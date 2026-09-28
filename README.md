@@ -75,4 +75,4 @@ in `%LOCALAPPDATA%\Botloft`.
 
 ## License
 
-[MIT](LICENSE)
+Botloft is licensed under the [Apache License 2.0](LICENSE). See [NOTICE](NOTICE) for the copyright notice that goes with redistributions.
