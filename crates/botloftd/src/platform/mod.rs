@@ -11,9 +11,9 @@ use std::io;
 use std::path::Path;
 
 #[cfg(unix)]
-pub use unix::{ProcessJob, restrict_to_current_user, user_environment};
+pub use unix::{ProcessJob, restrict_to_current_user, user_environment, write_inbox};
 #[cfg(windows)]
-pub use windows::{ProcessJob, restrict_to_current_user, user_environment};
+pub use windows::{ProcessJob, restrict_to_current_user, user_environment, write_inbox};
 
 /// Exclusive lock on `<home>\botloftd.lock`, held for the daemon's lifetime.
 /// The OS releases it when the process exits, even after a crash.
