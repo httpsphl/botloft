@@ -286,6 +286,7 @@ dependencies = [
 name = "botloft-store"
 version = "0.1.0"
 dependencies = [
+ "botloft-core",
  "rusqlite",
  "tempfile",
  "thiserror 2.0.21",
