@@ -1,9 +1,9 @@
 //! `messages` table. A message is saved together with its delivery, and
 //! with the task it creates, in one transaction (spec 9.1).
 
-use botloft_core::ids::{BotId, CrewId, MessageId};
+use botloft_core::ids::{BotId, CrewId, MessageId, TaskId};
 use botloft_core::protocol::{Delivery, Message, Task};
-use rusqlite::{OptionalExtension, Row, params};
+use rusqlite::{Connection, OptionalExtension, Row, params};
 
 use crate::{Result, Store, parse_column};
 
@@ -59,7 +59,18 @@ impl Store {
         if let Some(task) = task {
             Self::insert_task_in(&tx, task)?;
         }
-        tx.execute(
+        Self::insert_message_in(&tx, message, delivery)?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// The message and its delivery, inside the caller's transaction.
+    pub(crate) fn insert_message_in(
+        conn: &Connection,
+        message: &Message,
+        delivery: &Delivery,
+    ) -> Result<()> {
+        conn.execute(
             &format!(
                 "INSERT INTO messages ({COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
             ),
@@ -71,13 +82,26 @@ impl Store {
                 message.to_bot_id.as_str(),
                 message.kind.as_str(),
                 message.body,
-                message.task_id.as_ref().map(|id| id.as_str()),
+                message.task_id.as_ref().map(TaskId::as_str),
                 message.created_at,
             ],
         )?;
-        Self::insert_delivery_in(&tx, delivery)?;
-        tx.commit()?;
-        Ok(())
+        Self::insert_delivery_in(conn, delivery)
+    }
+
+    /// The message that asked for `task`.
+    pub fn task_request(&self, task: &TaskId) -> Result<Option<Message>> {
+        Ok(self
+            .conn
+            .query_row(
+                &format!(
+                    "SELECT {COLUMNS} FROM messages WHERE task_id = ?1 AND kind = 'task' \
+                     ORDER BY rowid LIMIT 1"
+                ),
+                [task.as_str()],
+                from_row,
+            )
+            .optional()?)
     }
 
     pub fn message(&self, id: &MessageId) -> Result<Option<Message>> {
