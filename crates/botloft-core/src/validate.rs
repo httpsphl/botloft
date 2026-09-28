@@ -9,6 +9,8 @@ pub struct ValidationError(pub String);
 pub const NAME_MAX_CHARS: usize = 64;
 pub const ROLE_MAX_CHARS: usize = 200;
 pub const INSTRUCTIONS_MAX_CHARS: usize = 32_000;
+/// Well under the ~1 million characters Claude Code accepts per message.
+pub const MESSAGE_MAX_CHARS: usize = 100_000;
 
 /// Trims a crew or bot name and checks it is a non-empty single line.
 pub fn name(field: &str, value: &str) -> Result<String, ValidationError> {
@@ -32,6 +34,21 @@ pub fn instructions(value: &str) -> Result<String, ValidationError> {
         )));
     }
     Ok(value.trim_end().to_owned())
+}
+
+/// Trims a message body or task result, free multi-line text that must not
+/// be empty.
+pub fn message(field: &str, value: &str) -> Result<String, ValidationError> {
+    let value = value.trim();
+    if value.is_empty() {
+        return Err(ValidationError(format!("{field} must not be empty")));
+    }
+    if value.chars().count() > MESSAGE_MAX_CHARS {
+        return Err(ValidationError(format!(
+            "{field} must be at most {MESSAGE_MAX_CHARS} characters"
+        )));
+    }
+    Ok(value.to_owned())
 }
 
 fn single_line(field: &str, value: &str, max: usize) -> Result<String, ValidationError> {
@@ -74,5 +91,29 @@ mod tests {
             Ok("line 1\nline 2".to_owned())
         );
         assert!(instructions(&"x".repeat(INSTRUCTIONS_MAX_CHARS + 1)).is_err());
+    }
+
+    #[test]
+    fn messages_are_trimmed_required_and_limited() {
+        assert_eq!(
+            message(
+                "body",
+                "
+ hi
+there 
+"
+            ),
+            Ok("hi
+there"
+                .to_owned())
+        );
+        assert!(
+            message(
+                "body", " 
+ "
+            )
+            .is_err()
+        );
+        assert!(message("body", &"x".repeat(MESSAGE_MAX_CHARS + 1)).is_err());
     }
 }

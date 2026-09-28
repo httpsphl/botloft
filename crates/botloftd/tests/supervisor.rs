@@ -24,7 +24,8 @@ struct Setup {
 }
 
 async fn setup() -> Setup {
-    let (daemon, runtime, _paths, dir) = new_daemon(test_settings());
+    let parts = new_daemon(test_settings());
+    let (daemon, runtime, dir) = (parts.daemon, parts.runtime, parts.dir);
     let crew = crews::create(&daemon, CrewsCreateParams { name: "Ops".into() }).expect("crew");
     let bot = bots::create(
         &daemon,
@@ -286,7 +287,8 @@ async fn output_lands_in_the_terminal_and_the_size_carries_over() {
 
 #[tokio::test(start_paused = true)]
 async fn a_failed_spawn_backs_off_and_retries() {
-    let (daemon, runtime, _paths, _dir) = new_daemon(test_settings());
+    let parts = new_daemon(test_settings());
+    let (daemon, runtime) = (parts.daemon, parts.runtime);
     runtime.fail_next_spawn();
     let crew = crews::create(&daemon, CrewsCreateParams { name: "Ops".into() }).expect("crew");
     let params = BotsCreateParams {

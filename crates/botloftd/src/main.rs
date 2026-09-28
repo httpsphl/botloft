@@ -6,7 +6,9 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use botloft_store::Store;
+use botloftd::clock::SystemClock;
 use botloftd::config::Config;
+use botloftd::courier::{self, CourierSettings, PipeInbox};
 use botloftd::paths::{self, Paths};
 use botloftd::platform::{self, InstanceLock};
 use botloftd::runtime::PtyRuntime;
@@ -80,6 +82,9 @@ fn serve(config_path: Option<PathBuf>) -> anyhow::Result<()> {
         owner_token,
         runtime: Arc::new(PtyRuntime),
         supervisor: SupervisorSettings::from_config(&config),
+        clock: Arc::new(SystemClock),
+        inbox: Arc::new(PipeInbox),
+        courier: CourierSettings::from_config(&config),
     });
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -96,6 +101,7 @@ fn serve(config_path: Option<PathBuf>) -> anyhow::Result<()> {
             })?;
         info!(port = config.port, "listening on 127.0.0.1");
         tokio::spawn(supervisor::run(Arc::clone(&daemon)));
+        tokio::spawn(courier::run(Arc::clone(&daemon)));
         server::serve(Arc::clone(&daemon), listener, platform::shutdown_signal()).await?;
         daemon.supervisor.shutdown();
         info!("stopped");

@@ -6,7 +6,10 @@ use rusqlite::Connection;
 use crate::{Result, StoreError};
 
 /// `(version, sql)`; versions are consecutive and match the file prefix.
-const MIGRATIONS: &[(u32, &str)] = &[(1, include_str!("../migrations/0001_init.sql"))];
+const MIGRATIONS: &[(u32, &str)] = &[
+    (1, include_str!("../migrations/0001_init.sql")),
+    (2, include_str!("../migrations/0002_messages.sql")),
+];
 
 /// Schema version after every migration has run.
 pub const LATEST_VERSION: u32 = MIGRATIONS.len() as u32;

@@ -2,6 +2,7 @@
 //! the daemon and the app.
 
 pub mod avatar;
+pub mod envelope;
 pub mod ids;
 pub mod protocol;
 pub mod slug;
