@@ -3,6 +3,7 @@
 
 pub mod bots;
 pub mod crews;
+pub mod terminal;
 
 use botloft_core::protocol::{PROTOCOL_VERSION, SystemStatus, error_code};
 use botloft_core::slug;
@@ -58,7 +59,8 @@ pub fn status(daemon: &Daemon) -> SystemStatus {
         daemon_version: env!("CARGO_PKG_VERSION").to_owned(),
         protocol: PROTOCOL_VERSION,
         uptime_ms: daemon.uptime_ms(),
-        claude_version: None,
+        claude_version: daemon.supervisor.claude_version(),
+        runtime_error: daemon.supervisor.runtime_error(),
     }
 }
 

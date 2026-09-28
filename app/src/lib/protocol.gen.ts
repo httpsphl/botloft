@@ -68,6 +68,11 @@ slug: string, role: string, instructions: string,
  */
 color: string, paused: boolean, state: BotState, 
 /**
+ * Current process generation; `null` if the bot has not started since
+ * the daemon did. Changes on every (re)start (spec 8).
+ */
+generation: number | null, 
+/**
  * Absolute path of the bot's workspace folder.
  */
 workspace: string, 
@@ -100,7 +105,11 @@ export type SystemStatus = { daemonVersion: string, protocol: number, uptimeMs: 
 /**
  * Version reported by `claude --version`; `null` until the runtime probe runs.
  */
-claudeVersion: string | null, };
+claudeVersion: string | null, 
+/**
+ * Why bots cannot start (Claude Code missing or too old); `null` when fine.
+ */
+runtimeError: string | null, };
 
 export type CrewsCreateParams = { name: string, };
 
@@ -131,6 +140,50 @@ export type BotsSetPausedParams = { botId: BotId, paused: boolean, };
 
 export type BotIdParams = { botId: BotId, };
 
+export type BotsRestartParams = { botId: BotId, 
+/**
+ * Start a new conversation instead of resuming the last one.
+ */
+fresh?: boolean, };
+
+/**
+ * Params of the `bot.state` notification.
+ */
+export type BotStateChanged = { botId: BotId, state: BotState, generation: number | null, };
+
+/**
+ * Starts streaming a bot's terminal. With the `generation` and `offset` the
+ * client last saw, only the missing bytes are replayed.
+ */
+export type TerminalAttachParams = { botId: BotId, generation?: number, offset?: number, };
+
+export type TerminalAttachResult = { generation: number, 
+/**
+ * Offset of the first byte the following `terminal.data` carries.
+ */
+offset: number, 
+/**
+ * True when the client must clear its screen before writing the replay.
+ */
+reset: boolean, };
+
+export type TerminalWriteParams = { botId: BotId, 
+/**
+ * Raw bytes, base64.
+ */
+data: string, };
+
+export type TerminalResizeParams = { botId: BotId, cols: number, rows: number, };
+
+/**
+ * Terminal output. `offset` counts bytes since the start of `generation`.
+ */
+export type TerminalData = { botId: BotId, generation: number, offset: number, 
+/**
+ * Raw bytes, base64. May end in the middle of a UTF-8 sequence.
+ */
+data: string, };
+
 /** Params and result of every request method. */
 export interface RpcMethods {
   "session.hello": { params: HelloParams; result: HelloResult };
@@ -145,12 +198,19 @@ export interface RpcMethods {
   "bots.update": { params: BotsUpdateParams; result: Bot };
   "bots.setPaused": { params: BotsSetPausedParams; result: Bot };
   "bots.archive": { params: BotIdParams; result: Bot };
+  "bots.restart": { params: BotsRestartParams; result: Bot };
+  "terminal.attach": { params: TerminalAttachParams; result: TerminalAttachResult };
+  "terminal.detach": { params: BotIdParams; result: null };
+  "terminal.write": { params: TerminalWriteParams; result: null };
+  "terminal.resize": { params: TerminalResizeParams; result: null };
 }
 
 /** Params of every server notification. */
 export interface RpcNotifications {
   "crew.changed": Crew;
   "bot.changed": Bot;
+  "bot.state": BotStateChanged;
+  "terminal.data": TerminalData;
 }
 
 export const RpcErrorCode = {

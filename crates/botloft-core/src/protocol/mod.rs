@@ -6,9 +6,11 @@
 mod export;
 mod methods;
 mod model;
+mod terminal;
 
 pub use methods::*;
 pub use model::*;
+pub use terminal::*;
 
 /// Version negotiated in `session.hello`.
 pub const PROTOCOL_VERSION: u32 = 1;
@@ -27,12 +29,19 @@ pub mod method {
     pub const BOTS_UPDATE: &str = "bots.update";
     pub const BOTS_SET_PAUSED: &str = "bots.setPaused";
     pub const BOTS_ARCHIVE: &str = "bots.archive";
+    pub const BOTS_RESTART: &str = "bots.restart";
+    pub const TERMINAL_ATTACH: &str = "terminal.attach";
+    pub const TERMINAL_DETACH: &str = "terminal.detach";
+    pub const TERMINAL_WRITE: &str = "terminal.write";
+    pub const TERMINAL_RESIZE: &str = "terminal.resize";
 }
 
 /// Server notification method names.
 pub mod notification {
     pub const CREW_CHANGED: &str = "crew.changed";
     pub const BOT_CHANGED: &str = "bot.changed";
+    pub const BOT_STATE: &str = "bot.state";
+    pub const TERMINAL_DATA: &str = "terminal.data";
 }
 
 /// Error codes: the standard JSON-RPC ones plus the daemon's (spec 11.4).

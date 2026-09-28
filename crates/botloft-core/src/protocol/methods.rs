@@ -53,6 +53,8 @@ pub struct SystemStatus {
     pub uptime_ms: i64,
     /// Version reported by `claude --version`; `null` until the runtime probe runs.
     pub claude_version: Option<String>,
+    /// Why bots cannot start (Claude Code missing or too old); `null` when fine.
+    pub runtime_error: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -142,4 +144,15 @@ pub struct BotsSetPausedParams {
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct BotIdParams {
     pub bot_id: BotId,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BotsRestartParams {
+    pub bot_id: BotId,
+    /// Start a new conversation instead of resuming the last one.
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub fresh: Option<bool>,
 }

@@ -6,7 +6,7 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 
 use super::jsonrpc::{RpcError, empty_params};
-use crate::service::{self, ApiResult, bots, crews};
+use crate::service::{self, ApiResult, bots, crews, terminal};
 use crate::state::Daemon;
 
 pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Value, RpcError> {
@@ -22,6 +22,9 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::BOTS_UPDATE => reply(bots::update(daemon, parse(params)?)),
         method::BOTS_SET_PAUSED => reply(bots::set_paused(daemon, parse(params)?)),
         method::BOTS_ARCHIVE => reply(bots::archive(daemon, parse(params)?)),
+        method::BOTS_RESTART => reply(bots::restart(daemon, parse(params)?)),
+        method::TERMINAL_WRITE => reply(terminal::write(daemon, parse(params)?)),
+        method::TERMINAL_RESIZE => reply(terminal::resize(daemon, parse(params)?)),
         method::SESSION_HELLO => Err(RpcError::new(
             error_code::CONFLICT,
             "this connection is already authenticated",
@@ -33,7 +36,7 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
     }
 }
 
-fn parse<T: DeserializeOwned>(params: Option<Value>) -> Result<T, RpcError> {
+pub(super) fn parse<T: DeserializeOwned>(params: Option<Value>) -> Result<T, RpcError> {
     serde_json::from_value(params.unwrap_or_else(empty_params))
         .map_err(|err| RpcError::new(error_code::INVALID_PARAMS, format!("invalid params: {err}")))
 }

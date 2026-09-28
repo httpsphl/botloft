@@ -6,17 +6,8 @@ use botloft_core::protocol::Crew;
 use botloft_store::BotRecord;
 use serde_json::{Value, json};
 
+use crate::hooks::EVENTS as HOOKS;
 use crate::paths::permission_rule_path;
-
-/// Hook events the daemon listens to, with the `botloftd hook` argument.
-const HOOKS: &[(&str, &str)] = &[
-    ("SessionStart", "session-start"),
-    ("UserPromptSubmit", "prompt-submit"),
-    ("Stop", "stop"),
-    ("StopFailure", "stop-failure"),
-    ("Notification", "notification"),
-    ("SessionEnd", "session-end"),
-];
 
 /// `.claude/settings.json` (spec 7.5). Hooks use exec form so Claude Code
 /// runs `botloftd.exe` directly, without a shell.

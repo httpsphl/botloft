@@ -1,16 +1,18 @@
-//! State shared by every connection: the store, the event bus and what the
-//! daemon knows about itself.
+//! State shared by every connection: the store, the supervisor, the event
+//! bus and what the daemon knows about itself.
 
 use std::path::PathBuf;
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Instant;
 
-use botloft_core::protocol::{Bot, Crew};
+use botloft_core::protocol::{Bot, BotStateChanged, Crew};
 use botloft_store::Store;
 use tokio::sync::broadcast;
 
 use crate::paths::Paths;
+use crate::runtime::Runtime;
 use crate::secrets::TokenHash;
+use crate::supervisor::{Supervisor, SupervisorSettings};
 use crate::workspace::WorkspaceEnv;
 
 /// Something that changed and every connected app should hear about.
@@ -18,6 +20,7 @@ use crate::workspace::WorkspaceEnv;
 pub enum Event {
     CrewChanged(Crew),
     BotChanged(Bot),
+    BotState(BotStateChanged),
 }
 
 /// Events buffered per connection before a slow client is dropped.
@@ -31,12 +34,15 @@ pub struct DaemonOptions {
     pub bin: PathBuf,
     pub store: Store,
     pub owner_token: TokenHash,
+    pub runtime: Arc<dyn Runtime>,
+    pub supervisor: SupervisorSettings,
 }
 
 pub struct Daemon {
     pub paths: Paths,
     pub port: u16,
     pub bin: PathBuf,
+    pub supervisor: Supervisor,
     store: Mutex<Store>,
     owner_token: TokenHash,
     events: broadcast::Sender<Event>,
@@ -44,9 +50,17 @@ pub struct Daemon {
 }
 
 impl Daemon {
-    pub fn new(options: DaemonOptions) -> Self {
+    /// The supervisor keeps a weak reference back to the daemon, so both are
+    /// created together. Start it with [`crate::supervisor::run`].
+    pub fn new(options: DaemonOptions) -> Arc<Self> {
         let (events, _) = broadcast::channel(EVENT_BUFFER);
-        Self {
+        Arc::new_cyclic(|daemon| Self {
+            supervisor: Supervisor::new(
+                daemon.clone(),
+                options.runtime,
+                options.supervisor,
+                events.clone(),
+            ),
             paths: options.paths,
             port: options.port,
             bin: options.bin,
@@ -54,7 +68,7 @@ impl Daemon {
             owner_token: options.owner_token,
             events,
             started: Instant::now(),
-        }
+        })
     }
 
     /// Locks the store. Hold the guard only for synchronous work, never

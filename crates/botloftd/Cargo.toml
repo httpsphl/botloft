@@ -10,13 +10,16 @@ authors.workspace = true
 [dependencies]
 anyhow = "1.0.104"
 axum = { version = "0.8.9", features = ["ws"] }
+base64 = "0.23.1"
 botloft-core.workspace = true
 botloft-store.workspace = true
+bytes = "1.12.1"
 clap = { version = "4.6.7", features = ["derive"] }
 dirs = "7.0.0"
 futures-util = "0.3.34"
 getrandom = "0.4.3"
 hex = "0.4.3"
+portable-pty = "0.9.0"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 sha2 = "0.11.0"
@@ -31,8 +34,10 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 workspace = true
 
 [target."cfg(windows)".dependencies]
-windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_System_Threading", "Win32_System_Memory"] }
+windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_System_Threading", "Win32_System_Memory", "Win32_System_JobObjects", "Win32_System_Environment"] }
 
 [dev-dependencies]
+base64 = "0.23.1"
 tempfile = "3.27.0"
+tokio = { version = "1.53.1", features = ["test-util", "macros", "rt-multi-thread"] }
 tokio-tungstenite = "0.30.0"
