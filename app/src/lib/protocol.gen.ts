@@ -101,6 +101,15 @@ token: string, client: ClientInfo, protocol: number, };
 
 export type HelloResult = { daemonVersion: string, protocol: number, };
 
+/**
+ * Deliveries still to go and those that gave up, for `system.status`.
+ */
+export type DeliveryBacklog = { 
+/**
+ * `pending` and `sending`.
+ */
+pending: number, dead: number, };
+
 export type SystemStatus = { daemonVersion: string, protocol: number, uptimeMs: number, 
 /**
  * Version reported by `claude --version`; `null` until the runtime probe runs.
@@ -184,6 +193,115 @@ export type TerminalData = { botId: BotId, generation: number, offset: number,
  */
 data: string, };
 
+/**
+ * Who wrote a message.
+ */
+export type SenderKind = "owner" | "bot" | "system";
+
+/**
+ * What a message is for.
+ */
+export type MessageKind = "note" | "task" | "result" | "system";
+
+/**
+ * Where a delivery is in the courier (spec 9.1).
+ */
+export type DeliveryState = "pending" | "sending" | "sent" | "dead";
+
+export type TaskStatus = "open" | "done" | "failed" | "cancelled" | "expired";
+
+/**
+ * Text sent to a bot, by the owner, another bot or the daemon.
+ */
+export type Message = { id: MessageId, crewId: CrewId, fromKind: SenderKind, 
+/**
+ * Set when `fromKind` is `bot`.
+ */
+fromBotId: BotId | null, toBotId: BotId, kind: MessageKind, body: string, 
+/**
+ * The task this message asks for, answers or reports on.
+ */
+taskId: TaskId | null, 
+/**
+ * Unix time in milliseconds.
+ */
+createdAt: number, };
+
+/**
+ * Getting one message into one bot's inbox.
+ */
+export type Delivery = { id: DeliveryId, messageId: MessageId, botId: BotId, state: DeliveryState, 
+/**
+ * Failed attempts so far. Waiting for the bot to be ready is not one.
+ */
+attempts: number, 
+/**
+ * Unix time in milliseconds of the next try while `pending`.
+ */
+nextAttemptAt: number, 
+/**
+ * Why the last attempt failed; never contains the message body.
+ */
+lastError: string | null, 
+/**
+ * Unix time in milliseconds.
+ */
+updatedAt: number, };
+
+/**
+ * Work one bot asked another to do (spec 9.4).
+ */
+export type Task = { id: TaskId, crewId: CrewId, requesterBotId: BotId, assigneeBotId: BotId, status: TaskStatus, 
+/**
+ * Unix time in milliseconds.
+ */
+deadlineAt: number, 
+/**
+ * Position in a chain of delegations: 1 for a task nobody else caused.
+ */
+hops: number, 
+/**
+ * First task of the chain this one belongs to; `null` for that first task.
+ */
+originTaskId: TaskId | null, result: string | null, 
+/**
+ * Unix time in milliseconds.
+ */
+createdAt: number, 
+/**
+ * Unix time in milliseconds.
+ */
+updatedAt: number, };
+
+/**
+ * The owner writes to a bot.
+ */
+export type MessagesSendParams = { botId: BotId, body: string, };
+
+/**
+ * Newest first. Page back with `before` set to the oldest id received.
+ */
+export type MessagesListParams = { crewId?: CrewId, 
+/**
+ * Messages sent to or by this bot.
+ */
+botId?: BotId, 
+/**
+ * Only messages older than this one.
+ */
+before?: MessageId, 
+/**
+ * 1 to 200; 50 when absent.
+ */
+limit?: number, };
+
+/**
+ * Most recently updated first.
+ */
+export type DeliveriesListParams = { state?: DeliveryState, botId?: BotId, };
+
+export type DeliveryIdParams = { deliveryId: DeliveryId, };
+
 /** Params and result of every request method. */
 export interface RpcMethods {
   "session.hello": { params: HelloParams; result: HelloResult };
@@ -203,6 +321,10 @@ export interface RpcMethods {
   "terminal.detach": { params: BotIdParams; result: null };
   "terminal.write": { params: TerminalWriteParams; result: null };
   "terminal.resize": { params: TerminalResizeParams; result: null };
+  "messages.send": { params: MessagesSendParams; result: Message };
+  "messages.list": { params: MessagesListParams; result: Array<Message> };
+  "deliveries.list": { params: DeliveriesListParams; result: Array<Delivery> };
+  "deliveries.retry": { params: DeliveryIdParams; result: Delivery };
 }
 
 /** Params of every server notification. */
@@ -211,6 +333,9 @@ export interface RpcNotifications {
   "bot.changed": Bot;
   "bot.state": BotStateChanged;
   "terminal.data": TerminalData;
+  "message.created": Message;
+  "delivery.changed": Delivery;
+  "task.changed": Task;
 }
 
 export const RpcErrorCode = {

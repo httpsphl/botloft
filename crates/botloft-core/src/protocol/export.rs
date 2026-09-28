@@ -62,6 +62,7 @@ fn export_bindings() {
     out.decl::<ClientInfo>();
     out.decl::<HelloParams>();
     out.decl::<HelloResult>();
+    out.decl::<DeliveryBacklog>();
     out.decl::<SystemStatus>();
     out.decl::<CrewsCreateParams>();
     out.decl::<CrewsRenameParams>();
@@ -79,6 +80,17 @@ fn export_bindings() {
     out.decl::<TerminalWriteParams>();
     out.decl::<TerminalResizeParams>();
     out.decl::<TerminalData>();
+    out.decl::<SenderKind>();
+    out.decl::<MessageKind>();
+    out.decl::<DeliveryState>();
+    out.decl::<TaskStatus>();
+    out.decl::<Message>();
+    out.decl::<Delivery>();
+    out.decl::<Task>();
+    out.decl::<MessagesSendParams>();
+    out.decl::<MessagesListParams>();
+    out.decl::<DeliveriesListParams>();
+    out.decl::<DeliveryIdParams>();
 
     let crew = out.name::<Crew>();
     let bot = out.name::<Bot>();
@@ -142,6 +154,28 @@ fn export_bindings() {
         &out.name::<TerminalResizeParams>(),
         "null",
     );
+    let message = out.name::<Message>();
+    let delivery = out.name::<Delivery>();
+    out.method(
+        method::MESSAGES_SEND,
+        &out.name::<MessagesSendParams>(),
+        &message,
+    );
+    out.method(
+        method::MESSAGES_LIST,
+        &out.name::<MessagesListParams>(),
+        &out.name::<Vec<Message>>(),
+    );
+    out.method(
+        method::DELIVERIES_LIST,
+        &out.name::<DeliveriesListParams>(),
+        &out.name::<Vec<Delivery>>(),
+    );
+    out.method(
+        method::DELIVERIES_RETRY,
+        &out.name::<DeliveryIdParams>(),
+        &delivery,
+    );
     out.text.push_str("}\n\n");
 
     out.text
@@ -153,6 +187,18 @@ fn export_bindings() {
     let data = out.name::<TerminalData>();
     let _ = writeln!(out.text, "  \"{}\": {state};", notification::BOT_STATE);
     let _ = writeln!(out.text, "  \"{}\": {data};", notification::TERMINAL_DATA);
+    let task = out.name::<Task>();
+    let _ = writeln!(
+        out.text,
+        "  \"{}\": {message};",
+        notification::MESSAGE_CREATED
+    );
+    let _ = writeln!(
+        out.text,
+        "  \"{}\": {delivery};",
+        notification::DELIVERY_CHANGED
+    );
+    let _ = writeln!(out.text, "  \"{}\": {task};", notification::TASK_CHANGED);
     out.text.push_str("}\n\n");
 
     out.text.push_str("export const RpcErrorCode = {\n");

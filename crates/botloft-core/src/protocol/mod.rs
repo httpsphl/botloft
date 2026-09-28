@@ -4,10 +4,12 @@
 
 #[cfg(test)]
 mod export;
+mod messaging;
 mod methods;
 mod model;
 mod terminal;
 
+pub use messaging::*;
 pub use methods::*;
 pub use model::*;
 pub use terminal::*;
@@ -34,6 +36,10 @@ pub mod method {
     pub const TERMINAL_DETACH: &str = "terminal.detach";
     pub const TERMINAL_WRITE: &str = "terminal.write";
     pub const TERMINAL_RESIZE: &str = "terminal.resize";
+    pub const MESSAGES_SEND: &str = "messages.send";
+    pub const MESSAGES_LIST: &str = "messages.list";
+    pub const DELIVERIES_LIST: &str = "deliveries.list";
+    pub const DELIVERIES_RETRY: &str = "deliveries.retry";
 }
 
 /// Server notification method names.
@@ -42,6 +48,9 @@ pub mod notification {
     pub const BOT_CHANGED: &str = "bot.changed";
     pub const BOT_STATE: &str = "bot.state";
     pub const TERMINAL_DATA: &str = "terminal.data";
+    pub const MESSAGE_CREATED: &str = "message.created";
+    pub const DELIVERY_CHANGED: &str = "delivery.changed";
+    pub const TASK_CHANGED: &str = "task.changed";
 }
 
 /// Error codes: the standard JSON-RPC ones plus the daemon's (spec 11.4).
