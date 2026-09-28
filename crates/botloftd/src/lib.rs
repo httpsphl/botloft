@@ -6,3 +6,4 @@ pub mod config;
 pub mod paths;
 pub mod platform;
 pub mod secrets;
+pub mod workspace;
