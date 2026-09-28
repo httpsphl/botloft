@@ -30,7 +30,7 @@ cargo build -p botloftd
 cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all --check
-cargo run -p botloftd -- serve --config .dev\config.toml   # daemon isolado de dev
+cargo run -p botloftd -- serve   # com BOTLOFT_HOME de dev (abaixo)
 
 # Tipos TS gerados a partir do Rust
 cargo test -p botloft-core export_bindings
@@ -38,11 +38,12 @@ cargo test -p botloft-core export_bindings
 # App
 cd app
 pnpm install
-pnpm tauri dev
+pnpm tauri dev    # o app acha o daemon pelo BOTLOFT_HOME e o inicia (target\debug\botloftd.exe)
+pnpm dev          # só a UI num navegador comum, com o FakeBotloft (src/dev/preview.ts)
 pnpm check        # tsc --noEmit + biome check + vitest run
 ```
 
-Em dev, use `BOTLOFT_HOME=.dev\home` para não tocar na instalação real em `%LOCALAPPDATA%\Botloft`.
+Em dev, use `$env:BOTLOFT_HOME = "$PWD\.dev\home"` (caminho absoluto) no daemon e no app, para não tocar na instalação real em `%LOCALAPPDATA%\Botloft`. O `config.toml` de dev fica dentro dessa pasta: o app lê a porta de lá.
 
 ## Convenções
 

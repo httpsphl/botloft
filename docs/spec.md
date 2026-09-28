@@ -209,7 +209,7 @@ Campos lidos do JSON do stdin (documentados): `error` no `StopFailure`, `notific
 
 Numa sessão interativa, o Claude Code segura **todos** os hooks até o dono aceitar o diálogo de confiança da pasta (documentado; confirmado com 2.1.283). Na primeira execução o bot fica em `launching`, com o diálogo no terminal, e só vai para `idle` quando alguém escolhe "Yes, I trust this folder" (a opção pré-selecionada é "No, exit"). Depois disso a confiança fica gravada para aquela pasta. Avisos de primeira execução vindos da configuração global do usuário também aparecem no terminal (ex.: extensão do Chrome detectada, novo renderizador).
 
-A confiança de uma pasta pai cobre as subpastas (fora de repositório git). O onboarding do app (M4) deve pedir ao dono para confiar uma vez na raiz dos workspaces, para que bots novos não parem no diálogo. Workspaces dentro de um repositório git herdam a confiança da raiz do repositório.
+Confiar na raiz dos workspaces não resolve: a confiança de uma pasta pai cobre as subpastas, mas **não** vale para `permissions.allow` do `.claude/settings.json` do projeto, e o diálogo volta listando essas regras (documentado em `permissions`). Como o `settings.json` gerado libera `mcp__botloft` (7.5), cada bot novo pergunta uma vez. O app explica isso no primeiro uso e o dono responde no terminal do próprio bot, dentro do app. O Botloft não grava `hasTrustDialogAccepted` no `~/.claude.json`: o arquivo é do Claude Code, que o reescreve o tempo todo.
 
 ### 7.5 `settings.json` gerado
 
@@ -460,23 +460,29 @@ app/src/
     api.ts        interface BotloftApi (contrato usado pela UI)
     client.ts     implementação real sobre rpc.ts
     fake.ts       FakeBotloft em memória para testes
+    host.ts       interface Host: comandos Tauri e janela (15.2)
+    tauriHost.ts  implementação real; fakeHost.ts para testes
     protocol.gen.ts   gerado por ts-rs, não editar
   store/          stores Zustand alimentados por notificações
   ui/             componentes base
+  dev/            prévia: `pnpm dev` num navegador comum usa FakeBotloft (só em dev)
 ```
 
-Componentes dependem só de `BotloftApi`, nunca do cliente concreto.
+Componentes dependem só de `BotloftApi` e `Host`, nunca do cliente concreto nem do Tauri. O store recarrega crews, bots e `system.status` a cada (re)conexão e depois segue as notificações; `system.status` não tem notificação e é relido a cada 15 s.
 
 ### 15.2 Comandos Tauri
 
 | Comando | Função |
 |---|---|
-| `daemon_status` | GET `/health` local |
+| `daemon_status` | GET `/health` local; diz se o daemon roda, está parado ou se outro programa ocupa a porta |
+| `daemon_start` | (M4) inicia o `botloftd.exe` ao lado do executável do app, destacado (sem console, fora do job do app) para seguir vivo quando o app fecha, e espera o `/health` por até 15 s. No M5 o `daemon_install` o substitui |
 | `daemon_install` | copia sidecar e roda `botloftd service install` |
 | `daemon_restart` | `botloftd service restart` |
 | `read_owner_token` | lê `secrets\owner.token` (só no app local) |
-| `open_path` | abre pasta no Explorer (`explorer /select,`) |
+| `open_path` | abre uma pasta no Explorer; recusa arquivos, que o Explorer executaria |
 | `set_unread_badge` | overlay icon na taskbar |
+
+O app acha o daemon como o daemon acha a si mesmo (seção 5): `BOTLOFT_HOME` ou `%LOCALAPPDATA%\Botloft`, com a porta lida do `config.toml` dessa pasta (45710 se ausente). Um daemon de dev com seu próprio `BOTLOFT_HOME` é encontrado sem configuração extra. A CSP libera `ws://127.0.0.1:*` pelo mesmo motivo.
 
 ### 15.3 Direção visual
 
@@ -532,3 +538,4 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28. "Co
 | stdout do `SessionStart` vira contexto | 7.6 | Confirmado (`hooks`); o subcomando nunca escreve no stdout | feito (M2) |
 | `StopFailure` (`rate_limit`, `authentication_failed`) e `Notification` (`permission_prompt`) | 7.2 | Campos documentados: `error` e `notification_type`. `SessionStart`, `UserPromptSubmit` e `Stop` **testados com 2.1.283** (`launching` -> `idle` -> `busy` -> `idle`) | disparar `StopFailure` e `permission_prompt` reais: pendente |
 | Confiança da pasta segura os hooks | 7.4.1 | Confirmado (`hooks`, `permissions`) e **visto com 2.1.283**: diálogo na primeira execução, bot em `launching` até aceitar | feito (M2) |
+| Confiança da pasta pai e regras `allow` do projeto | 7.4.1 | Confirmado (`permissions`): fora de git a confiança vale para as subpastas, mas `permissions.allow` do projeto só vale depois de aceitar o diálogo da própria pasta; `-p` nunca mostra o diálogo. Não há flag nem setting para pré-aceitar; o manual é `hasTrustDialogAccepted` no `~/.claude.json` | ver o diálogo de um bot novo no terminal do app: M4 |
