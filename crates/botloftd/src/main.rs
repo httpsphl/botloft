@@ -2,6 +2,7 @@
 
 use std::net::Ipv4Addr;
 use std::path::PathBuf;
+use std::process::ExitCode;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -55,8 +56,19 @@ enum ServiceCommand {
     Uninstall,
 }
 
-fn main() -> anyhow::Result<()> {
-    let cli = Cli::parse();
+/// Errors go to stderr on one line (`what failed: why`), which the app
+/// shows as is when it runs `service install`.
+fn main() -> ExitCode {
+    match dispatch(Cli::parse()) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(err) => {
+            eprintln!("{err:#}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn dispatch(cli: Cli) -> anyhow::Result<()> {
     let home =
         paths::resolve_home(cli.home.as_deref()).context("cannot resolve the data folder")?;
     match cli.command {

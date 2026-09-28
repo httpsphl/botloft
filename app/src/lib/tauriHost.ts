@@ -29,7 +29,8 @@ export function tauriHost(): Host {
   let overlay: Promise<Image> | undefined;
   return {
     daemonStatus: () => invoke<DaemonStatus>("daemon_status"),
-    startDaemon: () => invoke<DaemonStatus>("daemon_start"),
+    installDaemon: () => invoke<DaemonStatus>("daemon_install"),
+    restartDaemon: () => invoke<DaemonStatus>("daemon_restart"),
     readOwnerToken: () => invoke<string>("read_owner_token"),
     openPath: (path) => invoke<void>("open_path", { path }),
     openUrl: (url) => invoke<void>("open_url", { url }),

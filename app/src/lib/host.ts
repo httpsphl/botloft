@@ -1,9 +1,17 @@
 // What the app needs from the native shell (spec 15.2): the daemon's
-// status, starting it, the owner token, Explorer and the window. The Tauri
-// implementation lives in `tauriHost.ts`; tests pass a fake.
+// status, installing and restarting it, the owner token, Explorer and the
+// window. The Tauri implementation lives in `tauriHost.ts`; tests pass a
+// fake.
 
 export type DaemonStatus =
-  | { state: "running"; port: number; version: string; protocol: number }
+  | {
+      state: "running";
+      port: number;
+      version: string;
+      protocol: number;
+      /** Older than the daemon this app ships; installing replaces it. */
+      outdated: boolean;
+    }
   /** Nothing listens on the port. `home` is the daemon's data folder. */
   | { state: "stopped"; port: number; home: string }
   /** Something that is not botloftd holds the port. */
@@ -22,8 +30,14 @@ export interface AppWindow {
 
 export interface Host {
   daemonStatus(): Promise<DaemonStatus>;
-  /** Starts the daemon if needed and waits for it to answer. */
-  startDaemon(): Promise<DaemonStatus>;
+  /**
+   * Installs the daemon this app ships as a scheduled task that starts at
+   * logon, starts it and waits for it to answer (spec 14). Replaces an
+   * older daemon; leaves the same version running.
+   */
+  installDaemon(): Promise<DaemonStatus>;
+  /** Stops the daemon and starts it again from its scheduled task. */
+  restartDaemon(): Promise<DaemonStatus>;
   readOwnerToken(): Promise<string>;
   /** Opens a folder in Explorer. */
   openPath(path: string): Promise<void>;

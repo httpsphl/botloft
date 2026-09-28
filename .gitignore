@@ -4,6 +4,8 @@
 # App
 node_modules/
 /app/dist/
+# Sidecar copied in by app/scripts/sidecar.mjs before `pnpm bundle`
+/app/src-tauri/binaries/
 *.local
 
 # Local dev state (BOTLOFT_HOME, dev config)

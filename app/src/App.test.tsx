@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 import { App } from "./App";
 import type { Client } from "./lib/client";
@@ -69,13 +69,26 @@ describe("app", () => {
     expect(screen.getByRole("dialog", { name: "New bot" })).toBeDefined();
   });
 
-  test("the owner starts the daemon from the app", async () => {
+  test("the app sets itself up on the first run, without asking", async () => {
     const host = new FakeHost();
     host.status = { state: "stopped", port: 45710, home: "C:\\data\\Botloft" };
     renderApp(new FakeBotloft(), host);
-    fireEvent.click(await screen.findByRole("button", { name: "Start the daemon" }));
     expect(await screen.findByRole("heading", { name: "Welcome to Botloft" })).toBeDefined();
-    expect(host.starts).toBe(1);
+    expect(host.installs).toEqual(["install"]);
+    expect(screen.queryByText(/daemon/i)).toBeNull();
+  });
+
+  test("a failed setup explains itself in plain words", async () => {
+    const host = new FakeHost();
+    host.status = { state: "stopped", port: 45710, home: "C:\\data\\Botloft" };
+    host.afterInstall = new Error("cannot register the scheduled task Botloft: access denied");
+    renderApp(new FakeBotloft(), host);
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Botloft couldn't start");
+    expect(screen.getByText("Details")).toBeDefined();
+    host.afterInstall = host.status = { ...host.status };
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(host.installs).toEqual(["install", "install"]);
   });
 
   test("archiving a bot asks first", async () => {
@@ -105,17 +118,21 @@ describe("app", () => {
     expect(within(sidebar()).getAllByText("Paused")).toHaveLength(2);
   });
 
-  test("a missing Claude Code says why bots cannot start", async () => {
+  test("a missing Claude Code says why bots cannot start and where to get it", async () => {
     const fake = new FakeBotloft();
+    const host = new FakeHost();
     fake.addCrew("Ops");
     fake.system = {
       ...fake.system,
       claudeVersion: null,
       runtimeError: "claude.exe was not found on PATH.",
     };
-    renderApp(fake);
-    const banner = await screen.findByText("Bots cannot start");
-    expect(banner.closest("[role=alert]")?.textContent).toContain("claude.exe was not found");
+    renderApp(fake, host);
+    const banner = await screen.findByText("Bots can't start");
+    const alert = banner.closest("[role=alert]") as HTMLElement;
+    expect(alert.textContent).toContain("claude.exe was not found");
+    fireEvent.click(within(alert).getByRole("button", { name: "How to install Claude Code" }));
+    await waitFor(() => expect(host.opened).toEqual(["https://code.claude.com/docs/en/setup"]));
   });
 
   test("a lost connection shows in the title bar", async () => {

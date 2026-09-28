@@ -22,11 +22,17 @@ async fn daemon_status() -> Result<DaemonStatus, String> {
     blocking(|| daemon::endpoint().map(|endpoint| daemon::status(&endpoint))).await
 }
 
-/// Starts the daemon next to the app when it is not running (M4; M5
-/// installs it as a scheduled task instead).
+/// Installs the daemon this app ships as a scheduled task and starts it,
+/// replacing an older one (spec 14).
 #[tauri::command]
-async fn daemon_start() -> Result<DaemonStatus, String> {
-    blocking(|| daemon::start(&daemon::endpoint()?)).await
+async fn daemon_install() -> Result<DaemonStatus, String> {
+    blocking(|| daemon::install(&daemon::endpoint()?)).await
+}
+
+/// Stops the daemon and starts it again from its scheduled task.
+#[tauri::command]
+async fn daemon_restart() -> Result<DaemonStatus, String> {
+    blocking(|| daemon::restart(&daemon::endpoint()?)).await
 }
 
 #[tauri::command]
@@ -85,7 +91,8 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             daemon_status,
-            daemon_start,
+            daemon_install,
+            daemon_restart,
             read_owner_token,
             open_path,
             open_url

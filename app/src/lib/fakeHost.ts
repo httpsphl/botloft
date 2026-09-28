@@ -3,23 +3,27 @@
 import type { DaemonStatus, Host } from "./host";
 import { PROTOCOL_VERSION } from "./protocol.gen";
 
+/** A current daemon on the default port. */
+export function running(
+  changes: Partial<Extract<DaemonStatus, { state: "running" }>> = {},
+): DaemonStatus {
+  return {
+    state: "running",
+    port: 45710,
+    version: "0.1.0",
+    protocol: PROTOCOL_VERSION,
+    outdated: false,
+    ...changes,
+  };
+}
+
 export class FakeHost implements Host {
-  status: DaemonStatus = {
-    state: "running",
-    port: 45710,
-    version: "0.1.0",
-    protocol: PROTOCOL_VERSION,
-  };
-  /** What `startDaemon` leaves behind. */
-  afterStart: DaemonStatus = {
-    state: "running",
-    port: 45710,
-    version: "0.1.0",
-    protocol: PROTOCOL_VERSION,
-  };
+  status: DaemonStatus = running();
+  /** What `installDaemon` and `restartDaemon` leave behind, or their error. */
+  afterInstall: DaemonStatus | Error = running();
   token: string | Error = "a".repeat(64);
   readonly opened: string[] = [];
-  starts = 0;
+  readonly installs: ("install" | "restart")[] = [];
   maximized = false;
   closed = false;
   attention = false;
@@ -28,9 +32,20 @@ export class FakeHost implements Host {
     return Promise.resolve(this.status);
   }
 
-  startDaemon(): Promise<DaemonStatus> {
-    this.starts += 1;
-    this.status = this.afterStart;
+  installDaemon(): Promise<DaemonStatus> {
+    return this.settle("install");
+  }
+
+  restartDaemon(): Promise<DaemonStatus> {
+    return this.settle("restart");
+  }
+
+  private settle(action: "install" | "restart"): Promise<DaemonStatus> {
+    this.installs.push(action);
+    if (this.afterInstall instanceof Error) {
+      return Promise.reject(this.afterInstall);
+    }
+    this.status = this.afterInstall;
     return Promise.resolve(this.status);
   }
 

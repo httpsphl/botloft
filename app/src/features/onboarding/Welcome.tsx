@@ -3,13 +3,12 @@ import { type ReactNode, useState } from "react";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { CrewDialog } from "../crews/CrewDialog";
+import { ClaudeCodeHelp } from "./ClaudeCodeHelp";
 
 /** First run: what is ready, what is not, and the first crew. */
 export function Welcome() {
   const system = useApp((state) => state.system);
-  const connection = useApp((state) => state.connection);
   const [creating, setCreating] = useState(false);
-  const daemonVersion = connection.kind === "open" ? connection.daemonVersion : null;
 
   let claude: ReactNode;
   if (!system || (system.claudeVersion === null && system.runtimeError === null)) {
@@ -19,7 +18,7 @@ export function Welcome() {
       <Check
         state="bad"
         title="Claude Code"
-        detail={`${system.runtimeError} The daemon checks again every 30 seconds.`}
+        detail={<ClaudeCodeHelp error={system.runtimeError} />}
       />
     );
   } else {
@@ -35,7 +34,11 @@ export function Welcome() {
           folder. Start with one crew and a bot or two.
         </p>
         <ul className="mt-6 flex flex-col border border-line bg-panel">
-          <Check state="ok" title="Botloft daemon" detail={`Running, version ${daemonVersion}`} />
+          <Check
+            state="ok"
+            title="Botloft"
+            detail="Running in the background. It starts with Windows, so your bots keep working after you close this window."
+          />
           {claude}
         </ul>
         <div className="mt-4 border border-line bg-panel p-4 text-sm leading-relaxed">
@@ -61,7 +64,7 @@ function Check({
 }: {
   state: "ok" | "bad" | "pending";
   title: string;
-  detail: string;
+  detail: ReactNode;
 }) {
   const Icon = state === "ok" ? CircleCheck : state === "bad" ? CircleX : LoaderCircle;
   const tone = state === "ok" ? "text-ok" : state === "bad" ? "text-danger" : "text-muted";
@@ -79,9 +82,9 @@ function Check({
             : {state === "ok" ? "ready" : state === "bad" ? "not ready" : "checking"}
           </span>
         </p>
-        <p className="text-ink-soft" data-selectable>
+        <div className="text-ink-soft" data-selectable>
           {detail}
-        </p>
+        </div>
       </div>
     </li>
   );

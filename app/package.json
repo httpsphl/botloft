@@ -10,6 +10,7 @@
     "build": "pnpm typecheck && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "bundle": "node scripts/sidecar.mjs && tauri build --config src-tauri/tauri.bundle.conf.json",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "lint": "biome check .",
     "format": "biome check --write .",

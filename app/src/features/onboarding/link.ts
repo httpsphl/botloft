@@ -1,5 +1,8 @@
-// Getting from "app opened" to "connected to the daemon": check that it
-// runs, offer to start it, read the owner token and say hello (spec 15.1).
+// Getting from "app opened" to "connected to the daemon" without asking
+// the owner anything: install it when it does not run, keep it at the
+// version this app ships, read the owner token and say hello (spec 15.1).
+// Each run installs or updates at most once, so a failure shows instead
+// of looping.
 
 import { createStore, type StoreApi } from "zustand/vanilla";
 import { errorText } from "../../lib/api";
@@ -9,12 +12,16 @@ import { PROTOCOL_VERSION } from "../../lib/protocol.gen";
 
 export type LinkStep =
   | { step: "checking" }
+  /** Not running, and installing it did not help. */
   | { step: "stopped"; port: number; home: string; error: string | null }
-  | { step: "starting" }
+  /** Installing, updating to this app's version, or restarting the daemon. */
+  | { step: "installing"; action: "install" | "update" | "restart" }
   /** Another program holds the daemon's port. */
   | { step: "foreign"; port: number }
-  /** The daemon speaks another protocol version. */
+  /** The daemon speaks another protocol version and is not older than the app. */
   | { step: "mismatch"; daemonProtocol: number; daemonVersion: string }
+  /** The daemon is older than this app and updating it failed. */
+  | { step: "outdated"; daemonVersion: string; error: string }
   | { step: "error"; message: string }
   | { step: "connecting"; api: Client }
   | { step: "connected"; api: Client }
@@ -23,13 +30,17 @@ export type LinkStep =
 
 export interface Link {
   current: LinkStep;
-  /** Checks the daemon again from the start. */
+  /** Checks the daemon again from the start, installing it if needed. */
   check(): Promise<void>;
-  /** Starts the daemon, then connects. */
-  start(): Promise<void>;
+  /** Installs the daemon as a scheduled task and starts it, then connects. */
+  install(): Promise<void>;
+  /** Restarts the daemon, then connects. */
+  restart(): Promise<void>;
 }
 
 export type Connect = (port: number, token: string) => Client;
+
+const LATE = "It started but did not answer in time. Its log is in the logs folder.";
 
 export function createLink(host: Host, connect: Connect): StoreApi<Link> {
   let api: Client | null = null;
@@ -73,18 +84,41 @@ export function createLink(host: Host, connect: Connect): StoreApi<Link> {
       follow();
     };
 
-    const settle = async (status: DaemonStatus, run: number, error: string | null = null) => {
+    /** Moves on from a status: installs a stopped daemon and updates an older one. */
+    const settle = async (
+      status: DaemonStatus,
+      run: number,
+      { error = null, mayChange = true }: { error?: string | null; mayChange?: boolean } = {},
+    ): Promise<void> => {
       if (run !== generation) {
         return;
       }
       switch (status.state) {
         case "stopped":
+          if (mayChange) {
+            await change(run, "install", () => host.installDaemon());
+            return;
+          }
           set({ current: { step: "stopped", port: status.port, home: status.home, error } });
           return;
         case "foreign":
           set({ current: { step: "foreign", port: status.port } });
           return;
         case "running":
+          if (status.outdated) {
+            if (!mayChange) {
+              set({
+                current: {
+                  step: "outdated",
+                  daemonVersion: status.version,
+                  error: error ?? `The daemon still reports version ${status.version}.`,
+                },
+              });
+              return;
+            }
+            await change(run, "update", () => host.installDaemon());
+            return;
+          }
           if (status.protocol !== PROTOCOL_VERSION) {
             set({
               current: {
@@ -99,12 +133,44 @@ export function createLink(host: Host, connect: Connect): StoreApi<Link> {
       }
     };
 
+    /** Installs, updates or restarts, then settles on what runs afterwards. */
+    const change = async (
+      run: number,
+      action: "install" | "update" | "restart",
+      work: () => Promise<DaemonStatus>,
+    ) => {
+      set({ current: { step: "installing", action } });
+      let status: DaemonStatus;
+      let error: string | null = null;
+      try {
+        status = await work();
+        if (status.state === "stopped") {
+          error = LATE;
+        }
+      } catch (failure) {
+        error = errorText(failure);
+        try {
+          status = await host.daemonStatus();
+        } catch (again) {
+          if (run === generation) {
+            set({ current: { step: "error", message: errorText(again) } });
+          }
+          return;
+        }
+      }
+      await settle(status, run, { error, mayChange: false });
+    };
+
+    const begin = () => {
+      generation += 1;
+      drop();
+      return generation;
+    };
+
     return {
       current: { step: "checking" },
       check: async () => {
-        generation += 1;
-        const run = generation;
-        drop();
+        const run = begin();
         set({ current: { step: "checking" } });
         try {
           await settle(await host.daemonStatus(), run);
@@ -114,23 +180,13 @@ export function createLink(host: Host, connect: Connect): StoreApi<Link> {
           }
         }
       },
-      start: async () => {
-        generation += 1;
-        const run = generation;
-        drop();
-        set({ current: { step: "starting" } });
-        try {
-          const status = await host.startDaemon();
-          const late =
-            status.state === "stopped"
-              ? "The daemon did not answer in time. Its log is in the logs folder of its data folder."
-              : null;
-          await settle(status, run, late);
-        } catch (error) {
-          if (run === generation) {
-            set({ current: { step: "error", message: errorText(error) } });
-          }
-        }
+      install: async () => {
+        const run = begin();
+        await change(run, "install", () => host.installDaemon());
+      },
+      restart: async () => {
+        const run = begin();
+        await change(run, "restart", () => host.restartDaemon());
       },
     };
   });

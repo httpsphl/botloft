@@ -102,6 +102,10 @@ Tipos do protocolo ficam em `botloft-core` e são exportados para TypeScript com
 | Config | `%LOCALAPPDATA%\Botloft\config.toml` | `--config` |
 | Workspaces | `%USERPROFILE%\Botloft\<crew>\<bot>\` | `workspaces_root` na config |
 | Pasta compartilhada da crew | `%USERPROFILE%\Botloft\<crew>\shared\` | |
+| Binário do daemon | `%LOCALAPPDATA%\Botloft\bin\botloftd.exe` (seção 14) | `--home` |
+| App instalado | `%LOCALAPPDATA%\Botloft\` (`Botloft.exe`, o sidecar `botloftd.exe`, `uninstall.exe`; seção 15.4) | |
+
+O instalador por usuário do Tauri põe o app em `%LOCALAPPDATA%\<produto>`, a mesma pasta dos dados. Os nomes não se cruzam, e o desinstalador só apaga os arquivos que instalou e remove a pasta se ela ficar vazia: os dados ficam.
 
 `%LOCALAPPDATA%` e não `%APPDATA%`: o perfil roaming sincroniza em rede e não deve carregar SQLite nem segredos.
 
@@ -552,16 +556,27 @@ Layout, como um app de mensagens:
 
 | Comando | Função |
 |---|---|
-| `daemon_status` | GET `/health` local; diz se o daemon roda, está parado ou se outro programa ocupa a porta |
-| `daemon_start` | (M4) inicia o `botloftd.exe` ao lado do executável do app, destacado (sem console, fora do job do app) para seguir vivo quando o app fecha, e espera o `/health` por até 15 s. No M5 o `daemon_install` o substitui |
-| `daemon_install` | roda `botloftd service install` a partir do sidecar (o `botloftd.exe` ao lado do app), que se copia para `<home>\bin` e registra e inicia a tarefa (seção 14) |
-| `daemon_restart` | `botloftd service restart` |
+| `daemon_status` | GET `/health` local; diz se o daemon roda, está parado ou se outro programa ocupa a porta. Quando o daemon roda, diz também se ele é `outdated`: versão menor que a do app, que é a do sidecar (um workspace Cargo só). Pré-release é ignorado; versão ilegível nunca é antiga |
+| `daemon_install` | roda `botloftd --home <home> service install` a partir do sidecar (o `botloftd.exe` ao lado do app), sem janela, e espera: ele se copia para `<home>\bin`, registra e inicia a tarefa e espera o `/health` (seção 14). Um erro volta na mensagem de uma linha que o daemon escreve no stderr. Substitui o `daemon_start` do M4, que iniciava o daemon destacado ao lado do app |
+| `daemon_restart` | `botloftd --home <home> service restart`, do mesmo jeito |
 | `read_owner_token` | lê `secrets\owner.token` (só no app local) |
 | `open_path` | abre uma pasta no Explorer; recusa arquivos, que o Explorer executaria |
 | `open_url` | abre no navegador padrão um link de uma resposta do bot; só `http` e `https`, porque qualquer outro esquema pode iniciar um programa. Seguir o link dentro do app trocaria a janela pela página |
 | overlay na taskbar | não é comando próprio: o app usa `setOverlayIcon` da janela (permissão `core:window:allow-set-overlay-icon`) e marca o ícone com um ponto enquanto algo espera o dono: aprovação pendente, bot em `auth_error`, ou mensagem não entregue a um bot ativo. Entregas mortas para bot arquivado não contam: foram abandonadas de propósito |
 
 O app acha o daemon como o daemon acha a si mesmo (seção 5): `BOTLOFT_HOME` ou `%LOCALAPPDATA%\Botloft`, com a porta lida do `config.toml` dessa pasta (45710 se ausente). Um daemon de dev com seu próprio `BOTLOFT_HOME` é encontrado sem configuração extra. A CSP libera `ws://127.0.0.1:*` pelo mesmo motivo.
+
+Onboarding (M5): **configuração sem perguntas e sem jargão.** O dono não precisa saber que existe um daemon, uma porta ou uma tarefa agendada; a interface nunca usa essas palavras. Fala de "Botloft" e de "rodar em segundo plano", e o texto técnico (erro do daemon, caminho, porta) fica dobrado sob "Details".
+
+- Nada rodando: o app chama `daemon_install` sozinho ("Getting Botloft ready…", com uma linha dizendo que o Botloft segue rodando em segundo plano depois que a janela fecha e inicia com o Windows). Se falhar, "Botloft couldn't start" com "Try again".
+- Daemon `outdated`: o app o atualiza sozinho ("Updating Botloft…"), porque app e daemon são distribuídos juntos e quem atualizou o app espera o daemon novo. Os bots em turno são interrompidos e retomam a sessão (7.3). Se falhar ou a versão não mudar, "Botloft couldn't finish updating" com "Try again".
+- Cada verificação instala ou atualiza no máximo uma vez: uma falha aparece em vez de virar loop.
+- Daemon mais novo que o app com outro protocolo: pede para instalar a versão mais recente do Botloft.
+- Porta ocupada por outro programa: diz que outro programa está no caminho; porta e `config.toml` ficam em "Details".
+- Conectando sem sucesso: "Try again" e "Restart Botloft in the background" (`daemon_restart`).
+- Claude Code ausente ou inutilizável (`runtimeError`), na tela de boas-vindas e no aviso "Bots can't start": explica que os bots rodam no Claude Code, oferece "How to install Claude Code" (abre `https://code.claude.com/docs/en/setup`) e diz que o Botloft percebe sozinho em até 30 s; o erro vai em "Details".
+
+Em dev, `pnpm tauri dev` usa o `target\debug\botloftd.exe` como sidecar e instala uma tarefa própria da pasta de dev (seção 14). Quem prefere um daemon em primeiro plano roda `cargo run -p botloftd -- serve` antes de abrir o app.
 
 ### 15.3 Direção visual
 
@@ -576,6 +591,13 @@ No chat:
 - Anexos aparecem como miniatura (imagem) ou cartão com nome, tipo e tamanho.
 
 Identidade: o mascote do Botloft é uma chama com olhos, desenhada em vetor em `app/app-icon.svg`. O ícone do app é o mascote branco sobre fundo preto. Cada bot usa o mesmo personagem como avatar, com uma cor própria escolhida na criação. A cor do avatar identifica o bot e não comunica estado: estado continua sendo cor + ícone + texto, como descrito acima.
+
+### 15.4 Instalador e sidecar
+
+- `pnpm bundle` (em `app/`) roda `scripts/sidecar.mjs`, que compila o `botloftd` em release e o copia para `src-tauri/binaries/botloftd-<target triple>.exe`, e depois `tauri build --config src-tauri/tauri.bundle.conf.json`. Esse arquivo liga o `externalBin` e o NSIS; ele fica fora do `tauri.conf.json` porque o `tauri-build` copia o `externalBin` também em dev e no `cargo clippy`, o que exigiria o sidecar em todo build e sobrescreveria o `target\debug\botloftd.exe` com a cópia de release.
+- NSIS por usuário (`installMode = currentUser`), sem pedir administrador, em `%LOCALAPPDATA%\Botloft` (seção 5). O instalador não mexe no daemon: ele roda da própria cópia em `<home>\bin`, então o arquivo do sidecar nunca está em uso.
+- Hook `NSIS_HOOK_PREUNINSTALL` (`src-tauri/windows/hooks.nsh`): numa desinstalação de verdade, `botloftd service uninstall` para o daemon e apaga a tarefa e o binário; bots e dados ficam. Uma atualização também roda o desinstalador antigo, com `/UPDATE`: aí o hook não faz nada e o daemon continua rodando até o app novo abrir e atualizá-lo (15.2).
+- O manifesto do app (`src-tauri/windows/app.manifest`) é o padrão do Tauri (controles comuns v6) mais `longPathAware`.
 
 ## 16. Qualidade
 
