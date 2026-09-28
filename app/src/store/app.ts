@@ -1,9 +1,19 @@
 // App state fed by the daemon: loaded on every (re)connection, then kept
-// current by notifications (spec 11.3).
+// current by notifications (spec 11.3). `sync.ts` does the loading.
 
 import { createStore, type StoreApi } from "zustand/vanilla";
-import { type BotloftApi, type ConnectionState, errorText, type ServerEvent } from "../lib/api";
-import type { Bot, BotId, Crew, CrewId, SystemStatus } from "../lib/protocol.gen";
+import type { BotloftApi, ConnectionState, ServerEvent } from "../lib/api";
+import type {
+  Bot,
+  BotId,
+  Crew,
+  CrewId,
+  Delivery,
+  MessageId,
+  SystemStatus,
+  Task,
+  TaskId,
+} from "../lib/protocol.gen";
 
 export interface AppState {
   connection: ConnectionState;
@@ -13,6 +23,12 @@ export interface AppState {
   system: SystemStatus | null;
   crews: Record<CrewId, Crew>;
   bots: Record<BotId, Bot>;
+  /**
+   * Deliveries by message (each message has one): the most recently
+   * updated ones and every dead one, then every change.
+   */
+  deliveries: Record<MessageId, Delivery>;
+  tasks: Record<TaskId, Task>;
   selectedCrewId: CrewId | null;
   selectedBotId: BotId | null;
   selectCrew(crewId: CrewId | null): void;
@@ -20,12 +36,10 @@ export interface AppState {
   /** Applies a record a call returned, before its notification arrives. */
   putCrew(crew: Crew): void;
   putBot(bot: Bot): void;
+  putDelivery(delivery: Delivery): void;
 }
 
 export type AppStore = StoreApi<AppState>;
-
-/** How often `system.status` is refreshed; it has no notification. */
-const STATUS_POLL_MS = 15_000;
 
 const byCreation = <T extends { createdAt: number; id: string }>(a: T, b: T) =>
   a.createdAt - b.createdAt || a.id.localeCompare(b.id);
@@ -40,6 +54,19 @@ export function botsOf(state: AppState, crewId: CrewId): Bot[] {
     .sort(byCreation);
 }
 
+/** Deliveries that gave up, newest first. */
+export function deadDeliveries(state: AppState): Delivery[] {
+  return Object.values(state.deliveries)
+    .filter((delivery) => delivery.state === "dead")
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+export function tasksOf(state: AppState, crewId: CrewId): Task[] {
+  return Object.values(state.tasks)
+    .filter((task) => task.crewId === crewId)
+    .sort((a, b) => b.createdAt - a.createdAt || b.id.localeCompare(a.id));
+}
+
 export function createAppStore(api: BotloftApi): AppStore {
   return createStore<AppState>()((set, get) => ({
     connection: api.connection(),
@@ -48,6 +75,8 @@ export function createAppStore(api: BotloftApi): AppStore {
     system: null,
     crews: {},
     bots: {},
+    deliveries: {},
+    tasks: {},
     selectedCrewId: null,
     selectedBotId: null,
     selectCrew: (crewId) => set({ selectedCrewId: crewId, selectedBotId: null }),
@@ -59,6 +88,8 @@ export function createAppStore(api: BotloftApi): AppStore {
     },
     putCrew: (crew) => set((state) => withCrew(state, crew)),
     putBot: (bot) => set((state) => withBot(state, bot)),
+    putDelivery: (delivery) =>
+      set((state) => ({ deliveries: { ...state.deliveries, [delivery.messageId]: delivery } })),
   }));
 }
 
@@ -101,74 +132,11 @@ export function applyEvent(state: AppState, event: ServerEvent): Partial<AppStat
       const { state: botState, generation } = event.params;
       return { bots: { ...state.bots, [bot.id]: { ...bot, state: botState, generation } } };
     }
+    case "delivery.changed":
+      return { deliveries: { ...state.deliveries, [event.params.messageId]: event.params } };
+    case "task.changed":
+      return { tasks: { ...state.tasks, [event.params.id]: event.params } };
     default:
       return null;
   }
-}
-
-/** Keeps `store` in sync with the daemon until the returned function runs. */
-export function syncStore(store: AppStore, api: BotloftApi): () => void {
-  let poll: ReturnType<typeof setInterval> | undefined;
-  let alive = true;
-
-  const refreshStatus = () => {
-    api.call("system.status").then(
-      (system) => alive && store.setState({ system }),
-      () => {},
-    );
-  };
-
-  // Each part is applied as soon as it arrives: a notification that comes
-  // later in the stream is newer than the list and must win.
-  const load = () => {
-    store.setState({ loaded: false, loadError: null });
-    const fail = (error: unknown) => alive && store.setState({ loadError: errorText(error) });
-    refreshStatus();
-    const crews = api.call("crews.list").then((list) => {
-      if (alive) {
-        store.setState({ crews: Object.fromEntries(list.map((crew) => [crew.id, crew])) });
-      }
-    });
-    const bots = api.call("bots.list", {}).then((list) => {
-      if (alive) {
-        store.setState({ bots: Object.fromEntries(list.map((bot) => [bot.id, bot])) });
-      }
-    });
-    Promise.all([crews, bots]).then(() => {
-      if (!alive) {
-        return;
-      }
-      const state = store.getState();
-      const valid = state.selectedCrewId !== null && state.crews[state.selectedCrewId];
-      if (!valid) {
-        state.selectCrew(crewList(state)[0]?.id ?? null);
-      }
-      store.setState({ loaded: true });
-    }, fail);
-  };
-
-  const onConnection = (connection: ConnectionState) => {
-    store.setState({ connection });
-    clearInterval(poll);
-    if (connection.kind === "open") {
-      load();
-      poll = setInterval(refreshStatus, STATUS_POLL_MS);
-    }
-  };
-
-  const unsubscribeEvents = api.subscribe((event) => {
-    const change = applyEvent(store.getState(), event);
-    if (change) {
-      store.setState(change);
-    }
-  });
-  const unsubscribeConnection = api.onConnection(onConnection);
-  onConnection(api.connection());
-
-  return () => {
-    alive = false;
-    clearInterval(poll);
-    unsubscribeEvents();
-    unsubscribeConnection();
-  };
 }

@@ -2,6 +2,7 @@
 // output to attached bots, and the input and sizes the app sent.
 
 import { decodeBytes, encodeBytes } from "./base64";
+import type { FakeBotloft, Handlers } from "./fake";
 import type {
   BotId,
   TerminalAttachParams,
@@ -76,6 +77,30 @@ export class FakeTerminals {
 
   write({ botId, data }: TerminalWriteParams): void {
     this.input.push({ botId, text: new TextDecoder().decode(decodeBytes(data)) });
+  }
+
+  handlers(
+    fake: FakeBotloft,
+  ): Pick<Handlers, "terminal.attach" | "terminal.detach" | "terminal.write" | "terminal.resize"> {
+    return {
+      "terminal.attach": (params) => {
+        fake.bot(params.botId, false);
+        return this.attach(params);
+      },
+      "terminal.detach": ({ botId }) => {
+        this.detach(botId);
+        return null;
+      },
+      "terminal.write": (params) => {
+        fake.bot(params.botId);
+        this.write(params);
+        return null;
+      },
+      "terminal.resize": ({ botId, cols, rows }) => {
+        this.sizes.set(botId, { cols, rows });
+        return null;
+      },
+    };
   }
 
   private data(botId: BotId, generation: number, offset: number, bytes: Uint8Array): void {

@@ -7,10 +7,13 @@ import { useApi, useApp, useHost } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Confirm } from "../../ui/Confirm";
 import { Menu } from "../../ui/Menu";
+import { type Tab, Tabs, tabId } from "../../ui/Tabs";
 import { attempt } from "../../ui/toast";
-import { BotAvatar } from "../bots/BotAvatar";
 import { BotDialog } from "../bots/BotDialog";
-import { BotStateBadge } from "../bots/BotStateBadge";
+import { Composer } from "../messages/Composer";
+import { Timeline } from "../messages/Timeline";
+import { TaskList } from "../tasks/TaskList";
+import { CrewBots } from "./CrewBots";
 import { CrewDialog } from "./CrewDialog";
 
 /** The crew's `shared` folder, next to its bots' workspaces (spec 5). */
@@ -20,14 +23,21 @@ export function sharedFolder(bots: Bot[]): string | null {
 }
 
 type Open = "bot" | "rename" | "archive" | null;
+type Pane = "bots" | "timeline" | "tasks";
+
+const TABS: Tab<Pane>[] = [
+  { id: "bots", label: "Bots" },
+  { id: "timeline", label: "Timeline" },
+  { id: "tasks", label: "Tasks" },
+];
 
 export function CrewView({ crew }: { crew: Crew }) {
   const api = useApi();
   const host = useHost();
   const putCrew = useApp((state) => state.putCrew);
-  const selectBot = useApp((state) => state.selectBot);
   const bots = useApp(useShallow((state) => botsOf(state, crew.id)));
   const [open, setOpen] = useState<Open>(null);
+  const [pane, setPane] = useState<Pane>("bots");
   const shared = sharedFolder(bots);
   const close = () => setOpen(null);
 
@@ -38,7 +48,7 @@ export function CrewView({ crew }: { crew: Crew }) {
 
   return (
     <section aria-label={crew.name} className="flex min-h-0 flex-1 flex-col">
-      <header className="flex items-center gap-3 border-line border-b px-6 py-4">
+      <header className="flex items-center gap-3 border-line border-b px-5 py-3.5">
         <div className="min-w-0 flex-1">
           <h1 className="truncate font-semibold text-xl tracking-tight">{crew.name}</h1>
           <p className="mt-0.5 text-muted text-sm">
@@ -80,43 +90,38 @@ export function CrewView({ crew }: { crew: Crew }) {
         />
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-6">
-        {bots.length === 0 ? (
-          <div className="border border-line border-dashed px-6 py-10 text-center">
-            <p className="font-medium">No bots in {crew.name} yet.</p>
-            <p className="mt-1 text-muted text-sm">
-              A bot is a Claude Code session that keeps running, with its own folder and role.
-            </p>
-            <Button className="mt-4" variant="primary" icon={Plus} onClick={() => setOpen("bot")}>
-              New bot
-            </Button>
-          </div>
-        ) : (
-          <ul className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
-            {bots.map((bot) => (
-              <li key={bot.id}>
-                <button
-                  type="button"
-                  onClick={() => selectBot(bot.id)}
-                  className="flex h-full w-full flex-col gap-2 border border-line bg-panel p-3 text-left hover:border-line-strong"
-                >
-                  <div className="flex w-full items-center gap-2.5">
-                    <BotAvatar color={bot.color} size={32} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold">{bot.name}</p>
-                      <p className="truncate font-mono text-muted text-xs">@{bot.handle}</p>
-                    </div>
-                  </div>
-                  <p className="line-clamp-2 min-h-10 text-ink-soft text-sm">
-                    {bot.role || "No role yet."}
-                  </p>
-                  <BotStateBadge bot={bot} crewPaused={crew.paused} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <Tabs<Pane> label="Crew views" tabs={TABS} value={pane} onChange={setPane} />
+      {pane === "bots" && (
+        <div
+          role="tabpanel"
+          aria-labelledby={tabId("bots")}
+          className="min-h-0 flex-1 overflow-y-auto p-5"
+        >
+          <CrewBots crew={crew} bots={bots} onNewBot={() => setOpen("bot")} />
+        </div>
+      )}
+      {pane === "timeline" && (
+        <div
+          role="tabpanel"
+          aria-labelledby={tabId("timeline")}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <Timeline
+            filter={{ crewId: crew.id }}
+            empty="No messages yet. Write to a bot below; what the bots send each other shows up here too."
+            composer={(onSent) => <Composer crewId={crew.id} onSent={onSent} />}
+          />
+        </div>
+      )}
+      {pane === "tasks" && (
+        <div
+          role="tabpanel"
+          aria-labelledby={tabId("tasks")}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <TaskList crewId={crew.id} />
+        </div>
+      )}
 
       {open === "bot" && <BotDialog crewId={crew.id} onClose={close} />}
       {open === "rename" && <CrewDialog crew={crew} onClose={close} />}

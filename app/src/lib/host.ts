@@ -16,6 +16,8 @@ export interface AppWindow {
   isMaximized(): Promise<boolean>;
   /** Called when the window is resized; returns the unsubscribe function. */
   onResized(listener: () => void): Promise<() => void>;
+  /** Marks the taskbar icon while something waits for the owner. */
+  setAttention(on: boolean): Promise<void>;
 }
 
 export interface Host {

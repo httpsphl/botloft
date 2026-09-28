@@ -309,6 +309,7 @@ Reply with send_message(to: "revisor"). When the task is done, call complete_tas
 - Resultado de task: `· result of task tsk_... · done` (ou `failed`) e a instrução de resposta.
 - Aviso do daemon (task vencida): `from Botloft` e o texto do aviso, sem instrução.
 - O prazo é relativo (`due in 45 min`, `due in 2 h`, `overdue`) e calculado na hora do envio: o bot não sabe a hora atual, e o app mostra o horário absoluto a partir de `deadline_at`.
+- Tudo que chega pelo inbox, inclusive a mensagem do owner, o Claude Code apresenta como vindo de outra sessão e não digitado pelo usuário. Visto com 2.1.284: depois do envelope vem um aviso de que um par não concede permissão nem aprova prompt pendente. Então uma mensagem pela timeline tem autoridade de colega. Para agir como o usuário do bot (aprovar um prompt, mudar configuração), o owner digita no terminal do bot.
 
 ### 9.4 Tasks entre bots
 
@@ -453,8 +454,8 @@ app/src/
     crews/        lista, criar, renomear, pausar
     bots/         lista, criar, editar, estado
     terminal/     view xterm.js, attach/replay, input, resize
-    messages/     timeline da crew, enviar mensagem, deliveries com falha
-    tasks/        tarefas abertas por crew
+    messages/     timeline da crew e do bot, enviar mensagem, estado de entrega, deliveries com falha (botão na barra de título, retry)
+    tasks/        tarefas da crew (abertas por padrão, todas sob demanda)
     settings/
   lib/
     rpc.ts        cliente JSON-RPC com reconexão e fila de requests
@@ -469,7 +470,7 @@ app/src/
   dev/            prévia: `pnpm dev` num navegador comum usa FakeBotloft, ou um daemon de dev real com `?live=<porta>` (só em dev)
 ```
 
-Componentes dependem só de `BotloftApi` e `Host`, nunca do cliente concreto nem do Tauri. O store recarrega crews, bots e `system.status` a cada (re)conexão e depois segue as notificações; `system.status` não tem notificação e é relido a cada 15 s.
+Componentes dependem só de `BotloftApi` e `Host`, nunca do cliente concreto nem do Tauri. O store recarrega crews, bots e `system.status` a cada (re)conexão e depois segue as notificações; `system.status` não tem notificação e é relido a cada 15 s. Deliveries entram no store pela message (cada message tem uma): as 500 atualizadas mais recentemente e todas as mortas, depois cada `delivery.changed`; tasks, todas, depois cada `task.changed`. Mensagens não ficam no store: cada timeline carrega uma página (50) do que mostra, pede as anteriores sob demanda com `before` e acrescenta as novas por `message.created`.
 
 ### 15.2 Comandos Tauri
 
@@ -481,7 +482,7 @@ Componentes dependem só de `BotloftApi` e `Host`, nunca do cliente concreto nem
 | `daemon_restart` | `botloftd service restart` |
 | `read_owner_token` | lê `secrets\owner.token` (só no app local) |
 | `open_path` | abre uma pasta no Explorer; recusa arquivos, que o Explorer executaria |
-| `set_unread_badge` | overlay icon na taskbar |
+| overlay na taskbar | não é comando próprio: o app usa `setOverlayIcon` da janela (permissão `core:window:allow-set-overlay-icon`) e marca o ícone com um ponto enquanto algo espera o dono: bot em `needs_approval` ou `auth_error`, ou mensagem não entregue a um bot ativo. Entregas mortas para bot arquivado não contam: foram abandonadas de propósito |
 
 O app acha o daemon como o daemon acha a si mesmo (seção 5): `BOTLOFT_HOME` ou `%LOCALAPPDATA%\Botloft`, com a porta lida do `config.toml` dessa pasta (45710 se ausente). Um daemon de dev com seu próprio `BOTLOFT_HOME` é encontrado sem configuração extra. A CSP libera `ws://127.0.0.1:*` pelo mesmo motivo.
 
