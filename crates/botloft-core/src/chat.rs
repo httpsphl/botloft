@@ -59,6 +59,14 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
         "WebSearch" => field(input, "query").map(str::to_owned),
         "Task" | "Agent" => field(input, "description").map(str::to_owned),
         "TodoWrite" => Some("Updated the plan".to_owned()),
+        // Claude Code loads deferred tools (such as ours) by name first.
+        "ToolSearch" => field(input, "query").map(|query| match query.strip_prefix("select:") {
+            Some(names) => {
+                let labels: Vec<_> = names.split(',').map(|n| tool_label(n.trim())).collect();
+                format!("load {}", labels.join(", "))
+            }
+            None => query.to_owned(),
+        }),
         "mcp__botloft__send_message" => {
             field(input, "to").map(|to| format!("to @{}", to.trim_start_matches('@')))
         }
@@ -144,6 +152,17 @@ mod tests {
                 &json!({ "to": "@writer", "body": "x" })
             ),
             "to @writer"
+        );
+        assert_eq!(
+            tool_summary(
+                "ToolSearch",
+                &json!({ "query": "select:mcp__botloft__send_message,Read", "max_results": 3 })
+            ),
+            "load send_message, Read"
+        );
+        assert_eq!(
+            tool_summary("ToolSearch", &json!({ "query": "notebook jupyter" })),
+            "notebook jupyter"
         );
         assert_eq!(tool_summary("SomethingNew", &json!({ "a": 1 })), "");
         assert_eq!(tool_label("mcp__botloft__send_message"), "send_message");
