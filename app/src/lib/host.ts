@@ -27,5 +27,7 @@ export interface Host {
   readOwnerToken(): Promise<string>;
   /** Opens a folder in Explorer. */
   openPath(path: string): Promise<void>;
+  /** Opens an http(s) link in the default browser. */
+  openUrl(url: string): Promise<void>;
   window: AppWindow;
 }

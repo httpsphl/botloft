@@ -555,6 +555,7 @@ Layout, como um app de mensagens:
 | `daemon_restart` | `botloftd service restart` |
 | `read_owner_token` | lê `secrets\owner.token` (só no app local) |
 | `open_path` | abre uma pasta no Explorer; recusa arquivos, que o Explorer executaria |
+| `open_url` | abre no navegador padrão um link de uma resposta do bot; só `http` e `https`, porque qualquer outro esquema pode iniciar um programa. Seguir o link dentro do app trocaria a janela pela página |
 | overlay na taskbar | não é comando próprio: o app usa `setOverlayIcon` da janela (permissão `core:window:allow-set-overlay-icon`) e marca o ícone com um ponto enquanto algo espera o dono: aprovação pendente, bot em `auth_error`, ou mensagem não entregue a um bot ativo. Entregas mortas para bot arquivado não contam: foram abandonadas de propósito |
 
 O app acha o daemon como o daemon acha a si mesmo (seção 5): `BOTLOFT_HOME` ou `%LOCALAPPDATA%\Botloft`, com a porta lida do `config.toml` dessa pasta (45710 se ausente). Um daemon de dev com seu próprio `BOTLOFT_HOME` é encontrado sem configuração extra. A CSP libera `ws://127.0.0.1:*` pelo mesmo motivo.
