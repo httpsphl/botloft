@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { FakeBotloft } from "../lib/fake";
-import { botsOf, createAppStore, crewList, syncStore } from "./app";
+import { botsOf, createAppStore, crewList } from "./app";
+import { syncStore } from "./sync";
 
 async function synced(fake: FakeBotloft) {
   const store = createAppStore(fake);

@@ -3,7 +3,7 @@
 // handles, archiving, and the notifications each change sends.
 
 import type { BotloftApi } from "./api";
-import { conversationHandlers } from "./fakeConversation";
+import { FakeConversation } from "./fakeConversation";
 import { checkName, conflict, invalid, notFound, slugify } from "./fakeRules";
 import { FakeTerminals } from "./fakeTerminal";
 import {
@@ -13,10 +13,7 @@ import {
   type BotState,
   type Crew,
   type CrewId,
-  type Delivery,
-  type Message,
   type SystemStatus,
-  type Task,
 } from "./protocol.gen";
 import type {
   ConnectionState,
@@ -33,9 +30,6 @@ export type Handlers = { [M in Method]: (params: Params<M>) => Result<M> };
 export class FakeBotloft implements BotloftApi {
   readonly crews = new Map<CrewId, Crew>();
   readonly bots = new Map<BotId, Bot>();
-  readonly messages: Message[] = [];
-  readonly deliveries = new Map<string, Delivery>();
-  readonly tasks = new Map<string, Task>();
   system: SystemStatus = {
     daemonVersion: "0.1.0",
     protocol: 1,
@@ -47,7 +41,9 @@ export class FakeBotloft implements BotloftApi {
   /** Every call, in order. */
   readonly calls: { method: Method; params: unknown }[] = [];
   readonly terminals = new FakeTerminals((event) => this.emit(event));
-  now = 1_760_000_000_000;
+  readonly conversation = new FakeConversation(this);
+  /** Clock for created and updated times. */
+  now = Date.now();
   closed = false;
   private counter = 0;
   private state: ConnectionState = { kind: "open", daemonVersion: "0.1.0" };
@@ -285,6 +281,7 @@ export class FakeBotloft implements BotloftApi {
       }
       return bot;
     },
-    ...conversationHandlers(this),
+    ...this.terminals.handlers(this),
+    ...this.conversation.handlers(),
   };
 }

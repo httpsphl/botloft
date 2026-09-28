@@ -4,7 +4,8 @@ import { createContext, type ReactNode, useContext, useEffect, useState } from "
 import { useStore } from "zustand";
 import type { BotloftApi } from "../lib/api";
 import type { Host } from "../lib/host";
-import { type AppState, type AppStore, createAppStore, syncStore } from "./app";
+import { type AppState, type AppStore, createAppStore } from "./app";
+import { syncStore } from "./sync";
 
 const ApiContext = createContext<BotloftApi | null>(null);
 const StoreContext = createContext<AppStore | null>(null);
