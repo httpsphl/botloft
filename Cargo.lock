@@ -266,8 +266,12 @@ dependencies = [
 name = "botloft-app"
 version = "0.1.0"
 dependencies = [
+ "dirs",
+ "serde",
+ "serde_json",
  "tauri",
  "tauri-build",
+ "toml 1.1.6+spec-1.1.0",
 ]
 
 [[package]]
