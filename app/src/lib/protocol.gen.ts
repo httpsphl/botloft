@@ -302,6 +302,11 @@ export type DeliveriesListParams = { state?: DeliveryState, botId?: BotId, };
 
 export type DeliveryIdParams = { deliveryId: DeliveryId, };
 
+/**
+ * Newest first.
+ */
+export type TasksListParams = { crewId?: CrewId, status?: TaskStatus, };
+
 /** Params and result of every request method. */
 export interface RpcMethods {
   "session.hello": { params: HelloParams; result: HelloResult };
@@ -325,6 +330,7 @@ export interface RpcMethods {
   "messages.list": { params: MessagesListParams; result: Array<Message> };
   "deliveries.list": { params: DeliveriesListParams; result: Array<Delivery> };
   "deliveries.retry": { params: DeliveryIdParams; result: Delivery };
+  "tasks.list": { params: TasksListParams; result: Array<Task> };
 }
 
 /** Params of every server notification. */

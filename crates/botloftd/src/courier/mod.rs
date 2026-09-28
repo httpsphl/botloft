@@ -1,6 +1,6 @@
 //! The courier (spec 9.1): moves pending deliveries into the bots' inboxes,
 //! in order and one at a time per bot, retrying with backoff until they are
-//! sent or give up.
+//! sent or give up. Each cycle also expires overdue tasks (spec 9.4).
 
 pub mod fake;
 pub mod inbox;
@@ -19,6 +19,7 @@ use tracing::{debug, warn};
 pub use self::inbox::{InboxWriter, PipeInbox};
 pub use self::settings::CourierSettings;
 use crate::clock;
+use crate::service::tasks;
 use crate::state::{Daemon, Event};
 use crate::supervisor::Inbox;
 
@@ -87,6 +88,7 @@ fn cycle(daemon: &Arc<Daemon>) {
         }
         Err(err) => warn!("courier could not recover leases: {err}"),
     }
+    tasks::expire_overdue(daemon, &store, now);
     let due = match store.due_deliveries(now) {
         Ok(due) => due,
         Err(err) => {

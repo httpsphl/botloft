@@ -1,5 +1,5 @@
 //! HTTP server on 127.0.0.1: `GET /health`, the `/rpc` WebSocket for the
-//! app and `POST /hooks/{event}` for the bots. `/mcp` joins with the tools.
+//! app, and `POST /hooks/{event}` and `POST /mcp` for the bots.
 
 use std::future::Future;
 use std::sync::Arc;
@@ -14,7 +14,7 @@ use serde_json::json;
 use tokio::net::TcpListener;
 
 use crate::state::Daemon;
-use crate::{hooks, rpc};
+use crate::{hooks, rpc, tools};
 
 /// Browser origins allowed to open `/rpc` (spec 11.1): the Tauri app in
 /// production and the Vite dev server. Clients that send no `Origin`, such
@@ -29,6 +29,8 @@ pub const ALLOWED_ORIGINS: &[&str] = &[
 const MAX_MESSAGE_BYTES: usize = 4 << 20;
 /// Largest hook body; payloads are small JSON objects.
 const MAX_HOOK_BYTES: usize = 1 << 20;
+/// Largest MCP request: a message of 100 000 characters fits with room.
+const MAX_MCP_BYTES: usize = 2 << 20;
 
 pub fn router(daemon: Arc<Daemon>) -> Router {
     Router::new()
@@ -37,6 +39,13 @@ pub fn router(daemon: Arc<Daemon>) -> Router {
         .route(
             "/hooks/{event}",
             post(hooks::handle).layer(DefaultBodyLimit::max(MAX_HOOK_BYTES)),
+        )
+        .route(
+            "/mcp",
+            post(tools::handle)
+                .get(tools::not_allowed)
+                .delete(tools::not_allowed)
+                .layer(DefaultBodyLimit::max(MAX_MCP_BYTES)),
         )
         .with_state(daemon)
 }

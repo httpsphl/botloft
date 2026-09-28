@@ -9,6 +9,9 @@ use serde_json::{Value, json};
 use crate::hooks::EVENTS as HOOKS;
 use crate::paths::permission_rule_path;
 
+/// Permission rule for every tool of the `botloft` MCP server.
+const BOTLOFT_TOOLS: &str = "mcp__botloft";
+
 /// `.claude/settings.json` (spec 7.5). Hooks use exec form so Claude Code
 /// runs `botloftd.exe` directly, without a shell.
 pub fn settings_json(botloft_bin: &Path, botloft_home: &Path) -> Value {
@@ -24,7 +27,11 @@ pub fn settings_json(botloft_bin: &Path, botloft_home: &Path) -> Value {
     json!({
         "crossSessionInbound": "accept",
         "hooks": hooks,
-        "permissions": { "deny": [format!("Read({secrets}/**)")] },
+        "permissions": {
+            // The crew tools run without a prompt, so bots work unattended.
+            "allow": [BOTLOFT_TOOLS],
+            "deny": [format!("Read({secrets}/**)")],
+        },
     })
 }
 
@@ -94,6 +101,8 @@ other bots of your crew.
   - `complete_task`: report the result of a task assigned to you; the requester is told.
   - `my_tasks`: open tasks assigned to you or requested by you.
 - You can only reach bots of your own crew.
+- A task you receive ends with `complete_task`, also when you could not do it
+  (`status: \"failed\"` and why): the bot that asked is waiting for it.
 - Do not wait in a loop for a reply. Finish your turn; the reply arrives as a
   new message.
 ",
@@ -129,6 +138,7 @@ mod tests {
             settings["permissions"]["deny"][0],
             "Read(//c/Users/ana/AppData/Local/Botloft/secrets/**)"
         );
+        assert_eq!(settings["permissions"]["allow"], json!(["mcp__botloft"]));
     }
 
     #[test]

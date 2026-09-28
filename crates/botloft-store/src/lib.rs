@@ -22,6 +22,7 @@ pub use bots::BotRecord;
 pub use deliveries::DeliveryOutcome;
 pub use messages::MessageFilter;
 pub use migrate::LATEST_VERSION;
+pub use tasks::TaskFilter;
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {

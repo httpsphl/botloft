@@ -40,6 +40,7 @@ pub mod method {
     pub const MESSAGES_LIST: &str = "messages.list";
     pub const DELIVERIES_LIST: &str = "deliveries.list";
     pub const DELIVERIES_RETRY: &str = "deliveries.retry";
+    pub const TASKS_LIST: &str = "tasks.list";
 }
 
 /// Server notification method names.

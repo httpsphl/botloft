@@ -223,6 +223,19 @@ pub struct DeliveryIdParams {
     pub delivery_id: DeliveryId,
 }
 
+/// Newest first.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct TasksListParams {
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub crew_id: Option<CrewId>,
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub status: Option<TaskStatus>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

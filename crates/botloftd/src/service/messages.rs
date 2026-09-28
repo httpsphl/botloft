@@ -42,7 +42,15 @@ pub(crate) fn post(
     message: Message,
     task: Option<Task>,
 ) -> ApiResult<Message> {
-    let delivery = Delivery {
+    let delivery = pending_delivery(&message);
+    store.insert_message(&message, &delivery, task.as_ref())?;
+    announce(daemon, task, &message, delivery);
+    Ok(message)
+}
+
+/// A new delivery of `message`, due now.
+pub(crate) fn pending_delivery(message: &Message) -> Delivery {
+    Delivery {
         id: DeliveryId::generate(),
         message_id: message.id.clone(),
         bot_id: message.to_bot_id.clone(),
@@ -51,15 +59,18 @@ pub(crate) fn post(
         next_attempt_at: message.created_at,
         last_error: None,
         updated_at: message.created_at,
-    };
-    store.insert_message(&message, &delivery, task.as_ref())?;
+    }
+}
+
+/// Tells the app about a stored message (and the task it changed) and wakes
+/// the courier for it.
+pub(crate) fn announce(daemon: &Daemon, task: Option<Task>, message: &Message, delivery: Delivery) {
     if let Some(task) = task {
         daemon.emit(Event::TaskChanged(task));
     }
     daemon.emit(Event::MessageCreated(message.clone()));
     daemon.emit(Event::DeliveryChanged(delivery));
     daemon.courier.wake();
-    Ok(message)
 }
 
 pub fn list(daemon: &Daemon, params: MessagesListParams) -> ApiResult<Vec<Message>> {

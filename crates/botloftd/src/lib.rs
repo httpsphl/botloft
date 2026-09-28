@@ -17,4 +17,5 @@ pub mod service;
 pub mod state;
 pub mod supervisor;
 pub mod terminal;
+pub mod tools;
 pub mod workspace;

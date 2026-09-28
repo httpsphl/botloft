@@ -3,6 +3,9 @@
 
 #![allow(dead_code)] // each test file uses a different part of the harness
 
+pub mod bots;
+pub mod mcp;
+
 use std::collections::VecDeque;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -18,6 +21,7 @@ use botloftd::runtime::claude::Claude;
 use botloftd::runtime::fake::FakeRuntime;
 use botloftd::secrets::TokenHash;
 use botloftd::server;
+use botloftd::service::tasks::TaskSettings;
 use botloftd::state::{Daemon, DaemonOptions};
 use botloftd::supervisor::{self, ClaudeSource, SupervisorSettings};
 use futures_util::{SinkExt, StreamExt};
@@ -93,6 +97,10 @@ pub fn new_daemon(settings: SupervisorSettings) -> Parts {
         clock: Arc::clone(&clock) as _,
         inbox: Arc::new(inbox.clone()),
         courier: courier_settings(),
+        tasks: TaskSettings {
+            max_hops: 3,
+            default_deadline: Duration::from_secs(120 * 60),
+        },
     });
     Parts {
         daemon,

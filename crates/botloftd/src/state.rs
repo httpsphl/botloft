@@ -14,6 +14,7 @@ use crate::courier::{Courier, CourierSettings, InboxWriter};
 use crate::paths::Paths;
 use crate::runtime::Runtime;
 use crate::secrets::TokenHash;
+use crate::service::tasks::TaskSettings;
 use crate::supervisor::{Supervisor, SupervisorSettings};
 use crate::workspace::WorkspaceEnv;
 
@@ -44,6 +45,7 @@ pub struct DaemonOptions {
     pub clock: Arc<dyn Clock>,
     pub inbox: Arc<dyn InboxWriter>,
     pub courier: CourierSettings,
+    pub tasks: TaskSettings,
 }
 
 pub struct Daemon {
@@ -52,6 +54,7 @@ pub struct Daemon {
     pub bin: PathBuf,
     pub supervisor: Supervisor,
     pub courier: Courier,
+    pub tasks: TaskSettings,
     /// Time for everything stored or compared with stored times.
     pub clock: Arc<dyn Clock>,
     store: Mutex<Store>,
@@ -74,6 +77,7 @@ impl Daemon {
                 events.clone(),
             ),
             courier: Courier::new(options.courier, options.inbox),
+            tasks: options.tasks,
             clock: options.clock,
             paths: options.paths,
             port: options.port,

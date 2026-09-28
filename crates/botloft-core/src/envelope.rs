@@ -69,7 +69,7 @@ impl Envelope<'_> {
 
 /// Time left until `deadline_ms`, rounded for a reader who does not know
 /// the current time.
-fn due(deadline_ms: i64, now_ms: i64) -> String {
+pub fn due(deadline_ms: i64, now_ms: i64) -> String {
     let left = deadline_ms.saturating_sub(now_ms);
     if left <= 0 {
         return "overdue".to_owned();

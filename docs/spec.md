@@ -225,6 +225,7 @@ A confiança de uma pasta pai cobre as subpastas (fora de repositório git). O o
     "SessionEnd":       [{ "hooks": [{ "type": "command", "command": "<BOTLOFT_BIN>", "args": ["hook", "session-end"] }] }]
   },
   "permissions": {
+    "allow": ["mcp__botloft"],
     "deny": ["Read(//c/Users/<usuário>/AppData/Local/Botloft/secrets/**)"]
   }
 }
@@ -232,6 +233,7 @@ A confiança de uma pasta pai cobre as subpastas (fora de repositório git). O o
 
 - Hooks em **exec form** (`args` presente): o Claude Code executa o binário direto, sem Git Bash nem PowerShell. Some o problema de quoting, de `curl` e de path com barra invertida.
 - O `command` do exec form precisa ser um `.exe` de verdade; shims `.cmd`/`.bat` exigem shell. `botloftd.exe` atende.
+- `mcp__botloft` libera as tools da crew (seção 10) sem prompt de permissão: um bot sozinho não tem quem aprove, e a regra vale só para o servidor `botloft`.
 - `crossSessionInbound: accept` é obrigatório: o daemon não é processo filho da sessão, então sem isso a mensagem pode ficar retida esperando aprovação.
 - Caminho absoluto em permission rule usa o prefixo `//` e a forma POSIX que o Claude Code aplica no Windows: `C:\Users\ana\...` vira `//c/Users/ana/...` (letra do drive em minúscula). Uma barra só (`/caminho`) é relativa à origem do settings, não à raiz, e não protegeria nada. O daemon converte `BOTLOFT_HOME` para essa forma ao gerar o arquivo.
 
@@ -309,31 +311,42 @@ Reply with send_message(to: "revisor"). When the task is done, call complete_tas
 
 ### 9.4 Tasks entre bots
 
-- `send_message` com `kind: "task"` cria uma `task` ligada à message.
+- `send_message` com `kind: "task"` cria uma `task` ligada à message, na mesma transação.
 - Campos: `requester_bot_id`, `assignee_bot_id`, `status` (`open`, `done`, `failed`, `cancelled`, `expired`), `deadline_at`, `hops`, `origin` (id da task que originou a cadeia).
-- Uma task criada por um bot enquanto trabalha em outra herda `origin` e `hops + 1`. Acima de `max_hops`, a tool recusa com erro explicativo.
-- `complete_task` grava o resultado e envia automaticamente uma message de volta ao solicitante.
-- Task vencida vira `expired` e o solicitante recebe aviso.
+- Prazo: `deadline_minutes` de 1 a 10 080 (uma semana); sem ele, `default_deadline_minutes`.
+- Cadeia: a task que o bot está fazendo é a task `open` atribuída a ele com mais `hops` (a mais nova, no empate). Uma task criada por ele herda `origin` dessa task (ou o id dela, se ela for a primeira) e `hops + 1`. Uma task sem cadeia tem `hops = 1`. Acima de `max_hops`, a tool recusa com um erro que diz o passo, o limite e onde a cadeia começou. Notas não contam hops.
+- `complete_task` só vale para quem recebeu a task, com status `open` ou `expired`. Grava o resultado e, na mesma transação, cria a message `result` para o solicitante.
+- Task vencida vira `expired` no ciclo do courier, e o solicitante recebe um aviso do daemon (`from Botloft`). Ela continua aceitando resultado atrasado.
+- `cancelled` fica reservado: nenhuma tool cancela task no MVP.
 
 ## 10. Tools MCP dos bots (`POST /mcp`)
 
-Autenticação: `Authorization: Bearer <token do bot>`. `mcp.json` gerado:
+Autenticação: `Authorization: Bearer <token do bot>`, só de uma generation viva; outro token dá HTTP 401. `mcp.json` gerado:
 
 ```json
 { "mcpServers": { "botloft": { "type": "http", "url": "http://127.0.0.1:45710/mcp",
   "headers": { "Authorization": "Bearer ${BOTLOFT_BOT_TOKEN}" } } } }
 ```
 
-**Verificar** que a expansão `${VAR}` em headers do `mcp.json` funciona na versão alvo; plano B é escrever o token direto no arquivo (com ACL só do usuário).
+A expansão `${BOTLOFT_BOT_TOKEN}` foi confirmada com o Claude Code real (seção 19), então o token não vai para o disco.
 
-| Tool | Entrada | Saída |
+Transporte: Streamable HTTP, só POST e resposta `application/json`, sem sessão e sem stream. O servidor fala duas eras do MCP, porque o Claude Code 2.1.284 tenta a nova e cai para a antiga:
+
+- **2026-07-28** (sem handshake): cada request traz `_meta` com `io.modelcontextprotocol/protocolVersion` e `clientCapabilities`, e os headers `MCP-Protocol-Version`, `Mcp-Method` e, em `tools/call`, `Mcp-Name` (com a forma `=?base64?...?=`). Header que não bate com o corpo dá 400 com `-32020`; `_meta` incompleto dá 400 com `-32602`; método desconhecido dá 404 com `-32601`. Resultados levam `resultType: "complete"` e `_meta.serverInfo`. `server/discover` responde versões, `capabilities: {tools: {}}` e instruções.
+- **2025-11-25, 2025-06-18 e 2025-03-26**: `initialize` (sem header de versão) negocia a versão pedida, ou 2025-11-25 se não conhecer. Notificações recebem 202.
+- Qualquer outra versão no header dá 400 com `-32022` e a lista de versões aceitas. `GET` e `DELETE` dão 405. Request com `Origin` dá 403 (bots não mandam `Origin`; navegador sempre manda).
+
+| Tool | Entrada | Saída (JSON em texto) |
 |---|---|---|
-| `crew_roster` | nenhuma | bots da mesma crew: handle, papel, estado |
-| `send_message` | `to` (handle), `body`, `kind?` (`note` padrão, `task`), `deadline_minutes?` | ids da message e da task |
-| `complete_task` | `task_id`, `result`, `status?` (`done` padrão, `failed`) | ok |
-| `my_tasks` | `role?` (`assigned`, `requested`) | lista de tasks abertas |
+| `crew_roster` | nenhuma | `crew`, `you` e os outros bots da crew: handle, nome, papel, estado |
+| `send_message` | `to` (handle, com ou sem `@`), `body`, `kind?` (`note` padrão, `task`), `deadline_minutes?` (só task) | `message_id`, `task_id` e `due` (task), e um lembrete de que a resposta chega depois |
+| `complete_task` | `task_id`, `result`, `status?` (`done` padrão, `failed`) | `task_id`, `status` e quem recebe o resultado |
+| `my_tasks` | `role?` (`assigned`, `requested`) | tasks `open` e `expired`: id, de, para, status, prazo relativo, hops e o pedido original |
 
-Endereçamento só dentro da crew. Bot não enxerga bots de outras crews.
+- Erro que o modelo pode corrigir (handle desconhecido, argumento inválido, limite de hops, task de outro bot) volta como resultado com `isError: true` e uma frase explicando. Só tool desconhecida ou chamada malformada vira erro JSON-RPC (`-32602`).
+- Erro interno não expõe detalhes ao bot; vai para o log.
+
+Endereçamento só dentro da crew. Bot não enxerga bots nem tasks de outras crews.
 
 ## 11. Protocolo do app (JSON-RPC 2.0 sobre WebSocket)
 
@@ -511,7 +524,8 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28. "Co
 | Formato da linha de mensagem no inbox | 9.2 | **Não documentado**; **testado com 2.1.283**: `{"type":"user","message":{"role":"user","content":...}}` é entregue e abre um turno (detalhes em 9.2) | feito (M3) |
 | `crossSessionInbound` | 7.5 | Confirmado: valores `accept`, `hold`, `refuse`; `refuse` em settings de projeto vence tudo. **Testado com 2.1.283**: com `accept` a mensagem entrou direto, sem diálogo | feito (M3) |
 | Carregamento de `.claude/rules/*.md` sem frontmatter | 5.1 | Confirmado (`memory`) e **testado com 2.1.283**: o bot respondeu nome, handle e crew tirados das regras | feito (M2) |
-| Expansão `${VAR}` em headers do `mcp.json` | 10 | Confirmado (`mcp`); alguns nomes de credencial conhecidos são lidos vazios, `BOTLOFT_BOT_TOKEN` não é um deles | M3 |
+| Expansão `${VAR}` em headers do `mcp.json` | 10 | Confirmado (`mcp`); alguns nomes de credencial conhecidos são lidos vazios, `BOTLOFT_BOT_TOKEN` não é um deles. **Testado com 2.1.284**: o header chegou com o valor da variável de ambiente | feito (M3) |
+| Revisão do MCP que o Claude Code usa em servidor HTTP | 10 | Especificação MCP 2026-07-28 (sem `initialize`) e versões antigas. **Visto com 2.1.284**: manda `server/discover` com os headers de 2026-07-28 e, se falhar, `initialize` com 2025-11-25 (e depois tenta o transporte SSE antigo). Teste feito sem gastar tokens: `claude -p` com modelo inexistente conecta os servidores MCP antes de falhar | feito (M3) |
 | Sintaxe de caminho Windows em permission rules | 7.5 | Confirmado (`permissions`) e **testado com 2.1.283**: ler `secrets\owner.token` deu "File is in a directory that is denied by your permission settings" | feito (M2) |
 | Flags `--continue`, `--mcp-config` | 7.4 | Confirmado (`cli-reference`); aceitas pelo 2.1.283. **Testado**: depois de reiniciar o daemon, o bot voltou com `--continue` e a conversa anterior na tela | feito (M3) |
 | Flag `--settings <arquivo>` | 7.4 | Ausente da tabela de CLI, mas aceita pelo 2.1.283 e os hooks do arquivo rodaram | feito (M2) |
