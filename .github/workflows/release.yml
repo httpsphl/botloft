@@ -1,0 +1,44 @@
+name: Release
+
+# Pushing a tag vX.Y.Z (matching the workspace version) builds the signed
+# installer and opens a draft release; publishing it makes the in-app
+# updater offer it (spec 15.5).
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  installer:
+    name: Installer (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: node app/scripts/release.mjs check
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: app/package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: app
+      - name: Build the signed installer
+        run: pnpm bundle
+        working-directory: app
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      - name: Open a draft release
+        run: node app/scripts/release.mjs publish
+        env:
+          GH_TOKEN: ${{ github.token }}

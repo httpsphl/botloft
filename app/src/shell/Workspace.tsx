@@ -10,6 +10,7 @@ import { Sidebar } from "../features/crews/Sidebar";
 import { FailedDeliveries } from "../features/messages/FailedDeliveries";
 import { ClaudeCodeHelp } from "../features/onboarding/ClaudeCodeHelp";
 import { Welcome } from "../features/onboarding/Welcome";
+import { UpdateButton } from "../features/updates/UpdateButton";
 import { useApp } from "../store/context";
 import { Callout } from "../ui/Callout";
 import { useAttentionMark } from "./attention";
@@ -58,6 +59,7 @@ export function Workspace() {
       <TitleBar
         status={
           <>
+            <UpdateButton />
             <FailedDeliveries />
             <ConnectionStatus />
           </>

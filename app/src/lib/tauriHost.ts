@@ -3,7 +3,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { Image } from "@tauri-apps/api/image";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import type { DaemonStatus, Host } from "./host";
+import { check } from "@tauri-apps/plugin-updater";
+import type { AppUpdate, DaemonStatus, Host } from "./host";
 
 const DOT = 16;
 
@@ -24,6 +25,43 @@ function dot(): Uint8Array {
   return rgba;
 }
 
+/**
+ * Asks the release feed for a newer version (spec 15.5). A dev build never
+ * offers to replace itself with the released app.
+ */
+async function checkForUpdate(): Promise<AppUpdate | null> {
+  if (import.meta.env.DEV) {
+    return null;
+  }
+  const update = await check();
+  if (!update) {
+    return null;
+  }
+  return {
+    version: update.version,
+    notes: update.body?.trim() || null,
+    install: async (progress) => {
+      let total = 0;
+      let done = 0;
+      await update.downloadAndInstall((event) => {
+        switch (event.event) {
+          case "Started":
+            total = event.data.contentLength ?? 0;
+            progress(total > 0 ? 0 : null);
+            break;
+          case "Progress":
+            done += event.data.chunkLength;
+            progress(total > 0 ? Math.min(1, done / total) : null);
+            break;
+          case "Finished":
+            progress(1);
+            break;
+        }
+      });
+    },
+  };
+}
+
 export function tauriHost(): Host {
   const window = getCurrentWindow();
   let overlay: Promise<Image> | undefined;
@@ -31,6 +69,7 @@ export function tauriHost(): Host {
     daemonStatus: () => invoke<DaemonStatus>("daemon_status"),
     installDaemon: () => invoke<DaemonStatus>("daemon_install"),
     restartDaemon: () => invoke<DaemonStatus>("daemon_restart"),
+    checkForUpdate,
     readOwnerToken: () => invoke<string>("read_owner_token"),
     openPath: (path) => invoke<void>("open_path", { path }),
     openUrl: (url) => invoke<void>("open_url", { url }),
