@@ -6,7 +6,10 @@
 
 mod bots;
 mod crews;
+mod deliveries;
+mod messages;
 mod migrate;
+mod tasks;
 
 use std::path::Path;
 use std::str::FromStr;
@@ -16,6 +19,8 @@ use rusqlite::types::Type;
 use rusqlite::{Connection, Row, ffi};
 
 pub use bots::BotRecord;
+pub use deliveries::DeliveryOutcome;
+pub use messages::MessageFilter;
 pub use migrate::LATEST_VERSION;
 
 #[derive(Debug, thiserror::Error)]
@@ -87,8 +92,80 @@ fn unique_as_duplicate(err: rusqlite::Error, what: &'static str) -> StoreError {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
+    use botloft_core::ids::{BotId, CrewId, DeliveryId, MessageId};
+    use botloft_core::protocol::{Crew, Delivery, DeliveryState, Message, MessageKind, SenderKind};
+
     use super::*;
+
+    /// A store with one crew and two bots.
+    pub(crate) struct Fixture {
+        pub store: Store,
+        pub crew: Crew,
+        pub bots: Vec<BotRecord>,
+    }
+
+    impl Fixture {
+        pub fn new() -> Self {
+            let store = Store::open_in_memory().expect("store");
+            let crew = Crew {
+                id: CrewId::generate(),
+                name: "Ops".to_owned(),
+                slug: "ops".to_owned(),
+                paused: false,
+                created_at: 0,
+                archived_at: None,
+            };
+            store.insert_crew(&crew).expect("crew");
+            let bots = ["scout", "writer"]
+                .iter()
+                .map(|handle| {
+                    let bot = BotRecord {
+                        id: BotId::generate(),
+                        crew_id: crew.id.clone(),
+                        name: (*handle).to_owned(),
+                        handle: (*handle).to_owned(),
+                        slug: (*handle).to_owned(),
+                        role: String::new(),
+                        instructions: String::new(),
+                        color: "#FF7A59".to_owned(),
+                        paused: false,
+                        created_at: 0,
+                        archived_at: None,
+                    };
+                    store.insert_bot(&bot).expect("bot");
+                    bot
+                })
+                .collect();
+            Self { store, crew, bots }
+        }
+    }
+
+    /// An owner note to `bot` and its pending delivery, not yet saved.
+    pub(crate) fn message_to(crew: &CrewId, bot: &BotId, body: &str) -> (Message, Delivery) {
+        let message = Message {
+            id: MessageId::generate(),
+            crew_id: crew.clone(),
+            from_kind: SenderKind::Owner,
+            from_bot_id: None,
+            to_bot_id: bot.clone(),
+            kind: MessageKind::Note,
+            body: body.to_owned(),
+            task_id: None,
+            created_at: 0,
+        };
+        let delivery = Delivery {
+            id: DeliveryId::generate(),
+            message_id: message.id.clone(),
+            bot_id: bot.clone(),
+            state: DeliveryState::Pending,
+            attempts: 0,
+            next_attempt_at: 0,
+            last_error: None,
+            updated_at: 0,
+        };
+        (message, delivery)
+    }
 
     #[test]
     fn file_database_uses_wal_and_foreign_keys() {
