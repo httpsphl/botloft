@@ -62,15 +62,24 @@ impl Paths {
     }
 }
 
+/// `--home` when given (the scheduled task passes it, spec 14), else
 /// `BOTLOFT_HOME` when set, otherwise `%LOCALAPPDATA%\Botloft` (never the
-/// roaming profile). Relative overrides resolve against the current directory.
-pub fn resolve_home() -> io::Result<PathBuf> {
-    match std::env::var_os(HOME_ENV).filter(|v| !v.is_empty()) {
+/// roaming profile). Relative paths resolve against the current directory.
+pub fn resolve_home(flag: Option<&Path>) -> io::Result<PathBuf> {
+    let chosen = flag
+        .map(|path| path.as_os_str().to_owned())
+        .or_else(|| std::env::var_os(HOME_ENV))
+        .filter(|value| !value.is_empty());
+    match chosen {
         Some(home) => std::path::absolute(home),
-        None => dirs::data_local_dir()
-            .map(|dir| dir.join("Botloft"))
+        None => default_home()
             .ok_or_else(|| io::Error::other("cannot find the local application data folder")),
     }
+}
+
+/// `%LOCALAPPDATA%\Botloft`, the data folder of an installed daemon.
+pub fn default_home() -> Option<PathBuf> {
+    dirs::data_local_dir().map(|dir| dir.join("Botloft"))
 }
 
 /// `workspaces_root` from the config, otherwise `%USERPROFILE%\Botloft`.

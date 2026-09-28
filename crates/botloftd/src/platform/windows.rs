@@ -1,10 +1,18 @@
-//! Windows ACLs, Job Objects, the user environment and console signals.
+//! Windows ACLs, Job Objects, the user environment, power requests and
+//! console signals.
 
+mod console;
 mod env;
 mod job;
+mod power;
+mod task;
+mod task_xml;
 
+pub use console::leave_own_console;
 pub use env::user_environment;
 pub use job::ProcessJob;
+pub use power::KeepAwake;
+pub use task::{delete_task, find_task, register_task, run_task, stop_task};
 
 use std::io;
 use std::os::windows::ffi::OsStrExt;
@@ -14,8 +22,8 @@ use windows::Win32::Foundation::{
     CloseHandle, ERROR_SUCCESS, GENERIC_ALL, HANDLE, HLOCAL, LocalFree, WIN32_ERROR,
 };
 use windows::Win32::Security::Authorization::{
-    EXPLICIT_ACCESS_W, NO_MULTIPLE_TRUSTEE, SE_FILE_OBJECT, SET_ACCESS, SetEntriesInAclW,
-    SetNamedSecurityInfoW, TRUSTEE_IS_SID, TRUSTEE_IS_USER, TRUSTEE_W,
+    ConvertSidToStringSidW, EXPLICIT_ACCESS_W, NO_MULTIPLE_TRUSTEE, SE_FILE_OBJECT, SET_ACCESS,
+    SetEntriesInAclW, SetNamedSecurityInfoW, TRUSTEE_IS_SID, TRUSTEE_IS_USER, TRUSTEE_W,
 };
 use windows::Win32::Security::{
     ACL, DACL_SECURITY_INFORMATION, GetTokenInformation, NO_INHERITANCE,
@@ -121,6 +129,17 @@ impl CurrentUser {
     pub(crate) fn sid(&self) -> PSID {
         // SAFETY: `buf` was filled by GetTokenInformation(TokenUser).
         unsafe { (*self.buf.as_ptr().cast::<TOKEN_USER>()).User.Sid }
+    }
+
+    /// The SID as text (`S-1-5-21-...`).
+    pub(crate) fn sid_string(&self) -> io::Result<String> {
+        let mut text = PWSTR::null();
+        // SAFETY: `sid()` is valid while `self` lives; the string is freed
+        // by LocalBox.
+        unsafe { ConvertSidToStringSidW(self.sid(), &mut text) }?;
+        let _text = LocalBox(text.0.cast());
+        // SAFETY: a NUL-terminated string allocated by the call above.
+        unsafe { text.to_string() }.map_err(io::Error::other)
     }
 }
 

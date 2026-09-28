@@ -15,14 +15,17 @@ use botloftd::runtime::PipeRuntime;
 use botloftd::service::tasks::TaskSettings;
 use botloftd::state::{BotSettings, Daemon, DaemonOptions};
 use botloftd::supervisor::{self, SupervisorSettings};
-use botloftd::{approvals, logging, secrets, server};
+use botloftd::{approvals, autostart, keep_awake, logging, secrets, server};
 use clap::{Parser, Subcommand};
 use tokio::net::TcpListener;
-use tracing::info;
+use tracing::{error, info};
 
 #[derive(Parser)]
 #[command(name = "botloftd", version, about = "Botloft daemon")]
 struct Cli {
+    /// Data folder. Defaults to BOTLOFT_HOME, then %LOCALAPPDATA%\Botloft.
+    #[arg(long, global = true)]
+    home: Option<PathBuf>,
     #[command(subcommand)]
     command: Command,
 }
@@ -35,16 +38,38 @@ enum Command {
         #[arg(long)]
         config: Option<PathBuf>,
     },
+    /// Start the daemon at logon, as a scheduled task of the current user.
+    #[command(subcommand)]
+    Service(ServiceCommand),
+}
+
+#[derive(Subcommand)]
+enum ServiceCommand {
+    /// Copy this binary to the data folder, register the task and start it.
+    Install,
+    /// Show whether the task is installed and the daemon answers.
+    Status,
+    /// Stop the daemon and start it again.
+    Restart,
+    /// Stop the daemon and remove the task. Bots and data stay.
+    Uninstall,
 }
 
 fn main() -> anyhow::Result<()> {
-    match Cli::parse().command {
-        Command::Serve { config } => serve(config),
+    let cli = Cli::parse();
+    let home =
+        paths::resolve_home(cli.home.as_deref()).context("cannot resolve the data folder")?;
+    match cli.command {
+        Command::Serve { config } => serve(home, config),
+        Command::Service(ServiceCommand::Install) => autostart::install(&home),
+        Command::Service(ServiceCommand::Status) => autostart::status(&home),
+        Command::Service(ServiceCommand::Restart) => autostart::restart(&home),
+        Command::Service(ServiceCommand::Uninstall) => autostart::uninstall(&home),
     }
 }
 
-fn serve(config_path: Option<PathBuf>) -> anyhow::Result<()> {
-    let home = paths::resolve_home().context("cannot resolve the data folder")?;
+fn serve(home: PathBuf, config_path: Option<PathBuf>) -> anyhow::Result<()> {
+    platform::leave_own_console();
     std::fs::create_dir_all(&home).with_context(|| format!("cannot create {}", home.display()))?;
     let config = match &config_path {
         Some(path) => Config::load(path, true)?,
@@ -53,6 +78,12 @@ fn serve(config_path: Option<PathBuf>) -> anyhow::Result<()> {
     let paths = Paths::new(home, paths::resolve_workspaces_root(&config)?);
     std::fs::create_dir_all(paths.logs())?;
     let _log_guard = logging::init(&paths.logs(), &config.log_level)?;
+    // Started by the scheduled task, nobody sees stderr: the log has to
+    // say why the daemon stopped.
+    run(paths, config).inspect_err(|err| error!("{err:#}"))
+}
+
+fn run(paths: Paths, config: Config) -> anyhow::Result<()> {
     let _lock = InstanceLock::acquire(&paths.lock_file())?;
 
     let owner_token = secrets::load_or_create_owner_token(&paths.secrets())
@@ -92,6 +123,9 @@ fn serve(config_path: Option<PathBuf>) -> anyhow::Result<()> {
         info!(port = config.port, "listening on 127.0.0.1");
         tokio::spawn(supervisor::run(Arc::clone(&daemon)));
         tokio::spawn(courier::run(Arc::clone(&daemon)));
+        if config.keep_awake {
+            tokio::spawn(keep_awake::run(daemon.supervisor.busy_bots()));
+        }
         server::serve(Arc::clone(&daemon), listener, platform::shutdown_signal()).await?;
         daemon.supervisor.shutdown();
         info!("stopped");

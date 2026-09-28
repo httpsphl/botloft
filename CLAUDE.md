@@ -31,6 +31,7 @@ cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all --check
 cargo run -p botloftd -- serve   # com BOTLOFT_HOME de dev (abaixo)
+cargo run -p botloftd -- service install   # tarefa agendada própria da pasta de dev; `service uninstall` depois
 
 # Tipos TS gerados a partir do Rust
 cargo test -p botloft-core export_bindings
@@ -68,6 +69,7 @@ Em dev, use `$env:BOTLOFT_HOME = "$PWD\.dev\home"` (caminho absoluto) no daemon 
 - Permissão de arquivo é ACL (SID do usuário atual), não modo Unix.
 - Estado em `%LOCALAPPDATA%`, nunca `%APPDATA%` (roaming).
 - Cuidado com o limite de 260 caracteres em caminhos de workspace.
+- Tarefa agendada (spec 14): `RestartOnFailure` não reinicia quando o processo sai com erro, e a repetição de um gatilho de logon só começa no próximo logon. Quem traz o daemon de volta é um gatilho de horário repetido a cada minuto com `IgnoreNew`. Use a API COM do Agendador: a saída do `schtasks.exe` é traduzida.
 
 ## Segurança e privacidade
 

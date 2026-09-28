@@ -8,12 +8,43 @@ mod windows;
 
 use std::fs::{File, OpenOptions, TryLockError};
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[cfg(unix)]
-pub use unix::{ProcessJob, restrict_to_current_user, user_environment};
+pub use unix::{
+    KeepAwake, ProcessJob, delete_task, find_task, leave_own_console, register_task,
+    restrict_to_current_user, run_task, stop_task, user_environment,
+};
 #[cfg(windows)]
-pub use windows::{ProcessJob, restrict_to_current_user, user_environment};
+pub use windows::{
+    KeepAwake, ProcessJob, delete_task, find_task, leave_own_console, register_task,
+    restrict_to_current_user, run_task, stop_task, user_environment,
+};
+
+/// A program the system starts when the owner logs on (spec 14).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TaskDefinition {
+    pub description: String,
+    pub program: PathBuf,
+    /// Already quoted for the command line.
+    pub arguments: String,
+    pub working_dir: PathBuf,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TaskState {
+    Running,
+    /// Installed and waiting for its trigger.
+    Ready,
+    Disabled,
+    Unknown,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TaskInfo {
+    pub state: TaskState,
+    pub command: Option<String>,
+}
 
 /// Exclusive lock on `<home>\botloftd.lock`, held for the daemon's lifetime.
 /// The OS releases it when the process exits, even after a crash.

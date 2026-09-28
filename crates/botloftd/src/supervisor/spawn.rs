@@ -73,6 +73,7 @@ impl Supervisor {
                     resumed: launch.resumed,
                     token_hash: launch.token_hash,
                 });
+                self.count_busy(slot.state, BotState::Launching);
                 slot.state = BotState::Launching;
                 self.announce(&bot.id, slot);
                 debug!(bot = %bot.id, generation, pid = ?process.pid, resumed = launch.resumed, "bot started");

@@ -40,6 +40,35 @@ async fn turns_and_approvals_drive_the_state() {
     assert_eq!(s.state(), BotState::Idle);
 }
 
+/// What keeps the computer awake (spec 14): only `busy` counts.
+#[tokio::test(start_paused = true)]
+async fn the_busy_count_follows_turns_approvals_and_crashes() {
+    let s = setup().await;
+    let busy = s.daemon.supervisor.busy_bots();
+    let process = s.runtime.process(1).await;
+    s.until(BotState::Idle).await;
+    assert_eq!(*busy.borrow(), 0);
+    let generation = s.message("work");
+    assert_eq!(*busy.borrow(), 1);
+
+    s.daemon.supervisor.approval_opened(&s.bot, generation);
+    assert_eq!(*busy.borrow(), 0, "waiting for the owner is not working");
+    s.daemon.supervisor.approval_closed(&s.bot, generation);
+    assert_eq!(*busy.borrow(), 1);
+    process.emit(stream::result(false)).await;
+    s.until(BotState::Idle).await;
+    assert_eq!(*busy.borrow(), 0);
+
+    s.message("again");
+    assert_eq!(*busy.borrow(), 1);
+    process.exit(1).await;
+    s.until(BotState::Backoff).await;
+    assert_eq!(*busy.borrow(), 0, "a dead process works no more");
+    s.runtime.process(2).await;
+    s.until(BotState::Idle).await;
+    assert_eq!(*busy.borrow(), 0);
+}
+
 #[tokio::test(start_paused = true)]
 async fn sign_in_errors_stop_the_bot_until_the_owner_restarts_it() {
     let s = setup().await;
