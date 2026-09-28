@@ -3,23 +3,35 @@
 
 use botloft_core::ids::{DeliveryId, MessageId};
 use botloft_core::protocol::{
-    Delivery, DeliveryState, Message, MessageKind, MessagesListParams, MessagesSendParams,
-    SenderKind, Task,
+    ChatItem, Delivery, DeliveryState, Message, MessageKind, MessagesListParams,
+    MessagesSendParams, SenderKind, Task,
 };
 use botloft_core::validate;
 use botloft_store::{MessageFilter, Store};
 
-use super::{ApiError, ApiResult, bots, crews};
+use super::{ApiError, ApiResult, attachments, bots, crews};
+use crate::chat::items;
 use crate::state::{Daemon, Event};
 
 const DEFAULT_LIMIT: u32 = 50;
 const MAX_LIMIT: u32 = 200;
 
-/// The owner writes to a bot. A paused bot gets it once it runs again.
+/// The owner writes to a bot, with files if any (spec 9.5). A paused bot
+/// gets it once it runs again.
 pub fn send(daemon: &Daemon, params: MessagesSendParams) -> ApiResult<Message> {
-    let body = validate::message("body", &params.body)?;
+    let uploads = params.attachments.unwrap_or_default();
+    let body = if uploads.is_empty() || !params.body.trim().is_empty() {
+        validate::message("body", &params.body)?
+    } else {
+        // Files alone are a message too.
+        String::new()
+    };
     let store = daemon.store();
     let (crew, bot) = bots::active(&store, &params.bot_id)?;
+    let now = daemon.clock.now_ms();
+    let workspace = daemon.paths.bot_workspace(&crew.slug, &bot.slug);
+    let attachments =
+        attachments::save(&workspace, uploads, daemon.bots.attachment_max_bytes, now)?;
     let message = Message {
         id: MessageId::generate(),
         crew_id: crew.id,
@@ -29,7 +41,8 @@ pub fn send(daemon: &Daemon, params: MessagesSendParams) -> ApiResult<Message> {
         kind: MessageKind::Note,
         body,
         task_id: None,
-        created_at: daemon.clock.now_ms(),
+        attachments,
+        created_at: now,
     };
     post(daemon, &store, message, None)
 }
@@ -43,8 +56,8 @@ pub(crate) fn post(
     task: Option<Task>,
 ) -> ApiResult<Message> {
     let delivery = pending_delivery(&message);
-    store.insert_message(&message, &delivery, task.as_ref())?;
-    announce(daemon, task, &message, delivery);
+    let item = store.insert_message(&message, &delivery, task.as_ref())?;
+    announce(daemon, task, &message, delivery, item);
     Ok(message)
 }
 
@@ -58,18 +71,26 @@ pub(crate) fn pending_delivery(message: &Message) -> Delivery {
         attempts: 0,
         next_attempt_at: message.created_at,
         last_error: None,
+        read_at: None,
         updated_at: message.created_at,
     }
 }
 
 /// Tells the app about a stored message (and the task it changed) and wakes
 /// the courier for it.
-pub(crate) fn announce(daemon: &Daemon, task: Option<Task>, message: &Message, delivery: Delivery) {
+pub(crate) fn announce(
+    daemon: &Daemon,
+    task: Option<Task>,
+    message: &Message,
+    delivery: Delivery,
+    item: ChatItem,
+) {
     if let Some(task) = task {
         daemon.emit(Event::TaskChanged(task));
     }
     daemon.emit(Event::MessageCreated(message.clone()));
     daemon.emit(Event::DeliveryChanged(delivery));
+    items::announce(daemon, item);
     daemon.courier.wake();
 }
 

@@ -42,6 +42,7 @@ fn expire(daemon: &Daemon, store: &Store, task: &Task, now: i64) -> ApiResult<()
             task.id
         ),
         task_id: Some(task.id.clone()),
+        attachments: Vec::new(),
         created_at: now,
     };
     let delivery = pending_delivery(&notice);
@@ -54,8 +55,8 @@ fn expire(daemon: &Daemon, store: &Store, task: &Task, now: i64) -> ApiResult<()
         now,
         (&notice, &delivery),
     )?;
-    if let Some(expired) = expired {
-        announce(daemon, Some(expired), &notice, delivery);
+    if let Some((expired, item)) = expired {
+        announce(daemon, Some(expired), &notice, delivery, item);
     }
     Ok(())
 }

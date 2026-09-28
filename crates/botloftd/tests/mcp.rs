@@ -66,7 +66,13 @@ async fn claude_code_discovers_the_server_and_lists_the_tools() {
         .collect();
     assert_eq!(
         names,
-        ["crew_roster", "send_message", "complete_task", "my_tasks"]
+        [
+            "crew_roster",
+            "send_message",
+            "complete_task",
+            "my_tasks",
+            "permission_prompt"
+        ]
     );
 
     let unknown = client.request("prompts/list", json!({})).await;
@@ -109,7 +115,7 @@ async fn earlier_revisions_start_with_initialize() {
     let listed = mcp::post(t.addr, &legacy, &list).await;
     assert_eq!(
         listed.body["result"]["tools"].as_array().map(Vec::len),
-        Some(4)
+        Some(5)
     );
     let unknown = json!({ "jsonrpc": "2.0", "id": 2, "method": "prompts/list" }).to_string();
     let unknown = mcp::post(t.addr, &legacy, &unknown).await;

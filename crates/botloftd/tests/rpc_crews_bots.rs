@@ -44,16 +44,17 @@ async fn create_a_crew_and_a_bot_and_get_a_ready_workspace() {
     assert_eq!(bot["handle"], "revisao");
     assert_eq!(bot["state"], "offline");
     assert_eq!(bot["color"], "#FF7A59");
+    assert_eq!(bot["lastActivity"], Value::Null);
     assert_eq!(watcher.notification("bot.changed").await, bot);
 
     let ws = daemon.paths.bot_workspace("site-da-loja", "revisao");
     assert_eq!(bot["workspace"], ws.to_string_lossy().as_ref());
     let settings: Value =
         serde_json::from_str(&read(ws.join(".claude/settings.json"))).expect("json");
-    assert_eq!(settings["crossSessionInbound"], "accept");
     assert_eq!(
-        settings["hooks"]["SessionStart"][0]["hooks"][0]["args"],
-        json!(["hook", "session-start"])
+        settings["hooks"],
+        Value::Null,
+        "headless bots need no hooks"
     );
     let deny = settings["permissions"]["deny"][0]
         .as_str()

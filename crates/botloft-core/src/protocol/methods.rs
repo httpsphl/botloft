@@ -45,7 +45,7 @@ pub struct HelloResult {
     pub protocol: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct SystemStatus {
@@ -57,6 +57,34 @@ pub struct SystemStatus {
     /// Why bots cannot start (Claude Code missing or too old); `null` when fine.
     pub runtime_error: Option<String>,
     pub deliveries: DeliveryBacklog,
+    /// The Claude account's usage as last reported; `null` before any turn.
+    pub usage: Option<AccountUsage>,
+}
+
+/// The account's usage, from Claude Code's `rate_limit_event` (spec 8.1).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct AccountUsage {
+    /// As Claude Code says it: `allowed`, `allowed_warning`, `rejected`...
+    pub status: String,
+    /// Unix time in milliseconds when the current limit resets.
+    pub resets_at: Option<i64>,
+    pub windows: Vec<UsageWindow>,
+    /// Unix time in milliseconds.
+    pub observed_at: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct UsageWindow {
+    /// `five_hour`, `seven_day`...
+    pub name: String,
+    /// Share used, 0 to 1.
+    pub utilization: f64,
+    /// Unix time in milliseconds.
+    pub resets_at: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

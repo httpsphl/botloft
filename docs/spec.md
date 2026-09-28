@@ -279,7 +279,7 @@ Todo item tem `id` (`cht_`), `botId`, `kind`, `createdAt` e `updatedAt`.
 
 ### 8.3 Ao vivo
 
-- `chat.item {item}`: item novo ou atualizado (tool que terminou, aprovação respondida).
+- `chat.item {item, activity}`: item novo ou atualizado (tool que terminou, aprovação respondida). `activity` é a nova linha da conversa na barra lateral, quando mudou.
 - `chat.delta {botId, text}`: pedaço do texto que o bot está escrevendo, na ordem. O app junta os pedaços num balão provisório, trocado pelo `reply` quando ele chega. Um app que conecta no meio de um turno não vê o texto parcial já passado, só o que vier depois e o `reply` final.
 
 ### 8.4 Privacidade
@@ -313,7 +313,7 @@ Uma linha JSON por mensagem, terminada em `\n`, em UTF-8:
 {"type":"user","uuid":"<uuid da delivery>","message":{"role":"user","content":[<blocos>]}}
 ```
 
-- `uuid` é o ULID da delivery no formato de UUID. O Claude Code o devolve no replay (visto com 2.1.284).
+- `uuid` é um UUID v4 novo a cada envio, guardado na delivery (`turn_uuid`). O Claude Code o devolve no replay (visto com 2.1.284).
 - Blocos: um `text` com o texto (9.3) e, para imagens anexadas, blocos `image` com `source: {type: "base64", media_type, data}`.
 - Mensagem escrita durante um turno entra na fila do Claude Code e vira o turno seguinte (visto com 2.1.284). O courier não precisa esperar o bot ficar parado.
 - O formato de entrada do `stream-json` **não é documentado**; foi verificado com teste real (seção 19).
@@ -467,7 +467,7 @@ Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations 
 | `bots` | `id, crew_id, name, handle, slug, role, instructions, color, paused, token_hash, session_id, created_at, archived_at` |
 | `messages` | `id, crew_id, from_kind (owner/bot/system), from_bot_id, to_bot_id, kind (note/task/result/system), body, task_id, created_at` |
 | `attachments` | `id, message_id, name, media_type, size, path, created_at` |
-| `deliveries` | `id, message_id, bot_id, state, attempts, next_attempt_at, lease_until, last_error, sent_generation, read_at, updated_at` |
+| `deliveries` | `id, message_id, bot_id, state, attempts, next_attempt_at, lease_until, last_error, sent_generation, turn_uuid, read_at, updated_at` |
 | `tasks` | `id, crew_id, requester_bot_id, assignee_bot_id, status, deadline_at, hops, origin_task_id, result, created_at, updated_at` |
 | `chat_items` | `id, bot_id, kind, data (JSON), created_at, updated_at` |
 | `approvals` | `id, bot_id, tool_use_id, tool_name, input, status, note, created_at, answered_at` |

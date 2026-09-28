@@ -60,6 +60,45 @@ pub fn unique(base: &str, mut taken: impl FnMut(&str) -> bool) -> String {
     }
 }
 
+/// Longest attachment file name kept, in characters.
+const FILE_NAME_MAX: usize = 100;
+
+/// A file name that is safe to write in a folder on Windows: no folders,
+/// no reserved characters or device names, no trailing dots or spaces
+/// (spec 9.5). Keeps the extension when it has to shorten the name.
+pub fn file_name(name: &str) -> String {
+    let last = name.rsplit(['/', '\\']).next().unwrap_or(name);
+    let cleaned: String = last
+        .chars()
+        .filter(|ch| !ch.is_control() && !r#"<>:"/\|?*"#.contains(*ch))
+        .collect();
+    let cleaned = cleaned
+        .trim()
+        .trim_end_matches(['.', ' '])
+        .trim_start_matches('.');
+    let mut name = if cleaned.is_empty() {
+        "file".to_owned()
+    } else {
+        cleaned.to_owned()
+    };
+    let (stem, extension) = match name.rfind('.') {
+        Some(dot) if dot > 0 => (name[..dot].to_owned(), name[dot..].to_owned()),
+        _ => (name.clone(), String::new()),
+    };
+    if WINDOWS_RESERVED.contains(&stem.to_ascii_lowercase().as_str()) {
+        name = format!("{stem}-file{extension}");
+    }
+    if name.chars().count() > FILE_NAME_MAX {
+        let (stem, extension) = match name.rfind('.') {
+            Some(dot) if dot > 0 && name.len() - dot <= 12 => (&name[..dot], &name[dot..]),
+            _ => (name.as_str(), ""),
+        };
+        let keep = FILE_NAME_MAX.saturating_sub(extension.chars().count());
+        name = format!("{}{extension}", stem.chars().take(keep).collect::<String>());
+    }
+    name
+}
+
 /// Cuts an ASCII slug to `max` characters without leaving a trailing hyphen.
 fn truncate(slug: &str, max: usize) -> String {
     let cut = &slug[..slug.len().min(max)];
@@ -110,5 +149,27 @@ mod tests {
         let slug = unique(&base, |s| s == base);
         assert_eq!(slug.len(), MAX_LEN);
         assert!(slug.ends_with("-2"));
+    }
+
+    #[test]
+    fn file_names_lose_folders_and_forbidden_characters() {
+        assert_eq!(file_name("relatório final.pdf"), "relatório final.pdf");
+        assert_eq!(file_name(r"C:\Users\ana\notes.txt"), "notes.txt");
+        assert_eq!(file_name("../../etc/passwd"), "passwd");
+        assert_eq!(file_name("a<b>:c?.png"), "abc.png");
+        assert_eq!(file_name("trailing. . "), "trailing");
+        assert_eq!(file_name(".hidden"), "hidden");
+        assert_eq!(file_name(""), "file");
+        assert_eq!(file_name("..."), "file");
+        assert_eq!(file_name("CON.txt"), "CON-file.txt");
+        assert_eq!(file_name("nul"), "nul-file");
+    }
+
+    #[test]
+    fn long_file_names_keep_their_extension() {
+        let name = format!("{}.xlsx", "n".repeat(300));
+        let short = file_name(&name);
+        assert_eq!(short.chars().count(), FILE_NAME_MAX);
+        assert!(short.ends_with(".xlsx"));
     }
 }

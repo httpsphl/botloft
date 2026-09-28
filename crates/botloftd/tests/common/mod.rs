@@ -5,6 +5,8 @@
 
 pub mod bots;
 pub mod mcp;
+pub mod stream;
+pub mod supervised;
 
 use std::collections::VecDeque;
 use std::net::SocketAddr;
@@ -14,7 +16,6 @@ use std::time::Duration;
 
 use botloft_store::Store;
 use botloftd::clock::ManualClock;
-use botloftd::courier::fake::FakeInbox;
 use botloftd::courier::{self, CourierSettings};
 use botloftd::paths::Paths;
 use botloftd::runtime::claude::Claude;
@@ -22,7 +23,7 @@ use botloftd::runtime::fake::FakeRuntime;
 use botloftd::secrets::TokenHash;
 use botloftd::server;
 use botloftd::service::tasks::TaskSettings;
-use botloftd::state::{Daemon, DaemonOptions};
+use botloftd::state::{BotSettings, Daemon, DaemonOptions};
 use botloftd::supervisor::{self, ClaudeSource, SupervisorSettings};
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{Value, json};
@@ -40,7 +41,6 @@ pub struct TestDaemon {
     pub paths: Paths,
     pub daemon: Arc<Daemon>,
     pub runtime: FakeRuntime,
-    pub inbox: FakeInbox,
     pub clock: Arc<ManualClock>,
     _dir: TempDir,
 }
@@ -50,12 +50,20 @@ pub fn test_settings() -> SupervisorSettings {
     SupervisorSettings {
         claude: ClaudeSource::Fixed(Claude {
             path: PathBuf::from(r"C:\Claude\claude.exe"),
-            version: "2.1.283".to_owned(),
+            version: "2.1.284".to_owned(),
         }),
         backoff_initial: Duration::from_millis(40),
         backoff_max: Duration::from_millis(200),
         fresh_start_if_dies_within: Duration::from_secs(15),
-        ring_buffer_bytes: 64 * 1024,
+        ready_after: Duration::from_millis(20),
+    }
+}
+
+/// Approvals time out fast enough for a test to wait for it.
+pub fn bot_settings() -> BotSettings {
+    BotSettings {
+        approval_timeout: Duration::from_secs(3),
+        attachment_max_bytes: 1024 * 1024,
     }
 }
 
@@ -74,7 +82,6 @@ pub fn courier_settings() -> CourierSettings {
 pub struct Parts {
     pub daemon: Arc<Daemon>,
     pub runtime: FakeRuntime,
-    pub inbox: FakeInbox,
     pub clock: Arc<ManualClock>,
     pub paths: Paths,
     pub dir: TempDir,
@@ -84,28 +91,25 @@ pub fn new_daemon(settings: SupervisorSettings) -> Parts {
     let dir = tempfile::tempdir().expect("tempdir");
     let paths = Paths::new(dir.path().join("home"), dir.path().join("workspaces"));
     let runtime = FakeRuntime::new();
-    let inbox = FakeInbox::new();
     let clock = Arc::new(ManualClock::new());
     let daemon = Daemon::new(DaemonOptions {
         paths: paths.clone(),
         port: 45710,
-        bin: PathBuf::from(r"C:\Botloft\bin\botloftd.exe"),
         store: Store::open_in_memory().expect("store"),
         owner_token: TokenHash::of(TOKEN),
         runtime: Arc::new(runtime.clone()),
         supervisor: settings,
         clock: Arc::clone(&clock) as _,
-        inbox: Arc::new(inbox.clone()),
         courier: courier_settings(),
         tasks: TaskSettings {
             max_hops: 3,
             default_deadline: Duration::from_secs(120 * 60),
         },
+        bots: bot_settings(),
     });
     Parts {
         daemon,
         runtime,
-        inbox,
         clock,
         paths,
         dir,
@@ -119,7 +123,7 @@ impl TestDaemon {
     }
 
     /// Server, supervisor and courier, with bots running on a
-    /// [`FakeRuntime`] and inboxes that are a [`FakeInbox`].
+    /// [`FakeRuntime`].
     pub async fn start_supervised() -> Self {
         Self::launch(true).await
     }
@@ -142,7 +146,6 @@ impl TestDaemon {
             paths: parts.paths,
             daemon: parts.daemon,
             runtime: parts.runtime,
-            inbox: parts.inbox,
             clock: parts.clock,
             _dir: parts.dir,
         }
@@ -243,7 +246,7 @@ impl Client {
     pub async fn hello(&mut self, token: &str) -> Result<Value, RpcFailure> {
         self.call(
             "session.hello",
-            json!({ "token": token, "client": { "name": "tests", "version": "0" }, "protocol": 1 }),
+            json!({ "token": token, "client": { "name": "tests", "version": "0" }, "protocol": 2 }),
         )
         .await
     }

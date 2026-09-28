@@ -1,12 +1,13 @@
 //! What the RPC methods do, independent of JSON-RPC. Each operation runs
 //! under the store lock, so checks and writes cannot interleave.
 
+pub mod attachments;
 pub mod bots;
+pub mod chat;
 pub mod crews;
 pub mod deliveries;
 pub mod messages;
 pub mod tasks;
-pub mod terminal;
 
 use botloft_core::protocol::{PROTOCOL_VERSION, SystemStatus, error_code};
 use botloft_core::slug;
@@ -66,6 +67,7 @@ pub fn status(daemon: &Daemon) -> ApiResult<SystemStatus> {
         claude_version: daemon.supervisor.claude_version(),
         runtime_error: daemon.supervisor.runtime_error(),
         deliveries,
+        usage: daemon.usage(),
     })
 }
 

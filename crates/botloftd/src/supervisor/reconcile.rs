@@ -23,13 +23,21 @@ impl Supervisor {
             return;
         };
         self.ensure_claude().await;
+        // Read before taking the supervisor lock (lock order, see mod.rs).
         let read = {
             let store = daemon.store();
-            store
-                .bots(None, true)
-                .and_then(|bots| Ok((bots, store.crews(true)?)))
+            store.bots(None, true).and_then(|bots| {
+                let crews = store.crews(true)?;
+                let mut sessions = HashMap::new();
+                for bot in &bots {
+                    if let Some(session) = store.session_id(&bot.id)? {
+                        sessions.insert(bot.id.clone(), session);
+                    }
+                }
+                Ok((bots, crews, sessions))
+            })
         };
-        let (bots, crews) = match read {
+        let (bots, crews, sessions) = match read {
             Ok(read) => read,
             Err(err) => {
                 warn!("reconcile could not read the database: {err}");
@@ -40,8 +48,12 @@ impl Supervisor {
             .into_iter()
             .map(|crew| (crew.id.clone(), crew))
             .collect();
+        self.release_limits(daemon.clock.now_ms());
         let now = Instant::now();
         let mut inner = self.lock();
+        for (bot, session) in sessions {
+            inner.sessions.entry(bot).or_insert(session);
+        }
         for bot in &bots {
             if let Some(crew) = crews.get(&bot.crew_id) {
                 self.reconcile_bot(&mut inner, &daemon, crew, bot, now);
@@ -164,6 +176,6 @@ pub(super) fn slot_entry<'a>(
 ) -> &'a mut Slot {
     slots.entry(bot.clone()).or_insert_with(|| {
         let backoff = Backoff::new(settings.backoff_initial, settings.backoff_max);
-        Slot::new(settings.ring_buffer_bytes, backoff)
+        Slot::new(backoff)
     })
 }

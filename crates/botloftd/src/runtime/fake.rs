@@ -1,6 +1,6 @@
 //! A runtime that starts nothing (spec 1.6). Each spawn returns a
-//! [`FakeProcess`] the test drives by hand: it emits output, exits and
-//! records what the daemon wrote to it.
+//! [`FakeProcess`] the test drives by hand: it emits stream-json events,
+//! exits and records the lines the daemon wrote to its stdin.
 
 use std::io;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -10,7 +10,9 @@ use std::time::Duration;
 use bytes::Bytes;
 use tokio::sync::{Notify, mpsc};
 
-use super::{EVENT_BUFFER, Process, ProcessControl, ProcessEvent, Runtime, SpawnSpec, TermSize};
+use serde_json::Value;
+
+use super::{EVENT_BUFFER, Process, ProcessControl, ProcessEvent, Runtime, SpawnSpec};
 
 #[derive(Clone, Default)]
 pub struct FakeRuntime {
@@ -29,7 +31,7 @@ pub struct FakeProcess {
     pub spec: SpawnSpec,
     events: mpsc::Sender<ProcessEvent>,
     input: Arc<Mutex<Vec<u8>>>,
-    sizes: Arc<Mutex<Vec<TermSize>>>,
+    wrote: Arc<Notify>,
     killed: Arc<AtomicBool>,
 }
 
@@ -83,13 +85,13 @@ impl Runtime for FakeRuntime {
             spec,
             events: events.clone(),
             input: Arc::default(),
-            sizes: Arc::default(),
+            wrote: Arc::default(),
             killed: Arc::default(),
         };
         let control = FakeControl {
             events,
             input: Arc::clone(&process.input),
-            sizes: Arc::clone(&process.sizes),
+            wrote: Arc::clone(&process.wrote),
             killed: Arc::clone(&process.killed),
         };
         state.processes.push(process);
@@ -111,6 +113,13 @@ impl FakeProcess {
             .await;
     }
 
+    /// Writes one stream-json event to stdout, as Claude Code would.
+    pub async fn emit(&self, event: Value) {
+        let mut line = event.to_string().into_bytes();
+        line.push(b'\n');
+        self.output(&line).await;
+    }
+
     pub async fn exit(&self, code: u32) {
         let _ = self.events.send(ProcessEvent::Exited(Some(code))).await;
     }
@@ -119,8 +128,32 @@ impl FakeProcess {
         lock(&self.input).clone()
     }
 
-    pub fn sizes(&self) -> Vec<TermSize> {
-        lock(&self.sizes).clone()
+    /// Every complete line written to stdin, parsed as JSON.
+    pub fn input_lines(&self) -> Vec<Value> {
+        self.input()
+            .split(|byte| *byte == b'\n')
+            .filter(|line| !line.is_empty())
+            .map(|line| serde_json::from_slice(line).expect("stdin line is JSON"))
+            .collect()
+    }
+
+    /// Waits up to 5 s until at least `n` lines were written to stdin.
+    pub async fn wait_lines(&self, n: usize) -> Vec<Value> {
+        let wait = async {
+            loop {
+                let notified = self.wrote.notified();
+                tokio::pin!(notified);
+                notified.as_mut().enable();
+                let lines = self.input_lines();
+                if lines.len() >= n {
+                    return lines;
+                }
+                notified.await;
+            }
+        };
+        tokio::time::timeout(Duration::from_secs(5), wait)
+            .await
+            .unwrap_or_else(|_| panic!("expected {n} lines on stdin, got {:?}", self.input_lines()))
     }
 
     pub fn killed(&self) -> bool {
@@ -147,18 +180,17 @@ impl FakeProcess {
 struct FakeControl {
     events: mpsc::Sender<ProcessEvent>,
     input: Arc<Mutex<Vec<u8>>>,
-    sizes: Arc<Mutex<Vec<TermSize>>>,
+    wrote: Arc<Notify>,
     killed: Arc<AtomicBool>,
 }
 
 impl ProcessControl for FakeControl {
     fn write(&self, data: Bytes) -> io::Result<()> {
+        if self.killed.load(Ordering::SeqCst) {
+            return Err(io::Error::new(io::ErrorKind::BrokenPipe, "killed"));
+        }
         lock(&self.input).extend_from_slice(&data);
-        Ok(())
-    }
-
-    fn resize(&self, size: TermSize) -> io::Result<()> {
-        lock(&self.sizes).push(size);
+        self.wrote.notify_waiters();
         Ok(())
     }
 

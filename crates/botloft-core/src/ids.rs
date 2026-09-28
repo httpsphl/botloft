@@ -88,6 +88,36 @@ prefixed_id!(
     /// Identifies a task between bots.
     TaskId, "task", "tsk_"
 );
+prefixed_id!(
+    /// Identifies an item of a bot's chat.
+    ChatItemId, "chat item", "cht_"
+);
+prefixed_id!(
+    /// Identifies a permission request waiting for the owner.
+    ApprovalId, "approval", "apr_"
+);
+prefixed_id!(
+    /// Identifies a file the owner attached to a message.
+    AttachmentId, "attachment", "att_"
+);
+
+/// A random version 4 UUID, for Claude Code session ids and the uuid of
+/// each message written to a bot (spec 7.3, 9.2).
+pub fn random_uuid() -> String {
+    let mut value = Ulid::generate().0;
+    // Version 4 and the RFC 4122 variant, as UUID validators expect.
+    value = (value & !(0xf << 76)) | (0x4 << 76);
+    value = (value & !(0x3 << 62)) | (0x2 << 62);
+    let hex = format!("{value:032x}");
+    format!(
+        "{}-{}-{}-{}-{}",
+        &hex[0..8],
+        &hex[8..12],
+        &hex[12..16],
+        &hex[16..20],
+        &hex[20..32]
+    )
+}
 
 #[cfg(test)]
 mod tests {
@@ -122,6 +152,15 @@ mod tests {
         std::thread::sleep(std::time::Duration::from_millis(2));
         let second = DeliveryId::generate();
         assert!(first < second);
+    }
+
+    #[test]
+    fn random_uuids_are_version_4() {
+        let uuid = random_uuid();
+        assert_eq!(uuid.len(), 36);
+        assert_eq!(&uuid[14..15], "4");
+        assert!(matches!(&uuid[19..20], "8" | "9" | "a" | "b"), "{uuid}");
+        assert_ne!(random_uuid(), uuid);
     }
 
     #[test]

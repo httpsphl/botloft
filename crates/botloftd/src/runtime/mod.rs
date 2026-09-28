@@ -1,10 +1,10 @@
-//! How bot processes run. [`PtyRuntime`] starts them in a pseudo terminal
-//! (ConPTY on Windows); [`fake::FakeRuntime`] implements the same contract
-//! for tests, so the supervisor and terminal are tested without Claude.
+//! How bot processes run. [`PipeRuntime`] starts them with stdin and stdout
+//! in pipes (spec 7.4); [`fake::FakeRuntime`] implements the same contract
+//! for tests, so the supervisor, chat and courier are tested without Claude.
 
 pub mod claude;
 pub mod fake;
-mod pty;
+mod pipe;
 
 use std::ffi::OsString;
 use std::io;
@@ -13,24 +13,7 @@ use std::path::PathBuf;
 use bytes::Bytes;
 use tokio::sync::mpsc;
 
-pub use pty::PtyRuntime;
-
-/// Terminal size in character cells.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct TermSize {
-    pub cols: u16,
-    pub rows: u16,
-}
-
-impl Default for TermSize {
-    /// Used until the app sends `terminal.resize` (spec 7.4).
-    fn default() -> Self {
-        Self {
-            cols: 120,
-            rows: 32,
-        }
-    }
-}
+pub use pipe::PipeRuntime;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpawnSpec {
@@ -39,11 +22,11 @@ pub struct SpawnSpec {
     pub cwd: PathBuf,
     /// The complete environment. Nothing is inherited from the daemon.
     pub env: Vec<(OsString, OsString)>,
-    pub size: TermSize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ProcessEvent {
+    /// Bytes from stdout, in order; lines may be split across chunks.
     Output(Bytes),
     /// Last event. The exit code, when the OS reported one.
     Exited(Option<u32>),
@@ -51,9 +34,8 @@ pub enum ProcessEvent {
 
 /// Handle to a running process. Dropping it kills the process tree.
 pub trait ProcessControl: Send + Sync {
-    /// Queues bytes for the process's input without blocking.
+    /// Queues bytes for the process's stdin without blocking.
     fn write(&self, data: Bytes) -> io::Result<()>;
-    fn resize(&self, size: TermSize) -> io::Result<()>;
     /// Kills the process and everything it started.
     fn kill(&self) -> io::Result<()>;
 }

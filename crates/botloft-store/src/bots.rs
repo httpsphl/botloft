@@ -143,6 +143,28 @@ impl Store {
             .map_err(|err| unique_as_duplicate(err, "bot handle"))?;
         Ok(())
     }
+
+    /// The Claude Code conversation the bot resumes (spec 7.3).
+    pub fn session_id(&self, id: &BotId) -> Result<Option<String>> {
+        Ok(self
+            .conn
+            .query_row(
+                "SELECT session_id FROM bots WHERE id = ?1",
+                [id.as_str()],
+                |row| row.get(0),
+            )
+            .optional()?
+            .flatten())
+    }
+
+    /// `None` makes the next start a new conversation.
+    pub fn set_session_id(&self, id: &BotId, session: Option<&str>) -> Result<()> {
+        self.conn.execute(
+            "UPDATE bots SET session_id = ?2 WHERE id = ?1",
+            params![id.as_str(), session],
+        )?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]

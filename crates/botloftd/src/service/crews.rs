@@ -80,7 +80,9 @@ pub fn archive(daemon: &Daemon, params: CrewIdParams) -> ApiResult<Crew> {
     let crew = find(&store, &crew.id)?;
     for bot in bots {
         if let Some(bot) = store.bot(&bot.id)? {
-            daemon.emit(Event::BotChanged(bots::to_protocol(daemon, &crew, bot)));
+            daemon.emit(Event::BotChanged(bots::to_protocol(
+                daemon, &store, &crew, bot,
+            )));
         }
     }
     daemon.emit(Event::CrewChanged(crew.clone()));

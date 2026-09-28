@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::Activity;
 use crate::ids::{BotId, CrewId};
 
 /// A group of bots that can message each other and share a folder.
@@ -56,10 +57,12 @@ pub struct Bot {
     pub paused: bool,
     pub state: BotState,
     /// Current process generation; `null` if the bot has not started since
-    /// the daemon did. Changes on every (re)start (spec 8).
+    /// the daemon did. Changes on every (re)start.
     pub generation: Option<u64>,
     /// Absolute path of the bot's workspace folder.
     pub workspace: String,
+    /// The last item of the bot's chat, in one line; `null` for a new bot.
+    pub last_activity: Option<Activity>,
     /// Unix time in milliseconds.
     pub created_at: i64,
     /// Unix time in milliseconds; `null` while the bot is active.

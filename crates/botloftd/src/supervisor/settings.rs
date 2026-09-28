@@ -19,7 +19,9 @@ pub struct SupervisorSettings {
     pub backoff_initial: Duration,
     pub backoff_max: Duration,
     pub fresh_start_if_dies_within: Duration,
-    pub ring_buffer_bytes: usize,
+    /// A new process is taken as ready after living this long; Claude Code
+    /// says nothing until the first message (spec 7.2).
+    pub ready_after: Duration,
 }
 
 impl SupervisorSettings {
@@ -33,7 +35,7 @@ impl SupervisorSettings {
             fresh_start_if_dies_within: Duration::from_secs(
                 config.supervisor.fresh_start_if_dies_within_s,
             ),
-            ring_buffer_bytes: config.terminal.ring_buffer_bytes,
+            ready_after: Duration::from_millis(1500),
         }
     }
 }

@@ -8,6 +8,7 @@
 
 mod calls;
 mod catalog;
+mod era;
 
 use std::sync::Arc;
 
@@ -15,35 +16,22 @@ use axum::body::Bytes;
 use axum::extract::State;
 use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
 use axum::response::{IntoResponse, Response};
-use base64::Engine as _;
-use base64::engine::general_purpose::STANDARD as BASE64;
 use botloft_core::ids::BotId;
 use botloft_core::protocol::error_code;
 use serde_json::{Value, json};
 use tracing::debug;
 
+use self::era::{Era, LEGACY, era, supported};
+use crate::approvals;
 use crate::rpc::jsonrpc::{self, Request};
 use crate::state::Daemon;
 
-/// The revision without `initialize`.
-const MODERN: &str = "2026-07-28";
-/// Revisions that open with `initialize`, newest first.
-const LEGACY: &[&str] = &["2025-11-25", "2025-06-18", "2025-03-26"];
-/// MCP error codes (2026-07-28).
-const HEADER_MISMATCH: i32 = -32020;
-const UNSUPPORTED_VERSION: i32 = -32022;
 /// How long clients may reuse `server/discover` and `tools/list`.
 const CACHE_TTL_MS: u64 = 60 * 60 * 1000;
 
 const INSTRUCTIONS: &str = "Tools to work with your Botloft crew: see who is in it, send notes \
-    or tasks to other bots, and report the result of tasks assigned to you. Messages from the \
-    owner and from other bots arrive as prompts that start with [botloft].";
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Era {
-    Modern,
-    Legacy,
-}
+    or tasks to other bots, and report the result of tasks assigned to you. The owner writes to \
+    you directly; messages from other bots and from Botloft start with [botloft].";
 
 /// A JSON-RPC error with the HTTP status it goes out with.
 struct Failure {
@@ -61,10 +49,6 @@ impl Failure {
             message: message.into(),
             data: None,
         }
-    }
-
-    fn mismatch(message: impl Into<String>) -> Self {
-        Self::new(StatusCode::BAD_REQUEST, HEADER_MISMATCH, message)
     }
 
     fn into_response(self, id: &Value) -> Response {
@@ -91,7 +75,7 @@ pub async fn handle(
         .get(header::AUTHORIZATION)
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.strip_prefix("Bearer "));
-    let Some((bot, _generation)) = token.and_then(|token| daemon.supervisor.hook_owner(token))
+    let Some((bot, generation)) = token.and_then(|token| daemon.supervisor.token_owner(token))
     else {
         debug!(
             has_token = token.is_some(),
@@ -122,7 +106,16 @@ pub async fn handle(
         debug!(bot = %bot, method = %request.method, "mcp notification");
         return StatusCode::ACCEPTED.into_response();
     };
-    let answered = era(&headers, &request).and_then(|era| answer(&daemon, &bot, era, &request));
+    let answered = match era(&headers, &request) {
+        // Holds the request until the owner answers (spec 10.1).
+        Ok(era) if is_permission_prompt(&request) => {
+            permission(&daemon, &bot, generation, &request)
+                .await
+                .map(|result| decorate(era, &request, result))
+        }
+        Ok(era) => answer(&daemon, &bot, era, &request),
+        Err(failure) => Err(failure),
+    };
     // Method names only: arguments carry message bodies.
     match answered {
         Ok(result) => {
@@ -146,91 +139,46 @@ fn json_response(status: StatusCode, body: String) -> Response {
     (status, [(header::CONTENT_TYPE, "application/json")], body).into_response()
 }
 
-fn header_value<'a>(headers: &'a HeaderMap, name: &str) -> Option<&'a str> {
-    headers.get(name).and_then(|value| value.to_str().ok())
-}
-
-/// Which revision the request follows, checking what 2026-07-28 requires.
-fn era(headers: &HeaderMap, request: &Request) -> Result<Era, Failure> {
-    match header_value(headers, "mcp-protocol-version") {
-        // `initialize`, and clients from before the header existed.
-        None => Ok(Era::Legacy),
-        Some(MODERN) => check_modern(headers, request).map(|()| Era::Modern),
-        Some(version) if LEGACY.contains(&version) => Ok(Era::Legacy),
-        Some(version) => {
-            let mut failure = Failure::new(
-                StatusCode::BAD_REQUEST,
-                UNSUPPORTED_VERSION,
-                "Unsupported protocol version",
-            );
-            failure.data = Some(json!({ "supported": supported(), "requested": version }));
-            Err(failure)
-        }
-    }
-}
-
-fn supported() -> Vec<&'static str> {
-    std::iter::once(MODERN)
-        .chain(LEGACY.iter().copied())
-        .collect()
-}
-
-/// The headers must match the body, and the body must carry its metadata.
-fn check_modern(headers: &HeaderMap, request: &Request) -> Result<(), Failure> {
-    let params = request.params.as_ref();
-    let meta = params.and_then(|params| params.get("_meta"));
-    let field =
-        |name: &str| meta.and_then(|meta| meta.get(format!("io.modelcontextprotocol/{name}")));
-    let (Some(version), Some(_)) = (field("protocolVersion"), field("clientCapabilities")) else {
-        return Err(Failure::new(
-            StatusCode::BAD_REQUEST,
-            error_code::INVALID_PARAMS,
-            "_meta needs io.modelcontextprotocol/protocolVersion and clientCapabilities",
-        ));
-    };
-    if version.as_str() != Some(MODERN) {
-        return Err(Failure::mismatch(
-            "MCP-Protocol-Version does not match the protocol version in _meta",
-        ));
-    }
-    if header_value(headers, "mcp-method") != Some(request.method.as_str()) {
-        return Err(Failure::mismatch(
-            "Mcp-Method is missing or does not match the method",
-        ));
-    }
-    if request.method == "tools/call" {
-        let name = params
+fn is_permission_prompt(request: &Request) -> bool {
+    request.method == "tools/call"
+        && request
+            .params
+            .as_ref()
             .and_then(|params| params.get("name"))
-            .and_then(Value::as_str);
-        let header = header_value(headers, "mcp-name").and_then(decode_header);
-        if name.is_none() || header.as_deref() != name {
-            return Err(Failure::mismatch(
-                "Mcp-Name is missing or does not match the tool name",
-            ));
-        }
-    }
-    Ok(())
+            .and_then(Value::as_str)
+            == Some(catalog::PERMISSION_PROMPT)
 }
 
-/// Undoes the `=?base64?...?=` form clients use for values that are not
-/// plain ASCII. `None` when that form does not decode.
-fn decode_header(value: &str) -> Option<String> {
-    match value
-        .strip_prefix("=?base64?")
-        .and_then(|rest| rest.strip_suffix("?="))
-    {
-        Some(encoded) => BASE64
-            .decode(encoded)
-            .ok()
-            .and_then(|bytes| String::from_utf8(bytes).ok()),
-        None => Some(value.to_owned()),
-    }
+async fn permission(
+    daemon: &Daemon,
+    bot: &BotId,
+    generation: u64,
+    request: &Request,
+) -> Result<Value, Failure> {
+    let arguments = request
+        .params
+        .as_ref()
+        .and_then(|params| params.get("arguments"))
+        .cloned()
+        .unwrap_or_else(|| json!({}));
+    let args: approvals::PromptArgs = serde_json::from_value(arguments).map_err(|err| {
+        Failure::new(
+            StatusCode::OK,
+            error_code::INVALID_PARAMS,
+            format!("invalid arguments: {err}"),
+        )
+    })?;
+    let decision = approvals::prompt(daemon, bot, generation, args).await;
+    Ok(json!({ "content": [{ "type": "text", "text": decision }], "isError": false }))
+}
+
+fn server_info() -> Value {
+    json!({ "name": "botloft", "version": env!("CARGO_PKG_VERSION") })
 }
 
 fn answer(daemon: &Daemon, bot: &BotId, era: Era, request: &Request) -> Result<Value, Failure> {
     let params = request.params.clone().unwrap_or_else(|| json!({}));
-    let server_info = json!({ "name": "botloft", "version": env!("CARGO_PKG_VERSION") });
-    let mut result = match (era, request.method.as_str()) {
+    let result = match (era, request.method.as_str()) {
         (_, "ping") => json!({}),
         (Era::Modern, "server/discover") => json!({
             "supportedVersions": supported(),
@@ -245,7 +193,7 @@ fn answer(daemon: &Daemon, bot: &BotId, era: Era, request: &Request) -> Result<V
             json!({
                 "protocolVersion": version,
                 "capabilities": { "tools": {} },
-                "serverInfo": server_info,
+                "serverInfo": server_info(),
                 "instructions": INSTRUCTIONS,
             })
         }
@@ -265,9 +213,14 @@ fn answer(daemon: &Daemon, bot: &BotId, era: Era, request: &Request) -> Result<V
             ));
         }
     };
+    Ok(decorate(era, request, result))
+}
+
+/// What 2026-07-28 adds to every result.
+fn decorate(era: Era, request: &Request, mut result: Value) -> Value {
     if era == Era::Modern {
         result["resultType"] = json!("complete");
-        result["_meta"] = json!({ "io.modelcontextprotocol/serverInfo": server_info });
+        result["_meta"] = json!({ "io.modelcontextprotocol/serverInfo": server_info() });
         // 2026-07-28 requires caching hints on these; clients reject the
         // result without them. The tools only change with the daemon.
         if matches!(request.method.as_str(), "server/discover" | "tools/list") {
@@ -275,5 +228,5 @@ fn answer(daemon: &Daemon, bot: &BotId, era: Era, request: &Request) -> Result<V
             result["cacheScope"] = json!("public");
         }
     }
-    Ok(result)
+    result
 }

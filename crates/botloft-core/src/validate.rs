@@ -11,6 +11,8 @@ pub const ROLE_MAX_CHARS: usize = 200;
 pub const INSTRUCTIONS_MAX_CHARS: usize = 32_000;
 /// Well under the ~1 million characters Claude Code accepts per message.
 pub const MESSAGE_MAX_CHARS: usize = 100_000;
+/// Files per message (spec 9.5).
+pub const ATTACHMENTS_MAX: usize = 10;
 
 /// Trims a crew or bot name and checks it is a non-empty single line.
 pub fn name(field: &str, value: &str) -> Result<String, ValidationError> {

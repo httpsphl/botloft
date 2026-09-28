@@ -103,6 +103,7 @@ pub fn send(
         },
         body,
         task_id: task.as_ref().map(|task| task.id.clone()),
+        attachments: Vec::new(),
         created_at: now,
     };
     let message = post(daemon, &store, message, task.clone())?;
@@ -225,10 +226,11 @@ pub fn complete(
         kind: MessageKind::Result,
         body: result.clone(),
         task_id: Some(task.id.clone()),
+        attachments: Vec::new(),
         created_at: now,
     };
     let delivery = pending_delivery(&report);
-    let settled = store
+    let (settled, item) = store
         .settle_task(
             &task.id,
             &UNFINISHED,
@@ -240,7 +242,7 @@ pub fn complete(
         .ok_or_else(|| {
             ApiError::Conflict(format!("task {task_id} changed meanwhile; check my_tasks"))
         })?;
-    announce(daemon, Some(settled.clone()), &report, delivery);
+    announce(daemon, Some(settled.clone()), &report, delivery, item);
     Ok(settled)
 }
 

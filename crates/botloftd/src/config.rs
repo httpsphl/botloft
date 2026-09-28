@@ -18,7 +18,7 @@ pub struct Config {
     pub log_level: String,
     pub supervisor: SupervisorConfig,
     pub courier: CourierConfig,
-    pub terminal: TerminalConfig,
+    pub bots: BotsConfig,
     pub tasks: TasksConfig,
 }
 
@@ -32,7 +32,7 @@ impl Default for Config {
             log_level: "info".to_owned(),
             supervisor: SupervisorConfig::default(),
             courier: CourierConfig::default(),
-            terminal: TerminalConfig::default(),
+            bots: BotsConfig::default(),
             tasks: TasksConfig::default(),
         }
     }
@@ -80,14 +80,18 @@ impl Default for CourierConfig {
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-pub struct TerminalConfig {
-    pub ring_buffer_bytes: usize,
+pub struct BotsConfig {
+    /// How long a permission request waits for the owner (spec 10.1).
+    pub approval_timeout_minutes: u64,
+    /// Largest attachment, per file (spec 9.5).
+    pub attachment_max_mb: u64,
 }
 
-impl Default for TerminalConfig {
+impl Default for BotsConfig {
     fn default() -> Self {
         Self {
-            ring_buffer_bytes: 1 << 20,
+            approval_timeout_minutes: 60,
+            attachment_max_mb: 20,
         }
     }
 }

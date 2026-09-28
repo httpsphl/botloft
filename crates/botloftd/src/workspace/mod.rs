@@ -6,6 +6,7 @@ mod files;
 
 use std::io;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use botloft_core::protocol::Crew;
 use botloft_store::BotRecord;
@@ -16,9 +17,9 @@ use crate::paths::Paths;
 #[derive(Debug, Clone, Copy)]
 pub struct WorkspaceEnv<'a> {
     pub paths: &'a Paths,
-    /// Absolute path of `botloftd.exe`, run by the hooks.
-    pub bin: &'a Path,
     pub port: u16,
+    /// How long the MCP server may hold a permission request (spec 10).
+    pub approval_timeout: Duration,
 }
 
 /// Creates the crew folder and its `shared` folder.
@@ -39,11 +40,11 @@ pub fn prepare_bot(env: WorkspaceEnv<'_>, crew: &Crew, bot: &BotRecord) -> io::R
     }
     write_json(
         &dir.join(".claude").join("settings.json"),
-        &files::settings_json(env.bin, &env.paths.home),
+        &files::settings_json(&env.paths.home),
     )?;
     write_json(
         &dir.join(".botloft").join("mcp.json"),
-        &files::mcp_json(env.port),
+        &files::mcp_json(env.port, env.approval_timeout),
     )?;
     write_rules(env.paths, crew, bot)?;
     Ok(dir)
@@ -112,8 +113,8 @@ mod tests {
         let (_dir, paths, crew, bot) = fixture();
         let env = WorkspaceEnv {
             paths: &paths,
-            bin: Path::new("botloftd.exe"),
             port: 45710,
+            approval_timeout: Duration::from_secs(3600),
         };
         let ws = prepare_bot(env, &crew, &bot).expect("prepare");
 
@@ -130,7 +131,7 @@ mod tests {
         let settings: serde_json::Value =
             serde_json::from_slice(&std::fs::read(ws.join(".claude/settings.json")).expect("read"))
                 .expect("valid json");
-        assert_eq!(settings["crossSessionInbound"], "accept");
+        assert!(settings["permissions"]["deny"].is_array());
     }
 
     #[test]
@@ -138,8 +139,8 @@ mod tests {
         let (_dir, paths, crew, mut bot) = fixture();
         let env = WorkspaceEnv {
             paths: &paths,
-            bin: Path::new("botloftd.exe"),
             port: 45710,
+            approval_timeout: Duration::from_secs(3600),
         };
         let ws = prepare_bot(env, &crew, &bot).expect("prepare");
         std::fs::write(ws.join("CLAUDE.md"), "my notes").expect("edit memory");
