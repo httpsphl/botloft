@@ -147,9 +147,9 @@ export function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
             <div className="flex flex-col items-center gap-3 py-16 text-center">
               <BotAvatar color={bot.color} size={56} />
               <p className="font-semibold text-base">Start a conversation with {bot.name}</p>
+              {bot.role && <p className="max-w-md text-ink-soft text-sm">{bot.role}</p>}
               <p className="max-w-md text-muted text-sm">
-                {bot.role || "Ask for anything its folder and tools can do."} You can attach files
-                and images too.
+                Ask for anything its folder and tools can do. You can attach files and images too.
               </p>
             </div>
           )}

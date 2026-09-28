@@ -39,10 +39,10 @@ export function Welcome() {
           {claude}
         </ul>
         <div className="mt-4 border border-line bg-panel p-4 text-sm leading-relaxed">
-          <p className="font-semibold">Each bot asks once to trust its folder</p>
+          <p className="font-semibold">Bots ask before they change things</p>
           <p className="mt-1 text-ink-soft">
-            The first time a bot starts, Claude Code asks whether you trust the bot's folder. The
-            bot waits in "Starting" until you answer "Yes, I trust this folder" in its terminal.
+            When a bot wants to run a command or edit a file, it asks in its chat and waits for you
+            to allow or deny it.
           </p>
         </div>
         <Button className="mt-6" variant="primary" icon={Plus} onClick={() => setCreating(true)}>
