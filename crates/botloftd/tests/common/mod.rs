@@ -3,6 +3,9 @@
 
 #![allow(dead_code)] // each test file uses a different part of the harness
 
+pub mod bots;
+pub mod mcp;
+
 use std::collections::VecDeque;
 use std::net::SocketAddr;
 use std::path::PathBuf;

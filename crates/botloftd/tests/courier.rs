@@ -7,8 +7,7 @@ mod common;
 use std::time::Duration;
 
 use botloftd::clock::Clock as _;
-use botloftd::hooks::client::post;
-use botloftd::runtime::fake::FakeProcess;
+use common::bots::{pipe, session_start};
 use common::{Client, TestDaemon};
 use serde_json::{Value, json};
 
@@ -23,27 +22,6 @@ async fn crew_and_bot(app: &mut Client) -> Value {
         .expect("crew");
     let bot = json!({ "crewId": crew["id"], "name": "Scout", "role": "", "instructions": "" });
     app.call("bots.create", bot).await.expect("bot")
-}
-
-fn pipe(n: u32) -> String {
-    format!(r"\\.\pipe\LOCAL\cc-msg-test-{n}")
-}
-
-/// Sends `SessionStart` through `/hooks`, as the bot's hook would, with the
-/// inbox `pipe(n)` and messaging token `tok-n`.
-async fn session_start(t: &TestDaemon, process: &FakeProcess, n: u32) {
-    let token = process.env("BOTLOFT_BOT_TOKEN").expect("bot token");
-    let body = json!({
-        "payload": { "hook_event_name": "SessionStart" },
-        "messagingSocket": pipe(n),
-        "messagingToken": format!("tok-{n}"),
-    });
-    let body = serde_json::to_vec(&body).expect("json");
-    let port = t.addr.port();
-    tokio::task::spawn_blocking(move || post(port, "/hooks/session-start", &token, &body))
-        .await
-        .expect("join")
-        .expect("hook accepted");
 }
 
 async fn send(app: &mut Client, bot: &Value, body: &str) -> Value {
