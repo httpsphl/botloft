@@ -261,37 +261,51 @@ A confiança de uma pasta pai cobre as subpastas (fora de repositório git). O o
 ### 9.1 Fluxo
 
 1. `messages.send` (owner) ou tool `send_message` (bot) grava `message` + `delivery` (`pending`) numa transação.
-2. O **courier** acorda a cada `poll_interval_ms` (e na hora, via notify, quando entra delivery nova).
-3. Pega deliveries `pending` com `next_attempt_at <= agora`, marca `sending` com `lease_until`.
-4. Se o bot não está em `idle`/`busy`/`needs_approval` ou o inbox não foi registrado: volta para `pending` com `next_attempt_at` em 5 s, **sem** contar tentativa.
-5. Renderiza o envelope (9.3) e escreve no pipe (9.2).
-6. Sucesso: `sent`. Falha: `attempts += 1`, backoff exponencial; ao chegar em `max_attempts`, `dead`.
+2. O **courier** acorda a cada `poll_interval_ms` (e na hora, via notify, quando entra delivery nova ou termina um envio).
+3. Entrega em ordem, uma por vez por bot: de cada bot, só a delivery `pending` mais antiga pode sair, quando `next_attempt_at <= agora` e o bot não tem outra em `sending`. Ela vira `sending` com `lease_until`.
+4. Se o bot não está em `idle`/`busy`/`needs_approval` ou o inbox não foi registrado: volta para `pending` com `next_attempt_at` em 5 s, **sem** contar tentativa. Bot ou crew arquivados: a delivery vira `dead` na hora.
+5. Renderiza o envelope (9.3) na hora do envio e escreve no pipe (9.2), com timeout de 10 s.
+6. Sucesso: `sent`. Falha: `attempts += 1` e nova tentativa em `retry_backoff_initial_ms * 2^(attempts-1)`, limitado a `retry_backoff_max_ms`; ao chegar em `max_attempts`, `dead`. Se o bot reiniciou durante o envio (inbox trocou), a falha não conta tentativa.
 7. Lease vencido (daemon caiu no meio): volta a `pending` no boot e a cada ciclo.
+8. `deliveries.retry` devolve uma delivery `dead` para `pending`, com as tentativas zeradas.
 
 `sent` quer dizer que o Claude Code aceitou a conexão. Não prova que o bot fez o trabalho; para isso existem tasks.
 
+Os horários de `next_attempt_at`, `lease_until` e prazos vêm de um relógio injetável do daemon, para os testes controlarem o tempo sem esperar.
+
 ### 9.2 Escrita no inbox (Windows)
 
-- Endereço e token chegam pelo hook `session-start` e ficam só em memória, por generation.
+- Endereço e token chegam pelo hook `session-start` e ficam só em memória, por generation. O endereço tem a forma `\\.\pipe\LOCAL\cc-msg-<32 hex>` e o token tem 32 caracteres (visto com 2.1.283).
 - Abrir o pipe como cliente **somente com a mensagem pronta** (o Claude Code derruba conexão sem linha completa em 30 s).
-- Se `ERROR_PIPE_BUSY`, esperar até 2 s (`WaitNamedPipeW`) e tentar de novo dentro da mesma tentativa.
-- Conteúdo, uma linha JSON por item, terminado em `\n`:
+- Se `ERROR_PIPE_BUSY`, tentar abrir de novo a cada 50 ms por até 2 s, dentro da mesma tentativa.
+- Conteúdo, uma linha JSON por item, terminado em `\n`, em UTF-8:
   1. `{"type":"auth","token":"<CLAUDE_CODE_MESSAGING_TOKEN>"}` (**obrigatório** no Windows)
   2. `{"type":"user","message":{"role":"user","content":"<envelope>"}}`
-- Fechar a conexão depois do flush.
-- A documentação oficial confirma a linha de auth, a obrigatoriedade dela no Windows e o limite de 30 s, mas **não documenta** a linha de mensagem (item 2). Ela precisa ser confirmada com teste real no M3 antes de o courier depender dela.
-- Limites documentados do lado do Claude Code: mensagem de até ~1 milhão de caracteres, no máximo 50 mensagens aceitas na fila, rajadas recusadas e repetições idênticas descartadas. O courier deve respeitar isso (uma entrega por vez por bot).
+- Fechar a conexão logo depois de escrever. O Claude Code não responde nada; o que já foi escrito continua legível para ele depois do fechamento.
+- A documentação oficial confirma a linha de auth, a obrigatoriedade dela no Windows e o limite de 30 s, mas **não documenta** a linha de mensagem (item 2). Ela foi confirmada com teste real (2.1.283, ver seção 19):
+  - a mensagem chega como `Another Claude session sent a message:` seguida do texto e de um aviso de que mensagem de outra sessão não aprova prompts nem muda configuração; conteúdo com várias linhas e acentos chega intacto e abre um turno se o bot estiver parado;
+  - sem a linha de auth, ou com token errado, o Claude Code fecha a conexão e não entrega nada;
+  - com auth válido, uma linha que não é JSON é ignorada em silêncio e a conexão continua aberta;
+  - três conexões seguidas, uma mensagem cada, chegaram todas.
+- Mensagens do owner chegam com o mesmo aviso de "outra sessão": o envelope (9.3) diz que vieram do owner, mas elas não valem como aprovação de prompt de permissão.
+- Limites documentados do lado do Claude Code: mensagem de até ~1 milhão de caracteres, no máximo 50 mensagens aceitas na fila, rajadas recusadas e repetições idênticas descartadas. O courier respeita isso com uma entrega por vez por bot e corpo de no máximo 100 000 caracteres.
 
 ### 9.3 Envelope
 
+O texto que o bot lê é em inglês, como as regras geradas (5.1):
+
 ```
-[botloft] de @revisor · crew exemplo · tarefa tsk_01J9Z... · prazo 14:30
-Para responder: send_message(to: "revisor"). Para concluir: complete_task(task_id: "tsk_01J9Z...").
+[botloft] from @revisor · crew Exemplo · task tsk_01J9Z... · due in 2 h
+Reply with send_message(to: "revisor"). When the task is done, call complete_task(task_id: "tsk_01J9Z...").
 
 <corpo da mensagem>
 ```
 
-Mensagem do owner usa `de @owner` e não tem linha de instrução de tarefa, a menos que seja uma task.
+- Nota de outro bot: primeira linha `[botloft] from @revisor · crew Exemplo` e só a instrução de resposta.
+- Mensagem do owner: `from the owner`, sem `@` (um bot pode se chamar "Owner") e sem linha de instrução.
+- Resultado de task: `· result of task tsk_... · done` (ou `failed`) e a instrução de resposta.
+- Aviso do daemon (task vencida): `from Botloft` e o texto do aviso, sem instrução.
+- O prazo é relativo (`due in 45 min`, `due in 2 h`, `overdue`) e calculado na hora do envio: o bot não sabe a hora atual, e o app mostra o horário absoluto a partir de `deadline_at`.
 
 ### 9.4 Tasks entre bots
 
@@ -493,13 +507,13 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28. "Co
 | Item | Seção | Resultado | Teste real |
 |---|---|---|---|
 | Exec form de hooks (`args`) no Windows | 7.5 | Confirmado (`hooks`) e **testado com 2.1.283**: `botloftd.exe hook session-start` rodou direto, sem shell | feito (M2) |
-| Linha de auth, 30 s e variáveis do inbox | 9.2 | Confirmado (`cross-session-messaging`): `CLAUDE_CODE_MESSAGING_SOCKET`, `CLAUDE_CODE_MESSAGING_TOKEN`, auth obrigatória no Windows, >= 2.1.234 | M3 |
-| Formato da linha de mensagem no inbox | 9.2 | **Não documentado** | M3, obrigatório |
-| `crossSessionInbound` | 7.5 | Confirmado: valores `accept`, `hold`, `refuse`; `refuse` em settings de projeto vence tudo | M3 |
+| Linha de auth, 30 s e variáveis do inbox | 9.2 | Confirmado (`cross-session-messaging`): `CLAUDE_CODE_MESSAGING_SOCKET`, `CLAUDE_CODE_MESSAGING_TOKEN`, auth obrigatória no Windows, >= 2.1.234. **Testado com 2.1.283**: as duas variáveis chegam ao hook `SessionStart`; sem auth ou com token errado a conexão é fechada | feito (M3) |
+| Formato da linha de mensagem no inbox | 9.2 | **Não documentado**; **testado com 2.1.283**: `{"type":"user","message":{"role":"user","content":...}}` é entregue e abre um turno (detalhes em 9.2) | feito (M3) |
+| `crossSessionInbound` | 7.5 | Confirmado: valores `accept`, `hold`, `refuse`; `refuse` em settings de projeto vence tudo. **Testado com 2.1.283**: com `accept` a mensagem entrou direto, sem diálogo | feito (M3) |
 | Carregamento de `.claude/rules/*.md` sem frontmatter | 5.1 | Confirmado (`memory`) e **testado com 2.1.283**: o bot respondeu nome, handle e crew tirados das regras | feito (M2) |
 | Expansão `${VAR}` em headers do `mcp.json` | 10 | Confirmado (`mcp`); alguns nomes de credencial conhecidos são lidos vazios, `BOTLOFT_BOT_TOKEN` não é um deles | M3 |
 | Sintaxe de caminho Windows em permission rules | 7.5 | Confirmado (`permissions`) e **testado com 2.1.283**: ler `secrets\owner.token` deu "File is in a directory that is denied by your permission settings" | feito (M2) |
-| Flags `--continue`, `--mcp-config` | 7.4 | Confirmado (`cli-reference`); aceitas pelo 2.1.283 | `--continue` retomando conversa real: pendente |
+| Flags `--continue`, `--mcp-config` | 7.4 | Confirmado (`cli-reference`); aceitas pelo 2.1.283. **Testado**: depois de reiniciar o daemon, o bot voltou com `--continue` e a conversa anterior na tela | feito (M3) |
 | Flag `--settings <arquivo>` | 7.4 | Ausente da tabela de CLI, mas aceita pelo 2.1.283 e os hooks do arquivo rodaram | feito (M2) |
 | stdout do `SessionStart` vira contexto | 7.6 | Confirmado (`hooks`); o subcomando nunca escreve no stdout | feito (M2) |
 | `StopFailure` (`rate_limit`, `authentication_failed`) e `Notification` (`permission_prompt`) | 7.2 | Campos documentados: `error` e `notification_type`. `SessionStart`, `UserPromptSubmit` e `Stop` **testados com 2.1.283** (`launching` -> `idle` -> `busy` -> `idle`) | disparar `StopFailure` e `permission_prompt` reais: pendente |
