@@ -91,6 +91,7 @@ fn export_bindings() {
     out.decl::<MessagesListParams>();
     out.decl::<DeliveriesListParams>();
     out.decl::<DeliveryIdParams>();
+    out.decl::<TasksListParams>();
 
     let crew = out.name::<Crew>();
     let bot = out.name::<Bot>();
@@ -175,6 +176,11 @@ fn export_bindings() {
         method::DELIVERIES_RETRY,
         &out.name::<DeliveryIdParams>(),
         &delivery,
+    );
+    out.method(
+        method::TASKS_LIST,
+        &out.name::<TasksListParams>(),
+        &out.name::<Vec<Task>>(),
     );
     out.text.push_str("}\n\n");
 
