@@ -62,6 +62,7 @@ pub fn set_paused(daemon: &Daemon, params: CrewsSetPausedParams) -> ApiResult<Cr
         crew.paused = params.paused;
         store.update_crew(&crew)?;
         daemon.emit(Event::CrewChanged(crew.clone()));
+        daemon.supervisor.wake();
     }
     Ok(crew)
 }
@@ -83,6 +84,7 @@ pub fn archive(daemon: &Daemon, params: CrewIdParams) -> ApiResult<Crew> {
         }
     }
     daemon.emit(Event::CrewChanged(crew.clone()));
+    daemon.supervisor.wake();
     Ok(crew)
 }
 

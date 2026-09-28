@@ -59,8 +59,12 @@ Em dev, use `BOTLOFT_HOME=.dev\home` para não tocar na instalação real em `%L
 
 - O inbox do Claude Code no Windows é um **named pipe** criado pelo próprio Claude Code. O daemon é cliente. A primeira linha tem que ser o auth com `CLAUDE_CODE_MESSAGING_TOKEN`, senão a conexão é descartada. Abra o pipe só com a mensagem pronta.
 - Hooks usam **exec form** (`"args": [...]`) chamando `botloftd.exe hook <evento>`. Nada de hook em bash ou PowerShell. O subcomando sai sempre com 0 e nunca escreve no stdout.
-- `claude.cmd` (npm) precisa de `cmd.exe /d /s /c`; `claude.exe` (instalador nativo) roda direto.
-- ConPTY não tem fd para `poll`: leitura da PTY em thread dedicada + canal.
+- Só o `claude.exe` nativo roda. O `claude.cmd` do npm é recusado: passar por `cmd.exe` estraga o quoting na PTY.
+- ConPTY não tem fd para `poll`: leitura da PTY em thread dedicada + canal. Ao fim do processo, feche o pseudoconsole, senão a leitura nunca vê EOF.
+- O ConPTY do `portable-pty` (com `PSEUDOCONSOLE_INHERIT_CURSOR`) manda `ESC[6n` ao iniciar e trava o filho até a resposta. O daemon responde `ESC[1;1R` à primeira consulta.
+- O bot recebe o ambiente padrão do usuário (`CreateEnvironmentBlock`), nunca o do daemon: em dev o daemon herda variáveis da sessão do Claude Code (`CLAUDE_CODE_MESSAGING_SOCKET`, `ANTHROPIC_BASE_URL`...).
+- PATH real pode ter aspas soltas. Separe só por `;`; `std::env::split_paths` trata aspas como agrupamento e engole o resto.
+- Numa sessão interativa, os hooks só rodam depois de aceitar a confiança da pasta. Teste manual de bot novo começa pelo diálogo de confiança no terminal.
 - Todo processo de bot entra num Job Object com kill-on-close.
 - Permissão de arquivo é ACL (SID do usuário atual), não modo Unix.
 - Estado em `%LOCALAPPDATA%`, nunca `%APPDATA%` (roaming).

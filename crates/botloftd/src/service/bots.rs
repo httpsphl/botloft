@@ -2,8 +2,8 @@
 
 use botloft_core::ids::{BotId, CrewId};
 use botloft_core::protocol::{
-    Bot, BotIdParams, BotState, BotsCreateParams, BotsListParams, BotsSetPausedParams,
-    BotsUpdateParams, Crew,
+    Bot, BotIdParams, BotState, BotsCreateParams, BotsListParams, BotsRestartParams,
+    BotsSetPausedParams, BotsUpdateParams, Crew,
 };
 use botloft_core::{avatar, now_ms, slug, validate};
 use botloft_store::{BotRecord, Store};
@@ -65,7 +65,9 @@ pub fn create(daemon: &Daemon, params: BotsCreateParams) -> ApiResult<Bot> {
     };
     workspace::prepare_bot(daemon.workspace_env(), &crew, &record).map_err(ApiError::Workspace)?;
     store.insert_bot(&record)?;
-    Ok(changed(daemon, &crew, record))
+    let bot = changed(daemon, &crew, record);
+    daemon.supervisor.wake();
+    Ok(bot)
 }
 
 pub fn update(daemon: &Daemon, params: BotsUpdateParams) -> ApiResult<Bot> {
@@ -85,7 +87,8 @@ pub fn update(daemon: &Daemon, params: BotsUpdateParams) -> ApiResult<Bot> {
     if let Some(color) = params.color {
         record.color = parse_color(&color)?;
     }
-    // Rules first: if the disk write fails, nothing is saved.
+    // Rules first: if the disk write fails, nothing is saved. A running bot
+    // reads them at its next start.
     workspace::write_rules(&daemon.paths, &crew, &record).map_err(ApiError::Workspace)?;
     store.update_bot(&record)?;
     Ok(changed(daemon, &crew, record))
@@ -99,11 +102,30 @@ pub fn set_paused(daemon: &Daemon, params: BotsSetPausedParams) -> ApiResult<Bot
     }
     record.paused = params.paused;
     store.update_bot(&record)?;
-    Ok(changed(daemon, &crew, record))
+    let bot = changed(daemon, &crew, record);
+    daemon.supervisor.wake();
+    Ok(bot)
 }
 
-/// Archives the bot. Archiving twice is not an error. The workspace stays on
-/// disk until the runtime can stop the process first (spec 14).
+/// Restarts the process; `fresh` drops the conversation. Also the way out
+/// of `auth_error` (spec 7.3).
+pub fn restart(daemon: &Daemon, params: BotsRestartParams) -> ApiResult<Bot> {
+    let store = daemon.store();
+    let (crew, record) = active(&store, &params.bot_id)?;
+    if record.paused || crew.paused {
+        return Err(ApiError::Conflict(format!(
+            "bot {} is paused; resume it instead",
+            record.id
+        )));
+    }
+    daemon
+        .supervisor
+        .restart(&record.id, params.fresh.unwrap_or(false));
+    Ok(to_protocol(daemon, &crew, record))
+}
+
+/// Archives the bot and stops its process. Archiving twice is not an error.
+/// The workspace stays on disk for now (spec 14).
 pub fn archive(daemon: &Daemon, params: BotIdParams) -> ApiResult<Bot> {
     let store = daemon.store();
     let mut record = find(&store, &params.bot_id)?;
@@ -113,16 +135,21 @@ pub fn archive(daemon: &Daemon, params: BotIdParams) -> ApiResult<Bot> {
     }
     record.archived_at = Some(now_ms());
     store.update_bot(&record)?;
-    Ok(changed(daemon, &crew, record))
+    let bot = changed(daemon, &crew, record);
+    daemon.supervisor.wake();
+    Ok(bot)
 }
 
-/// The protocol view of a stored bot. Until the runtime exists (M2) every
-/// active bot is `offline`.
+/// The protocol view of a stored bot, with the supervisor's live state.
 pub(crate) fn to_protocol(daemon: &Daemon, crew: &Crew, record: BotRecord) -> Bot {
-    let state = if record.archived_at.is_some() {
+    let (live, generation) = daemon
+        .supervisor
+        .status(&record.id)
+        .unwrap_or((BotState::Offline, None));
+    let state = if record.archived_at.is_some() || crew.archived_at.is_some() {
         BotState::Archived
     } else {
-        BotState::Offline
+        live
     };
     let workspace = daemon.paths.bot_workspace(&crew.slug, &record.slug);
     Bot {
@@ -136,6 +163,7 @@ pub(crate) fn to_protocol(daemon: &Daemon, crew: &Crew, record: BotRecord) -> Bo
         color: record.color,
         paused: record.paused,
         state,
+        generation,
         workspace: workspace.to_string_lossy().into_owned(),
         created_at: record.created_at,
         archived_at: record.archived_at,
@@ -148,7 +176,7 @@ fn changed(daemon: &Daemon, crew: &Crew, record: BotRecord) -> Bot {
     bot
 }
 
-fn find(store: &Store, id: &BotId) -> ApiResult<BotRecord> {
+pub(crate) fn find(store: &Store, id: &BotId) -> ApiResult<BotRecord> {
     store
         .bot(id)?
         .ok_or_else(|| ApiError::NotFound(format!("bot {id} does not exist")))

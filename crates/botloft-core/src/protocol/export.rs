@@ -72,6 +72,13 @@ fn export_bindings() {
     out.decl::<BotsUpdateParams>();
     out.decl::<BotsSetPausedParams>();
     out.decl::<BotIdParams>();
+    out.decl::<BotsRestartParams>();
+    out.decl::<BotStateChanged>();
+    out.decl::<TerminalAttachParams>();
+    out.decl::<TerminalAttachResult>();
+    out.decl::<TerminalWriteParams>();
+    out.decl::<TerminalResizeParams>();
+    out.decl::<TerminalData>();
 
     let crew = out.name::<Crew>();
     let bot = out.name::<Bot>();
@@ -117,6 +124,24 @@ fn export_bindings() {
         &bot,
     );
     out.method(method::BOTS_ARCHIVE, &out.name::<BotIdParams>(), &bot);
+    out.method(method::BOTS_RESTART, &out.name::<BotsRestartParams>(), &bot);
+    let attach = out.name::<TerminalAttachResult>();
+    out.method(
+        method::TERMINAL_ATTACH,
+        &out.name::<TerminalAttachParams>(),
+        &attach,
+    );
+    out.method(method::TERMINAL_DETACH, &out.name::<BotIdParams>(), "null");
+    out.method(
+        method::TERMINAL_WRITE,
+        &out.name::<TerminalWriteParams>(),
+        "null",
+    );
+    out.method(
+        method::TERMINAL_RESIZE,
+        &out.name::<TerminalResizeParams>(),
+        "null",
+    );
     out.text.push_str("}\n\n");
 
     out.text
@@ -124,6 +149,10 @@ fn export_bindings() {
     out.text.push_str("export interface RpcNotifications {\n");
     let _ = writeln!(out.text, "  \"{}\": {crew};", notification::CREW_CHANGED);
     let _ = writeln!(out.text, "  \"{}\": {bot};", notification::BOT_CHANGED);
+    let state = out.name::<BotStateChanged>();
+    let data = out.name::<TerminalData>();
+    let _ = writeln!(out.text, "  \"{}\": {state};", notification::BOT_STATE);
+    let _ = writeln!(out.text, "  \"{}\": {data};", notification::TERMINAL_DATA);
     out.text.push_str("}\n\n");
 
     out.text.push_str("export const RpcErrorCode = {\n");

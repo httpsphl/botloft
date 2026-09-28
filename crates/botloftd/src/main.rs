@@ -9,8 +9,10 @@ use botloft_store::Store;
 use botloftd::config::Config;
 use botloftd::paths::{self, Paths};
 use botloftd::platform::{self, InstanceLock};
+use botloftd::runtime::PtyRuntime;
 use botloftd::state::{Daemon, DaemonOptions};
-use botloftd::{logging, secrets, server};
+use botloftd::supervisor::{self, SupervisorSettings};
+use botloftd::{hooks, logging, secrets, server};
 use clap::{Parser, Subcommand};
 use tokio::net::TcpListener;
 use tracing::info;
@@ -30,11 +32,23 @@ enum Command {
         #[arg(long)]
         config: Option<PathBuf>,
     },
+    /// Forward a Claude Code hook to the daemon (run by the bots' settings).
+    #[command(hide = true)]
+    Hook {
+        /// session-start, prompt-submit, stop, stop-failure, notification or session-end.
+        event: String,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
     match Cli::parse().command {
         Command::Serve { config } => serve(config),
+        Command::Hook { event } => {
+            // Always exit 0, even on a panic: a failing hook must never get
+            // in the way of the bot (spec 7.6).
+            let _ = std::panic::catch_unwind(|| hooks::client::run(&event));
+            std::process::exit(0);
+        }
     }
 }
 
@@ -58,13 +72,15 @@ fn serve(config_path: Option<PathBuf>) -> anyhow::Result<()> {
     let bin = std::env::current_exe().context("cannot find the botloftd executable")?;
 
     info!(home = %paths.home.display(), workspaces = %paths.workspaces_root.display(), "starting");
-    let daemon = Arc::new(Daemon::new(DaemonOptions {
+    let daemon = Daemon::new(DaemonOptions {
         paths,
         port: config.port,
         bin,
         store,
         owner_token,
-    }));
+        runtime: Arc::new(PtyRuntime),
+        supervisor: SupervisorSettings::from_config(&config),
+    });
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -79,7 +95,9 @@ fn serve(config_path: Option<PathBuf>) -> anyhow::Result<()> {
                 )
             })?;
         info!(port = config.port, "listening on 127.0.0.1");
-        server::serve(daemon, listener, platform::shutdown_signal()).await?;
+        tokio::spawn(supervisor::run(Arc::clone(&daemon)));
+        server::serve(Arc::clone(&daemon), listener, platform::shutdown_signal()).await?;
+        daemon.supervisor.shutdown();
         info!("stopped");
         anyhow::Ok(())
     })

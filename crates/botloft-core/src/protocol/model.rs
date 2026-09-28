@@ -55,10 +55,23 @@ pub struct Bot {
     pub color: String,
     pub paused: bool,
     pub state: BotState,
+    /// Current process generation; `null` if the bot has not started since
+    /// the daemon did. Changes on every (re)start (spec 8).
+    pub generation: Option<u64>,
     /// Absolute path of the bot's workspace folder.
     pub workspace: String,
     /// Unix time in milliseconds.
     pub created_at: i64,
     /// Unix time in milliseconds; `null` while the bot is active.
     pub archived_at: Option<i64>,
+}
+
+/// Params of the `bot.state` notification.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BotStateChanged {
+    pub bot_id: BotId,
+    pub state: BotState,
+    pub generation: Option<u64>,
 }

@@ -1,4 +1,10 @@
-//! Windows ACLs and console signals.
+//! Windows ACLs, Job Objects, the user environment and console signals.
+
+mod env;
+mod job;
+
+pub use env::user_environment;
+pub use job::ProcessJob;
 
 use std::io;
 use std::os::windows::ffi::OsStrExt;

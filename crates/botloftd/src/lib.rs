@@ -3,12 +3,16 @@
 //! parses the command line and wires these modules together.
 
 pub mod config;
+pub mod hooks;
 pub mod logging;
 pub mod paths;
 pub mod platform;
 pub mod rpc;
+pub mod runtime;
 pub mod secrets;
 pub mod server;
 pub mod service;
 pub mod state;
+pub mod supervisor;
+pub mod terminal;
 pub mod workspace;

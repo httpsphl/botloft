@@ -179,28 +179,37 @@ default_deadline_minutes = 120
 | hook `UserPromptSubmit` | `busy` |
 | hook `Stop` | `idle` |
 | hook `StopFailure` com `rate_limit` | `rate_limited` |
-| hook `StopFailure` com `authentication_failed` | `auth_error` |
+| hook `StopFailure` com `authentication_failed` ou `oauth_org_not_allowed` | `auth_error` |
+| hook `StopFailure` com outro `error` | `idle` (o turno acabou, a sessão segue) |
 | hook `Notification` com `permission_prompt` | `needs_approval` |
 | input do usuário depois de `needs_approval` | `busy` |
 | saída do processo | `backoff` (ou `offline`/`archived` se foi pedido) |
+
+Campos lidos do JSON do stdin (documentados): `error` no `StopFailure`, `notification_type` no `Notification`. Hooks de uma generation antiga são ignorados. Todo processo novo emite `bot.state {botId, state, generation}`, mesmo que o nome do estado não mude, porque a generation mudou.
 
 ### 7.3 Regras
 
 - Bots não pausados sempre rodam. O supervisor reconcilia no boot e a cada 5 s.
 - Backoff exponencial com jitter entre `restart_backoff_initial_ms` e `restart_backoff_max_ms`; zera após 10 min de sessão estável.
-- Relançamento usa `--continue` para retomar a conversa. Se a sessão retomada morrer em menos de `fresh_start_if_dies_within_s`, o próximo start vem sem `--continue`.
+- Relançamento usa `--continue` para retomar a conversa. Se a sessão retomada morrer em menos de `fresh_start_if_dies_within_s`, o próximo start vem sem `--continue`. O primeiro start de um bot não usa `--continue`: o daemon grava `.botloft/started` no workspace no primeiro `SessionStart` e só a partir daí retoma. `bots.restart {fresh: true}` também começa conversa nova.
+- Mudanças em nome, papel ou instruções regravam as regras na hora, mas o bot só as lê no próximo start; o daemon não reinicia o bot sozinho.
 - `auth_error` não entra em loop de restart: fica parado até o owner pedir `bots.restart`.
 - Cada processo de bot entra num **Job Object** com `KILL_ON_JOB_CLOSE`. Se o daemon morrer, a árvore de processos dos bots morre junto e não sobra `claude.exe` órfão.
 
 ### 7.4 Spawn
 
-1. Resolver o binário: `claude_path` ou PATH (`claude.exe` do instalador nativo; `claude.cmd` do npm roda via `cmd.exe /d /s /c`).
-2. `probe`: `claude --version` e exigir **>= 2.1.234** (inbox via named pipe no Windows nativo).
+1. Resolver o binário: `claude_path` ou PATH. Só o `claude.exe` nativo roda. O `claude.cmd` do npm é recusado com erro claro: passar por `cmd.exe /d /s /c` estraga o quoting dos argumentos na PTY, e a documentação recomenda o instalador nativo. O PATH é separado só por `;`, como o Windows faz; aspas soltas numa entrada (comum em PATHs reais) não escondem as entradas seguintes.
+2. `probe`: `claude --version` e exigir **>= 2.1.234** (inbox via named pipe no Windows nativo). Sem Claude utilizável, os bots ficam `offline`, `system.status.runtimeError` diz o motivo e o daemon tenta de novo a cada 30 s.
 3. Gerar os arquivos da seção 5.1.
-4. Comando (confirmar flags com `claude --help` na versão alvo):
-   `claude [--continue] --settings <workspace>\.claude\settings.json --mcp-config <workspace>\.botloft\mcp.json`
-5. Ambiente: `BOTLOFT_BOT_ID`, `BOTLOFT_BOT_TOKEN`, `BOTLOFT_PORT`, `BOTLOFT_BIN` (caminho absoluto do `botloftd.exe`).
+4. Comando: `claude [--continue] --settings <workspace>\.claude\settings.json --mcp-config <workspace>\.botloft\mcp.json`. O `--settings` aponta para o mesmo arquivo que o Claude Code já lê como settings do projeto; a documentação garante que um hook definido em dois arquivos roda uma vez só, e o `--settings` dá precedência ao `crossSessionInbound` sobre as settings do usuário.
+5. Ambiente: o bloco padrão do usuário (`CreateEnvironmentBlock`, o mesmo de um logon novo), **não** o ambiente do daemon. Um daemon iniciado de dentro de uma sessão do Claude Code herda `CLAUDECODE`, `CLAUDE_CODE_MESSAGING_SOCKET`, `ANTHROPIC_BASE_URL` e outras variáveis da sessão, que fariam o bot se achar filho dela. Por cima vão `BOTLOFT_BOT_ID`, `BOTLOFT_BOT_TOKEN`, `BOTLOFT_PORT`, `BOTLOFT_BIN` (caminho absoluto do `botloftd.exe`) e `BOTLOFT_HOME` (onde o hook grava `logs\hook.log`).
 6. PTY com cwd no workspace e tamanho vindo do último `terminal.resize` (padrão 120x32).
+
+### 7.4.1 Primeira execução de cada bot
+
+Numa sessão interativa, o Claude Code segura **todos** os hooks até o dono aceitar o diálogo de confiança da pasta (documentado; confirmado com 2.1.283). Na primeira execução o bot fica em `launching`, com o diálogo no terminal, e só vai para `idle` quando alguém escolhe "Yes, I trust this folder" (a opção pré-selecionada é "No, exit"). Depois disso a confiança fica gravada para aquela pasta. Avisos de primeira execução vindos da configuração global do usuário também aparecem no terminal (ex.: extensão do Chrome detectada, novo renderizador).
+
+A confiança de uma pasta pai cobre as subpastas (fora de repositório git). O onboarding do app (M4) deve pedir ao dono para confiar uma vez na raiz dos workspaces, para que bots novos não parem no diálogo. Workspaces dentro de um repositório git herdam a confiança da raiz do repositório.
 
 ### 7.5 `settings.json` gerado
 
@@ -235,13 +244,16 @@ default_deadline_minutes = 120
 
 ## 8. Terminal
 
-- Leitura da PTY numa thread dedicada por bot, enviando blocos por canal para a task async.
+- Cada processo tem três threads: leitura da PTY, escrita (a escrita nunca bloqueia quem chama) e espera pelo fim do processo. A leitura manda blocos por canal para a task async. Quando o processo termina, o daemon fecha o pseudoconsole; sem isso o ConPTY nunca entrega EOF.
 - Coalescência: junta leituras por até 8 ms ou 32 KiB antes de emitir.
-- Cada bot tem um ring buffer de `ring_buffer_bytes` com cursor `offset` (bytes desde o início da generation).
+- **Handshake do ConPTY:** o `portable-pty` cria o pseudoconsole com `PSEUDOCONSOLE_INHERIT_CURSOR`, e com isso o ConPTY pergunta a posição do cursor (`ESC[6n`) ao iniciar e segura o processo filho até ouvir a resposta. O daemon responde `ESC[1;1R` à primeira consulta de cada generation; as seguintes ficam com o terminal do app (confirmado com Claude Code real: sem a resposta, a tela fica vazia para sempre).
+- Cada bot tem um ring buffer de `ring_buffer_bytes` com cursor `offset` (bytes desde o início da generation). O buffer fica depois que o processo morre, para o dono ver a última tela.
+- Generations são únicas entre bots e entre reinícios do daemon (o contador começa no horário de boot em ms), para um cliente nunca confundir um processo novo com um que já viu.
 - `terminal.attach {botId, generation?, offset?}`:
   - mesma generation e offset ainda no buffer: responde `{generation, offset, reset: false}` e envia só o que falta;
-  - senão: `{reset: true}` e envia o buffer inteiro, cortado no primeiro `\n` para não começar no meio de uma sequência de escape.
-- Dados vão em `terminal.data {botId, generation, offset, data}` com `data` em base64 (bytes crus; o xterm.js recebe `Uint8Array` e resolve UTF-8 quebrado entre blocos).
+  - senão: `{reset: true}` e envia o buffer inteiro; se o buffer já descartou o começo da generation, corta no primeiro `\n` para não começar no meio de uma sequência de escape.
+- A resposta do `terminal.attach` sai antes do primeiro `terminal.data`. `terminal.detach {botId}` para o envio. `terminal.write {botId, data}` e `terminal.resize {botId, cols, rows}` (1 a 1000) respondem `null`; escrever num bot sem processo dá `-32003`.
+- Dados vão em `terminal.data {botId, generation, offset, data}` com `data` em base64 (bytes crus; o xterm.js recebe `Uint8Array` e resolve UTF-8 quebrado entre blocos). Um `terminal.data` com generation nova é uma tela nova: o cliente limpa antes de escrever. Um cliente que atrasa pode ver o offset pular; ele percebe (offset diferente do esperado) e refaz o attach com o que tem.
 - Vários clientes podem assistir ao mesmo bot. Qualquer cliente autenticado pode escrever (MVP só tem o owner).
 
 ## 9. Mensagens e entrega
@@ -324,7 +336,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 
 | Método | Params | Result |
 |---|---|---|
-| `system.status` | | versão, uptime, versão do claude, backlog de entrega |
+| `system.status` | | versão, uptime, versão do claude, `runtimeError` (por que os bots não sobem), backlog de entrega (M3) |
 | `crews.list` | | `Crew[]` |
 | `crews.create` | `name` | `Crew` |
 | `crews.rename` | `crewId, name` | `Crew` |
@@ -381,7 +393,7 @@ Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations 
 
 - Daemon escuta **só em 127.0.0.1** no MVP.
 - Token do owner: 32 bytes aleatórios em `secrets\owner.token`, ACL com acesso só para o SID do usuário atual (DACL protegida, sem herança).
-- Token de bot: 32 bytes aleatórios. No banco fica só o **SHA-256** (`token_hash`); o valor cru existe apenas no ambiente do processo do bot. Novo token a cada generation.
+- Token de bot: 32 bytes aleatórios, novo a cada generation. O valor cru existe apenas no ambiente do processo do bot; o daemon guarda só o **SHA-256**, e só em memória: todo processo de bot morre junto com o daemon (Job Object), então nenhum token sobrevive a um reinício e não há motivo para gravá-lo. A coluna `bots.token_hash` fica sem uso.
 - Logs nunca registram tokens, conteúdo de mensagens nem saída de terminal em nível `info`. Bots podem manipular dados sensíveis (inclusive de saúde); o daemon trata corpo de mensagem como dado pessoal.
 - `log_level` vale só para os crates do Botloft; dependências ficam em `warn`, porque em `debug`/`trace` a pilha de WebSocket registra frames, que podem conter mensagens. `RUST_LOG` sobrepõe tudo e é só para depuração local.
 - Isolamento entre bots é cooperativo (mesmo usuário do Windows). Documentar isso no README sem prometer sandbox.
@@ -480,14 +492,15 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28. "Co
 
 | Item | Seção | Resultado | Teste real |
 |---|---|---|---|
-| Exec form de hooks (`args`) no Windows | 7.5 | Confirmado (`hooks`): com `args`, o binário roda direto, sem shell; `command` precisa ser `.exe` | M2 |
+| Exec form de hooks (`args`) no Windows | 7.5 | Confirmado (`hooks`) e **testado com 2.1.283**: `botloftd.exe hook session-start` rodou direto, sem shell | feito (M2) |
 | Linha de auth, 30 s e variáveis do inbox | 9.2 | Confirmado (`cross-session-messaging`): `CLAUDE_CODE_MESSAGING_SOCKET`, `CLAUDE_CODE_MESSAGING_TOKEN`, auth obrigatória no Windows, >= 2.1.234 | M3 |
 | Formato da linha de mensagem no inbox | 9.2 | **Não documentado** | M3, obrigatório |
 | `crossSessionInbound` | 7.5 | Confirmado: valores `accept`, `hold`, `refuse`; `refuse` em settings de projeto vence tudo | M3 |
-| Carregamento de `.claude/rules/*.md` sem frontmatter | 5.1 | Confirmado (`memory`): carregadas sempre | M2 |
+| Carregamento de `.claude/rules/*.md` sem frontmatter | 5.1 | Confirmado (`memory`) e **testado com 2.1.283**: o bot respondeu nome, handle e crew tirados das regras | feito (M2) |
 | Expansão `${VAR}` em headers do `mcp.json` | 10 | Confirmado (`mcp`); alguns nomes de credencial conhecidos são lidos vazios, `BOTLOFT_BOT_TOKEN` não é um deles | M3 |
-| Sintaxe de caminho Windows em permission rules | 7.5 | Confirmado (`permissions`): `//c/...` em forma POSIX; spec corrigida | M2 |
-| Flags `--continue`, `--mcp-config` | 7.4 | Confirmado (`cli-reference`) | M2 |
-| Flag `--settings <arquivo>` | 7.4 | Citada em outras páginas (ex.: `cross-session-messaging`), ausente da tabela de CLI; confirmar com `claude --help` | M2 |
-| stdout do `SessionStart` vira contexto | 7.6 | Confirmado (`hooks`) | M2 |
-| `StopFailure` (`rate_limit`, `authentication_failed`) e `Notification` (`permission_prompt`) | 7.2 | Eventos e valores de matcher confirmados; nome do campo no JSON do stdin a confirmar | M2 |
+| Sintaxe de caminho Windows em permission rules | 7.5 | Confirmado (`permissions`) e **testado com 2.1.283**: ler `secrets\owner.token` deu "File is in a directory that is denied by your permission settings" | feito (M2) |
+| Flags `--continue`, `--mcp-config` | 7.4 | Confirmado (`cli-reference`); aceitas pelo 2.1.283 | `--continue` retomando conversa real: pendente |
+| Flag `--settings <arquivo>` | 7.4 | Ausente da tabela de CLI, mas aceita pelo 2.1.283 e os hooks do arquivo rodaram | feito (M2) |
+| stdout do `SessionStart` vira contexto | 7.6 | Confirmado (`hooks`); o subcomando nunca escreve no stdout | feito (M2) |
+| `StopFailure` (`rate_limit`, `authentication_failed`) e `Notification` (`permission_prompt`) | 7.2 | Campos documentados: `error` e `notification_type`. `SessionStart`, `UserPromptSubmit` e `Stop` **testados com 2.1.283** (`launching` -> `idle` -> `busy` -> `idle`) | disparar `StopFailure` e `permission_prompt` reais: pendente |
+| Confiança da pasta segura os hooks | 7.4.1 | Confirmado (`hooks`, `permissions`) e **visto com 2.1.283**: diálogo na primeira execução, bot em `launching` até aceitar | feito (M2) |

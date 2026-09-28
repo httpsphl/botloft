@@ -11,9 +11,9 @@ use std::io;
 use std::path::Path;
 
 #[cfg(unix)]
-pub use unix::restrict_to_current_user;
+pub use unix::{ProcessJob, restrict_to_current_user, user_environment};
 #[cfg(windows)]
-pub use windows::restrict_to_current_user;
+pub use windows::{ProcessJob, restrict_to_current_user, user_environment};
 
 /// Exclusive lock on `<home>\botloftd.lock`, held for the daemon's lifetime.
 /// The OS releases it when the process exits, even after a crash.
@@ -57,6 +57,21 @@ pub async fn shutdown_signal() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn user_environment_has_the_basics_and_no_claude_session() {
+        let vars = user_environment().expect("environment");
+        let has = |name: &str| vars.iter().any(|(k, _)| k.eq_ignore_ascii_case(name));
+        assert!(has("PATH"));
+        assert!(!has("CLAUDECODE"));
+        assert!(!has("CLAUDE_CODE_MESSAGING_SOCKET"));
+    }
+
+    #[test]
+    fn a_job_can_be_created_and_terminated_empty() {
+        let job = ProcessJob::new().expect("job");
+        job.terminate().expect("terminate");
+    }
 
     #[test]
     fn a_second_lock_on_the_same_file_is_refused_until_released() {

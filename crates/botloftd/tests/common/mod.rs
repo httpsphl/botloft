@@ -11,9 +11,12 @@ use std::time::Duration;
 
 use botloft_store::Store;
 use botloftd::paths::Paths;
+use botloftd::runtime::claude::Claude;
+use botloftd::runtime::fake::FakeRuntime;
 use botloftd::secrets::TokenHash;
 use botloftd::server;
 use botloftd::state::{Daemon, DaemonOptions};
+use botloftd::supervisor::{self, ClaudeSource, SupervisorSettings};
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{Value, json};
 use tempfile::TempDir;
@@ -28,26 +31,70 @@ const WAIT: Duration = Duration::from_secs(5);
 pub struct TestDaemon {
     pub addr: SocketAddr,
     pub paths: Paths,
+    pub daemon: Arc<Daemon>,
+    pub runtime: FakeRuntime,
     _dir: TempDir,
 }
 
+/// Backoff short enough for tests that run on the real clock.
+pub fn test_settings() -> SupervisorSettings {
+    SupervisorSettings {
+        claude: ClaudeSource::Fixed(Claude {
+            path: PathBuf::from(r"C:\Claude\claude.exe"),
+            version: "2.1.283".to_owned(),
+        }),
+        backoff_initial: Duration::from_millis(40),
+        backoff_max: Duration::from_millis(200),
+        fresh_start_if_dies_within: Duration::from_secs(15),
+        ring_buffer_bytes: 64 * 1024,
+    }
+}
+
+/// A daemon with a fake runtime and an in-memory database, no server.
+pub fn new_daemon(settings: SupervisorSettings) -> (Arc<Daemon>, FakeRuntime, Paths, TempDir) {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let paths = Paths::new(dir.path().join("home"), dir.path().join("workspaces"));
+    let runtime = FakeRuntime::new();
+    let daemon = Daemon::new(DaemonOptions {
+        paths: paths.clone(),
+        port: 45710,
+        bin: PathBuf::from(r"C:\Botloftinotloftd.exe"),
+        store: Store::open_in_memory().expect("store"),
+        owner_token: TokenHash::of(TOKEN),
+        runtime: Arc::new(runtime.clone()),
+        supervisor: settings,
+    });
+    (daemon, runtime, paths, dir)
+}
+
 impl TestDaemon {
+    /// Server only: bots are never started.
     pub async fn start() -> Self {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let paths = Paths::new(dir.path().join("home"), dir.path().join("workspaces"));
-        let daemon = Arc::new(Daemon::new(DaemonOptions {
-            paths: paths.clone(),
-            port: 45710,
-            bin: PathBuf::from(r"C:\Botloft\bin\botloftd.exe"),
-            store: Store::open_in_memory().expect("store"),
-            owner_token: TokenHash::of(TOKEN),
-        }));
+        Self::launch(false).await
+    }
+
+    /// Server and supervisor, with bots running on a [`FakeRuntime`].
+    pub async fn start_supervised() -> Self {
+        Self::launch(true).await
+    }
+
+    async fn launch(supervised: bool) -> Self {
+        let (daemon, runtime, paths, dir) = new_daemon(test_settings());
         let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
         let addr = listener.local_addr().expect("addr");
-        tokio::spawn(server::serve(daemon, listener, std::future::pending()));
+        if supervised {
+            tokio::spawn(supervisor::run(Arc::clone(&daemon)));
+        }
+        tokio::spawn(server::serve(
+            Arc::clone(&daemon),
+            listener,
+            std::future::pending(),
+        ));
         Self {
             addr,
             paths,
+            daemon,
+            runtime,
             _dir: dir,
         }
     }
