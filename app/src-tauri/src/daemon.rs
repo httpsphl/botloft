@@ -230,7 +230,13 @@ pub fn owner_token(endpoint: &Endpoint) -> Result<String, String> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Mutex;
+
     use super::*;
+
+    /// The port tests pick free ports; run one at a time so one does not
+    /// take the port the other just freed.
+    static PORTS: Mutex<()> = Mutex::new(());
 
     #[test]
     fn port_defaults_and_reads_the_config() {
@@ -260,6 +266,7 @@ mod tests {
 
     #[test]
     fn a_closed_port_reads_as_stopped() {
+        let _ports = PORTS.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
         // Bind and drop to find a port nothing listens on.
         let listener = std::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).expect("bind");
         let port = listener.local_addr().expect("addr").port();
@@ -269,6 +276,7 @@ mod tests {
 
     #[test]
     fn a_port_that_is_not_botloft_reads_as_foreign() {
+        let _ports = PORTS.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
         let listener = std::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).expect("bind");
         let port = listener.local_addr().expect("addr").port();
         let server = std::thread::spawn(move || {
