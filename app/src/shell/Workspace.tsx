@@ -7,9 +7,11 @@ import { BotAvatar } from "../features/bots/BotAvatar";
 import { BotView } from "../features/bots/BotView";
 import { CrewView } from "../features/crews/CrewView";
 import { Sidebar } from "../features/crews/Sidebar";
+import { FailedDeliveries } from "../features/messages/FailedDeliveries";
 import { Welcome } from "../features/onboarding/Welcome";
 import { useApp } from "../store/context";
 import { Callout } from "../ui/Callout";
+import { useAttentionMark } from "./attention";
 import { TitleBar } from "./TitleBar";
 
 export function Workspace() {
@@ -17,6 +19,7 @@ export function Workspace() {
   const loadError = useApp((state) => state.loadError);
   const hasCrews = useApp((state) => Object.keys(state.crews).length > 0);
   const runtimeError = useApp((state) => state.system?.runtimeError ?? null);
+  useAttentionMark();
 
   let main: ReactNode;
   if (loadError) {
@@ -51,7 +54,14 @@ export function Workspace() {
 
   return (
     <div className="flex h-full flex-col">
-      <TitleBar status={<ConnectionStatus />}>
+      <TitleBar
+        status={
+          <>
+            <FailedDeliveries />
+            <ConnectionStatus />
+          </>
+        }
+      >
         <Breadcrumb />
       </TitleBar>
       {main}

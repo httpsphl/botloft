@@ -2,14 +2,17 @@ import { useEffect, useState } from "react";
 import type { Bot, Crew } from "../../lib/protocol.gen";
 import { Callout } from "../../ui/Callout";
 import { Tabs, tabId } from "../../ui/Tabs";
+import { Composer } from "../messages/Composer";
+import { Timeline } from "../messages/Timeline";
 import { TerminalView } from "../terminal/TerminalView";
 import { BotHeader } from "./BotHeader";
 import { stateView } from "./BotStateBadge";
 
-type Pane = "terminal" | "details";
+type Pane = "terminal" | "messages" | "details";
 
 const TABS: { id: Pane; label: string }[] = [
   { id: "terminal", label: "Terminal" },
+  { id: "messages", label: "Messages" },
   { id: "details", label: "Details" },
 ];
 
@@ -57,6 +60,19 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
           <TerminalView botId={bot.id} />
         )}
       </div>
+      {pane === "messages" && (
+        <div
+          role="tabpanel"
+          aria-labelledby={tabId("messages")}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <Timeline
+            filter={{ botId: bot.id }}
+            empty={`No messages to or from ${bot.name} yet.`}
+            composer={(onSent) => <Composer crewId={crew.id} botId={bot.id} onSent={onSent} />}
+          />
+        </div>
+      )}
       {pane === "details" && (
         <div
           role="tabpanel"

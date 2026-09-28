@@ -61,12 +61,61 @@ function seed(fake: FakeBotloft): void {
   fake.setBotState(analyst.id, "rate_limited", 1);
   fake.terminals.output(scout.id, SCOUT_SCREEN);
   fake.terminals.output(reviewer.id, PROMPT_SCREEN);
+  conversation(fake, scout.id, writer.id, reviewer.id);
   const ops = fake.addCrew("Ops");
   const deploy = fake.addBot(ops.id, "Deploy", "Ships the site on Fridays");
   const watcher = fake.addBot(ops.id, "Watcher", "Keeps an eye on the error log");
   void fake.call("crews.setPaused", { crewId: ops.id, paused: true });
   fake.setBotState(deploy.id, "offline");
   fake.setBotState(watcher.id, "offline");
+}
+
+/** A morning's worth of messages and tasks between three bots. */
+function conversation(fake: FakeBotloft, scout: string, writer: string, reviewer: string): void {
+  const talk = fake.conversation;
+  void fake.call("messages.send", {
+    botId: scout,
+    body: "Summarize the three newest papers in shared/inbox.",
+  });
+  const owner = [...talk.deliveries.values()].at(-1);
+  if (owner) {
+    talk.deliver(owner.id, "sent");
+  }
+  const summary = talk.task(scout, writer, {
+    status: "done",
+    result: "Draft in shared/drafts/week-39.md, 2 pages.",
+  });
+  const asked = talk.say({
+    from: scout,
+    to: writer,
+    kind: "task",
+    taskId: summary.id,
+    body: "Turn shared/summaries/week-39.md into this week's report draft.",
+  });
+  talk.deliver(asked.delivery.id, "sent");
+  const done = talk.say({
+    from: writer,
+    to: scout,
+    kind: "result",
+    taskId: summary.id,
+    body: "Draft in shared/drafts/week-39.md, 2 pages.",
+  });
+  talk.deliver(done.delivery.id, "sent");
+  const review = talk.task(writer, reviewer, { hops: 2 });
+  const check = talk.say({
+    from: writer,
+    to: reviewer,
+    kind: "task",
+    taskId: review.id,
+    body: "Check the numbers in section 2 against the sources.",
+  });
+  talk.deliver(check.delivery.id, "sent");
+  const late = talk.say({
+    from: scout,
+    to: reviewer,
+    body: "Two of the links in the draft moved; the new ones are in shared/links.md.",
+  });
+  talk.deliver(late.delivery.id, "dead", "the bot's inbox did not answer in 10 s");
 }
 
 const ESC = String.fromCharCode(27);

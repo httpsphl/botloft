@@ -11,6 +11,7 @@ export class FakeHost implements Host {
   starts = 0;
   maximized = false;
   closed = false;
+  attention = false;
 
   daemonStatus(): Promise<DaemonStatus> {
     return Promise.resolve(this.status);
@@ -43,5 +44,9 @@ export class FakeHost implements Host {
     },
     isMaximized: () => Promise.resolve(this.maximized),
     onResized: () => Promise.resolve(() => {}),
+    setAttention: (on: boolean) => {
+      this.attention = on;
+      return Promise.resolve();
+    },
   };
 }
