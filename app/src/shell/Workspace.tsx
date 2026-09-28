@@ -8,6 +8,7 @@ import { BotView } from "../features/bots/BotView";
 import { CrewView } from "../features/crews/CrewView";
 import { Sidebar } from "../features/crews/Sidebar";
 import { FailedDeliveries } from "../features/messages/FailedDeliveries";
+import { ClaudeCodeHelp } from "../features/onboarding/ClaudeCodeHelp";
 import { Welcome } from "../features/onboarding/Welcome";
 import { useApp } from "../store/context";
 import { Callout } from "../ui/Callout";
@@ -41,8 +42,8 @@ export function Workspace() {
         <main className="flex min-w-0 flex-1 flex-col">
           {runtimeError && (
             <div className="border-line border-b p-3">
-              <Callout tone="danger" title="Bots cannot start">
-                {runtimeError} The daemon checks again every 30 seconds.
+              <Callout tone="danger" title="Bots can't start">
+                <ClaudeCodeHelp error={runtimeError} />
               </Callout>
             </div>
           )}

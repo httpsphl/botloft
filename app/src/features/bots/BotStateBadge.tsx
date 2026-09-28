@@ -34,7 +34,7 @@ const views: Record<BotState, StateView> = {
     hint: "Claude Code is starting.",
   },
   idle: { label: "Idle", tone: "ok", icon: CircleDot, hint: "Ready for work." },
-  busy: { label: "Working", tone: "work", icon: Activity, hint: "In the middle of a turn." },
+  busy: { label: "Working", tone: "work", icon: Activity, hint: "Working on something." },
   needs_approval: {
     label: "Needs approval",
     tone: "warn",
@@ -42,22 +42,22 @@ const views: Record<BotState, StateView> = {
     hint: "Waiting for you to allow or deny a tool in its chat.",
   },
   rate_limited: {
-    label: "Rate limited",
+    label: "Usage limit",
     tone: "warn",
     icon: Hourglass,
-    hint: "Hit the usage limit; messages wait until it clears.",
+    hint: "Your Claude plan hit its usage limit; messages wait until it resets.",
   },
   auth_error: {
     label: "Sign-in needed",
     tone: "danger",
     icon: KeyRound,
-    hint: "Claude Code is not signed in. Sign in, then restart the bot.",
+    hint: "Claude Code is not signed in. Open Claude Code and sign in, then restart the bot.",
   },
   backoff: {
     label: "Restarting",
     tone: "warn",
     icon: RotateCw,
-    hint: "The process stopped; it starts again shortly.",
+    hint: "It stopped unexpectedly; Botloft starts it again shortly.",
   },
   archived: { label: "Archived", tone: "quiet", icon: Archive, hint: "Archived." },
 };

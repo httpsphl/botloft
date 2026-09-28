@@ -1,8 +1,7 @@
 import { describe, expect, test } from "vitest";
 import type { Client } from "../../lib/client";
 import { FakeBotloft } from "../../lib/fake";
-import { FakeHost } from "../../lib/fakeHost";
-import { PROTOCOL_VERSION } from "../../lib/protocol.gen";
+import { FakeHost, running } from "../../lib/fakeHost";
 import { type Connect, createLink } from "./link";
 
 function setup() {
@@ -20,40 +19,86 @@ function setup() {
 describe("link to the daemon", () => {
   test("a running daemon connects with the owner token", async () => {
     const { host, link, connections } = setup();
-    host.status = { state: "running", port: 45799, version: "0.1.0", protocol: PROTOCOL_VERSION };
+    host.status = running({ port: 45799 });
     await link.getState().check();
     expect(link.getState().current.step).toBe("connected");
     expect(connections).toEqual([{ port: 45799, token: "a".repeat(64) }]);
   });
 
-  test("a stopped daemon waits for the owner to start it", async () => {
+  test("a stopped daemon is installed without asking", async () => {
     const { host, link } = setup();
     host.status = { state: "stopped", port: 45710, home: "C:\\data\\Botloft" };
     await link.getState().check();
-    expect(link.getState().current).toEqual({
-      step: "stopped",
-      port: 45710,
-      home: "C:\\data\\Botloft",
-      error: null,
-    });
-    await link.getState().start();
-    expect(host.starts).toBe(1);
+    expect(host.installs).toEqual(["install"]);
     expect(link.getState().current.step).toBe("connected");
   });
 
   test("a daemon that does not come up says so", async () => {
     const { host, link } = setup();
     host.status = { state: "stopped", port: 45710, home: "C:\\data" };
-    host.afterStart = host.status;
-    await link.getState().start();
+    host.afterInstall = host.status;
+    await link.getState().check();
+    expect(host.installs).toEqual(["install"]);
     const current = link.getState().current;
     expect(current.step).toBe("stopped");
     expect(current.step === "stopped" && current.error).toMatch(/did not answer/);
   });
 
+  test("a failed install shows its error once, with a way to try again", async () => {
+    const { host, link } = setup();
+    host.status = { state: "stopped", port: 45710, home: "C:\\data" };
+    host.afterInstall = new Error("cannot register the scheduled task Botloft: access denied");
+    await link.getState().check();
+    expect(link.getState().current).toEqual({
+      step: "stopped",
+      port: 45710,
+      home: "C:\\data",
+      error: "cannot register the scheduled task Botloft: access denied",
+    });
+  });
+
+  test("an older daemon is updated before connecting", async () => {
+    const { host, link, connections } = setup();
+    host.status = running({ version: "0.0.9", protocol: 1, outdated: true });
+    await link.getState().check();
+    expect(host.installs).toEqual(["install"]);
+    expect(link.getState().current.step).toBe("connected");
+    expect(connections).toHaveLength(1);
+  });
+
+  test("an update that fails is shown once, without a loop", async () => {
+    const { host, link, connections } = setup();
+    host.status = running({ version: "0.0.9", outdated: true });
+    host.afterInstall = new Error("the daemon did not stop");
+    await link.getState().check();
+    expect(link.getState().current).toEqual({
+      step: "outdated",
+      daemonVersion: "0.0.9",
+      error: "the daemon did not stop",
+    });
+    host.afterInstall = running({ version: "0.0.9", outdated: true });
+    await link.getState().install();
+    expect(host.installs).toEqual(["install", "install"]);
+    expect(link.getState().current).toEqual({
+      step: "outdated",
+      daemonVersion: "0.0.9",
+      error: "The daemon still reports version 0.0.9.",
+    });
+    expect(connections).toHaveLength(0);
+  });
+
+  test("restarting the daemon reconnects", async () => {
+    const { host, link, connections } = setup();
+    await link.getState().check();
+    await link.getState().restart();
+    expect(host.installs).toEqual(["restart"]);
+    expect(link.getState().current.step).toBe("connected");
+    expect(connections).toHaveLength(2);
+  });
+
   test("another protocol version is not spoken to", async () => {
     const { host, link, connections } = setup();
-    host.status = { state: "running", port: 45710, version: "9.0.0", protocol: 9 };
+    host.status = running({ version: "9.0.0", protocol: 9 });
     await link.getState().check();
     expect(link.getState().current).toEqual({
       step: "mismatch",

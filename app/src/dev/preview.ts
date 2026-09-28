@@ -35,7 +35,13 @@ export function previewProps(search: string): { host: Host; connect: Connect } {
 
 function liveProps(port: number): { host: Host; connect: Connect } {
   const host = new FakeHost();
-  host.status = { state: "running", port, version: "dev", protocol: PROTOCOL_VERSION };
+  host.status = {
+    state: "running",
+    port,
+    version: "dev",
+    protocol: PROTOCOL_VERSION,
+    outdated: false,
+  };
   host.token =
     sessionStorage.getItem("botloft.devToken") ??
     new Error('Set sessionStorage "botloft.devToken" to the dev daemon\'s owner token.');

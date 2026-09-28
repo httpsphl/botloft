@@ -1,15 +1,19 @@
-//! Finding, checking and starting the local daemon (spec 15.2).
+//! Finding, checking and installing the local daemon (spec 15.2).
 //!
 //! The app resolves the daemon's data folder the way the daemon does
 //! (spec 5): `BOTLOFT_HOME`, else `%LOCALAPPDATA%\Botloft`. The port comes
 //! from `config.toml` in that folder, so a dev daemon with its own
 //! `BOTLOFT_HOME` is found without extra setup.
+//!
+//! The app ships `botloftd.exe` next to itself (the sidecar) and installs
+//! it with `botloftd service install`, which copies it into the data
+//! folder and runs it as a scheduled task (spec 14).
 
 use std::io::{Read as _, Write as _};
 use std::net::{Ipv4Addr, SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
@@ -17,8 +21,8 @@ const HOME_ENV: &str = "BOTLOFT_HOME";
 const DEFAULT_PORT: u16 = 45710;
 const CONNECT_TIMEOUT: Duration = Duration::from_millis(500);
 const READ_TIMEOUT: Duration = Duration::from_secs(2);
-/// How long a freshly started daemon may take to answer `/health`.
-const START_TIMEOUT: Duration = Duration::from_secs(15);
+/// The daemon this app ships has the app's version (one Cargo workspace).
+const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Where the daemon lives.
 #[derive(Debug, Clone)]
@@ -36,6 +40,8 @@ pub enum DaemonStatus {
         port: u16,
         version: String,
         protocol: u32,
+        /// Older than the daemon this app ships: installing replaces it.
+        outdated: bool,
     },
     /// Nothing listens on the port.
     #[serde(rename_all = "camelCase")]
@@ -83,6 +89,7 @@ pub fn status(endpoint: &Endpoint) -> DaemonStatus {
     match health(endpoint.port) {
         Probe::Healthy(health) => DaemonStatus::Running {
             port: endpoint.port,
+            outdated: is_older(&health.version, APP_VERSION),
             version: health.version,
             protocol: health.protocol,
         },
@@ -127,26 +134,65 @@ fn health(port: u16) -> Probe {
     }
 }
 
-/// Starts `botloftd.exe serve` from the app's folder, detached so it keeps
-/// running after the app closes (spec 1), and waits for it to answer.
-pub fn start(endpoint: &Endpoint) -> Result<DaemonStatus, String> {
-    if let running @ DaemonStatus::Running { .. } = status(endpoint) {
-        return Ok(running);
+/// Whether version `a` comes before `b` (`major.minor.patch`; a
+/// pre-release suffix is ignored). Unreadable versions are never older.
+fn is_older(a: &str, b: &str) -> bool {
+    fn parse(version: &str) -> Option<(u64, u64, u64)> {
+        let core = version.split(['-', '+']).next()?;
+        let mut parts = core.split('.').map(|part| part.parse::<u64>().ok());
+        Some((parts.next()??, parts.next()??, parts.next()??))
     }
-    let binary = daemon_binary()?;
-    spawn_detached(&binary).map_err(|err| format!("cannot start {}: {err}", binary.display()))?;
-    let started = Instant::now();
-    loop {
-        let current = status(endpoint);
-        if matches!(current, DaemonStatus::Running { .. }) || started.elapsed() > START_TIMEOUT {
-            return Ok(current);
-        }
-        std::thread::sleep(Duration::from_millis(200));
-    }
+    matches!((parse(a), parse(b)), (Some(a), Some(b)) if a < b)
 }
 
-/// `botloftd.exe` next to the app: the installer puts it there (M5), and
-/// in dev both land in `target\debug`.
+/// Installs the daemon this app ships and starts it: `botloftd service
+/// install` copies it into the data folder, registers the scheduled task
+/// and waits for the daemon to answer (spec 14).
+pub fn install(endpoint: &Endpoint) -> Result<DaemonStatus, String> {
+    run_service(endpoint, "install")?;
+    Ok(status(endpoint))
+}
+
+/// Stops the daemon and starts it again from its scheduled task.
+pub fn restart(endpoint: &Endpoint) -> Result<DaemonStatus, String> {
+    run_service(endpoint, "restart")?;
+    Ok(status(endpoint))
+}
+
+/// Runs `botloftd --home <home> service <command>` without a window and
+/// returns its error message if it fails.
+fn run_service(endpoint: &Endpoint, command: &str) -> Result<(), String> {
+    let binary = daemon_binary()?;
+    let mut process = Command::new(&binary);
+    process
+        .arg("--home")
+        .arg(&endpoint.home)
+        .args(["service", command])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt as _;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        process.creation_flags(CREATE_NO_WINDOW);
+    }
+    let output = process
+        .output()
+        .map_err(|err| format!("cannot run {}: {err}", binary.display()))?;
+    if output.status.success() {
+        return Ok(());
+    }
+    let message = String::from_utf8_lossy(&output.stderr).trim().to_owned();
+    Err(if message.is_empty() {
+        format!("botloftd service {command} failed ({})", output.status)
+    } else {
+        message
+    })
+}
+
+/// `botloftd.exe` next to the app: the installer puts it there, and in dev
+/// both land in `target\debug`.
 fn daemon_binary() -> Result<PathBuf, String> {
     let app = std::env::current_exe().map_err(|err| err.to_string())?;
     let binary = app.with_file_name(if cfg!(windows) {
@@ -162,31 +208,6 @@ fn daemon_binary() -> Result<PathBuf, String> {
             binary.display()
         ))
     }
-}
-
-fn spawn_detached(binary: &Path) -> std::io::Result<()> {
-    let mut command = Command::new(binary);
-    command
-        .arg("serve")
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt as _;
-        const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
-        const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
-        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-        let flags = CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP;
-        // Leave the app's job, if it runs in one that would kill children
-        // on close. Jobs that forbid breaking away refuse the flag.
-        command.creation_flags(flags | CREATE_BREAKAWAY_FROM_JOB);
-        if command.spawn().is_ok() {
-            return Ok(());
-        }
-        command.creation_flags(flags);
-    }
-    command.spawn().map(drop)
 }
 
 /// The owner token the daemon wrote on its first start (spec 13).
@@ -224,6 +245,17 @@ mod tests {
         std::fs::write(&config, "port = \"x\"").expect("write");
         assert!(read_port(&config).is_err());
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn versions_compare_by_number() {
+        assert!(is_older("0.1.0", "0.2.0"));
+        assert!(is_older("0.9.3", "0.10.0"));
+        assert!(is_older("1.2.3-beta.1", "1.2.4"));
+        assert!(!is_older("0.2.0", "0.2.0"));
+        assert!(!is_older("0.3.0", "0.2.9"));
+        assert!(!is_older("dev", "0.2.0"));
+        assert!(!is_older("0.1", "0.2.0"));
     }
 
     #[test]

@@ -95,8 +95,8 @@ function FailedDialog({ dead, onClose }: { dead: Delivery[]; onClose(): void }) 
       }
     >
       <p className="mb-3 text-ink-soft text-sm">
-        The daemon stopped trying after several attempts. Retrying puts a message back in line; it
-        goes out when the bot is ready.
+        Botloft stopped trying after several attempts. Retrying puts a message back in line; it goes
+        out when the bot is ready.
       </p>
       <ul className="flex flex-col border border-line">
         {dead.map((delivery) => {

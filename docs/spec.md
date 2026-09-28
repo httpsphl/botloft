@@ -552,16 +552,27 @@ Layout, como um app de mensagens:
 
 | Comando | Função |
 |---|---|
-| `daemon_status` | GET `/health` local; diz se o daemon roda, está parado ou se outro programa ocupa a porta |
-| `daemon_start` | (M4) inicia o `botloftd.exe` ao lado do executável do app, destacado (sem console, fora do job do app) para seguir vivo quando o app fecha, e espera o `/health` por até 15 s. No M5 o `daemon_install` o substitui |
-| `daemon_install` | roda `botloftd service install` a partir do sidecar (o `botloftd.exe` ao lado do app), que se copia para `<home>\bin` e registra e inicia a tarefa (seção 14) |
-| `daemon_restart` | `botloftd service restart` |
+| `daemon_status` | GET `/health` local; diz se o daemon roda, está parado ou se outro programa ocupa a porta. Quando o daemon roda, diz também se ele é `outdated`: versão menor que a do app, que é a do sidecar (um workspace Cargo só). Pré-release é ignorado; versão ilegível nunca é antiga |
+| `daemon_install` | roda `botloftd --home <home> service install` a partir do sidecar (o `botloftd.exe` ao lado do app), sem janela, e espera: ele se copia para `<home>\bin`, registra e inicia a tarefa e espera o `/health` (seção 14). Um erro volta na mensagem de uma linha que o daemon escreve no stderr. Substitui o `daemon_start` do M4, que iniciava o daemon destacado ao lado do app |
+| `daemon_restart` | `botloftd --home <home> service restart`, do mesmo jeito |
 | `read_owner_token` | lê `secrets\owner.token` (só no app local) |
 | `open_path` | abre uma pasta no Explorer; recusa arquivos, que o Explorer executaria |
 | `open_url` | abre no navegador padrão um link de uma resposta do bot; só `http` e `https`, porque qualquer outro esquema pode iniciar um programa. Seguir o link dentro do app trocaria a janela pela página |
 | overlay na taskbar | não é comando próprio: o app usa `setOverlayIcon` da janela (permissão `core:window:allow-set-overlay-icon`) e marca o ícone com um ponto enquanto algo espera o dono: aprovação pendente, bot em `auth_error`, ou mensagem não entregue a um bot ativo. Entregas mortas para bot arquivado não contam: foram abandonadas de propósito |
 
 O app acha o daemon como o daemon acha a si mesmo (seção 5): `BOTLOFT_HOME` ou `%LOCALAPPDATA%\Botloft`, com a porta lida do `config.toml` dessa pasta (45710 se ausente). Um daemon de dev com seu próprio `BOTLOFT_HOME` é encontrado sem configuração extra. A CSP libera `ws://127.0.0.1:*` pelo mesmo motivo.
+
+Onboarding (M5): **configuração sem perguntas e sem jargão.** O dono não precisa saber que existe um daemon, uma porta ou uma tarefa agendada; a interface nunca usa essas palavras. Fala de "Botloft" e de "rodar em segundo plano", e o texto técnico (erro do daemon, caminho, porta) fica dobrado sob "Details".
+
+- Nada rodando: o app chama `daemon_install` sozinho ("Getting Botloft ready…", com uma linha dizendo que o Botloft segue rodando em segundo plano depois que a janela fecha e inicia com o Windows). Se falhar, "Botloft couldn't start" com "Try again".
+- Daemon `outdated`: o app o atualiza sozinho ("Updating Botloft…"), porque app e daemon são distribuídos juntos e quem atualizou o app espera o daemon novo. Os bots em turno são interrompidos e retomam a sessão (7.3). Se falhar ou a versão não mudar, "Botloft couldn't finish updating" com "Try again".
+- Cada verificação instala ou atualiza no máximo uma vez: uma falha aparece em vez de virar loop.
+- Daemon mais novo que o app com outro protocolo: pede para instalar a versão mais recente do Botloft.
+- Porta ocupada por outro programa: diz que outro programa está no caminho; porta e `config.toml` ficam em "Details".
+- Conectando sem sucesso: "Try again" e "Restart Botloft in the background" (`daemon_restart`).
+- Claude Code ausente ou inutilizável (`runtimeError`), na tela de boas-vindas e no aviso "Bots can't start": explica que os bots rodam no Claude Code, oferece "How to install Claude Code" (abre `https://code.claude.com/docs/en/setup`) e diz que o Botloft percebe sozinho em até 30 s; o erro vai em "Details".
+
+Em dev, `pnpm tauri dev` usa o `target\debug\botloftd.exe` como sidecar e instala uma tarefa própria da pasta de dev (seção 14). Quem prefere um daemon em primeiro plano roda `cargo run -p botloftd -- serve` antes de abrir o app.
 
 ### 15.3 Direção visual
 

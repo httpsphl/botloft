@@ -116,7 +116,7 @@ export class RpcConnection {
   request<M extends Method>(method: M, ...params: ParamsArg<M>): Promise<Result<M>> {
     return new Promise<Result<M>>((resolve, reject) => {
       if (this.state.kind === "closed" || this.state.kind === "failed") {
-        reject(new RpcError(ClientErrorCode.closed, "not connected to the daemon"));
+        reject(new RpcError(ClientErrorCode.closed, "not connected to Botloft"));
         return;
       }
       const pending: Pending = {
@@ -251,7 +251,7 @@ export class RpcConnection {
       this.inflight.delete(id);
       clearTimeout(pending.timer);
       pending.reject(
-        new RpcError(ClientErrorCode.connectionLost, "lost the connection to the daemon"),
+        new RpcError(ClientErrorCode.connectionLost, "lost the connection to Botloft"),
       );
     }
     if (this.state.kind === "failed" || this.state.kind === "closed") {
