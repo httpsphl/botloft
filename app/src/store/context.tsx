@@ -44,3 +44,8 @@ export function useApi(): BotloftApi {
 export function useApp<T>(selector: (state: AppState) => T): T {
   return useStore(required(useContext(StoreContext), "AppStore"), selector);
 }
+
+/** The store itself, for actions that set state outside the store's own. */
+export function useAppStore(): AppStore {
+  return required(useContext(StoreContext), "AppStore");
+}

@@ -69,6 +69,7 @@ export function tauriHost(): Host {
     daemonStatus: () => invoke<DaemonStatus>("daemon_status"),
     installDaemon: () => invoke<DaemonStatus>("daemon_install"),
     restartDaemon: () => invoke<DaemonStatus>("daemon_restart"),
+    signInToClaude: (path) => invoke<boolean>("claude_sign_in", { path }),
     checkForUpdate,
     readOwnerToken: () => invoke<string>("read_owner_token"),
     openPath: (path) => invoke<void>("open_path", { path }),
