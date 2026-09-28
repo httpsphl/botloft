@@ -3,6 +3,17 @@
 
 export const PROTOCOL_VERSION = 1;
 
+/** Avatar colors the daemon assigns in order (spec 15.3). */
+export const AVATAR_PALETTE = ["#FF7A59", "#5EC8FF", "#A48BFF", "#9BE564", "#FFC857", "#FF7EB6", "#3DD9C1", "#E8D5B0"] as const;
+
+/** Longest values the daemon accepts, in characters. */
+export const FIELD_LIMITS = {
+  name: 64,
+  role: 200,
+  instructions: 32000,
+  message: 100000,
+} as const;
+
 /**
  * Identifies a crew.
  */
