@@ -5,6 +5,8 @@ use std::io;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
+use super::{TaskDefinition, TaskInfo};
+
 /// `0700` for folders, `0600` for files.
 pub fn restrict_to_current_user(path: &Path) -> io::Result<()> {
     let mode = if path.is_dir() { 0o700 } else { 0o600 };
@@ -42,6 +44,20 @@ impl ProcessJob {
     }
 }
 
+/// Nothing keeps a Unix machine awake yet.
+#[derive(Debug)]
+pub struct KeepAwake;
+
+impl KeepAwake {
+    pub fn new() -> io::Result<Self> {
+        Ok(Self)
+    }
+
+    pub fn set(&mut self, _on: bool) -> io::Result<()> {
+        Ok(())
+    }
+}
+
 /// The daemon's environment without Claude Code session variables.
 pub fn user_environment() -> io::Result<Vec<(OsString, OsString)>> {
     Ok(std::env::vars_os()
@@ -50,4 +66,34 @@ pub fn user_environment() -> io::Result<Vec<(OsString, OsString)>> {
             name != "CLAUDECODE" && !name.starts_with("CLAUDE_CODE_")
         })
         .collect())
+}
+
+/// Nothing to leave: Unix never opens a console for the daemon.
+pub fn leave_own_console() {}
+
+fn no_tasks() -> io::Error {
+    io::Error::new(
+        io::ErrorKind::Unsupported,
+        "starting at logon is only supported on Windows",
+    )
+}
+
+pub fn register_task(_name: &str, _task: &TaskDefinition) -> io::Result<()> {
+    Err(no_tasks())
+}
+
+pub fn find_task(_name: &str) -> io::Result<Option<TaskInfo>> {
+    Err(no_tasks())
+}
+
+pub fn run_task(_name: &str) -> io::Result<()> {
+    Err(no_tasks())
+}
+
+pub fn stop_task(_name: &str) -> io::Result<()> {
+    Err(no_tasks())
+}
+
+pub fn delete_task(_name: &str) -> io::Result<bool> {
+    Err(no_tasks())
 }

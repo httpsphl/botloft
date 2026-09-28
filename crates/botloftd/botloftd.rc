@@ -1,0 +1,3 @@
+// The daemon's Windows resources: only its manifest (spec 14).
+#define RT_MANIFEST 24
+1 RT_MANIFEST "botloftd.manifest"

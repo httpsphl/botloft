@@ -3,10 +3,12 @@
 //! parses the command line and wires these modules together.
 
 pub mod approvals;
+pub mod autostart;
 pub mod chat;
 pub mod clock;
 pub mod config;
 pub mod courier;
+pub mod keep_awake;
 pub mod logging;
 pub mod paths;
 pub mod platform;

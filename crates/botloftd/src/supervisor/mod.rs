@@ -20,7 +20,7 @@ use botloft_core::ids::BotId;
 use botloft_core::now_ms;
 use botloft_core::protocol::{BotState, BotStateChanged};
 use bytes::Bytes;
-use tokio::sync::{Notify, broadcast};
+use tokio::sync::{Notify, broadcast, watch};
 use tokio::time::Instant;
 use tracing::warn;
 
@@ -50,6 +50,8 @@ pub struct Supervisor {
     next_generation: AtomicU64,
     reconcile_lock: tokio::sync::Mutex<()>,
     wake: Notify,
+    /// How many bots are `busy`, for keeping the computer awake (spec 14).
+    busy: watch::Sender<usize>,
 }
 
 #[derive(Default)]
@@ -90,6 +92,7 @@ impl Supervisor {
             next_generation: AtomicU64::new(u64::try_from(now_ms()).unwrap_or(1)),
             reconcile_lock: tokio::sync::Mutex::new(()),
             wake: Notify::new(),
+            busy: watch::Sender::new(0),
         }
     }
 
@@ -111,6 +114,11 @@ impl Supervisor {
             .slots
             .get(bot)
             .map(|slot| (slot.state, slot.generation))
+    }
+
+    /// Follows how many bots are `busy`.
+    pub fn busy_bots(&self) -> watch::Receiver<usize> {
+        self.busy.subscribe()
     }
 
     pub fn claude_version(&self) -> Option<String> {
@@ -194,8 +202,24 @@ impl Supervisor {
 
     fn set_state(&self, bot: &BotId, slot: &mut Slot, state: BotState) {
         if slot.state != state {
+            self.count_busy(slot.state, state);
             slot.state = state;
             self.announce(bot, slot);
+        }
+    }
+
+    /// Keeps the busy count in step with a state change. Every change of
+    /// `slot.state` goes through here.
+    fn count_busy(&self, from: BotState, to: BotState) {
+        let (was, is) = (from == BotState::Busy, to == BotState::Busy);
+        if was != is {
+            self.busy.send_modify(|count| {
+                *count = if is {
+                    *count + 1
+                } else {
+                    count.saturating_sub(1)
+                };
+            });
         }
     }
 
