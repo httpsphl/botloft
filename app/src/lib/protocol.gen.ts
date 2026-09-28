@@ -282,6 +282,17 @@ export type AttachmentUpload = { name: string, mediaType: string,
  */
 data: string, };
 
+export type AttachmentIdParams = { attachmentId: AttachmentId, };
+
+/**
+ * A saved attachment's bytes, for the app to show (spec 9.5).
+ */
+export type AttachmentData = { mediaType: string, 
+/**
+ * The file's bytes, base64.
+ */
+data: string, };
+
 /**
  * Text sent to a bot, by the owner, another bot or the daemon.
  */
@@ -516,6 +527,7 @@ export interface RpcMethods {
   "approvals.answer": { params: ApprovalsAnswerParams; result: Approval };
   "messages.send": { params: MessagesSendParams; result: Message };
   "messages.list": { params: MessagesListParams; result: Array<Message> };
+  "attachments.read": { params: AttachmentIdParams; result: AttachmentData };
   "deliveries.list": { params: DeliveriesListParams; result: Array<Delivery> };
   "deliveries.retry": { params: DeliveryIdParams; result: Delivery };
   "tasks.list": { params: TasksListParams; result: Array<Task> };

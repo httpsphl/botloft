@@ -61,6 +61,13 @@ fn attachments_and_the_chat_item_come_with_the_message() {
         })
         .expect("list");
     assert_eq!(listed[0].attachments, message.attachments);
+    let first = &message.attachments[0];
+    assert_eq!(
+        fx.store.attachment(&first.id).expect("read"),
+        Some((first.clone(), fx.bots[0].id.clone()))
+    );
+    let missing = botloft_core::ids::AttachmentId::generate();
+    assert_eq!(fx.store.attachment(&missing).expect("read"), None);
 }
 
 #[test]

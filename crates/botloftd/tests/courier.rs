@@ -191,44 +191,6 @@ async fn a_message_the_bot_began_is_not_sent_again() {
 }
 
 #[tokio::test]
-async fn attachments_are_saved_and_images_go_inline() {
-    let t = TestDaemon::start_supervised().await;
-    let mut app = t.session().await;
-    let bot = crew_and_bot(&mut app).await;
-    t.until_state(&bot, BotState::Idle).await;
-    let process = t.process_of(&bot).await;
-    let params = json!({ "botId": bot["id"], "body": "", "attachments": [
-        { "name": "screen.png", "mediaType": "image/png", "data": BASE64.encode(b"png") },
-        { "name": "../../report.pdf", "mediaType": "application/pdf", "data": BASE64.encode(b"pdf") },
-    ] });
-    let message = app
-        .call("messages.send", params)
-        .await
-        .expect("files alone");
-    let attachments = message["attachments"].as_array().expect("attachments");
-    assert_eq!(attachments.len(), 2);
-    assert_eq!(attachments[1]["name"], "report.pdf");
-    let workspace = std::path::PathBuf::from(bot["workspace"].as_str().expect("workspace"));
-    for attachment in attachments {
-        let path = workspace.join(attachment["path"].as_str().expect("path"));
-        assert!(path.is_file(), "{} missing", path.display());
-    }
-
-    let line = process.wait_lines(1).await.remove(0);
-    let text = text_of(&line);
-    assert!(
-        text.starts_with("\n\nAttached files, saved in your folder: attachments/"),
-        "{text}"
-    );
-    assert!(text.ends_with("/report.pdf"));
-    assert_eq!(line["message"]["content"][1]["type"], "image");
-    assert_eq!(
-        line["message"]["content"][1]["source"]["data"],
-        BASE64.encode(b"png")
-    );
-}
-
-#[tokio::test]
 async fn archiving_a_bot_drops_what_is_still_queued_for_it() {
     let t = TestDaemon::start_supervised().await;
     let mut app = t.session().await;

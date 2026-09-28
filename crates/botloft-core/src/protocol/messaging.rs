@@ -108,6 +108,32 @@ impl std::fmt::Debug for AttachmentUpload {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct AttachmentIdParams {
+    pub attachment_id: AttachmentId,
+}
+
+/// A saved attachment's bytes, for the app to show (spec 9.5).
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct AttachmentData {
+    pub media_type: String,
+    /// The file's bytes, base64.
+    pub data: String,
+}
+
+impl std::fmt::Debug for AttachmentData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AttachmentData")
+            .field("media_type", &self.media_type)
+            .field("data", &format_args!("<{} base64 chars>", self.data.len()))
+            .finish()
+    }
+}
+
 /// Getting one message into one bot's process.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

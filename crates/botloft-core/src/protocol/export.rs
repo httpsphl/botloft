@@ -113,6 +113,8 @@ fn export_bindings() {
     out.decl::<TaskStatus>();
     out.decl::<Attachment>();
     out.decl::<AttachmentUpload>();
+    out.decl::<AttachmentIdParams>();
+    out.decl::<AttachmentData>();
     out.decl::<Message>();
     out.decl::<Delivery>();
     out.decl::<Task>();
@@ -204,6 +206,11 @@ fn export_bindings() {
         method::MESSAGES_LIST,
         &out.name::<MessagesListParams>(),
         &out.name::<Vec<Message>>(),
+    );
+    out.method(
+        method::ATTACHMENTS_READ,
+        &out.name::<AttachmentIdParams>(),
+        &out.name::<AttachmentData>(),
     );
     out.method(
         method::DELIVERIES_LIST,

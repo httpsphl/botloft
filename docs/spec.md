@@ -353,6 +353,7 @@ Reply with send_message(to: "revisor"). When the task is done, call complete_tas
 - Imagens PNG, JPEG, GIF e WebP de até 5 MB também seguem inline como blocos `image`, para o bot vê-las sem abrir arquivo.
 - O texto da mensagem ganha, no fim, a lista do que foi salvo (`Attached files, saved in your folder: attachments/2026-09-28/relatorio.pdf`), para o bot abrir o resto com as ferramentas dele (PDF, planilha, código...).
 - Anexos ficam na pasta do bot até alguém apagar; o chat mostra nome, tipo e tamanho, e o app abre a pasta.
+- Imagens aparecem como miniatura. O app lê o arquivo de volta com `attachments.read`, que devolve os bytes como estão agora na pasta do bot (o bot pode ter mudado ou apagado o arquivo; apagado dá `not_found`). Arquivo maior que `attachment_max_mb` não é lido.
 
 ## 10. Tools MCP dos bots (`POST /mcp`)
 
@@ -435,6 +436,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `approvals.answer` | `approvalId, allow, note?` | `Approval` |
 | `messages.send` | `botId, body, attachments?` (`[{name, mediaType, data}]`, data em base64) | `Message` |
 | `messages.list` | `crewId?, botId?, before?, limit?` | `Message[]` |
+| `attachments.read` | `attachmentId` | `{mediaType, data}`, data em base64 (9.5) |
 | `deliveries.list` | `state?, botId?` | `Delivery[]` |
 | `deliveries.retry` | `deliveryId` | `Delivery` |
 | `tasks.list` | `crewId?, status?` | `Task[]` |

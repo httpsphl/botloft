@@ -2,7 +2,7 @@
 //! its attachments, its delivery, the task it creates and the recipient's
 //! chat item, in one transaction (spec 9.1).
 
-use botloft_core::ids::{BotId, ChatItemId, CrewId, MessageId, TaskId};
+use botloft_core::ids::{AttachmentId, BotId, ChatItemId, CrewId, MessageId, TaskId};
 use botloft_core::protocol::{
     Attachment, ChatBody, ChatItem, Delivery, InboundItem, Message, Task,
 };
@@ -169,6 +169,20 @@ impl Store {
             )
             .optional()?;
         Ok(with_attachments(&self.conn, message.into_iter().collect())?.pop())
+    }
+
+    /// An attachment and the bot whose folder holds it.
+    pub fn attachment(&self, id: &AttachmentId) -> Result<Option<(Attachment, BotId)>> {
+        let found = self
+            .conn
+            .query_row(
+                "SELECT a.id, a.name, a.media_type, a.size, a.path, m.to_bot_id \
+                 FROM attachments a JOIN messages m ON m.id = a.message_id WHERE a.id = ?1",
+                [id.as_str()],
+                |row| Ok((attachment_from_row(row)?, parse_column(row, 5)?)),
+            )
+            .optional()?;
+        Ok(found)
     }
 
     /// Newest first, in the order they were stored.

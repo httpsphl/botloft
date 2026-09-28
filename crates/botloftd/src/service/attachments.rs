@@ -1,15 +1,17 @@
 //! Files the owner sends with a message (spec 9.5): saved in the bot's
-//! `attachments\<yyyy-mm-dd>\` folder before the message is stored.
+//! `attachments\<yyyy-mm-dd>\` folder before the message is stored, and
+//! read back for the app to show.
 
-use std::path::Path;
+use std::path::{Component, Path};
 
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use botloft_core::ids::AttachmentId;
-use botloft_core::protocol::{Attachment, AttachmentUpload};
+use botloft_core::protocol::{Attachment, AttachmentData, AttachmentIdParams, AttachmentUpload};
 use botloft_core::{slug, validate};
 
-use super::{ApiError, ApiResult};
+use super::{ApiError, ApiResult, bots, crews};
+use crate::state::Daemon;
 
 const ATTACHMENTS_DIR: &str = "attachments";
 const DEFAULT_MEDIA_TYPE: &str = "application/octet-stream";
@@ -62,6 +64,52 @@ pub(crate) fn save(
         });
     }
     Ok(saved)
+}
+
+/// `attachments.read`: a file the owner sent, as it is now in the bot's
+/// folder. Archived bots keep theirs; the bot may have changed or removed it.
+pub fn read(daemon: &Daemon, params: AttachmentIdParams) -> ApiResult<AttachmentData> {
+    let id = params.attachment_id;
+    let store = daemon.store();
+    let (attachment, bot_id) = store
+        .attachment(&id)?
+        .ok_or_else(|| ApiError::NotFound(format!("attachment {id} does not exist")))?;
+    let bot = bots::find(&store, &bot_id)?;
+    let crew = crews::find(&store, &bot.crew_id)?;
+    drop(store);
+    let relative = Path::new(&attachment.path);
+    // The daemon wrote the path; a stored one that climbs out is refused all the same.
+    if !relative
+        .components()
+        .all(|part| matches!(part, Component::Normal(_)))
+    {
+        return Err(ApiError::NotFound(format!(
+            "attachment {id} does not exist"
+        )));
+    }
+    let path = daemon
+        .paths
+        .bot_workspace(&crew.slug, &bot.slug)
+        .join(relative);
+    let gone = || {
+        ApiError::NotFound(format!(
+            "{} is no longer in the bot's folder",
+            attachment.name
+        ))
+    };
+    let size = std::fs::metadata(&path).map_err(|_| gone())?.len();
+    if size > daemon.bots.attachment_max_bytes {
+        return Err(ApiError::validation(format!(
+            "{} is larger than {} MB now",
+            attachment.name,
+            daemon.bots.attachment_max_bytes / (1024 * 1024)
+        )));
+    }
+    let bytes = std::fs::read(&path).map_err(|_| gone())?;
+    Ok(AttachmentData {
+        media_type: attachment.media_type,
+        data: BASE64.encode(bytes),
+    })
 }
 
 /// A MIME type as given, or the generic one when it looks wrong.
