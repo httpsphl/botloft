@@ -5,5 +5,9 @@
 pub mod config;
 pub mod paths;
 pub mod platform;
+pub mod rpc;
 pub mod secrets;
+pub mod server;
+pub mod service;
+pub mod state;
 pub mod workspace;

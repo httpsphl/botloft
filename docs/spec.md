@@ -107,7 +107,9 @@ Tipos do protocolo ficam em `botloft-core` e são exportados para TypeScript com
 
 Workspaces ficam num caminho curto e visível para o usuário abrir no Explorer e para reduzir estouro do limite de 260 caracteres (bots rodam `npm install`).
 
-Nomes de pasta de crew e bot são slugs gerados na criação e **não mudam** quando o nome de exibição muda.
+Nomes de pasta de crew e bot são slugs gerados na criação e **não mudam** quando o nome de exibição muda. Slug: ASCII minúsculo com hífens, acentos transliterados (`Revisão` -> `revisao`), no máximo 32 caracteres, nunca um nome de dispositivo do Windows (`con`, `lpt1`...) e nunca `shared` para bot. Colisão ganha sufixo (`docs-2`), inclusive com slug de item arquivado ou pasta que já exista no disco.
+
+O **handle** do bot (`@revisao`) é derivado do nome pela mesma regra, acompanha renomeações e é único entre os bots ativos da crew; um nome que gere handle já usado é recusado com erro de validação.
 
 ### 5.1 Arquivos gerados em cada workspace
 
@@ -314,8 +316,9 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 ### 11.1 Sessão
 
 - Primeiro request obrigatório: `session.hello {token, client: {name, version}, protocol: 1}` -> `{daemonVersion, protocol}`.
-- Qualquer outro método antes do hello: erro `-32001` e a conexão fecha.
-- `Origin` aceito: `http://tauri.localhost`, `tauri://localhost` e `http://localhost:1420` (dev).
+- Qualquer outro método antes do hello: erro `-32001` e a conexão fecha. Token errado também dá `-32001`; `protocol` diferente dá `-32004`; nos dois casos a conexão fecha. O hello tem que chegar em até 10 s.
+- `Origin` aceito: `http://tauri.localhost`, `tauri://localhost` e `http://localhost:1420` (dev). Qualquer outro `Origin` recebe HTTP 403 antes do upgrade. Sem `Origin` (cliente nativo, testes) é aceito: navegadores sempre mandam o header, e o token continua obrigatório.
+- Um cliente lento que deixa acumular mais de 1024 notificações é desconectado e recarrega o estado ao reconectar.
 
 ### 11.2 Métodos (MVP)
 
@@ -328,8 +331,8 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `crews.setPaused` | `crewId, paused` | `Crew` |
 | `crews.archive` | `crewId` | `Crew` |
 | `bots.list` | `crewId?` | `Bot[]` |
-| `bots.create` | `crewId, name, role, instructions` | `Bot` |
-| `bots.update` | `botId, name?, role?, instructions?` | `Bot` |
+| `bots.create` | `crewId, name, role, instructions, color?` | `Bot` |
+| `bots.update` | `botId, name?, role?, instructions?, color?` | `Bot` |
 | `bots.setPaused` | `botId, paused` | `Bot` |
 | `bots.restart` | `botId, fresh?` | `Bot` |
 | `bots.archive` | `botId` | `Bot` |
@@ -357,6 +360,8 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `-32004` | validação |
 | `-32005` | runtime indisponível (claude ausente ou versão antiga) |
 
+Além desses, os códigos padrão do JSON-RPC: `-32700` (JSON inválido), `-32600` (request inválido), `-32601` (método desconhecido), `-32602` (params inválidos) e `-32603` (erro interno; a mensagem não traz corpo de mensagem nem token). `crews.archive` e `bots.archive` são idempotentes.
+
 ## 12. Dados (SQLite)
 
 Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations numeradas em `botloft-store/migrations/NNNN_nome.sql`, versão em `PRAGMA user_version`. Tempo em milissegundos Unix (`INTEGER`). Arquivamento é lógico (`archived_at`).
@@ -364,7 +369,7 @@ Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations 
 | Tabela | Colunas principais |
 |---|---|
 | `crews` | `id, name, slug, paused, created_at, archived_at` |
-| `bots` | `id, crew_id, name, handle, slug, role, instructions, paused, token_hash, created_at, archived_at` |
+| `bots` | `id, crew_id, name, handle, slug, role, instructions, color, paused, token_hash, created_at, archived_at` |
 | `messages` | `id, crew_id, from_kind (owner/bot/system), from_bot_id, to_bot_id, kind (note/task/result/system), body, task_id, created_at` |
 | `deliveries` | `id, message_id, bot_id, state, attempts, next_attempt_at, lease_until, last_error, updated_at` |
 | `tasks` | `id, crew_id, requester_bot_id, assignee_bot_id, status, deadline_at, hops, origin_task_id, result, created_at, updated_at` |
@@ -378,6 +383,7 @@ Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations 
 - Token do owner: 32 bytes aleatórios em `secrets\owner.token`, ACL com acesso só para o SID do usuário atual (DACL protegida, sem herança).
 - Token de bot: 32 bytes aleatórios. No banco fica só o **SHA-256** (`token_hash`); o valor cru existe apenas no ambiente do processo do bot. Novo token a cada generation.
 - Logs nunca registram tokens, conteúdo de mensagens nem saída de terminal em nível `info`. Bots podem manipular dados sensíveis (inclusive de saúde); o daemon trata corpo de mensagem como dado pessoal.
+- `log_level` vale só para os crates do Botloft; dependências ficam em `warn`, porque em `debug`/`trace` a pilha de WebSocket registra frames, que podem conter mensagens. `RUST_LOG` sobrepõe tudo e é só para depuração local.
 - Isolamento entre bots é cooperativo (mesmo usuário do Windows). Documentar isso no README sem prometer sandbox.
 
 ## 14. Integração com o Windows
