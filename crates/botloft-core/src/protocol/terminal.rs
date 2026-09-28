@@ -28,6 +28,10 @@ pub struct TerminalAttachResult {
     pub offset: u64,
     /// True when the client must clear its screen before writing the replay.
     pub reset: bool,
+    /// Offset where live output starts. The bytes before it replay past
+    /// output: a terminal must not answer the queries in them (cursor
+    /// position, device attributes...), which were asked long ago.
+    pub live_offset: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

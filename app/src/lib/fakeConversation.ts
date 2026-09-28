@@ -21,7 +21,7 @@ export function conversationHandlers(fake: FakeBotloft): Conversation {
   return {
     "terminal.attach": ({ botId }) => {
       const bot = fake.bot(botId, false);
-      return { generation: bot.generation ?? 1, offset: 0, reset: true };
+      return { generation: bot.generation ?? 1, offset: 0, reset: true, liveOffset: 0 };
     },
     "terminal.detach": () => null,
     "terminal.write": ({ botId, data }) => {

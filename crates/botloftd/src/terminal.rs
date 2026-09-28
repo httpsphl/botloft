@@ -28,6 +28,8 @@ pub struct AttachPoint {
     /// The client must clear its screen: it saw another generation, or the
     /// bytes after its offset are no longer buffered.
     pub reset: bool,
+    /// End of the replay, where live output starts.
+    pub live_offset: u64,
 }
 
 pub struct Attachment {
@@ -133,6 +135,7 @@ impl Terminal {
                 generation: inner.generation,
                 offset: from,
                 reset: !resumable,
+                live_offset: inner.end(),
             },
             replay: Bytes::from(replay),
             live,
@@ -213,7 +216,8 @@ mod tests {
             AttachPoint {
                 generation: 7,
                 offset: 0,
-                reset: true
+                reset: true,
+                live_offset: 11
             }
         );
         assert_eq!(text(&fresh.replay), "hello world");
@@ -224,7 +228,8 @@ mod tests {
             AttachPoint {
                 generation: 7,
                 offset: 6,
-                reset: false
+                reset: false,
+                live_offset: 11
             }
         );
         assert_eq!(text(&resumed.replay), "world");
@@ -252,7 +257,8 @@ mod tests {
             AttachPoint {
                 generation: 2,
                 offset: 0,
-                reset: true
+                reset: true,
+                live_offset: 3
             }
         );
         assert_eq!(text(&stale.replay), "new");
