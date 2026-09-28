@@ -118,7 +118,7 @@ claudeVersion: string | null,
 /**
  * Why bots cannot start (Claude Code missing or too old); `null` when fine.
  */
-runtimeError: string | null, };
+runtimeError: string | null, deliveries: DeliveryBacklog, };
 
 export type CrewsCreateParams = { name: string, };
 

@@ -1,5 +1,5 @@
 //! HTTP server on 127.0.0.1: `GET /health`, the `/rpc` WebSocket for the
-//! app and `POST /hooks/{event}` for the bots. `/mcp` joins in M3.
+//! app and `POST /hooks/{event}` for the bots. `/mcp` joins with the tools.
 
 use std::future::Future;
 use std::sync::Arc;

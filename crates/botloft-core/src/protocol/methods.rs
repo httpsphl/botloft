@@ -4,6 +4,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
+use super::DeliveryBacklog;
 use crate::ids::{BotId, CrewId};
 
 /// Identifies the connecting app in `session.hello`.
@@ -55,6 +56,7 @@ pub struct SystemStatus {
     pub claude_version: Option<String>,
     /// Why bots cannot start (Claude Code missing or too old); `null` when fine.
     pub runtime_error: Option<String>,
+    pub deliveries: DeliveryBacklog,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

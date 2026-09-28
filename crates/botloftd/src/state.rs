@@ -1,14 +1,16 @@
-//! State shared by every connection: the store, the supervisor, the event
-//! bus and what the daemon knows about itself.
+//! State shared by every connection: the store, the supervisor, the
+//! courier, the event bus and what the daemon knows about itself.
 
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Instant;
 
-use botloft_core::protocol::{Bot, BotStateChanged, Crew};
+use botloft_core::protocol::{Bot, BotStateChanged, Crew, Delivery, Message, Task};
 use botloft_store::Store;
 use tokio::sync::broadcast;
 
+use crate::clock::Clock;
+use crate::courier::{Courier, CourierSettings, InboxWriter};
 use crate::paths::Paths;
 use crate::runtime::Runtime;
 use crate::secrets::TokenHash;
@@ -21,6 +23,9 @@ pub enum Event {
     CrewChanged(Crew),
     BotChanged(Bot),
     BotState(BotStateChanged),
+    MessageCreated(Message),
+    DeliveryChanged(Delivery),
+    TaskChanged(Task),
 }
 
 /// Events buffered per connection before a slow client is dropped.
@@ -36,6 +41,9 @@ pub struct DaemonOptions {
     pub owner_token: TokenHash,
     pub runtime: Arc<dyn Runtime>,
     pub supervisor: SupervisorSettings,
+    pub clock: Arc<dyn Clock>,
+    pub inbox: Arc<dyn InboxWriter>,
+    pub courier: CourierSettings,
 }
 
 pub struct Daemon {
@@ -43,6 +51,9 @@ pub struct Daemon {
     pub port: u16,
     pub bin: PathBuf,
     pub supervisor: Supervisor,
+    pub courier: Courier,
+    /// Time for everything stored or compared with stored times.
+    pub clock: Arc<dyn Clock>,
     store: Mutex<Store>,
     owner_token: TokenHash,
     events: broadcast::Sender<Event>,
@@ -51,7 +62,8 @@ pub struct Daemon {
 
 impl Daemon {
     /// The supervisor keeps a weak reference back to the daemon, so both are
-    /// created together. Start it with [`crate::supervisor::run`].
+    /// created together. Start them with [`crate::supervisor::run`] and
+    /// [`crate::courier::run`].
     pub fn new(options: DaemonOptions) -> Arc<Self> {
         let (events, _) = broadcast::channel(EVENT_BUFFER);
         Arc::new_cyclic(|daemon| Self {
@@ -61,6 +73,8 @@ impl Daemon {
                 options.supervisor,
                 events.clone(),
             ),
+            courier: Courier::new(options.courier, options.inbox),
+            clock: options.clock,
             paths: options.paths,
             port: options.port,
             bin: options.bin,

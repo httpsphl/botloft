@@ -6,12 +6,12 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 
 use super::jsonrpc::{RpcError, empty_params};
-use crate::service::{self, ApiResult, bots, crews, terminal};
+use crate::service::{self, ApiResult, bots, crews, deliveries, messages, terminal};
 use crate::state::Daemon;
 
 pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Value, RpcError> {
     match name {
-        method::SYSTEM_STATUS => reply(Ok(service::status(daemon))),
+        method::SYSTEM_STATUS => reply(service::status(daemon)),
         method::CREWS_LIST => reply(crews::list(daemon)),
         method::CREWS_CREATE => reply(crews::create(daemon, parse(params)?)),
         method::CREWS_RENAME => reply(crews::rename(daemon, parse(params)?)),
@@ -25,6 +25,10 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::BOTS_RESTART => reply(bots::restart(daemon, parse(params)?)),
         method::TERMINAL_WRITE => reply(terminal::write(daemon, parse(params)?)),
         method::TERMINAL_RESIZE => reply(terminal::resize(daemon, parse(params)?)),
+        method::MESSAGES_SEND => reply(messages::send(daemon, parse(params)?)),
+        method::MESSAGES_LIST => reply(messages::list(daemon, parse(params)?)),
+        method::DELIVERIES_LIST => reply(deliveries::list(daemon, parse(params)?)),
+        method::DELIVERIES_RETRY => reply(deliveries::retry(daemon, parse(params)?)),
         method::SESSION_HELLO => Err(RpcError::new(
             error_code::CONFLICT,
             "this connection is already authenticated",

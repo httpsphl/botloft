@@ -3,6 +3,8 @@
 
 pub mod bots;
 pub mod crews;
+pub mod deliveries;
+pub mod messages;
 pub mod terminal;
 
 use botloft_core::protocol::{PROTOCOL_VERSION, SystemStatus, error_code};
@@ -54,14 +56,16 @@ impl From<StoreError> for ApiError {
 
 pub type ApiResult<T> = Result<T, ApiError>;
 
-pub fn status(daemon: &Daemon) -> SystemStatus {
-    SystemStatus {
+pub fn status(daemon: &Daemon) -> ApiResult<SystemStatus> {
+    let deliveries = daemon.store().delivery_backlog()?;
+    Ok(SystemStatus {
         daemon_version: env!("CARGO_PKG_VERSION").to_owned(),
         protocol: PROTOCOL_VERSION,
         uptime_ms: daemon.uptime_ms(),
         claude_version: daemon.supervisor.claude_version(),
         runtime_error: daemon.supervisor.runtime_error(),
-    }
+        deliveries,
+    })
 }
 
 /// [`slug::unique`] for checks that can fail.

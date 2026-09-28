@@ -183,7 +183,7 @@ pub(crate) fn find(store: &Store, id: &BotId) -> ApiResult<BotRecord> {
 }
 
 /// The bot and its crew, if the bot exists and is not archived.
-fn active(store: &Store, id: &BotId) -> ApiResult<(Crew, BotRecord)> {
+pub(crate) fn active(store: &Store, id: &BotId) -> ApiResult<(Crew, BotRecord)> {
     let record = find(store, id)?;
     if record.archived_at.is_some() {
         return Err(ApiError::Conflict(format!("bot {id} is archived")));

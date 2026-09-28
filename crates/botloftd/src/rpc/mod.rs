@@ -167,6 +167,14 @@ fn to_notification(event: &Event) -> String {
         Event::CrewChanged(crew) => (notification::CREW_CHANGED, serde_json::to_value(crew)),
         Event::BotChanged(bot) => (notification::BOT_CHANGED, serde_json::to_value(bot)),
         Event::BotState(state) => (notification::BOT_STATE, serde_json::to_value(state)),
+        Event::MessageCreated(message) => {
+            (notification::MESSAGE_CREATED, serde_json::to_value(message))
+        }
+        Event::DeliveryChanged(delivery) => (
+            notification::DELIVERY_CHANGED,
+            serde_json::to_value(delivery),
+        ),
+        Event::TaskChanged(task) => (notification::TASK_CHANGED, serde_json::to_value(task)),
     };
     jsonrpc::notification(name, params.unwrap_or(Value::Null))
 }

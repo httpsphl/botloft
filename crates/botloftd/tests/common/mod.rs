@@ -10,6 +10,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use botloft_store::Store;
+use botloftd::clock::ManualClock;
+use botloftd::courier::fake::FakeInbox;
+use botloftd::courier::{self, CourierSettings};
 use botloftd::paths::Paths;
 use botloftd::runtime::claude::Claude;
 use botloftd::runtime::fake::FakeRuntime;
@@ -33,6 +36,8 @@ pub struct TestDaemon {
     pub paths: Paths,
     pub daemon: Arc<Daemon>,
     pub runtime: FakeRuntime,
+    pub inbox: FakeInbox,
+    pub clock: Arc<ManualClock>,
     _dir: TempDir,
 }
 
@@ -50,52 +55,88 @@ pub fn test_settings() -> SupervisorSettings {
     }
 }
 
-/// A daemon with a fake runtime and an in-memory database, no server.
-pub fn new_daemon(settings: SupervisorSettings) -> (Arc<Daemon>, FakeRuntime, Paths, TempDir) {
+/// Polls often on the real clock; retries are timed by the manual clock.
+pub fn courier_settings() -> CourierSettings {
+    CourierSettings {
+        poll_interval: Duration::from_millis(10),
+        lease: Duration::from_secs(15),
+        max_attempts: 3,
+        retry_backoff_initial: Duration::from_secs(1),
+        retry_backoff_max: Duration::from_secs(4),
+    }
+}
+
+/// A daemon with fakes for everything outside the process, and no server.
+pub struct Parts {
+    pub daemon: Arc<Daemon>,
+    pub runtime: FakeRuntime,
+    pub inbox: FakeInbox,
+    pub clock: Arc<ManualClock>,
+    pub paths: Paths,
+    pub dir: TempDir,
+}
+
+pub fn new_daemon(settings: SupervisorSettings) -> Parts {
     let dir = tempfile::tempdir().expect("tempdir");
     let paths = Paths::new(dir.path().join("home"), dir.path().join("workspaces"));
     let runtime = FakeRuntime::new();
+    let inbox = FakeInbox::new();
+    let clock = Arc::new(ManualClock::new());
     let daemon = Daemon::new(DaemonOptions {
         paths: paths.clone(),
         port: 45710,
-        bin: PathBuf::from(r"C:\Botloftinotloftd.exe"),
+        bin: PathBuf::from(r"C:\Botloft\bin\botloftd.exe"),
         store: Store::open_in_memory().expect("store"),
         owner_token: TokenHash::of(TOKEN),
         runtime: Arc::new(runtime.clone()),
         supervisor: settings,
+        clock: Arc::clone(&clock) as _,
+        inbox: Arc::new(inbox.clone()),
+        courier: courier_settings(),
     });
-    (daemon, runtime, paths, dir)
+    Parts {
+        daemon,
+        runtime,
+        inbox,
+        clock,
+        paths,
+        dir,
+    }
 }
 
 impl TestDaemon {
-    /// Server only: bots are never started.
+    /// Server only: bots are never started and nothing is delivered.
     pub async fn start() -> Self {
         Self::launch(false).await
     }
 
-    /// Server and supervisor, with bots running on a [`FakeRuntime`].
+    /// Server, supervisor and courier, with bots running on a
+    /// [`FakeRuntime`] and inboxes that are a [`FakeInbox`].
     pub async fn start_supervised() -> Self {
         Self::launch(true).await
     }
 
     async fn launch(supervised: bool) -> Self {
-        let (daemon, runtime, paths, dir) = new_daemon(test_settings());
+        let parts = new_daemon(test_settings());
         let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
         let addr = listener.local_addr().expect("addr");
         if supervised {
-            tokio::spawn(supervisor::run(Arc::clone(&daemon)));
+            tokio::spawn(supervisor::run(Arc::clone(&parts.daemon)));
+            tokio::spawn(courier::run(Arc::clone(&parts.daemon)));
         }
         tokio::spawn(server::serve(
-            Arc::clone(&daemon),
+            Arc::clone(&parts.daemon),
             listener,
             std::future::pending(),
         ));
         Self {
             addr,
-            paths,
-            daemon,
-            runtime,
-            _dir: dir,
+            paths: parts.paths,
+            daemon: parts.daemon,
+            runtime: parts.runtime,
+            inbox: parts.inbox,
+            clock: parts.clock,
+            _dir: parts.dir,
         }
     }
 
