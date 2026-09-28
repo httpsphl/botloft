@@ -3,6 +3,7 @@
 //! parses the command line and wires these modules together.
 
 pub mod config;
+pub mod logging;
 pub mod paths;
 pub mod platform;
 pub mod rpc;
