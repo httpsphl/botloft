@@ -107,7 +107,9 @@ Tipos do protocolo ficam em `botloft-core` e são exportados para TypeScript com
 
 Workspaces ficam num caminho curto e visível para o usuário abrir no Explorer e para reduzir estouro do limite de 260 caracteres (bots rodam `npm install`).
 
-Nomes de pasta de crew e bot são slugs gerados na criação e **não mudam** quando o nome de exibição muda.
+Nomes de pasta de crew e bot são slugs gerados na criação e **não mudam** quando o nome de exibição muda. Slug: ASCII minúsculo com hífens, acentos transliterados (`Revisão` -> `revisao`), no máximo 32 caracteres, nunca um nome de dispositivo do Windows (`con`, `lpt1`...) e nunca `shared` para bot. Colisão ganha sufixo (`docs-2`), inclusive com slug de item arquivado ou pasta que já exista no disco.
+
+O **handle** do bot (`@revisao`) é derivado do nome pela mesma regra, acompanha renomeações e é único entre os bots ativos da crew; um nome que gere handle já usado é recusado com erro de validação.
 
 ### 5.1 Arquivos gerados em cada workspace
 
@@ -121,7 +123,7 @@ Nomes de pasta de crew e bot são slugs gerados na criação e **não mudam** qu
     mcp.json                       config MCP do bot (gerado pelo daemon)
 ```
 
-Identidade e instruções vão em `.claude/rules/botloft.md` e não na linha de comando: o texto pode ser longo e a linha de comando do Windows é limitada. **Verificar** na versão alvo do Claude Code que regras sem frontmatter `paths` são carregadas sempre. Plano B: `--append-system-prompt` com texto curto apontando para o arquivo.
+Identidade e instruções vão em `.claude/rules/botloft.md` e não na linha de comando: o texto pode ser longo e a linha de comando do Windows é limitada. Regras sem frontmatter `paths` são carregadas no início de toda sessão, com a mesma prioridade de `.claude/CLAUDE.md` (confirmado na documentação oficial, ver seção 19). Plano B, se isso mudar: `--append-system-prompt` com texto curto apontando para o arquivo.
 
 ## 6. Configuração (`config.toml`)
 
@@ -214,14 +216,15 @@ default_deadline_minutes = 120
     "SessionEnd":       [{ "hooks": [{ "type": "command", "command": "<BOTLOFT_BIN>", "args": ["hook", "session-end"] }] }]
   },
   "permissions": {
-    "deny": ["Read(<BOTLOFT_HOME>/secrets/**)"]
+    "deny": ["Read(//c/Users/<usuário>/AppData/Local/Botloft/secrets/**)"]
   }
 }
 ```
 
 - Hooks em **exec form** (`args` presente): o Claude Code executa o binário direto, sem Git Bash nem PowerShell. Some o problema de quoting, de `curl` e de path com barra invertida.
+- O `command` do exec form precisa ser um `.exe` de verdade; shims `.cmd`/`.bat` exigem shell. `botloftd.exe` atende.
 - `crossSessionInbound: accept` é obrigatório: o daemon não é processo filho da sessão, então sem isso a mensagem pode ficar retida esperando aprovação.
-- Caminhos são absolutos e escritos com `/` dentro das regras de permissão. **Verificar** a sintaxe de path das permission rules no Windows.
+- Caminho absoluto em permission rule usa o prefixo `//` e a forma POSIX que o Claude Code aplica no Windows: `C:\Users\ana\...` vira `//c/Users/ana/...` (letra do drive em minúscula). Uma barra só (`/caminho`) é relativa à origem do settings, não à raiz, e não protegeria nada. O daemon converte `BOTLOFT_HOME` para essa forma ao gerar o arquivo.
 
 ### 7.6 Subcomando `botloftd hook <evento>`
 
@@ -264,7 +267,8 @@ default_deadline_minutes = 120
   1. `{"type":"auth","token":"<CLAUDE_CODE_MESSAGING_TOKEN>"}` (**obrigatório** no Windows)
   2. `{"type":"user","message":{"role":"user","content":"<envelope>"}}`
 - Fechar a conexão depois do flush.
-- **Verificar** o formato exato da linha de mensagem contra a documentação de cross-session messaging na versão alvo e cobrir com teste de integração manual (checklist no M3).
+- A documentação oficial confirma a linha de auth, a obrigatoriedade dela no Windows e o limite de 30 s, mas **não documenta** a linha de mensagem (item 2). Ela precisa ser confirmada com teste real no M3 antes de o courier depender dela.
+- Limites documentados do lado do Claude Code: mensagem de até ~1 milhão de caracteres, no máximo 50 mensagens aceitas na fila, rajadas recusadas e repetições idênticas descartadas. O courier deve respeitar isso (uma entrega por vez por bot).
 
 ### 9.3 Envelope
 
@@ -312,8 +316,9 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 ### 11.1 Sessão
 
 - Primeiro request obrigatório: `session.hello {token, client: {name, version}, protocol: 1}` -> `{daemonVersion, protocol}`.
-- Qualquer outro método antes do hello: erro `-32001` e a conexão fecha.
-- `Origin` aceito: `http://tauri.localhost`, `tauri://localhost` e `http://localhost:1420` (dev).
+- Qualquer outro método antes do hello: erro `-32001` e a conexão fecha. Token errado também dá `-32001`; `protocol` diferente dá `-32004`; nos dois casos a conexão fecha. O hello tem que chegar em até 10 s.
+- `Origin` aceito: `http://tauri.localhost`, `tauri://localhost` e `http://localhost:1420` (dev). Qualquer outro `Origin` recebe HTTP 403 antes do upgrade. Sem `Origin` (cliente nativo, testes) é aceito: navegadores sempre mandam o header, e o token continua obrigatório.
+- Um cliente lento que deixa acumular mais de 1024 notificações é desconectado e recarrega o estado ao reconectar.
 
 ### 11.2 Métodos (MVP)
 
@@ -326,8 +331,8 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `crews.setPaused` | `crewId, paused` | `Crew` |
 | `crews.archive` | `crewId` | `Crew` |
 | `bots.list` | `crewId?` | `Bot[]` |
-| `bots.create` | `crewId, name, role, instructions` | `Bot` |
-| `bots.update` | `botId, name?, role?, instructions?` | `Bot` |
+| `bots.create` | `crewId, name, role, instructions, color?` | `Bot` |
+| `bots.update` | `botId, name?, role?, instructions?, color?` | `Bot` |
 | `bots.setPaused` | `botId, paused` | `Bot` |
 | `bots.restart` | `botId, fresh?` | `Bot` |
 | `bots.archive` | `botId` | `Bot` |
@@ -355,6 +360,8 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `-32004` | validação |
 | `-32005` | runtime indisponível (claude ausente ou versão antiga) |
 
+Além desses, os códigos padrão do JSON-RPC: `-32700` (JSON inválido), `-32600` (request inválido), `-32601` (método desconhecido), `-32602` (params inválidos) e `-32603` (erro interno; a mensagem não traz corpo de mensagem nem token). `crews.archive` e `bots.archive` são idempotentes.
+
 ## 12. Dados (SQLite)
 
 Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations numeradas em `botloft-store/migrations/NNNN_nome.sql`, versão em `PRAGMA user_version`. Tempo em milissegundos Unix (`INTEGER`). Arquivamento é lógico (`archived_at`).
@@ -362,7 +369,7 @@ Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations 
 | Tabela | Colunas principais |
 |---|---|
 | `crews` | `id, name, slug, paused, created_at, archived_at` |
-| `bots` | `id, crew_id, name, handle, slug, role, instructions, paused, token_hash, created_at, archived_at` |
+| `bots` | `id, crew_id, name, handle, slug, role, instructions, color, paused, token_hash, created_at, archived_at` |
 | `messages` | `id, crew_id, from_kind (owner/bot/system), from_bot_id, to_bot_id, kind (note/task/result/system), body, task_id, created_at` |
 | `deliveries` | `id, message_id, bot_id, state, attempts, next_attempt_at, lease_until, last_error, updated_at` |
 | `tasks` | `id, crew_id, requester_bot_id, assignee_bot_id, status, deadline_at, hops, origin_task_id, result, created_at, updated_at` |
@@ -376,6 +383,7 @@ Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations 
 - Token do owner: 32 bytes aleatórios em `secrets\owner.token`, ACL com acesso só para o SID do usuário atual (DACL protegida, sem herança).
 - Token de bot: 32 bytes aleatórios. No banco fica só o **SHA-256** (`token_hash`); o valor cru existe apenas no ambiente do processo do bot. Novo token a cada generation.
 - Logs nunca registram tokens, conteúdo de mensagens nem saída de terminal em nível `info`. Bots podem manipular dados sensíveis (inclusive de saúde); o daemon trata corpo de mensagem como dado pessoal.
+- `log_level` vale só para os crates do Botloft; dependências ficam em `warn`, porque em `debug`/`trace` a pilha de WebSocket registra frames, que podem conter mensagens. `RUST_LOG` sobrepõe tudo e é só para depuração local.
 - Isolamento entre bots é cooperativo (mesmo usuário do Windows). Documentar isso no README sem prometer sandbox.
 
 ## 14. Integração com o Windows
@@ -389,7 +397,7 @@ Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations 
 | Encerramento | `ctrl_c`, `ctrl_close`, `ctrl_shutdown`, `ctrl_logoff` do Tokio: parar courier, sinalizar bots, flush do banco |
 | Caminhos longos | manifesto `longPathAware` no daemon e no app; usar APIs com `\\?\` ao apagar árvores de workspace |
 | Arquivo em uso | arquivar bot só apaga workspace depois do processo encerrado; retentar exclusão se bloqueado |
-| Instância única | mutex nomeado `Local\Botloft.Daemon`; se já existir, sair com erro claro |
+| Instância única | lock exclusivo em `<BOTLOFT_HOME>\botloftd.lock` (`File::try_lock`), solto pelo sistema quando o processo termina, mesmo em crash; se já estiver preso, sair com erro claro. É um lock por pasta de dados, e não um mutex de nome fixo, para o daemon de dev (`BOTLOFT_HOME`) rodar ao lado do instalado |
 | Porta ocupada | se 45710 estiver em uso por outro processo, sair com erro (sem porta alternativa no MVP) |
 
 ## 15. App desktop
@@ -468,12 +476,18 @@ Identidade: o mascote do Botloft é uma chama com olhos, desenhada em vetor em `
 
 ## 19. Pontos a verificar na versão alvo do Claude Code
 
-| Item | Seção |
-|---|---|
-| Exec form de hooks (`args`) no Windows | 7.5 |
-| Formato das linhas no named pipe do inbox | 9.2 |
-| Carregamento de `.claude/rules/*.md` sem frontmatter | 5.1 |
-| Expansão `${VAR}` em headers do `mcp.json` | 10 |
-| Sintaxe de caminho Windows em permission rules | 7.5 |
-| Flags `--continue`, `--settings`, `--mcp-config` | 7.4 |
-| Payload do `StopFailure` e do `Notification` | 7.2 |
+Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28. "Confirmado" quer dizer documentado; o teste real na versão alvo continua no checklist do marco indicado.
+
+| Item | Seção | Resultado | Teste real |
+|---|---|---|---|
+| Exec form de hooks (`args`) no Windows | 7.5 | Confirmado (`hooks`): com `args`, o binário roda direto, sem shell; `command` precisa ser `.exe` | M2 |
+| Linha de auth, 30 s e variáveis do inbox | 9.2 | Confirmado (`cross-session-messaging`): `CLAUDE_CODE_MESSAGING_SOCKET`, `CLAUDE_CODE_MESSAGING_TOKEN`, auth obrigatória no Windows, >= 2.1.234 | M3 |
+| Formato da linha de mensagem no inbox | 9.2 | **Não documentado** | M3, obrigatório |
+| `crossSessionInbound` | 7.5 | Confirmado: valores `accept`, `hold`, `refuse`; `refuse` em settings de projeto vence tudo | M3 |
+| Carregamento de `.claude/rules/*.md` sem frontmatter | 5.1 | Confirmado (`memory`): carregadas sempre | M2 |
+| Expansão `${VAR}` em headers do `mcp.json` | 10 | Confirmado (`mcp`); alguns nomes de credencial conhecidos são lidos vazios, `BOTLOFT_BOT_TOKEN` não é um deles | M3 |
+| Sintaxe de caminho Windows em permission rules | 7.5 | Confirmado (`permissions`): `//c/...` em forma POSIX; spec corrigida | M2 |
+| Flags `--continue`, `--mcp-config` | 7.4 | Confirmado (`cli-reference`) | M2 |
+| Flag `--settings <arquivo>` | 7.4 | Citada em outras páginas (ex.: `cross-session-messaging`), ausente da tabela de CLI; confirmar com `claude --help` | M2 |
+| stdout do `SessionStart` vira contexto | 7.6 | Confirmado (`hooks`) | M2 |
+| `StopFailure` (`rate_limit`, `authentication_failed`) e `Notification` (`permission_prompt`) | 7.2 | Eventos e valores de matcher confirmados; nome do campo no JSON do stdin a confirmar | M2 |
