@@ -40,9 +40,13 @@ export class FakeBotloft implements BotloftApi {
     uptimeMs: 1000,
     claudeVersion: "2.1.284",
     runtimeError: null,
+    claudePath: "C:\\Users\\owner\\.local\\bin\\claude.exe",
+    claudeSignedIn: true,
     deliveries: { pending: 0, dead: 0 },
     usage: null,
   };
+  /** How many times the app asked for a new Claude Code check. */
+  refreshes = 0;
   /** Every call, in order. */
   readonly calls: { method: Method; params: unknown }[] = [];
   readonly chat = new FakeChat(this);
@@ -188,6 +192,10 @@ export class FakeBotloft implements BotloftApi {
       protocol: PROTOCOL_VERSION,
     }),
     "system.status": () => this.system,
+    "system.refresh": () => {
+      this.refreshes += 1;
+      return this.system;
+    },
     "crews.list": () => [...this.crews.values()].filter((crew) => crew.archivedAt === null),
     "crews.create": ({ name }) => {
       const checked = checkName(name);

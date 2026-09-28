@@ -87,6 +87,7 @@ fn export_bindings() {
     out.decl::<AttachmentId>();
     out.decl::<Crew>();
     out.decl::<BotState>();
+    out.decl::<ActivityKind>();
     out.decl::<Activity>();
     out.decl::<Bot>();
     out.decl::<ClientInfo>();
@@ -126,6 +127,7 @@ fn export_bindings() {
     out.decl::<ToolStatus>();
     out.decl::<ApprovalStatus>();
     out.decl::<NoticeLevel>();
+    out.decl::<NoticeCode>();
     out.decl::<InboundItem>();
     out.decl::<ReplyItem>();
     out.decl::<ToolItem>();
@@ -155,6 +157,11 @@ fn export_bindings() {
     );
     out.method(
         method::SYSTEM_STATUS,
+        "undefined",
+        &out.name::<SystemStatus>(),
+    );
+    out.method(
+        method::SYSTEM_REFRESH,
         "undefined",
         &out.name::<SystemStatus>(),
     );

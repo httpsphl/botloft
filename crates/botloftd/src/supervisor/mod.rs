@@ -7,6 +7,7 @@
 
 mod reconcile;
 mod settings;
+mod sign_in;
 mod slot;
 mod spawn;
 mod turns;
@@ -63,6 +64,7 @@ struct Inner {
     /// database has it too (spec 7.3).
     sessions: HashMap<BotId, String>,
     claude: ClaudeStatus,
+    sign_in: sign_in::SignIn,
 }
 
 #[derive(Default)]
@@ -119,6 +121,14 @@ impl Supervisor {
     /// Follows how many bots are `busy`.
     pub fn busy_bots(&self) -> watch::Receiver<usize> {
         self.busy.subscribe()
+    }
+
+    /// The Claude Code executable the bots run, once found.
+    pub fn claude_path(&self) -> Option<std::path::PathBuf> {
+        match &self.lock().claude {
+            ClaudeStatus::Ready(claude) => Some(claude.path.clone()),
+            _ => None,
+        }
     }
 
     pub fn claude_version(&self) -> Option<String> {

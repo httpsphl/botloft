@@ -2,7 +2,7 @@ import { Pause, Plus } from "lucide-react";
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { when } from "../../lib/format";
-import type { Bot, Crew } from "../../lib/protocol.gen";
+import type { Activity, Bot, Crew } from "../../lib/protocol.gen";
 import { botsOf, crewList } from "../../store/app";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
@@ -98,11 +98,23 @@ function Conversation({ bot, crew }: { bot: Bot; crew: Crew }) {
           <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs">
             <BotStateBadge bot={bot} crewPaused={crew.paused} compact />
             <span className="min-w-0 truncate text-muted">
-              {activity?.text ?? (bot.role || "No messages yet")}
+              {activity ? activityText(activity) : bot.role || "No messages yet"}
             </span>
           </span>
         </span>
       </button>
     </li>
   );
+}
+
+/** The conversation-list line, worded here from what the daemon sends. */
+function activityText(activity: Activity): string {
+  switch (activity.kind) {
+    case "owner":
+      return `You: ${activity.text}`;
+    case "approval":
+      return `Waiting for approval: ${activity.text}`;
+    default:
+      return activity.text;
+  }
 }

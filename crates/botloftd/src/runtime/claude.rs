@@ -3,7 +3,7 @@
 use std::ffi::OsString;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Command, Output, Stdio};
 use std::time::{Duration, Instant};
 
 /// First version with the inbox as a named pipe on native Windows.
@@ -87,37 +87,10 @@ fn not_a_launcher(path: PathBuf) -> Result<PathBuf, ClaudeError> {
 
 /// Runs `claude --version` and checks it against [`MIN_VERSION`].
 pub fn probe(path: &Path, env: &[(OsString, OsString)]) -> Result<Claude, ClaudeError> {
-    let run_error = |source| ClaudeError::Run {
+    let output = run(path, &["--version"], env).map_err(|source| ClaudeError::Run {
         path: path.to_owned(),
         source,
-    };
-    let mut command = Command::new(path);
-    command
-        .arg("--version")
-        .env_clear()
-        .envs(env.iter().map(|(k, v)| (k, v)))
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null());
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-        command.creation_flags(CREATE_NO_WINDOW);
-    }
-    let mut child = command.spawn().map_err(run_error)?;
-    let started = Instant::now();
-    while child.try_wait().map_err(run_error)?.is_none() {
-        if started.elapsed() > PROBE_TIMEOUT {
-            let _ = child.kill();
-            return Err(run_error(io::Error::new(
-                io::ErrorKind::TimedOut,
-                "`claude --version` did not finish",
-            )));
-        }
-        std::thread::sleep(Duration::from_millis(50));
-    }
-    let output = child.wait_with_output().map_err(run_error)?;
+    })?;
     let text = String::from_utf8_lossy(&output.stdout);
     let (version, parsed) = parse_version(&text).ok_or(ClaudeError::UnknownVersion)?;
     if parsed < MIN_VERSION {
@@ -131,6 +104,52 @@ pub fn probe(path: &Path, env: &[(OsString, OsString)]) -> Result<Claude, Claude
         path: path.to_owned(),
         version,
     })
+}
+
+/// Runs `claude auth status`, documented to print JSON with `loggedIn` and
+/// to exit with 0 when signed in and 1 when not (spec 19).
+pub fn signed_in(path: &Path, env: &[(OsString, OsString)]) -> io::Result<bool> {
+    let output = run(path, &["auth", "status", "--json"], env)?;
+    Ok(parse_signed_in(&output.stdout).unwrap_or(output.status.success()))
+}
+
+fn parse_signed_in(stdout: &[u8]) -> Option<bool> {
+    serde_json::from_slice::<serde_json::Value>(stdout)
+        .ok()?
+        .get("loggedIn")?
+        .as_bool()
+}
+
+/// Runs Claude Code without a window and with `env` only, giving up after
+/// [`PROBE_TIMEOUT`].
+fn run(path: &Path, args: &[&str], env: &[(OsString, OsString)]) -> io::Result<Output> {
+    let mut command = Command::new(path);
+    command
+        .args(args)
+        .env_clear()
+        .envs(env.iter().map(|(k, v)| (k, v)))
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+    let mut child = command.spawn()?;
+    let started = Instant::now();
+    while child.try_wait()?.is_none() {
+        if started.elapsed() > PROBE_TIMEOUT {
+            let _ = child.kill();
+            return Err(io::Error::new(
+                io::ErrorKind::TimedOut,
+                format!("`claude {}` did not finish", args.join(" ")),
+            ));
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    child.wait_with_output()
 }
 
 /// Reads `2.1.283` from output such as `2.1.283 (Claude Code)`.
@@ -154,6 +173,19 @@ mod tests {
         assert_eq!(parse_version("Claude Code"), None);
         assert_eq!(parse_version(""), None);
         assert!(parse_version("2.1.74 (Claude Code)").is_some_and(|(_, v)| v < MIN_VERSION));
+    }
+
+    #[test]
+    fn reads_the_sign_in_from_auth_status() {
+        assert_eq!(
+            parse_signed_in(br#"{"loggedIn": true, "authMethod": "claude.ai"}"#),
+            Some(true)
+        );
+        assert_eq!(
+            parse_signed_in(br#"{"loggedIn": false, "authMethod": "none"}"#),
+            Some(false)
+        );
+        assert_eq!(parse_signed_in(b"Logged in"), None);
     }
 
     #[test]

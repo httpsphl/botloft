@@ -15,6 +15,11 @@ use crate::state::Daemon;
 pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Value, RpcError> {
     match name {
         method::SYSTEM_STATUS => reply(service::status(daemon)),
+        // Asks for a new check and answers at once; the app polls the result.
+        method::SYSTEM_REFRESH => {
+            daemon.supervisor.refresh_claude();
+            reply(service::status(daemon))
+        }
         method::CREWS_LIST => reply(crews::list(daemon)),
         method::CREWS_CREATE => reply(crews::create(daemon, parse(params)?)),
         method::CREWS_RENAME => reply(crews::rename(daemon, parse(params)?)),

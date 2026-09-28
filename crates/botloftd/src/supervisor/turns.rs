@@ -79,8 +79,10 @@ impl Supervisor {
     }
 
     /// Claude Code is not signed in: restarting cannot fix that, so the
-    /// process stops until the owner restarts the bot (spec 7.3).
+    /// process stops until the owner restarts the bot or signs in again
+    /// (spec 7.3).
     pub(crate) fn signed_out(&self, bot: &BotId, generation: u64) {
+        self.recheck_sign_in();
         self.with_current(bot, generation, |supervisor, slot| {
             supervisor.set_state(bot, slot, BotState::AuthError);
             if slot.stop.is_none() {

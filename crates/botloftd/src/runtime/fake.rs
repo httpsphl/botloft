@@ -12,7 +12,7 @@ use tokio::sync::{Notify, mpsc};
 
 use serde_json::Value;
 
-use super::{EVENT_BUFFER, Process, ProcessControl, ProcessEvent, Runtime, SpawnSpec};
+use super::{EVENT_BUFFER, Process, ProcessControl, ProcessEvent, Runtime, SignInCheck, SpawnSpec};
 
 #[derive(Clone, Default)]
 pub struct FakeRuntime {
@@ -20,10 +20,22 @@ pub struct FakeRuntime {
     spawned: Arc<Notify>,
 }
 
-#[derive(Default)]
 struct State {
     processes: Vec<FakeProcess>,
     failures: usize,
+    signed_in: bool,
+    sign_in_checks: usize,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        Self {
+            processes: Vec::new(),
+            failures: 0,
+            signed_in: true,
+            sign_in_checks: 0,
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -38,6 +50,16 @@ pub struct FakeProcess {
 impl FakeRuntime {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// What `claude auth status` answers from now on (signed in by default).
+    pub fn set_signed_in(&self, signed_in: bool) {
+        lock(&self.state).signed_in = signed_in;
+    }
+
+    /// How many times the daemon asked whether Claude Code is signed in.
+    pub fn sign_in_checks(&self) -> usize {
+        lock(&self.state).sign_in_checks
     }
 
     /// Every process spawned so far, oldest first.
@@ -71,6 +93,12 @@ impl FakeRuntime {
 }
 
 impl Runtime for FakeRuntime {
+    fn signed_in(&self, _program: std::path::PathBuf) -> SignInCheck {
+        let mut state = lock(&self.state);
+        state.sign_in_checks += 1;
+        Box::pin(std::future::ready(Ok(state.signed_in)))
+    }
+
     fn spawn(&self, spec: SpawnSpec) -> io::Result<Process> {
         let mut state = lock(&self.state);
         if state.failures > 0 {

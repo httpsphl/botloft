@@ -12,8 +12,10 @@ use bytes::Bytes;
 use tokio::sync::mpsc;
 use tracing::debug;
 
-use super::{EVENT_BUFFER, Process, ProcessControl, ProcessEvent, Runtime, SpawnSpec};
-use crate::platform::ProcessJob;
+use super::{
+    EVENT_BUFFER, Process, ProcessControl, ProcessEvent, Runtime, SignInCheck, SpawnSpec, claude,
+};
+use crate::platform::{self, ProcessJob};
 
 const READ_CHUNK: usize = 64 * 1024;
 /// Longest stderr line kept for the debug log.
@@ -22,6 +24,17 @@ const STDERR_LINE_MAX: usize = 300;
 pub struct PipeRuntime;
 
 impl Runtime for PipeRuntime {
+    fn signed_in(&self, program: std::path::PathBuf) -> SignInCheck {
+        Box::pin(async move {
+            tokio::task::spawn_blocking(move || {
+                let env = platform::user_environment()?;
+                claude::signed_in(&program, &env)
+            })
+            .await
+            .map_err(io::Error::other)?
+        })
+    }
+
     fn spawn(&self, spec: SpawnSpec) -> io::Result<Process> {
         let mut command = Command::new(&spec.program);
         command

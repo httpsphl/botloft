@@ -189,7 +189,8 @@ Os estados saem do próprio fluxo de eventos (8.1); não há hooks.
 | a tool de aprovação é chamada | `needs_approval` |
 | aprovação respondida ou vencida | `busy` |
 | erro `rate_limit` num turno, ou `rate_limit_event` com status diferente de `allowed` | `rate_limited` até `resetsAt` (5 min se não vier), depois `idle` |
-| erro `authentication_failed`, `oauth_org_not_allowed`, `billing_error` ou `account_on_hold` | `auth_error`; o processo é parado |
+| erro `authentication_failed`, `oauth_org_not_allowed`, `billing_error` ou `account_on_hold` | `auth_error`; o processo é parado e o daemon confere o login na hora (`claude auth status`) |
+| o login do Claude Code passa de desconectado para conectado | os bots em `auth_error` voltam a `offline` e sobem de novo |
 | saída do processo | `backoff` (ou `offline`/`archived` se foi pedido) |
 
 Eventos de uma generation antiga são ignorados. Todo processo novo emite `bot.state {botId, state, generation}`, mesmo que o nome do estado não mude, porque a generation mudou.
@@ -200,7 +201,8 @@ Eventos de uma generation antiga são ignorados. Todo processo novo emite `bot.s
 - Backoff exponencial com jitter entre `restart_backoff_initial_ms` e `restart_backoff_max_ms`; zera após 10 min de sessão estável.
 - **Sessão:** o daemon guarda em `bots.session_id` o id da conversa. O primeiro start usa `--session-id <uuid novo>`; os seguintes, `--resume <session_id>`. Se a sessão retomada morrer em menos de `fresh_start_if_dies_within_s`, o próximo start vem com um id novo. `bots.restart {fresh: true}` também começa conversa nova. O histórico do chat fica no banco do daemon (seção 8) e não depende do transcript do Claude Code.
 - Mudanças em nome, papel ou instruções regravam as regras na hora, mas o bot só as lê no próximo start; o daemon não reinicia o bot sozinho.
-- `auth_error` não entra em loop de restart: fica parado até o owner pedir `bots.restart`. O login é feito fora do bot (`claude auth login` num terminal), e o app diz isso.
+- `auth_error` não entra em loop de restart: fica parado até o owner pedir `bots.restart` ou até o daemon ver o Claude Code conectado de novo.
+- **Login do Claude Code:** o daemon roda `claude auth status` (JSON com `loggedIn`; sai com 0 conectado e 1 desconectado, seção 19) no ambiente do usuário, sem janela: quando acha o Claude Code, a cada 30 s enquanto desconectado ou desconhecido, na hora quando um bot cai em `auth_error` e quando o app pede (`system.refresh`). Conectado, não confere de novo sozinho. Quando o resultado passa de desconectado para conectado, os bots em `auth_error` sobem de novo sem o dono pedir. Um erro de conta com o login válido (`billing_error`, `account_on_hold`, organização bloqueada) não muda o resultado e por isso não vira loop. O resultado sai em `system.status.claudeSignedIn`. O login em si é feito fora do bot (`claude auth login` num terminal).
 - Cada processo de bot entra num **Job Object** com `KILL_ON_JOB_CLOSE`. Se o daemon morrer, a árvore de processos dos bots morre junto e não sobra `claude.exe` órfão.
 
 ### 7.4 Spawn
@@ -274,7 +276,7 @@ Todo item tem `id` (`cht_`), `botId`, `kind`, `createdAt` e `updatedAt`.
 | `tool` | `toolUseId`, `name`, `summary`, `input`, `status` (`running`, `done`, `failed`), `output` | ferramenta usada pelo bot |
 | `approval` | `approvalId`, `toolName`, `summary`, `input`, `status` (`pending`, `allowed`, `denied`, `expired`), `note` | pedido de permissão (10.1) |
 | `turn` | `durationMs`, `costUsd`, `error` | fim de um turno |
-| `notice` | `level` (`info`, `warning`, `error`), `text` | avisos do daemon: limite de uso, login, sessão reiniciada |
+| `notice` | `level` (`info`, `warning`, `error`), `code` (`signed_out`, `usage_limit`, `turn_failed`; ausente em avisos antigos), `text` | avisos do daemon: limite de uso, login, turno com erro. O app escreve os avisos com `code` no idioma do dono; `text` fica em inglês para quem não conhece o código e, em `turn_failed`, traz o detalhe do erro |
 
 - `summary` é uma frase curta feita pelo daemon a partir da entrada: o comando do `Bash`, o arquivo do `Read`/`Edit`/`Write`, o padrão do `Grep`/`Glob`, a URL do `WebFetch`, a busca do `WebSearch`, o destinatário do `send_message`. Ferramenta desconhecida mostra só o nome.
 - `input` guarda o JSON da entrada até 4 KB; `output`, até 8 KB de texto. O resto fica só no transcript do próprio Claude Code.
@@ -424,7 +426,8 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 
 | Método | Params | Result |
 |---|---|---|
-| `system.status` | | versão, uptime, versão do claude, `runtimeError` (por que os bots não sobem), backlog de entrega, `usage` (uso da conta, 8.1) |
+| `system.status` | | versão, uptime, versão e caminho do claude (`claudeVersion`, `claudePath`), `runtimeError` (por que os bots não sobem), `claudeSignedIn` (7.3; `null` antes de conferir), backlog de entrega, `usage` (uso da conta, 8.1) |
+| `system.refresh` | | pede uma nova conferência do Claude Code (login e, se falhou, o executável) e responde na hora com o `system.status` atual; o app relê o status até ver o resultado |
 | `crews.list` | | `Crew[]` |
 | `crews.create` | `name` | `Crew` |
 | `crews.rename` | `crewId, name` | `Crew` |
@@ -445,7 +448,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `deliveries.retry` | `deliveryId` | `Delivery` |
 | `tasks.list` | `crewId?, status?` | `Task[]` |
 
-`Bot` traz também `lastActivity`: o último item do chat resumido em uma linha (`text`, `at`), para a lista de conversas.
+`Bot` traz também `lastActivity`: o último item do chat resumido em uma linha, para a lista de conversas: `kind` (`owner`, `message`, `reply`, `tool`, `approval`, `notice`), `text` e `at`. O `text` não tem palavras do daemon: a mensagem do dono vem sem "You:" e a aprovação só com o nome da ferramenta, e o app completa no idioma do dono.
 
 ### 11.3 Notificações do servidor
 
@@ -655,6 +658,7 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28. "Co
 | `--permission-prompts host` | 10.1 | Documentado só para o SDK. **Visto com 2.1.284**: sem o aperto de mão do SDK, nega tudo (`system/permission_denied`). Não usado | não se aplica |
 | `timeout` por servidor MCP | 10 | Confirmado (`env-vars`): HTTP tem 60 s por request e 5 min sem resposta por padrão; `timeout` >= 1000 no servidor sobe os dois. **Testado com 2.1.284**: a aprovação respondida depois de 95 s chegou ao bot | feito (M4.1) |
 | `--setting-sources project,local` | 7.4 | Confirmado (`cli-reference`). **Testado com 2.1.284**: sem os hooks, skills e agents do usuário; modo `default`; login da assinatura continua valendo | feito (M4.1) |
+| `claude auth status` | 7.3 | Confirmado (`cli-reference`): JSON por padrão, sai com 0 conectado e 1 desconectado. **Testado com 2.1.284**: conectado traz `"loggedIn": true`; com `CLAUDE_CONFIG_DIR` vazio, `"loggedIn": false`, `"authMethod": "none"` e saída 1. As credenciais ficam em `%USERPROFILE%\.claude\.credentials.json` (`authentication`) | feito |
 | Regras `allow` do projeto em `-p` sem confiança | 7.4 | Confirmado (`permissions`): não são aplicadas numa pasta nunca confiada; `deny` vale sempre. Por isso `--allowedTools mcp__botloft` | M4.1 |
 | `--session-id`, `--resume` em `-p` | 7.3 | Confirmado (`cli-reference`, `sessions`): a sessão retoma histórico e modelo; flags como `--mcp-config` têm de ser passadas de novo. **Testado com 2.1.284**: depois de reiniciar o bot e depois de reiniciar o daemon, o bot lembrou arquivos, a imagem e a mensagem de outro bot | feito (M4.1) |
 | Tools MCP adiadas | 10 | **Visto com 2.1.284**: as tools do `botloft` chegam adiadas; antes da primeira `send_message` o bot chama `ToolSearch` com `select:mcp__botloft__send_message`. O chat mostra isso como "load send_message" | feito (M4.1) |

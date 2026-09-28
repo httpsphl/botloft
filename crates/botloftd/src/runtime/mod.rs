@@ -7,8 +7,10 @@ pub mod fake;
 mod pipe;
 
 use std::ffi::OsString;
+use std::future::Future;
 use std::io;
 use std::path::PathBuf;
+use std::pin::Pin;
 
 use bytes::Bytes;
 use tokio::sync::mpsc;
@@ -47,8 +49,13 @@ pub struct Process {
     pub control: Box<dyn ProcessControl>,
 }
 
+/// The answer to "is Claude Code signed in?", computed off the async workers.
+pub type SignInCheck = Pin<Box<dyn Future<Output = io::Result<bool>> + Send>>;
+
 pub trait Runtime: Send + Sync + 'static {
     fn spawn(&self, spec: SpawnSpec) -> io::Result<Process>;
+    /// Whether the Claude Code at `program` is signed in (`claude auth status`).
+    fn signed_in(&self, program: PathBuf) -> SignInCheck;
 }
 
 /// Capacity of the event channel between a process and the daemon. When it

@@ -5,8 +5,8 @@
 use botloft_core::chat::{TOOL_INPUT_MAX, TOOL_OUTPUT_MAX, clip, tool_summary};
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{
-    AccountUsage, ChatBody, ChatDelta, NoticeItem, NoticeLevel, ReplyItem, ToolItem, ToolStatus,
-    TurnItem, UsageWindow,
+    AccountUsage, ChatBody, ChatDelta, NoticeCode, NoticeItem, NoticeLevel, ReplyItem, ToolItem,
+    ToolStatus, TurnItem, UsageWindow,
 };
 use serde_json::Value;
 use tracing::{debug, warn};
@@ -130,22 +130,31 @@ fn failed_turn(daemon: &Daemon, bot: &BotId, generation: u64, error: &str, event
         .filter_map(|block| block["text"].as_str())
         .collect::<Vec<_>>()
         .join(" ");
-    let text = if SIGN_IN_ERRORS.contains(&error) {
-        "Claude Code is not signed in or the account cannot be used. Sign in with \
-         `claude auth login` in a terminal, then restart the bot."
-            .to_owned()
+    // The code lets the app say it in the owner's language; the text stays
+    // for older apps and for the conversation list.
+    let (code, text) = if SIGN_IN_ERRORS.contains(&error) {
+        (
+            NoticeCode::SignedOut,
+            "Claude Code is not signed in or the account cannot be used. Sign in, then restart \
+             the bot."
+                .to_owned(),
+        )
     } else if error == "rate_limit" {
-        "The account reached its usage limit. Messages wait until it resets.".to_owned()
+        (
+            NoticeCode::UsageLimit,
+            "The account reached its usage limit. Messages wait until it resets.".to_owned(),
+        )
     } else if detail.is_empty() {
-        format!("The turn failed: {error}.")
+        (NoticeCode::TurnFailed, error.to_owned())
     } else {
-        detail
+        (NoticeCode::TurnFailed, detail)
     };
     items::add(
         daemon,
         bot,
         ChatBody::Notice(NoticeItem {
             level: NoticeLevel::Error,
+            code: Some(code),
             text,
         }),
     );

@@ -33,6 +33,34 @@ text_enum!(
     }
 );
 
+text_enum!(
+    /// What a notice is about, so the app can say it in the owner's language.
+    NoticeCode, "notice code" {
+        /// Claude Code is not signed in or the account cannot be used.
+        SignedOut => "signed_out",
+        /// The account reached its usage limit.
+        UsageLimit => "usage_limit",
+        /// The turn failed; `text` holds Claude Code's detail or error code.
+        TurnFailed => "turn_failed",
+    }
+);
+
+text_enum!(
+    /// What the conversation-list line shows; the app words it.
+    ActivityKind, "activity kind" {
+        /// The owner's message; `text` is its body.
+        Owner => "owner",
+        /// A message from another bot or the daemon; `text` is its body.
+        Message => "message",
+        Reply => "reply",
+        /// `text` is the tool and its summary.
+        Tool => "tool",
+        /// A permission request; `text` is the tool.
+        Approval => "approval",
+        Notice => "notice",
+    }
+);
+
 /// One entry of a bot's chat.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -122,6 +150,11 @@ pub struct TurnItem {
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct NoticeItem {
     pub level: NoticeLevel,
+    /// Absent on notices stored before codes existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, ts(optional))]
+    pub code: Option<NoticeCode>,
+    /// English text, or the detail for [`NoticeCode::TurnFailed`].
     pub text: String,
 }
 
@@ -194,7 +227,8 @@ pub struct ApprovalsAnswerParams {
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct Activity {
-    /// One line, at most 120 characters.
+    pub kind: ActivityKind,
+    /// One line, at most 120 characters, without wording of its own.
     pub text: String,
     /// Unix time in milliseconds.
     pub at: i64,

@@ -56,6 +56,10 @@ pub struct SystemStatus {
     pub claude_version: Option<String>,
     /// Why bots cannot start (Claude Code missing or too old); `null` when fine.
     pub runtime_error: Option<String>,
+    /// The Claude Code executable the bots run; `null` until it is found.
+    pub claude_path: Option<String>,
+    /// Whether Claude Code is signed in (`claude auth status`); `null` until checked.
+    pub claude_signed_in: Option<bool>,
     pub deliveries: DeliveryBacklog,
     /// The Claude account's usage as last reported; `null` before any turn.
     pub usage: Option<AccountUsage>,

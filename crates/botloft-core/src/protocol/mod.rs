@@ -69,6 +69,7 @@ pub const PROTOCOL_VERSION: u32 = 2;
 pub mod method {
     pub const SESSION_HELLO: &str = "session.hello";
     pub const SYSTEM_STATUS: &str = "system.status";
+    pub const SYSTEM_REFRESH: &str = "system.refresh";
     pub const CREWS_LIST: &str = "crews.list";
     pub const CREWS_CREATE: &str = "crews.create";
     pub const CREWS_RENAME: &str = "crews.rename";
