@@ -32,6 +32,7 @@ export function tauriHost(): Host {
     startDaemon: () => invoke<DaemonStatus>("daemon_start"),
     readOwnerToken: () => invoke<string>("read_owner_token"),
     openPath: (path) => invoke<void>("open_path", { path }),
+    openUrl: (url) => invoke<void>("open_url", { url }),
     window: {
       minimize: () => window.minimize(),
       toggleMaximize: () => window.toggleMaximize(),

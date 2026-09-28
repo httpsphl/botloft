@@ -9,6 +9,8 @@ pub const CREW_ROSTER: &str = "crew_roster";
 pub const SEND_MESSAGE: &str = "send_message";
 pub const COMPLETE_TASK: &str = "complete_task";
 pub const MY_TASKS: &str = "my_tasks";
+/// Claude Code's `--permission-prompt-tool` (spec 10.1).
+pub const PERMISSION_PROMPT: &str = "permission_prompt";
 
 pub fn tools() -> Value {
     json!([
@@ -98,6 +100,21 @@ pub fn tools() -> Value {
                 "additionalProperties": false,
             },
             "annotations": { "readOnlyHint": true },
+        },
+        {
+            "name": PERMISSION_PROMPT,
+            "title": "Permission prompt",
+            "description": "Used by Claude Code to ask the owner before a tool runs. Never call \
+                it yourself: it decides nothing about what you do.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "tool_name": { "type": "string" },
+                    "input": { "type": "object" },
+                    "tool_use_id": { "type": "string" },
+                },
+                "required": ["tool_name", "input"],
+            },
         },
     ])
 }

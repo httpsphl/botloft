@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import type { Client } from "../../lib/client";
 import { FakeBotloft } from "../../lib/fake";
 import { FakeHost } from "../../lib/fakeHost";
+import { PROTOCOL_VERSION } from "../../lib/protocol.gen";
 import { type Connect, createLink } from "./link";
 
 function setup() {
@@ -19,7 +20,7 @@ function setup() {
 describe("link to the daemon", () => {
   test("a running daemon connects with the owner token", async () => {
     const { host, link, connections } = setup();
-    host.status = { state: "running", port: 45799, version: "0.1.0", protocol: 1 };
+    host.status = { state: "running", port: 45799, version: "0.1.0", protocol: PROTOCOL_VERSION };
     await link.getState().check();
     expect(link.getState().current.step).toBe("connected");
     expect(connections).toEqual([{ port: 45799, token: "a".repeat(64) }]);

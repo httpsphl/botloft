@@ -42,15 +42,6 @@ impl ProcessJob {
     }
 }
 
-/// Writes `payload` to the Unix socket Claude Code serves as the inbox.
-pub async fn write_inbox(address: &str, payload: &[u8]) -> io::Result<()> {
-    use tokio::io::AsyncWriteExt;
-
-    let mut stream = tokio::net::UnixStream::connect(address).await?;
-    stream.write_all(payload).await?;
-    stream.shutdown().await
-}
-
 /// The daemon's environment without Claude Code session variables.
 pub fn user_environment() -> io::Result<Vec<(OsString, OsString)>> {
     Ok(std::env::vars_os()

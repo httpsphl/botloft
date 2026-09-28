@@ -6,10 +6,10 @@ use botloft_core::ids::{BotId, DeliveryId};
 use botloft_core::protocol::{Delivery, DeliveryBacklog, DeliveryState};
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
-use crate::{Result, Store, parse_column};
+use crate::{Result, Store, parse_column, to_sql_int};
 
 const COLUMNS: &str =
-    "id, message_id, bot_id, state, attempts, next_attempt_at, last_error, updated_at";
+    "id, message_id, bot_id, state, attempts, next_attempt_at, last_error, read_at, updated_at";
 
 /// Longest list `deliveries` returns.
 const LIST_LIMIT: u32 = 500;
@@ -23,33 +23,33 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<Delivery> {
         attempts: row.get(4)?,
         next_attempt_at: row.get(5)?,
         last_error: row.get(6)?,
-        updated_at: row.get(7)?,
+        read_at: row.get(7)?,
+        updated_at: row.get(8)?,
     })
 }
 
 /// How an attempt, or a decision not to try, ended.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DeliveryOutcome<'a> {
-    Sent,
+    /// Written to the process of `generation` with `turn_uuid` (spec 9.2).
+    Sent { generation: u64, turn_uuid: &'a str },
     /// The bot is not ready: try again at `until`, without counting an attempt.
-    Defer {
-        until: i64,
-    },
+    Defer { until: i64 },
     /// Counts an attempt. `retry_at: None` gives up.
     Failed {
         error: &'a str,
         retry_at: Option<i64>,
     },
     /// Gives up without counting an attempt, e.g. the bot was archived.
-    Dead {
-        error: &'a str,
-    },
+    Dead { error: &'a str },
 }
 
 impl Store {
     pub(crate) fn insert_delivery_in(conn: &Connection, delivery: &Delivery) -> Result<()> {
         conn.execute(
-            &format!("INSERT INTO deliveries ({COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)"),
+            &format!(
+                "INSERT INTO deliveries ({COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
+            ),
             params![
                 delivery.id.as_str(),
                 delivery.message_id.as_str(),
@@ -58,6 +58,7 @@ impl Store {
                 delivery.attempts,
                 delivery.next_attempt_at,
                 delivery.last_error,
+                delivery.read_at,
                 delivery.updated_at,
             ],
         )?;
@@ -157,9 +158,13 @@ impl Store {
         };
         let id = id.as_str();
         let row = match outcome {
-            DeliveryOutcome::Sent => update(
-                "state = 'sent', last_error = NULL, updated_at = ?2",
-                params![id, now],
+            DeliveryOutcome::Sent {
+                generation,
+                turn_uuid,
+            } => update(
+                "state = 'sent', last_error = NULL, updated_at = ?2, sent_generation = ?3, \
+                 turn_uuid = ?4, read_at = NULL",
+                params![id, now, to_sql_int(generation), turn_uuid],
             ),
             // Waiting is not news: updated_at stays, so lists do not churn.
             DeliveryOutcome::Defer { until } => update(
@@ -187,6 +192,63 @@ impl Store {
             ),
         };
         Ok(row?)
+    }
+
+    /// The bot began the turn for the delivery sent with `turn_uuid`
+    /// (spec 9.1). `None` if no unread delivery went with that uuid.
+    pub fn mark_read(&self, turn_uuid: &str, now: i64) -> Result<Option<Delivery>> {
+        Ok(self
+            .conn
+            .query_row(
+                &format!(
+                    "UPDATE deliveries SET read_at = ?2, updated_at = ?2 \
+                     WHERE turn_uuid = ?1 AND state = 'sent' AND read_at IS NULL \
+                     RETURNING {COLUMNS}"
+                ),
+                params![turn_uuid, now],
+                from_row,
+            )
+            .optional()?)
+    }
+
+    /// Deliveries written to the process of `generation` that it never
+    /// began, oldest first.
+    pub fn unread_deliveries(&self, bot: &BotId, generation: u64) -> Result<Vec<Delivery>> {
+        let mut stmt = self.conn.prepare(&format!(
+            "SELECT {COLUMNS} FROM deliveries \
+             WHERE bot_id = ?1 AND sent_generation = ?2 AND state = 'sent' AND read_at IS NULL \
+             ORDER BY rowid"
+        ))?;
+        let rows = stmt.query_map(params![bot.as_str(), to_sql_int(generation)], from_row)?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    /// Puts a sent but unread delivery back in the queue, counting an
+    /// attempt; `retry_at: None` gives up. `None` if it was read meanwhile.
+    pub fn reopen_unread(
+        &self,
+        id: &DeliveryId,
+        error: &str,
+        retry_at: Option<i64>,
+        now: i64,
+    ) -> Result<Option<Delivery>> {
+        let (state, next) = match retry_at {
+            Some(at) => ("pending", at),
+            None => ("dead", now),
+        };
+        Ok(self
+            .conn
+            .query_row(
+                &format!(
+                    "UPDATE deliveries SET state = ?2, attempts = attempts + 1, \
+                     next_attempt_at = ?3, last_error = ?4, updated_at = ?5, \
+                     sent_generation = NULL, turn_uuid = NULL \
+                     WHERE id = ?1 AND state = 'sent' AND read_at IS NULL RETURNING {COLUMNS}"
+                ),
+                params![id.as_str(), state, next, error, now],
+                from_row,
+            )
+            .optional()?)
     }
 
     /// Returns deliveries whose sender died mid-send to `pending`.

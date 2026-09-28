@@ -1,15 +1,11 @@
-//! Per-bot supervision state and the transition rules of spec 7.2.
+//! Per-bot supervision state and restart backoff (spec 7).
 
-use std::fmt;
-use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::Duration;
 
 use botloft_core::protocol::BotState;
 use tokio::time::Instant;
 
-use crate::runtime::{ProcessControl, TermSize};
-use crate::terminal::Terminal;
+use crate::runtime::ProcessControl;
 
 pub(super) struct Slot {
     pub state: BotState,
@@ -18,18 +14,20 @@ pub(super) struct Slot {
     pub running: Option<Running>,
     pub backoff: Backoff,
     pub restart_at: Option<Instant>,
-    /// Start the next process without `--continue`.
+    /// Start the next process with a new conversation.
     pub fresh_next: bool,
     /// Why the running process is being killed, if the daemon asked.
     pub stop: Option<StopIntent>,
-    pub size: TermSize,
-    pub terminal: Arc<Terminal>,
-    /// Where to deliver messages to this generation (spec 9.2); memory only.
-    pub inbox: Option<Inbox>,
+    /// Messages written to the process whose turn has not ended yet.
+    pub turns: u32,
+    /// Permission requests waiting for the owner.
+    pub approvals: u32,
+    /// While `rate_limited`: Unix ms when the limit resets.
+    pub limited_until: Option<i64>,
 }
 
 impl Slot {
-    pub fn new(ring_buffer_bytes: usize, backoff: Backoff) -> Self {
+    pub fn new(backoff: Backoff) -> Self {
         Self {
             state: BotState::Offline,
             generation: None,
@@ -38,20 +36,39 @@ impl Slot {
             restart_at: None,
             fresh_next: false,
             stop: None,
-            size: TermSize::default(),
-            terminal: Arc::new(Terminal::new(ring_buffer_bytes)),
-            inbox: None,
+            turns: 0,
+            approvals: 0,
+            limited_until: None,
         }
+    }
+
+    /// The state that follows from the counters once nothing blocks the bot.
+    pub fn working_state(&self) -> BotState {
+        if self.approvals > 0 {
+            BotState::NeedsApproval
+        } else if self.turns > 0 {
+            BotState::Busy
+        } else {
+            BotState::Idle
+        }
+    }
+
+    /// Whether the counters decide the state, rather than a launch, a
+    /// limit, a sign-in problem or a stop.
+    pub fn is_working(&self) -> bool {
+        matches!(
+            self.state,
+            BotState::Idle | BotState::Busy | BotState::NeedsApproval
+        )
     }
 }
 
 pub(super) struct Running {
     pub control: Box<dyn ProcessControl>,
     pub started: Instant,
-    /// Started with `--continue`.
+    /// Started with `--resume`.
     pub resumed: bool,
     pub token_hash: String,
-    pub workspace: PathBuf,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -59,60 +76,8 @@ pub(super) enum StopIntent {
     Restart {
         fresh: bool,
     },
-    /// Paused or archived: settle in this state.
+    /// Paused, archived or signed out: settle in this state.
     Halt(BotState),
-}
-
-/// The bot's inbox, reported by the `SessionStart` hook.
-#[derive(Clone, PartialEq, Eq)]
-pub struct Inbox {
-    pub socket: String,
-    pub token: String,
-}
-
-impl fmt::Debug for Inbox {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Inbox")
-            .field("socket", &self.socket)
-            .field("token", &"<redacted>")
-            .finish()
-    }
-}
-
-/// What a hook reported. Payload fields as documented by Claude Code.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Hook {
-    SessionStart {
-        inbox: Option<Inbox>,
-    },
-    PromptSubmit,
-    Stop,
-    /// `error`: `rate_limit`, `authentication_failed`, ...
-    StopFailure {
-        error: String,
-    },
-    /// `notification_type`: `permission_prompt`, `idle_prompt`, ...
-    Notification {
-        kind: String,
-    },
-    SessionEnd,
-}
-
-/// The state a hook moves the bot to, if it changes it (spec 7.2).
-pub(super) fn state_after_hook(current: BotState, hook: &Hook) -> Option<BotState> {
-    let next = match hook {
-        Hook::SessionStart { .. } | Hook::Stop => BotState::Idle,
-        Hook::PromptSubmit => BotState::Busy,
-        Hook::StopFailure { error } => match error.as_str() {
-            "rate_limit" => BotState::RateLimited,
-            "authentication_failed" | "oauth_org_not_allowed" => BotState::AuthError,
-            // The turn ended; the session is still usable.
-            _ => BotState::Idle,
-        },
-        Hook::Notification { kind } if kind == "permission_prompt" => BotState::NeedsApproval,
-        Hook::Notification { .. } | Hook::SessionEnd => return None,
-    };
-    (next != current).then_some(next)
 }
 
 /// Exponential restart delay with jitter (spec 7.3).
@@ -159,43 +124,14 @@ fn random_below(bound: u64) -> u64 {
 mod tests {
     use super::*;
 
-    fn after(current: BotState, hook: Hook) -> Option<BotState> {
-        state_after_hook(current, &hook)
-    }
-
     #[test]
-    fn hooks_move_the_bot_through_its_states() {
-        use BotState::*;
-        assert_eq!(
-            after(Launching, Hook::SessionStart { inbox: None }),
-            Some(Idle)
-        );
-        assert_eq!(after(Idle, Hook::PromptSubmit), Some(Busy));
-        assert_eq!(after(Busy, Hook::Stop), Some(Idle));
-        let permission = Hook::Notification {
-            kind: "permission_prompt".into(),
-        };
-        assert_eq!(after(Busy, permission), Some(NeedsApproval));
-        let idle_prompt = Hook::Notification {
-            kind: "idle_prompt".into(),
-        };
-        assert_eq!(after(Idle, idle_prompt), None);
-        assert_eq!(after(Idle, Hook::SessionEnd), None);
-        assert_eq!(after(Idle, Hook::Stop), None, "no change, no event");
-    }
-
-    #[test]
-    fn stop_failures_map_to_their_states() {
-        use BotState::*;
-        let failure = |error: &str| Hook::StopFailure {
-            error: error.into(),
-        };
-        assert_eq!(after(Busy, failure("rate_limit")), Some(RateLimited));
-        assert_eq!(
-            after(Busy, failure("authentication_failed")),
-            Some(AuthError)
-        );
-        assert_eq!(after(Busy, failure("server_error")), Some(Idle));
+    fn counters_decide_the_working_state() {
+        let mut slot = Slot::new(Backoff::new(Duration::ZERO, Duration::ZERO));
+        assert_eq!(slot.working_state(), BotState::Idle);
+        slot.turns = 2;
+        assert_eq!(slot.working_state(), BotState::Busy);
+        slot.approvals = 1;
+        assert_eq!(slot.working_state(), BotState::NeedsApproval);
     }
 
     #[test]
@@ -218,14 +154,5 @@ mod tests {
         assert!(backoff.next_delay() <= Duration::from_secs(10));
         backoff.reset();
         assert!(backoff.next_delay() <= Duration::from_secs(1));
-    }
-
-    #[test]
-    fn inbox_debug_hides_the_token() {
-        let inbox = Inbox {
-            socket: r"\\.\pipe\x".into(),
-            token: "secret".into(),
-        };
-        assert!(!format!("{inbox:?}").contains("secret"));
     }
 }

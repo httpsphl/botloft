@@ -1,44 +1,39 @@
-//! The courier (spec 9.1): moves pending deliveries into the bots' inboxes,
-//! in order and one at a time per bot, retrying with backoff until they are
-//! sent or give up. Each cycle also expires overdue tasks (spec 9.4).
+//! The courier (spec 9.1): writes pending deliveries into the bots' stdin,
+//! in order and one at a time per bot, and puts back what a process that
+//! ended never began. Each cycle also expires overdue tasks (spec 9.4).
 
-pub mod fake;
-pub mod inbox;
+mod render;
 mod settings;
 
 use std::sync::Arc;
 use std::time::Duration;
 
-use botloft_core::envelope::{Envelope, Sender};
+use botloft_core::ids::BotId;
 use botloft_core::protocol::{BotState, Delivery, SenderKind};
 use botloft_store::{DeliveryOutcome, Store, StoreError};
-use bytes::Bytes;
 use tokio::sync::Notify;
 use tracing::{debug, warn};
 
-pub use self::inbox::{InboxWriter, PipeInbox};
+use self::render::{Context, Rendered, render};
 pub use self::settings::CourierSettings;
 use crate::clock;
 use crate::service::tasks;
 use crate::state::{Daemon, Event};
-use crate::supervisor::Inbox;
 
 /// How long to wait for a bot that cannot take messages yet (spec 9.1).
 const WAIT_FOR_BOT: Duration = Duration::from_secs(5);
-/// One attempt: opening the pipe, waiting while it is busy and writing.
-const SEND_TIMEOUT: Duration = Duration::from_secs(10);
+/// Why a delivery goes back in the queue after its process ended.
+const PROCESS_ENDED: &str = "the bot's process ended before it began this message";
 
 pub struct Courier {
     settings: CourierSettings,
-    writer: Arc<dyn InboxWriter>,
     wake: Notify,
 }
 
 impl Courier {
-    pub fn new(settings: CourierSettings, writer: Arc<dyn InboxWriter>) -> Self {
+    pub fn new(settings: CourierSettings) -> Self {
         Self {
             settings,
-            writer,
             wake: Notify::new(),
         }
     }
@@ -63,17 +58,11 @@ pub async fn run(daemon: Arc<Daemon>) {
 
 /// What to do with a due delivery.
 enum Step {
-    Send(Job),
+    Send(Rendered),
     /// The bot cannot take messages yet.
     Wait,
     /// It can never be delivered.
     Drop(&'static str),
-}
-
-struct Job {
-    delivery: Delivery,
-    inbox: Inbox,
-    payload: Bytes,
 }
 
 fn cycle(daemon: &Arc<Daemon>) {
@@ -97,46 +86,79 @@ fn cycle(daemon: &Arc<Daemon>) {
         }
     };
     for delivery in due {
-        let step = match prepare(daemon, &store, &delivery, now) {
-            Ok(step) => step,
+        let changed = match prepare(daemon, &store, &delivery, now) {
+            Ok(Step::Send(rendered)) => send(daemon, &store, &delivery, &rendered, now),
+            Ok(Step::Wait) => {
+                let until = clock::after(now, WAIT_FOR_BOT);
+                finish(&store, &delivery, DeliveryOutcome::Defer { until }, now)
+            }
+            Ok(Step::Drop(error)) => {
+                finish(&store, &delivery, DeliveryOutcome::Dead { error }, now)
+            }
             Err(err) => {
                 warn!(delivery = %delivery.id, "courier could not prepare a delivery: {err}");
                 continue;
             }
         };
-        let finished = match step {
-            Step::Send(job) => {
-                let lease_until = clock::after(now, daemon.courier.settings.lease);
-                match store.claim_delivery(&job.delivery.id, now, lease_until) {
-                    Ok(Some(sending)) => {
-                        daemon.emit(Event::DeliveryChanged(sending));
-                        tokio::spawn(send(Arc::clone(daemon), job));
-                    }
-                    Ok(None) => {}
-                    Err(err) => warn!(delivery = %delivery.id, "courier could not claim: {err}"),
-                }
-                continue;
-            }
-            Step::Wait => {
-                let until = clock::after(now, WAIT_FOR_BOT);
-                store.finish_delivery(&delivery.id, DeliveryOutcome::Defer { until }, now)
-            }
-            Step::Drop(error) => {
-                store.finish_delivery(&delivery.id, DeliveryOutcome::Dead { error }, now)
-            }
-        };
-        match finished {
-            Ok(Some(changed)) if changed.state != delivery.state => {
-                debug!(delivery = %changed.id, "delivery dropped");
-                daemon.emit(Event::DeliveryChanged(changed));
-            }
-            Ok(_) => {}
-            Err(err) => warn!(delivery = %delivery.id, "courier could not update: {err}"),
+        if let Some(changed) = changed.filter(|changed| changed.state != delivery.state) {
+            daemon.emit(Event::DeliveryChanged(changed));
         }
     }
 }
 
-/// Decides whether the delivery can go now and renders its envelope.
+fn finish(
+    store: &Store,
+    delivery: &Delivery,
+    outcome: DeliveryOutcome<'_>,
+    now: i64,
+) -> Option<Delivery> {
+    store
+        .finish_delivery(&delivery.id, outcome, now)
+        .unwrap_or_else(|err| {
+            warn!(delivery = %delivery.id, "courier could not update: {err}");
+            None
+        })
+}
+
+/// Claims the delivery, writes it and records how that went. `None` when
+/// someone else claimed it first.
+fn send(
+    daemon: &Daemon,
+    store: &Store,
+    delivery: &Delivery,
+    rendered: &Rendered,
+    now: i64,
+) -> Option<Delivery> {
+    let lease_until = clock::after(now, daemon.courier.settings.lease);
+    match store.claim_delivery(&delivery.id, now, lease_until) {
+        Ok(Some(_)) => {}
+        Ok(None) => return None,
+        Err(err) => {
+            warn!(delivery = %delivery.id, "courier could not claim: {err}");
+            return None;
+        }
+    }
+    let outcome = match daemon
+        .supervisor
+        .write_message(&delivery.bot_id, rendered.line.clone())
+    {
+        Ok(generation) => {
+            debug!(delivery = %delivery.id, bot = %delivery.bot_id, generation, "delivery written");
+            DeliveryOutcome::Sent {
+                generation,
+                turn_uuid: &rendered.uuid,
+            }
+        }
+        // The process went away between the check and the write: not this
+        // delivery's fault.
+        Err(_) => DeliveryOutcome::Defer {
+            until: clock::after(now, WAIT_FOR_BOT),
+        },
+    };
+    finish(store, delivery, outcome, now)
+}
+
+/// Decides whether the delivery can go now and renders it.
 fn prepare(
     daemon: &Daemon,
     store: &Store,
@@ -159,9 +181,9 @@ fn prepare(
         daemon.supervisor.status(&bot.id),
         Some((BotState::Idle | BotState::Busy | BotState::NeedsApproval, _))
     );
-    let Some(inbox) = daemon.supervisor.inbox(&bot.id).filter(|_| ready) else {
+    if !ready {
         return Ok(Step::Wait);
-    };
+    }
     let task = match &message.task_id {
         Some(id) => store.task(id)?,
         None => None,
@@ -170,70 +192,44 @@ fn prepare(
         (SenderKind::Bot, Some(id)) => store.bot(id)?.map(|sender| sender.handle),
         _ => None,
     };
-    let from = match message.from_kind {
-        SenderKind::Owner => Sender::Owner,
-        SenderKind::Bot => Sender::Bot {
-            handle: sender.as_deref().unwrap_or("unknown"),
-        },
-        SenderKind::System => Sender::Botloft,
-    };
-    let text = Envelope {
-        from,
-        crew: &crew.name,
-        kind: message.kind,
+    let workspace = daemon.paths.bot_workspace(&crew.slug, &bot.slug);
+    let context = Context {
+        crew_name: &crew.name,
+        sender_handle: sender.as_deref(),
         task: task.as_ref(),
-        body: &message.body,
-    }
-    .render(now);
-    Ok(Step::Send(Job {
-        delivery: delivery.clone(),
-        payload: inbox::payload(&inbox.token, &text),
-        inbox,
-    }))
+        workspace: &workspace,
+    };
+    Ok(Step::Send(render(&message, &context, now)))
 }
 
-/// One attempt, then the outcome in the database.
-async fn send(daemon: Arc<Daemon>, job: Job) {
-    let courier = &daemon.courier;
-    let written = tokio::time::timeout(
-        SEND_TIMEOUT,
-        courier.writer.write(&job.inbox.socket, job.payload),
-    )
-    .await;
-    let error = match written {
-        Ok(Ok(())) => None,
-        Ok(Err(err)) => Some(err.to_string()),
-        Err(_) => Some("timed out writing to the inbox".to_owned()),
-    };
+/// The process of `generation` ended: what it never began goes back in
+/// the queue, counting an attempt (spec 9.1).
+pub fn requeue_unread(daemon: &Daemon, bot: &BotId, generation: u64) {
     let now = daemon.clock.now_ms();
-    let delivery = &job.delivery;
-    let outcome = match &error {
-        None => DeliveryOutcome::Sent,
-        // The bot restarted meanwhile: its old inbox is gone, which says
-        // nothing about this delivery. Try the new one as soon as it is up.
-        Some(_) if daemon.supervisor.inbox(&delivery.bot_id).as_ref() != Some(&job.inbox) => {
-            DeliveryOutcome::Defer { until: now }
-        }
-        Some(error) => {
-            let attempts = delivery.attempts + 1;
-            let retry_at = (attempts < courier.settings.max_attempts)
-                .then(|| clock::after(now, courier.settings.retry_delay(attempts)));
-            DeliveryOutcome::Failed { error, retry_at }
+    let store = daemon.store();
+    let unread = match store.unread_deliveries(bot, generation) {
+        Ok(unread) => unread,
+        Err(err) => {
+            warn!(bot = %bot, "could not read unread deliveries: {err}");
+            return;
         }
     };
-    if let Some(error) = &error {
-        debug!(delivery = %delivery.id, bot = %delivery.bot_id, "delivery attempt failed: {error}");
-    }
-    let finished = daemon.store().finish_delivery(&delivery.id, outcome, now);
-    match finished {
-        Ok(Some(changed)) => {
-            if let DeliveryOutcome::Failed { retry_at: None, .. } = outcome {
-                warn!(delivery = %changed.id, bot = %changed.bot_id, "gave up on a delivery");
+    let settings = &daemon.courier.settings;
+    for delivery in unread {
+        let attempts = delivery.attempts + 1;
+        let retry_at = (attempts < settings.max_attempts)
+            .then(|| clock::after(now, settings.retry_delay(attempts)));
+        match store.reopen_unread(&delivery.id, PROCESS_ENDED, retry_at, now) {
+            Ok(Some(changed)) => {
+                if retry_at.is_none() {
+                    warn!(delivery = %changed.id, bot = %bot, "gave up on a delivery");
+                }
+                daemon.emit(Event::DeliveryChanged(changed));
             }
-            daemon.emit(Event::DeliveryChanged(changed));
+            Ok(None) => {}
+            Err(err) => warn!(delivery = %delivery.id, "could not requeue: {err}"),
         }
-        Ok(None) => {}
-        Err(err) => warn!(delivery = %delivery.id, "courier could not record a send: {err}"),
     }
-    courier.wake();
+    drop(store);
+    daemon.courier.wake();
 }

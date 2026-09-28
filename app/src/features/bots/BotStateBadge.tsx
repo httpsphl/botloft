@@ -39,7 +39,7 @@ const views: Record<BotState, StateView> = {
     label: "Needs approval",
     tone: "warn",
     icon: Hand,
-    hint: "Waiting for you to answer a permission prompt in its terminal.",
+    hint: "Waiting for you to allow or deny a tool in its chat.",
   },
   rate_limited: {
     label: "Rate limited",

@@ -1,8 +1,8 @@
-# Botloft: especificação v0.1
+# Botloft: especificação v0.2
 
-**TL;DR:** Botloft mantém "tripulações" de bots Claude Code sempre ligados no Windows. Um daemon Rust (`botloftd`) roda os bots em ConPTY, guarda tudo em SQLite e entrega mensagens entre bots pelo inbox nativo do Claude Code (named pipe). Um app Tauri + React mostra os terminais e controla tudo via JSON-RPC sobre WebSocket. O MVP cobre crews, bots, terminal e mensagens duráveis; rotinas, caixa de perguntas e acesso remoto vêm depois.
+**TL;DR:** Botloft mantém "tripulações" de bots Claude Code sempre ligados no Windows. Um daemon Rust (`botloftd`) roda cada bot como Claude Code headless (`stream-json` pelo stdin e pelo stdout), guarda tudo em SQLite e entrega mensagens entre bots de forma durável. Um app Tauri + React mostra cada bot como um chat: o dono conversa, manda imagens e arquivos e aprova o que o bot pede, tudo via JSON-RPC sobre WebSocket. O MVP cobre crews, bots, chat e mensagens duráveis; rotinas, caixa de perguntas e acesso remoto vêm depois.
 
-Status: rascunho para implementação. Este documento é a fonte de verdade do projeto. Quando código e spec divergirem, corrige-se um dos dois no mesmo PR.
+Status: rascunho para implementação. Este documento é a fonte de verdade do projeto. Quando código e spec divergirem, corrige-se um dos dois no mesmo PR. Decisões de arquitetura ficam em `docs/adr/` (a ADR 0001 trocou o terminal pelo chat).
 
 ---
 
@@ -13,8 +13,8 @@ Botloft é um workspace desktop, Windows-first e open-source, para rodar vários
 Princípios:
 
 1. **Daemon independente do app.** Fechar o app não derruba bot nenhum. O daemon é a única fonte de verdade.
-2. **Claude Code é o runtime.** Nada de SDK próprio de agente. O terminal nativo do Claude Code é preservado, com prompts de permissão e tudo.
-3. **Terminal e mensagens em canais separados.** O que o usuário digita vai pela PTY. Mensagens de outros bots chegam pelo inbox do Claude Code, nunca injetadas no terminal.
+2. **Claude Code é o runtime.** Cada bot é uma sessão do Claude Code em modo headless (`claude -p` com `stream-json` na entrada e na saída). Nada de SDK próprio de agente nem de loop reimplementado: o daemon só conversa com o processo pelo protocolo de linhas JSON.
+3. **Uma conversa por bot.** Tudo que o bot recebe (dono, outros bots, avisos do daemon) entra pelo stdin como mensagem, em ordem. Tudo que ele faz sai pelo stdout como eventos, que o daemon grava e o app mostra como chat.
 4. **Durável antes de entregar.** Toda mensagem é gravada antes de sair. Entrega é pelo menos uma vez, com retry.
 5. **Sem serviços externos.** SQLite local, sem Redis, sem nuvem, sem telemetria no MVP.
 6. **Testável sem gastar token.** Um runtime falso implementa o mesmo contrato do runtime real.
@@ -27,33 +27,33 @@ Princípios:
 | **Crew** | Grupo de bots que podem conversar entre si. Tem pasta compartilhada `shared/`. |
 | **Bot** | Uma sessão Claude Code persistente com nome, papel e instruções. |
 | **Workspace** | Pasta de trabalho do bot, onde o Claude Code roda. |
-| **Message** | Texto enviado a um bot, pelo usuário ou por outro bot. |
-| **Delivery** | Tentativa de entregar uma message a um bot. Tem estado, tentativas e prazo. |
+| **Message** | Texto enviado a um bot, pelo dono, por outro bot ou pelo daemon. Pode trazer anexos (só do dono). |
+| **Delivery** | Entrega de uma message ao processo do bot. Tem estado, tentativas e prazo. |
 | **Task** | Message que pede trabalho e espera um resultado de volta. |
-| **Generation** | Contador que incrementa a cada vez que o processo de um bot é (re)iniciado. |
+| **Turn** | Um processamento do Claude Code: começa numa message e termina no evento `result`. |
+| **Chat** | Histórico estruturado de um bot: messages recebidas, respostas, ferramentas usadas, aprovações e avisos. |
+| **Approval** | Pedido de permissão de uma ferramenta, esperando o dono no chat. |
+| **Generation** | Contador que muda a cada vez que o processo de um bot é (re)iniciado. |
 | **Owner** | O usuário humano dono da instalação. |
 
 ## 3. Arquitetura
 
 ```
- App (Tauri + React + xterm.js)
+ App (Tauri + React)
         │  JSON-RPC 2.0 sobre WebSocket  (127.0.0.1:45710/rpc)
         ▼
  botloftd ─────────────────────────────────────────────────────
    rpc/        sessões WS, autenticação, métodos e notificações
    supervisor/ ciclo de vida dos bots, estados, backoff
-   runtime/    ConPTY (real) e FakeRuntime (testes)
-   terminal/   ring buffer por bot, cursores de replay
-   courier/    worker de entrega (lease, retry, dead)
-   tools/      servidor MCP HTTP (/mcp) com tools dos bots
-   hooks/      endpoint /hooks + subcomando `botloftd hook`
+   runtime/    processo claude com pipes (real) e FakeRuntime (testes)
+   chat/       leitura do stream-json, itens do chat, texto ao vivo
+   courier/    worker de entrega (escreve no stdin, retry, dead)
+   tools/      servidor MCP HTTP (/mcp): tools da crew e aprovações
    store/      SQLite (WAL), migrations
-   platform/   pipes, ACL, Job Objects, tarefa agendada, keep-awake
-        │ ConPTY                         ▲ HTTP /mcp e /hooks (token do bot)
-        ▼                                │
- claude.exe (um processo por bot) ───────┘
-        ▲
-        └─ named pipe do inbox (criado pelo Claude Code; botloftd é cliente)
+   platform/   ACL, Job Objects, ambiente do usuário, tarefa agendada, keep-awake
+        │ stdin (mensagens)   ▲ stdout (eventos)   ▲ HTTP /mcp (token do bot)
+        ▼                     │                    │
+ claude.exe -p (um processo por bot) ──────────────┘
 ```
 
 ### 3.1 Layout do repositório
@@ -63,7 +63,7 @@ botloft/
   crates/
     botloft-core/    tipos de domínio, IDs, erros, render de envelope, tipos do protocolo
     botloft-store/   SQLite: conexão, migrations, repositórios
-    botloftd/        binário do daemon (rpc, supervisor, runtime, courier, tools, hooks, platform)
+    botloftd/        binário do daemon (rpc, supervisor, runtime, chat, courier, tools, platform)
   app/
     src/             React
     src-tauri/       shell nativa
@@ -81,14 +81,14 @@ Tipos do protocolo ficam em `botloft-core` e são exportados para TypeScript com
 |---|---|---|
 | Daemon | Rust stable, Tokio, Axum | Async maduro, WebSocket e HTTP no mesmo servidor |
 | Banco | `rusqlite` (bundled), WAL, FTS5 depois | Arquivo único, sem servidor |
-| PTY | `portable-pty` (ConPTY) | Única opção madura em Rust para ConPTY |
-| Win32 | crate `windows` | ACL, Job Objects, keep-awake, pipes |
+| Processo do bot | `tokio::process` com pipes | stdin/stdout de linhas JSON, sem PTY |
+| Win32 | crate `windows` | ACL, Job Objects, ambiente do usuário, keep-awake |
 | MCP | servidor Streamable HTTP próprio e mínimo (JSON-RPC) | Poucas tools, sem dependência pesada |
 | Tempo | `time` + `croner` (rotinas, pós-MVP) | |
-| IDs | ULID com prefixo (`bot_`, `crw_`, `msg_`, `dlv_`, `tsk_`) | Ordenável, legível em log |
+| IDs | ULID com prefixo (`bot_`, `crw_`, `msg_`, `dlv_`, `tsk_`, `cht_`, `apr_`, `att_`) | Ordenável, legível em log |
 | App | Tauri v2, React 19, TypeScript strict, Vite, Tailwind v4 | |
 | Estado no app | Zustand | Leve, sem boilerplate |
-| Terminal | `@xterm/xterm` + addons fit e webgl | |
+| Markdown no chat | `react-markdown` + `remark-gfm`, sem HTML cru | Resposta do bot é markdown; nada de `dangerouslySetInnerHTML` |
 | Qualidade | rustfmt, clippy `-D warnings`, Biome, Vitest | Biome faz lint e format do TS numa ferramenta só |
 
 ## 5. Estado em disco
@@ -116,8 +116,9 @@ O **handle** do bot (`@revisao`) é derivado do nome pela mesma regra, acompanha
 ```
 <workspace>\
   CLAUDE.md                        memória viva do bot (o bot edita; o daemon só cria se não existir)
+  attachments\<aaaa-mm-dd>\        arquivos que o dono mandou no chat (9.5)
   .claude\
-    settings.json                  hooks + permissões (gerado pelo daemon, sobrescrito a cada start)
+    settings.json                  regra de negação para os segredos (gerado pelo daemon, sobrescrito a cada start)
     rules\botloft.md               identidade, papel, crew e guia de uso das tools (gerado pelo daemon)
   .botloft\
     mcp.json                       config MCP do bot (gerado pelo daemon)
@@ -146,8 +147,9 @@ max_attempts = 8
 retry_backoff_initial_ms = 2000
 retry_backoff_max_ms = 120000
 
-[terminal]
-ring_buffer_bytes = 1048576
+[bots]
+approval_timeout_minutes = 60 # sem resposta do dono, a ferramenta é negada
+attachment_max_mb = 20        # por arquivo; no máximo 10 arquivos por message
 
 [tasks]
 max_hops = 4
@@ -161,141 +163,166 @@ default_deadline_minutes = 120
 | Estado | Quando |
 |---|---|
 | `offline` | Sem processo e sem restart agendado (crew ou bot pausado) |
-| `launching` | Processo criado, aguardando hook `SessionStart` |
-| `idle` | Sessão pronta, sem turno em andamento |
-| `busy` | Turno em andamento |
-| `needs_approval` | Claude Code mostrando prompt de permissão |
-| `rate_limited` | Turno falhou por limite de uso |
+| `launching` | Processo criado, nos primeiros 1,5 s |
+| `idle` | Processo vivo, sem turno em andamento |
+| `busy` | Turno em andamento ou na fila do Claude Code |
+| `needs_approval` | Uma ferramenta espera o dono aprovar (10.1) |
+| `rate_limited` | O limite de uso da conta foi atingido; espera `resetsAt` |
 | `auth_error` | Claude Code sem autenticação válida |
 | `backoff` | Processo morreu; relançamento agendado |
 | `archived` | Bot arquivado; processo parado, token revogado |
 
 ### 7.2 Fontes de transição
 
+Os estados saem do próprio fluxo de eventos (8.1); não há hooks.
+
 | Evento | Novo estado |
 |---|---|
 | spawn do processo | `launching` |
-| hook `SessionStart` | `idle` (e registra o inbox, ver 9.2) |
-| hook `UserPromptSubmit` | `busy` |
-| hook `Stop` | `idle` |
-| hook `StopFailure` com `rate_limit` | `rate_limited` |
-| hook `StopFailure` com `authentication_failed` ou `oauth_org_not_allowed` | `auth_error` |
-| hook `StopFailure` com outro `error` | `idle` (o turno acabou, a sessão segue) |
-| hook `Notification` com `permission_prompt` | `needs_approval` |
-| input do usuário depois de `needs_approval` | `busy` |
+| processo vivo há 1,5 s | `idle` (o Claude Code fica calado até a primeira mensagem) |
+| delivery escrita no stdin | `busy` (conta um turno pendente) |
+| `result` | `idle` se não sobrou turno pendente, senão continua `busy` |
+| a tool de aprovação é chamada | `needs_approval` |
+| aprovação respondida ou vencida | `busy` |
+| erro `rate_limit` num turno, ou `rate_limit_event` com status diferente de `allowed` | `rate_limited` até `resetsAt` (5 min se não vier), depois `idle` |
+| erro `authentication_failed`, `oauth_org_not_allowed`, `billing_error` ou `account_on_hold` | `auth_error`; o processo é parado |
 | saída do processo | `backoff` (ou `offline`/`archived` se foi pedido) |
 
-Campos lidos do JSON do stdin (documentados): `error` no `StopFailure`, `notification_type` no `Notification`. Hooks de uma generation antiga são ignorados. Todo processo novo emite `bot.state {botId, state, generation}`, mesmo que o nome do estado não mude, porque a generation mudou.
+Eventos de uma generation antiga são ignorados. Todo processo novo emite `bot.state {botId, state, generation}`, mesmo que o nome do estado não mude, porque a generation mudou.
 
 ### 7.3 Regras
 
 - Bots não pausados sempre rodam. O supervisor reconcilia no boot e a cada 5 s.
 - Backoff exponencial com jitter entre `restart_backoff_initial_ms` e `restart_backoff_max_ms`; zera após 10 min de sessão estável.
-- Relançamento usa `--continue` para retomar a conversa. Se a sessão retomada morrer em menos de `fresh_start_if_dies_within_s`, o próximo start vem sem `--continue`. O primeiro start de um bot não usa `--continue`: o daemon grava `.botloft/started` no workspace no primeiro `SessionStart` e só a partir daí retoma. `bots.restart {fresh: true}` também começa conversa nova.
+- **Sessão:** o daemon guarda em `bots.session_id` o id da conversa. O primeiro start usa `--session-id <uuid novo>`; os seguintes, `--resume <session_id>`. Se a sessão retomada morrer em menos de `fresh_start_if_dies_within_s`, o próximo start vem com um id novo. `bots.restart {fresh: true}` também começa conversa nova. O histórico do chat fica no banco do daemon (seção 8) e não depende do transcript do Claude Code.
 - Mudanças em nome, papel ou instruções regravam as regras na hora, mas o bot só as lê no próximo start; o daemon não reinicia o bot sozinho.
-- `auth_error` não entra em loop de restart: fica parado até o owner pedir `bots.restart`.
+- `auth_error` não entra em loop de restart: fica parado até o owner pedir `bots.restart`. O login é feito fora do bot (`claude auth login` num terminal), e o app diz isso.
 - Cada processo de bot entra num **Job Object** com `KILL_ON_JOB_CLOSE`. Se o daemon morrer, a árvore de processos dos bots morre junto e não sobra `claude.exe` órfão.
 
 ### 7.4 Spawn
 
-1. Resolver o binário: `claude_path` ou PATH. Só o `claude.exe` nativo roda. O `claude.cmd` do npm é recusado com erro claro: passar por `cmd.exe /d /s /c` estraga o quoting dos argumentos na PTY, e a documentação recomenda o instalador nativo. O PATH é separado só por `;`, como o Windows faz; aspas soltas numa entrada (comum em PATHs reais) não escondem as entradas seguintes.
-2. `probe`: `claude --version` e exigir **>= 2.1.234** (inbox via named pipe no Windows nativo). Sem Claude utilizável, os bots ficam `offline`, `system.status.runtimeError` diz o motivo e o daemon tenta de novo a cada 30 s.
+1. Resolver o binário: `claude_path` ou PATH. Só o `claude.exe` nativo roda; o `claude.cmd` do npm é recusado com erro claro (passar por `cmd.exe` estraga o quoting dos argumentos). O PATH é separado só por `;`, como o Windows faz; aspas soltas numa entrada (comum em PATHs reais) não escondem as entradas seguintes.
+2. `probe`: `claude --version` e exigir **>= 2.1.234**. Sem Claude utilizável, os bots ficam `offline`, `system.status.runtimeError` diz o motivo e o daemon tenta de novo a cada 30 s.
 3. Gerar os arquivos da seção 5.1.
-4. Comando: `claude [--continue] --settings <workspace>\.claude\settings.json --mcp-config <workspace>\.botloft\mcp.json`. O `--settings` aponta para o mesmo arquivo que o Claude Code já lê como settings do projeto; a documentação garante que um hook definido em dois arquivos roda uma vez só, e o `--settings` dá precedência ao `crossSessionInbound` sobre as settings do usuário.
-5. Ambiente: o bloco padrão do usuário (`CreateEnvironmentBlock`, o mesmo de um logon novo), **não** o ambiente do daemon. Um daemon iniciado de dentro de uma sessão do Claude Code herda `CLAUDECODE`, `CLAUDE_CODE_MESSAGING_SOCKET`, `ANTHROPIC_BASE_URL` e outras variáveis da sessão, que fariam o bot se achar filho dela. Por cima vão `BOTLOFT_BOT_ID`, `BOTLOFT_BOT_TOKEN`, `BOTLOFT_PORT`, `BOTLOFT_BIN` (caminho absoluto do `botloftd.exe`) e `BOTLOFT_HOME` (onde o hook grava `logs\hook.log`).
-6. PTY com cwd no workspace e tamanho vindo do último `terminal.resize` (padrão 120x32).
+4. Comando, com cwd no workspace:
 
-### 7.4.1 Primeira execução de cada bot
+   ```
+   claude -p --input-format stream-json --output-format stream-json --verbose
+     --include-partial-messages --replay-user-messages
+     (--session-id <uuid> | --resume <session_id>)
+     --setting-sources project,local
+     --mcp-config <workspace>\.botloft\mcp.json --strict-mcp-config
+     --permission-mode default
+     --permission-prompt-tool mcp__botloft__permission_prompt
+     --allowedTools mcp__botloft
+   ```
 
-Numa sessão interativa, o Claude Code segura **todos** os hooks até o dono aceitar o diálogo de confiança da pasta (documentado; confirmado com 2.1.283). Na primeira execução o bot fica em `launching`, com o diálogo no terminal, e só vai para `idle` quando alguém escolhe "Yes, I trust this folder" (a opção pré-selecionada é "No, exit"). Depois disso a confiança fica gravada para aquela pasta. Avisos de primeira execução vindos da configuração global do usuário também aparecem no terminal (ex.: extensão do Chrome detectada, novo renderizador).
-
-Confiar na raiz dos workspaces não resolve: a confiança de uma pasta pai cobre as subpastas, mas **não** vale para `permissions.allow` do `.claude/settings.json` do projeto, e o diálogo volta listando essas regras (documentado em `permissions`). Como o `settings.json` gerado libera `mcp__botloft` (7.5), cada bot novo pergunta uma vez. O app explica isso no primeiro uso e o dono responde no terminal do próprio bot, dentro do app. O Botloft não grava `hasTrustDialogAccepted` no `~/.claude.json`: o arquivo é do Claude Code, que o reescreve o tempo todo.
+   - `--setting-sources project,local` e `--strict-mcp-config` deixam de fora hooks, skills, agents, modo de permissão e servidores MCP pessoais do dono: o bot vê o que o Botloft gera. O login da conta não é uma fonte de settings e continua valendo.
+   - `--allowedTools mcp__botloft` libera as tools da crew sem aprovação. Uma regra `allow` no `settings.json` do projeto não bastaria: em `-p`, numa pasta que nunca passou pelo diálogo de confiança, o Claude Code não aplica as regras `allow` do projeto (documentado em `permissions`).
+   - Qualquer outra ferramenta que peça permissão passa pela tool de aprovação (10.1) e vira um pedido no chat.
+5. Ambiente: o bloco padrão do usuário (`CreateEnvironmentBlock`, o mesmo de um logon novo), **não** o ambiente do daemon. Um daemon iniciado de dentro de uma sessão do Claude Code herda `CLAUDECODE`, `CLAUDE_CODE_MESSAGING_SOCKET`, `ANTHROPIC_BASE_URL` e outras variáveis da sessão, que fariam o bot se achar filho dela. Por cima vão `BOTLOFT_BOT_ID`, `BOTLOFT_BOT_TOKEN` e `BOTLOFT_PORT`.
+6. stdin, stdout e stderr em pipes, sem console (`CREATE_NO_WINDOW`). O stdin fica aberto enquanto o processo vive; fechá-lo encerra o Claude Code com código 0. O stderr vai para o log em nível `debug`, sem conteúdo de mensagem.
 
 ### 7.5 `settings.json` gerado
 
 ```json
 {
-  "crossSessionInbound": "accept",
-  "hooks": {
-    "SessionStart":     [{ "hooks": [{ "type": "command", "command": "<BOTLOFT_BIN>", "args": ["hook", "session-start"] }] }],
-    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "<BOTLOFT_BIN>", "args": ["hook", "prompt-submit"] }] }],
-    "Stop":             [{ "hooks": [{ "type": "command", "command": "<BOTLOFT_BIN>", "args": ["hook", "stop"] }] }],
-    "StopFailure":      [{ "hooks": [{ "type": "command", "command": "<BOTLOFT_BIN>", "args": ["hook", "stop-failure"] }] }],
-    "Notification":     [{ "hooks": [{ "type": "command", "command": "<BOTLOFT_BIN>", "args": ["hook", "notification"] }] }],
-    "SessionEnd":       [{ "hooks": [{ "type": "command", "command": "<BOTLOFT_BIN>", "args": ["hook", "session-end"] }] }]
-  },
   "permissions": {
-    "allow": ["mcp__botloft"],
     "deny": ["Read(//c/Users/<usuário>/AppData/Local/Botloft/secrets/**)"]
   }
 }
 ```
 
-- Hooks em **exec form** (`args` presente): o Claude Code executa o binário direto, sem Git Bash nem PowerShell. Some o problema de quoting, de `curl` e de path com barra invertida.
-- O `command` do exec form precisa ser um `.exe` de verdade; shims `.cmd`/`.bat` exigem shell. `botloftd.exe` atende.
-- `mcp__botloft` libera as tools da crew (seção 10) sem prompt de permissão: um bot sozinho não tem quem aprove, e a regra vale só para o servidor `botloft`.
-- `crossSessionInbound: accept` é obrigatório: o daemon não é processo filho da sessão, então sem isso a mensagem pode ficar retida esperando aprovação.
+- Regras `deny` valem mesmo sem confiança na pasta: elas só restringem.
 - Caminho absoluto em permission rule usa o prefixo `//` e a forma POSIX que o Claude Code aplica no Windows: `C:\Users\ana\...` vira `//c/Users/ana/...` (letra do drive em minúscula). Uma barra só (`/caminho`) é relativa à origem do settings, não à raiz, e não protegeria nada. O daemon converte `BOTLOFT_HOME` para essa forma ao gerar o arquivo.
+- Em `-p` o diálogo de confiança da pasta nunca aparece (documentado), então bot novo começa a trabalhar sem passo manual.
 
-### 7.6 Subcomando `botloftd hook <evento>`
+## 8. Chat
 
-- Lê o JSON do stdin, lê `BOTLOFT_BOT_TOKEN` e `BOTLOFT_PORT` do ambiente.
-- `session-start` também lê `CLAUDE_CODE_MESSAGING_SOCKET` e `CLAUDE_CODE_MESSAGING_TOKEN`.
-- Faz `POST http://127.0.0.1:<port>/hooks/<evento>` com `Authorization: Bearer <token>`, timeout de 3 s.
-- **Sempre** sai com código 0 e **nunca** escreve no stdout (no `SessionStart`, stdout vira contexto do Claude). Erros vão para `logs\hook.log`.
+O chat de um bot é a sequência de itens que o daemon monta a partir do que entra no stdin e do que sai no stdout. Ele fica no banco (`chat_items`), é paginado pelo app e é a única visão da conversa: não há terminal.
 
-## 8. Terminal
+### 8.1 Leitura do stdout
 
-- Cada processo tem três threads: leitura da PTY, escrita (a escrita nunca bloqueia quem chama) e espera pelo fim do processo. A leitura manda blocos por canal para a task async. Quando o processo termina, o daemon fecha o pseudoconsole; sem isso o ConPTY nunca entrega EOF.
-- Coalescência: junta leituras por até 8 ms ou 32 KiB antes de emitir.
-- **Handshake do ConPTY:** o `portable-pty` cria o pseudoconsole com `PSEUDOCONSOLE_INHERIT_CURSOR`, e com isso o ConPTY pergunta a posição do cursor (`ESC[6n`) ao iniciar e segura o processo filho até ouvir a resposta. O daemon responde `ESC[1;1R` à primeira consulta de cada generation; as seguintes ficam com o terminal do app (confirmado com Claude Code real: sem a resposta, a tela fica vazia para sempre).
-- Cada bot tem um ring buffer de `ring_buffer_bytes` com cursor `offset` (bytes desde o início da generation). O buffer fica depois que o processo morre, para o dono ver a última tela.
-- Generations são únicas entre bots e entre reinícios do daemon (o contador começa no horário de boot em ms), para um cliente nunca confundir um processo novo com um que já viu.
-- `terminal.attach {botId, generation?, offset?}`:
-  - mesma generation e offset ainda no buffer: responde `{generation, offset, reset: false}` e envia só o que falta;
-  - senão: `{reset: true}` e envia o buffer inteiro; se o buffer já descartou o começo da generation, corta no primeiro `\n` para não começar no meio de uma sequência de escape.
-- A resposta traz também `liveOffset`, o fim do replay: dali em diante a saída é ao vivo. **O cliente não responde às consultas do terminal que estão no replay** (posição do cursor, atributos do dispositivo, `XTVERSION`, flags de teclado...). Elas foram feitas no passado, e a resposta chegaria ao bot como teclas digitadas. Visto com Claude Code 2.1.284: o replay de um bot recém-iniciado traz `ESC[6n`, três `ESC[>0q` e um `ESC[?u`, e sem esse cuidado aparecia um caractere solto no prompt. O app descarta o que o xterm.js "digita" enquanto interpreta o replay.
-- A resposta do `terminal.attach` sai antes do primeiro `terminal.data`. `terminal.detach {botId}` para o envio. `terminal.write {botId, data}` e `terminal.resize {botId, cols, rows}` (1 a 1000) respondem `null`; escrever num bot sem processo dá `-32003`.
-- Dados vão em `terminal.data {botId, generation, offset, data}` com `data` em base64 (bytes crus; o xterm.js recebe `Uint8Array` e resolve UTF-8 quebrado entre blocos). Um `terminal.data` com generation nova é uma tela nova: o cliente limpa antes de escrever. Um cliente que atrasa pode ver o offset pular; ele percebe (offset diferente do esperado) e refaz o attach com o que tem.
-- Vários clientes podem assistir ao mesmo bot. Qualquer cliente autenticado pode escrever (MVP só tem o owner).
+Uma linha JSON por evento, em UTF-8. Linha que não é JSON, ou maior que 8 MiB, é descartada com um aviso em `debug`. Tipos desconhecidos são ignorados (o protocolo cresce entre versões do Claude Code). O que o daemon usa:
+
+| Evento | O que vira |
+|---|---|
+| `system/init` | guarda `session_id` em `bots.session_id` (vem no começo de cada turno) |
+| `user` com `isReplay: true` | a message com aquele `uuid` começou a ser processada: a delivery ganha `read_at` (9.1) |
+| `stream_event` com `text_delta` | texto ao vivo da resposta (`chat.delta`, 8.3); não é gravado |
+| `assistant`, bloco `text` | item `reply` com o texto (markdown) |
+| `assistant`, bloco `tool_use` | item `tool` em `running`, com resumo da entrada |
+| `user`, bloco `tool_result` | atualiza o item `tool` do mesmo `tool_use_id`: `done` ou `failed` e um trecho da saída |
+| `assistant` com `error` | item `notice` e, conforme o erro, estado `rate_limited` ou `auth_error` (7.2) |
+| `rate_limit_event` | uso da conta (janelas de 5 h e 7 dias) em `system.status.usage`; status diferente de `allowed` leva a `rate_limited` |
+| `result` | item `turn` com duração, custo e erro (se houve); fecha um turno pendente |
+
+Blocos `thinking` não são gravados nem mostrados.
+
+### 8.2 Itens
+
+Todo item tem `id` (`cht_`), `botId`, `kind`, `createdAt` e `updatedAt`.
+
+| `kind` | Campos | Origem |
+|---|---|---|
+| `inbound` | `message` (a `Message`, com anexos) | criado junto com a message para o bot: dono, outro bot ou daemon |
+| `reply` | `text` | texto do bot |
+| `tool` | `toolUseId`, `name`, `summary`, `input`, `status` (`running`, `done`, `failed`), `output` | ferramenta usada pelo bot |
+| `approval` | `approvalId`, `toolName`, `summary`, `input`, `status` (`pending`, `allowed`, `denied`, `expired`), `note` | pedido de permissão (10.1) |
+| `turn` | `durationMs`, `costUsd`, `error` | fim de um turno |
+| `notice` | `level` (`info`, `warning`, `error`), `text` | avisos do daemon: limite de uso, login, sessão reiniciada |
+
+- `summary` é uma frase curta feita pelo daemon a partir da entrada: o comando do `Bash`, o arquivo do `Read`/`Edit`/`Write`, o padrão do `Grep`/`Glob`, a URL do `WebFetch`, a busca do `WebSearch`, o destinatário do `send_message`. Ferramenta desconhecida mostra só o nome.
+- `input` guarda o JSON da entrada até 4 KB; `output`, até 8 KB de texto. O resto fica só no transcript do próprio Claude Code.
+- A resposta do bot (`reply`) é guardada inteira.
+- Uma message de um bot para outro aparece duas vezes: no chat de quem mandou, como o item `tool` do `send_message`; no chat de quem recebe, como `inbound`.
+
+### 8.3 Ao vivo
+
+- `chat.item {item, activity}`: item novo ou atualizado (tool que terminou, aprovação respondida). `activity` é a nova linha da conversa na barra lateral, quando mudou.
+- `chat.delta {botId, text}`: pedaço do texto que o bot está escrevendo, na ordem. O app junta os pedaços num balão provisório, trocado pelo `reply` quando ele chega. Um app que conecta no meio de um turno não vê o texto parcial já passado, só o que vier depois e o `reply` final.
+
+### 8.4 Privacidade
+
+Itens do chat são dado pessoal como o corpo das messages: nunca vão para o log em nível `info` ou acima. O log de `debug` registra só tipos de evento e ids.
 
 ## 9. Mensagens e entrega
 
 ### 9.1 Fluxo
 
-1. `messages.send` (owner) ou tool `send_message` (bot) grava `message` + `delivery` (`pending`) numa transação.
+1. `messages.send` (owner) ou tool `send_message` (bot) grava `message`, `delivery` (`pending`) e o item `inbound` no chat do destinatário, numa transação. Anexos são gravados antes (9.5).
 2. O **courier** acorda a cada `poll_interval_ms` (e na hora, via notify, quando entra delivery nova ou termina um envio).
 3. Entrega em ordem, uma por vez por bot: de cada bot, só a delivery `pending` mais antiga pode sair, quando `next_attempt_at <= agora` e o bot não tem outra em `sending`. Ela vira `sending` com `lease_until`.
-4. Se o bot não está em `idle`/`busy`/`needs_approval` ou o inbox não foi registrado: volta para `pending` com `next_attempt_at` em 5 s, **sem** contar tentativa. Bot ou crew arquivados: a delivery vira `dead` na hora.
-5. Renderiza o envelope (9.3) na hora do envio e escreve no pipe (9.2), com timeout de 10 s.
-6. Sucesso: `sent`. Falha: `attempts += 1` e nova tentativa em `retry_backoff_initial_ms * 2^(attempts-1)`, limitado a `retry_backoff_max_ms`; ao chegar em `max_attempts`, `dead`. Se o bot reiniciou durante o envio (inbox trocou), a falha não conta tentativa.
-7. Lease vencido (daemon caiu no meio): volta a `pending` no boot e a cada ciclo.
-8. `deliveries.retry` devolve uma delivery `dead` para `pending`, com as tentativas zeradas.
+4. Se o bot não está em `idle`/`busy`/`needs_approval`: volta para `pending` com `next_attempt_at` em 5 s, **sem** contar tentativa. Bot ou crew arquivados: a delivery vira `dead` na hora.
+5. Monta a mensagem (9.2) na hora do envio e escreve uma linha no stdin do processo, com timeout de 10 s.
+6. Escrita aceita: `sent`, com a generation do processo. Falha de escrita (processo saindo): volta para `pending` sem contar tentativa.
+7. Quando o Claude Code começa o turno daquela mensagem, ele a devolve no stdout com o mesmo `uuid` (`--replay-user-messages`), e a delivery ganha `read_at`. O app mostra isso como "lida".
+8. **O processo morreu antes de ler:** a delivery ainda está `sent` sem `read_at` e com a generation que acabou. Ela volta para `pending` com `attempts += 1` e o backoff de `retry_backoff_initial_ms * 2^(attempts-1)`, limitado a `retry_backoff_max_ms`. Ao chegar em `max_attempts` vira `dead`: uma mensagem que derruba o processo toda vez não fica em laço.
+9. Lease vencido (daemon caiu no meio): volta a `pending` no boot e a cada ciclo.
+10. `deliveries.retry` devolve uma delivery `dead` para `pending`, com as tentativas zeradas.
 
-`sent` quer dizer que o Claude Code aceitou a conexão. Não prova que o bot fez o trabalho; para isso existem tasks.
+`sent` quer dizer que o processo do bot recebeu a mensagem na fila dele; `read_at`, que o bot começou a trabalhar nela. Nenhum dos dois prova que o trabalho foi feito; para isso existem tasks.
 
 Os horários de `next_attempt_at`, `lease_until` e prazos vêm de um relógio injetável do daemon, para os testes controlarem o tempo sem esperar.
 
-### 9.2 Escrita no inbox (Windows)
+### 9.2 Entrada pelo stdin
 
-- Endereço e token chegam pelo hook `session-start` e ficam só em memória, por generation. O endereço tem a forma `\\.\pipe\LOCAL\cc-msg-<32 hex>` e o token tem 32 caracteres (visto com 2.1.283).
-- Abrir o pipe como cliente **somente com a mensagem pronta** (o Claude Code derruba conexão sem linha completa em 30 s).
-- Se `ERROR_PIPE_BUSY`, tentar abrir de novo a cada 50 ms por até 2 s, dentro da mesma tentativa.
-- Conteúdo, uma linha JSON por item, terminado em `\n`, em UTF-8:
-  1. `{"type":"auth","token":"<CLAUDE_CODE_MESSAGING_TOKEN>"}` (**obrigatório** no Windows)
-  2. `{"type":"user","message":{"role":"user","content":"<envelope>"}}`
-- Fechar a conexão logo depois de escrever. O Claude Code não responde nada; o que já foi escrito continua legível para ele depois do fechamento.
-- A documentação oficial confirma a linha de auth, a obrigatoriedade dela no Windows e o limite de 30 s, mas **não documenta** a linha de mensagem (item 2). Ela foi confirmada com teste real (2.1.283, ver seção 19):
-  - a mensagem chega como `Another Claude session sent a message:` seguida do texto e de um aviso de que mensagem de outra sessão não aprova prompts nem muda configuração; conteúdo com várias linhas e acentos chega intacto e abre um turno se o bot estiver parado;
-  - sem a linha de auth, ou com token errado, o Claude Code fecha a conexão e não entrega nada;
-  - com auth válido, uma linha que não é JSON é ignorada em silêncio e a conexão continua aberta;
-  - três conexões seguidas, uma mensagem cada, chegaram todas.
-- Mensagens do owner chegam com o mesmo aviso de "outra sessão": o envelope (9.3) diz que vieram do owner, mas elas não valem como aprovação de prompt de permissão.
-- Limites documentados do lado do Claude Code: mensagem de até ~1 milhão de caracteres, no máximo 50 mensagens aceitas na fila, rajadas recusadas e repetições idênticas descartadas. O courier respeita isso com uma entrega por vez por bot e corpo de no máximo 100 000 caracteres.
+Uma linha JSON por mensagem, terminada em `\n`, em UTF-8:
 
-### 9.3 Envelope
+```json
+{"type":"user","uuid":"<uuid da delivery>","message":{"role":"user","content":[<blocos>]}}
+```
 
-O texto que o bot lê é em inglês, como as regras geradas (5.1):
+- `uuid` é um UUID v4 novo a cada envio, guardado na delivery (`turn_uuid`). O Claude Code o devolve no replay (visto com 2.1.284).
+- Blocos: um `text` com o texto (9.3) e, para imagens anexadas, blocos `image` com `source: {type: "base64", media_type, data}`.
+- Mensagem escrita durante um turno entra na fila do Claude Code e vira o turno seguinte (visto com 2.1.284). O courier não precisa esperar o bot ficar parado.
+- O formato de entrada do `stream-json` **não é documentado**; foi verificado com teste real (seção 19).
+
+### 9.3 Texto que o bot recebe
+
+A mensagem do **dono** vai como ele escreveu, sem envelope: é o usuário da sessão falando, com a autoridade de quem digita.
+
+Mensagens de **outros bots** e **avisos do daemon** levam um envelope em inglês, como as regras geradas (5.1):
 
 ```
 [botloft] from @revisor · crew Exemplo · task tsk_01J9Z... · due in 2 h
@@ -305,11 +332,9 @@ Reply with send_message(to: "revisor"). When the task is done, call complete_tas
 ```
 
 - Nota de outro bot: primeira linha `[botloft] from @revisor · crew Exemplo` e só a instrução de resposta.
-- Mensagem do owner: `from the owner`, sem `@` (um bot pode se chamar "Owner") e sem linha de instrução.
 - Resultado de task: `· result of task tsk_... · done` (ou `failed`) e a instrução de resposta.
 - Aviso do daemon (task vencida): `from Botloft` e o texto do aviso, sem instrução.
 - O prazo é relativo (`due in 45 min`, `due in 2 h`, `overdue`) e calculado na hora do envio: o bot não sabe a hora atual, e o app mostra o horário absoluto a partir de `deadline_at`.
-- Tudo que chega pelo inbox, inclusive a mensagem do owner, o Claude Code apresenta como vindo de outra sessão e não digitado pelo usuário. Visto com 2.1.284: depois do envelope vem um aviso de que um par não concede permissão nem aprova prompt pendente. Então uma mensagem pela timeline tem autoridade de colega. Para agir como o usuário do bot (aprovar um prompt, mudar configuração), o owner digita no terminal do bot.
 
 ### 9.4 Tasks entre bots
 
@@ -321,16 +346,27 @@ Reply with send_message(to: "revisor"). When the task is done, call complete_tas
 - Task vencida vira `expired` no ciclo do courier, e o solicitante recebe um aviso do daemon (`from Botloft`). Ela continua aceitando resultado atrasado.
 - `cancelled` fica reservado: nenhuma tool cancela task no MVP.
 
+### 9.5 Anexos
+
+- Só o dono manda anexos, pelo `messages.send` (até 10 arquivos, cada um até `attachment_max_mb`). O app manda os bytes em base64; nomes são reduzidos ao nome do arquivo, sem pasta.
+- O daemon grava cada arquivo em `<workspace>\attachments\<aaaa-mm-dd>\<nome>` (nome repetido ganha sufixo `-2`) e registra na tabela `attachments`.
+- Imagens PNG, JPEG, GIF e WebP de até 5 MB também seguem inline como blocos `image`, para o bot vê-las sem abrir arquivo.
+- O texto da mensagem ganha, no fim, a lista do que foi salvo (`Attached files, saved in your folder: attachments/2026-09-28/relatorio.pdf`), para o bot abrir o resto com as ferramentas dele (PDF, planilha, código...).
+- Anexos ficam na pasta do bot até alguém apagar; o chat mostra nome, tipo e tamanho, e o app abre a pasta.
+- Imagens aparecem como miniatura. O app lê o arquivo de volta com `attachments.read`, que devolve os bytes como estão agora na pasta do bot (o bot pode ter mudado ou apagado o arquivo; apagado dá `not_found`). Arquivo maior que `attachment_max_mb` não é lido.
+
 ## 10. Tools MCP dos bots (`POST /mcp`)
 
 Autenticação: `Authorization: Bearer <token do bot>`, só de uma generation viva; outro token dá HTTP 401. `mcp.json` gerado:
 
 ```json
 { "mcpServers": { "botloft": { "type": "http", "url": "http://127.0.0.1:45710/mcp",
-  "headers": { "Authorization": "Bearer ${BOTLOFT_BOT_TOKEN}" } } } }
+  "headers": { "Authorization": "Bearer ${BOTLOFT_BOT_TOKEN}" },
+  "timeout": <(approval_timeout_minutes + 2) em ms> } } }
 ```
 
-A expansão `${BOTLOFT_BOT_TOKEN}` foi confirmada com o Claude Code real (seção 19), então o token não vai para o disco.
+- A expansão `${BOTLOFT_BOT_TOKEN}` foi confirmada com o Claude Code real (seção 19), então o token não vai para o disco.
+- `timeout` existe por causa da aprovação (10.1). Um servidor MCP por HTTP tem, por padrão, 60 s por request e 5 min sem resposta antes de o Claude Code abortar a chamada. O `timeout` por servidor (>= 1000) sobe os dois limites (documentado em `env-vars`, `MCP_TOOL_TIMEOUT` e `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT`).
 
 Transporte: Streamable HTTP, só POST e resposta `application/json`, sem sessão e sem stream. O servidor fala duas eras do MCP, porque o Claude Code 2.1.284 tenta a nova e cai para a antiga:
 
@@ -344,28 +380,47 @@ Transporte: Streamable HTTP, só POST e resposta `application/json`, sem sessão
 | `send_message` | `to` (handle, com ou sem `@`), `body`, `kind?` (`note` padrão, `task`), `deadline_minutes?` (só task) | `message_id`, `task_id` e `due` (task), e um lembrete de que a resposta chega depois |
 | `complete_task` | `task_id`, `result`, `status?` (`done` padrão, `failed`) | `task_id`, `status` e quem recebe o resultado |
 | `my_tasks` | `role?` (`assigned`, `requested`) | tasks `open` e `expired`: id, de, para, status, prazo relativo, hops e o pedido original |
+| `permission_prompt` | `tool_name`, `input`, `tool_use_id` | decisão do dono (10.1). Chamada pelo Claude Code, não pelo modelo |
 
 - Erro que o modelo pode corrigir (handle desconhecido, argumento inválido, limite de hops, task de outro bot) volta como resultado com `isError: true` e uma frase explicando. Só tool desconhecida ou chamada malformada vira erro JSON-RPC (`-32602`).
 - Erro interno não expõe detalhes ao bot; vai para o log.
 
 Endereçamento só dentro da crew. Bot não enxerga bots nem tasks de outras crews.
 
+### 10.1 Aprovações
+
+Com `--permission-prompt-tool mcp__botloft__permission_prompt`, toda ferramenta que precisaria de permissão chama a tool `permission_prompt`. A entrada é `{tool_name, input, tool_use_id}` (documentado; visto com 2.1.284).
+
+1. O daemon grava uma `approval` (`pending`) e o item `approval` no chat, e passa o bot para `needs_approval`.
+2. A chamada HTTP fica aberta até o dono responder (`approvals.answer {approvalId, allow, note?}`) ou até `approval_timeout_minutes`.
+3. Resposta ao Claude Code, em texto JSON:
+   - Permitir: `{"behavior":"allow","updatedInput":<input original>}`.
+   - Negar: `{"behavior":"deny","message":"The owner denied this."}`, com a nota do dono se houver.
+   - Sem resposta no prazo: nega com `"The owner did not answer in time."` e a aprovação vira `expired`.
+4. Se o processo do bot morrer ou o daemon reiniciar com a aprovação aberta, ela vira `expired`.
+5. O bot volta a `busy` e o item do chat é atualizado.
+
+"Permitir sempre" (gravar uma regra para o bot) fica para depois do MVP.
+
+A aprovação só abre se `tool_use_id` for de uma ferramenta em `running` no chat daquele bot. O daemon espera até 2 s pelo evento, que às vezes chega depois da chamada. Senão nega na hora, sem incomodar o dono. Assim um bot que chame `permission_prompt` por conta própria não consegue pôr um pedido inventado na frente do dono. A descrição da tool também diz para não chamá-la.
+
 ## 11. Protocolo do app (JSON-RPC 2.0 sobre WebSocket)
 
-Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests com `id`, respostas com `result` ou `error`, notificações do servidor sem `id`.
+Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests com `id`, respostas com `result` ou `error`, notificações do servidor sem `id`. O maior frame aceito do app é de 32 MiB, por causa dos anexos.
 
 ### 11.1 Sessão
 
-- Primeiro request obrigatório: `session.hello {token, client: {name, version}, protocol: 1}` -> `{daemonVersion, protocol}`.
+- Primeiro request obrigatório: `session.hello {token, client: {name, version}, protocol: 2}` -> `{daemonVersion, protocol}`.
 - Qualquer outro método antes do hello: erro `-32001` e a conexão fecha. Token errado também dá `-32001`; `protocol` diferente dá `-32004`; nos dois casos a conexão fecha. O hello tem que chegar em até 10 s.
 - `Origin` aceito: `http://tauri.localhost`, `tauri://localhost` e `http://localhost:1420` (dev). Qualquer outro `Origin` recebe HTTP 403 antes do upgrade. Sem `Origin` (cliente nativo, testes) é aceito: navegadores sempre mandam o header, e o token continua obrigatório.
 - Um cliente lento que deixa acumular mais de 1024 notificações é desconectado e recarrega o estado ao reconectar.
+- A versão 2 do protocolo troca `terminal.*` pelo chat (ADR 0001).
 
 ### 11.2 Métodos (MVP)
 
 | Método | Params | Result |
 |---|---|---|
-| `system.status` | | versão, uptime, versão do claude, `runtimeError` (por que os bots não sobem), backlog de entrega (M3) |
+| `system.status` | | versão, uptime, versão do claude, `runtimeError` (por que os bots não sobem), backlog de entrega, `usage` (uso da conta, 8.1) |
 | `crews.list` | | `Crew[]` |
 | `crews.create` | `name` | `Crew` |
 | `crews.rename` | `crewId, name` | `Crew` |
@@ -377,19 +432,20 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `bots.setPaused` | `botId, paused` | `Bot` |
 | `bots.restart` | `botId, fresh?` | `Bot` |
 | `bots.archive` | `botId` | `Bot` |
-| `terminal.attach` | `botId, generation?, offset?` | `{generation, offset, reset, liveOffset}` |
-| `terminal.detach` | `botId` | |
-| `terminal.write` | `botId, data` (base64) | |
-| `terminal.resize` | `botId, cols, rows` | |
-| `messages.send` | `botId, body` | `Message` |
+| `chat.history` | `botId, before?, limit?` | `ChatItem[]`, mais novo primeiro; `limit` de 1 a 200, 50 se ausente |
+| `approvals.answer` | `approvalId, allow, note?` | `Approval` |
+| `messages.send` | `botId, body, attachments?` (`[{name, mediaType, data}]`, data em base64) | `Message` |
 | `messages.list` | `crewId?, botId?, before?, limit?` | `Message[]` |
+| `attachments.read` | `attachmentId` | `{mediaType, data}`, data em base64 (9.5) |
 | `deliveries.list` | `state?, botId?` | `Delivery[]` |
 | `deliveries.retry` | `deliveryId` | `Delivery` |
 | `tasks.list` | `crewId?, status?` | `Task[]` |
 
+`Bot` traz também `lastActivity`: o último item do chat resumido em uma linha (`text`, `at`), para a lista de conversas.
+
 ### 11.3 Notificações do servidor
 
-`bot.state`, `bot.changed`, `crew.changed`, `terminal.data`, `message.created`, `delivery.changed`, `task.changed`.
+`bot.state`, `bot.changed`, `crew.changed`, `chat.item`, `chat.delta`, `message.created`, `delivery.changed`, `task.changed`.
 
 ### 11.4 Erros
 
@@ -397,7 +453,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 |---|---|
 | `-32001` | não autenticado |
 | `-32002` | não encontrado |
-| `-32003` | conflito de estado (ex.: bot arquivado) |
+| `-32003` | conflito de estado (ex.: bot arquivado, aprovação já respondida) |
 | `-32004` | validação |
 | `-32005` | runtime indisponível (claude ausente ou versão antiga) |
 
@@ -410,21 +466,25 @@ Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations 
 | Tabela | Colunas principais |
 |---|---|
 | `crews` | `id, name, slug, paused, created_at, archived_at` |
-| `bots` | `id, crew_id, name, handle, slug, role, instructions, color, paused, token_hash, created_at, archived_at` |
+| `bots` | `id, crew_id, name, handle, slug, role, instructions, color, paused, token_hash, session_id, created_at, archived_at` |
 | `messages` | `id, crew_id, from_kind (owner/bot/system), from_bot_id, to_bot_id, kind (note/task/result/system), body, task_id, created_at` |
-| `deliveries` | `id, message_id, bot_id, state, attempts, next_attempt_at, lease_until, last_error, updated_at` |
+| `attachments` | `id, message_id, name, media_type, size, path, created_at` |
+| `deliveries` | `id, message_id, bot_id, state, attempts, next_attempt_at, lease_until, last_error, sent_generation, turn_uuid, read_at, updated_at` |
 | `tasks` | `id, crew_id, requester_bot_id, assignee_bot_id, status, deadline_at, hops, origin_task_id, result, created_at, updated_at` |
+| `chat_items` | `id, bot_id, kind, data (JSON), created_at, updated_at` |
+| `approvals` | `id, bot_id, tool_use_id, tool_name, input, status, note, created_at, answered_at` |
 | `settings` | `key, value` |
 
-Índices mínimos: `deliveries(state, next_attempt_at)`, `messages(crew_id, created_at)`, `tasks(assignee_bot_id, status)`, `bots(crew_id)`.
+Índices mínimos: `deliveries(state, next_attempt_at)`, `messages(crew_id, created_at)`, `tasks(assignee_bot_id, status)`, `bots(crew_id)`, `chat_items(bot_id, id)`, `attachments(message_id)`.
 
 ## 13. Segurança e privacidade
 
 - Daemon escuta **só em 127.0.0.1** no MVP.
 - Token do owner: 32 bytes aleatórios em `secrets\owner.token`, ACL com acesso só para o SID do usuário atual (DACL protegida, sem herança).
 - Token de bot: 32 bytes aleatórios, novo a cada generation. O valor cru existe apenas no ambiente do processo do bot; o daemon guarda só o **SHA-256**, e só em memória: todo processo de bot morre junto com o daemon (Job Object), então nenhum token sobrevive a um reinício e não há motivo para gravá-lo. A coluna `bots.token_hash` fica sem uso.
-- Logs nunca registram tokens, conteúdo de mensagens nem saída de terminal em nível `info`. Bots podem manipular dados sensíveis (inclusive de saúde); o daemon trata corpo de mensagem como dado pessoal.
+- Logs nunca registram tokens, conteúdo de mensagens, anexos nem itens do chat em nível `info`. Bots podem manipular dados sensíveis (inclusive de saúde); o daemon trata corpo de mensagem, anexo e saída de ferramenta como dado pessoal.
 - `log_level` vale só para os crates do Botloft; dependências ficam em `warn`, porque em `debug`/`trace` a pilha de WebSocket registra frames, que podem conter mensagens. `RUST_LOG` sobrepõe tudo e é só para depuração local.
+- Nome de anexo vira só o nome do arquivo (sem `..`, sem pasta, sem caracteres proibidos no Windows) antes de ir para o disco.
 - Isolamento entre bots é cooperativo (mesmo usuário do Windows). Documentar isso no README sem prometer sandbox.
 
 ## 14. Integração com o Windows
@@ -451,10 +511,10 @@ app/src/
   shell/          janela, barra de título, layout, atalhos
   features/
     onboarding/   checagens (claude instalado e versão, daemon rodando) e instalação do serviço
-    crews/        lista, criar, renomear, pausar
-    bots/         lista, criar, editar, estado
-    terminal/     view xterm.js, attach/replay, input, resize
-    messages/     timeline da crew e do bot, enviar mensagem, estado de entrega, deliveries com falha (botão na barra de título, retry)
+    crews/        lista, criar, renomear, pausar; página da crew com timeline e tasks
+    bots/         conversas na barra lateral, criar, editar, estado, detalhes
+    chat/         conversa com o bot: itens, texto ao vivo, aprovações, compositor com anexos
+    messages/     timeline da crew, estado de entrega, deliveries com falha (botão na barra de título, retry)
     tasks/        tarefas da crew (abertas por padrão, todas sob demanda)
     settings/
   lib/
@@ -470,7 +530,20 @@ app/src/
   dev/            prévia: `pnpm dev` num navegador comum usa FakeBotloft, ou um daemon de dev real com `?live=<porta>` (só em dev)
 ```
 
-Componentes dependem só de `BotloftApi` e `Host`, nunca do cliente concreto nem do Tauri. O store recarrega crews, bots e `system.status` a cada (re)conexão e depois segue as notificações; `system.status` não tem notificação e é relido a cada 15 s. Deliveries entram no store pela message (cada message tem uma): as 500 atualizadas mais recentemente e todas as mortas, depois cada `delivery.changed`; tasks, todas, depois cada `task.changed`. Mensagens não ficam no store: cada timeline carrega uma página (50) do que mostra, pede as anteriores sob demanda com `before` e acrescenta as novas por `message.created`.
+Componentes dependem só de `BotloftApi` e `Host`, nunca do cliente concreto nem do Tauri.
+
+O store recarrega crews, bots e `system.status` a cada (re)conexão e depois segue as notificações. `system.status` não tem notificação e é relido a cada 15 s.
+
+- **Deliveries:** entram no store pela message (cada message tem uma). Vêm as 500 atualizadas mais recentemente e todas as mortas, depois cada `delivery.changed`.
+- **Tasks:** todas, depois cada `task.changed`.
+- **Chat e timeline** não ficam no store. Cada um carrega uma página (50) do que mostra, pede as anteriores sob demanda com `before` e acrescenta o que chega por notificação (`chat.item`, `chat.delta`, `message.created`).
+
+Layout, como um app de mensagens:
+
+- **Barra lateral:** crews como seções, com os bots como conversas. Cada conversa mostra avatar, nome, estado (cor, ícone e texto) e a prévia da última atividade (`lastActivity`) com a hora.
+- **Área principal com um bot:** cabeçalho com nome, estado e ações; o chat; o compositor embaixo. O compositor aceita texto, colar imagem e arrastar ou escolher arquivos. Enter envia e Shift+Enter quebra linha.
+- **Área principal com uma crew:** a timeline (messages entre os bots e do dono) e as tasks.
+- **Detalhes do bot** (pasta, instruções, sessão) ficam num painel, fora do caminho da conversa.
 
 ### 15.2 Comandos Tauri
 
@@ -482,13 +555,22 @@ Componentes dependem só de `BotloftApi` e `Host`, nunca do cliente concreto nem
 | `daemon_restart` | `botloftd service restart` |
 | `read_owner_token` | lê `secrets\owner.token` (só no app local) |
 | `open_path` | abre uma pasta no Explorer; recusa arquivos, que o Explorer executaria |
-| overlay na taskbar | não é comando próprio: o app usa `setOverlayIcon` da janela (permissão `core:window:allow-set-overlay-icon`) e marca o ícone com um ponto enquanto algo espera o dono: bot em `needs_approval` ou `auth_error`, ou mensagem não entregue a um bot ativo. Entregas mortas para bot arquivado não contam: foram abandonadas de propósito |
+| `open_url` | abre no navegador padrão um link de uma resposta do bot; só `http` e `https`, porque qualquer outro esquema pode iniciar um programa. Seguir o link dentro do app trocaria a janela pela página |
+| overlay na taskbar | não é comando próprio: o app usa `setOverlayIcon` da janela (permissão `core:window:allow-set-overlay-icon`) e marca o ícone com um ponto enquanto algo espera o dono: aprovação pendente, bot em `auth_error`, ou mensagem não entregue a um bot ativo. Entregas mortas para bot arquivado não contam: foram abandonadas de propósito |
 
 O app acha o daemon como o daemon acha a si mesmo (seção 5): `BOTLOFT_HOME` ou `%LOCALAPPDATA%\Botloft`, com a porta lida do `config.toml` dessa pasta (45710 se ausente). Um daemon de dev com seu próprio `BOTLOFT_HOME` é encontrado sem configuração extra. A CSP libera `ws://127.0.0.1:*` pelo mesmo motivo.
 
 ### 15.3 Direção visual
 
-Ferramenta de trabalho densa, estilo painel de operação: tipografia forte, grid firme, estados dos bots legíveis de longe (cor + ícone + texto, nunca só cor). Sem gradiente, sem sombra pesada, sem visual de template. Tema escuro e claro. Barra de título própria (`decorations: false`) com controles de janela do Windows.
+Ferramenta de trabalho densa e calma: tipografia forte, grid firme, estados dos bots legíveis de longe (cor + ícone + texto, nunca só cor). Sem gradiente, sem sombra pesada, sem visual de template. Tema escuro e claro. Barra de título própria (`decorations: false`) com controles de janela do Windows.
+
+No chat:
+
+- O dono fala em balões à direita; o bot, à esquerda, com markdown.
+- Mensagens de outros bots aparecem à esquerda, com o avatar e o nome de quem mandou.
+- O que o bot faz com as ferramentas aparece em linhas compactas (ícone, ferramenta, resumo e estado), agrupadas por turno, que abrem para mostrar entrada e saída.
+- Pedido de aprovação é um cartão com o que o bot quer fazer e os botões Permitir e Negar.
+- Anexos aparecem como miniatura (imagem) ou cartão com nome, tipo e tamanho.
 
 Identidade: o mascote do Botloft é uma chama com olhos, desenhada em vetor em `app/app-icon.svg`. O ícone do app é o mascote branco sobre fundo preto. Cada bot usa o mesmo personagem como avatar, com uma cor própria escolhida na criação. A cor do avatar identifica o bot e não comunica estado: estado continua sendo cor + ícone + texto, como descrito acima.
 
@@ -497,7 +579,7 @@ Identidade: o mascote do Botloft é uma chama com olhos, desenhada em vetor em `
 - Rust: `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`.
 - TS: `tsc --noEmit`, `biome check`, `vitest run`.
 - Limite **flexível de 300 linhas** por arquivo; passou disso, dividir por responsabilidade.
-- Toda lógica de supervisor, courier e terminal testada com `FakeRuntime` (sem Claude real).
+- Toda lógica de supervisor, courier e chat testada com `FakeRuntime` (sem Claude real). O `FakeRuntime` fala `stream-json` de verdade: recebe as linhas do stdin e o teste escreve os eventos do stdout.
 - CI: GitHub Actions em `windows-latest` (principal) e `ubuntu-latest` para `botloft-core` e `botloft-store`.
 
 ## 17. Marcos do MVP
@@ -506,20 +588,24 @@ Identidade: o mascote do Botloft é uma chama com olhos, desenhada em vetor em `
 |---|---|---|
 | **M0** Fundação | Workspace Cargo, app Tauri vazio, CI, LICENSE, README | CI verde nos dois runners |
 | **M1** Daemon base | config, store + migrations, `/health`, `/rpc` com hello, CRUD de crews e bots, geração de workspace | teste de integração cria crew e bot via RPC |
-| **M2** Runtime | ConPTY, supervisor com estados e backoff, Job Objects, hooks, terminal com replay, `FakeRuntime` | bot real abre no Windows, estados mudam pelos hooks, reattach sem perder tela |
-| **M3** Mensagens | courier, inbox via pipe, tools MCP, tasks com hops e prazo | dois bots trocam task e resultado sem intervenção |
-| **M4** App | onboarding, crews, bots, terminal, timeline, deliveries com falha | fluxo completo pelo app sem abrir terminal |
+| **M2** Runtime | supervisor com estados e backoff, Job Objects, `FakeRuntime` | bot real sobe no Windows e os estados mudam |
+| **M3** Mensagens | courier, tools MCP, tasks com hops e prazo | dois bots trocam task e resultado sem intervenção |
+| **M4** App | onboarding, crews, bots, timeline, deliveries com falha | fluxo completo pelo app sem abrir terminal |
+| **M4.1** Chat | runtime headless (ADR 0001), chat com texto ao vivo, aprovações pelo chat, anexos, lista de conversas | conversar com um bot pelo app, mandar uma imagem, aprovar uma ferramenta e ver o resultado; dois bots trocam task e resultado pelo stdin |
 | **M5** Distribuição | tarefa agendada, keep-awake, instalador NSIS com sidecar, updater | instalar em máquina limpa e bots voltarem sozinhos após reboot |
+
+M2 a M4 foram entregues com ConPTY, terminal com replay, inbox por named pipe e hooks. A ADR 0001 troca tudo isso pelo runtime headless no M4.1, antes do M5.
 
 ## 18. Fora do MVP (ordem sugerida)
 
 1. Rotinas (cron com timezone, intervalo) com política de sobreposição.
 2. Caixa de perguntas ao owner (bot pergunta, owner responde, resposta volta como mensagem).
-3. Busca FTS5 em mensagens.
-4. Histórico de versões das instruções do bot.
-5. Acesso remoto com token por dispositivo (Tailscale).
-6. Sinais entre bots disparando rotinas.
-7. Suporte Linux/macOS.
+3. "Permitir sempre" nas aprovações, gravado como regra do bot.
+4. Busca FTS5 em mensagens e no chat.
+5. Histórico de versões das instruções do bot.
+6. Acesso remoto com token por dispositivo (Tailscale).
+7. Sinais entre bots disparando rotinas.
+8. Suporte Linux/macOS.
 
 ## 19. Pontos a verificar na versão alvo do Claude Code
 
@@ -527,17 +613,24 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28. "Co
 
 | Item | Seção | Resultado | Teste real |
 |---|---|---|---|
-| Exec form de hooks (`args`) no Windows | 7.5 | Confirmado (`hooks`) e **testado com 2.1.283**: `botloftd.exe hook session-start` rodou direto, sem shell | feito (M2) |
-| Linha de auth, 30 s e variáveis do inbox | 9.2 | Confirmado (`cross-session-messaging`): `CLAUDE_CODE_MESSAGING_SOCKET`, `CLAUDE_CODE_MESSAGING_TOKEN`, auth obrigatória no Windows, >= 2.1.234. **Testado com 2.1.283**: as duas variáveis chegam ao hook `SessionStart`; sem auth ou com token errado a conexão é fechada | feito (M3) |
-| Formato da linha de mensagem no inbox | 9.2 | **Não documentado**; **testado com 2.1.283**: `{"type":"user","message":{"role":"user","content":...}}` é entregue e abre um turno (detalhes em 9.2) | feito (M3) |
-| `crossSessionInbound` | 7.5 | Confirmado: valores `accept`, `hold`, `refuse`; `refuse` em settings de projeto vence tudo. **Testado com 2.1.283**: com `accept` a mensagem entrou direto, sem diálogo | feito (M3) |
-| Carregamento de `.claude/rules/*.md` sem frontmatter | 5.1 | Confirmado (`memory`) e **testado com 2.1.283**: o bot respondeu nome, handle e crew tirados das regras | feito (M2) |
+| Formato de entrada `--input-format stream-json` | 9.2 | **Não documentado**. **Testado com 2.1.284**: `{"type":"user","uuid":...,"message":{"role":"user","content":[blocos]}}` abre um turno; bloco `image` em base64 é aceito | feito (M4.1) |
+| Vários turnos num processo; mensagem durante um turno | 9.2 | **Testado com 2.1.284**: dois turnos seguidos no mesmo processo; a mensagem escrita durante um turno virou o turno seguinte. Cada turno começa com `system/init` e termina com `result` | feito (M4.1) |
+| Processo sem entrada | 7.2 | **Testado com 2.1.284**: fica calado e vivo até a primeira mensagem; sai com 0 quando o stdin fecha | feito (M4.1) |
+| `--replay-user-messages` | 9.1 | Flag no `--help` sem detalhes na documentação. **Testado com 2.1.284**: devolve a mensagem com `isReplay: true` e o mesmo `uuid` quando o turno dela começa, não quando é lida | feito (M4.1) |
+| Eventos do `--output-format stream-json` | 8.1 | Parcialmente documentado (`headless`): `system/init`, `stream_event` com `text_delta` (exige `--verbose` e `--include-partial-messages`), `system/api_retry` com `error` (`rate_limit`, `authentication_failed`...), `result`. **Visto com 2.1.284**: também `rate_limit_event` (status, `resetsAt`, uso das janelas de 5 h e 7 dias), `system/post_turn_summary`, `system/task_summary`, `system/thinking_tokens`; erro de API vem em `assistant.error` e `result.terminal_reason` | feito (M4.1) |
+| `--permission-prompt-tool` | 10.1 | Confirmado (`cli-reference`, `headless`). **Testado com 2.1.284**: chama a tool com `{tool_name, input, tool_use_id}` e segue `{"behavior":"allow","updatedInput":...}`. Pelo daemon e pelo app: permitir depois de 95 s funcionou; negar com nota fez o bot citar a nota e não usar a ferramenta | feito (M4.1) |
+| `--permission-prompts host` | 10.1 | Documentado só para o SDK. **Visto com 2.1.284**: sem o aperto de mão do SDK, nega tudo (`system/permission_denied`). Não usado | não se aplica |
+| `timeout` por servidor MCP | 10 | Confirmado (`env-vars`): HTTP tem 60 s por request e 5 min sem resposta por padrão; `timeout` >= 1000 no servidor sobe os dois. **Testado com 2.1.284**: a aprovação respondida depois de 95 s chegou ao bot | feito (M4.1) |
+| `--setting-sources project,local` | 7.4 | Confirmado (`cli-reference`). **Testado com 2.1.284**: sem os hooks, skills e agents do usuário; modo `default`; login da assinatura continua valendo | feito (M4.1) |
+| Regras `allow` do projeto em `-p` sem confiança | 7.4 | Confirmado (`permissions`): não são aplicadas numa pasta nunca confiada; `deny` vale sempre. Por isso `--allowedTools mcp__botloft` | M4.1 |
+| `--session-id`, `--resume` em `-p` | 7.3 | Confirmado (`cli-reference`, `sessions`): a sessão retoma histórico e modelo; flags como `--mcp-config` têm de ser passadas de novo. **Testado com 2.1.284**: depois de reiniciar o bot e depois de reiniciar o daemon, o bot lembrou arquivos, a imagem e a mensagem de outro bot | feito (M4.1) |
+| Tools MCP adiadas | 10 | **Visto com 2.1.284**: as tools do `botloft` chegam adiadas; antes da primeira `send_message` o bot chama `ToolSearch` com `select:mcp__botloft__send_message`. O chat mostra isso como "load send_message" | feito (M4.1) |
+| Imagem inline na entrada | 9.5 | **Visto com 2.1.284**: o Claude Code guarda cada bloco `image` recebido em `%TEMP%\claude\<projeto>\<sessão>\images\<n>.png`, e o bot pode abrir essa cópia com `Read` sem pedir aprovação. O anexo original continua na pasta do bot | feito (M4.1) |
+| Transcript `.jsonl` | 7.3 | Confirmado (`sessions`): formato interno, muda entre versões. O chat do Botloft não depende dele | não se aplica |
+| Inbox entre sessões em `-p` | 9 | Documentado como indisponível em `-p`; o courier escreve no stdin | não se aplica |
+| Carregamento de `.claude/rules/*.md` sem frontmatter | 5.1 | Confirmado (`memory`) e **testado com 2.1.283** (modo interativo) e **2.1.284** (`-p`): o bot respondeu nome, handle e crew tirados das regras | feito (M4.1) |
 | Expansão `${VAR}` em headers do `mcp.json` | 10 | Confirmado (`mcp`); alguns nomes de credencial conhecidos são lidos vazios, `BOTLOFT_BOT_TOKEN` não é um deles. **Testado com 2.1.284**: o header chegou com o valor da variável de ambiente | feito (M3) |
-| Revisão do MCP que o Claude Code usa em servidor HTTP | 10 | Especificação MCP 2026-07-28 (sem `initialize`) e versões antigas. **Visto com 2.1.284**: manda `server/discover` com os headers de 2026-07-28 e, se falhar, `initialize` com 2025-11-25 (e depois tenta o transporte SSE antigo). Teste feito sem gastar tokens: `claude -p` com modelo inexistente conecta os servidores MCP antes de falhar | feito (M3) |
-| Sintaxe de caminho Windows em permission rules | 7.5 | Confirmado (`permissions`) e **testado com 2.1.283**: ler `secrets\owner.token` deu "File is in a directory that is denied by your permission settings" | feito (M2) |
-| Flags `--continue`, `--mcp-config` | 7.4 | Confirmado (`cli-reference`); aceitas pelo 2.1.283. **Testado**: depois de reiniciar o daemon, o bot voltou com `--continue` e a conversa anterior na tela | feito (M3) |
-| Flag `--settings <arquivo>` | 7.4 | Ausente da tabela de CLI, mas aceita pelo 2.1.283 e os hooks do arquivo rodaram | feito (M2) |
-| stdout do `SessionStart` vira contexto | 7.6 | Confirmado (`hooks`); o subcomando nunca escreve no stdout | feito (M2) |
-| `StopFailure` (`rate_limit`, `authentication_failed`) e `Notification` (`permission_prompt`) | 7.2 | Campos documentados: `error` e `notification_type`. `SessionStart`, `UserPromptSubmit` e `Stop` **testados com 2.1.283** (`launching` -> `idle` -> `busy` -> `idle`) | disparar `StopFailure` e `permission_prompt` reais: pendente |
-| Confiança da pasta segura os hooks | 7.4.1 | Confirmado (`hooks`, `permissions`) e **visto com 2.1.283**: diálogo na primeira execução, bot em `launching` até aceitar | feito (M2) |
-| Confiança da pasta pai e regras `allow` do projeto | 7.4.1 | Confirmado (`permissions`): fora de git a confiança vale para as subpastas, mas `permissions.allow` do projeto só vale depois de aceitar o diálogo da própria pasta; `-p` nunca mostra o diálogo. Não há flag nem setting para pré-aceitar; o manual é `hasTrustDialogAccepted` no `~/.claude.json`. **Visto com 2.1.284**: o diálogo de um bot novo lista "This folder pre-approves 1 tool permission: mcp__botloft" e aparece no terminal do app; Down e Enter no xterm aceitaram e o bot foi a `idle` | feito (M4) |
+| Revisão do MCP que o Claude Code usa | 10 | Especificação MCP 2026-07-28 (sem `initialize`) e versões antigas. **Visto com 2.1.284**: manda `server/discover` com os headers de 2026-07-28 e, se falhar, `initialize` com 2025-11-25; o mesmo num servidor stdio | feito (M3) |
+| Sintaxe de caminho Windows em permission rules | 7.5 | Confirmado (`permissions`) e **testado com 2.1.283** (interativo) e **2.1.284** (`-p --setting-sources project,local`): `Read(//c/.../**)` em `deny` bloqueou a leitura com "File is in a directory that is denied by your permission settings", sem perguntar, e o `result` listou a negação em `permission_denials` | feito (M4.1) |
+
+Itens do runtime anterior (ConPTY, hooks em exec form, `crossSessionInbound`, linha de auth do inbox, diálogo de confiança, `ESC[6n` do ConPTY, consultas do terminal no replay) foram verificados no M2–M4 e deixaram de se aplicar com a ADR 0001; o histórico está no git e na ADR.

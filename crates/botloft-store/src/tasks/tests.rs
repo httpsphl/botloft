@@ -71,7 +71,7 @@ fn settling_updates_the_task_and_saves_the_report_together() {
     let task = ask(&fx, 100);
     let from = [TaskStatus::Open, TaskStatus::Expired];
     let (report, delivery) = message_to(&fx.crew.id, &fx.bots[0].id, "done: 42");
-    let done = fx
+    let (done, item) = fx
         .store
         .settle_task(
             &task.id,
@@ -83,6 +83,7 @@ fn settling_updates_the_task_and_saves_the_report_together() {
         )
         .expect("settle")
         .expect("was open");
+    assert_eq!(item.bot_id, report.to_bot_id);
     assert_eq!(done.status, TaskStatus::Done);
     assert_eq!(done.result.as_deref(), Some("42"));
     assert_eq!(done.updated_at, 500);

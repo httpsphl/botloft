@@ -1,87 +1,30 @@
-import { useEffect, useState } from "react";
+import { X } from "lucide-react";
+import { useState } from "react";
 import type { Bot, Crew } from "../../lib/protocol.gen";
+import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
-import { Tabs, tabId } from "../../ui/Tabs";
-import { Composer } from "../messages/Composer";
-import { Timeline } from "../messages/Timeline";
-import { TerminalView } from "../terminal/TerminalView";
+import { ChatView } from "../chat/ChatView";
 import { BotHeader } from "./BotHeader";
 import { stateView } from "./BotStateBadge";
 
-type Pane = "terminal" | "messages" | "details";
-
-const TABS: { id: Pane; label: string }[] = [
-  { id: "terminal", label: "Terminal" },
-  { id: "messages", label: "Messages" },
-  { id: "details", label: "Details" },
-];
-
-/** How long a start takes before the trust prompt is the likely reason. */
-const SLOW_START_MS = 4000;
-
-/** True once the bot has been starting for a while. */
-function useSlowStart(bot: Bot): boolean {
-  const [slow, setSlow] = useState(false);
-  // Each start of a process has its own generation.
-  const launch = bot.state === "launching" ? bot.generation : null;
-  useEffect(() => {
-    setSlow(false);
-    if (launch === null) {
-      return;
-    }
-    const timer = setTimeout(() => setSlow(true), SLOW_START_MS);
-    return () => clearTimeout(timer);
-  }, [launch]);
-  return slow && launch !== null;
-}
-
+/** A bot's conversation, with its details in a side panel (spec 15.1). */
 export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
-  const [pane, setPane] = useState<Pane>("terminal");
-  const slowStart = useSlowStart(bot);
+  const [details, setDetails] = useState(false);
   const view = stateView(bot, crew.paused);
 
   return (
     <section aria-label={bot.name} className="flex min-h-0 flex-1 flex-col">
-      <BotHeader bot={bot} crew={crew} />
-      <Notices bot={bot} crew={crew} slowStart={slowStart} view={view} />
-      <Tabs<Pane> label="Bot views" tabs={TABS} value={pane} onChange={setPane} />
-      {/* The terminal stays mounted so switching tabs keeps its screen. */}
-      <div
-        role="tabpanel"
-        aria-labelledby={tabId("terminal")}
-        className={pane === "terminal" ? "flex min-h-0 flex-1 flex-col" : "hidden"}
-      >
-        {bot.generation === null ? (
-          <p className="p-6 text-muted text-sm">
-            {bot.name} has not started since the daemon did.
-            {(bot.paused || crew.paused) && " Resume it to start it."}
-          </p>
-        ) : (
-          <TerminalView botId={bot.id} />
-        )}
+      <BotHeader
+        bot={bot}
+        crew={crew}
+        detailsOpen={details}
+        onToggleDetails={() => setDetails(!details)}
+      />
+      <Notices bot={bot} crew={crew} view={view} />
+      <div className="flex min-h-0 flex-1">
+        <ChatView bot={bot} stopped={bot.paused || crew.paused} />
+        {details && <Details bot={bot} onClose={() => setDetails(false)} />}
       </div>
-      {pane === "messages" && (
-        <div
-          role="tabpanel"
-          aria-labelledby={tabId("messages")}
-          className="flex min-h-0 flex-1 flex-col"
-        >
-          <Timeline
-            filter={{ botId: bot.id }}
-            empty={`No messages to or from ${bot.name} yet.`}
-            composer={(onSent) => <Composer crewId={crew.id} botId={bot.id} onSent={onSent} />}
-          />
-        </div>
-      )}
-      {pane === "details" && (
-        <div
-          role="tabpanel"
-          aria-labelledby={tabId("details")}
-          className="min-h-0 flex-1 overflow-y-auto p-5"
-        >
-          <Details bot={bot} />
-        </div>
-      )}
     </section>
   );
 }
@@ -89,12 +32,10 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
 function Notices({
   bot,
   crew,
-  slowStart,
   view,
 }: {
   bot: Bot;
   crew: Crew;
-  slowStart: boolean;
   view: ReturnType<typeof stateView>;
 }) {
   const notices = [];
@@ -105,15 +46,8 @@ function Notices({
       </Callout>,
     );
   }
-  if (slowStart) {
-    notices.push(
-      <Callout key="trust" title="Still starting">
-        On a bot's first start, Claude Code asks whether you trust its folder. Choose "Yes, I trust
-        this folder" in the terminal below; it asks only once.
-      </Callout>,
-    );
-  }
-  if (view.tone === "warn" || view.tone === "danger") {
+  // An approval shows in the chat itself; the rest needs a word up here.
+  if ((view.tone === "warn" || view.tone === "danger") && bot.state !== "needs_approval") {
     notices.push(
       <Callout key="state" tone={view.tone} title={view.label}>
         {view.hint}
@@ -126,23 +60,40 @@ function Notices({
   return <div className="flex flex-col gap-2 border-line border-b px-5 py-3">{notices}</div>;
 }
 
-function Details({ bot }: { bot: Bot }) {
+function Details({ bot, onClose }: { bot: Bot; onClose(): void }) {
   return (
-    <dl className="grid max-w-3xl grid-cols-[9rem_1fr] gap-x-4 gap-y-3 border border-line bg-panel p-4 text-sm">
-      <dt className="text-muted">Role</dt>
-      <dd className="text-ink-soft">{bot.role || "No role yet."}</dd>
-      <dt className="text-muted">Folder</dt>
-      <dd className="break-all font-mono text-xs" data-selectable>
-        {bot.workspace}
-      </dd>
-      <dt className="text-muted">Process</dt>
-      <dd className="font-mono text-xs">
-        {bot.generation === null ? "not started" : `generation ${bot.generation}`}
-      </dd>
-      <dt className="text-muted">Instructions</dt>
-      <dd className="whitespace-pre-wrap text-ink-soft" data-selectable>
-        {bot.instructions || "None yet."}
-      </dd>
-    </dl>
+    <aside
+      aria-label={`About ${bot.name}`}
+      className="flex w-80 shrink-0 flex-col border-line border-l bg-panel"
+    >
+      <header className="flex h-11 shrink-0 items-center justify-between border-line border-b pr-1.5 pl-4">
+        <h2 className="font-semibold text-sm">About {bot.name}</h2>
+        <Button variant="ghost" size="sm" icon={X} label="Close details" onClick={onClose} />
+      </header>
+      <dl className="flex min-h-0 flex-col gap-4 overflow-y-auto p-4 text-sm">
+        <div>
+          <dt className="text-muted text-xs">Role</dt>
+          <dd className="mt-0.5 text-ink-soft">{bot.role || "No role yet."}</dd>
+        </div>
+        <div>
+          <dt className="text-muted text-xs">Folder</dt>
+          <dd className="mt-0.5 break-all font-mono text-xs" data-selectable>
+            {bot.workspace}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted text-xs">Process</dt>
+          <dd className="mt-0.5 font-mono text-xs">
+            {bot.generation === null ? "not started" : `generation ${bot.generation}`}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted text-xs">Instructions</dt>
+          <dd className="mt-0.5 whitespace-pre-wrap text-ink-soft" data-selectable>
+            {bot.instructions || "None yet."}
+          </dd>
+        </div>
+      </dl>
+    </aside>
   );
 }

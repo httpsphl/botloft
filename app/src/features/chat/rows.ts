@@ -1,0 +1,63 @@
+// How a chat reads on screen (spec 15.3): what others say stands alone,
+// what the bot does in a turn runs together under its avatar, and a date
+// line starts every day.
+
+import type { ChatItem, Message, NoticeItem } from "../../lib/protocol.gen";
+
+export type Row =
+  | { kind: "day"; key: string; at: number }
+  /** A message to the bot: from the owner, another bot or Botloft. */
+  | { kind: "inbound"; key: string; item: ChatItem; message: Message }
+  /** Replies, tool calls and approvals of one turn, and its end. */
+  | { kind: "run"; key: string; items: ChatItem[] }
+  | { kind: "notice"; key: string; item: ChatItem; notice: NoticeItem };
+
+function dayOf(ms: number): string {
+  return new Date(ms).toDateString();
+}
+
+export function chatRows(items: ChatItem[]): Row[] {
+  const rows: Row[] = [];
+  let day: string | null = null;
+  let run: ChatItem[] | null = null;
+  for (const item of items) {
+    const today = dayOf(item.createdAt);
+    if (today !== day) {
+      day = today;
+      run = null;
+      rows.push({ kind: "day", key: `day-${item.id}`, at: item.createdAt });
+    }
+    const body = item.body;
+    if (body.kind === "inbound") {
+      run = null;
+      rows.push({ kind: "inbound", key: item.id, item, message: body.message });
+    } else if (body.kind === "notice") {
+      run = null;
+      rows.push({ kind: "notice", key: item.id, item, notice: body });
+    } else {
+      if (!run) {
+        run = [];
+        rows.push({ kind: "run", key: item.id, items: run });
+      }
+      run.push(item);
+      if (body.kind === "turn") {
+        run = null;
+      }
+    }
+  }
+  return rows;
+}
+
+/** Splits a run into replies, approvals and turns alone, and tool calls together. */
+export function runParts(items: ChatItem[]): ChatItem[][] {
+  const parts: ChatItem[][] = [];
+  for (const item of items) {
+    const last = parts.at(-1);
+    if (item.body.kind === "tool" && last?.[0]?.body.kind === "tool") {
+      last.push(item);
+    } else {
+      parts.push([item]);
+    }
+  }
+  return parts;
+}

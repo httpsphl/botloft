@@ -1,13 +1,18 @@
-//! Owner messages through the courier into a fake inbox (spec 9): waiting
-//! for the bot, order, retries, restarts and archiving. Retry times follow
-//! the manual clock; the courier itself polls on the real one.
+//! Messages through the courier into the bots' stdin (spec 9): waiting for
+//! the bot, order, read receipts, processes that end before reading,
+//! attachments and archiving. Retry times follow the manual clock; the
+//! courier itself polls on the real one.
 
 mod common;
 
 use std::time::Duration;
 
+use base64::Engine as _;
+use base64::engine::general_purpose::STANDARD as BASE64;
+use botloft_core::protocol::BotState;
 use botloftd::clock::Clock as _;
-use common::bots::{pipe, session_start};
+use common::bots::text_of;
+use common::stream;
 use common::{Client, TestDaemon};
 use serde_json::{Value, json};
 
@@ -45,36 +50,46 @@ async fn delivery(app: &mut Client, state: &str) -> Value {
 }
 
 #[tokio::test]
-async fn an_owner_message_waits_for_the_bot_and_then_reaches_its_inbox() {
+async fn an_owner_message_reaches_the_bot_as_its_user_and_is_read() {
     let t = TestDaemon::start_supervised().await;
     let mut app = t.session().await;
     let bot = crew_and_bot(&mut app).await;
-    let process = t.runtime.process(1).await;
+    let process = t.process_of(&bot).await;
 
     let message = send(&mut app, &bot, "  Olá!\nTudo bem? ").await;
     assert_eq!(message["body"], "Olá!\nTudo bem?");
-    assert_eq!(message["fromKind"], "owner");
-    assert_eq!(message["kind"], "note");
+    assert_eq!(
+        (&message["fromKind"], &message["kind"]),
+        (&json!("owner"), &json!("note"))
+    );
     assert_eq!(app.notification("message.created").await, message);
     let pending = delivery(&mut app, "pending").await;
     assert_eq!(pending["messageId"], message["id"]);
-
-    // Still launching: the courier waits and counts nothing.
-    tokio::time::sleep(Duration::from_millis(100)).await;
-    assert_eq!(t.inbox.attempts(), 0);
-
-    session_start(&t, &process, 1).await;
-    t.clock.advance(Duration::from_secs(5));
-    let post = t.inbox.post(1).await;
-    assert_eq!(post.address, pipe(1));
-    assert_eq!(post.token, "tok-1");
+    let item = app.notification("chat.item").await;
     assert_eq!(
-        post.text,
-        "[botloft] from the owner · crew Ops\n\nOlá!\nTudo bem?"
+        item["item"]["body"],
+        json!({ "kind": "inbound", "message": message })
     );
-    delivery(&mut app, "sending").await;
+    assert_eq!(item["activity"]["text"], "You: Olá! Tudo bem?");
+
+    t.until_state(&bot, BotState::Idle).await;
+    t.clock.advance(Duration::from_secs(5));
+    let line = process.wait_lines(1).await.remove(0);
+    assert_eq!(line["type"], "user");
+    assert_eq!(
+        text_of(&line),
+        "Olá!\nTudo bem?",
+        "no envelope for the owner"
+    );
     let sent = delivery(&mut app, "sent").await;
-    assert_eq!(sent["attempts"], 0);
+    assert_eq!(
+        (&sent["attempts"], &sent["readAt"]),
+        (&json!(0), &Value::Null)
+    );
+
+    process.emit(stream::replay(&line)).await;
+    let read = delivery_where(&mut app, |changed| !changed["readAt"].is_null()).await;
+    assert_eq!(read["id"], sent["id"]);
 
     let listed = app
         .call("messages.list", json!({ "botId": bot["id"] }))
@@ -93,45 +108,48 @@ async fn messages_to_one_bot_arrive_in_order() {
     let t = TestDaemon::start_supervised().await;
     let mut app = t.session().await;
     let bot = crew_and_bot(&mut app).await;
-    let process = t.runtime.process(1).await;
+    let process = t.process_of(&bot).await;
     for body in ["one", "two", "three"] {
         send(&mut app, &bot, body).await;
     }
-    session_start(&t, &process, 1).await;
+    t.until_state(&bot, BotState::Idle).await;
     t.clock.advance(Duration::from_secs(5));
-    for (n, body) in ["one", "two", "three"].iter().enumerate() {
-        assert!(t.inbox.post(n + 1).await.text.ends_with(body));
-    }
+    let lines = process.wait_lines(3).await;
+    let texts: Vec<_> = lines.iter().map(text_of).collect();
+    assert_eq!(texts, ["one", "two", "three"]);
+    let uuids: std::collections::HashSet<_> = lines.iter().map(|l| l["uuid"].clone()).collect();
+    assert_eq!(uuids.len(), 3, "each message has its own uuid");
 }
 
 #[tokio::test]
-async fn failed_writes_back_off_then_give_up_and_can_be_retried() {
+async fn what_a_dead_process_never_read_goes_back_until_it_gives_up() {
     let t = TestDaemon::start_supervised().await;
     let mut app = t.session().await;
     let bot = crew_and_bot(&mut app).await;
-    let process = t.runtime.process(1).await;
-    session_start(&t, &process, 1).await;
-    t.inbox.fail_next(3);
+    t.until_state(&bot, BotState::Idle).await;
     send(&mut app, &bot, "hello").await;
 
-    // Three attempts (the test limit), 1 s then 2 s apart.
-    for (attempts, wait) in [(1, 1), (2, 2)] {
-        let retry = delivery_where(&mut app, |changed| {
-            changed["state"] == "pending" && changed["attempts"] == attempts
+    // Three attempts (the test limit): each process ends before reading.
+    for (attempt, wait) in [(1, 1), (2, 2)] {
+        let process = t.process_of(&bot).await;
+        process.wait_lines(1).await;
+        delivery(&mut app, "sent").await;
+        process.exit(1).await;
+        let back = delivery_where(&mut app, |changed| {
+            changed["state"] == "pending" && changed["attempts"] == attempt
         })
         .await;
-        assert_eq!(retry["lastError"], "fake failure");
-        let due_in = retry["nextAttemptAt"].as_i64().expect("time") - t.clock.now_ms();
+        assert!(back["lastError"].as_str().expect("error").contains("ended"));
+        let due_in = back["nextAttemptAt"].as_i64().expect("time") - t.clock.now_ms();
         assert_eq!(due_in, wait * 1000);
+        t.until_state(&bot, BotState::Idle).await;
         t.clock.advance(Duration::from_secs(wait as u64));
     }
+    let last = t.process_of(&bot).await;
+    last.wait_lines(1).await;
+    last.exit(1).await;
     let dead = delivery(&mut app, "dead").await;
     assert_eq!(dead["attempts"], 3);
-    let status = app
-        .call("system.status", json!(null))
-        .await
-        .expect("status");
-    assert_eq!(status["deliveries"], json!({ "pending": 0, "dead": 1 }));
 
     let retried = app
         .call("deliveries.retry", json!({ "deliveryId": dead["id"] }))
@@ -141,8 +159,11 @@ async fn failed_writes_back_off_then_give_up_and_can_be_retried() {
         (&retried["state"], &retried["attempts"]),
         (&json!("pending"), &json!(0))
     );
-    assert!(t.inbox.post(1).await.text.ends_with("hello"));
-    delivery(&mut app, "sent").await;
+    // The bot was still restarting at the retry: the courier waits 5 s.
+    t.until_state(&bot, BotState::Idle).await;
+    t.clock.advance(Duration::from_secs(5));
+    let fresh = t.process_of(&bot).await;
+    assert_eq!(text_of(&fresh.wait_lines(1).await[0]), "hello");
     let again = app
         .call("deliveries.retry", json!({ "deliveryId": dead["id"] }))
         .await
@@ -151,30 +172,22 @@ async fn failed_writes_back_off_then_give_up_and_can_be_retried() {
 }
 
 #[tokio::test]
-async fn a_bot_restart_during_a_send_does_not_count_as_a_failure() {
+async fn a_message_the_bot_began_is_not_sent_again() {
     let t = TestDaemon::start_supervised().await;
     let mut app = t.session().await;
     let bot = crew_and_bot(&mut app).await;
-    let first = t.runtime.process(1).await;
-    session_start(&t, &first, 1).await;
-
-    t.inbox.hold();
-    t.inbox.fail_next(1);
-    send(&mut app, &bot, "survive the restart").await;
-    delivery(&mut app, "sending").await;
+    t.until_state(&bot, BotState::Idle).await;
+    let first = t.process_of(&bot).await;
+    send(&mut app, &bot, "only once").await;
+    let line = first.wait_lines(1).await.remove(0);
+    first.emit(stream::replay(&line)).await;
+    delivery_where(&mut app, |changed| !changed["readAt"].is_null()).await;
     first.exit(1).await;
-    let second = t.runtime.process(2).await;
-    t.inbox.release();
-
-    let back = delivery(&mut app, "pending").await;
-    assert_eq!(
-        back["attempts"], 0,
-        "the old inbox going away is not a failure"
-    );
-    session_start(&t, &second, 2).await;
-    t.clock.advance(Duration::from_secs(5));
-    let post = t.inbox.post(1).await;
-    assert_eq!((post.address, post.token), (pipe(2), "tok-2".to_owned()));
+    t.until_state(&bot, BotState::Idle).await;
+    t.clock.advance(Duration::from_secs(10));
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    let second = t.process_of(&bot).await;
+    assert!(second.input_lines().is_empty());
 }
 
 #[tokio::test]
@@ -221,6 +234,13 @@ async fn invalid_messages_are_refused() {
         send_err(&mut app, json!({ "botId": bot["id"], "body": long })).await,
         VALIDATION
     );
+    let file = json!({ "name": "a.txt", "mediaType": "text/plain", "data": BASE64.encode(b"a") });
+    let many = json!({ "botId": bot["id"], "body": "x", "attachments": vec![file; 11] });
+    assert_eq!(send_err(&mut app, many).await, VALIDATION);
+    let big = json!({ "botId": bot["id"], "body": "x", "attachments": [
+        { "name": "big.bin", "mediaType": "", "data": BASE64.encode(vec![0u8; 1024 * 1024 + 1]) }
+    ] });
+    assert_eq!(send_err(&mut app, big).await, VALIDATION);
     let missing = json!({ "botId": "bot_01J9Z3K8M4Q7R2T5V8X1Y4Z6A0", "body": "hi" });
     assert_eq!(send_err(&mut app, missing).await, NOT_FOUND);
     let err = app

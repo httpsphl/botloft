@@ -23,7 +23,7 @@ async fn health_answers_without_authentication() {
     stream.read_to_string(&mut response).await.expect("read");
     assert!(response.starts_with("HTTP/1.1 200"), "{response}");
     assert!(response.contains(r#""status":"ok""#), "{response}");
-    assert!(response.contains(r#""protocol":1"#), "{response}");
+    assert!(response.contains(r#""protocol":2"#), "{response}");
 }
 
 #[tokio::test]
@@ -31,7 +31,7 @@ async fn hello_returns_the_daemon_version_and_protocol() {
     let daemon = TestDaemon::start().await;
     let mut client = daemon.client().await;
     let result = client.hello(TOKEN).await.expect("hello");
-    assert_eq!(result["protocol"], 1);
+    assert_eq!(result["protocol"], 2);
     assert_eq!(result["daemonVersion"], env!("CARGO_PKG_VERSION"));
 }
 
@@ -63,7 +63,7 @@ async fn another_protocol_version_is_refused() {
     let err = client
         .call(
             "session.hello",
-            json!({ "token": TOKEN, "client": { "name": "t", "version": "0" }, "protocol": 2 }),
+            json!({ "token": TOKEN, "client": { "name": "t", "version": "0" }, "protocol": 1 }),
         )
         .await
         .expect_err("refused");
@@ -124,7 +124,7 @@ async fn errors_after_hello_keep_the_connection_open() {
         .call("system.status", json!(null))
         .await
         .expect("still open");
-    assert_eq!(status["protocol"], 1);
+    assert_eq!(status["protocol"], 2);
     assert!(status["uptimeMs"].as_i64().is_some());
     assert_eq!(status["claudeVersion"], serde_json::Value::Null);
 }

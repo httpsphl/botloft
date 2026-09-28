@@ -109,3 +109,102 @@
     background-clip: padding-box;
   }
 }
+
+/* A bot's reply (features/chat/Markdown.tsx). */
+@layer components {
+  .chat-md {
+    overflow-wrap: anywhere;
+    line-height: 1.6;
+  }
+
+  .chat-md > * + * {
+    margin-top: 0.6em;
+  }
+
+  .chat-md :is(h1, h2, h3, h4) {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-top: 1em;
+  }
+
+  .chat-md h1 {
+    font-size: 1.2em;
+  }
+
+  .chat-md h2 {
+    font-size: 1.1em;
+  }
+
+  .chat-md :is(ul, ol) {
+    padding-left: 1.4em;
+  }
+
+  .chat-md ul {
+    list-style: disc;
+  }
+
+  .chat-md ol {
+    list-style: decimal;
+  }
+
+  .chat-md li + li {
+    margin-top: 0.2em;
+  }
+
+  .chat-md li > :is(ul, ol) {
+    margin-top: 0.2em;
+  }
+
+  .chat-md :not(pre) > code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--sunken);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+  }
+
+  .chat-md pre {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    background: var(--sunken);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0.7em 0.9em;
+    overflow-x: auto;
+    overflow-wrap: normal;
+  }
+
+  .chat-md blockquote {
+    border-left: 3px solid var(--line-strong);
+    padding-left: 0.8em;
+    color: var(--ink-soft);
+  }
+
+  .chat-md hr {
+    border: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .chat-md table {
+    border-collapse: collapse;
+    display: block;
+    overflow-x: auto;
+    font-size: 0.8125rem;
+  }
+
+  .chat-md :is(th, td) {
+    border: 1px solid var(--line);
+    padding: 0.3em 0.6em;
+    text-align: left;
+  }
+
+  .chat-md th {
+    background: var(--sunken);
+    font-weight: 600;
+  }
+
+  .chat-md input[type="checkbox"] {
+    margin-right: 0.4em;
+  }
+}

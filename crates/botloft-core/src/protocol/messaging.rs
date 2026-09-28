@@ -1,59 +1,9 @@
 //! Messages, deliveries and tasks (spec 9 and 12), with the params of the
 //! `messages.*`, `deliveries.*` and `tasks.*` methods.
 
-use std::fmt;
-use std::str::FromStr;
-
 use serde::{Deserialize, Serialize};
 
-use crate::ids::{BotId, CrewId, DeliveryId, MessageId, TaskId};
-
-/// A stored value that is not one of the enum's names.
-#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("unknown {kind} `{value}`")]
-pub struct UnknownVariant {
-    kind: &'static str,
-    value: String,
-}
-
-/// Enums stored as text: `as_str` for writing, `FromStr` for reading back.
-/// The names match the serde names the app sees.
-macro_rules! text_enum {
-    ($(#[$doc:meta])* $name:ident, $kind:literal { $($(#[$vdoc:meta])* $variant:ident => $text:literal),+ $(,)? }) => {
-        $(#[$doc])*
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-        #[serde(rename_all = "snake_case")]
-        #[cfg_attr(test, derive(ts_rs::TS))]
-        pub enum $name {
-            $($(#[$vdoc])* $variant),+
-        }
-
-        impl $name {
-            pub fn as_str(self) -> &'static str {
-                match self {
-                    $(Self::$variant => $text),+
-                }
-            }
-        }
-
-        impl FromStr for $name {
-            type Err = UnknownVariant;
-
-            fn from_str(s: &str) -> Result<Self, Self::Err> {
-                match s {
-                    $($text => Ok(Self::$variant),)+
-                    _ => Err(UnknownVariant { kind: $kind, value: s.to_owned() }),
-                }
-            }
-        }
-
-        impl fmt::Display for $name {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.write_str(self.as_str())
-            }
-        }
-    };
-}
+use crate::ids::{AttachmentId, BotId, CrewId, DeliveryId, MessageId, TaskId};
 
 text_enum!(
     /// Who wrote a message.
@@ -82,8 +32,8 @@ text_enum!(
     DeliveryState, "delivery state" {
         Pending => "pending",
         Sending => "sending",
-        /// Claude Code accepted the connection. It does not prove the bot did
-        /// anything; tasks do.
+        /// Written to the bot's process; `readAt` says when its turn began.
+        /// Neither proves the work was done; tasks do.
         Sent => "sent",
         /// Gave up after `max_attempts`, or the bot was archived.
         Dead => "dead",
@@ -116,11 +66,75 @@ pub struct Message {
     pub body: String,
     /// The task this message asks for, answers or reports on.
     pub task_id: Option<TaskId>,
+    /// Files the owner attached (spec 9.5); empty for everything else.
+    pub attachments: Vec<Attachment>,
     /// Unix time in milliseconds.
     pub created_at: i64,
 }
 
-/// Getting one message into one bot's inbox.
+/// A file attached to a message, saved in the bot's folder.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct Attachment {
+    pub id: AttachmentId,
+    /// File name as saved, without folders.
+    pub name: String,
+    pub media_type: String,
+    /// Bytes.
+    pub size: u64,
+    /// Path relative to the bot's workspace, with forward slashes.
+    pub path: String,
+}
+
+/// A file the owner sends with `messages.send`.
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct AttachmentUpload {
+    pub name: String,
+    pub media_type: String,
+    /// The file's bytes, base64.
+    pub data: String,
+}
+
+impl std::fmt::Debug for AttachmentUpload {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AttachmentUpload")
+            .field("name", &self.name)
+            .field("media_type", &self.media_type)
+            .field("data", &format_args!("<{} base64 chars>", self.data.len()))
+            .finish()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct AttachmentIdParams {
+    pub attachment_id: AttachmentId,
+}
+
+/// A saved attachment's bytes, for the app to show (spec 9.5).
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct AttachmentData {
+    pub media_type: String,
+    /// The file's bytes, base64.
+    pub data: String,
+}
+
+impl std::fmt::Debug for AttachmentData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AttachmentData")
+            .field("media_type", &self.media_type)
+            .field("data", &format_args!("<{} base64 chars>", self.data.len()))
+            .finish()
+    }
+}
+
+/// Getting one message into one bot's process.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
@@ -135,6 +149,8 @@ pub struct Delivery {
     pub next_attempt_at: i64,
     /// Why the last attempt failed; never contains the message body.
     pub last_error: Option<String>,
+    /// Unix time in milliseconds the bot began the turn for this message.
+    pub read_at: Option<i64>,
     /// Unix time in milliseconds.
     pub updated_at: i64,
 }
@@ -179,6 +195,10 @@ pub struct DeliveryBacklog {
 pub struct MessagesSendParams {
     pub bot_id: BotId,
     pub body: String,
+    /// Up to 10 files (spec 9.5).
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub attachments: Option<Vec<AttachmentUpload>>,
 }
 
 /// Newest first. Page back with `before` set to the oldest id received.

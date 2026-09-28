@@ -26,7 +26,7 @@ pub fn list(daemon: &Daemon, params: BotsListParams) -> ApiResult<Vec<Bot>> {
         .into_iter()
         .map(|record| {
             let crew = crews::find(&store, &record.crew_id)?;
-            Ok(to_protocol(daemon, &crew, record))
+            Ok(to_protocol(daemon, &store, &crew, record))
         })
         .collect()
 }
@@ -65,7 +65,7 @@ pub fn create(daemon: &Daemon, params: BotsCreateParams) -> ApiResult<Bot> {
     };
     workspace::prepare_bot(daemon.workspace_env(), &crew, &record).map_err(ApiError::Workspace)?;
     store.insert_bot(&record)?;
-    let bot = changed(daemon, &crew, record);
+    let bot = changed(daemon, &store, &crew, record);
     daemon.supervisor.wake();
     Ok(bot)
 }
@@ -91,18 +91,18 @@ pub fn update(daemon: &Daemon, params: BotsUpdateParams) -> ApiResult<Bot> {
     // reads them at its next start.
     workspace::write_rules(&daemon.paths, &crew, &record).map_err(ApiError::Workspace)?;
     store.update_bot(&record)?;
-    Ok(changed(daemon, &crew, record))
+    Ok(changed(daemon, &store, &crew, record))
 }
 
 pub fn set_paused(daemon: &Daemon, params: BotsSetPausedParams) -> ApiResult<Bot> {
     let store = daemon.store();
     let (crew, mut record) = active(&store, &params.bot_id)?;
     if record.paused == params.paused {
-        return Ok(to_protocol(daemon, &crew, record));
+        return Ok(to_protocol(daemon, &store, &crew, record));
     }
     record.paused = params.paused;
     store.update_bot(&record)?;
-    let bot = changed(daemon, &crew, record);
+    let bot = changed(daemon, &store, &crew, record);
     daemon.supervisor.wake();
     Ok(bot)
 }
@@ -121,7 +121,7 @@ pub fn restart(daemon: &Daemon, params: BotsRestartParams) -> ApiResult<Bot> {
     daemon
         .supervisor
         .restart(&record.id, params.fresh.unwrap_or(false));
-    Ok(to_protocol(daemon, &crew, record))
+    Ok(to_protocol(daemon, &store, &crew, record))
 }
 
 /// Archives the bot and stops its process. Archiving twice is not an error.
@@ -131,17 +131,17 @@ pub fn archive(daemon: &Daemon, params: BotIdParams) -> ApiResult<Bot> {
     let mut record = find(&store, &params.bot_id)?;
     let crew = crews::find(&store, &record.crew_id)?;
     if record.archived_at.is_some() {
-        return Ok(to_protocol(daemon, &crew, record));
+        return Ok(to_protocol(daemon, &store, &crew, record));
     }
     record.archived_at = Some(now_ms());
     store.update_bot(&record)?;
-    let bot = changed(daemon, &crew, record);
+    let bot = changed(daemon, &store, &crew, record);
     daemon.supervisor.wake();
     Ok(bot)
 }
 
 /// The protocol view of a stored bot, with the supervisor's live state.
-pub(crate) fn to_protocol(daemon: &Daemon, crew: &Crew, record: BotRecord) -> Bot {
+pub(crate) fn to_protocol(daemon: &Daemon, store: &Store, crew: &Crew, record: BotRecord) -> Bot {
     let (live, generation) = daemon
         .supervisor
         .status(&record.id)
@@ -152,6 +152,10 @@ pub(crate) fn to_protocol(daemon: &Daemon, crew: &Crew, record: BotRecord) -> Bo
         live
     };
     let workspace = daemon.paths.bot_workspace(&crew.slug, &record.slug);
+    let last_activity = store.last_activity(&record.id).unwrap_or_else(|err| {
+        tracing::warn!(bot = %record.id, "could not read the last activity: {err}");
+        None
+    });
     Bot {
         id: record.id,
         crew_id: record.crew_id,
@@ -165,13 +169,14 @@ pub(crate) fn to_protocol(daemon: &Daemon, crew: &Crew, record: BotRecord) -> Bo
         state,
         generation,
         workspace: workspace.to_string_lossy().into_owned(),
+        last_activity,
         created_at: record.created_at,
         archived_at: record.archived_at,
     }
 }
 
-fn changed(daemon: &Daemon, crew: &Crew, record: BotRecord) -> Bot {
-    let bot = to_protocol(daemon, crew, record);
+fn changed(daemon: &Daemon, store: &Store, crew: &Crew, record: BotRecord) -> Bot {
+    let bot = to_protocol(daemon, store, crew, record);
     daemon.emit(Event::BotChanged(bot.clone()));
     bot
 }

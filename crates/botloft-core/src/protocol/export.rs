@@ -9,7 +9,9 @@ use ts_rs::{Config, TS};
 
 use super::*;
 use crate::avatar::PALETTE;
-use crate::ids::{BotId, CrewId, DeliveryId, MessageId, TaskId};
+use crate::ids::{
+    ApprovalId, AttachmentId, BotId, ChatItemId, CrewId, DeliveryId, MessageId, TaskId,
+};
 use crate::validate;
 
 const HEADER: &str = "\
@@ -60,14 +62,16 @@ fn export_bindings() {
         "export const AVATAR_PALETTE = [{}] as const;\n",
         palette.join(", ")
     );
-    out.text
-        .push_str("/** Longest values the daemon accepts, in characters. */\n");
+    out.text.push_str(
+        "/** Longest values the daemon accepts, in characters (files, for attachments). */\n",
+    );
     out.text.push_str("export const FIELD_LIMITS = {\n");
     for (name, max) in [
         ("name", validate::NAME_MAX_CHARS),
         ("role", validate::ROLE_MAX_CHARS),
         ("instructions", validate::INSTRUCTIONS_MAX_CHARS),
         ("message", validate::MESSAGE_MAX_CHARS),
+        ("attachments", validate::ATTACHMENTS_MAX),
     ] {
         let _ = writeln!(out.text, "  {name}: {max},");
     }
@@ -78,13 +82,19 @@ fn export_bindings() {
     out.decl::<MessageId>();
     out.decl::<DeliveryId>();
     out.decl::<TaskId>();
+    out.decl::<ChatItemId>();
+    out.decl::<ApprovalId>();
+    out.decl::<AttachmentId>();
     out.decl::<Crew>();
     out.decl::<BotState>();
+    out.decl::<Activity>();
     out.decl::<Bot>();
     out.decl::<ClientInfo>();
     out.decl::<HelloParams>();
     out.decl::<HelloResult>();
     out.decl::<DeliveryBacklog>();
+    out.decl::<UsageWindow>();
+    out.decl::<AccountUsage>();
     out.decl::<SystemStatus>();
     out.decl::<CrewsCreateParams>();
     out.decl::<CrewsRenameParams>();
@@ -97,15 +107,14 @@ fn export_bindings() {
     out.decl::<BotIdParams>();
     out.decl::<BotsRestartParams>();
     out.decl::<BotStateChanged>();
-    out.decl::<TerminalAttachParams>();
-    out.decl::<TerminalAttachResult>();
-    out.decl::<TerminalWriteParams>();
-    out.decl::<TerminalResizeParams>();
-    out.decl::<TerminalData>();
     out.decl::<SenderKind>();
     out.decl::<MessageKind>();
     out.decl::<DeliveryState>();
     out.decl::<TaskStatus>();
+    out.decl::<Attachment>();
+    out.decl::<AttachmentUpload>();
+    out.decl::<AttachmentIdParams>();
+    out.decl::<AttachmentData>();
     out.decl::<Message>();
     out.decl::<Delivery>();
     out.decl::<Task>();
@@ -114,6 +123,22 @@ fn export_bindings() {
     out.decl::<DeliveriesListParams>();
     out.decl::<DeliveryIdParams>();
     out.decl::<TasksListParams>();
+    out.decl::<ToolStatus>();
+    out.decl::<ApprovalStatus>();
+    out.decl::<NoticeLevel>();
+    out.decl::<InboundItem>();
+    out.decl::<ReplyItem>();
+    out.decl::<ToolItem>();
+    out.decl::<ApprovalItem>();
+    out.decl::<TurnItem>();
+    out.decl::<NoticeItem>();
+    out.decl::<ChatBody>();
+    out.decl::<ChatItem>();
+    out.decl::<ChatItemChanged>();
+    out.decl::<Approval>();
+    out.decl::<ChatDelta>();
+    out.decl::<ChatHistoryParams>();
+    out.decl::<ApprovalsAnswerParams>();
 
     let crew = out.name::<Crew>();
     let bot = out.name::<Bot>();
@@ -160,22 +185,15 @@ fn export_bindings() {
     );
     out.method(method::BOTS_ARCHIVE, &out.name::<BotIdParams>(), &bot);
     out.method(method::BOTS_RESTART, &out.name::<BotsRestartParams>(), &bot);
-    let attach = out.name::<TerminalAttachResult>();
     out.method(
-        method::TERMINAL_ATTACH,
-        &out.name::<TerminalAttachParams>(),
-        &attach,
-    );
-    out.method(method::TERMINAL_DETACH, &out.name::<BotIdParams>(), "null");
-    out.method(
-        method::TERMINAL_WRITE,
-        &out.name::<TerminalWriteParams>(),
-        "null",
+        method::CHAT_HISTORY,
+        &out.name::<ChatHistoryParams>(),
+        &out.name::<Vec<ChatItem>>(),
     );
     out.method(
-        method::TERMINAL_RESIZE,
-        &out.name::<TerminalResizeParams>(),
-        "null",
+        method::APPROVALS_ANSWER,
+        &out.name::<ApprovalsAnswerParams>(),
+        &out.name::<Approval>(),
     );
     let message = out.name::<Message>();
     let delivery = out.name::<Delivery>();
@@ -188,6 +206,11 @@ fn export_bindings() {
         method::MESSAGES_LIST,
         &out.name::<MessagesListParams>(),
         &out.name::<Vec<Message>>(),
+    );
+    out.method(
+        method::ATTACHMENTS_READ,
+        &out.name::<AttachmentIdParams>(),
+        &out.name::<AttachmentData>(),
     );
     out.method(
         method::DELIVERIES_LIST,
@@ -212,9 +235,11 @@ fn export_bindings() {
     let _ = writeln!(out.text, "  \"{}\": {crew};", notification::CREW_CHANGED);
     let _ = writeln!(out.text, "  \"{}\": {bot};", notification::BOT_CHANGED);
     let state = out.name::<BotStateChanged>();
-    let data = out.name::<TerminalData>();
+    let item = out.name::<ChatItemChanged>();
+    let delta = out.name::<ChatDelta>();
     let _ = writeln!(out.text, "  \"{}\": {state};", notification::BOT_STATE);
-    let _ = writeln!(out.text, "  \"{}\": {data};", notification::TERMINAL_DATA);
+    let _ = writeln!(out.text, "  \"{}\": {item};", notification::CHAT_ITEM);
+    let _ = writeln!(out.text, "  \"{}\": {delta};", notification::CHAT_DELTA);
     let task = out.name::<Task>();
     let _ = writeln!(
         out.text,

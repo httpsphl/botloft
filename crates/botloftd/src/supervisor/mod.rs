@@ -1,6 +1,6 @@
 //! Keeps every active bot running (spec 7): starts processes, follows their
-//! state through hooks, restarts them with backoff and stops them when they
-//! are paused or archived.
+//! state through the events they print, restarts them with backoff and
+//! stops them when they are paused or archived.
 //!
 //! Lock order: the store lock may be held while taking the supervisor lock
 //! (service calls read states), never the other way around.
@@ -9,6 +9,7 @@ mod reconcile;
 mod settings;
 mod slot;
 mod spawn;
+mod turns;
 
 use std::collections::HashMap;
 use std::sync::atomic::AtomicU64;
@@ -21,17 +22,15 @@ use botloft_core::protocol::{BotState, BotStateChanged};
 use bytes::Bytes;
 use tokio::sync::{Notify, broadcast};
 use tokio::time::Instant;
-use tracing::{debug, warn};
+use tracing::warn;
 
 use self::reconcile::slot_entry;
 pub use self::settings::{ClaudeSource, SupervisorSettings};
-pub use self::slot::{Hook, Inbox};
-use self::slot::{Slot, StopIntent, state_after_hook};
+use self::slot::{Slot, StopIntent};
+use crate::runtime::Runtime;
 use crate::runtime::claude::Claude;
-use crate::runtime::{Runtime, TermSize};
 use crate::secrets::TokenHash;
 use crate::state::{Daemon, Event};
-use crate::terminal::Terminal;
 
 /// How often the supervisor compares running processes with the database.
 const RECONCILE_EVERY: Duration = Duration::from_secs(5);
@@ -58,6 +57,9 @@ struct Inner {
     slots: HashMap<BotId, Slot>,
     /// Token hash of each running generation -> its bot.
     tokens: HashMap<String, (BotId, u64)>,
+    /// The conversation each bot resumes, as far as this run knows; the
+    /// database has it too (spec 7.3).
+    sessions: HashMap<BotId, String>,
     claude: ClaudeStatus,
 }
 
@@ -126,51 +128,35 @@ impl Supervisor {
         }
     }
 
-    pub fn terminal(&self, bot: &BotId) -> Arc<Terminal> {
-        let mut inner = self.lock();
-        Arc::clone(&self.slot(&mut inner, bot).terminal)
-    }
-
     fn slot<'a>(&self, inner: &'a mut Inner, bot: &BotId) -> &'a mut Slot {
         slot_entry(&mut inner.slots, bot, &self.settings)
     }
 
-    /// Sends keystrokes to the bot. Answering a permission prompt resumes
-    /// the turn (spec 7.2).
-    pub fn write(&self, bot: &BotId, data: Bytes) -> Result<(), NotRunning> {
+    /// Writes one stream-json line to the bot's stdin (spec 9.2). A message
+    /// is one turn more for the bot. Returns the generation it went to.
+    pub fn write_message(&self, bot: &BotId, line: Bytes) -> Result<u64, NotRunning> {
         let mut inner = self.lock();
         let slot = self.slot(&mut inner, bot);
-        let running = slot.running.as_ref().ok_or(NotRunning)?;
-        running.control.write(data).map_err(|_| NotRunning)?;
-        if slot.state == BotState::NeedsApproval {
-            self.set_state(bot, slot, BotState::Busy);
+        let (Some(running), Some(generation)) = (&slot.running, slot.generation) else {
+            return Err(NotRunning);
+        };
+        if slot.stop.is_some() {
+            return Err(NotRunning);
         }
-        Ok(())
+        running.control.write(line).map_err(|_| NotRunning)?;
+        slot.turns += 1;
+        if slot.is_working() {
+            self.set_state(bot, slot, slot.working_state());
+        }
+        Ok(generation)
     }
 
-    /// Answers the process of `generation` on behalf of the terminal.
-    pub(crate) fn reply(&self, bot: &BotId, generation: u64, data: &'static [u8]) {
-        let inner = self.lock();
-        let running = inner
+    /// Whether `generation` is the bot's running process.
+    pub fn is_current(&self, bot: &BotId, generation: u64) -> bool {
+        self.lock()
             .slots
             .get(bot)
-            .filter(|slot| slot.generation == Some(generation))
-            .and_then(|slot| slot.running.as_ref());
-        if let Some(running) = running {
-            let _ = running.control.write(Bytes::from_static(data));
-        }
-    }
-
-    /// Remembers the size for the next start and applies it now if running.
-    pub fn resize(&self, bot: &BotId, size: TermSize) {
-        let mut inner = self.lock();
-        let slot = self.slot(&mut inner, bot);
-        slot.size = size;
-        if let Some(running) = &slot.running
-            && let Err(err) = running.control.resize(size)
-        {
-            debug!(bot = %bot, "resize failed: {err}");
-        }
+            .is_some_and(|slot| slot.generation == Some(generation) && slot.running.is_some())
     }
 
     /// Restarts the bot, also out of `auth_error`. The caller checked that
@@ -198,38 +184,12 @@ impl Supervisor {
         self.wake();
     }
 
-    /// The bot and generation a hook token belongs to.
-    pub fn hook_owner(&self, token: &str) -> Option<(BotId, u64)> {
+    /// The bot and generation an MCP token belongs to.
+    pub fn token_owner(&self, token: &str) -> Option<(BotId, u64)> {
         self.lock()
             .tokens
             .get(&TokenHash::of(token).to_hex())
             .cloned()
-    }
-
-    pub fn on_hook(&self, bot: &BotId, generation: u64, hook: Hook) {
-        let mut inner = self.lock();
-        let slot = self.slot(&mut inner, bot);
-        if slot.generation != Some(generation) || slot.running.is_none() {
-            return;
-        }
-        debug!(bot = %bot, generation, ?hook, "hook");
-        if let Hook::SessionStart { inbox } = &hook {
-            slot.inbox.clone_from(inbox);
-            if let Some(running) = &slot.running {
-                spawn::mark_started(&running.workspace);
-            }
-        }
-        if let Some(next) = state_after_hook(slot.state, &hook) {
-            self.set_state(bot, slot, next);
-        }
-    }
-
-    /// Where to deliver messages to the bot's current generation.
-    pub fn inbox(&self, bot: &BotId) -> Option<Inbox> {
-        self.lock()
-            .slots
-            .get(bot)
-            .and_then(|slot| slot.inbox.clone())
     }
 
     fn set_state(&self, bot: &BotId, slot: &mut Slot, state: BotState) {

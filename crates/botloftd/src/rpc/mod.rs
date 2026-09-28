@@ -3,7 +3,6 @@
 
 mod dispatch;
 pub mod jsonrpc;
-mod terminal;
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -41,9 +40,7 @@ pub async fn serve_connection(socket: WebSocket, daemon: Arc<Daemon>) {
     // Subscribe before answering hello so no change slips in between.
     let events = daemon.subscribe();
     if authenticate(&mut stream, &outbox, &daemon).await {
-        let mut streams = terminal::Streams::default();
-        run(stream, &outbox, events, &daemon, &mut streams).await;
-        streams.stop_all();
+        run(stream, &outbox, events, &daemon).await;
     }
     drop(outbox);
     let _ = writer.await;
@@ -108,12 +105,11 @@ async fn run(
     outbox: &mpsc::Sender<String>,
     mut events: broadcast::Receiver<Event>,
     daemon: &Daemon,
-    streams: &mut terminal::Streams,
 ) {
     loop {
         let frame = tokio::select! {
             message = stream.next() => match message {
-                Some(Ok(Message::Text(text))) => handle(daemon, &text, outbox, streams).await,
+                Some(Ok(Message::Text(text))) => handle(daemon, &text),
                 Some(Ok(Message::Close(_)) | Err(_)) | None => return,
                 Some(Ok(_)) => None,
             },
@@ -135,31 +131,19 @@ async fn run(
     }
 }
 
-async fn handle(
-    daemon: &Daemon,
-    text: &str,
-    outbox: &mpsc::Sender<String>,
-    streams: &mut terminal::Streams,
-) -> Option<String> {
+fn handle(daemon: &Daemon, text: &str) -> Option<String> {
     let request = match jsonrpc::parse(text) {
         Ok(request) => request,
         Err((id, err)) => return Some(jsonrpc::failure(&id, &err)),
     };
     debug!(method = %request.method, "rpc request");
-    let id = request.id.clone();
-    let result = match request.method.as_str() {
-        method::TERMINAL_ATTACH => {
-            // The response must go out before the first terminal.data.
-            return terminal::attach(daemon, request, outbox, streams).await;
-        }
-        method::TERMINAL_DETACH => terminal::detach(request.params, streams),
-        _ => dispatch::dispatch(daemon, &request.method, request.params),
-    };
-    let id = id?;
-    Some(match result {
-        Ok(value) => jsonrpc::success(&id, value),
-        Err(err) => jsonrpc::failure(&id, &err),
-    })
+    let id = request.id.clone()?;
+    Some(
+        match dispatch::dispatch(daemon, &request.method, request.params) {
+            Ok(value) => jsonrpc::success(&id, value),
+            Err(err) => jsonrpc::failure(&id, &err),
+        },
+    )
 }
 
 fn to_notification(event: &Event) -> String {
@@ -167,6 +151,8 @@ fn to_notification(event: &Event) -> String {
         Event::CrewChanged(crew) => (notification::CREW_CHANGED, serde_json::to_value(crew)),
         Event::BotChanged(bot) => (notification::BOT_CHANGED, serde_json::to_value(bot)),
         Event::BotState(state) => (notification::BOT_STATE, serde_json::to_value(state)),
+        Event::ChatItem(item) => (notification::CHAT_ITEM, serde_json::to_value(item)),
+        Event::ChatDelta(delta) => (notification::CHAT_DELTA, serde_json::to_value(delta)),
         Event::MessageCreated(message) => {
             (notification::MESSAGE_CREATED, serde_json::to_value(message))
         }

@@ -4,7 +4,9 @@
 //! One [`Store`] wraps one connection. The daemon keeps a single store behind
 //! a mutex; queries are short, so there is no connection pool.
 
+mod approvals;
 mod bots;
+mod chat;
 mod crews;
 mod deliveries;
 mod messages;
@@ -18,6 +20,7 @@ use std::time::Duration;
 use rusqlite::types::Type;
 use rusqlite::{Connection, Row, ffi};
 
+pub use approvals::ApprovalRecord;
 pub use bots::BotRecord;
 pub use deliveries::DeliveryOutcome;
 pub use messages::MessageFilter;
@@ -76,6 +79,12 @@ where
     let raw: String = row.get(idx)?;
     raw.parse()
         .map_err(|err| rusqlite::Error::FromSqlConversionFailure(idx, Type::Text, Box::new(err)))
+}
+
+/// Generations and sizes are `u64` in the protocol; SQLite stores `i64`.
+/// Neither comes near `i64::MAX`.
+fn to_sql_int(value: u64) -> i64 {
+    i64::try_from(value).unwrap_or(i64::MAX)
 }
 
 /// Turns a UNIQUE or PRIMARY KEY failure into [`StoreError::Duplicate`];
@@ -153,6 +162,7 @@ pub(crate) mod tests {
             kind: MessageKind::Note,
             body: body.to_owned(),
             task_id: None,
+            attachments: Vec::new(),
             created_at: 0,
         };
         let delivery = Delivery {
@@ -163,6 +173,7 @@ pub(crate) mod tests {
             attempts: 0,
             next_attempt_at: 0,
             last_error: None,
+            read_at: None,
             updated_at: 0,
         };
         (message, delivery)

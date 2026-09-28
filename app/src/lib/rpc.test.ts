@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { RpcErrorCode } from "./protocol.gen";
+import { PROTOCOL_VERSION, RpcErrorCode } from "./protocol.gen";
 import { ClientErrorCode, RpcConnection, RpcError, type SocketLike } from "./rpc";
 
 class FakeSocket implements SocketLike {
@@ -70,7 +70,7 @@ function setup(options: { requestTimeoutMs?: number } = {}) {
   /** Opens the socket and accepts the hello. */
   const accept = () => {
     socket().open();
-    socket().reply(socket().last().id, { daemonVersion: "0.1.0", protocol: 1 });
+    socket().reply(socket().last().id, { daemonVersion: "0.1.0", protocol: PROTOCOL_VERSION });
   };
   return { connection, sockets, socket, accept };
 }
@@ -95,10 +95,14 @@ describe("RpcConnection", () => {
         jsonrpc: "2.0",
         id: 1,
         method: "session.hello",
-        params: { token: "t".repeat(64), client: { name: "test", version: "1" }, protocol: 1 },
+        params: {
+          token: "t".repeat(64),
+          client: { name: "test", version: "1" },
+          protocol: PROTOCOL_VERSION,
+        },
       },
     ]);
-    socket().reply(1, { daemonVersion: "0.1.0", protocol: 1 });
+    socket().reply(1, { daemonVersion: "0.1.0", protocol: PROTOCOL_VERSION });
     expect(connection.state).toEqual({ kind: "open", daemonVersion: "0.1.0" });
     // Methods without params send no params field.
     expect(socket().last()).toEqual({ jsonrpc: "2.0", id: 2, method: "crews.list" });

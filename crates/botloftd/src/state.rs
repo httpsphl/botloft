@@ -1,16 +1,19 @@
 //! State shared by every connection: the store, the supervisor, the
 //! courier, the event bus and what the daemon knows about itself.
 
-use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
-use botloft_core::protocol::{Bot, BotStateChanged, Crew, Delivery, Message, Task};
+use botloft_core::protocol::{
+    AccountUsage, Bot, BotStateChanged, ChatDelta, ChatItemChanged, Crew, Delivery, Message, Task,
+};
 use botloft_store::Store;
 use tokio::sync::broadcast;
 
+use crate::approvals::Approvals;
 use crate::clock::Clock;
-use crate::courier::{Courier, CourierSettings, InboxWriter};
+use crate::config::Config;
+use crate::courier::{Courier, CourierSettings};
 use crate::paths::Paths;
 use crate::runtime::Runtime;
 use crate::secrets::TokenHash;
@@ -19,11 +22,13 @@ use crate::supervisor::{Supervisor, SupervisorSettings};
 use crate::workspace::WorkspaceEnv;
 
 /// Something that changed and every connected app should hear about.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Event {
     CrewChanged(Crew),
     BotChanged(Bot),
     BotState(BotStateChanged),
+    ChatItem(ChatItemChanged),
+    ChatDelta(ChatDelta),
     MessageCreated(Message),
     DeliveryChanged(Delivery),
     TaskChanged(Task),
@@ -32,34 +37,52 @@ pub enum Event {
 /// Events buffered per connection before a slow client is dropped.
 const EVENT_BUFFER: usize = 1024;
 
+/// Settings for what bots may ask of the owner (spec 6, `[bots]`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BotSettings {
+    /// How long a permission request waits for the owner (spec 10.1).
+    pub approval_timeout: Duration,
+    /// Largest attachment, per file (spec 9.5).
+    pub attachment_max_bytes: u64,
+}
+
+impl BotSettings {
+    pub fn from_config(config: &Config) -> Self {
+        Self {
+            approval_timeout: Duration::from_secs(config.bots.approval_timeout_minutes * 60),
+            attachment_max_bytes: config.bots.attachment_max_mb * 1024 * 1024,
+        }
+    }
+}
+
 pub struct DaemonOptions {
     pub paths: Paths,
     /// Port the daemon listens on, written into each bot's `mcp.json`.
     pub port: u16,
-    /// Absolute path of `botloftd.exe`, run by the bots' hooks.
-    pub bin: PathBuf,
     pub store: Store,
     pub owner_token: TokenHash,
     pub runtime: Arc<dyn Runtime>,
     pub supervisor: SupervisorSettings,
     pub clock: Arc<dyn Clock>,
-    pub inbox: Arc<dyn InboxWriter>,
     pub courier: CourierSettings,
     pub tasks: TaskSettings,
+    pub bots: BotSettings,
 }
 
 pub struct Daemon {
     pub paths: Paths,
     pub port: u16,
-    pub bin: PathBuf,
     pub supervisor: Supervisor,
     pub courier: Courier,
     pub tasks: TaskSettings,
+    pub bots: BotSettings,
+    pub approvals: Approvals,
     /// Time for everything stored or compared with stored times.
     pub clock: Arc<dyn Clock>,
     store: Mutex<Store>,
     owner_token: TokenHash,
     events: broadcast::Sender<Event>,
+    usage: Mutex<Option<AccountUsage>>,
     started: Instant,
 }
 
@@ -76,15 +99,17 @@ impl Daemon {
                 options.supervisor,
                 events.clone(),
             ),
-            courier: Courier::new(options.courier, options.inbox),
+            courier: Courier::new(options.courier),
             tasks: options.tasks,
+            bots: options.bots,
+            approvals: Approvals::default(),
             clock: options.clock,
             paths: options.paths,
             port: options.port,
-            bin: options.bin,
             store: Mutex::new(options.store),
             owner_token: options.owner_token,
             events,
+            usage: Mutex::new(None),
             started: Instant::now(),
         })
     }
@@ -102,8 +127,8 @@ impl Daemon {
     pub fn workspace_env(&self) -> WorkspaceEnv<'_> {
         WorkspaceEnv {
             paths: &self.paths,
-            bin: &self.bin,
             port: self.port,
+            approval_timeout: self.bots.approval_timeout,
         }
     }
 
@@ -118,6 +143,21 @@ impl Daemon {
     pub(crate) fn emit(&self, event: Event) {
         // No receivers just means no app is connected.
         let _ = self.events.send(event);
+    }
+
+    /// The account usage Claude Code last reported (spec 8.1).
+    pub fn usage(&self) -> Option<AccountUsage> {
+        self.usage
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clone()
+    }
+
+    pub(crate) fn set_usage(&self, usage: AccountUsage) {
+        *self
+            .usage
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(usage);
     }
 
     pub fn uptime_ms(&self) -> i64 {

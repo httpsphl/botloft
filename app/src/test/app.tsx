@@ -1,6 +1,4 @@
 // Rendering the whole app against FakeBotloft and FakeHost for tests.
-// Test files that render bots must mock TerminalView (xterm needs a real
-// browser); see App.test.tsx.
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { App } from "../App";

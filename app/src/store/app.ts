@@ -1,5 +1,6 @@
 // App state fed by the daemon: loaded on every (re)connection, then kept
-// current by notifications (spec 11.3). `sync.ts` does the loading.
+// current by notifications (spec 11.3). `sync.ts` does the loading. Chats
+// are not here: each open chat keeps its own page (spec 15.1).
 
 import { createStore, type StoreApi } from "zustand/vanilla";
 import type { BotloftApi, ConnectionState, ServerEvent } from "../lib/api";
@@ -131,6 +132,14 @@ export function applyEvent(state: AppState, event: ServerEvent): Partial<AppStat
       }
       const { state: botState, generation } = event.params;
       return { bots: { ...state.bots, [bot.id]: { ...bot, state: botState, generation } } };
+    }
+    case "chat.item": {
+      const { item, activity } = event.params;
+      const bot = state.bots[item.botId];
+      if (!bot || !activity) {
+        return null;
+      }
+      return { bots: { ...state.bots, [bot.id]: { ...bot, lastActivity: activity } } };
     }
     case "delivery.changed":
       return { deliveries: { ...state.deliveries, [event.params.messageId]: event.params } };

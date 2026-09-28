@@ -1,27 +1,39 @@
 // The fake daemon's messages, deliveries and tasks, with helpers for tests
 // to play the bots' and the courier's part.
 
+import { decodedSize } from "./base64";
 import type { FakeBotloft, Handlers } from "./fake";
 import { conflict, invalid, notFound } from "./fakeRules";
-import type {
-  BotId,
-  Delivery,
-  DeliveryState,
-  Message,
-  MessageKind,
-  Task,
-  TaskId,
+import {
+  type Attachment,
+  type AttachmentData,
+  type AttachmentUpload,
+  type BotId,
+  type Delivery,
+  type DeliveryState,
+  FIELD_LIMITS,
+  type Message,
+  type MessageKind,
+  type Task,
+  type TaskId,
 } from "./protocol.gen";
 
 type Conversation = Pick<
   Handlers,
-  "messages.send" | "messages.list" | "deliveries.list" | "deliveries.retry" | "tasks.list"
+  | "messages.send"
+  | "messages.list"
+  | "attachments.read"
+  | "deliveries.list"
+  | "deliveries.retry"
+  | "tasks.list"
 >;
 
 export class FakeConversation {
   readonly messages: Message[] = [];
   readonly deliveries = new Map<string, Delivery>();
   readonly tasks = new Map<TaskId, Task>();
+  /** What was uploaded, by attachment id; `attachments.read` gives it back. */
+  readonly files = new Map<string, AttachmentData>();
 
   constructor(private readonly fake: FakeBotloft) {}
 
@@ -40,6 +52,7 @@ export class FakeConversation {
       kind: options.kind ?? (options.from ? "note" : "system"),
       body: options.body,
       taskId: options.taskId ?? null,
+      attachments: [],
       createdAt: this.fake.now,
     };
     return { message, delivery: this.record(message) };
@@ -51,6 +64,23 @@ export class FakeConversation {
     const attempts = state === "dead" || lastError ? delivery.attempts + 1 : delivery.attempts;
     Object.assign(delivery, { state, lastError, attempts, updatedAt: this.fake.now });
     this.fake.emit({ name: "delivery.changed", params: delivery });
+    return delivery;
+  }
+
+  /** The bot began the turn for the message: sent and read. */
+  read(deliveryId: string): Delivery {
+    const delivery = this.delivery(deliveryId);
+    Object.assign(delivery, { state: "sent", readAt: this.fake.now, updatedAt: this.fake.now });
+    this.fake.emit({ name: "delivery.changed", params: delivery });
+    return delivery;
+  }
+
+  /** The delivery of `messageId`. */
+  deliveryOf(messageId: string): Delivery {
+    const delivery = [...this.deliveries.values()].find((d) => d.messageId === messageId);
+    if (!delivery) {
+      throw notFound(`delivery of ${messageId}`);
+    }
     return delivery;
   }
 
@@ -79,10 +109,14 @@ export class FakeConversation {
 
   handlers(): Conversation {
     return {
-      "messages.send": ({ botId, body }) => {
+      "messages.send": ({ botId, body, attachments }) => {
         const bot = this.fake.bot(botId);
-        if (!body.trim()) {
+        const files = attachments ?? [];
+        if (!body.trim() && files.length === 0) {
           throw invalid("body must not be empty");
+        }
+        if (files.length > FIELD_LIMITS.attachments) {
+          throw invalid(`at most ${FIELD_LIMITS.attachments} files per message`);
         }
         const message: Message = {
           id: this.fake.id("msg"),
@@ -93,6 +127,7 @@ export class FakeConversation {
           kind: "note",
           body: body.trim(),
           taskId: null,
+          attachments: files.map((file) => this.saved(file)),
           createdAt: this.fake.now,
         };
         this.record(message);
@@ -106,6 +141,13 @@ export class FakeConversation {
             (before === undefined || message.id < before),
         );
         return matches.reverse().slice(0, limit ?? 50);
+      },
+      "attachments.read": ({ attachmentId }) => {
+        const file = this.files.get(attachmentId);
+        if (!file) {
+          throw notFound(`attachment ${attachmentId}`);
+        }
+        return file;
       },
       "deliveries.list": ({ state, botId }) =>
         [...this.deliveries.values()]
@@ -145,12 +187,28 @@ export class FakeConversation {
       attempts: 0,
       nextAttemptAt: this.fake.now,
       lastError: null,
+      readAt: null,
       updatedAt: this.fake.now,
     };
     this.deliveries.set(delivery.id, delivery);
     this.fake.emit({ name: "message.created", params: message });
     this.fake.emit({ name: "delivery.changed", params: delivery });
+    this.fake.chat.add(message.toBotId, { kind: "inbound", message });
     return delivery;
+  }
+
+  /** Where the daemon would save an uploaded file. */
+  private saved(file: AttachmentUpload): Attachment {
+    const mediaType = file.mediaType || "application/octet-stream";
+    const attachment: Attachment = {
+      id: this.fake.id("att"),
+      name: file.name,
+      mediaType,
+      size: decodedSize(file.data),
+      path: `attachments/2026-09-28/${file.name}`,
+    };
+    this.files.set(attachment.id, { mediaType, data: file.data });
+    return attachment;
   }
 
   private delivery(deliveryId: string): Delivery {

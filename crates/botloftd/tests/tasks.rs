@@ -8,8 +8,7 @@ mod common;
 use std::time::Duration;
 
 use common::Client;
-use common::bots::pipe;
-use common::bots::{ready_bot, two_bots};
+use common::bots::{ready_bot, text_of, two_bots};
 use serde_json::{Value, json};
 
 fn task_id(out: &Value) -> String {
@@ -41,10 +40,9 @@ async fn a_task_reaches_the_assignee_and_its_result_comes_back() {
     let id = task_id(&sent);
     assert_eq!(sent["due"], "due in 30 min");
 
-    let asked = c.t.inbox.post(1).await;
-    assert_eq!(asked.address, pipe(2));
+    let asked = text_of(&c.writer_process.wait_lines(1).await[0]);
     assert_eq!(
-        asked.text,
+        asked,
         format!(
             "[botloft] from @lead · crew Ops · task {id} · due in 30 min\n\
              Reply with send_message(to: \"lead\"). When the task is done, call \
@@ -71,10 +69,9 @@ async fn a_task_reaches_the_assignee_and_its_result_comes_back() {
         .await
         .expect("complete");
     assert_eq!(done["status"], "done");
-    let result = c.t.inbox.post(2).await;
-    assert_eq!(result.address, pipe(1));
+    let result = text_of(&c.lead_process.wait_lines(1).await[0]);
     assert_eq!(
-        result.text,
+        result,
         format!(
             "[botloft] from @writer · crew Ops · result of task {id} · done\n\
              Reply with send_message(to: \"writer\").\n\nIt is in shared/intro.md."
@@ -158,16 +155,14 @@ async fn an_overdue_task_expires_and_can_still_be_completed() {
         .await
         .expect("send");
     let id = task_id(&sent);
-    c.t.inbox.post(1).await;
+    c.writer_process.wait_lines(1).await;
     c.t.clock.advance(Duration::from_secs(61));
-    let notice = c.t.inbox.post(2).await;
-    assert_eq!(notice.address, pipe(1));
+    let notice = text_of(&c.lead_process.wait_lines(1).await[0]);
     assert!(
-        notice.text.starts_with(&format!(
+        notice.starts_with(&format!(
             "[botloft] from Botloft · crew Ops · task {id} · expired\n\nTask {id} for @writer passed its deadline"
         )),
-        "{}",
-        notice.text
+        "{notice}"
     );
     assert_eq!(task(&mut c.app, &id).await["status"], "expired");
 
@@ -178,8 +173,8 @@ async fn an_overdue_task_expires_and_can_still_be_completed() {
         )
         .await
         .expect("late result");
-    let result = c.t.inbox.post(3).await;
-    assert!(result.text.contains("result of task") && result.text.ends_with("Late, but done."));
+    let result = text_of(&c.lead_process.wait_lines(2).await[1]);
+    assert!(result.contains("result of task") && result.ends_with("Late, but done."));
 }
 
 #[tokio::test]
@@ -261,7 +256,7 @@ async fn bots_only_reach_their_own_crew() {
         .call("crews.create", json!({ "name": "Other" }))
         .await
         .expect("crew");
-    let mut stranger = ready_bot(&c.t, &mut c.app, &other, "Writer", 3).await;
+    let (_, stranger_process, mut stranger) = ready_bot(&c.t, &mut c.app, &other, "Writer").await;
     assert_ne!(other["id"], c.crew["id"]);
 
     let sent = c
@@ -272,10 +267,10 @@ async fn bots_only_reach_their_own_crew() {
         )
         .await
         .expect("send");
-    assert_eq!(
-        c.t.inbox.post(1).await.address,
-        pipe(2),
-        "the writer of Ops"
+    c.writer_process.wait_lines(1).await;
+    assert!(
+        stranger_process.input_lines().is_empty(),
+        "only the writer of Ops"
     );
     let roster = c.lead.tool("crew_roster", json!({})).await.expect("roster");
     assert_eq!(roster["bots"].as_array().map(Vec::len), Some(1));

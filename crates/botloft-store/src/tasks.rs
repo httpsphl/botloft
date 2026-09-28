@@ -3,7 +3,7 @@
 //! message that reports the outcome.
 
 use botloft_core::ids::{BotId, CrewId, TaskId};
-use botloft_core::protocol::{Delivery, Message, Task, TaskStatus};
+use botloft_core::protocol::{ChatItem, Delivery, Message, Task, TaskStatus};
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
 use crate::messages::optional_column;
@@ -118,8 +118,9 @@ impl Store {
     }
 
     /// Moves a task from one of `from` to `to`, keeps `result` when given
-    /// and saves the message that reports it, all or nothing. `None`, with
-    /// nothing saved, if the task was in no state of `from`.
+    /// and saves the message that reports it, all or nothing. Returns the
+    /// task and the recipient's chat item; `None`, with nothing saved, if
+    /// the task was in no state of `from`.
     pub fn settle_task(
         &self,
         id: &TaskId,
@@ -128,7 +129,7 @@ impl Store {
         result: Option<&str>,
         now: i64,
         report: (&Message, &Delivery),
-    ) -> Result<Option<Task>> {
+    ) -> Result<Option<(Task, ChatItem)>> {
         let tx = self.conn.unchecked_transaction()?;
         let settled = tx
             .query_row(
@@ -140,11 +141,12 @@ impl Store {
                 from_row,
             )
             .optional()?;
-        if settled.is_some() {
-            Self::insert_message_in(&tx, report.0, report.1)?;
-            tx.commit()?;
-        }
-        Ok(settled)
+        let Some(settled) = settled else {
+            return Ok(None);
+        };
+        let item = Self::insert_message_in(&tx, report.0, report.1)?;
+        tx.commit()?;
+        Ok(Some((settled, item)))
     }
 }
 

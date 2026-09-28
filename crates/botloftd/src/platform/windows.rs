@@ -1,13 +1,10 @@
-//! Windows ACLs, Job Objects, the user environment, inbox pipes and console
-//! signals.
+//! Windows ACLs, Job Objects, the user environment and console signals.
 
 mod env;
 mod job;
-mod pipe;
 
 pub use env::user_environment;
 pub use job::ProcessJob;
-pub use pipe::write_inbox;
 
 use std::io;
 use std::os::windows::ffi::OsStrExt;

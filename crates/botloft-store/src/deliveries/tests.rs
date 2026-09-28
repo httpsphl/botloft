@@ -34,7 +34,14 @@ fn each_bot_sends_its_oldest_delivery_one_at_a_time() {
 
     let sent = fx
         .store
-        .finish_delivery(&a1.id, DeliveryOutcome::Sent, 60)
+        .finish_delivery(
+            &a1.id,
+            DeliveryOutcome::Sent {
+                generation: 1,
+                turn_uuid: "u-1",
+            },
+            60,
+        )
         .expect("finish")
         .expect("row");
     assert_eq!(sent.state, DeliveryState::Sent);
@@ -133,4 +140,85 @@ fn expired_leases_go_back_to_pending() {
             .len(),
         1
     );
+}
+
+fn send(fx: &Fixture, delivery: &Delivery, generation: u64, uuid: &str) -> Delivery {
+    fx.store
+        .claim_delivery(&delivery.id, 10, 1_000)
+        .expect("claim");
+    fx.store
+        .finish_delivery(
+            &delivery.id,
+            DeliveryOutcome::Sent {
+                generation,
+                turn_uuid: uuid,
+            },
+            20,
+        )
+        .expect("finish")
+        .expect("was sending")
+}
+
+#[test]
+fn the_replay_marks_a_sent_delivery_read_once() {
+    let fx = Fixture::new();
+    let a1 = queue(&fx, 0, "a1", 0);
+    let sent = send(&fx, &a1, 7, "uuid-a1");
+    assert_eq!((sent.state, sent.read_at), (DeliveryState::Sent, None));
+    let read = fx
+        .store
+        .mark_read("uuid-a1", 30)
+        .expect("read")
+        .expect("unread");
+    assert_eq!((read.read_at, read.updated_at), (Some(30), 30));
+    assert_eq!(fx.store.mark_read("uuid-a1", 40).expect("again"), None);
+    assert_eq!(fx.store.mark_read("uuid-other", 40).expect("unknown"), None);
+}
+
+#[test]
+fn deliveries_a_dead_process_never_began_go_back_or_give_up() {
+    let fx = Fixture::new();
+    let bot = &fx.bots[0].id;
+    let a1 = queue(&fx, 0, "a1", 0);
+    let a2 = queue(&fx, 0, "a2", 0);
+    let read = send(&fx, &a1, 7, "u1");
+    fx.store.mark_read("u1", 25).expect("read");
+    send(&fx, &a2, 7, "u2");
+    let unread = fx.store.unread_deliveries(bot, 7).expect("unread");
+    assert_eq!(unread.iter().map(|d| &d.id).collect::<Vec<_>>(), [&a2.id]);
+    assert!(
+        fx.store
+            .unread_deliveries(bot, 8)
+            .expect("other generation")
+            .is_empty()
+    );
+
+    let reopened = fx
+        .store
+        .reopen_unread(&a2.id, "the bot's process ended", Some(500), 40)
+        .expect("reopen")
+        .expect("was unread");
+    assert_eq!(
+        (reopened.state, reopened.attempts, reopened.next_attempt_at),
+        (DeliveryState::Pending, 1, 500)
+    );
+    assert_eq!(
+        reopened.last_error.as_deref(),
+        Some("the bot's process ended")
+    );
+    // The read one stays sent.
+    assert_eq!(
+        fx.store
+            .reopen_unread(&read.id, "x", Some(1), 50)
+            .expect("noop"),
+        None
+    );
+
+    send(&fx, &a2, 9, "u3");
+    let dead = fx
+        .store
+        .reopen_unread(&a2.id, "the bot's process ended", None, 60)
+        .expect("give up")
+        .expect("was unread");
+    assert_eq!((dead.state, dead.attempts), (DeliveryState::Dead, 2));
 }

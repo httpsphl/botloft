@@ -1,49 +1,41 @@
 //! Contents of the files the daemon generates in a bot's workspace.
 
 use std::path::Path;
+use std::time::Duration;
 
 use botloft_core::protocol::Crew;
 use botloft_store::BotRecord;
 use serde_json::{Value, json};
 
-use crate::hooks::EVENTS as HOOKS;
 use crate::paths::permission_rule_path;
 
-/// Permission rule for every tool of the `botloft` MCP server.
-const BOTLOFT_TOOLS: &str = "mcp__botloft";
+/// Longer than the approval timeout, so Claude Code never gives up on a
+/// permission request before the daemon answers it (spec 10).
+const MCP_TIMEOUT_MARGIN: Duration = Duration::from_secs(120);
 
-/// `.claude/settings.json` (spec 7.5). Hooks use exec form so Claude Code
-/// runs `botloftd.exe` directly, without a shell.
-pub fn settings_json(botloft_bin: &Path, botloft_home: &Path) -> Value {
-    let command = botloft_bin.to_string_lossy();
-    let hooks: serde_json::Map<String, Value> = HOOKS
-        .iter()
-        .map(|(event, arg)| {
-            let hook = json!({ "type": "command", "command": command, "args": ["hook", arg] });
-            ((*event).to_owned(), json!([{ "hooks": [hook] }]))
-        })
-        .collect();
+/// `.claude/settings.json` (spec 7.5): keeps the bot out of the daemon's
+/// secrets. Deny rules apply even in a folder nobody trusted.
+pub fn settings_json(botloft_home: &Path) -> Value {
     let secrets = permission_rule_path(&botloft_home.join("secrets"));
     json!({
-        "crossSessionInbound": "accept",
-        "hooks": hooks,
         "permissions": {
-            // The crew tools run without a prompt, so bots work unattended.
-            "allow": [BOTLOFT_TOOLS],
             "deny": [format!("Read({secrets}/**)")],
         },
     })
 }
 
 /// `.botloft/mcp.json` (spec 10). The token is expanded by Claude Code from
-/// the bot's environment, so it is never written to disk.
-pub fn mcp_json(port: u16) -> Value {
+/// the bot's environment, so it is never written to disk. `timeout` lets a
+/// permission request wait for the owner.
+pub fn mcp_json(port: u16, approval_timeout: Duration) -> Value {
+    let timeout = approval_timeout + MCP_TIMEOUT_MARGIN;
     json!({
         "mcpServers": {
             "botloft": {
                 "type": "http",
                 "url": format!("http://127.0.0.1:{port}/mcp"),
                 "headers": { "Authorization": "Bearer ${BOTLOFT_BOT_TOKEN}" },
+                "timeout": u64::try_from(timeout.as_millis()).unwrap_or(u64::MAX),
             }
         }
     })
@@ -77,8 +69,8 @@ pub fn rules_md(crew: &Crew, bot: &BotRecord, shared_dir: &Path) -> String {
 # Botloft
 
 You are **{name}** (`@{handle}`), a bot in the crew **{crew}**. Botloft keeps
-you running all the time and delivers messages from the owner and from the
-other bots of your crew.
+you running all the time. The owner talks to you in a chat in the Botloft
+app; the other bots of your crew send you messages too.
 
 ## Role
 
@@ -88,18 +80,28 @@ other bots of your crew.
 
 {instructions}
 
+## Talking with the owner
+
+- The owner's messages reach you as they wrote them. Your replies show up in
+  their chat as markdown: keep them short and clear, and say what you did.
+- Files the owner sends are saved in `attachments/` in this folder; the
+  message lists them. Images also come inline.
+- When you need a permission, the owner gets a request in the chat with
+  Allow and Deny. If they deny it, find another way or ask them.
+
 ## Working with your crew
 
 - This folder is your workspace. `CLAUDE.md` here is your memory across restarts.
 - Files for the whole crew go in the shared folder: `{shared}`.
-- Messages from the owner and from other bots arrive as prompts that start
-  with `[botloft]`. The first line says who sent it; for a task it also has
-  the task id and the deadline.
+- Messages from other bots and notices from Botloft start with `[botloft]`.
+  The first line says who sent it; for a task it also has the task id and
+  the deadline.
 - Use the `botloft` MCP tools to work with the crew:
   - `crew_roster`: bots of your crew with handle, role and state.
   - `send_message`: send a note, or a task with `kind: \"task\"`, to another bot by handle.
   - `complete_task`: report the result of a task assigned to you; the requester is told.
   - `my_tasks`: open tasks assigned to you or requested by you.
+- Never call `permission_prompt` yourself; Claude Code uses it for approvals.
 - You can only reach bots of your own crew.
 - A task you receive ends with `complete_task`, also when you could not do it
   (`status: \"failed\"` and why): the bot that asked is waiting for it.
@@ -120,36 +122,25 @@ mod tests {
     use super::*;
 
     #[test]
-    fn settings_use_exec_form_hooks_and_deny_the_secrets_folder() {
-        let bin = Path::new(r"C:\Users\ana\AppData\Local\Botloft\bin\botloftd.exe");
+    fn settings_deny_the_secrets_folder_and_nothing_else() {
         let home = Path::new(r"C:\Users\ana\AppData\Local\Botloft");
-        let settings = settings_json(bin, home);
-
-        assert_eq!(settings["crossSessionInbound"], "accept");
-        let stop = &settings["hooks"]["StopFailure"][0]["hooks"][0];
-        assert_eq!(stop["type"], "command");
-        assert_eq!(stop["command"], bin.to_string_lossy().as_ref());
-        assert_eq!(stop["args"], json!(["hook", "stop-failure"]));
+        let settings = settings_json(home);
         assert_eq!(
-            settings["hooks"].as_object().map(|h| h.len()),
-            Some(HOOKS.len())
+            settings,
+            json!({ "permissions": { "deny": ["Read(//c/Users/ana/AppData/Local/Botloft/secrets/**)"] } })
         );
-        assert_eq!(
-            settings["permissions"]["deny"][0],
-            "Read(//c/Users/ana/AppData/Local/Botloft/secrets/**)"
-        );
-        assert_eq!(settings["permissions"]["allow"], json!(["mcp__botloft"]));
     }
 
     #[test]
-    fn mcp_config_points_at_the_daemon_and_expands_the_token() {
-        let mcp = mcp_json(45710);
+    fn mcp_config_points_at_the_daemon_and_outlasts_an_approval() {
+        let mcp = mcp_json(45710, Duration::from_secs(3600));
         let server = &mcp["mcpServers"]["botloft"];
         assert_eq!(server["url"], "http://127.0.0.1:45710/mcp");
         assert_eq!(
             server["headers"]["Authorization"],
             "Bearer ${BOTLOFT_BOT_TOKEN}"
         );
+        assert_eq!(server["timeout"], 3_720_000);
     }
 
     #[test]
@@ -181,5 +172,6 @@ mod tests {
         assert!(rules.contains("Review every PR."));
         assert!(rules.contains("Ask the owner"));
         assert!(rules.contains("/ws/site/shared"));
+        assert!(rules.contains("attachments/"));
     }
 }

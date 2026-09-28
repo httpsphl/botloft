@@ -1,0 +1,120 @@
+// What the bot did with its tools: one compact line per call (icon, tool,
+// summary, state) that opens to show the input and the output (spec 15.3).
+
+import {
+  Check,
+  ChevronRight,
+  FilePen,
+  FileSearch,
+  FileText,
+  Globe,
+  ListChecks,
+  LoaderCircle,
+  type LucideIcon,
+  Send,
+  SquareTerminal,
+  Users,
+  Wrench,
+  X,
+} from "lucide-react";
+import { useState } from "react";
+import type { ChatItem, ToolItem } from "../../lib/protocol.gen";
+
+const ICONS: Record<string, LucideIcon> = {
+  Bash: SquareTerminal,
+  PowerShell: SquareTerminal,
+  Read: FileText,
+  Edit: FilePen,
+  MultiEdit: FilePen,
+  Write: FilePen,
+  NotebookEdit: FilePen,
+  Grep: FileSearch,
+  Glob: FileSearch,
+  WebFetch: Globe,
+  WebSearch: Globe,
+  TodoWrite: ListChecks,
+  Task: Users,
+  Agent: Users,
+  send_message: Send,
+};
+
+/** `mcp__botloft__send_message` reads as `send_message`. */
+export function toolLabel(name: string): string {
+  return name.split("__").at(-1) ?? name;
+}
+
+/** JSON indented for reading; anything else as it came. */
+export function pretty(text: string): string {
+  try {
+    return JSON.stringify(JSON.parse(text), null, 2);
+  } catch {
+    return text;
+  }
+}
+
+function Status({ status }: { status: ToolItem["status"] }) {
+  switch (status) {
+    case "running":
+      return (
+        <LoaderCircle aria-label="Running" size={13} className="shrink-0 animate-spin text-work" />
+      );
+    case "done":
+      return <Check aria-label="Done" size={13} className="shrink-0 text-ok" />;
+    case "failed":
+      return <X aria-label="Failed" size={13} className="shrink-0 text-danger" />;
+  }
+}
+
+function ToolLine({ tool }: { tool: ToolItem }) {
+  const [open, setOpen] = useState(false);
+  const label = toolLabel(tool.name);
+  const Icon = ICONS[label] ?? Wrench;
+  const block =
+    "max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-[3px] border border-line bg-sunken px-2.5 py-1.5 font-mono text-xs leading-relaxed";
+  return (
+    <li>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className="group flex w-full min-w-0 items-center gap-2 rounded-[3px] px-1.5 py-1 text-left text-sm hover:bg-sunken"
+      >
+        <Icon aria-hidden size={14} className="shrink-0 text-muted" />
+        <span className="shrink-0 font-medium">{label}</span>
+        <span className="min-w-0 flex-1 truncate font-mono text-muted text-xs" title={tool.summary}>
+          {tool.summary}
+        </span>
+        <Status status={tool.status} />
+        <ChevronRight
+          aria-hidden
+          size={13}
+          className={`shrink-0 text-muted transition-transform ${open ? "rotate-90" : ""}`}
+        />
+      </button>
+      {open && (
+        <div className="mt-1 mb-2 ml-7 flex flex-col gap-1.5" data-selectable>
+          <p className="text-muted text-xs">Input</p>
+          <pre className={block}>{pretty(tool.input)}</pre>
+          {tool.output !== null && (
+            <>
+              <p className={`text-xs ${tool.status === "failed" ? "text-danger" : "text-muted"}`}>
+                {tool.status === "failed" ? "Error" : "Output"}
+              </p>
+              <pre className={block}>{tool.output}</pre>
+            </>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
+export function ToolLines({ items }: { items: ChatItem[] }) {
+  return (
+    <ul aria-label="Tool calls" className="-mx-1.5 flex flex-col">
+      {items.map((item) =>
+        item.body.kind === "tool" ? <ToolLine key={item.id} tool={item.body} /> : null,
+      )}
+    </ul>
+  );
+}

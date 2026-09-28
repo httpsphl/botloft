@@ -1,14 +1,9 @@
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 import { App } from "./App";
 import type { Client } from "./lib/client";
 import { FakeBotloft } from "./lib/fake";
 import { FakeHost } from "./lib/fakeHost";
-
-// xterm.js needs a real browser; the terminal has its own tests.
-vi.mock("./features/terminal/TerminalView", () => ({
-  TerminalView: ({ botId }: { botId: string }) => <div data-testid={`terminal-${botId}`} />,
-}));
 
 afterEach(cleanup);
 
@@ -55,9 +50,10 @@ describe("app", () => {
     expect(within(view).getByText("Starting")).toBeDefined();
     const bot = [...fake.bots.values()][0];
     act(() => fake.setBotState(bot?.id ?? "", "needs_approval"));
-    // The badge, and a callout that says what to do.
-    expect(within(view).getAllByText("Needs approval")).toHaveLength(2);
-    expect(within(view).getByRole("alert").textContent).toContain("permission prompt");
+    // The request itself shows in the chat; the header says why it waits.
+    expect(within(view).getByText("Needs approval")).toBeDefined();
+    act(() => fake.setBotState(bot?.id ?? "", "auth_error"));
+    expect(within(view).getByRole("alert").textContent).toContain("not signed in");
   });
 
   test("the daemon's validation errors stay in the form", async () => {
@@ -130,51 +126,31 @@ describe("app", () => {
     act(() => fake.setConnection({ kind: "waiting", retryAt: 0 }));
     expect(screen.getByText("Reconnecting…")).toBeDefined();
   });
-  test("a bot's view shows its terminal, and details in a second tab", async () => {
+  test("a bot opens on its chat, with its details in a side panel", async () => {
     const fake = new FakeBotloft();
     const crew = fake.addCrew("Ops");
     const scout = fake.addBot(crew.id, "Scout", "Finds sources");
     renderApp(fake);
     await screen.findByRole("heading", { level: 1, name: "Ops" });
     fireEvent.click(within(sidebar()).getByRole("button", { name: /Scout/ }));
-    expect(screen.getByTestId(`terminal-${scout.id}`)).toBeDefined();
-    fireEvent.click(screen.getByRole("tab", { name: "Details" }));
-    expect(screen.getByText(scout.workspace)).toBeDefined();
-    // The terminal stays mounted behind the other tab.
-    expect(screen.getByTestId(`terminal-${scout.id}`)).toBeDefined();
+    expect(await screen.findByText("Start a conversation with Scout")).toBeDefined();
+    expect(screen.queryByText(scout.workspace)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Show details" }));
+    const details = screen.getByRole("complementary", { name: "About Scout" });
+    expect(within(details).getByText(scout.workspace)).toBeDefined();
+    fireEvent.click(within(details).getByRole("button", { name: "Close details" }));
+    expect(screen.queryByRole("complementary", { name: "About Scout" })).toBeNull();
   });
 
-  test("a start that takes long points at the trust prompt", async () => {
-    const fake = new FakeBotloft();
-    const crew = fake.addCrew("Ops");
-    const scout = fake.addBot(crew.id, "Scout");
-    renderApp(fake);
-    await screen.findByRole("heading", { level: 1, name: "Ops" });
-    fireEvent.click(within(sidebar()).getByRole("button", { name: /Scout/ }));
-    vi.useFakeTimers();
-    try {
-      act(() => fake.setBotState(scout.id, "launching", 2));
-      expect(screen.queryByText("Still starting")).toBeNull();
-      act(() => vi.advanceTimersByTime(4000));
-      expect(screen.getByText("Still starting")).toBeDefined();
-      act(() => fake.setBotState(scout.id, "idle"));
-      expect(screen.queryByText("Still starting")).toBeNull();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  test("a bot that never started says how to start it", async () => {
+  test("a paused bot still takes messages, and says they wait", async () => {
     const fake = new FakeBotloft();
     const crew = fake.addCrew("Ops");
     await fake.call("crews.setPaused", { crewId: crew.id, paused: true });
-    const scout = fake.addBot(crew.id, "Scout");
+    fake.addBot(crew.id, "Scout");
     renderApp(fake);
     await screen.findByRole("heading", { level: 1, name: "Ops" });
     fireEvent.click(within(sidebar()).getByRole("button", { name: /Scout/ }));
-    expect(screen.getByText(/has not started since the daemon did/).textContent).toContain(
-      "Resume it to start it.",
-    );
-    expect(screen.queryByTestId(`terminal-${scout.id}`)).toBeNull();
+    expect(await screen.findByText(/What you send waits until it runs again/)).toBeDefined();
+    expect(screen.getByLabelText("Message to Scout")).toBeDefined();
   });
 });

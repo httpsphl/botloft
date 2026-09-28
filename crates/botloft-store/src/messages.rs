@@ -1,11 +1,14 @@
-//! `messages` table. A message is saved together with its delivery, and
-//! with the task it creates, in one transaction (spec 9.1).
+//! `messages` and `attachments` tables. A message is saved together with
+//! its attachments, its delivery, the task it creates and the recipient's
+//! chat item, in one transaction (spec 9.1).
 
-use botloft_core::ids::{BotId, CrewId, MessageId, TaskId};
-use botloft_core::protocol::{Delivery, Message, Task};
+use botloft_core::ids::{AttachmentId, BotId, ChatItemId, CrewId, MessageId, TaskId};
+use botloft_core::protocol::{
+    Attachment, ChatBody, ChatItem, Delivery, InboundItem, Message, Task,
+};
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
-use crate::{Result, Store, parse_column};
+use crate::{Result, Store, parse_column, to_sql_int};
 
 const COLUMNS: &str =
     "id, crew_id, from_kind, from_bot_id, to_bot_id, kind, body, task_id, created_at";
@@ -20,8 +23,32 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<Message> {
         kind: parse_column(row, 5)?,
         body: row.get(6)?,
         task_id: optional_column(row, 7)?,
+        attachments: Vec::new(),
         created_at: row.get(8)?,
     })
+}
+
+fn attachment_from_row(row: &Row<'_>) -> rusqlite::Result<Attachment> {
+    Ok(Attachment {
+        id: parse_column(row, 0)?,
+        name: row.get(1)?,
+        media_type: row.get(2)?,
+        size: u64::try_from(row.get::<_, i64>(3)?).unwrap_or(0),
+        path: row.get(4)?,
+    })
+}
+
+/// Fills in each message's attachments.
+fn with_attachments(conn: &Connection, mut messages: Vec<Message>) -> Result<Vec<Message>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, name, media_type, size, path FROM attachments \
+         WHERE message_id = ?1 ORDER BY rowid",
+    )?;
+    for message in &mut messages {
+        let rows = stmt.query_map([message.id.as_str()], attachment_from_row)?;
+        message.attachments = rows.collect::<rusqlite::Result<_>>()?;
+    }
+    Ok(messages)
 }
 
 /// Reads a nullable text column into an optional parsed type.
@@ -48,28 +75,30 @@ pub struct MessageFilter<'a> {
 }
 
 impl Store {
-    /// Saves a message, its delivery and the task it creates, atomically.
+    /// Saves a message with its attachments, its delivery, the task it
+    /// creates and the recipient's chat item, atomically. Returns the item.
     pub fn insert_message(
         &self,
         message: &Message,
         delivery: &Delivery,
         task: Option<&Task>,
-    ) -> Result<()> {
+    ) -> Result<ChatItem> {
         let tx = self.conn.unchecked_transaction()?;
         if let Some(task) = task {
             Self::insert_task_in(&tx, task)?;
         }
-        Self::insert_message_in(&tx, message, delivery)?;
+        let item = Self::insert_message_in(&tx, message, delivery)?;
         tx.commit()?;
-        Ok(())
+        Ok(item)
     }
 
-    /// The message and its delivery, inside the caller's transaction.
+    /// Everything [`Store::insert_message`] saves but the task, inside the
+    /// caller's transaction.
     pub(crate) fn insert_message_in(
         conn: &Connection,
         message: &Message,
         delivery: &Delivery,
-    ) -> Result<()> {
+    ) -> Result<ChatItem> {
         conn.execute(
             &format!(
                 "INSERT INTO messages ({COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
@@ -86,7 +115,33 @@ impl Store {
                 message.created_at,
             ],
         )?;
-        Self::insert_delivery_in(conn, delivery)
+        for attachment in &message.attachments {
+            conn.execute(
+                "INSERT INTO attachments (id, message_id, name, media_type, size, path, created_at) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                params![
+                    attachment.id.as_str(),
+                    message.id.as_str(),
+                    attachment.name,
+                    attachment.media_type,
+                    to_sql_int(attachment.size),
+                    attachment.path,
+                    message.created_at,
+                ],
+            )?;
+        }
+        Self::insert_delivery_in(conn, delivery)?;
+        let item = ChatItem {
+            id: ChatItemId::generate(),
+            bot_id: message.to_bot_id.clone(),
+            body: ChatBody::Inbound(InboundItem {
+                message: message.clone(),
+            }),
+            created_at: message.created_at,
+            updated_at: message.created_at,
+        };
+        Self::insert_chat_item_in(conn, &item)?;
+        Ok(item)
     }
 
     /// The message that asked for `task`.
@@ -105,14 +160,29 @@ impl Store {
     }
 
     pub fn message(&self, id: &MessageId) -> Result<Option<Message>> {
-        Ok(self
+        let message = self
             .conn
             .query_row(
                 &format!("SELECT {COLUMNS} FROM messages WHERE id = ?1"),
                 [id.as_str()],
                 from_row,
             )
-            .optional()?)
+            .optional()?;
+        Ok(with_attachments(&self.conn, message.into_iter().collect())?.pop())
+    }
+
+    /// An attachment and the bot whose folder holds it.
+    pub fn attachment(&self, id: &AttachmentId) -> Result<Option<(Attachment, BotId)>> {
+        let found = self
+            .conn
+            .query_row(
+                "SELECT a.id, a.name, a.media_type, a.size, a.path, m.to_bot_id \
+                 FROM attachments a JOIN messages m ON m.id = a.message_id WHERE a.id = ?1",
+                [id.as_str()],
+                |row| Ok((attachment_from_row(row)?, parse_column(row, 5)?)),
+            )
+            .optional()?;
+        Ok(found)
     }
 
     /// Newest first, in the order they were stored.
@@ -133,86 +203,9 @@ impl Store {
             ],
             from_row,
         )?;
-        Ok(rows.collect::<rusqlite::Result<_>>()?)
+        with_attachments(&self.conn, rows.collect::<rusqlite::Result<_>>()?)
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use botloft_core::protocol::{MessageKind, SenderKind};
-
-    use super::*;
-    use crate::tests::{Fixture, message_to};
-
-    #[test]
-    fn a_message_is_saved_with_its_delivery_and_read_back() {
-        let fx = Fixture::new();
-        let (message, delivery) = message_to(&fx.crew.id, &fx.bots[0].id, "hello");
-        fx.store
-            .insert_message(&message, &delivery, None)
-            .expect("insert");
-        assert_eq!(
-            fx.store.message(&message.id).expect("read"),
-            Some(message.clone())
-        );
-        assert_eq!(
-            fx.store.delivery(&delivery.id).expect("read"),
-            Some(delivery)
-        );
-        assert_eq!(message.from_kind, SenderKind::Owner);
-        assert_eq!(message.kind, MessageKind::Note);
-    }
-
-    #[test]
-    fn a_failed_insert_leaves_nothing_behind() {
-        let fx = Fixture::new();
-        let (message, mut delivery) = message_to(&fx.crew.id, &fx.bots[0].id, "hello");
-        delivery.bot_id = BotId::generate(); // no such bot: the FK fails
-        assert!(fx.store.insert_message(&message, &delivery, None).is_err());
-        assert_eq!(fx.store.message(&message.id).expect("read"), None);
-    }
-
-    #[test]
-    fn listing_filters_by_bot_and_pages_back_newest_first() {
-        let fx = Fixture::new();
-        let mut ids = Vec::new();
-        for (i, bot) in [&fx.bots[0], &fx.bots[1], &fx.bots[0]].iter().enumerate() {
-            let (message, delivery) = message_to(&fx.crew.id, &bot.id, &format!("m{i}"));
-            fx.store
-                .insert_message(&message, &delivery, None)
-                .expect("insert");
-            ids.push(message.id);
-        }
-        let all = fx
-            .store
-            .messages(MessageFilter {
-                limit: 10,
-                ..MessageFilter::default()
-            })
-            .expect("list");
-        let bodies: Vec<_> = all.iter().map(|m| m.body.as_str()).collect();
-        assert_eq!(bodies, ["m2", "m1", "m0"]);
-
-        let first_bot = fx
-            .store
-            .messages(MessageFilter {
-                bot: Some(&fx.bots[0].id),
-                limit: 10,
-                ..MessageFilter::default()
-            })
-            .expect("list");
-        assert_eq!(first_bot.len(), 2);
-
-        let older = fx
-            .store
-            .messages(MessageFilter {
-                crew: Some(&fx.crew.id),
-                before: Some(&ids[2]),
-                limit: 1,
-                ..MessageFilter::default()
-            })
-            .expect("page");
-        assert_eq!(older.len(), 1);
-        assert_eq!(older[0].body, "m1");
-    }
-}
+mod tests;

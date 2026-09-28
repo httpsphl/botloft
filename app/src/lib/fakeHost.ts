@@ -1,11 +1,22 @@
 // A `Host` for tests: a daemon that is running unless told otherwise.
 
 import type { DaemonStatus, Host } from "./host";
+import { PROTOCOL_VERSION } from "./protocol.gen";
 
 export class FakeHost implements Host {
-  status: DaemonStatus = { state: "running", port: 45710, version: "0.1.0", protocol: 1 };
+  status: DaemonStatus = {
+    state: "running",
+    port: 45710,
+    version: "0.1.0",
+    protocol: PROTOCOL_VERSION,
+  };
   /** What `startDaemon` leaves behind. */
-  afterStart: DaemonStatus = { state: "running", port: 45710, version: "0.1.0", protocol: 1 };
+  afterStart: DaemonStatus = {
+    state: "running",
+    port: 45710,
+    version: "0.1.0",
+    protocol: PROTOCOL_VERSION,
+  };
   token: string | Error = "a".repeat(64);
   readonly opened: string[] = [];
   starts = 0;
@@ -29,6 +40,11 @@ export class FakeHost implements Host {
 
   openPath(path: string): Promise<void> {
     this.opened.push(path);
+    return Promise.resolve();
+  }
+
+  openUrl(url: string): Promise<void> {
+    this.opened.push(url);
     return Promise.resolve();
   }
 
