@@ -19,16 +19,23 @@ type Conversation = Pick<
 
 export function conversationHandlers(fake: FakeBotloft): Conversation {
   return {
-    "terminal.attach": ({ botId }) => {
-      const bot = fake.bot(botId, false);
-      return { generation: bot.generation ?? 1, offset: 0, reset: true, liveOffset: 0 };
+    "terminal.attach": (params) => {
+      fake.bot(params.botId, false);
+      return fake.terminals.attach(params);
     },
-    "terminal.detach": () => null,
-    "terminal.write": ({ botId, data }) => {
-      fake.terminalInput.push({ botId, data });
+    "terminal.detach": ({ botId }) => {
+      fake.terminals.detach(botId);
       return null;
     },
-    "terminal.resize": () => null,
+    "terminal.write": (params) => {
+      fake.bot(params.botId);
+      fake.terminals.write(params);
+      return null;
+    },
+    "terminal.resize": ({ botId, cols, rows }) => {
+      fake.terminals.sizes.set(botId, { cols, rows });
+      return null;
+    },
     "messages.send": ({ botId, body }) => {
       const bot = fake.bot(botId);
       if (!body.trim()) {

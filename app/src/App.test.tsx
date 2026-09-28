@@ -1,9 +1,14 @@
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { App } from "./App";
 import type { Client } from "./lib/client";
 import { FakeBotloft } from "./lib/fake";
 import { FakeHost } from "./lib/fakeHost";
+
+// xterm.js needs a real browser; the terminal has its own tests.
+vi.mock("./features/terminal/TerminalView", () => ({
+  TerminalView: ({ botId }: { botId: string }) => <div data-testid={`terminal-${botId}`} />,
+}));
 
 afterEach(cleanup);
 
@@ -124,5 +129,52 @@ describe("app", () => {
     await screen.findByRole("heading", { level: 1, name: "Ops" });
     act(() => fake.setConnection({ kind: "waiting", retryAt: 0 }));
     expect(screen.getByText("Reconnecting…")).toBeDefined();
+  });
+  test("a bot's view shows its terminal, and details in a second tab", async () => {
+    const fake = new FakeBotloft();
+    const crew = fake.addCrew("Ops");
+    const scout = fake.addBot(crew.id, "Scout", "Finds sources");
+    renderApp(fake);
+    await screen.findByRole("heading", { level: 1, name: "Ops" });
+    fireEvent.click(within(sidebar()).getByRole("button", { name: /Scout/ }));
+    expect(screen.getByTestId(`terminal-${scout.id}`)).toBeDefined();
+    fireEvent.click(screen.getByRole("tab", { name: "Details" }));
+    expect(screen.getByText(scout.workspace)).toBeDefined();
+    // The terminal stays mounted behind the other tab.
+    expect(screen.getByTestId(`terminal-${scout.id}`)).toBeDefined();
+  });
+
+  test("a start that takes long points at the trust prompt", async () => {
+    const fake = new FakeBotloft();
+    const crew = fake.addCrew("Ops");
+    const scout = fake.addBot(crew.id, "Scout");
+    renderApp(fake);
+    await screen.findByRole("heading", { level: 1, name: "Ops" });
+    fireEvent.click(within(sidebar()).getByRole("button", { name: /Scout/ }));
+    vi.useFakeTimers();
+    try {
+      act(() => fake.setBotState(scout.id, "launching", 2));
+      expect(screen.queryByText("Still starting")).toBeNull();
+      act(() => vi.advanceTimersByTime(4000));
+      expect(screen.getByText("Still starting")).toBeDefined();
+      act(() => fake.setBotState(scout.id, "idle"));
+      expect(screen.queryByText("Still starting")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("a bot that never started says how to start it", async () => {
+    const fake = new FakeBotloft();
+    const crew = fake.addCrew("Ops");
+    await fake.call("crews.setPaused", { crewId: crew.id, paused: true });
+    const scout = fake.addBot(crew.id, "Scout");
+    renderApp(fake);
+    await screen.findByRole("heading", { level: 1, name: "Ops" });
+    fireEvent.click(within(sidebar()).getByRole("button", { name: /Scout/ }));
+    expect(screen.getByText(/has not started since the daemon did/).textContent).toContain(
+      "Resume it to start it.",
+    );
+    expect(screen.queryByTestId(`terminal-${scout.id}`)).toBeNull();
   });
 });

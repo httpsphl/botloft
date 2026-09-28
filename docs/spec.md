@@ -466,7 +466,7 @@ app/src/
     protocol.gen.ts   gerado por ts-rs, não editar
   store/          stores Zustand alimentados por notificações
   ui/             componentes base
-  dev/            prévia: `pnpm dev` num navegador comum usa FakeBotloft (só em dev)
+  dev/            prévia: `pnpm dev` num navegador comum usa FakeBotloft, ou um daemon de dev real com `?live=<porta>` (só em dev)
 ```
 
 Componentes dependem só de `BotloftApi` e `Host`, nunca do cliente concreto nem do Tauri. O store recarrega crews, bots e `system.status` a cada (re)conexão e depois segue as notificações; `system.status` não tem notificação e é relido a cada 15 s.
@@ -539,4 +539,4 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28. "Co
 | stdout do `SessionStart` vira contexto | 7.6 | Confirmado (`hooks`); o subcomando nunca escreve no stdout | feito (M2) |
 | `StopFailure` (`rate_limit`, `authentication_failed`) e `Notification` (`permission_prompt`) | 7.2 | Campos documentados: `error` e `notification_type`. `SessionStart`, `UserPromptSubmit` e `Stop` **testados com 2.1.283** (`launching` -> `idle` -> `busy` -> `idle`) | disparar `StopFailure` e `permission_prompt` reais: pendente |
 | Confiança da pasta segura os hooks | 7.4.1 | Confirmado (`hooks`, `permissions`) e **visto com 2.1.283**: diálogo na primeira execução, bot em `launching` até aceitar | feito (M2) |
-| Confiança da pasta pai e regras `allow` do projeto | 7.4.1 | Confirmado (`permissions`): fora de git a confiança vale para as subpastas, mas `permissions.allow` do projeto só vale depois de aceitar o diálogo da própria pasta; `-p` nunca mostra o diálogo. Não há flag nem setting para pré-aceitar; o manual é `hasTrustDialogAccepted` no `~/.claude.json` | ver o diálogo de um bot novo no terminal do app: M4 |
+| Confiança da pasta pai e regras `allow` do projeto | 7.4.1 | Confirmado (`permissions`): fora de git a confiança vale para as subpastas, mas `permissions.allow` do projeto só vale depois de aceitar o diálogo da própria pasta; `-p` nunca mostra o diálogo. Não há flag nem setting para pré-aceitar; o manual é `hasTrustDialogAccepted` no `~/.claude.json`. **Visto com 2.1.284**: o diálogo de um bot novo lista "This folder pre-approves 1 tool permission: mcp__botloft" e aparece no terminal do app; Down e Enter no xterm aceitaram e o bot foi a `idle` | feito (M4) |
