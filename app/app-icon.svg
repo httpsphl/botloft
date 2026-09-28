@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1254 1254" width="1254" height="1254">
+  <title>Botloft</title>
+  <defs>
+    <radialGradient id="body-shade" cx="640" cy="560" r="760" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#ECECEC"/>
+    </radialGradient>
+    <filter id="glow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+    <path id="body" d="M468 58 C600 105 730 180 800 290 C830 340 845 400 870 440 C885 465 915 475 930 455 C948 430 945 400 938 378 C1060 440 1170 600 1210 800 C1240 950 1235 1120 1190 1254 L1180 1300 L70 1300 L60 1254 C10 1130 0 950 60 800 C100 700 150 650 180 590 C210 520 220 440 260 385 C290 340 330 312 372 292 C350 330 340 370 348 390 C355 410 380 412 395 398 C440 355 500 300 510 220 C518 150 495 100 468 58 Z"/>
+  </defs>
+  <rect width="1254" height="1254" fill="#000000"/>
+  <use href="#body" fill="#FFFFFF" opacity="0.55" filter="url(#glow)"/>
+  <use href="#body" fill="url(#body-shade)"/>
+  <ellipse cx="537" cy="862" rx="112" ry="110" fill="#000000"/>
+  <ellipse cx="546" cy="811" rx="33" ry="29" fill="#FFFFFF"/>
+  <ellipse cx="945" cy="768" rx="98" ry="104" transform="rotate(-14 945 768)" fill="#000000"/>
+  <ellipse cx="934" cy="720" rx="30" ry="26" fill="#FFFFFF"/>
+</svg>

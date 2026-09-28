@@ -1,0 +1,15 @@
+[package]
+name = "botloftd"
+description = "Botloft daemon: runs and supervises always-on Claude Code bots"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+botloft-core.workspace = true
+botloft-store.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,23 @@
+[package]
+name = "botloft-app"
+description = "Botloft desktop app (Tauri shell)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lib]
+# The `_lib` suffix keeps the lib name distinct from the bin name, which
+# otherwise collides on Windows (rust-lang/cargo#8519).
+name = "botloft_app_lib"
+crate-type = ["rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+[lints]
+workspace = true
