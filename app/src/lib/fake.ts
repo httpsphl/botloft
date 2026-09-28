@@ -5,6 +5,7 @@
 import type { BotloftApi } from "./api";
 import { conversationHandlers } from "./fakeConversation";
 import { checkName, conflict, invalid, notFound, slugify } from "./fakeRules";
+import { FakeTerminals } from "./fakeTerminal";
 import {
   AVATAR_PALETTE,
   type Bot,
@@ -45,8 +46,7 @@ export class FakeBotloft implements BotloftApi {
   };
   /** Every call, in order. */
   readonly calls: { method: Method; params: unknown }[] = [];
-  /** Bytes written to each bot's terminal. */
-  readonly terminalInput: { botId: BotId; data: string }[] = [];
+  readonly terminals = new FakeTerminals((event) => this.emit(event));
   now = 1_760_000_000_000;
   closed = false;
   private counter = 0;
@@ -124,6 +124,9 @@ export class FakeBotloft implements BotloftApi {
   setBotState(botId: BotId, state: BotState, generation?: number): void {
     const bot = this.bot(botId);
     bot.state = state;
+    if (generation !== undefined && generation !== bot.generation) {
+      this.terminals.restart(botId, generation);
+    }
     bot.generation = generation ?? bot.generation ?? 1;
     this.emit({ name: "bot.state", params: { botId, state, generation: bot.generation } });
   }

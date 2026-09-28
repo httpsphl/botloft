@@ -80,6 +80,8 @@ async fn attach_replays_the_screen_then_streams_and_reattach_skips_what_was_seen
         .expect("attach");
     assert_eq!(attached["reset"], true);
     assert_eq!(attached["offset"], 0);
+    // The 7 buffered bytes are history; what comes after is live.
+    assert_eq!(attached["liveOffset"], 7);
     let replay = app.notification("terminal.data").await;
     assert_eq!(decode(&replay), b"hello\r\n");
 
@@ -107,6 +109,7 @@ async fn attach_replays_the_screen_then_streams_and_reattach_skips_what_was_seen
         .expect("reattach");
     assert_eq!(again["reset"], false);
     assert_eq!(again["offset"], 11);
+    assert_eq!(again["liveOffset"], 11);
 
     app.call("terminal.detach", json!({ "botId": bot["id"] }))
         .await

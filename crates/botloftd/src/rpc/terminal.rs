@@ -60,6 +60,7 @@ pub async fn attach(
         generation: point.generation,
         offset: point.offset,
         reset: point.reset,
+        live_offset: point.live_offset,
     };
     let frame = jsonrpc::success(&id, serde_json::to_value(result).unwrap_or(Value::Null));
     if outbox.send(frame).await.is_err() {

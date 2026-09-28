@@ -185,7 +185,13 @@ offset: number,
 /**
  * True when the client must clear its screen before writing the replay.
  */
-reset: boolean, };
+reset: boolean, 
+/**
+ * Offset where live output starts. The bytes before it replay past
+ * output: a terminal must not answer the queries in them (cursor
+ * position, device attributes...), which were asked long ago.
+ */
+liveOffset: number, };
 
 export type TerminalWriteParams = { botId: BotId, 
 /**

@@ -254,6 +254,7 @@ Confiar na raiz dos workspaces não resolve: a confiança de uma pasta pai cobre
 - `terminal.attach {botId, generation?, offset?}`:
   - mesma generation e offset ainda no buffer: responde `{generation, offset, reset: false}` e envia só o que falta;
   - senão: `{reset: true}` e envia o buffer inteiro; se o buffer já descartou o começo da generation, corta no primeiro `\n` para não começar no meio de uma sequência de escape.
+- A resposta traz também `liveOffset`, o fim do replay: dali em diante a saída é ao vivo. **O cliente não responde às consultas do terminal que estão no replay** (posição do cursor, atributos do dispositivo, `XTVERSION`, flags de teclado...). Elas foram feitas no passado, e a resposta chegaria ao bot como teclas digitadas. Visto com Claude Code 2.1.284: o replay de um bot recém-iniciado traz `ESC[6n`, três `ESC[>0q` e um `ESC[?u`, e sem esse cuidado aparecia um caractere solto no prompt. O app descarta o que o xterm.js "digita" enquanto interpreta o replay.
 - A resposta do `terminal.attach` sai antes do primeiro `terminal.data`. `terminal.detach {botId}` para o envio. `terminal.write {botId, data}` e `terminal.resize {botId, cols, rows}` (1 a 1000) respondem `null`; escrever num bot sem processo dá `-32003`.
 - Dados vão em `terminal.data {botId, generation, offset, data}` com `data` em base64 (bytes crus; o xterm.js recebe `Uint8Array` e resolve UTF-8 quebrado entre blocos). Um `terminal.data` com generation nova é uma tela nova: o cliente limpa antes de escrever. Um cliente que atrasa pode ver o offset pular; ele percebe (offset diferente do esperado) e refaz o attach com o que tem.
 - Vários clientes podem assistir ao mesmo bot. Qualquer cliente autenticado pode escrever (MVP só tem o owner).
@@ -375,7 +376,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `bots.setPaused` | `botId, paused` | `Bot` |
 | `bots.restart` | `botId, fresh?` | `Bot` |
 | `bots.archive` | `botId` | `Bot` |
-| `terminal.attach` | `botId, generation?, offset?` | `{generation, offset, reset}` |
+| `terminal.attach` | `botId, generation?, offset?` | `{generation, offset, reset, liveOffset}` |
 | `terminal.detach` | `botId` | |
 | `terminal.write` | `botId, data` (base64) | |
 | `terminal.resize` | `botId, cols, rows` | |
@@ -465,7 +466,7 @@ app/src/
     protocol.gen.ts   gerado por ts-rs, não editar
   store/          stores Zustand alimentados por notificações
   ui/             componentes base
-  dev/            prévia: `pnpm dev` num navegador comum usa FakeBotloft (só em dev)
+  dev/            prévia: `pnpm dev` num navegador comum usa FakeBotloft, ou um daemon de dev real com `?live=<porta>` (só em dev)
 ```
 
 Componentes dependem só de `BotloftApi` e `Host`, nunca do cliente concreto nem do Tauri. O store recarrega crews, bots e `system.status` a cada (re)conexão e depois segue as notificações; `system.status` não tem notificação e é relido a cada 15 s.
@@ -538,4 +539,4 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28. "Co
 | stdout do `SessionStart` vira contexto | 7.6 | Confirmado (`hooks`); o subcomando nunca escreve no stdout | feito (M2) |
 | `StopFailure` (`rate_limit`, `authentication_failed`) e `Notification` (`permission_prompt`) | 7.2 | Campos documentados: `error` e `notification_type`. `SessionStart`, `UserPromptSubmit` e `Stop` **testados com 2.1.283** (`launching` -> `idle` -> `busy` -> `idle`) | disparar `StopFailure` e `permission_prompt` reais: pendente |
 | Confiança da pasta segura os hooks | 7.4.1 | Confirmado (`hooks`, `permissions`) e **visto com 2.1.283**: diálogo na primeira execução, bot em `launching` até aceitar | feito (M2) |
-| Confiança da pasta pai e regras `allow` do projeto | 7.4.1 | Confirmado (`permissions`): fora de git a confiança vale para as subpastas, mas `permissions.allow` do projeto só vale depois de aceitar o diálogo da própria pasta; `-p` nunca mostra o diálogo. Não há flag nem setting para pré-aceitar; o manual é `hasTrustDialogAccepted` no `~/.claude.json` | ver o diálogo de um bot novo no terminal do app: M4 |
+| Confiança da pasta pai e regras `allow` do projeto | 7.4.1 | Confirmado (`permissions`): fora de git a confiança vale para as subpastas, mas `permissions.allow` do projeto só vale depois de aceitar o diálogo da própria pasta; `-p` nunca mostra o diálogo. Não há flag nem setting para pré-aceitar; o manual é `hasTrustDialogAccepted` no `~/.claude.json`. **Visto com 2.1.284**: o diálogo de um bot novo lista "This folder pre-approves 1 tool permission: mcp__botloft" e aparece no terminal do app; Down e Enter no xterm aceitaram e o bot foi a `idle` | feito (M4) |
