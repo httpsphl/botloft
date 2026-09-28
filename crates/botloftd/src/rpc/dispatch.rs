@@ -6,7 +6,7 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 
 use super::jsonrpc::{RpcError, empty_params};
-use crate::service::{self, ApiResult, bots, crews, deliveries, messages, terminal};
+use crate::service::{self, ApiResult, bots, crews, deliveries, messages, tasks, terminal};
 use crate::state::Daemon;
 
 pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Value, RpcError> {
@@ -29,6 +29,7 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::MESSAGES_LIST => reply(messages::list(daemon, parse(params)?)),
         method::DELIVERIES_LIST => reply(deliveries::list(daemon, parse(params)?)),
         method::DELIVERIES_RETRY => reply(deliveries::retry(daemon, parse(params)?)),
+        method::TASKS_LIST => reply(tasks::list(daemon, parse(params)?)),
         method::SESSION_HELLO => Err(RpcError::new(
             error_code::CONFLICT,
             "this connection is already authenticated",

@@ -5,6 +5,7 @@ pub mod bots;
 pub mod crews;
 pub mod deliveries;
 pub mod messages;
+pub mod tasks;
 pub mod terminal;
 
 use botloft_core::protocol::{PROTOCOL_VERSION, SystemStatus, error_code};

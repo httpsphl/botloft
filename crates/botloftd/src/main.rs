@@ -12,6 +12,7 @@ use botloftd::courier::{self, CourierSettings, PipeInbox};
 use botloftd::paths::{self, Paths};
 use botloftd::platform::{self, InstanceLock};
 use botloftd::runtime::PtyRuntime;
+use botloftd::service::tasks::TaskSettings;
 use botloftd::state::{Daemon, DaemonOptions};
 use botloftd::supervisor::{self, SupervisorSettings};
 use botloftd::{hooks, logging, secrets, server};
@@ -85,6 +86,7 @@ fn serve(config_path: Option<PathBuf>) -> anyhow::Result<()> {
         clock: Arc::new(SystemClock),
         inbox: Arc::new(PipeInbox),
         courier: CourierSettings::from_config(&config),
+        tasks: TaskSettings::from_config(&config),
     });
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
