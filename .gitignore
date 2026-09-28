@@ -1,0 +1,20 @@
+# Rust
+/target/
+
+# App
+node_modules/
+/app/dist/
+*.local
+
+# Local dev state (BOTLOFT_HOME, dev config)
+/.dev/
+
+# Logs
+*.log
+
+# Editors and OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
