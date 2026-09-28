@@ -102,6 +102,10 @@ Tipos do protocolo ficam em `botloft-core` e são exportados para TypeScript com
 | Config | `%LOCALAPPDATA%\Botloft\config.toml` | `--config` |
 | Workspaces | `%USERPROFILE%\Botloft\<crew>\<bot>\` | `workspaces_root` na config |
 | Pasta compartilhada da crew | `%USERPROFILE%\Botloft\<crew>\shared\` | |
+| Binário do daemon | `%LOCALAPPDATA%\Botloft\bin\botloftd.exe` (seção 14) | `--home` |
+| App instalado | `%LOCALAPPDATA%\Botloft\` (`Botloft.exe`, o sidecar `botloftd.exe`, `uninstall.exe`; seção 15.4) | |
+
+O instalador por usuário do Tauri põe o app em `%LOCALAPPDATA%\<produto>`, a mesma pasta dos dados. Os nomes não se cruzam, e o desinstalador só apaga os arquivos que instalou e remove a pasta se ela ficar vazia: os dados ficam.
 
 `%LOCALAPPDATA%` e não `%APPDATA%`: o perfil roaming sincroniza em rede e não deve carregar SQLite nem segredos.
 
@@ -587,6 +591,13 @@ No chat:
 - Anexos aparecem como miniatura (imagem) ou cartão com nome, tipo e tamanho.
 
 Identidade: o mascote do Botloft é uma chama com olhos, desenhada em vetor em `app/app-icon.svg`. O ícone do app é o mascote branco sobre fundo preto. Cada bot usa o mesmo personagem como avatar, com uma cor própria escolhida na criação. A cor do avatar identifica o bot e não comunica estado: estado continua sendo cor + ícone + texto, como descrito acima.
+
+### 15.4 Instalador e sidecar
+
+- `pnpm bundle` (em `app/`) roda `scripts/sidecar.mjs`, que compila o `botloftd` em release e o copia para `src-tauri/binaries/botloftd-<target triple>.exe`, e depois `tauri build --config src-tauri/tauri.bundle.conf.json`. Esse arquivo liga o `externalBin` e o NSIS; ele fica fora do `tauri.conf.json` porque o `tauri-build` copia o `externalBin` também em dev e no `cargo clippy`, o que exigiria o sidecar em todo build e sobrescreveria o `target\debug\botloftd.exe` com a cópia de release.
+- NSIS por usuário (`installMode = currentUser`), sem pedir administrador, em `%LOCALAPPDATA%\Botloft` (seção 5). O instalador não mexe no daemon: ele roda da própria cópia em `<home>\bin`, então o arquivo do sidecar nunca está em uso.
+- Hook `NSIS_HOOK_PREUNINSTALL` (`src-tauri/windows/hooks.nsh`): numa desinstalação de verdade, `botloftd service uninstall` para o daemon e apaga a tarefa e o binário; bots e dados ficam. Uma atualização também roda o desinstalador antigo, com `/UPDATE`: aí o hook não faz nada e o daemon continua rodando até o app novo abrir e atualizá-lo (15.2).
+- O manifesto do app (`src-tauri/windows/app.manifest`) é o padrão do Tauri (controles comuns v6) mais `longPathAware`.
 
 ## 16. Qualidade
 

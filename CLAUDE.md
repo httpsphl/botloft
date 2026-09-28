@@ -39,9 +39,10 @@ cargo test -p botloft-core export_bindings
 # App
 cd app
 pnpm install
-pnpm tauri dev    # o app acha o daemon pelo BOTLOFT_HOME e o inicia (target\debug\botloftd.exe)
+pnpm tauri dev    # o app acha o daemon pelo BOTLOFT_HOME; "Start the daemon" instala target\debug\botloftd.exe como tarefa da pasta de dev
 pnpm dev          # só a UI num navegador comum, com o FakeBotloft (src/dev/preview.ts)
 pnpm check        # tsc --noEmit + biome check + vitest run
+pnpm bundle       # instalador NSIS com o sidecar (spec 15.4), em target\release\bundle\nsis
 ```
 
 Em dev, use `$env:BOTLOFT_HOME = "$PWD\.dev\home"` (caminho absoluto) no daemon e no app, para não tocar na instalação real em `%LOCALAPPDATA%\Botloft`. O `config.toml` de dev fica dentro dessa pasta: o app lê a porta de lá.
