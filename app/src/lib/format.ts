@@ -31,3 +31,41 @@ export function fromNow(ms: number, now = Date.now()): string {
   }
   return relative.format(Math.round(seconds / 86_400), "day");
 }
+
+/** "912 B", "48 KB", "3.4 MB". */
+export function fileSize(bytes: number): string {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  const kb = bytes / 1024;
+  if (kb < 1024) {
+    return `${Math.round(kb)} KB`;
+  }
+  const mb = kb / 1024;
+  return `${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB`;
+}
+
+/** "0.8 s", "42 s", "3 min 5 s". */
+export function duration(ms: number): string {
+  const seconds = ms / 1000;
+  if (seconds < 10) {
+    return `${seconds.toFixed(1)} s`;
+  }
+  if (seconds < 60) {
+    return `${Math.round(seconds)} s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const rest = Math.round(seconds % 60);
+  return rest === 0 ? `${minutes} min` : `${minutes} min ${rest} s`;
+}
+
+/** "Monday, September 28" for today's year, with the year otherwise. */
+export function day(ms: number, now = Date.now()): string {
+  const sameYear = new Date(ms).getFullYear() === new Date(now).getFullYear();
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: sameYear ? undefined : "numeric",
+  }).format(ms);
+}

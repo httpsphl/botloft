@@ -1,4 +1,4 @@
-// Terminal bytes travel as base64 (spec 8).
+// Attachments travel as base64 (spec 9.5).
 
 const CHUNK = 0x8000;
 
@@ -10,21 +10,8 @@ export function encodeBytes(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-/** Text typed or pasted into a terminal, as UTF-8. */
-export function encodeText(text: string): string {
-  return encodeBytes(new TextEncoder().encode(text));
-}
-
-/** xterm's binary strings: one char per byte. */
-export function encodeBinary(binary: string): string {
-  return btoa(binary);
-}
-
-export function decodeBytes(base64: string): Uint8Array {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i += 1) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
+/** Bytes that base64 of `length` characters decodes to. */
+export function decodedSize(base64: string): number {
+  const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+  return Math.floor((base64.length * 3) / 4) - padding;
 }

@@ -2,6 +2,7 @@ import {
   Archive,
   Ellipsis,
   FolderOpen,
+  PanelRight,
   Pause,
   Pencil,
   Play,
@@ -22,7 +23,17 @@ import { BotStateBadge } from "./BotStateBadge";
 type Open = "edit" | "archive" | "fresh" | null;
 
 /** The bot's name, state and actions. */
-export function BotHeader({ bot, crew }: { bot: Bot; crew: Crew }) {
+export function BotHeader({
+  bot,
+  crew,
+  detailsOpen,
+  onToggleDetails,
+}: {
+  bot: Bot;
+  crew: Crew;
+  detailsOpen: boolean;
+  onToggleDetails(): void;
+}) {
   const api = useApi();
   const host = useHost();
   const putBot = useApp((state) => state.putBot);
@@ -40,11 +51,11 @@ export function BotHeader({ bot, crew }: { bot: Bot; crew: Crew }) {
     );
 
   return (
-    <header className="flex items-center gap-3 border-line border-b px-5 py-3">
-      <BotAvatar color={bot.color} size={40} />
+    <header className="flex items-center gap-3 border-line border-b px-5 py-2.5">
+      <BotAvatar color={bot.color} size={36} />
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
-          <h1 className="truncate font-semibold text-xl tracking-tight">{bot.name}</h1>
+          <h1 className="truncate font-semibold text-lg tracking-tight">{bot.name}</h1>
           <span className="font-mono text-muted text-sm" data-selectable>
             @{bot.handle}
           </span>
@@ -66,6 +77,13 @@ export function BotHeader({ bot, crew }: { bot: Bot; crew: Crew }) {
       <Button icon={RotateCw} disabled={stopped} onClick={() => restart(false)}>
         Restart
       </Button>
+      <Button
+        variant={detailsOpen ? "secondary" : "ghost"}
+        icon={PanelRight}
+        label={detailsOpen ? "Hide details" : "Show details"}
+        aria-pressed={detailsOpen}
+        onClick={onToggleDetails}
+      />
       <Menu
         label="More bot actions"
         icon={Ellipsis}

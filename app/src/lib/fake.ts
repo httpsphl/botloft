@@ -3,9 +3,9 @@
 // handles, archiving, and the notifications each change sends.
 
 import type { BotloftApi } from "./api";
+import { FakeChat } from "./fakeChat";
 import { FakeConversation } from "./fakeConversation";
 import { checkName, conflict, invalid, notFound, slugify } from "./fakeRules";
-import { FakeTerminals } from "./fakeTerminal";
 import {
   AVATAR_PALETTE,
   type Bot,
@@ -13,6 +13,7 @@ import {
   type BotState,
   type Crew,
   type CrewId,
+  PROTOCOL_VERSION,
   type SystemStatus,
 } from "./protocol.gen";
 import type {
@@ -27,25 +28,28 @@ import type {
 
 export type Handlers = { [M in Method]: (params: Params<M>) => Result<M> };
 
+/** Shared by every fake, so ids never repeat between tests (caches key on them). */
+let counter = 0;
+
 export class FakeBotloft implements BotloftApi {
   readonly crews = new Map<CrewId, Crew>();
   readonly bots = new Map<BotId, Bot>();
   system: SystemStatus = {
     daemonVersion: "0.1.0",
-    protocol: 1,
+    protocol: PROTOCOL_VERSION,
     uptimeMs: 1000,
     claudeVersion: "2.1.284",
     runtimeError: null,
     deliveries: { pending: 0, dead: 0 },
+    usage: null,
   };
   /** Every call, in order. */
   readonly calls: { method: Method; params: unknown }[] = [];
-  readonly terminals = new FakeTerminals((event) => this.emit(event));
+  readonly chat = new FakeChat(this);
   readonly conversation = new FakeConversation(this);
   /** Clock for created and updated times. */
   now = Date.now();
   closed = false;
-  private counter = 0;
   private state: ConnectionState = { kind: "open", daemonVersion: "0.1.0" };
   private readonly listeners = new Set<(event: ServerEvent) => void>();
   private readonly connectionListeners = new Set<(state: ConnectionState) => void>();
@@ -120,17 +124,14 @@ export class FakeBotloft implements BotloftApi {
   setBotState(botId: BotId, state: BotState, generation?: number): void {
     const bot = this.bot(botId);
     bot.state = state;
-    if (generation !== undefined && generation !== bot.generation) {
-      this.terminals.restart(botId, generation);
-    }
     bot.generation = generation ?? bot.generation ?? 1;
     this.emit({ name: "bot.state", params: { botId, state, generation: bot.generation } });
   }
 
   /** A new id with `prefix`, like the daemon's. */
   id(prefix: string): string {
-    this.counter += 1;
-    return `${prefix}_${String(this.counter).padStart(4, "0")}`;
+    counter += 1;
+    return `${prefix}_${String(counter).padStart(4, "0")}`;
   }
 
   private crew(crewId: CrewId, active = true): Crew {
@@ -182,7 +183,10 @@ export class FakeBotloft implements BotloftApi {
   }
 
   private readonly handlers: Handlers = {
-    "session.hello": () => ({ daemonVersion: this.system.daemonVersion, protocol: 1 }),
+    "session.hello": () => ({
+      daemonVersion: this.system.daemonVersion,
+      protocol: PROTOCOL_VERSION,
+    }),
     "system.status": () => this.system,
     "crews.list": () => [...this.crews.values()].filter((crew) => crew.archivedAt === null),
     "crews.create": ({ name }) => {
@@ -245,6 +249,7 @@ export class FakeBotloft implements BotloftApi {
         state: crew.paused ? "offline" : "launching",
         generation: crew.paused ? null : 1,
         workspace: `C:\\Users\\owner\\Botloft\\${crew.slug}\\${handle}`,
+        lastActivity: null,
         createdAt: this.now,
         archivedAt: null,
       };
@@ -281,7 +286,7 @@ export class FakeBotloft implements BotloftApi {
       }
       return bot;
     },
-    ...this.terminals.handlers(this),
+    ...this.chat.handlers(),
     ...this.conversation.handlers(),
   };
 }

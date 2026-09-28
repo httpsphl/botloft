@@ -1,9 +1,7 @@
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { FakeBotloft } from "../../lib/fake";
-import { crewOpened, openBot, openTab, renderApp } from "../../test/app";
-
-vi.mock("../terminal/TerminalView", () => ({ TerminalView: () => null }));
+import { crewOpened, openTab, renderApp } from "../../test/app";
 
 afterEach(cleanup);
 
@@ -50,26 +48,6 @@ describe("messages", () => {
       fake.conversation.deliver(owner?.id ?? "", "sent");
     });
     expect(within(sentRow).getByText("Delivered")).toBeDefined();
-  });
-
-  test("a bot's messages tab writes to that bot only", async () => {
-    const { fake, lead, writer } = crew();
-    fake.conversation.say({ from: lead.id, to: writer.id, body: "for writer" });
-    fake.conversation.say({ from: writer.id, to: lead.id, body: "for lead" });
-    const other = fake.addBot(fake.addCrew("Other").id, "Loner");
-    fake.conversation.say({ to: other.id, body: "elsewhere" });
-    renderApp(fake);
-    await crewOpened("Ops");
-    openBot("Lead");
-    openTab("Messages");
-    expect(await within(messages()).findByText("for writer")).toBeDefined();
-    expect(within(messages()).getByText("for lead")).toBeDefined();
-    expect(within(messages()).queryByText("elsewhere")).toBeNull();
-    expect(screen.queryByLabelText("Recipient")).toBeNull();
-    fireEvent.change(screen.getByLabelText("Message to"), { target: { value: "hi lead" } });
-    fireEvent.keyDown(screen.getByLabelText("Message to"), { key: "Enter", ctrlKey: true });
-    expect(await within(messages()).findByText("hi lead")).toBeDefined();
-    expect(fake.calls.at(-1)?.params).toEqual({ botId: lead.id, body: "hi lead" });
   });
 
   test("older messages load on demand", async () => {

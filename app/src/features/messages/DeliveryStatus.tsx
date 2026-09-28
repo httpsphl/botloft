@@ -1,11 +1,11 @@
-import { CircleCheck, CircleX, Clock, LoaderCircle, RotateCw } from "lucide-react";
+import { CheckCheck, CircleCheck, CircleX, Clock, LoaderCircle, RotateCw } from "lucide-react";
 import { fromNow } from "../../lib/format";
 import type { Delivery } from "../../lib/protocol.gen";
 import { useApi, useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { attempt } from "../../ui/toast";
 
-/** Where a message is on its way into the bot's inbox (spec 9.1). */
+/** Where a message is on its way to the bot (spec 9.1). */
 export function DeliveryStatus({ delivery }: { delivery: Delivery }) {
   const api = useApi();
   const putDelivery = useApp((state) => state.putDelivery);
@@ -13,10 +13,15 @@ export function DeliveryStatus({ delivery }: { delivery: Delivery }) {
 
   switch (delivery.state) {
     case "sent":
-      return (
+      return delivery.readAt === null ? (
         <p className={`${line} text-muted`}>
           <CircleCheck aria-hidden size={12} />
           Delivered
+        </p>
+      ) : (
+        <p className={`${line} text-muted`} title="The bot began working on it">
+          <CheckCheck aria-hidden size={12} />
+          Read
         </p>
       );
     case "sending":
