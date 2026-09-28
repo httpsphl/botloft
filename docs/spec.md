@@ -121,7 +121,7 @@ Nomes de pasta de crew e bot são slugs gerados na criação e **não mudam** qu
     mcp.json                       config MCP do bot (gerado pelo daemon)
 ```
 
-Identidade e instruções vão em `.claude/rules/botloft.md` e não na linha de comando: o texto pode ser longo e a linha de comando do Windows é limitada. **Verificar** na versão alvo do Claude Code que regras sem frontmatter `paths` são carregadas sempre. Plano B: `--append-system-prompt` com texto curto apontando para o arquivo.
+Identidade e instruções vão em `.claude/rules/botloft.md` e não na linha de comando: o texto pode ser longo e a linha de comando do Windows é limitada. Regras sem frontmatter `paths` são carregadas no início de toda sessão, com a mesma prioridade de `.claude/CLAUDE.md` (confirmado na documentação oficial, ver seção 19). Plano B, se isso mudar: `--append-system-prompt` com texto curto apontando para o arquivo.
 
 ## 6. Configuração (`config.toml`)
 
@@ -214,14 +214,15 @@ default_deadline_minutes = 120
     "SessionEnd":       [{ "hooks": [{ "type": "command", "command": "<BOTLOFT_BIN>", "args": ["hook", "session-end"] }] }]
   },
   "permissions": {
-    "deny": ["Read(<BOTLOFT_HOME>/secrets/**)"]
+    "deny": ["Read(//c/Users/<usuário>/AppData/Local/Botloft/secrets/**)"]
   }
 }
 ```
 
 - Hooks em **exec form** (`args` presente): o Claude Code executa o binário direto, sem Git Bash nem PowerShell. Some o problema de quoting, de `curl` e de path com barra invertida.
+- O `command` do exec form precisa ser um `.exe` de verdade; shims `.cmd`/`.bat` exigem shell. `botloftd.exe` atende.
 - `crossSessionInbound: accept` é obrigatório: o daemon não é processo filho da sessão, então sem isso a mensagem pode ficar retida esperando aprovação.
-- Caminhos são absolutos e escritos com `/` dentro das regras de permissão. **Verificar** a sintaxe de path das permission rules no Windows.
+- Caminho absoluto em permission rule usa o prefixo `//` e a forma POSIX que o Claude Code aplica no Windows: `C:\Users\ana\...` vira `//c/Users/ana/...` (letra do drive em minúscula). Uma barra só (`/caminho`) é relativa à origem do settings, não à raiz, e não protegeria nada. O daemon converte `BOTLOFT_HOME` para essa forma ao gerar o arquivo.
 
 ### 7.6 Subcomando `botloftd hook <evento>`
 
@@ -264,7 +265,8 @@ default_deadline_minutes = 120
   1. `{"type":"auth","token":"<CLAUDE_CODE_MESSAGING_TOKEN>"}` (**obrigatório** no Windows)
   2. `{"type":"user","message":{"role":"user","content":"<envelope>"}}`
 - Fechar a conexão depois do flush.
-- **Verificar** o formato exato da linha de mensagem contra a documentação de cross-session messaging na versão alvo e cobrir com teste de integração manual (checklist no M3).
+- A documentação oficial confirma a linha de auth, a obrigatoriedade dela no Windows e o limite de 30 s, mas **não documenta** a linha de mensagem (item 2). Ela precisa ser confirmada com teste real no M3 antes de o courier depender dela.
+- Limites documentados do lado do Claude Code: mensagem de até ~1 milhão de caracteres, no máximo 50 mensagens aceitas na fila, rajadas recusadas e repetições idênticas descartadas. O courier deve respeitar isso (uma entrega por vez por bot).
 
 ### 9.3 Envelope
 
@@ -468,12 +470,18 @@ Identidade: o mascote do Botloft é uma chama com olhos, desenhada em vetor em `
 
 ## 19. Pontos a verificar na versão alvo do Claude Code
 
-| Item | Seção |
-|---|---|
-| Exec form de hooks (`args`) no Windows | 7.5 |
-| Formato das linhas no named pipe do inbox | 9.2 |
-| Carregamento de `.claude/rules/*.md` sem frontmatter | 5.1 |
-| Expansão `${VAR}` em headers do `mcp.json` | 10 |
-| Sintaxe de caminho Windows em permission rules | 7.5 |
-| Flags `--continue`, `--settings`, `--mcp-config` | 7.4 |
-| Payload do `StopFailure` e do `Notification` | 7.2 |
+Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28. "Confirmado" quer dizer documentado; o teste real na versão alvo continua no checklist do marco indicado.
+
+| Item | Seção | Resultado | Teste real |
+|---|---|---|---|
+| Exec form de hooks (`args`) no Windows | 7.5 | Confirmado (`hooks`): com `args`, o binário roda direto, sem shell; `command` precisa ser `.exe` | M2 |
+| Linha de auth, 30 s e variáveis do inbox | 9.2 | Confirmado (`cross-session-messaging`): `CLAUDE_CODE_MESSAGING_SOCKET`, `CLAUDE_CODE_MESSAGING_TOKEN`, auth obrigatória no Windows, >= 2.1.234 | M3 |
+| Formato da linha de mensagem no inbox | 9.2 | **Não documentado** | M3, obrigatório |
+| `crossSessionInbound` | 7.5 | Confirmado: valores `accept`, `hold`, `refuse`; `refuse` em settings de projeto vence tudo | M3 |
+| Carregamento de `.claude/rules/*.md` sem frontmatter | 5.1 | Confirmado (`memory`): carregadas sempre | M2 |
+| Expansão `${VAR}` em headers do `mcp.json` | 10 | Confirmado (`mcp`); alguns nomes de credencial conhecidos são lidos vazios, `BOTLOFT_BOT_TOKEN` não é um deles | M3 |
+| Sintaxe de caminho Windows em permission rules | 7.5 | Confirmado (`permissions`): `//c/...` em forma POSIX; spec corrigida | M2 |
+| Flags `--continue`, `--mcp-config` | 7.4 | Confirmado (`cli-reference`) | M2 |
+| Flag `--settings <arquivo>` | 7.4 | Citada em outras páginas (ex.: `cross-session-messaging`), ausente da tabela de CLI; confirmar com `claude --help` | M2 |
+| stdout do `SessionStart` vira contexto | 7.6 | Confirmado (`hooks`) | M2 |
+| `StopFailure` (`rate_limit`, `authentication_failed`) e `Notification` (`permission_prompt`) | 7.2 | Eventos e valores de matcher confirmados; nome do campo no JSON do stdin a confirmar | M2 |
