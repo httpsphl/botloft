@@ -28,6 +28,8 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
+      - name: Generated TypeScript bindings are up to date
+        run: git diff --exit-code -- app/src/lib/protocol.gen.ts
 
   rust-ubuntu:
     name: Rust core + store (Ubuntu)

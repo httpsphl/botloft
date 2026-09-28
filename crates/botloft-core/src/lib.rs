@@ -1,15 +1,18 @@
 //! Domain types, IDs, message envelope rendering and protocol types shared by
 //! the daemon and the app.
 
-/// Version of the app <-> daemon JSON-RPC protocol, negotiated in `session.hello`.
-pub const PROTOCOL_VERSION: u32 = 1;
+pub mod avatar;
+pub mod ids;
+pub mod protocol;
+pub mod slug;
+pub mod validate;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub use protocol::PROTOCOL_VERSION;
 
-    #[test]
-    fn protocol_version_starts_at_one() {
-        assert_eq!(PROTOCOL_VERSION, 1);
-    }
+/// Current time in milliseconds since the Unix epoch.
+pub fn now_ms() -> i64 {
+    let elapsed = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default();
+    i64::try_from(elapsed.as_millis()).unwrap_or(i64::MAX)
 }
