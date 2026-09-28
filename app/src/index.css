@@ -1,1 +1,111 @@
 @import "tailwindcss";
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+
+/* Colors are tokens so the light and dark themes swap in one place
+   (spec 15.3). State colors always go with an icon and a label. */
+:root {
+  color-scheme: light;
+  --canvas: #f3f3f0;
+  --panel: #ffffff;
+  --sunken: #e9e9e5;
+  --line: #d8d8d2;
+  --line-strong: #b5b5ae;
+  --ink: #121212;
+  --ink-soft: #3b3b38;
+  --muted: #6f6f69;
+  --accent: #d9481f;
+  --ok: #1d7f46;
+  --work: #1f5fc4;
+  --warn: #a35f00;
+  --danger: #c2372a;
+  --idle-state: #6f6f69;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #0b0b0b;
+  --panel: #141414;
+  --sunken: #1c1c1c;
+  --line: #262626;
+  --line-strong: #3b3b3b;
+  --ink: #eeeeea;
+  --ink-soft: #c6c6c0;
+  --muted: #8c8c86;
+  --accent: #ff7a59;
+  --ok: #4fc382;
+  --work: #6ea6ff;
+  --warn: #f0b24a;
+  --danger: #ff6d60;
+  --idle-state: #8c8c86;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-panel: var(--panel);
+  --color-sunken: var(--sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-ok: var(--ok);
+  --color-work: var(--work);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-quiet: var(--idle-state);
+}
+
+@theme {
+  --font-sans: "IBM Plex Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 0.875rem;
+  --text-base--line-height: 1.375rem;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  input,
+  textarea,
+  [data-selectable] {
+    user-select: text;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--line-strong);
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+}

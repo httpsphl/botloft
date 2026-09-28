@@ -1,6 +1,11 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import packageJson from "../package.json";
 import { App } from "./App";
+import type { Connect } from "./features/onboarding/link";
+import { connect, rpcUrl } from "./lib/client";
+import type { Host } from "./lib/host";
+import { tauriHost } from "./lib/tauriHost";
 import "./index.css";
 
 const root = document.getElementById("root");
@@ -8,8 +13,25 @@ if (!root) {
   throw new Error("missing #root element");
 }
 
-createRoot(root).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
+async function props(): Promise<{ host: Host; connect: Connect }> {
+  if ("__TAURI_INTERNALS__" in window) {
+    const client = { name: "botloft-app", version: packageJson.version };
+    return {
+      host: tauriHost(),
+      connect: (port, token) => connect({ url: rpcUrl(port), token, client }),
+    };
+  }
+  if (import.meta.env.DEV) {
+    const { previewProps } = await import("./dev/preview");
+    return previewProps(window.location.search);
+  }
+  throw new Error("Botloft runs inside its desktop app");
+}
+
+props().then(({ host, connect: open }) =>
+  createRoot(root).render(
+    <StrictMode>
+      <App host={host} connect={open} />
+    </StrictMode>,
+  ),
 );
