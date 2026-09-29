@@ -46,7 +46,10 @@ pub(super) fn apply(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value
                 .supervisor
                 .agents_running(bot, generation, agent_count(event));
         }
-        "stream_event" if !from_subagent => delta(daemon, bot, event),
+        "stream_event" if !from_subagent => {
+            delta(daemon, bot, event);
+            crate::screens::stream(daemon, bot, event);
+        }
         "assistant" if !from_subagent => assistant(daemon, bot, generation, event),
         "user" if event["isReplay"].as_bool() == Some(true) => replay(daemon, bot, event),
         "user" if !from_subagent => tool_results(daemon, bot, event),
@@ -231,6 +234,7 @@ fn tool_results(daemon: &Daemon, bot: &BotId, event: &Value) {
         let Some(id) = block["tool_use_id"].as_str() else {
             continue;
         };
+        crate::screens::tool_done(daemon, bot, id);
         let found = daemon.store().tool_item(bot, id);
         let Ok(Some(item)) = found else {
             continue;
@@ -317,5 +321,6 @@ fn result(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
         }),
     );
     routines::turn_ended(daemon, bot, failed);
+    crate::screens::turn_ended(daemon, bot);
     daemon.supervisor.turn_ended(bot, generation);
 }

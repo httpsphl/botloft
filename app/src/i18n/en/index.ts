@@ -10,6 +10,7 @@ import { files } from "./files";
 import { messages } from "./messages";
 import { onboarding } from "./onboarding";
 import { routines } from "./routines";
+import { screens } from "./screens";
 import { shell } from "./shell";
 import { updates } from "./updates";
 
@@ -26,6 +27,7 @@ export const en = {
   files,
   messages,
   routines,
+  screens,
 };
 
 export type Messages = typeof en;

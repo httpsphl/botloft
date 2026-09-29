@@ -58,6 +58,7 @@ mod messaging;
 mod methods;
 mod model;
 mod routines;
+mod screens;
 
 pub use browser::*;
 pub use chat::*;
@@ -66,6 +67,7 @@ pub use messaging::*;
 pub use methods::*;
 pub use model::*;
 pub use routines::*;
+pub use screens::*;
 
 /// Version negotiated in `session.hello`. 2 replaced the terminal with the
 /// chat (ADR 0001).
@@ -111,6 +113,7 @@ pub mod method {
     pub const BROWSER_LIST: &str = "browser.list";
     pub const BROWSER_WATCH: &str = "browser.watch";
     pub const BROWSER_UNWATCH: &str = "browser.unwatch";
+    pub const SCREENS_LIST: &str = "screens.list";
 }
 
 /// Server notification method names.
@@ -129,6 +132,7 @@ pub mod notification {
     pub const BROWSER_ACTION: &str = "browser.action";
     /// Only to the connection watching that bot's browser (spec 21.7).
     pub const BROWSER_FRAME: &str = "browser.frame";
+    pub const SCREEN_DRAFT: &str = "screen.draft";
 }
 
 /// Error codes: the standard JSON-RPC ones plus the daemon's (spec 11.4).

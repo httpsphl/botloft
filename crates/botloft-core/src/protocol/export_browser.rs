@@ -1,4 +1,4 @@
-//! The browser part of the TypeScript bindings (spec 21.7).
+//! The browser and screens part of the TypeScript bindings (spec 21.7, 22.4).
 
 use std::fmt::Write as _;
 
@@ -13,6 +13,10 @@ pub(super) fn decls(out: &mut Out) {
     out.decl::<BrowserAction>();
     out.decl::<BrowserView>();
     out.decl::<BrowserWatchParams>();
+    out.decl::<ScreenDevice>();
+    out.decl::<Screen>();
+    out.decl::<ScreensListParams>();
+    out.decl::<ScreenDraft>();
 }
 
 pub(super) fn methods(out: &mut Out) {
@@ -27,6 +31,11 @@ pub(super) fn methods(out: &mut Out) {
         &out.name::<BrowserView>(),
     );
     out.method(method::BROWSER_UNWATCH, "undefined", "null");
+    out.method(
+        method::SCREENS_LIST,
+        &out.name::<ScreensListParams>(),
+        &out.name::<Vec<Screen>>(),
+    );
 }
 
 pub(super) fn notifications(out: &mut Out) {
@@ -44,4 +53,6 @@ pub(super) fn notifications(out: &mut Out) {
         notification::BROWSER_ACTION
     );
     let _ = writeln!(out.text, "  \"{}\": {frame};", notification::BROWSER_FRAME);
+    let draft = out.name::<ScreenDraft>();
+    let _ = writeln!(out.text, "  \"{}\": {draft};", notification::SCREEN_DRAFT);
 }

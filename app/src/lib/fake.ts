@@ -11,6 +11,7 @@ import { crewHandlers } from "./fakeCrews";
 import { FakeFiles } from "./fakeFiles";
 import { FakeRoutines } from "./fakeRoutines";
 import { conflict, invalid, notFound, slugify } from "./fakeRules";
+import { FakeScreens } from "./fakeScreens";
 import {
   type Bot,
   type BotId,
@@ -62,6 +63,7 @@ export class FakeBotloft implements BotloftApi {
   readonly routines = new FakeRoutines(this);
   readonly files = new FakeFiles(this);
   readonly browser = new FakeBrowser(this);
+  readonly screens = new FakeScreens(this);
   /** Clock for created and updated times. */
   now = Date.now();
   closed = false;
@@ -214,6 +216,7 @@ export class FakeBotloft implements BotloftApi {
     ...this.conversation.handlers(),
     ...this.files.handlers(),
     ...this.browser.handlers(),
+    ...this.screens.handlers(),
     ...this.routines.handlers(),
   };
 }

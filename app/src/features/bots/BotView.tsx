@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
@@ -17,12 +17,15 @@ import { ShowFile } from "../files/showFile";
 import { useBotFiles } from "../files/useBotFiles";
 import { SignInButton } from "../onboarding/SignIn";
 import { BotRoutines } from "../routines/RoutineList";
+import { ScreensPanel } from "../screens/ScreensPanel";
+import { ShowScreen } from "../screens/showScreen";
+import { useScreens } from "../screens/useScreens";
 import { BotHeader } from "./BotHeader";
 import { stateView } from "./BotStateBadge";
 
 type Pane = "chat" | "routines";
 /** What the panel beside the chat shows. */
-type Side = "details" | "files" | "browser" | null;
+type Side = "details" | "files" | "browser" | "screens" | null;
 
 /**
  * A bot's conversation and its routines, with its details in a side panel
@@ -73,6 +76,36 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
     return status === "open" || status === "starting";
   });
   const browserOpen = side === "browser";
+  const screens = useScreens(bot);
+  const screensOpen = side === "screens";
+  const [screenPath, setScreenPath] = useState<string | null>(null);
+  const showScreen = (path: string | null) => {
+    if (filesOpen) {
+      seen();
+    }
+    setSide("screens");
+    setScreenPath(path);
+    void screens.refresh();
+  };
+  // The design area opens by itself when the bot starts drawing a screen,
+  // once per screen, if nothing else is open beside the chat (spec 22.5).
+  const drawn = useRef(new Set<string>());
+  // biome-ignore lint/correctness/useExhaustiveDependencies: another bot starts with its own screens
+  useEffect(() => {
+    drawn.current = new Set();
+    setScreenPath(null);
+  }, [bot.id]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only a new screen being written opens it
+  useEffect(() => {
+    const path = screens.writing?.toLowerCase();
+    if (path && !drawn.current.has(path)) {
+      drawn.current.add(path);
+      if (side === null) {
+        setSide("screens");
+        setScreenPath(null);
+      }
+    }
+  }, [screens.writing]);
   const showBrowser = () => {
     if (filesOpen) {
       seen();
@@ -101,6 +134,9 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
         browserOpen={browserOpen}
         browsing={browsing}
         onToggleBrowser={() => (browserOpen ? setSide(null) : showBrowser())}
+        screensOpen={screensOpen}
+        drawing={screens.writing !== null}
+        onToggleScreens={() => (screensOpen ? setSide(null) : showScreen(null))}
       />
       <Notices bot={bot} crew={crew} view={view} />
       <Tabs<Pane> label={bot.name} tabs={tabs} value={pane} onChange={setPane} />
@@ -109,7 +145,9 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
           {pane === "chat" ? (
             <ShowFile.Provider value={showFile}>
               <ShowBrowser.Provider value={showBrowser}>
-                <ChatView bot={bot} stopped={bot.paused || crew.paused} />
+                <ShowScreen.Provider value={showScreen}>
+                  <ChatView bot={bot} stopped={bot.paused || crew.paused} />
+                </ShowScreen.Provider>
               </ShowBrowser.Provider>
             </ShowFile.Provider>
           ) : (
@@ -118,6 +156,15 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
         </div>
         {side === "details" && <Details bot={bot} onClose={() => setSide(null)} />}
         {browserOpen && <BrowserPanel bot={bot} onClose={() => setSide(null)} />}
+        {screensOpen && (
+          <ScreensPanel
+            bot={bot}
+            data={screens}
+            path={screenPath}
+            onPath={setScreenPath}
+            onClose={() => setSide(null)}
+          />
+        )}
         {filesOpen && (
           <FilesPanel
             bot={bot}

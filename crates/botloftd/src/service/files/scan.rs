@@ -101,7 +101,7 @@ pub(super) fn keys(files: &[String]) -> HashSet<String> {
 }
 
 /// The media type for a file name, by extension.
-pub(super) fn media_type(name: &str) -> &'static str {
+pub(crate) fn media_type(name: &str) -> &'static str {
     let extension = name
         .rsplit_once('.')
         .map(|(_, extension)| extension.to_ascii_lowercase())

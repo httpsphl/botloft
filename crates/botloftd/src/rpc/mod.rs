@@ -217,6 +217,7 @@ fn to_notification(event: &Event) -> String {
         Event::BrowserAction(action) => {
             (notification::BROWSER_ACTION, serde_json::to_value(action))
         }
+        Event::ScreenDraft(draft) => (notification::SCREEN_DRAFT, serde_json::to_value(draft)),
     };
     jsonrpc::notification(name, params.unwrap_or(Value::Null))
 }
