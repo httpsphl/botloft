@@ -233,7 +233,13 @@ function Artboard({
             : undefined
         }
       >
-        <LiveFrame url={screen.url} device={device} scale={scale} title={screen.name} />
+        <LiveFrame
+          url={screen.url}
+          device={device}
+          scale={scale}
+          title={screen.name}
+          writer={screen.writing ? bot : null}
+        />
         <button
           type="button"
           aria-label={t.open(screen.name)}

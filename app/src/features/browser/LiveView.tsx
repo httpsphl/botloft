@@ -5,16 +5,9 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { useT } from "../../i18n";
 import type { Bot, BrowserAction, BrowserFrame } from "../../lib/protocol.gen";
+import { BotCursor } from "../bots/BotCursor";
 
 const PAGE = { width: 1280, height: 800 };
-
-/** Dark text on light colors, light text on dark ones. */
-function inkOn(color: string): string {
-  const hex = color.replace("#", "");
-  const [r, g, b] = [0, 2, 4].map((at) => Number.parseInt(hex.slice(at, at + 2), 16) / 255);
-  const luminance = 0.2126 * (r ?? 0) + 0.7152 * (g ?? 0) + 0.0722 * (b ?? 0);
-  return luminance > 0.55 ? "#141414" : "#ffffff";
-}
 
 /** Where on the screen, in percent, an action happened. */
 function spot(action: BrowserAction | null, frame: BrowserFrame | null) {
@@ -83,7 +76,6 @@ export function LiveView({
   }, [action?.at, action?.kind]);
   const width = frame?.width ?? PAGE.width;
   const height = frame?.height ?? PAGE.height;
-  const ink = inkOn(bot.color);
   const acting = !dim && !held;
 
   return (
@@ -113,29 +105,12 @@ export function LiveView({
         />
       )}
       {acting && cursor && (
-        <span
-          aria-hidden
-          className="browser-cursor"
-          style={{ left: `${cursor.x}%`, top: `${cursor.y}%` }}
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" className="drop-shadow-sm">
-            <title>{bot.name}</title>
-            <path
-              d="M4 2.5 19.5 12l-7 1.6-3.4 6.9Z"
-              fill={bot.color}
-              stroke="#ffffff"
-              strokeWidth="1.6"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <span
-            className="ml-3.5 -mt-1 inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 font-semibold text-[11px] shadow-sm"
-            style={{ background: bot.color, color: ink }}
-          >
-            {bot.name}
-            {action?.kind === "type" && <span className="browser-typing">•••</span>}
-          </span>
-        </span>
+        <BotCursor
+          bot={bot}
+          left={`${cursor.x}%`}
+          top={`${cursor.y}%`}
+          typing={action?.kind === "type"}
+        />
       )}
       {children}
     </figure>
