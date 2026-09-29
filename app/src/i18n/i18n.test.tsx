@@ -56,13 +56,13 @@ describe("languages", () => {
     render(<App host={new FakeHost()} connect={() => fake as Client} />);
     expect(await screen.findByRole("heading", { name: "Welcome to Botloft" })).toBeDefined();
 
-    fireEvent.click(screen.getByRole("button", { name: "Language" }));
+    // The language lives in the account menu at the bottom of the sidebar.
+    fireEvent.click(screen.getByRole("button", { name: /Ana Lima/ }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Language" }));
     fireEvent.click(screen.getByRole("menuitemradio", { name: /Português/ }));
     expect(screen.getByRole("heading", { name: "Boas-vindas ao Botloft" })).toBeDefined();
     expect(document.documentElement.lang).toBe("pt-BR");
     expect(localStorage.getItem("botloft.locale")).toBe("pt-BR");
-
-    fireEvent.click(screen.getByRole("button", { name: "Idioma" }));
     expect(
       screen.getByRole("menuitemradio", { name: /Português/ }).getAttribute("aria-checked"),
     ).toBe("true");

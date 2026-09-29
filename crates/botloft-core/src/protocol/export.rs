@@ -96,6 +96,8 @@ fn export_bindings() {
     out.decl::<DeliveryBacklog>();
     out.decl::<UsageWindow>();
     out.decl::<AccountUsage>();
+    out.decl::<ClaudeAccount>();
+    out.decl::<OwnerAccount>();
     out.decl::<SystemStatus>();
     out.decl::<CrewsCreateParams>();
     out.decl::<CrewsRenameParams>();

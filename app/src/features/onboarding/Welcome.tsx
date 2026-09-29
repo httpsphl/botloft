@@ -58,12 +58,12 @@ export function Welcome() {
       <div className="mx-auto max-w-xl">
         <h1 className="font-semibold text-2xl tracking-tight">{w.title}</h1>
         <p className="mt-1 text-ink-soft leading-relaxed">{w.intro}</p>
-        <ul className="mt-6 flex flex-col border border-line bg-panel">
+        <ul className="mt-6 flex flex-col overflow-hidden rounded-xl border border-line bg-panel">
           <Check state="ok" title={w.botloft} detail={w.running} />
           {claude}
           {account}
         </ul>
-        <div className="mt-4 border border-line bg-panel p-4 text-sm leading-relaxed">
+        <div className="mt-4 rounded-xl border border-line bg-panel p-4 text-sm leading-relaxed">
           <p className="font-semibold">{w.askFirstTitle}</p>
           <p className="mt-1 text-ink-soft">{w.askFirstBody}</p>
         </div>

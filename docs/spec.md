@@ -202,7 +202,7 @@ Eventos de uma generation antiga são ignorados. Todo processo novo emite `bot.s
 - **Sessão:** o daemon guarda em `bots.session_id` o id da conversa. O primeiro start usa `--session-id <uuid novo>`; os seguintes, `--resume <session_id>`. Se a sessão retomada morrer em menos de `fresh_start_if_dies_within_s`, o próximo start vem com um id novo. `bots.restart {fresh: true}` também começa conversa nova. O histórico do chat fica no banco do daemon (seção 8) e não depende do transcript do Claude Code.
 - Mudanças em nome, papel ou instruções regravam as regras na hora, mas o bot só as lê no próximo start; o daemon não reinicia o bot sozinho.
 - `auth_error` não entra em loop de restart: fica parado até o owner pedir `bots.restart` ou até o daemon ver o Claude Code conectado de novo.
-- **Login do Claude Code:** o daemon roda `claude auth status` (JSON com `loggedIn`; sai com 0 conectado e 1 desconectado, seção 19) no ambiente do usuário, sem janela: quando acha o Claude Code, a cada 30 s enquanto desconectado ou desconhecido, na hora quando um bot cai em `auth_error` e quando o app pede (`system.refresh`). Conectado, não confere de novo sozinho. Quando o resultado passa de desconectado para conectado, os bots em `auth_error` sobem de novo sem o dono pedir. Um erro de conta com o login válido (`billing_error`, `account_on_hold`, organização bloqueada) não muda o resultado e por isso não vira loop. O resultado sai em `system.status.claudeSignedIn`. O login em si é feito pelo app (15.2).
+- **Login do Claude Code:** o daemon roda `claude auth status` (JSON com `loggedIn` e, conectado, `email`, `subscriptionType` e `orgName`; sai com 0 conectado e 1 desconectado, seção 19) no ambiente do usuário, sem janela: quando acha o Claude Code, a cada 30 s enquanto desconectado ou desconhecido, na hora quando um bot cai em `auth_error` e quando o app pede (`system.refresh`). Conectado, não confere de novo sozinho. Quando o resultado passa de desconectado para conectado, os bots em `auth_error` sobem de novo sem o dono pedir. Um erro de conta com o login válido (`billing_error`, `account_on_hold`, organização bloqueada) não muda o resultado e por isso não vira loop. O resultado sai em `system.status.claudeSignedIn`, e a conta (e-mail, plano, organização) em `system.status.account.claude`. O login em si é feito pelo app (15.2).
 - Cada processo de bot entra num **Job Object** com `KILL_ON_JOB_CLOSE`. Se o daemon morrer, a árvore de processos dos bots morre junto e não sobra `claude.exe` órfão.
 
 ### 7.4 Spawn
@@ -426,7 +426,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 
 | Método | Params | Result |
 |---|---|---|
-| `system.status` | | versão, uptime, versão e caminho do claude (`claudeVersion`, `claudePath`), `runtimeError` (por que os bots não sobem), `claudeSignedIn` (7.3; `null` antes de conferir), backlog de entrega, `usage` (uso da conta, 8.1) |
+| `system.status` | | versão, uptime, versão e caminho do claude (`claudeVersion`, `claudePath`), `runtimeError` (por que os bots não sobem), `claudeSignedIn` (7.3; `null` antes de conferir), `account` (o dono para a área da conta do app: `name`, o nome de exibição da conta do Windows, `GetUserNameExW(NameDisplay)`, ou o nome de usuário sem ele, lido uma vez; e `claude`, a conta do Claude com `email`, `plan` e `organization`, ou `null` desconectado), backlog de entrega, `usage` (uso da conta, 8.1) |
 | `system.refresh` | | pede uma nova conferência do Claude Code (login e, se falhou, o executável) e responde na hora com o `system.status` atual; o app relê o status até ver o resultado |
 | `crews.list` | | `Crew[]` |
 | `crews.create` | `name` | `Crew` |
@@ -550,7 +550,8 @@ O store recarrega crews, bots e `system.status` a cada (re)conexão e depois seg
 
 Layout, como um app de mensagens:
 
-- **Barra lateral:** crews como seções, com os bots como conversas. Cada conversa mostra avatar, nome, estado (cor, ícone e texto) e a prévia da última atividade (`lastActivity`) com a hora.
+- **Barra lateral:** crews como seções, com os bots como conversas. Cada conversa mostra avatar, nome, estado (cor, ícone e texto) e a prévia da última atividade (`lastActivity`) com a hora. Ela aparece desde a conexão, também na tela de boas-vindas antes da primeira crew.
+- **Área da conta**, no pé da barra lateral, como nos apps de chat: um círculo com a inicial, o nome do dono (do Windows) e o plano do Claude ("Plano Max"; sem plano, a organização ou o e-mail; desconectado, "Sem conta do Claude conectada"). Um clique abre um menu para cima com o e-mail e: **Uso** (as janelas de uso do plano, 8.1, com a parte usada e quando renovam; antes da primeira resposta de um bot, um aviso de que ainda não há dados), **Configurações** (tema, tamanho, idioma e as versões do Botloft e do Claude Code), **Idioma** (submenu ao lado, com a escolha na hora), **Novidades** (a página de releases no navegador) e **Ajuda** (o README no navegador). Tema, tamanho e idioma saíram da barra de título; ela só mostra o idioma nas telas de preparo, que ainda não têm barra lateral.
 - **Área principal com um bot:** cabeçalho com nome, estado e ações; o chat; o compositor embaixo. O compositor aceita texto, colar imagem e arrastar ou escolher arquivos. Enter envia e Shift+Enter quebra linha.
 - **Área principal com uma crew:** a timeline (messages entre os bots e do dono) e as tasks.
 - **Detalhes do bot** (pasta, instruções, sessão) ficam num painel, fora do caminho da conversa.
@@ -588,6 +589,8 @@ Em dev, `pnpm tauri dev` usa o `target\debug\botloftd.exe` como sidecar e instal
 
 Ferramenta de trabalho densa e calma: tipografia forte, grid firme, estados dos bots legíveis de longe (cor + ícone + texto, nunca só cor). Sem gradiente, sem sombra pesada, sem visual de template. Tema escuro e claro. Barra de título própria (`decorations: false`) com controles de janela do Windows.
 
+Tamanho: a janela inteira é desenhada numa escala (zoom do webview, `setZoom`), então texto, espaçamento, ícones e avatares crescem juntos. Níveis 100%, 110%, 125% e 150%; o padrão é **125%**, porque o desenho a 100% ficava miúdo num monitor sem ampliação do Windows. Quem já usa a ampliação alta volta para 100% em Configurações (área da conta) ou com Ctrl+-; Ctrl+= aumenta e Ctrl+0 volta ao padrão. A escolha fica no `localStorage` (`botloft.zoom`) e é aplicada antes da primeira pintura, para a janela não piscar pequena. Acima de 150% a janela mínima (900 px) não cabe o layout.
+
 No chat:
 
 - O dono fala em balões à direita; o bot, à esquerda, com markdown.
@@ -596,7 +599,7 @@ No chat:
 - Pedido de aprovação é um cartão com o que o bot quer fazer e os botões Permitir e Negar.
 - Anexos aparecem como miniatura (imagem) ou cartão com nome, tipo e tamanho.
 
-Identidade: o mascote do Botloft é uma chama com olhos, desenhada em vetor em `app/app-icon.svg`. O ícone do app é o mascote branco sobre fundo preto. Cada bot usa o mesmo personagem como avatar, com uma cor própria escolhida na criação. A cor do avatar identifica o bot e não comunica estado: estado continua sendo cor + ícone + texto, como descrito acima.
+Identidade: o mascote do Botloft é uma chama com olhos, desenhada em vetor em `app/app-icon.svg`. O ícone do app é o mascote branco sobre fundo preto. Cada bot usa o mesmo personagem como avatar, com uma cor própria escolhida na criação, sem fundo e com um contorno fino e discreto (escuro no tema claro, claro no escuro) para as cores claras não sumirem. O mascote branco do próprio Botloft (barra de título, mensagens do daemon) fica sobre o quadrado preto do ícone do app, que é o que o torna visível no tema claro. A cor do avatar identifica o bot e não comunica estado: estado continua sendo cor + ícone + texto, como descrito acima.
 
 ### 15.4 Instalador e sidecar
 
@@ -617,7 +620,7 @@ Identidade: o mascote do Botloft é uma chama com olhos, desenhada em vetor em `
 
 - O app fala **inglês, português (Brasil) e espanhol**. Todo texto que o dono lê fica em `app/src/i18n/<idioma>/`, um arquivo por área (`common`, `shell`, `onboarding`, `updates`, `bots`, `chat`, `crews`, `messages`). O inglês é a referência: o formato dele é o tipo `Messages`, e um texto que falte ou sobre em outro idioma não compila. Texto com valores é função (`ready(version)`), com o plural escrito para cada idioma.
 - Componentes leem com `useT()`; código fora do React (toasts, formatação, erros da conexão) com `t()` na hora do uso.
-- Escolha no botão de idioma da barra de título (também nas telas de preparo): "Idioma do sistema" segue o Windows (o primeiro idioma suportado entre os preferidos; `pt-PT` vira `pt-BR`; nenhum, inglês) ou um idioma fixo. A escolha fica no `localStorage` do app (`botloft.locale`) e marca `<html lang>`.
+- Escolha na área da conta (Idioma, ou Configurações), e no botão de idioma da barra de título só nas telas de preparo: "Idioma do sistema" segue o Windows (o primeiro idioma suportado entre os preferidos; `pt-PT` vira `pt-BR`; nenhum, inglês) ou um idioma fixo. A escolha fica no `localStorage` do app (`botloft.locale`) e marca `<html lang>`.
 - Datas e horas (`lib/format.ts`) usam o idioma escolhido.
 - O daemon não escreve texto para o dono: avisos vêm com `code` e a linha da conversa com `kind` (8.2, 11.2), e o app escreve. Continuam como vêm: nomes, mensagens, respostas e saídas de ferramenta; o resumo de ferramenta que o daemon faz a partir da entrada (o comando, o arquivo); e as mensagens de erro do daemon (validação, falhas), mostradas como texto técnico.
 - O instalador NSIS também traz os três idiomas e escolhe pelo idioma do Windows.

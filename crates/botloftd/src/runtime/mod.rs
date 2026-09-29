@@ -12,6 +12,7 @@ use std::io;
 use std::path::PathBuf;
 use std::pin::Pin;
 
+use botloft_core::protocol::ClaudeAccount;
 use bytes::Bytes;
 use tokio::sync::mpsc;
 
@@ -49,13 +50,21 @@ pub struct Process {
     pub control: Box<dyn ProcessControl>,
 }
 
-/// The answer to "is Claude Code signed in?", computed off the async workers.
-pub type SignInCheck = Pin<Box<dyn Future<Output = io::Result<bool>> + Send>>;
+/// What `claude auth status` says: signed in or not, and to which account.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AuthStatus {
+    pub signed_in: bool,
+    pub account: Option<ClaudeAccount>,
+}
+
+/// An [`AuthStatus`], computed off the async workers.
+pub type AuthCheck = Pin<Box<dyn Future<Output = io::Result<AuthStatus>> + Send>>;
 
 pub trait Runtime: Send + Sync + 'static {
     fn spawn(&self, spec: SpawnSpec) -> io::Result<Process>;
-    /// Whether the Claude Code at `program` is signed in (`claude auth status`).
-    fn signed_in(&self, program: PathBuf) -> SignInCheck;
+    /// Whether the Claude Code at `program` is signed in, and to which
+    /// account (`claude auth status`).
+    fn auth_status(&self, program: PathBuf) -> AuthCheck;
 }
 
 /// Capacity of the event channel between a process and the daemon. When it

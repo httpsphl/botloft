@@ -30,6 +30,13 @@ async fn the_status_says_whether_claude_code_is_signed_in() {
     let status = service::status(&s.daemon).expect("status");
     assert_eq!(status.claude_signed_in, Some(true));
     assert!(status.claude_path.is_some());
+    assert!(
+        !status.account.name.is_empty(),
+        "the Windows account's name"
+    );
+    let claude = status.account.claude.expect("the signed-in Claude account");
+    assert_eq!(claude.email.as_deref(), Some("owner@example.com"));
+    assert_eq!(claude.plan.as_deref(), Some("max"));
     assert_eq!(s.runtime.sign_in_checks(), 1, "checked once, then trusted");
     tokio::time::sleep(Duration::from_secs(300)).await;
     assert_eq!(s.runtime.sign_in_checks(), 1);
@@ -43,6 +50,11 @@ async fn signing_in_again_brings_the_stopped_bots_back() {
     sign_in_error(&s).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
     assert_eq!(s.daemon.supervisor.claude_signed_in(), Some(false));
+    assert_eq!(
+        s.daemon.supervisor.claude_account(),
+        None,
+        "no account while signed out"
+    );
 
     // Still signed out: checked every 30 s, the bot stays stopped.
     tokio::time::sleep(Duration::from_secs(40)).await;

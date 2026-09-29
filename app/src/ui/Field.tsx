@@ -41,7 +41,7 @@ function Frame({
 }
 
 const control =
-  "w-full rounded-[3px] border border-line-strong bg-canvas px-2.5 text-ink text-sm outline-none placeholder:text-muted focus:border-accent";
+  "w-full rounded-lg border border-line-strong bg-canvas px-2.5 text-ink text-sm outline-none placeholder:text-muted focus:border-accent";
 
 export function TextField({
   label,

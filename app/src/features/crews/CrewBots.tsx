@@ -12,7 +12,7 @@ export function CrewBots({ crew, bots, onNewBot }: { crew: Crew; bots: Bot[]; on
   const selectBot = useApp((state) => state.selectBot);
   if (bots.length === 0) {
     return (
-      <div className="border border-line border-dashed px-6 py-10 text-center">
+      <div className="rounded-2xl border border-line border-dashed px-6 py-10 text-center">
         <p className="font-medium">{t.crews.bots.empty(crew.name)}</p>
         <p className="mt-1 text-muted text-sm">{t.crews.bots.emptyHint}</p>
         <Button className="mt-4" variant="primary" icon={Plus} onClick={onNewBot}>
@@ -28,7 +28,7 @@ export function CrewBots({ crew, bots, onNewBot }: { crew: Crew; bots: Bot[]; on
           <button
             type="button"
             onClick={() => selectBot(bot.id)}
-            className="flex h-full w-full flex-col gap-2 border border-line bg-panel p-3 text-left hover:border-line-strong"
+            className="flex h-full w-full flex-col gap-2 rounded-xl border border-line bg-panel p-3.5 text-left transition-colors hover:border-line-strong"
           >
             <div className="flex w-full items-center gap-2.5">
               <BotAvatar color={bot.color} size={32} />

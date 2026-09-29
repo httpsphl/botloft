@@ -23,6 +23,10 @@
   --warn: #a35f00;
   --danger: #c2372a;
   --idle-state: #6f6f69;
+  /* The thin edge around a bot's avatar, so light colors hold their shape. */
+  --avatar-edge: rgb(0 0 0 / 0.2);
+  /* Under menus, pickers and dialogs. */
+  --lift: rgb(0 0 0 / 0.12);
 }
 
 [data-theme="dark"] {
@@ -41,6 +45,8 @@
   --warn: #f0b24a;
   --danger: #ff6d60;
   --idle-state: #8c8c86;
+  --avatar-edge: rgb(255 255 255 / 0.14);
+  --lift: rgb(0 0 0 / 0.5);
 }
 
 @theme inline {
@@ -58,6 +64,7 @@
   --color-warn: var(--warn);
   --color-danger: var(--danger);
   --color-quiet: var(--idle-state);
+  --shadow-lift: 0 12px 32px -8px var(--lift), 0 2px 8px -2px var(--lift);
 }
 
 @theme {
@@ -121,6 +128,10 @@
     margin-top: 0.6em;
   }
 
+  .chat-md > :first-child {
+    margin-top: 0;
+  }
+
   .chat-md :is(h1, h2, h3, h4) {
     font-weight: 600;
     letter-spacing: -0.01em;
@@ -160,7 +171,7 @@
     font-size: 0.9em;
     background: var(--sunken);
     padding: 0.1em 0.35em;
-    border-radius: 3px;
+    border-radius: 5px;
   }
 
   .chat-md pre {
@@ -169,8 +180,8 @@
     line-height: 1.5;
     background: var(--sunken);
     border: 1px solid var(--line);
-    border-radius: 4px;
-    padding: 0.7em 0.9em;
+    border-radius: 10px;
+    padding: 0.75em 1em;
     overflow-x: auto;
     overflow-wrap: normal;
   }
@@ -187,16 +198,29 @@
   }
 
   .chat-md table {
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     display: block;
+    width: fit-content;
+    max-width: 100%;
     overflow-x: auto;
     font-size: 0.8125rem;
+    border: 1px solid var(--line);
+    border-radius: 10px;
   }
 
   .chat-md :is(th, td) {
-    border: 1px solid var(--line);
-    padding: 0.3em 0.6em;
+    border-bottom: 1px solid var(--line);
+    padding: 0.4em 0.75em;
     text-align: left;
+  }
+
+  .chat-md :is(th, td) + :is(th, td) {
+    border-left: 1px solid var(--line);
+  }
+
+  .chat-md tbody tr:last-child > td {
+    border-bottom: 0;
   }
 
   .chat-md th {

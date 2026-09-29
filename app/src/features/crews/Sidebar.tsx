@@ -7,6 +7,7 @@ import type { Activity, Bot, Crew } from "../../lib/protocol.gen";
 import { botsOf, crewList } from "../../store/app";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
+import { AccountArea } from "../account/AccountArea";
 import { BotAvatar } from "../bots/BotAvatar";
 import { BotStateBadge, stateView } from "../bots/BotStateBadge";
 import { CrewDialog } from "./CrewDialog";
@@ -17,34 +18,33 @@ export function Sidebar() {
   const crews = useApp(useShallow(crewList));
   const [creating, setCreating] = useState(false);
   return (
-    <nav
-      aria-label={t.crews.sidebar.label}
-      className="flex w-72 shrink-0 flex-col border-line border-r bg-panel"
-    >
-      <div className="flex h-10 shrink-0 items-center justify-between pr-1.5 pl-4">
-        <h2 className="font-semibold text-muted text-xs uppercase tracking-[0.12em]">
-          {t.crews.sidebar.label}
-        </h2>
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={Plus}
-          label={t.crews.newCrew}
-          onClick={() => setCreating(true)}
-        />
-      </div>
-      <ul className="min-h-0 flex-1 overflow-y-auto pb-3">
-        {crews.map((crew) => (
-          <CrewEntry key={crew.id} crew={crew} />
-        ))}
-      </ul>
+    <div className="flex w-72 shrink-0 flex-col border-line border-r bg-panel">
+      <nav aria-label={t.crews.sidebar.label} className="flex min-h-0 flex-1 flex-col">
+        <div className="flex h-10 shrink-0 items-center justify-between pr-1.5 pl-4">
+          <h2 className="font-semibold text-muted text-xs uppercase tracking-[0.12em]">
+            {t.crews.sidebar.label}
+          </h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={Plus}
+            label={t.crews.newCrew}
+            onClick={() => setCreating(true)}
+          />
+        </div>
+        <ul className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
+          {crews.map((crew) => (
+            <CrewEntry key={crew.id} crew={crew} />
+          ))}
+        </ul>
+      </nav>
+      <AccountArea />
       {creating && <CrewDialog onClose={() => setCreating(false)} />}
-    </nav>
+    </div>
   );
 }
 
-const row = "relative flex w-full items-center text-left hover:bg-sunken";
-const marker = "before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-accent";
+const row = "relative flex w-full items-center rounded-lg text-left hover:bg-sunken";
 
 function CrewEntry({ crew }: { crew: Crew }) {
   const t = useT();
@@ -58,7 +58,7 @@ function CrewEntry({ crew }: { crew: Crew }) {
         type="button"
         aria-current={selected ? "page" : undefined}
         onClick={() => selectCrew(crew.id)}
-        className={`${row} h-8 gap-2 pr-3 pl-4 font-semibold text-sm ${selected ? `bg-sunken ${marker}` : ""}`}
+        className={`${row} h-8 gap-2 px-2.5 font-semibold text-sm ${selected ? "bg-sunken" : ""}`}
       >
         <span className="min-w-0 flex-1 truncate">{crew.name}</span>
         {crew.paused && (
@@ -89,7 +89,7 @@ function Conversation({ bot, crew }: { bot: Bot; crew: Crew }) {
         aria-current={selected ? "page" : undefined}
         aria-label={`${bot.name}, ${stateView(bot, crew.paused).label}`}
         onClick={() => selectBot(bot.id)}
-        className={`${row} gap-2.5 py-2 pr-3 pl-4 ${selected ? `bg-sunken ${marker}` : ""}`}
+        className={`${row} gap-2.5 px-2.5 py-2 ${selected ? "bg-sunken" : ""}`}
       >
         <BotAvatar color={bot.color} size={32} />
         <span className="min-w-0 flex-1">

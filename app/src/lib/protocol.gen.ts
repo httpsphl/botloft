@@ -190,6 +190,29 @@ resetsAt: number | null, windows: Array<UsageWindow>,
  */
 observedAt: number, };
 
+/**
+ * What `claude auth status` says about the account (spec 7.3).
+ */
+export type ClaudeAccount = { email: string | null, 
+/**
+ * As Claude Code says it: `max`, `pro`, `team`, `enterprise`...
+ */
+plan: string | null, organization: string | null, };
+
+/**
+ * The owner, as the app shows them in its account area (spec 15.1).
+ */
+export type OwnerAccount = { 
+/**
+ * The Windows account's display name, or the user name without one.
+ */
+name: string, 
+/**
+ * The Claude account Claude Code is signed in to; `null` when signed out
+ * or not checked yet.
+ */
+claude: ClaudeAccount | null, };
+
 export type SystemStatus = { daemonVersion: string, protocol: number, uptimeMs: number, 
 /**
  * Version reported by `claude --version`; `null` until the runtime probe runs.
@@ -206,7 +229,11 @@ claudePath: string | null,
 /**
  * Whether Claude Code is signed in (`claude auth status`); `null` until checked.
  */
-claudeSignedIn: boolean | null, deliveries: DeliveryBacklog, 
+claudeSignedIn: boolean | null, 
+/**
+ * Who the owner is, for the account area of the app.
+ */
+account: OwnerAccount, deliveries: DeliveryBacklog, 
 /**
  * The Claude account's usage as last reported; `null` before any turn.
  */

@@ -19,7 +19,7 @@ export function previewProps(search: string): { host: Host; connect: Connect } {
     return liveProps(live);
   }
   const fake = new FakeBotloft();
-  const host = new FakeHost();
+  const host = previewHost();
   if (params.has("stopped")) {
     host.status = {
       state: "stopped",
@@ -34,7 +34,7 @@ export function previewProps(search: string): { host: Host; connect: Connect } {
 }
 
 function liveProps(port: number): { host: Host; connect: Connect } {
-  const host = new FakeHost();
+  const host = previewHost();
   host.status = {
     state: "running",
     port,
@@ -52,7 +52,31 @@ function liveProps(port: number): { host: Host; connect: Connect } {
   };
 }
 
+/** A FakeHost whose zoom shows in a plain browser, like the app's does. */
+function previewHost(): FakeHost {
+  const host = new FakeHost();
+  host.setZoom = (factor) => {
+    host.zoom = factor;
+    document.documentElement.style.zoom = String(factor);
+    return Promise.resolve();
+  };
+  return host;
+}
+
 function seed(fake: FakeBotloft): void {
+  const now = Date.now();
+  fake.system = {
+    ...fake.system,
+    usage: {
+      status: "allowed",
+      resetsAt: now + 2 * 3600_000,
+      observedAt: now - 5 * 60_000,
+      windows: [
+        { name: "five_hour", utilization: 0.34, resetsAt: now + 2 * 3600_000 },
+        { name: "seven_day", utilization: 0.62, resetsAt: now + 3 * 86_400_000 },
+      ],
+    },
+  };
   const research = fake.addCrew("Research");
   const scout = fake.addBot(research.id, "Scout", "Finds sources and summarizes them");
   const writer = fake.addBot(research.id, "Writer", "Turns notes into a weekly report");

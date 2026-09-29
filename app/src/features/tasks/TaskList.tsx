@@ -58,7 +58,7 @@ export function TaskList({ crewId }: { crewId: CrewId }) {
             type="button"
             aria-pressed={show === option}
             onClick={() => setShow(option)}
-            className={`h-7 rounded-[3px] px-2.5 font-medium text-sm ${show === option ? "bg-ink text-canvas" : "text-ink-soft hover:bg-sunken"}`}
+            className={`h-7 rounded-lg px-2.5 font-medium text-sm ${show === option ? "bg-ink text-canvas" : "text-ink-soft hover:bg-sunken"}`}
           >
             {option === "open" ? words.open : words.all}
           </button>

@@ -6,6 +6,7 @@ import type { Connect } from "./features/onboarding/link";
 import { connect, rpcUrl } from "./lib/client";
 import type { Host } from "./lib/host";
 import { tauriHost } from "./lib/tauriHost";
+import { currentZoom } from "./shell/zoom";
 import "./index.css";
 
 const root = document.getElementById("root");
@@ -28,10 +29,12 @@ async function props(): Promise<{ host: Host; connect: Connect }> {
   throw new Error("Botloft runs inside its desktop app");
 }
 
-props().then(({ host, connect: open }) =>
+props().then(({ host, connect: open }) => {
+  // Before the first paint, so the window never flashes at the small size.
+  host.setZoom(currentZoom()).catch(() => {});
   createRoot(root).render(
     <StrictMode>
       <App host={host} connect={open} />
     </StrictMode>,
-  ),
-);
+  );
+});

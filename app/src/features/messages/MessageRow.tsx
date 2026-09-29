@@ -32,7 +32,7 @@ function Sender({ message, bots }: { message: Message; bots: Record<BotId, Bot> 
     case "system":
       return (
         <span className="inline-flex items-center gap-1.5 font-medium">
-          <BotAvatar color="#ffffff" size={14} />
+          <BotAvatar color="#ffffff" size={14} framed />
           {t.messages.row.system}
         </span>
       );
@@ -56,7 +56,7 @@ function TaskTag({ message, task }: { message: Message; task: Task | undefined }
         : text.taskStatus[task.status];
   }
   return (
-    <span className="inline-flex items-center gap-1 border border-line px-1.5 text-muted text-xs">
+    <span className="inline-flex items-center gap-1 rounded-md border border-line px-1.5 text-muted text-xs">
       <Icon aria-hidden size={11} />
       {message.kind === "task" ? text.task : text.result}
       {detail && <span>· {detail}</span>}

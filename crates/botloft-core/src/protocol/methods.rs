@@ -60,9 +60,34 @@ pub struct SystemStatus {
     pub claude_path: Option<String>,
     /// Whether Claude Code is signed in (`claude auth status`); `null` until checked.
     pub claude_signed_in: Option<bool>,
+    /// Who the owner is, for the account area of the app.
+    pub account: OwnerAccount,
     pub deliveries: DeliveryBacklog,
     /// The Claude account's usage as last reported; `null` before any turn.
     pub usage: Option<AccountUsage>,
+}
+
+/// The owner, as the app shows them in its account area (spec 15.1).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct OwnerAccount {
+    /// The Windows account's display name, or the user name without one.
+    pub name: String,
+    /// The Claude account Claude Code is signed in to; `null` when signed out
+    /// or not checked yet.
+    pub claude: Option<ClaudeAccount>,
+}
+
+/// What `claude auth status` says about the account (spec 7.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct ClaudeAccount {
+    pub email: Option<String>,
+    /// As Claude Code says it: `max`, `pro`, `team`, `enterprise`...
+    pub plan: Option<String>,
+    pub organization: Option<String>,
 }
 
 /// The account's usage, from Claude Code's `rate_limit_event` (spec 8.1).

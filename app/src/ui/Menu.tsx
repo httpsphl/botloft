@@ -1,6 +1,8 @@
 import { Check, type LucideIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Button } from "./Button";
+import { POPOVER, POPOVER_ITEM } from "./surface";
+import { useDismiss } from "./useDismiss";
 
 export interface MenuItem {
   label: string;
@@ -25,23 +27,11 @@ export function Menu({
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const onPointer = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-    const onKey = (event: KeyboardEvent) => event.key === "Escape" && setOpen(false);
-    window.addEventListener("pointerdown", onPointer);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("pointerdown", onPointer);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  useDismiss(
+    open,
+    root,
+    useCallback(() => setOpen(false), []),
+  );
 
   return (
     <div ref={root} className="relative">
@@ -54,10 +44,7 @@ export function Menu({
         onClick={() => setOpen(!open)}
       />
       {open && (
-        <div
-          role="menu"
-          className="absolute top-full right-0 z-30 mt-1 min-w-60 border border-line-strong bg-panel py-1"
-        >
+        <div role="menu" className={`absolute top-full right-0 mt-1 min-w-60 ${POPOVER}`}>
           {items.map(({ label: itemLabel, icon: Icon, danger, disabled, checked, onSelect }) => (
             <button
               key={itemLabel}
@@ -70,7 +57,7 @@ export function Menu({
                 setOpen(false);
                 onSelect();
               }}
-              className={`flex h-8 w-full items-center gap-2 whitespace-nowrap px-3 text-left text-sm hover:bg-sunken disabled:opacity-45 ${danger ? "text-danger" : "text-ink"}`}
+              className={`h-8 whitespace-nowrap ${POPOVER_ITEM} ${danger ? "text-danger" : "text-ink"}`}
             >
               {Icon && <Icon aria-hidden size={14} />}
               {checked !== undefined && (

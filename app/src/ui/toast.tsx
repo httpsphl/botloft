@@ -46,7 +46,7 @@ export function Toaster() {
         <div
           key={toast.id}
           role="alert"
-          className="pointer-events-auto flex items-start gap-2 border border-danger/60 border-l-4 bg-panel py-2 pr-1.5 pl-3 text-sm"
+          className="pointer-events-auto flex items-start gap-2 rounded-xl border border-danger/45 bg-panel py-2.5 pr-2 pl-3.5 text-sm shadow-lift"
         >
           <p className="min-w-0 flex-1 break-words" data-selectable>
             {toast.text}
@@ -55,7 +55,7 @@ export function Toaster() {
             type="button"
             aria-label={t.common.dismiss}
             onClick={() => dismiss(toast.id)}
-            className="grid h-6 w-6 shrink-0 place-items-center text-muted hover:text-ink"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-muted hover:bg-sunken hover:text-ink"
           >
             <X aria-hidden size={14} />
           </button>

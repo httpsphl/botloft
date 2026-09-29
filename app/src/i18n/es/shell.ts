@@ -7,12 +7,9 @@ export const shell: Messages["shell"] = {
     restore: "Restaurar",
     close: "Cerrar",
   },
-  theme: {
-    system: "sistema",
-    light: "claro",
-    dark: "oscuro",
-    label: (theme: string) => `Tema: ${theme}`,
-    hint: (theme: string) => `Tema: ${theme} (haz clic para cambiarlo)`,
+  zoom: {
+    level: (percent: number, isDefault: boolean) =>
+      isDefault ? `${percent}% (predeterminado)` : `${percent}%`,
   },
   language: {
     label: "Idioma",

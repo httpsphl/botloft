@@ -1,33 +1,31 @@
 // The window's own title bar (spec 15.3: `decorations: false`), with the
-// Windows controls on the right. Empty space drags the window.
+// Windows controls on the right. Empty space drags the window. Theme, size
+// and language live in the account area of the sidebar (spec 15.1).
 
-import { Copy, Languages, Minus, Monitor, Moon, Square, Sun, X } from "lucide-react";
+import { Copy, Languages, Minus, Square, X } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { BotAvatar } from "../features/bots/BotAvatar";
 import { LOCALES, setLocaleChoice, systemLocale, useLocale, useT } from "../i18n";
 import { useHost } from "../store/context";
 import { Menu } from "../ui/Menu";
-import { setTheme, type ThemeChoice, useTheme } from "./theme";
 
-const NEXT_THEME: Record<ThemeChoice, ThemeChoice> = {
-  system: "light",
-  light: "dark",
-  dark: "system",
-};
-const THEME_ICON = { system: Monitor, light: Sun, dark: Moon };
-
-export function TitleBar({ children, status }: { children?: ReactNode; status?: ReactNode }) {
-  const t = useT();
-  const { choice } = useTheme();
-  const ThemeIcon = THEME_ICON[choice];
-  const themeName = t.shell.theme[choice];
+export function TitleBar({
+  children,
+  status,
+  language = false,
+}: {
+  children?: ReactNode;
+  status?: ReactNode;
+  /** Shows the language menu, for the setup screens that have no sidebar. */
+  language?: boolean;
+}) {
   return (
     <header
       data-tauri-drag-region
       className="flex h-9 shrink-0 items-center border-line border-b bg-panel"
     >
       <div data-tauri-drag-region className="flex items-center gap-2 pr-4 pl-3">
-        <BotAvatar color="#ffffff" size={18} />
+        <BotAvatar color="#ffffff" size={18} framed />
         <span data-tauri-drag-region className="font-semibold text-sm tracking-tight">
           Botloft
         </span>
@@ -37,16 +35,7 @@ export function TitleBar({ children, status }: { children?: ReactNode; status?: 
       </div>
       <div className="flex items-center gap-1 pr-2">
         {status}
-        <LanguageMenu />
-        <button
-          type="button"
-          aria-label={t.shell.theme.label(themeName)}
-          title={t.shell.theme.hint(themeName)}
-          onClick={() => setTheme(NEXT_THEME[choice])}
-          className="grid h-7 w-7 place-items-center text-muted hover:bg-sunken hover:text-ink"
-        >
-          <ThemeIcon aria-hidden size={14} />
-        </button>
+        {language && <LanguageMenu />}
       </div>
       <WindowControls />
     </header>

@@ -67,10 +67,10 @@ export function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
   const list: ReactNode[] = rows.map((row, index) => {
     if (row.kind === "day") {
       return (
-        <li key={row.key} className="flex items-center gap-3 text-muted text-xs">
-          <span className="h-px flex-1 bg-line" />
-          {day(row.at)}
-          <span className="h-px flex-1 bg-line" />
+        <li key={row.key} className="flex justify-center">
+          <span className="rounded-full bg-sunken px-3 py-1 font-medium text-muted text-xs">
+            {day(row.at)}
+          </span>
         </li>
       );
     }
@@ -126,7 +126,7 @@ export function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
             element.scrollHeight - element.scrollTop - element.clientHeight < STICKY_PX;
         }}
       >
-        <div className="mx-auto flex max-w-5xl flex-col px-5 pt-4 pb-2">
+        <div className="mx-auto flex max-w-3xl flex-col px-5 pt-5 pb-3">
           {chat.error && (
             <Callout tone="danger" title={t.chat.view.loadFailed}>
               {chat.error}
@@ -153,12 +153,12 @@ export function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
               <p className="max-w-md text-muted text-sm">{t.chat.view.emptyBody}</p>
             </div>
           )}
-          <ol aria-label={t.chat.view.messages} className="flex flex-col gap-5">
+          <ol aria-label={t.chat.view.messages} className="flex flex-col gap-6">
             {list}
           </ol>
         </div>
       </div>
-      <div className="mx-auto w-full max-w-5xl">
+      <div className="mx-auto w-full max-w-3xl">
         <ChatComposer
           bot={bot}
           files={files}
@@ -169,7 +169,7 @@ export function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
         />
       </div>
       {dragging && (
-        <div className="pointer-events-none absolute inset-3 grid place-items-center rounded-lg border-2 border-accent border-dashed bg-canvas/85">
+        <div className="pointer-events-none absolute inset-3 grid place-items-center rounded-2xl border-2 border-accent border-dashed bg-canvas/85">
           <p className="flex items-center gap-2 font-medium">
             <Paperclip aria-hidden size={16} />
             {t.chat.view.dropToAttach}

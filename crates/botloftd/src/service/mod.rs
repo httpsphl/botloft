@@ -9,7 +9,7 @@ pub mod deliveries;
 pub mod messages;
 pub mod tasks;
 
-use botloft_core::protocol::{PROTOCOL_VERSION, SystemStatus, error_code};
+use botloft_core::protocol::{OwnerAccount, PROTOCOL_VERSION, SystemStatus, error_code};
 use botloft_core::slug;
 use botloft_core::validate::ValidationError;
 use botloft_store::StoreError;
@@ -58,6 +58,13 @@ impl From<StoreError> for ApiError {
 
 pub type ApiResult<T> = Result<T, ApiError>;
 
+/// The owner's name, asked of Windows once: it does not change while the
+/// daemon runs.
+fn owner_name() -> String {
+    static NAME: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    NAME.get_or_init(crate::platform::owner_name).clone()
+}
+
 pub fn status(daemon: &Daemon) -> ApiResult<SystemStatus> {
     let deliveries = daemon.store().delivery_backlog()?;
     Ok(SystemStatus {
@@ -71,6 +78,10 @@ pub fn status(daemon: &Daemon) -> ApiResult<SystemStatus> {
             .claude_path()
             .map(|path| path.display().to_string()),
         claude_signed_in: daemon.supervisor.claude_signed_in(),
+        account: OwnerAccount {
+            name: owner_name(),
+            claude: daemon.supervisor.claude_account(),
+        },
         deliveries,
         usage: daemon.usage(),
     })

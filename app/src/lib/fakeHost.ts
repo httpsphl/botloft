@@ -32,6 +32,8 @@ export class FakeHost implements Host {
   /** What `checkForUpdate` finds, or its error. */
   update: AppUpdate | null | Error = null;
   updateChecks = 0;
+  /** The window's size, as the app last set it. */
+  zoom = 1;
   maximized = false;
   closed = false;
   attention = false;
@@ -55,6 +57,11 @@ export class FakeHost implements Host {
     }
     this.onSignIn();
     return Promise.resolve(this.signInResult);
+  }
+
+  setZoom(factor: number): Promise<void> {
+    this.zoom = factor;
+    return Promise.resolve();
   }
 
   checkForUpdate(): Promise<AppUpdate | null> {

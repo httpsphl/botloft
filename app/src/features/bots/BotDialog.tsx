@@ -113,7 +113,7 @@ export function BotDialog(props: Props) {
                 aria-label={t.bots.dialog.swatch(swatch)}
                 aria-pressed={color === swatch}
                 onClick={() => setColor(swatch)}
-                className={`relative rounded-[3px] p-0.5 ${color === swatch ? "ring-2 ring-accent" : ""}`}
+                className={`relative rounded-lg p-0.5 ${color === swatch ? "ring-2 ring-accent" : ""}`}
               >
                 <BotAvatar color={swatch} size={26} />
                 {color === swatch && (
