@@ -72,6 +72,19 @@ export function seedChats(fake: FakeBotloft, crew: Crew): void {
     const call = chat.tool(crew.scout, name, { summary, input: JSON.stringify({ path: summary }) });
     chat.finish(call, name === "Write" ? "Wrote 42 lines" : "ok");
   }
+  at(93);
+  const made = fake.files;
+  made.add(crew.scout, "week-39.md", {
+    folder: "summaries",
+    text: SUMMARY,
+    writtenByBot: true,
+    at: fake.now,
+  });
+  made.add(crew.scout, "papers.csv", {
+    text: "paper,pages,deep_read\nRetrieval at scale,14,yes\nAgents that plan,22,yes\nSmall evals,9,maybe\n",
+    at: fake.now + MINUTE,
+  });
+  made.add(crew.scout, "week-39-report.docx", { text: "docx", at: fake.now + 2 * MINUTE });
   at(92);
   chat.reply(crew.scout, SUMMARY);
   const handoff = chat.tool(crew.scout, "mcp__botloft__send_message", {

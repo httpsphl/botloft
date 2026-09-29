@@ -2,6 +2,7 @@ import {
   Archive,
   Crown,
   Ellipsis,
+  Files,
   FolderOpen,
   PanelRight,
   Pause,
@@ -32,11 +33,18 @@ export function BotHeader({
   crew,
   detailsOpen,
   onToggleDetails,
+  filesOpen,
+  freshFiles,
+  onToggleFiles,
 }: {
   bot: Bot;
   crew: Crew;
   detailsOpen: boolean;
   onToggleDetails(): void;
+  filesOpen: boolean;
+  /** Files that showed up since the owner last looked. */
+  freshFiles: number;
+  onToggleFiles(): void;
 }) {
   const t = useT();
   const words = t.bots.header;
@@ -99,6 +107,29 @@ export function BotHeader({
       <Button icon={RotateCw} disabled={stopped} onClick={() => restart(false)}>
         {words.restart}
       </Button>
+      <span className="relative">
+        <Button
+          variant={filesOpen ? "secondary" : "ghost"}
+          icon={Files}
+          label={
+            freshFiles > 0
+              ? `${t.files.show}: ${t.files.fresh(freshFiles)}`
+              : filesOpen
+                ? t.files.hide
+                : t.files.show
+          }
+          aria-pressed={filesOpen}
+          onClick={onToggleFiles}
+        />
+        {freshFiles > 0 && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -top-1 -right-1 grid min-w-4 place-items-center rounded-full bg-work px-1 font-semibold text-[10px] text-canvas leading-4"
+          >
+            {freshFiles}
+          </span>
+        )}
+      </span>
       <Button
         variant={detailsOpen ? "secondary" : "ghost"}
         icon={PanelRight}

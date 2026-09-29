@@ -90,6 +90,7 @@ export class FakeChat {
       input: "{}",
       status: "running",
       output: null,
+      file: null,
       ...changes,
     });
   }

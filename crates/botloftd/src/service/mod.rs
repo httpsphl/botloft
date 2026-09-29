@@ -6,6 +6,7 @@ pub mod bots;
 pub mod chat;
 pub mod crews;
 pub mod deliveries;
+pub mod files;
 pub mod lead;
 pub mod messages;
 pub mod models;

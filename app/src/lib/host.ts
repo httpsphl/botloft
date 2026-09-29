@@ -64,6 +64,10 @@ export interface Host {
   readOwnerToken(): Promise<string>;
   /** Opens a folder in Explorer. */
   openPath(path: string): Promise<void>;
+  /** Opens a document or media file with the program Windows uses for it. */
+  openFile(path: string): Promise<void>;
+  /** Shows a file in its folder, selected. */
+  revealFile(path: string): Promise<void>;
   /**
    * Asks the owner for a folder with Windows' folder picker, starting at
    * `start` if given. Resolves null if they cancel.

@@ -21,6 +21,7 @@ const tool = (name: string) =>
     input: "{}",
     status: "done",
     output: null,
+    file: null,
   });
 const turn = () => item({ kind: "turn", durationMs: 1000, costUsd: null, error: null });
 const inbound = (body: string, at?: number) =>

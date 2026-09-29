@@ -101,6 +101,15 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
     one_line(&summary.unwrap_or_default(), SUMMARY_MAX_CHARS)
 }
 
+/// The full path of the file a `Write`/`Edit`/`NotebookEdit` call changes.
+pub fn tool_file(name: &str, input: &Value) -> Option<String> {
+    matches!(name, "Edit" | "MultiEdit" | "Write" | "NotebookEdit")
+        .then(|| field(input, "file_path").or_else(|| field(input, "notebook_path")))
+        .flatten()
+        .filter(|path| !path.is_empty() && path.len() <= 1024)
+        .map(str::to_owned)
+}
+
 /// The last part of a path, whichever slash it uses.
 fn file_name(path: &str) -> String {
     path.rsplit(['/', '\\'])

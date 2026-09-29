@@ -65,6 +65,59 @@ async fn open_path(path: String) -> Result<(), String> {
     .await
 }
 
+/// Extensions `open_file` will open with the program Windows picks. Anything
+/// else could be a program or a script that runs when opened.
+const OPENABLE: [&str; 24] = [
+    "pdf", "png", "jpg", "jpeg", "gif", "webp", "svg", "txt", "md", "csv", "json", "log", "html",
+    "htm", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "mp3", "wav", "mp4", "rtf",
+];
+
+fn is_openable(path: &Path) -> bool {
+    path.extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| OPENABLE.contains(&extension.to_ascii_lowercase().as_str()))
+}
+
+/// Opens a file a bot made with the program Windows uses for it. Only
+/// documents, images, sound and video: never something that runs.
+#[tauri::command]
+async fn open_file(path: String) -> Result<(), String> {
+    blocking(move || {
+        let file = Path::new(&path);
+        if !file.is_absolute() || !file.is_file() {
+            return Err(format!("{path} is not a file"));
+        }
+        if !is_openable(file) {
+            return Err("this kind of file is not opened from Botloft".into());
+        }
+        std::process::Command::new("explorer.exe")
+            .arg(file)
+            .spawn()
+            .map(drop)
+            .map_err(|err| format!("cannot open the file: {err}"))
+    })
+    .await
+}
+
+/// Shows a file in its folder, selected. Nothing is run.
+#[tauri::command]
+async fn reveal_file(path: String) -> Result<(), String> {
+    use std::os::windows::process::CommandExt as _;
+    blocking(move || {
+        let file = Path::new(&path);
+        if !file.is_absolute() || !file.exists() || path.contains('"') {
+            return Err(format!("{path} is not a file"));
+        }
+        // Explorer reads `/select,` and the path as one argument.
+        std::process::Command::new("explorer.exe")
+            .raw_arg(format!("/select,\"{path}\""))
+            .spawn()
+            .map(drop)
+            .map_err(|err| format!("cannot open Explorer: {err}"))
+    })
+    .await
+}
+
 /// Whether `url` is a plain web link, safe to hand to the default browser.
 fn is_web_link(url: &str) -> bool {
     let rest = url
@@ -108,6 +161,8 @@ pub fn run() {
             claude_sign_in,
             read_owner_token,
             open_path,
+            open_file,
+            reveal_file,
             open_url
         ])
         .run(tauri::generate_context!())
@@ -116,7 +171,29 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::is_web_link;
+    use std::path::Path;
+
+    use super::{is_openable, is_web_link};
+
+    #[test]
+    fn only_documents_and_media_open() {
+        for file in [r"C:\w\Report.PDF", r"C:\w\a b\notes.md", r"C:\w\chart.png"] {
+            assert!(is_openable(Path::new(file)), "{file}");
+        }
+        for file in [
+            r"C:\w\setup.exe",
+            r"C:\w\run.bat",
+            r"C:\w\run.cmd",
+            r"C:\w\run.ps1",
+            r"C:\w\link.lnk",
+            r"C:\w\page.hta",
+            r"C:\w\macro.docm",
+            r"C:\w\noextension",
+            r"C:\w\report.pdf.exe",
+        ] {
+            assert!(!is_openable(Path::new(file)), "{file}");
+        }
+    }
 
     #[test]
     fn only_plain_web_links_open() {

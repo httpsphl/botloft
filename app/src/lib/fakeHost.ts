@@ -23,6 +23,9 @@ export class FakeHost implements Host {
   afterInstall: DaemonStatus | Error = running();
   token: string | Error = "a".repeat(64);
   readonly opened: string[] = [];
+  /** Files opened with their program, and files shown in their folder. */
+  readonly openedFiles: string[] = [];
+  readonly revealed: string[] = [];
   /** What the folder picker gives back; null is a cancel. */
   nextFolder: string | null = null;
   /** Where each folder picker started. */
@@ -90,6 +93,16 @@ export class FakeHost implements Host {
 
   openPath(path: string): Promise<void> {
     this.opened.push(path);
+    return Promise.resolve();
+  }
+
+  openFile(path: string): Promise<void> {
+    this.openedFiles.push(path);
+    return Promise.resolve();
+  }
+
+  revealFile(path: string): Promise<void> {
+    this.revealed.push(path);
     return Promise.resolve();
   }
 

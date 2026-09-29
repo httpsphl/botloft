@@ -121,6 +121,10 @@ pub struct ToolItem {
     pub status: ToolStatus,
     /// The start of what the tool returned, cut at 8 KB.
     pub output: Option<String>,
+    /// The full path of the file a `Write`/`Edit`/`NotebookEdit` call
+    /// changes; absent for other tools and for items stored before it existed.
+    #[serde(default)]
+    pub file: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -259,6 +263,7 @@ mod tests {
             input: "{}".into(),
             status: ToolStatus::Running,
             output: None,
+            file: None,
         });
         let json = serde_json::to_value(&tool).expect("serialize");
         assert_eq!(json["kind"], "tool");
