@@ -13,6 +13,10 @@ pub const PLAN_INPUT_MAX: usize = 32 * 1024;
 pub const PLAN_TOOL: &str = "ExitPlanMode";
 /// The chief's tool to suggest a new bot (spec 10.2).
 pub const SUGGEST_TOOL: &str = "mcp__botloft__suggest_bot";
+/// A bot asking to use its browser on a site (spec 21.5). Not a tool the
+/// model calls: the daemon opens this request from inside the `browser_*`
+/// tools.
+pub const BROWSER_SITE_TOOL: &str = "mcp__botloft__browser";
 /// Longest suggestion kept, in bytes: the owner reads and edits all of it.
 pub const SUGGESTION_INPUT_MAX: usize = 64 * 1024;
 /// Longest tool output kept, in bytes.
@@ -96,6 +100,15 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
         }
         "mcp__botloft__complete_task" => field(input, "task_id").map(|id| format!("task {id}")),
         SUGGEST_TOOL => field(input, "name").map(str::to_owned),
+        BROWSER_SITE_TOOL => field(input, "site").map(str::to_owned),
+        "mcp__botloft__browser_open" => field(input, "url").map(str::to_owned),
+        "mcp__botloft__browser_click"
+        | "mcp__botloft__browser_type"
+        | "mcp__botloft__browser_select" => field(input, "ref").map(str::to_owned),
+        "mcp__botloft__browser_press" => field(input, "key").map(str::to_owned),
+        "mcp__botloft__browser_scroll" => field(input, "ref")
+            .or_else(|| field(input, "to"))
+            .map(str::to_owned),
         _ => None,
     };
     one_line(&summary.unwrap_or_default(), SUMMARY_MAX_CHARS)
@@ -205,6 +218,24 @@ mod tests {
             "notebook jupyter"
         );
         assert_eq!(tool_summary("SomethingNew", &json!({ "a": 1 })), "");
+        assert_eq!(
+            tool_summary(
+                "mcp__botloft__browser_open",
+                &json!({ "url": "https://example.com/a" })
+            ),
+            "https://example.com/a"
+        );
+        assert_eq!(
+            tool_summary(
+                "mcp__botloft__browser_type",
+                &json!({ "ref": "e4", "text": "secret" })
+            ),
+            "e4"
+        );
+        assert_eq!(
+            tool_summary(BROWSER_SITE_TOOL, &json!({ "site": "example.com" })),
+            "example.com"
+        );
         assert_eq!(
             tool_summary(
                 PLAN_TOOL,

@@ -9,6 +9,7 @@ import {
   Files,
   FileText,
   Globe,
+  LayoutTemplate,
   ListChecks,
   ListTodo,
   LoaderCircle,
@@ -24,7 +25,9 @@ import { useContext, useState } from "react";
 import { useT } from "../../i18n";
 import type { ChatItem, ToolItem } from "../../lib/protocol.gen";
 import { useArrival } from "../../ui/motion";
+import { isBrowserTool, ShowBrowser } from "../browser/showBrowser";
 import { ShowFile } from "../files/showFile";
+import { isScreenFile, ShowScreen } from "../screens/showScreen";
 
 const ICONS: Record<string, LucideIcon> = {
   Bash: SquareTerminal,
@@ -45,6 +48,11 @@ const ICONS: Record<string, LucideIcon> = {
   send_message: Send,
   suggest_bot: UserPlus,
 };
+
+/** The browser tools share the globe (spec 21.4). */
+function iconOf(label: string): LucideIcon {
+  return ICONS[label] ?? (label.startsWith("browser_") ? Globe : Wrench);
+}
 
 /** `mcp__botloft__send_message` reads as `send_message`. */
 export function toolLabel(name: string): string {
@@ -82,9 +90,11 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const showFile = useContext(ShowFile);
+  const showBrowser = useContext(ShowBrowser);
+  const showScreen = useContext(ShowScreen);
   const arrival = useArrival(createdAt);
   const label = toolLabel(tool.name);
-  const Icon = ICONS[label] ?? Wrench;
+  const Icon = iconOf(label);
   const block =
     "max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-lg border border-line bg-sunken px-2.5 py-1.5 font-mono text-xs leading-relaxed";
   return (
@@ -120,6 +130,28 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
             className="grid size-6 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-sunken hover:text-ink"
           >
             <Files aria-hidden size={14} />
+          </button>
+        )}
+        {showScreen && tool.file && isScreenFile(tool.file) && tool.status !== "failed" && (
+          <button
+            type="button"
+            title={t.screens.showInPanel}
+            aria-label={`${t.screens.showInPanel}: ${tool.summary}`}
+            onClick={() => showScreen(tool.file as string)}
+            className="grid size-6 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-sunken hover:text-ink"
+          >
+            <LayoutTemplate aria-hidden size={14} />
+          </button>
+        )}
+        {showBrowser && isBrowserTool(tool.name) && (
+          <button
+            type="button"
+            title={t.browser.showInPanel}
+            aria-label={`${t.browser.showInPanel}: ${label}`}
+            onClick={showBrowser}
+            className="grid size-6 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-sunken hover:text-ink"
+          >
+            <Globe aria-hidden size={14} />
           </button>
         )}
       </div>

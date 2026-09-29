@@ -12,6 +12,7 @@ pub mod messages;
 pub mod models;
 pub mod modes;
 pub mod routines;
+pub mod screens;
 pub mod tasks;
 
 use botloft_core::protocol::{OwnerAccount, PROTOCOL_VERSION, SystemStatus, error_code};

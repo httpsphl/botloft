@@ -1,0 +1,151 @@
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, describe, expect, test } from "vitest";
+import { FakeBotloft } from "../../lib/fake";
+import { crewOpened, openBot, renderApp } from "../../test/app";
+
+afterEach(cleanup);
+
+/** A crew "Ops" with @scout, idle. */
+function crew() {
+  const fake = new FakeBotloft();
+  const ops = fake.addCrew("Ops");
+  const scout = fake.addBot(ops.id, "Scout", "Finds sources");
+  fake.setBotState(scout.id, "idle");
+  return { fake, scout };
+}
+
+async function openScout(fake: FakeBotloft) {
+  const rendered = renderApp(fake);
+  await crewOpened("Ops");
+  openBot("Scout");
+  await screen.findByRole("list", { name: "Messages" });
+  return rendered;
+}
+
+const toggle = () => screen.getByRole("button", { name: /Show browser|Hide browser/ });
+const panel = () => screen.getByRole("complementary", { name: "Scout's browser" });
+
+describe("browser panel", () => {
+  test("watches the bot's browser while open, and says when it has not opened one", async () => {
+    const { fake, scout } = crew();
+    await openScout(fake);
+    fireEvent.click(toggle());
+    expect(await within(panel()).findByText("Scout hasn't opened the browser yet")).toBeDefined();
+    await waitFor(() => expect(fake.browser.watching).toBe(scout.id));
+
+    fireEvent.click(within(panel()).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(fake.browser.watching).toBeNull());
+    expect(fake.browser.watches).toEqual([scout.id, null]);
+  });
+
+  test("shows the live page, its address, and the bot's cursor where it clicks", async () => {
+    const { fake, scout } = crew();
+    fake.browser.open(scout.id, "https://example.com/signin", "Sign in");
+    await openScout(fake);
+    fireEvent.click(toggle());
+    const address = await within(panel()).findByRole("textbox", { name: "Address" });
+    expect((address as HTMLInputElement).value).toBe("https://example.com/signin");
+    await waitFor(() => expect(fake.browser.watching).toBe(scout.id));
+
+    act(() => {
+      fake.browser.frame(scout.id, "AAAA");
+      fake.browser.act(scout.id, "click", { x: 640, y: 400, label: "Sign in" });
+    });
+    const screenshot = within(panel()).getByRole("figure", { name: "What Scout sees" });
+    const image = screenshot.querySelector("img");
+    expect(image?.getAttribute("src")).toBe("data:image/jpeg;base64,AAAA");
+    const cursor = screenshot.querySelector(".browser-cursor") as HTMLElement;
+    expect(cursor.style.left).toBe("50%");
+    expect(cursor.style.top).toBe("50%");
+    expect(within(panel()).getByText("Live")).toBeDefined();
+    expect(await within(panel()).findByText("Clicked Sign in")).toBeDefined();
+
+    // Another bot's actions do not move this cursor.
+    const other = fake.addBot(scout.crewId, "Writer");
+    act(() => {
+      fake.browser.act(other.id, "open", { label: "elsewhere.com" });
+    });
+    expect(within(panel()).queryByText("Opened elsewhere.com")).toBeNull();
+  });
+
+  test("the button marks a bot that is browsing while the panel is closed", async () => {
+    const { fake, scout } = crew();
+    await openScout(fake);
+    expect(toggle().getAttribute("aria-label")).toBe("Show browser");
+    act(() => {
+      fake.browser.open(scout.id, "https://example.com/", "Example");
+    });
+    await waitFor(() =>
+      expect(toggle().getAttribute("aria-label")).toBe("Show browser: Scout is using the browser"),
+    );
+    fireEvent.click(toggle());
+    expect(toggle().getAttribute("aria-label")).toBe("Hide browser");
+  });
+
+  test("a closed browser keeps its last page, faded; one that failed says why", async () => {
+    const { fake, scout } = crew();
+    fake.browser.open(scout.id, "https://example.com/", "Example");
+    await openScout(fake);
+    fireEvent.click(toggle());
+    await waitFor(() => expect(fake.browser.watching).toBe(scout.id));
+    act(() => {
+      fake.browser.frame(scout.id, "BBBB");
+    });
+    act(() => {
+      fake.browser.close(scout.id);
+    });
+    expect(await within(panel()).findByText("Browser closed")).toBeDefined();
+    expect(within(panel()).getByRole("figure").querySelector("img")?.className).toContain(
+      "grayscale",
+    );
+
+    act(() => {
+      fake.browser.set(scout.id, {
+        status: "failed",
+        error: "Microsoft Edge was not found on this computer",
+      });
+    });
+    expect(await within(panel()).findByText("The browser couldn't open")).toBeDefined();
+    expect(
+      within(panel()).getByText("Microsoft Edge was not found on this computer"),
+    ).toBeDefined();
+  });
+
+  test("a browser line in the chat opens the panel", async () => {
+    const { fake, scout } = crew();
+    fake.chat.tool(scout.id, "mcp__botloft__browser_open", {
+      summary: "https://example.com",
+      status: "done",
+    });
+    fake.chat.tool(scout.id, "Bash", { summary: "ls", status: "done" });
+    await openScout(fake);
+    expect(screen.getAllByRole("button", { name: /Watch in browser/ })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Watch in browser: browser_open" }));
+    expect(await screen.findByRole("complementary", { name: "Scout's browser" })).toBeDefined();
+  });
+});
+
+describe("site requests", () => {
+  test("show the site and its address, and allowing it answers the request", async () => {
+    const { fake, scout } = crew();
+    const item = fake.chat.ask(
+      scout.id,
+      "mcp__botloft__browser",
+      "wikipedia.org",
+      JSON.stringify({ site: "wikipedia.org", url: "https://wikipedia.org/wiki/Bread" }),
+    );
+    await openScout(fake);
+    const card = await screen.findByRole("region", { name: "Scout asks to use wikipedia.org" });
+    expect(within(card).getByText("https://wikipedia.org/wiki/Bread")).toBeDefined();
+    fireEvent.click(within(card).getByRole("button", { name: "Allow" }));
+    await waitFor(() =>
+      expect(fake.calls).toContainEqual({
+        method: "approvals.answer",
+        params: {
+          approvalId: item.body.kind === "approval" ? item.body.approvalId : "",
+          allow: true,
+        },
+      }),
+    );
+  });
+});

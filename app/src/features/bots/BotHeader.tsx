@@ -4,6 +4,8 @@ import {
   Ellipsis,
   Files,
   FolderOpen,
+  Globe,
+  LayoutTemplate,
   PanelRight,
   Pause,
   Pencil,
@@ -36,6 +38,12 @@ export function BotHeader({
   filesOpen,
   freshFiles,
   onToggleFiles,
+  browserOpen,
+  browsing,
+  onToggleBrowser,
+  screensOpen,
+  drawing,
+  onToggleScreens,
 }: {
   bot: Bot;
   crew: Crew;
@@ -45,6 +53,14 @@ export function BotHeader({
   /** Files that showed up since the owner last looked. */
   freshFiles: number;
   onToggleFiles(): void;
+  browserOpen: boolean;
+  /** The bot's browser is open (spec 21.8). */
+  browsing: boolean;
+  onToggleBrowser(): void;
+  screensOpen: boolean;
+  /** The bot is writing a screen (spec 22.5). */
+  drawing: boolean;
+  onToggleScreens(): void;
 }) {
   const t = useT();
   const words = t.bots.header;
@@ -107,6 +123,50 @@ export function BotHeader({
       <Button icon={RotateCw} disabled={stopped} onClick={() => restart(false)}>
         {words.restart}
       </Button>
+      <span className="relative">
+        <Button
+          variant={screensOpen ? "secondary" : "ghost"}
+          icon={LayoutTemplate}
+          label={
+            screensOpen
+              ? t.screens.hide
+              : drawing
+                ? `${t.screens.show}: ${t.screens.drawing(bot.name)}`
+                : t.screens.show
+          }
+          aria-pressed={screensOpen}
+          onClick={onToggleScreens}
+        />
+        {drawing && !screensOpen && (
+          <span
+            aria-hidden
+            className="live-dot pointer-events-none absolute top-0.5 right-0.5"
+            style={{ background: bot.color }}
+          />
+        )}
+      </span>
+      <span className="relative">
+        <Button
+          variant={browserOpen ? "secondary" : "ghost"}
+          icon={Globe}
+          label={
+            browserOpen
+              ? t.browser.hide
+              : browsing
+                ? `${t.browser.show}: ${t.browser.browsing(bot.name)}`
+                : t.browser.show
+          }
+          aria-pressed={browserOpen}
+          onClick={onToggleBrowser}
+        />
+        {browsing && !browserOpen && (
+          <span
+            aria-hidden
+            className="live-dot pointer-events-none absolute top-0.5 right-0.5"
+            style={{ background: "var(--work)" }}
+          />
+        )}
+      </span>
       <span className="relative">
         <Button
           variant={filesOpen ? "secondary" : "ghost"}

@@ -4,6 +4,7 @@
 
 pub mod approvals;
 pub mod autostart;
+pub mod browser;
 pub mod chat;
 pub mod clock;
 pub mod config;
@@ -15,6 +16,7 @@ pub mod platform;
 pub mod routines;
 pub mod rpc;
 pub mod runtime;
+pub mod screens;
 pub mod secrets;
 pub mod server;
 pub mod service;

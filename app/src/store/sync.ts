@@ -55,6 +55,13 @@ export function syncStore(store: AppStore, api: BotloftApi): () => void {
       )
       .catch(() => {});
     api
+      .call("browser.list")
+      .then(
+        (list) =>
+          alive && store.setState({ browsers: Object.fromEntries(list.map((b) => [b.botId, b])) }),
+      )
+      .catch(() => {});
+    api
       .call("tasks.list", {})
       .then(
         (list) =>

@@ -188,6 +188,80 @@
   }
 }
 
+/* The bot's browser, live (features/browser): its cursor glides to each
+   point it acts on, a ring spreads where it clicks once the cursor gets
+   there, and a dot pulses while the page is live. */
+.browser-cursor {
+  position: absolute;
+  display: flex;
+  align-items: flex-start;
+  pointer-events: none;
+  translate: -4px -3px;
+  transition:
+    left 520ms var(--ease-out),
+    top 520ms var(--ease-out);
+}
+
+.browser-cursor > span {
+  margin-top: 14px;
+}
+
+.browser-ripple {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  margin: -23px 0 0 -23px;
+  border: 3px solid;
+  border-radius: 9999px;
+  pointer-events: none;
+  animation: ripple 700ms var(--ease-out) 420ms both;
+}
+
+.browser-typing {
+  letter-spacing: 1px;
+  animation: caret 0.9s steps(2, jump-none) infinite;
+}
+
+.live-dot {
+  position: relative;
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: var(--danger);
+}
+
+.live-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  animation: live 1.6s ease-out infinite;
+}
+
+@keyframes ripple {
+  from {
+    opacity: 0.95;
+    transform: scale(0.2);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+
+@keyframes live {
+  from {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
 /* Switching bots or crews: the main pane fades out and the new one rises
    in; the rest of the window stays put (ui/motion.ts). */
 ::view-transition-old(root),

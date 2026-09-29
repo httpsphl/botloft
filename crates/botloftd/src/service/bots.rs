@@ -151,6 +151,9 @@ pub fn set_paused(daemon: &Daemon, params: BotsSetPausedParams) -> ApiResult<Bot
     store.update_bot(&record)?;
     let bot = changed(daemon, &store, &crew, record);
     daemon.supervisor.wake();
+    if bot.paused {
+        daemon.browsers.close(&bot.id);
+    }
     Ok(bot)
 }
 
@@ -186,6 +189,7 @@ pub fn archive(daemon: &Daemon, params: BotIdParams) -> ApiResult<Bot> {
     super::routines::archive_of(daemon, &store, &record.id);
     let bot = changed(daemon, &store, &crew, record);
     daemon.supervisor.wake();
+    daemon.browsers.forget(&bot.id);
     Ok(bot)
 }
 

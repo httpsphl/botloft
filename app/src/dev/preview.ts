@@ -10,9 +10,11 @@ import { FakeBotloft } from "../lib/fake";
 import { FakeHost } from "../lib/fakeHost";
 import type { Host } from "../lib/host";
 import { PROTOCOL_VERSION } from "../lib/protocol.gen";
+import { seedBrowser } from "./seedBrowser";
 import { seedChats } from "./seedChats";
 import { seedChief } from "./seedChief";
 import { seedRoutines } from "./seedRoutines";
+import { seedScreens } from "./seedScreens";
 
 export function previewProps(search: string): { host: Host; connect: Connect } {
   const params = new URLSearchParams(search);
@@ -111,6 +113,8 @@ function seed(fake: FakeBotloft): void {
     planner: planner.id,
   });
   seedRoutines(fake, { scout: scout.id, analyst: analyst.id });
+  seedBrowser(fake, scout.id);
+  seedScreens(fake, research.id);
   const ops = fake.addCrew("Ops");
   const deploy = fake.addBot(ops.id, "Deploy", "Ships the site on Fridays");
   const watcher = fake.addBot(ops.id, "Watcher", "Keeps an eye on the error log");

@@ -1,0 +1,50 @@
+// Each bot's own browser (spec 21.8): the panel beside its chat where the
+// owner watches it live, and the card where it asks to use a new site.
+
+export const browser = {
+  heading: "Browser",
+  panel: (bot: string) => `${bot}'s browser`,
+  show: "Show browser",
+  hide: "Hide browser",
+  browsing: (bot: string) => `${bot} is using the browser`,
+  showInPanel: "Watch in browser",
+  close: "Close",
+  expand: "Make wider",
+  shrink: "Make narrower",
+  openOutside: "Open in my browser",
+  openFailed: "Could not open the page",
+  live: "Live",
+  loading: "Loading…",
+  address: "Address",
+  screen: (bot: string) => `What ${bot} sees`,
+  emptyTitle: (bot: string) => `${bot} hasn't opened the browser yet`,
+  emptyBody:
+    "When it searches or uses a site, you'll see it here live: every page it opens, every click.",
+  starting: "Opening the browser…",
+  closed: "Browser closed",
+  closedBody: "It opens again when the bot needs it. Logins stay.",
+  failedTitle: "The browser couldn't open",
+  failedBody:
+    "Botloft uses Microsoft Edge, which comes with Windows. Check that it's installed, then ask the bot to try again.",
+  details: "Details",
+  tabs: (count: number) => (count === 1 ? "1 tab" : `${count} tabs`),
+  did: {
+    open: (site: string) => `Opened ${site}`,
+    click: (what: string) => `Clicked ${what}`,
+    clickSomewhere: "Clicked",
+    type: (what: string) => `Typed in ${what}`,
+    typeSomewhere: "Typed",
+    select: (what: string) => `Chose in ${what}`,
+    press: (key: string) => `Pressed ${key}`,
+    scroll: "Scrolled",
+    back: "Went back",
+  },
+  site: {
+    wants: (bot: string) => `${bot} wants to use the browser on`,
+    asks: (bot: string, site: string) => `${bot} asks to use ${site}`,
+    why: "Once you allow a site, it won't ask again for it.",
+    allowed: (site: string) => `You allowed ${site}`,
+    denied: (site: string) => `You declined ${site}`,
+    expired: (site: string) => `No answer about ${site}`,
+  },
+};

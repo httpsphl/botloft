@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
@@ -9,18 +9,23 @@ import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { SidePanel } from "../../ui/SidePanel";
 import { type Tab, Tabs, tabId } from "../../ui/Tabs";
+import { BrowserPanel } from "../browser/BrowserPanel";
+import { ShowBrowser } from "../browser/showBrowser";
 import { ChatView } from "../chat/ChatView";
 import { FilesPanel } from "../files/FilesPanel";
 import { ShowFile } from "../files/showFile";
 import { useBotFiles } from "../files/useBotFiles";
 import { SignInButton } from "../onboarding/SignIn";
 import { BotRoutines } from "../routines/RoutineList";
+import { ScreensPanel } from "../screens/ScreensPanel";
+import { ShowScreen } from "../screens/showScreen";
+import { useScreens } from "../screens/useScreens";
 import { BotHeader } from "./BotHeader";
 import { stateView } from "./BotStateBadge";
 
 type Pane = "chat" | "routines";
 /** What the panel beside the chat shows. */
-type Side = "details" | "files" | null;
+type Side = "details" | "files" | "browser" | "screens" | null;
 
 /**
  * A bot's conversation and its routines, with its details in a side panel
@@ -66,6 +71,47 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
   };
   const fresh = filesOpen ? 0 : files.files.filter((file) => file.modifiedAt > seenAt).length;
   const routines = useApp(useShallow((state) => routinesOf(state, bot.id)));
+  const browsing = useApp((state) => {
+    const status = state.browsers[bot.id]?.status;
+    return status === "open" || status === "starting";
+  });
+  const browserOpen = side === "browser";
+  const screens = useScreens(bot);
+  const screensOpen = side === "screens";
+  const [screenPath, setScreenPath] = useState<string | null>(null);
+  const showScreen = (path: string | null) => {
+    if (filesOpen) {
+      seen();
+    }
+    setSide("screens");
+    setScreenPath(path);
+    void screens.refresh();
+  };
+  // The design area opens by itself when the bot starts drawing a screen,
+  // once per screen, if nothing else is open beside the chat (spec 22.5).
+  const drawn = useRef(new Set<string>());
+  // biome-ignore lint/correctness/useExhaustiveDependencies: another bot starts with its own screens
+  useEffect(() => {
+    drawn.current = new Set();
+    setScreenPath(null);
+  }, [bot.id]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only a new screen being written opens it
+  useEffect(() => {
+    const path = screens.writing?.toLowerCase();
+    if (path && !drawn.current.has(path)) {
+      drawn.current.add(path);
+      if (side === null) {
+        setSide("screens");
+        setScreenPath(null);
+      }
+    }
+  }, [screens.writing]);
+  const showBrowser = () => {
+    if (filesOpen) {
+      seen();
+    }
+    setSide("browser");
+  };
   const view = stateView(bot, crew.paused, t);
   const tabs: Tab<Pane>[] = [
     { id: "chat", label: t.routines.chatTab },
@@ -85,6 +131,12 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
         filesOpen={filesOpen}
         freshFiles={fresh}
         onToggleFiles={toggleFiles}
+        browserOpen={browserOpen}
+        browsing={browsing}
+        onToggleBrowser={() => (browserOpen ? setSide(null) : showBrowser())}
+        screensOpen={screensOpen}
+        drawing={screens.writing !== null}
+        onToggleScreens={() => (screensOpen ? setSide(null) : showScreen(null))}
       />
       <Notices bot={bot} crew={crew} view={view} />
       <Tabs<Pane> label={bot.name} tabs={tabs} value={pane} onChange={setPane} />
@@ -92,13 +144,27 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
         <div role="tabpanel" aria-labelledby={tabId(pane)} className="flex min-h-0 min-w-0 flex-1">
           {pane === "chat" ? (
             <ShowFile.Provider value={showFile}>
-              <ChatView bot={bot} stopped={bot.paused || crew.paused} />
+              <ShowBrowser.Provider value={showBrowser}>
+                <ShowScreen.Provider value={showScreen}>
+                  <ChatView bot={bot} stopped={bot.paused || crew.paused} />
+                </ShowScreen.Provider>
+              </ShowBrowser.Provider>
             </ShowFile.Provider>
           ) : (
             <BotRoutines bot={bot} />
           )}
         </div>
         {side === "details" && <Details bot={bot} onClose={() => setSide(null)} />}
+        {browserOpen && <BrowserPanel bot={bot} onClose={() => setSide(null)} />}
+        {screensOpen && (
+          <ScreensPanel
+            bot={bot}
+            data={screens}
+            path={screenPath}
+            onPath={setScreenPath}
+            onClose={() => setSide(null)}
+          />
+        )}
         {filesOpen && (
           <FilesPanel
             bot={bot}
