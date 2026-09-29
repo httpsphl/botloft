@@ -71,6 +71,7 @@ export function tauriHost(): Host {
     daemonStatus: () => invoke<DaemonStatus>("daemon_status"),
     installDaemon: () => invoke<DaemonStatus>("daemon_install"),
     restartDaemon: () => invoke<DaemonStatus>("daemon_restart"),
+    stopDaemon: () => invoke<void>("daemon_stop"),
     signInToClaude: (path) => invoke<boolean>("claude_sign_in", { path }),
     setZoom: (factor) => getCurrentWebview().setZoom(factor),
     checkForUpdate,
@@ -92,6 +93,8 @@ export function tauriHost(): Host {
       minimize: () => window.minimize(),
       toggleMaximize: () => window.toggleMaximize(),
       close: () => window.close(),
+      hide: () => window.hide(),
+      onCloseRequested: (before) => window.onCloseRequested(() => before()),
       isMaximized: () => window.isMaximized(),
       onResized: (listener) => window.onResized(() => listener()),
       setAttention: async (on) => {

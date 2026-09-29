@@ -9,9 +9,10 @@ export const onboarding: Messages["onboarding"] = {
     install: "Preparando Botloft…",
     update: "Actualizando Botloft…",
     restart: "Reiniciando Botloft…",
+    start: "Iniciando tus bots…",
   },
   installNote:
-    "Botloft mantiene tus bots funcionando en segundo plano, incluso después de cerrar esta ventana, y se inicia con Windows.",
+    "Botloft ejecuta tus bots en segundo plano. En Configuración eliges si siguen trabajando después de cerrar esta ventana y si Botloft se inicia con Windows.",
   stopped: {
     title: "Botloft no pudo iniciar",
     body: "Botloft ejecuta tus bots en segundo plano, y esa parte no se inició.",
@@ -48,6 +49,10 @@ export const onboarding: Messages["onboarding"] = {
     botloft: "Botloft",
     running:
       "Funcionando en segundo plano. Se inicia con Windows, así que tus bots siguen trabajando después de cerrar esta ventana.",
+    runningNotAtStart:
+      "Funcionando en segundo plano, así que tus bots siguen trabajando después de cerrar esta ventana.",
+    runningWhileOpen:
+      "Funcionando mientras esta ventana está abierta. Al cerrarla, tus bots se detienen.",
     claudeCode: "Claude Code",
     checking: "Comprobando…",
     version: (version: string) => `Versión ${version}`,

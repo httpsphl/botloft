@@ -10,13 +10,17 @@ import { errorText } from "../../lib/api";
 import type { Client } from "../../lib/client";
 import type { DaemonStatus, Host } from "../../lib/host";
 import { PROTOCOL_VERSION } from "../../lib/protocol.gen";
+import { whenClosed } from "../../shell/closing";
 
 export type LinkStep =
   | { step: "checking" }
   /** Not running, and installing it did not help. */
   | { step: "stopped"; port: number; home: string; error: string | null }
-  /** Installing, updating to this app's version, or restarting the daemon. */
-  | { step: "installing"; action: "install" | "update" | "restart" }
+  /**
+   * Installing, updating to this app's version or restarting the daemon, or
+   * starting it again after the owner closed Botloft with the bots.
+   */
+  | { step: "installing"; action: "install" | "update" | "restart" | "start" }
   /** Another program holds the daemon's port. */
   | { step: "foreign"; port: number }
   /** The daemon speaks another protocol version and is not older than the app. */
@@ -95,7 +99,9 @@ export function createLink(host: Host, connect: Connect): StoreApi<Link> {
       switch (status.state) {
         case "stopped":
           if (mayChange) {
-            await change(run, "install", () => host.installDaemon());
+            // Closing Botloft stopped the bots: opening it brings them back.
+            const action = whenClosed() === "stop" ? "start" : "install";
+            await change(run, action, () => host.installDaemon());
             return;
           }
           set({ current: { step: "stopped", port: status.port, home: status.home, error } });
@@ -135,7 +141,7 @@ export function createLink(host: Host, connect: Connect): StoreApi<Link> {
     /** Installs, updates or restarts, then settles on what runs afterwards. */
     const change = async (
       run: number,
-      action: "install" | "update" | "restart",
+      action: "install" | "update" | "restart" | "start",
       work: () => Promise<DaemonStatus>,
     ) => {
       set({ current: { step: "installing", action } });
