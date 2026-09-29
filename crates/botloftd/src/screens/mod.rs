@@ -2,6 +2,7 @@
 //! and the drafts of the HTML files bots are writing right now, read from
 //! the tool input Claude Code streams while the model writes it.
 
+mod cursor;
 mod partial;
 mod place;
 mod view;
