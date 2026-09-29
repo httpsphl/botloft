@@ -4,6 +4,7 @@ export const common = {
   cancel: "Cancel",
   close: "Close",
   dismiss: "Dismiss",
+  resize: "Resize panel",
   details: "Details",
   tryAgain: "Try again",
   errors: {

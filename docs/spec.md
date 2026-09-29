@@ -607,7 +607,7 @@ Layout, como um app de mensagens:
 - **Nova crew:** nome; "Para que é esta equipe?", o objetivo que vira as instruções do chefe, com a explicação de que a equipe começa com um Chefe que planeja o trabalho e sugere os bots de que precisa; "Pasta de trabalho", com "Escolher pasta…" (o seletor do Windows; sem escolha, "Uma pasta nova dentro do Botloft", a `shared\`); e "Modelo do Chefe". Criada, o app abre o chat do chefe.
 - **Chefe:** uma coroa ao lado do nome na barra lateral e nos cartões da crew, e "Chefe" no cabeçalho do bot, com a dica "Lidera <crew>: planeja o trabalho e sugere bots novos". O menu do bot tem "Tornar chefe da equipe" ou "Deixar de ser chefe".
 - **Sugestão de bot** (10.2): um cartão no chat do chefe, "<chefe> sugere um bot novo", com o porquê e os campos editáveis Nome, Modelo, Função e Instruções, a linha de que o bot começa na hora e recebe o trabalho do chefe, um campo para dizer ao chefe por que não, e os botões Criar bot e Agora não. Respondido, vira uma linha ("Você criou Designer", "Você recusou Designer") que abre o que foi sugerido.
-- **Detalhes do bot** (pasta, instruções, sessão) ficam num painel, fora do caminho da conversa.
+- **Detalhes do bot** (pasta, instruções, sessão) ficam num painel, fora do caminho da conversa. Detalhes e arquivos são painéis laterais que o dono redimensiona arrastando a borda esquerda (ou com as setas do teclado, Shift anda mais; duplo clique volta ao padrão): 256 a 900 px, sempre deixando ao chat ao menos 22rem, e a largura de cada um fica no `localStorage` (`botloft.panel.details`, `botloft.panel.files`). O chat encolhe com eles e nunca passa por baixo nem por cima do painel.
 - **Arquivos do bot** (8.4): um botão "Mostrar arquivos" no cabeçalho abre, à direita do chat, um painel com o que o bot fez, do mais novo ao mais antigo (ícone pelo tipo, nome, pasta, tamanho, "há 5 min"). Um clique mostra o arquivo no próprio painel: imagem, PDF, markdown e texto aparecem; o resto diz que não tem prévia. "Abrir" usa o programa que o Windows escolheu e "Mostrar na pasta" abre o Explorer com o arquivo marcado. A lista é lida ao abrir o bot, a cada 4 s enquanto ele trabalha e de novo quando ele para. Com o painel fechado, o botão ganha um contador dos arquivos que apareceram desde a última vez que o dono olhou; abertos, esses levam a etiqueta "Novo". No chat, a linha de uma ferramenta que mudou um arquivo (`Write`, `Edit`...; item `tool` com `file`, 8.2) e não falhou ganha o botão "Ver em arquivos", que abre o painel direto na prévia desse arquivo; se ele não existe mais, o painel diz. Detalhes e arquivos dividem o mesmo lugar: abrir um fecha o outro.
 
 ### 15.2 Comandos Tauri
@@ -658,7 +658,7 @@ Movimento: o app se mexe para parecer vivo, sem atrapalhar o trabalho. Animaçõ
 
 No chat:
 
-- O chat é uma coluna centralizada (48rem), com o compositor na mesma largura; o dia é uma pílula no meio.
+- O chat ocupa toda a largura que sobra, alinhado à esquerda, com o compositor na mesma largura (sem coluna centralizada, que deixava vazio dos dois lados); o dia é uma pílula no meio.
 - O dono fala em balões à direita; o bot, à esquerda, com markdown.
 - Mensagens de outros bots aparecem à esquerda, com o avatar e o nome de quem mandou.
 - O que o bot faz com as ferramentas aparece em linhas compactas (ícone, ferramenta, resumo e estado), agrupadas por turno, que abrem para mostrar entrada e saída.

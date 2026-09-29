@@ -7,6 +7,7 @@ import { routinesOf } from "../../store/app";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
+import { SidePanel } from "../../ui/SidePanel";
 import { type Tab, Tabs, tabId } from "../../ui/Tabs";
 import { ChatView } from "../chat/ChatView";
 import { FilesPanel } from "../files/FilesPanel";
@@ -149,10 +150,7 @@ function Notices({
 function Details({ bot, onClose }: { bot: Bot; onClose(): void }) {
   const words = useT().bots.details;
   return (
-    <aside
-      aria-label={words.title(bot.name)}
-      className="flex w-80 shrink-0 flex-col border-line border-l bg-panel"
-    >
+    <SidePanel label={words.title(bot.name)} name="details" defaultWidth={320}>
       <header className="flex h-11 shrink-0 items-center justify-between border-line border-b pr-1.5 pl-4">
         <h2 className="font-semibold text-sm">{words.title(bot.name)}</h2>
         <Button variant="ghost" size="sm" icon={X} label={words.close} onClick={onClose} />
@@ -181,6 +179,6 @@ function Details({ bot, onClose }: { bot: Bot; onClose(): void }) {
           </dd>
         </div>
       </dl>
-    </aside>
+    </SidePanel>
   );
 }
