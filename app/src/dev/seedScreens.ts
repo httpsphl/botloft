@@ -61,7 +61,7 @@ export function seedScreens(fake: FakeBotloft, crewId: CrewId): void {
       }
       return;
     }
-    written = Math.min(LANDING.length, written + 70);
+    written = Math.min(LANDING.length, written + 24);
     const done = written === LANDING.length;
     if (done) {
       fake.screens.add(designer.id, "index.html", LANDING, { folder: "site" });

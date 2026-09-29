@@ -92,6 +92,7 @@ export function ScreenFocus({
             scale={scale}
             title={screen.name}
             interactive
+            writer={screen.writing ? bot : null}
           />
         </div>
       </div>

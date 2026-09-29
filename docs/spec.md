@@ -782,6 +782,7 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28. "Co
 | Tools do navegador com o Claude Code real | 21 | **Testado com 2.1.284** (daemon e app de dev, Haiku, modo Manual): o bot carregou `browser_open`, `browser_click`, `browser_look` e `browser_screenshot` pelo `ToolSearch`; o pedido de example.com apareceu no chat e, permitido, ele abriu a página e clicou no link, que levou ao iana.org; o `browser_screenshot` lá pediu o iana.org, e o segundo screenshot não pediu de novo. O painel mostrou a página e o cursor ao vivo. Pausar o bot fechou o navegador (os processos do Edge sumiram). O log de `debug` só teve nomes de tools, métodos e ids | feito |
 | Rascunho de tela a partir do `Write` | 22.3 | **Visto com 2.1.284**: com `--include-partial-messages`, o `Write` chega em `stream_event` (`content_block_start` com `tool_use` e `name: "Write"`, depois `input_json_delta`; 379 pedaços para um arquivo de 3 KB). **Testado com 2.1.284** (daemon e app de dev, Haiku, modo Manual): pedida uma landing page, a área de design abriu sozinha e a página se montou versão a versão (umas 70 de 8 KB) antes do OK para gravar; permitido, a tela passou a vir do disco. Numa segunda página, negar o `Write` tirou a tela da área de design. O log de `debug` só teve status e ids. O painel do navegador do app de desktop do Claude bloqueia `iframe` para 127.0.0.1 (`ERR_BLOCKED_BY_CLIENT`), então a prévia foi vista num Edge sem janela | feito |
 | Dono no controle com o Claude Code real | 21.10 | **Testado com 2.1.284** (daemon e app de dev, Haiku, modo Manual): pedido para abrir uma página de login local e chamar o dono, o bot carregou `browser_ask_owner` pelo `ToolSearch` sozinho, com a tarefa na língua do dono. Pelo cartão, o painel abriu já nas mãos do dono; clique, digitação, troca de campo e Enter chegaram ao Edge, e a página de login entrou na conta. Devolvido, a tool respondeu com a página nova e o bot listou os pedidos. A senha digitada não apareceu no log, no banco nem na conversa do Claude Code (o bot leu só o que a página mostrava). Numa página comprida, a roda do mouse sobre a tela ao vivo rolou a página do bot e não o painel | feito |
+| Cursor do bot nas telas | 22.3 | **Testado com 2.1.284** (daemon e app de dev, Haiku, modo Manual), com o app num Edge sem janela: pedidas quatro páginas (floricultura, cafeteria, livraria, academia), o cursor seguiu o título, cada cartão, cada item de plano e cada linha de tabela enquanto o bot escrevia, e a prancheta rolou junto. Visto aqui: num `iframe` de outra origem, o script às vezes lê a página com `innerHeight` 0 e só depois recebe o tamanho (por isso a espera do `resize`); a versão escondida fala antes de ir para a frente (por isso vale a marca do quadro à mostra). O conteúdo das páginas não foi para o log | feito |
 | Telas no WebView2 do app | 22.5 | Não visto: a CSP do Tauri com `frame-src http://127.0.0.1:*` e as telas carregando no `iframe` | manual (PR): `pnpm tauri dev`, pedir uma página HTML a um bot e ver a área de design |
 
 Itens do runtime anterior (ConPTY, hooks em exec form, `crossSessionInbound`, linha de auth do inbox, diálogo de confiança, `ESC[6n` do ConPTY, consultas do terminal no replay) foram verificados no M2–M4 e deixaram de se aplicar com a ADR 0001; o histórico está no git e na ADR.
@@ -1096,7 +1097,7 @@ O dono pode usar o navegador do bot com as próprias mãos: clicar, arrastar, ro
 
 ## 22. Telas
 
-Status: **T1 e T2 implementados** (22.8). É o N4 da seção 21.
+Status: **T1, T2 e T3 implementados** (22.8). É o N4 da seção 21.
 
 ### 22.1 O que é
 
@@ -1111,7 +1112,7 @@ Uma área de design ao lado do chat: cada página HTML que o bot faz aparece com
 
 - `GET /view/<chave>/<raiz>/<caminho>`, no mesmo servidor do daemon (só 127.0.0.1). A `<chave>` tem 128 bits aleatórios, é uma por bot, fica só na memória e muda a cada início do daemon; só o app a recebe, em `screens.list`. `<raiz>` é `w` (pasta de trabalho da crew) ou `b` (pasta do bot). O caminho é resolvido de verdade e precisa ficar dentro da raiz: `..`, links para fora e entradas ocultas dão 404, sem dizer por quê. CSS, imagens, fontes e scripts ao lado do HTML carregam pelo mesmo caminho, como num site.
 - Toda resposta leva `Content-Security-Policy: sandbox allow-scripts allow-forms allow-popups allow-modals`: a página roda numa origem opaca, sem acesso ao daemon nem aos cookies e ao armazenamento de 127.0.0.1, também se aberta direto. E ainda `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` e, para um pedido com `Origin: null` (a própria tela buscando um arquivo dela), `Access-Control-Allow-Origin: null`. O tipo sai da extensão (8.4). Acima de 20 MiB, 404.
-- Enquanto um arquivo tem rascunho, o endereço dele serve o rascunho.
+- Enquanto um arquivo tem rascunho, o endereço dele serve o rascunho, com o script do cursor do bot (22.3). O arquivo do disco é servido como está.
 - A CSP do app ganha `frame-src http://127.0.0.1:*`: as telas abrem num `iframe` do endereço delas, com os próprios scripts e as bibliotecas que carregam da internet, o que não funcionaria num `srcdoc`, que herda a CSP do app.
 - O log registra só o status, em `debug`.
 
@@ -1121,6 +1122,7 @@ Uma área de design ao lado do chat: cada página HTML que o bot faz aparece com
 - Do JSON parcial, o daemon tira `file_path` (quando a string dele fecha) e o começo de `content` que já chegou, com os escapes completos desfeitos. Só vira rascunho um `.html` ou `.htm` numa das duas raízes.
 - Notificação `screen.draft {botId, path, url, rev, done}`: `url` já aponta para aquela versão (`?rev=<n>`), no máximo uma a cada 250 ms e uma quando a escrita fecha. O rascunho fica até o resultado daquele `tool_use` chegar (gravado, negado ou com erro), e então sai uma última com `done: true`, e o endereço volta a servir o disco. Um arquivo que o dono negou some da área de design. O fim do turno (`result`) também fecha os rascunhos que sobraram.
 - Rascunho não vai para o banco, para o disco nem para o log.
+- **Cursor do bot:** cada rascunho servido leva primeiro um script pequeno do daemon (`<script data-botloft-cursor>`), logo depois do `<!doctype>`, que precisa continuar primeiro para a página manter o modo de layout; sem doctype, no começo. Um doctype ainda sendo escrito fica sem script naquela versão. Quando a página termina de ler (`DOMContentLoaded`) e de novo no `load`, o script acha onde o conteúdo acaba agora: o fim do texto mais novo, ou o centro do elemento mais novo com tamanho, fora `script`, `style`, `template` e `noscript`. Se esse ponto está abaixo de 85% da altura da tela, rola a página para ele ficar a 60%. Um `iframe` de outra origem roda em outro processo e pode ler a página antes de saber o próprio tamanho (`innerHeight` 0, visto no Edge 154); então o script espera o `resize` antes de medir. Por fim manda ao app, por `postMessage`, `{botloft: "cursor", view, point, box}`: `view` é o tamanho da tela em que mediu, e `point` e `box` vêm nos pixels dela: o ponto e a caixa da parte em volta (o elemento mais próximo que não é texto em linha, menos a página inteira). Sem nada visível ainda (o bot escrevendo o CSS), `point` e `box` vão `null`. O script não muda mais nada na página.
 
 ### 22.4 Protocolo
 
@@ -1140,12 +1142,14 @@ Uma área de design ao lado do chat: cada página HTML que o bot faz aparece com
 - Até 12 telas no quadro; "Mostrar mais" traz as outras.
 - Sem telas: o mascote e "<bot> ainda não fez nenhuma tela", com a explicação de que cada página HTML que ele escrever aparece ali e se monta enquanto ele escreve.
 - No chat, a linha de um `Write` ou `Edit` de `.html` que não falhou ganha "Ver em telas", que abre o painel nessa tela.
+- **Cursor:** na prancheta e na tela em foco, enquanto o bot escreve, o cursor dele (a seta na cor do bot, com o nome e os três pontos de quem escreve, o mesmo do navegador) desliza até o ponto que o rascunho diz (22.3), e uma moldura na cor do bot marca a parte que está nascendo. Sem ponto ainda, o cursor espera no canto de cima. O app converte as medidas pela largura de `view` (numa prévia com zoom de CSS, o `iframe` vê mais pixels que o aparelho). Cada versão nova carrega por trás e fala antes de ir para a frente: vale a marca do `iframe` que está à mostra, para o cursor e a moldura baterem com o que se vê. Perto da borda direita, o nome passa para a esquerda da seta. O cursor e a moldura ficam em cima da tela, no tamanho do app, não da prancheta, e somem quando a escrita termina.
 - Textos nos três idiomas (15.6).
 
 ### 22.6 Segurança
 
 - A tela roda HTML e JavaScript escritos pelo bot. A CSP de sandbox (22.2) a isola do app e do daemon; o `iframe` no app também usa `sandbox="allow-scripts allow-forms allow-popups allow-modals"`, sem `allow-same-origin`. Um script da tela pode acessar a internet, como a própria página abriria num navegador.
 - A chave só dá leitura, só dos arquivos das duas raízes, e some quando o daemon reinicia.
+- O script do cursor (22.3) roda dentro da mesma sandbox, com a página do bot, e só manda números. O app aceita a mensagem só de um dos seus próprios `iframe`s, lê só números finitos e os prende ao tamanho da página; a página não tem como mover o cursor para fora da prancheta nem mandar outra coisa ao app.
 
 ### 22.7 Fora desta etapa
 
@@ -1160,3 +1164,4 @@ Uma área de design ao lado do chat: cada página HTML que o bot faz aparece com
 |---|---|---|
 | **T1** Telas no daemon | rascunho a partir do stream, JSON parcial, `/view` com sandbox, `screens.list`, `screen.draft`, regras do bot, testes com `FakeRuntime` | um `Write` de `.html` transmitido pelo `FakeRuntime` aparece como rascunho em `/view` e vira o arquivo depois do resultado |
 | **T2** Área de design | painel de telas, quadro com zoom, tela em foco, aparelhos, escrita ao vivo, "Ver em telas" no chat, textos nos três idiomas | ver pelo app um bot real escrever uma tela e ela se montar enquanto ele escreve |
+| **T3** Cursor do bot | script do cursor nos rascunhos, cursor e moldura na prancheta e na tela em foco, a prévia com o mesmo script | ver pelo app um bot real escrever uma tela com o cursor dele seguindo cada parte que nasce |

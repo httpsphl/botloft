@@ -1,15 +1,22 @@
 // A screen drawn at its device's real size and scaled to fit (spec 22.5).
 // Each new version loads in a hidden frame and takes the front once it is
-// ready, so a screen being written grows without flickering.
+// ready, so a screen being written grows without flickering. While the bot
+// writes it, its cursor follows the end of the page and a frame marks the
+// part being built (spec 22.3).
 
-import { useEffect, useReducer } from "react";
-import type { ScreenDevice } from "../../lib/protocol.gen";
+import { useEffect, useReducer, useRef, useState } from "react";
+import type { Bot, ScreenDevice } from "../../lib/protocol.gen";
+import { BotCursor } from "../bots/BotCursor";
+import { type Mark, readMark } from "./cursorMark";
 
 export const DEVICES: Record<ScreenDevice, { width: number; height: number }> = {
   desktop: { width: 1280, height: 800 },
   tablet: { width: 834, height: 1112 },
   mobile: { width: 390, height: 844 },
 };
+
+/** Where the cursor waits while nothing on the page shows yet. */
+const PARKED = { x: 40, y: 40 };
 
 /** The screen runs its own scripts, away from the app (spec 22.6). */
 const SANDBOX = "allow-scripts allow-forms allow-popups allow-modals";
@@ -53,6 +60,7 @@ export function LiveFrame({
   scale,
   title,
   interactive = false,
+  writer = null,
 }: {
   url: string;
   device: ScreenDevice;
@@ -60,6 +68,8 @@ export function LiveFrame({
   title: string;
   /** Takes clicks and scrolling; otherwise the frame is only a picture. */
   interactive?: boolean;
+  /** The bot writing it now, whose cursor shows. */
+  writer?: Pick<Bot, "name" | "color"> | null;
 }) {
   const [state, change] = useReducer(frames, {
     urls: [url, null],
@@ -69,6 +79,30 @@ export function LiveFrame({
   });
   useEffect(() => change({ kind: "show", url }), [url]);
   const size = DEVICES[device];
+  const windows = useRef<(Window | null)[]>([null, null]);
+  // Each frame's own mark: the one behind speaks before it is on show, and
+  // its layout is the next version's, so only the front one's shows.
+  const [marks, setMarks] = useState<[Mark | null, Mark | null]>([null, null]);
+  const writing = writer !== null;
+  useEffect(() => {
+    if (!writing) {
+      setMarks([null, null]);
+      return;
+    }
+    const listen = (event: MessageEvent) => {
+      const frame = event.source === null ? -1 : windows.current.indexOf(event.source as Window);
+      const read = frame === 0 || frame === 1 ? readMark(event.data, size) : undefined;
+      if (read) {
+        setMarks((current) => (frame === 0 ? [read, current[1]] : [current[0], read]));
+      }
+    };
+    window.addEventListener("message", listen);
+    return () => window.removeEventListener("message", listen);
+  }, [writing, size]);
+  const mark = marks[state.front];
+  const box = writing ? mark?.box : null;
+  // Nothing to see yet (the styles come first): the cursor waits at the top.
+  const point = writing && mark ? (mark.point ?? PARKED) : null;
 
   return (
     <div
@@ -84,6 +118,9 @@ export function LiveFrame({
         return (
           <iframe
             key={frame}
+            ref={(node) => {
+              windows.current[frame] = node?.contentWindow ?? null;
+            }}
             src={src}
             title={title}
             sandbox={SANDBOX}
@@ -102,6 +139,30 @@ export function LiveFrame({
           />
         );
       })}
+      {box && writer && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute rounded-[4px] border-2 transition-[left,top,width,height] duration-500 ease-out"
+          style={{
+            left: box.x * scale - 3,
+            top: box.y * scale - 3,
+            width: box.width * scale + 6,
+            height: box.height * scale + 6,
+            borderColor: writer.color,
+            boxShadow: `0 0 0 4px ${writer.color}26`,
+          }}
+        />
+      )}
+      {point && writer && (
+        <BotCursor
+          bot={writer}
+          left={`${point.x * scale}px`}
+          top={`${point.y * scale}px`}
+          typing
+          flip={point.x > size.width * 0.7}
+          lift={point.y > size.height * 0.88}
+        />
+      )}
     </div>
   );
 }

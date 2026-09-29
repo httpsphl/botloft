@@ -54,7 +54,7 @@ describe("browser panel", () => {
     const screenshot = within(panel()).getByRole("figure", { name: "What Scout sees" });
     const image = screenshot.querySelector("img");
     expect(image?.getAttribute("src")).toBe("data:image/jpeg;base64,AAAA");
-    const cursor = screenshot.querySelector(".browser-cursor") as HTMLElement;
+    const cursor = screenshot.querySelector(".bot-cursor") as HTMLElement;
     expect(cursor.style.left).toBe("50%");
     expect(cursor.style.top).toBe("50%");
     expect(within(panel()).getByText("Live")).toBeDefined();

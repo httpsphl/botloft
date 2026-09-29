@@ -191,7 +191,7 @@
 /* The bot's browser, live (features/browser): its cursor glides to each
    point it acts on, a ring spreads where it clicks once the cursor gets
    there, and a dot pulses while the page is live. */
-.browser-cursor {
+.bot-cursor {
   position: absolute;
   display: flex;
   align-items: flex-start;
@@ -202,7 +202,7 @@
     top 520ms var(--ease-out);
 }
 
-.browser-cursor > span {
+.bot-cursor > span {
   margin-top: 14px;
 }
 
@@ -217,7 +217,7 @@
   animation: ripple 700ms var(--ease-out) 420ms both;
 }
 
-.browser-typing {
+.bot-typing {
   letter-spacing: 1px;
   animation: caret 0.9s steps(2, jump-none) infinite;
 }

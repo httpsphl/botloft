@@ -13,6 +13,9 @@ use serde_json::{Value, json};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
+/// How a draft served with the bot's cursor starts (spec 22.3).
+const CURSOR: &str = "<script data-botloft-cursor>";
+
 struct Page {
     status: u16,
     head: String,
@@ -103,7 +106,9 @@ async fn a_screen_is_built_live_and_then_read_from_disk() {
 
     let page = get(t.addr, &url, None).await;
     assert_eq!(page.status, 200);
-    assert_eq!(page.body, "<h1>Bak");
+    // The bot's cursor comes first, then what the bot wrote so far.
+    assert!(page.body.starts_with(CURSOR), "{}", page.body);
+    assert!(page.body.ends_with("</script><h1>Bak"), "{}", page.body);
     assert!(
         page.head
             .contains("content-security-policy: sandbox allow-scripts")
@@ -118,7 +123,12 @@ async fn a_screen_is_built_live_and_then_read_from_disk() {
     let last = draft(&mut app).await;
     assert!(last["rev"].as_u64() > first["rev"].as_u64());
     let page = get(t.addr, last["url"].as_str().expect("url"), None).await;
-    assert_eq!(page.body, "<h1>Bakery</h1>\n<p>Fresh \"bread\"</p>");
+    assert!(
+        page.body
+            .ends_with("</script><h1>Bakery</h1>\n<p>Fresh \"bread\"</p>"),
+        "{}",
+        page.body
+    );
 
     // Not on disk yet: listed from the draft, being written.
     let screens = app
@@ -151,6 +161,7 @@ async fn a_screen_is_built_live_and_then_read_from_disk() {
         "{}",
         page.body
     );
+    assert!(!page.body.contains(CURSOR), "the file is served as it is");
 
     let screens = app
         .call("screens.list", json!({ "botId": bot["id"] }))

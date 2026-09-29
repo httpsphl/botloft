@@ -10,6 +10,7 @@ use axum::response::{IntoResponse, Response};
 use tracing::debug;
 
 use super::Place;
+use super::cursor::with_cursor;
 use super::place::{Root, roots};
 use crate::service::files::media_type;
 use crate::state::Daemon;
@@ -61,8 +62,8 @@ pub async fn handle(
     response
 }
 
-/// The bytes and type at a `/view` address: the draft being written, or
-/// the file, if it is inside the folder.
+/// The bytes and type at a `/view` address: the draft being written, with
+/// the bot's cursor, or the file, if it is inside the folder.
 async fn find(
     daemon: &Daemon,
     key: &str,
@@ -73,7 +74,7 @@ async fn find(
     let place = Place::from_request(root, rel)?;
     let media = media_type(&place.rel);
     if let Some(draft) = daemon.screens.draft(&bot, &place) {
-        return Some((draft.into_bytes(), media));
+        return Some((with_cursor(&draft).into_bytes(), media));
     }
     let (work, workspace) = roots(daemon, &bot)?;
     let folder = match place.root {
