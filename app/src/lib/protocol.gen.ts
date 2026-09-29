@@ -410,6 +410,59 @@ export type AttachmentData = { mediaType: string,
 data: string, };
 
 /**
+ * A file in the bot's folder or the crew's work folder, or one the bot's
+ * own `Write`/`Edit` calls changed.
+ */
+export type BotFile = { 
+/**
+ * Absolute path.
+ */
+path: string, 
+/**
+ * File name, without folders.
+ */
+name: string, 
+/**
+ * Folder it is in, relative to the work folder or the bot's folder when
+ * it is inside one, else the absolute folder; empty at the top.
+ */
+folder: string, 
+/**
+ * Guessed from the extension.
+ */
+mediaType: string, 
+/**
+ * Bytes.
+ */
+size: number, 
+/**
+ * Unix time in milliseconds.
+ */
+modifiedAt: number, 
+/**
+ * The bot's own `Write`/`Edit` calls changed it, as opposed to a file
+ * that only showed up in the folder.
+ */
+writtenByBot: boolean, };
+
+export type FilesListParams = { botId: BotId, };
+
+export type FilesReadParams = { botId: BotId, 
+/**
+ * A `BotFile.path`.
+ */
+path: string, };
+
+/**
+ * A file's bytes, for the app to preview.
+ */
+export type FileData = { mediaType: string, 
+/**
+ * The file's bytes, base64.
+ */
+data: string, };
+
+/**
  * Text sent to a bot, by the owner, another bot or the daemon.
  */
 export type Message = { id: MessageId, crewId: CrewId, fromKind: SenderKind, 
@@ -552,7 +605,12 @@ input: string, status: ToolStatus,
 /**
  * The start of what the tool returned, cut at 8 KB.
  */
-output: string | null, };
+output: string | null, 
+/**
+ * The full path of the file a `Write`/`Edit`/`NotebookEdit` call
+ * changes; absent for other tools and for items stored before it existed.
+ */
+file: string | null, };
 
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, input: string, status: ApprovalStatus, 
 /**
@@ -746,6 +804,8 @@ export interface RpcMethods {
   "messages.send": { params: MessagesSendParams; result: Message };
   "messages.list": { params: MessagesListParams; result: Array<Message> };
   "attachments.read": { params: AttachmentIdParams; result: AttachmentData };
+  "files.list": { params: FilesListParams; result: Array<BotFile> };
+  "files.read": { params: FilesReadParams; result: FileData };
   "deliveries.list": { params: DeliveriesListParams; result: Array<Delivery> };
   "deliveries.retry": { params: DeliveryIdParams; result: Delivery };
   "tasks.list": { params: TasksListParams; result: Array<Task> };

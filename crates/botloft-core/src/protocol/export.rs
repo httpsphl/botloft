@@ -131,6 +131,10 @@ fn export_bindings() {
     out.decl::<AttachmentUpload>();
     out.decl::<AttachmentIdParams>();
     out.decl::<AttachmentData>();
+    out.decl::<BotFile>();
+    out.decl::<FilesListParams>();
+    out.decl::<FilesReadParams>();
+    out.decl::<FileData>();
     out.decl::<Message>();
     out.decl::<Delivery>();
     out.decl::<Task>();
@@ -254,6 +258,16 @@ fn export_bindings() {
         method::ATTACHMENTS_READ,
         &out.name::<AttachmentIdParams>(),
         &out.name::<AttachmentData>(),
+    );
+    out.method(
+        method::FILES_LIST,
+        &out.name::<FilesListParams>(),
+        &out.name::<Vec<BotFile>>(),
+    );
+    out.method(
+        method::FILES_READ,
+        &out.name::<FilesReadParams>(),
+        &out.name::<FileData>(),
     );
     out.method(
         method::DELIVERIES_LIST,

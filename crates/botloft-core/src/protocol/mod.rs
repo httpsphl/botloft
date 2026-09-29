@@ -52,12 +52,14 @@ macro_rules! text_enum {
 mod chat;
 #[cfg(test)]
 mod export;
+mod files;
 mod messaging;
 mod methods;
 mod model;
 mod routines;
 
 pub use chat::*;
+pub use files::*;
 pub use messaging::*;
 pub use methods::*;
 pub use model::*;
@@ -92,6 +94,8 @@ pub mod method {
     pub const MESSAGES_SEND: &str = "messages.send";
     pub const MESSAGES_LIST: &str = "messages.list";
     pub const ATTACHMENTS_READ: &str = "attachments.read";
+    pub const FILES_LIST: &str = "files.list";
+    pub const FILES_READ: &str = "files.read";
     pub const DELIVERIES_LIST: &str = "deliveries.list";
     pub const DELIVERIES_RETRY: &str = "deliveries.retry";
     pub const TASKS_LIST: &str = "tasks.list";

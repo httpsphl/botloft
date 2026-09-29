@@ -2,7 +2,7 @@
 //! (spec 8.1). Fields are read defensively: the format is not documented
 //! and grows between Claude Code versions.
 
-use botloft_core::chat::{TOOL_OUTPUT_MAX, clip, tool_input_max, tool_summary};
+use botloft_core::chat::{TOOL_OUTPUT_MAX, clip, tool_file, tool_input_max, tool_summary};
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{
     AccountUsage, ChatBody, ChatDelta, NoticeCode, NoticeItem, NoticeLevel, ReplyItem, ToolItem,
@@ -123,6 +123,7 @@ fn assistant(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
                         input: clip(&input.to_string(), tool_input_max(name)),
                         status: ToolStatus::Running,
                         output: None,
+                        file: tool_file(name, input),
                     }),
                 );
             }

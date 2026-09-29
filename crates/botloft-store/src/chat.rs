@@ -131,6 +131,21 @@ impl Store {
             .optional()?)
     }
 
+    /// Paths of the files the bot's `Write`/`Edit` calls changed, newest
+    /// first and without repeats; failed calls do not count.
+    pub fn written_files(&self, bot: &BotId, limit: u32) -> Result<Vec<String>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT json_extract(data, '$.file') FROM chat_items \
+             WHERE bot_id = ?1 AND kind = 'tool' \
+               AND json_extract(data, '$.file') IS NOT NULL \
+               AND json_extract(data, '$.status') != 'failed' \
+             GROUP BY json_extract(data, '$.file') \
+             ORDER BY MAX(rowid) DESC LIMIT ?2",
+        )?;
+        let rows = stmt.query_map(params![bot.as_str(), limit], |row| row.get(0))?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
     /// The conversation-list line: the newest item that has one.
     pub fn last_activity(&self, bot: &BotId) -> Result<Option<Activity>> {
         let mut stmt = self.conn.prepare(&format!(
@@ -208,6 +223,7 @@ mod tests {
             input: "{}".into(),
             status: ToolStatus::Running,
             output: None,
+            file: None,
         };
         let entry = item(bot, ChatBody::Tool(running.clone()), 5);
         fx.store.insert_chat_item(&entry).expect("insert");
@@ -232,6 +248,43 @@ mod tests {
         assert_eq!(
             (updated.body, updated.created_at, updated.updated_at),
             (done, 5, 9)
+        );
+    }
+
+    #[test]
+    fn written_files_come_newest_first_without_repeats_or_failures() {
+        let fx = Fixture::new();
+        let bot = &fx.bots[0].id;
+        let write = |file: Option<&str>, status: ToolStatus| {
+            ChatBody::Tool(ToolItem {
+                tool_use_id: "t".into(),
+                name: "Write".into(),
+                summary: String::new(),
+                input: "{}".into(),
+                status,
+                output: None,
+                file: file.map(str::to_owned),
+            })
+        };
+        for (n, (file, status)) in [
+            (Some(r"C:\work\a.md"), ToolStatus::Done),
+            (Some(r"C:\work\b.pdf"), ToolStatus::Done),
+            (Some(r"C:\work\bad.md"), ToolStatus::Failed),
+            (None, ToolStatus::Done),
+            (Some(r"C:\work\a.md"), ToolStatus::Done),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            fx.store
+                .insert_chat_item(&item(bot, write(file, status), n as i64))
+                .expect("insert");
+        }
+        let files = fx.store.written_files(bot, 10).expect("files");
+        assert_eq!(files, [r"C:\work\a.md", r"C:\work\b.pdf"]);
+        assert_eq!(
+            fx.store.written_files(bot, 1).expect("one"),
+            [r"C:\work\a.md"]
         );
     }
 
