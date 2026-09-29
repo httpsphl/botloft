@@ -17,6 +17,20 @@ export type DaemonStatus =
   /** Something that is not botloftd holds the port. */
   | { state: "foreign"; port: number };
 
+/** A newer Botloft, ready to download and install (spec 15.5). */
+export interface AppUpdate {
+  version: string;
+  /** Release notes, if the release has any. */
+  notes: string | null;
+  /**
+   * Downloads and installs the update. Botloft closes, the installer runs
+   * and opens it again, so this only returns if something fails.
+   * `progress` gets the downloaded fraction, or null while the size is
+   * unknown.
+   */
+  install(progress: (fraction: number | null) => void): Promise<void>;
+}
+
 export interface AppWindow {
   minimize(): Promise<void>;
   toggleMaximize(): Promise<void>;
@@ -38,6 +52,8 @@ export interface Host {
   installDaemon(): Promise<DaemonStatus>;
   /** Stops the daemon and starts it again from its scheduled task. */
   restartDaemon(): Promise<DaemonStatus>;
+  /** A newer version of the app, or null when this one is the latest. */
+  checkForUpdate(): Promise<AppUpdate | null>;
   readOwnerToken(): Promise<string>;
   /** Opens a folder in Explorer. */
   openPath(path: string): Promise<void>;

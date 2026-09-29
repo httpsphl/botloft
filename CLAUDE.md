@@ -45,6 +45,8 @@ pnpm check        # tsc --noEmit + biome check + vitest run
 pnpm bundle       # instalador NSIS com o sidecar (spec 15.4), em target\release\bundle\nsis
 ```
 
+Release (spec 15.5): suba a versão em `[workspace.package]` do `Cargo.toml` (e no `app/package.json`), faça merge, crie a tag `vX.Y.Z` e dê push. O workflow `release.yml` abre um release rascunho com instalador, `.sig` e `latest.json`; o updater só o vê depois de publicado. A chave privada do updater fica no segredo `TAURI_SIGNING_PRIVATE_KEY`; perdê-la impede atualizar quem já instalou.
+
 Em dev, use `$env:BOTLOFT_HOME = "$PWD\.dev\home"` (caminho absoluto) no daemon e no app, para não tocar na instalação real em `%LOCALAPPDATA%\Botloft`. O `config.toml` de dev fica dentro dessa pasta: o app lê a porta de lá.
 
 ## Convenções

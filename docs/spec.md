@@ -599,6 +599,14 @@ Identidade: o mascote do Botloft é uma chama com olhos, desenhada em vetor em `
 - Hook `NSIS_HOOK_PREUNINSTALL` (`src-tauri/windows/hooks.nsh`): numa desinstalação de verdade, `botloftd service uninstall` para o daemon e apaga a tarefa e o binário; bots e dados ficam. Uma atualização também roda o desinstalador antigo, com `/UPDATE`: aí o hook não faz nada e o daemon continua rodando até o app novo abrir e atualizá-lo (15.2).
 - O manifesto do app (`src-tauri/windows/app.manifest`) é o padrão do Tauri (controles comuns v6) mais `longPathAware`.
 
+### 15.5 Atualizações
+
+- O app usa o `tauri-plugin-updater`. O feed é `latest.json` do último release publicado no GitHub (`releases/latest/download/latest.json`). O app o consulta ao abrir e a cada 6 h; sem rede ou sem release, fica quieto. Build de dev não consulta, para não se trocar pelo app publicado.
+- Com versão nova, aparece "Update available" na barra de título. Um clique abre o diálogo: a versão, "What's new" (se o release tiver notas) e o aviso de que o Botloft fecha, instala e abre de novo, e de que os bots pausam por um instante e continuam de onde pararam. "Update now" baixa com progresso e roda o instalador; se falhar, o erro fica em "Details" e dá para tentar de novo.
+- O instalador roda como `/P /UPDATE /R`: passivo, sem perguntas, e reabre o app. O hook de desinstalação não faz nada com `/UPDATE` (15.4), o daemon segue rodando, e o app reaberto o atualiza porque ele ficou `outdated` (15.2).
+- Os artefatos são assinados com a chave do updater do Tauri (`createUpdaterArtifacts`), e a chave pública fica no `tauri.conf.json`. `requireSignedVersion` exige que a assinatura traga a versão, para um feed adulterado não empurrar uma versão antiga de volta. O instalador não tem assinatura Authenticode, então o SmartScreen avisa na primeira execução.
+- Release: a versão fica só no `[workspace.package]` do `Cargo.toml` (o `tauri.conf.json` não repete a versão e usa a do crate). Um push de tag `vX.Y.Z` roda `.github/workflows/release.yml`, que confere tag e versão, roda `pnpm bundle` com `TAURI_SIGNING_PRIVATE_KEY` (segredo do repositório) e abre um release **rascunho** com o instalador, o `.sig` e o `latest.json` (`app/scripts/release.mjs`). O updater só enxerga o release depois que o dono o publica.
+
 ## 16. Qualidade
 
 - Rust: `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`.

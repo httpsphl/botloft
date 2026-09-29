@@ -12,6 +12,20 @@ to do.
 > tasks between bots. M5 (distribution) is in progress. The design lives in
 > [`docs/spec.md`](docs/spec.md).
 
+## Install
+
+1. Install [Claude Code](https://code.claude.com/docs/en/setup) and sign in once.
+2. Download `Botloft_<version>_x64-setup.exe` from
+   [Releases](https://github.com/httpsphl/botloft/releases) and run it. It installs for your
+   Windows user only, with no administrator prompt. The installer is not code-signed yet, so
+   Windows SmartScreen may ask you to confirm.
+3. Open Botloft. It sets itself up; there is nothing to configure.
+
+Botloft updates itself: when a new version is out, an "Update available" button shows in the
+title bar. Uninstalling (Settings > Apps) removes the app and stops Botloft from running in the
+background; your bots and their files stay in `%LOCALAPPDATA%\Botloft` and
+`%USERPROFILE%\Botloft`.
+
 ## How it works
 
 - **The daemon is the source of truth.** Closing the app never stops a bot. The daemon runs as a

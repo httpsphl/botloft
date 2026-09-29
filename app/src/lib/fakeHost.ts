@@ -1,6 +1,6 @@
 // A `Host` for tests: a daemon that is running unless told otherwise.
 
-import type { DaemonStatus, Host } from "./host";
+import type { AppUpdate, DaemonStatus, Host } from "./host";
 import { PROTOCOL_VERSION } from "./protocol.gen";
 
 /** A current daemon on the default port. */
@@ -24,6 +24,9 @@ export class FakeHost implements Host {
   token: string | Error = "a".repeat(64);
   readonly opened: string[] = [];
   readonly installs: ("install" | "restart")[] = [];
+  /** What `checkForUpdate` finds, or its error. */
+  update: AppUpdate | null | Error = null;
+  updateChecks = 0;
   maximized = false;
   closed = false;
   attention = false;
@@ -38,6 +41,13 @@ export class FakeHost implements Host {
 
   restartDaemon(): Promise<DaemonStatus> {
     return this.settle("restart");
+  }
+
+  checkForUpdate(): Promise<AppUpdate | null> {
+    this.updateChecks += 1;
+    return this.update instanceof Error
+      ? Promise.reject(this.update)
+      : Promise.resolve(this.update);
   }
 
   private settle(action: "install" | "restart"): Promise<DaemonStatus> {
@@ -80,4 +90,21 @@ export class FakeHost implements Host {
       return Promise.resolve();
     },
   };
+}
+
+/** An update whose install reports some progress, then fails or hangs. */
+export class FakeUpdate implements AppUpdate {
+  notes: string | null = null;
+  installs = 0;
+  /** Rejects the install with this, or never settles, as a real one exits. */
+  failure: Error | null = null;
+
+  constructor(readonly version: string) {}
+
+  install(progress: (fraction: number | null) => void): Promise<void> {
+    this.installs += 1;
+    progress(null);
+    progress(0.5);
+    return this.failure ? Promise.reject(this.failure) : new Promise(() => {});
+  }
 }

@@ -2,7 +2,6 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Botloft",
   "mainBinaryName": "Botloft",
-  "version": "0.1.0",
   "identifier": "io.github.httpsphl.botloft",
   "build": {
     "beforeDevCommand": "pnpm dev",
@@ -23,6 +22,16 @@
     ],
     "security": {
       "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost ws://127.0.0.1:*; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY4Mzk1NTc0OUYwODcyNTAKUldSUWNnaWZkRlU1K0xsNTVPcWw1c3A3dUNEZzRxUjJscWJpdUJWcVNCa3RkRFNFZFhrU21xQm8K",
+      "endpoints": ["https://github.com/httpsphl/botloft/releases/latest/download/latest.json"],
+      "requireSignedVersion": true,
+      "windows": {
+        "installMode": "passive"
+      }
     }
   },
   "bundle": {
