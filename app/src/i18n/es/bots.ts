@@ -25,6 +25,10 @@ export const bots: Messages["bots"] = {
     archived: { label: "Archivado", hint: "Archivado." },
     paused: { label: "En pausa", hint: "En pausa; reanúdalo para iniciarlo." },
   },
+  chief: {
+    badge: "Jefe",
+    hint: (crew: string) => `Dirige ${crew}: planea el trabajo y sugiere bots nuevos`,
+  },
   header: {
     noRole: "Sin rol",
     pause: "Pausar",
@@ -36,12 +40,15 @@ export const bots: Messages["bots"] = {
     edit: "Editar",
     restartFresh: "Reiniciar con una conversación nueva",
     openFolder: "Abrir carpeta",
+    makeChief: "Hacer jefe del equipo",
+    stopChief: "Dejar de ser jefe",
     archive: "Archivar bot",
     failed: {
       pause: "No se pudo pausar el bot",
       resume: "No se pudo reanudar el bot",
       restart: "No se pudo reiniciar el bot",
       openFolder: "No se pudo abrir la carpeta",
+      chief: "No se pudo cambiar el jefe",
       archive: "No se pudo archivar el bot",
     },
     fresh: {

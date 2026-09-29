@@ -80,6 +80,12 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
         bot.archivedAt = fake.now;
         bot.state = "archived";
         fake.changedBot(bot);
+        // An archived chief leaves its crew without one.
+        const crew = fake.crews.get(bot.crewId);
+        if (crew?.leadBotId === botId) {
+          crew.leadBotId = null;
+          fake.changedCrew(crew);
+        }
       }
       return bot;
     },

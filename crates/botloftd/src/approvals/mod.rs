@@ -1,29 +1,27 @@
-//! Permission requests (spec 10.1). Claude Code calls the MCP tool
-//! `permission_prompt`; the call waits here until the owner answers in the
-//! chat, the request times out, or the bot's process ends.
+//! Requests that wait for the owner in the chat: Claude Code's permission
+//! requests (spec 10.1) and the chief's bot suggestions (spec 10.2). The
+//! MCP call waits here until the owner answers, the request times out, or
+//! the bot's process ends.
+
+mod prompt;
 
 use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard};
-use std::time::Duration;
 
-use botloft_core::chat::{clip, tool_input_max, tool_summary};
+use botloft_core::chat::{SUGGEST_TOOL, clip, tool_input_max, tool_summary};
 use botloft_core::ids::{ApprovalId, BotId, ChatItemId};
 use botloft_core::protocol::{
-    Approval, ApprovalItem, ApprovalStatus, ApprovalsAnswerParams, ChatBody, ToolStatus,
+    Approval, ApprovalItem, ApprovalStatus, ApprovalsAnswerParams, ChatBody,
 };
 use botloft_store::ApprovalRecord;
-use serde_json::{Value, json};
+use serde_json::Value;
 use tokio::sync::oneshot;
 use tracing::{debug, warn};
 
+pub use self::prompt::{PromptArgs, prompt};
 use crate::chat::items;
 use crate::service::{ApiError, ApiResult};
 use crate::state::Daemon;
-
-/// How long to wait for the `tool_use` event that the request is about;
-/// it can arrive a moment after the MCP call.
-const MATCH_WINDOW: Duration = Duration::from_secs(2);
-const MATCH_POLL: Duration = Duration::from_millis(50);
 
 /// Requests waiting for an answer, in memory: they cannot outlive the
 /// daemon, since the bots' processes do not either.
@@ -36,6 +34,21 @@ pub struct Approvals {
 struct Decision {
     allow: bool,
     note: Option<String>,
+    input: Option<String>,
+}
+
+/// How the owner answered a request.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum Answer {
+    /// `input` is the request as the owner changed it, if they did.
+    Allowed {
+        input: Option<String>,
+    },
+    Denied {
+        note: Option<String>,
+    },
+    /// No answer in time, or the process ended.
+    Expired,
 }
 
 impl Approvals {
@@ -46,26 +59,17 @@ impl Approvals {
     }
 }
 
-/// Arguments Claude Code sends to the permission tool.
-#[derive(Debug, Clone, serde::Deserialize)]
-pub struct PromptArgs {
-    pub tool_name: String,
-    #[serde(default)]
-    pub input: Value,
-    #[serde(default)]
-    pub tool_use_id: String,
-}
-
-/// Handles one `permission_prompt` call and returns the text of the tool
-/// result: `{"behavior": "allow" | "deny", ...}`.
-pub async fn prompt(daemon: &Daemon, bot: &BotId, generation: u64, args: PromptArgs) -> String {
-    if !matches_running_tool(daemon, bot, &args.tool_use_id).await {
-        debug!(bot = %bot, "permission request for no running tool; denied");
-        return deny("There is no pending tool call with that id.");
-    }
-    let Some(pending) = open(daemon, bot, &args) else {
-        return deny("Botloft could not ask the owner.");
-    };
+/// Puts a request in the bot's chat and waits for the owner. `None` if it
+/// could not be saved.
+pub(crate) async fn ask(
+    daemon: &Daemon,
+    bot: &BotId,
+    generation: u64,
+    tool_name: &str,
+    input: &Value,
+    tool_use_id: &str,
+) -> Option<Answer> {
+    let pending = open(daemon, bot, tool_name, input, tool_use_id)?;
     let (answer, waiting) = oneshot::channel();
     daemon
         .approvals
@@ -83,20 +87,17 @@ pub async fn prompt(daemon: &Daemon, bot: &BotId, generation: u64, args: PromptA
     guard.settled = true;
     daemon.approvals.lock().remove(&pending.record.approval.id);
     daemon.supervisor.approval_closed(bot, generation);
-    match decision {
-        Ok(Ok(Decision { allow: true, .. })) => {
-            json!({ "behavior": "allow", "updatedInput": args.input }).to_string()
-        }
-        Ok(Ok(Decision { allow: false, note })) => match note {
-            Some(note) => deny(&format!("The owner denied this: {note}")),
-            None => deny("The owner denied this."),
-        },
+    Some(match decision {
+        Ok(Ok(Decision {
+            allow: true, input, ..
+        })) => Answer::Allowed { input },
+        Ok(Ok(Decision { note, .. })) => Answer::Denied { note },
         // Timed out, or the answer was dropped (the process ended).
         Ok(Err(_)) | Err(_) => {
-            settle(daemon, &pending.record, ApprovalStatus::Expired, None);
-            deny("The owner did not answer in time.")
+            settle(daemon, &pending.record, ApprovalStatus::Expired, None, None);
+            Answer::Expired
         }
-    }
+    })
 }
 
 /// The owner's answer (`approvals.answer`).
@@ -114,7 +115,16 @@ pub fn answer(daemon: &Daemon, params: ApprovalsAnswerParams) -> ApiResult<Appro
         .store()
         .approval(&params.approval_id)?
         .ok_or_else(|| ApiError::NotFound(format!("approval {}", params.approval_id)))?;
-    let Some(record) = settle(daemon, &existing, status, note.as_deref()) else {
+    // Only a bot suggestion can be changed before it is allowed (spec 10.2).
+    let input = match params.input {
+        Some(input) if params.allow && existing.approval.tool_name == SUGGEST_TOOL => {
+            let value: Value = serde_json::from_str(&input)
+                .map_err(|_| ApiError::validation("the changed suggestion is not valid JSON"))?;
+            Some(value.to_string())
+        }
+        _ => None,
+    };
+    let Some(record) = settle(daemon, &existing, status, note.as_deref(), input.as_deref()) else {
         return Err(ApiError::Conflict(format!(
             "approval {} was already answered or expired",
             params.approval_id
@@ -124,6 +134,7 @@ pub fn answer(daemon: &Daemon, params: ApprovalsAnswerParams) -> ApiResult<Appro
         let _ = waiter.send(Decision {
             allow: params.allow,
             note,
+            input,
         });
     }
     Ok(record.approval)
@@ -160,44 +171,25 @@ pub fn expire_all(daemon: &Daemon) {
     }
 }
 
-fn deny(message: &str) -> String {
-    json!({ "behavior": "deny", "message": message }).to_string()
-}
-
-/// Whether the bot's chat shows `tool_use_id` running, waiting briefly for
-/// the event if it has not been read yet.
-async fn matches_running_tool(daemon: &Daemon, bot: &BotId, tool_use_id: &str) -> bool {
-    if tool_use_id.is_empty() {
-        return false;
-    }
-    let deadline = tokio::time::Instant::now() + MATCH_WINDOW;
-    loop {
-        let found = daemon.store().tool_item(bot, tool_use_id);
-        if let Ok(Some(item)) = found
-            && matches!(&item.body, ChatBody::Tool(tool) if tool.status == ToolStatus::Running)
-        {
-            return true;
-        }
-        if tokio::time::Instant::now() >= deadline {
-            return false;
-        }
-        tokio::time::sleep(MATCH_POLL).await;
-    }
-}
-
 struct Pending {
     record: ApprovalRecord,
 }
 
 /// Saves the request and puts it in the chat.
-fn open(daemon: &Daemon, bot: &BotId, args: &PromptArgs) -> Option<Pending> {
+fn open(
+    daemon: &Daemon,
+    bot: &BotId,
+    tool_name: &str,
+    input: &Value,
+    tool_use_id: &str,
+) -> Option<Pending> {
     let now = daemon.clock.now_ms();
     let approval = Approval {
         id: ApprovalId::generate(),
         bot_id: bot.clone(),
-        tool_name: args.tool_name.clone(),
-        summary: tool_summary(&args.tool_name, &args.input),
-        input: clip(&args.input.to_string(), tool_input_max(&args.tool_name)),
+        tool_name: tool_name.to_owned(),
+        summary: tool_summary(tool_name, input),
+        input: clip(&input.to_string(), tool_input_max(tool_name)),
         status: ApprovalStatus::Pending,
         note: None,
         created_at: now,
@@ -207,7 +199,7 @@ fn open(daemon: &Daemon, bot: &BotId, args: &PromptArgs) -> Option<Pending> {
     let record = ApprovalRecord {
         approval,
         chat_item_id: item.id,
-        tool_use_id: args.tool_use_id.clone(),
+        tool_use_id: tool_use_id.to_owned(),
     };
     if let Err(err) = daemon.store().insert_approval(&record) {
         warn!(bot = %bot, "could not save an approval: {err}");
@@ -234,11 +226,12 @@ fn settle(
     record: &ApprovalRecord,
     status: ApprovalStatus,
     note: Option<&str>,
+    input: Option<&str>,
 ) -> Option<ApprovalRecord> {
     let now = daemon.clock.now_ms();
     let settled = daemon
         .store()
-        .settle_approval(&record.approval.id, status, note, now);
+        .settle_approval(&record.approval.id, status, note, input, now);
     match settled {
         Ok(Some(settled)) => {
             show(daemon, &settled);
@@ -276,7 +269,13 @@ impl Drop for Guard<'_> {
             .approvals
             .lock()
             .remove(&self.record.approval.id);
-        settle(self.daemon, self.record, ApprovalStatus::Expired, None);
+        settle(
+            self.daemon,
+            self.record,
+            ApprovalStatus::Expired,
+            None,
+            None,
+        );
         self.daemon
             .supervisor
             .approval_closed(self.bot, self.generation);

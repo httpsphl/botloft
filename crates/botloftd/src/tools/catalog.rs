@@ -3,12 +3,16 @@
 
 use serde_json::{Value, json};
 
+use super::suggest::{INSTRUCTIONS_MAX, REASON_MAX};
 use crate::service::tasks::MAX_DEADLINE_MINUTES;
+use botloft_core::validate::{NAME_MAX_CHARS, ROLE_MAX_CHARS};
 
 pub const CREW_ROSTER: &str = "crew_roster";
 pub const SEND_MESSAGE: &str = "send_message";
 pub const COMPLETE_TASK: &str = "complete_task";
 pub const MY_TASKS: &str = "my_tasks";
+/// The chief's tool (spec 10.2); Claude Code names it `mcp__botloft__suggest_bot`.
+pub const SUGGEST_BOT: &str = "suggest_bot";
 /// Claude Code's `--permission-prompt-tool` (spec 10.1).
 pub const PERMISSION_PROMPT: &str = "permission_prompt";
 
@@ -100,6 +104,50 @@ pub fn tools() -> Value {
                 "additionalProperties": false,
             },
             "annotations": { "readOnlyHint": true },
+        },
+        {
+            "name": SUGGEST_BOT,
+            "title": "Suggest a new bot",
+            "description": "Only for the crew's chief (crew_roster marks it). Suggests a new bot \
+                for work that needs a specialist the crew lacks. The owner sees the suggestion in \
+                your chat, may change it, and approves or declines it; the call waits for that. \
+                Once approved the bot starts at once: give it work with send_message. If the owner \
+                declines, do the work yourself or with the bots you have.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": NAME_MAX_CHARS,
+                        "description": "A short name, like \"Designer\". Its handle comes from it.",
+                    },
+                    "role": {
+                        "type": "string",
+                        "maxLength": ROLE_MAX_CHARS,
+                        "description": "One line: what the bot does in the crew.",
+                    },
+                    "instructions": {
+                        "type": "string",
+                        "maxLength": INSTRUCTIONS_MAX,
+                        "description": "Written to the new bot: what it works on, how, what it \
+                            hands back and when to ask.",
+                    },
+                    "model": {
+                        "type": "string",
+                        "enum": ["default", "fable", "opus", "sonnet", "haiku"],
+                        "description": "\"haiku\" for simple, repetitive work; \"sonnet\" for most \
+                            work; \"opus\" or \"fable\" for the hardest reasoning. The owner's \
+                            plan default when absent.",
+                    },
+                    "reason": {
+                        "type": "string",
+                        "maxLength": REASON_MAX,
+                        "description": "For the owner: why the crew needs this bot now.",
+                    },
+                },
+                "required": ["name", "role", "instructions", "reason"],
+                "additionalProperties": false,
+            },
         },
         {
             "name": PERMISSION_PROMPT,

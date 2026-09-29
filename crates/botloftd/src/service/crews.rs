@@ -9,6 +9,7 @@ use botloft_core::{now_ms, slug, validate};
 use botloft_store::Store;
 use tracing::warn;
 
+use super::bots::NewBot;
 use super::{ApiError, ApiResult, bots, pick_slug};
 use crate::state::{Daemon, Event};
 use crate::workspace;
@@ -34,19 +35,35 @@ pub fn create(daemon: &Daemon, params: CrewsCreateParams) -> ApiResult<Crew> {
         .map(|input| choose_folder(daemon, input))
         .transpose()?;
 
-    let crew = Crew {
+    let lead = params
+        .lead
+        .map(|lead| NewBot::check(&lead.name, &lead.role, &lead.instructions, None, lead.model))
+        .transpose()?;
+
+    let mut crew = Crew {
         id: CrewId::generate(),
         name,
         slug,
         work_folder_chosen: chosen.is_some(),
         work_folder: chosen.unwrap_or_default(),
+        lead_bot_id: None,
         paused: false,
         created_at: now_ms(),
         archived_at: None,
     };
     workspace::prepare_crew(&daemon.paths, &crew).map_err(ApiError::Workspace)?;
     store.insert_crew(&crew)?;
-    Ok(changed(daemon, crew))
+    // The chief is saved before the store is let go, so it starts as one.
+    let chief = match lead {
+        Some(lead) => Some(super::lead::create_chief(daemon, &store, &mut crew, lead)?),
+        None => None,
+    };
+    let crew = changed(daemon, crew);
+    if let Some(chief) = chief {
+        bots::changed(daemon, &store, &crew, chief);
+        daemon.supervisor.wake();
+    }
+    Ok(crew)
 }
 
 pub fn rename(daemon: &Daemon, params: CrewsRenameParams) -> ApiResult<Crew> {
@@ -144,7 +161,7 @@ pub(crate) fn present(daemon: &Daemon, mut crew: Crew) -> Crew {
     crew
 }
 
-fn changed(daemon: &Daemon, crew: Crew) -> Crew {
+pub(crate) fn changed(daemon: &Daemon, crew: Crew) -> Crew {
     let crew = present(daemon, crew);
     daemon.emit(Event::CrewChanged(crew.clone()));
     crew

@@ -25,10 +25,12 @@ describe("work folders", () => {
     expect(await within(dialog).findByText(PROJECT)).toBeDefined();
     fireEvent.click(within(dialog).getByRole("button", { name: "Create crew" }));
 
-    await crewOpened("Bakery");
+    // The new crew opens on its chief's chat.
+    await screen.findByRole("heading", { level: 1, name: "Chief" });
     const create = fake.calls.find((call) => call.method === "crews.create");
-    expect(create?.params).toEqual({ name: "Bakery", workFolder: PROJECT });
-    expect(screen.getByText(`Works in ${PROJECT}`)).toBeDefined();
+    expect(create?.params).toMatchObject({ name: "Bakery", workFolder: PROJECT });
+    const bakery = [...fake.crews.values()].find((crew) => crew.name === "Bakery");
+    expect(bakery?.workFolder).toBe(PROJECT);
   });
 
   test("without a choice the crew gets a new folder", async () => {
@@ -47,10 +49,11 @@ describe("work folders", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Use a new folder" }));
     fireEvent.click(within(dialog).getByRole("button", { name: "Create crew" }));
 
-    await crewOpened("Bakery");
+    await screen.findByRole("heading", { level: 1, name: "Chief" });
     const create = fake.calls.find((call) => call.method === "crews.create");
-    expect(create?.params).toEqual({ name: "Bakery" });
-    expect(screen.getByText(/Works in .*\\bakery\\shared/)).toBeDefined();
+    expect(create?.params).not.toHaveProperty("workFolder");
+    const bakery = [...fake.crews.values()].find((crew) => crew.name === "Bakery");
+    expect(bakery?.workFolderChosen).toBe(false);
   });
 
   test("the owner opens the folder and moves the crew to another one", async () => {

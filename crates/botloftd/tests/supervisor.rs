@@ -195,6 +195,7 @@ async fn a_failed_spawn_backs_off_and_retries() {
         CrewsCreateParams {
             name: "Ops".into(),
             work_folder: None,
+            lead: None,
         },
     )
     .expect("crew");

@@ -7,6 +7,7 @@ import { useT } from "../../i18n";
 import type { ApprovalItem, Bot } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
 import { PLAN_TOOL, PlanCard } from "./PlanCard";
+import { SUGGEST_TOOL, SuggestionCard } from "./SuggestionCard";
 import { pretty, toolLabel } from "./ToolLines";
 import { useAnswer } from "./useAnswer";
 
@@ -44,11 +45,14 @@ function Answered({ approval }: { approval: ApprovalItem }) {
 }
 
 export function ApprovalCard({ approval, bot }: { approval: ApprovalItem; bot: Bot }) {
-  return approval.toolName === PLAN_TOOL ? (
-    <PlanCard approval={approval} bot={bot} />
-  ) : (
-    <ToolApproval approval={approval} bot={bot} />
-  );
+  switch (approval.toolName) {
+    case PLAN_TOOL:
+      return <PlanCard approval={approval} bot={bot} />;
+    case SUGGEST_TOOL:
+      return <SuggestionCard approval={approval} bot={bot} />;
+    default:
+      return <ToolApproval approval={approval} bot={bot} />;
+  }
 }
 
 function ToolApproval({ approval, bot }: { approval: ApprovalItem; bot: Bot }) {

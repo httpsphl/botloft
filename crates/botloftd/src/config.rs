@@ -85,6 +85,8 @@ pub struct BotsConfig {
     pub approval_timeout_minutes: u64,
     /// Largest attachment, per file (spec 9.5).
     pub attachment_max_mb: u64,
+    /// Most bots a chief's suggestions can bring a crew to (spec 10.2).
+    pub max_per_crew: usize,
 }
 
 impl Default for BotsConfig {
@@ -92,6 +94,7 @@ impl Default for BotsConfig {
         Self {
             approval_timeout_minutes: 60,
             attachment_max_mb: 20,
+            max_per_crew: 12,
         }
     }
 }

@@ -71,22 +71,25 @@ impl Store {
             .optional()?)
     }
 
-    /// Answers a pending approval. `None` if it was already settled.
+    /// Answers a pending approval; `input` replaces what was asked, when the
+    /// owner changed it. `None` if it was already settled.
     pub fn settle_approval(
         &self,
         id: &ApprovalId,
         status: ApprovalStatus,
         note: Option<&str>,
+        input: Option<&str>,
         now: i64,
     ) -> Result<Option<ApprovalRecord>> {
         Ok(self
             .conn
             .query_row(
                 &format!(
-                    "UPDATE approvals SET status = ?2, note = ?3, answered_at = ?4 \
+                    "UPDATE approvals SET status = ?2, note = ?3, answered_at = ?4, \
+                     input = COALESCE(?5, input) \
                      WHERE id = ?1 AND status = 'pending' RETURNING {COLUMNS}, tool_use_id"
                 ),
-                params![id.as_str(), status.as_str(), note, now],
+                params![id.as_str(), status.as_str(), note, now, input],
                 from_row,
             )
             .optional()?)
@@ -163,6 +166,7 @@ mod tests {
                 &record.approval.id,
                 ApprovalStatus::Denied,
                 Some("not now"),
+                None,
                 20,
             )
             .expect("settle")
@@ -172,9 +176,27 @@ mod tests {
         assert_eq!(denied.approval.answered_at, Some(20));
         let again = fx
             .store
-            .settle_approval(&record.approval.id, ApprovalStatus::Allowed, None, 30)
+            .settle_approval(&record.approval.id, ApprovalStatus::Allowed, None, None, 30)
             .expect("settle");
         assert_eq!(again, None);
+    }
+
+    #[test]
+    fn an_answer_can_replace_what_was_asked() {
+        let fx = Fixture::new();
+        let record = pending(&fx, 0);
+        let allowed = fx
+            .store
+            .settle_approval(
+                &record.approval.id,
+                ApprovalStatus::Allowed,
+                None,
+                Some(r#"{"name":"Designer"}"#),
+                40,
+            )
+            .expect("settle")
+            .expect("was pending");
+        assert_eq!(allowed.approval.input, r#"{"name":"Designer"}"#);
     }
 
     #[test]

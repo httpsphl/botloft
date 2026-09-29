@@ -31,6 +31,7 @@ const MODES: { mode: PermissionMode; icon: LucideIcon }[] = [
 export function ModePicker({ bot, onLater }: { bot: Bot; onLater(text: string): void }) {
   const api = useApi();
   const putBot = useApp((state) => state.putBot);
+  const chief = useApp((state) => state.crews[bot.crewId]?.leadBotId === bot.id);
   const m = useT().chat.mode;
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -123,6 +124,7 @@ export function ModePicker({ bot, onLater }: { bot: Bot; onLater(text: string): 
         >
           <p>{m.bypassBody(bot.name)}</p>
           <p className="mt-2">{m.bypassRisk}</p>
+          {chief && <p className="mt-2">{m.bypassChief(bot.name)}</p>}
           <p className="mt-2 font-medium text-ink">{m.bypassAdvice}</p>
         </Confirm>
       )}

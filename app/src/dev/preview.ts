@@ -11,6 +11,7 @@ import { FakeHost } from "../lib/fakeHost";
 import type { Host } from "../lib/host";
 import { PROTOCOL_VERSION } from "../lib/protocol.gen";
 import { seedChats } from "./seedChats";
+import { seedChief } from "./seedChief";
 
 export function previewProps(search: string): { host: Host; connect: Connect } {
   const params = new URLSearchParams(search);
@@ -114,4 +115,5 @@ function seed(fake: FakeBotloft): void {
   void fake.call("crews.setPaused", { crewId: ops.id, paused: true });
   fake.setBotState(deploy.id, "offline");
   fake.setBotState(watcher.id, "offline");
+  seedChief(fake);
 }

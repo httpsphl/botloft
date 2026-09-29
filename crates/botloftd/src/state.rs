@@ -44,6 +44,8 @@ pub struct BotSettings {
     pub approval_timeout: Duration,
     /// Largest attachment, per file (spec 9.5).
     pub attachment_max_bytes: u64,
+    /// Most bots a chief's suggestions can bring a crew to (spec 10.2).
+    pub max_per_crew: usize,
 }
 
 impl BotSettings {
@@ -51,6 +53,7 @@ impl BotSettings {
         Self {
             approval_timeout: Duration::from_secs(config.bots.approval_timeout_minutes * 60),
             attachment_max_bytes: config.bots.attachment_max_mb * 1024 * 1024,
+            max_per_crew: config.bots.max_per_crew,
         }
     }
 }

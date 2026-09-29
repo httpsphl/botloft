@@ -18,6 +18,13 @@ export const crews: Messages["crews"] = {
     chooseFolder: "Escolher pasta…",
     pickTitle: "Escolha onde a equipe trabalha",
     useDefault: "Usar uma pasta nova",
+    goal: "Para que é esta equipe?",
+    goalPlaceholder: "Criar e manter o site da minha padaria",
+    goalHint:
+      "A equipe começa com um Chefe, que lê isto, planeja o trabalho e sugere os bots de que precisa.",
+    chiefModel: "Modelo do Chefe",
+    chiefName: "Chefe",
+    chiefRole: "Lidera a equipe: planeja o trabalho, sugere bots novos e distribui as tarefas",
     renameTitle: "Renomear equipe",
     create: "Criar equipe",
     name: "Nome",

@@ -29,6 +29,10 @@ export const bots = {
     /** Paused (the bot or its crew) and not running. */
     paused: { label: "Paused", hint: "Paused; resume to start it." },
   },
+  chief: {
+    badge: "Chief",
+    hint: (crew: string) => `Leads ${crew}: plans the work and suggests new bots`,
+  },
   header: {
     noRole: "No role",
     pause: "Pause",
@@ -40,12 +44,15 @@ export const bots = {
     edit: "Edit",
     restartFresh: "Restart with a new conversation",
     openFolder: "Open folder",
+    makeChief: "Make crew chief",
+    stopChief: "Stop being chief",
     archive: "Archive bot",
     failed: {
       pause: "Could not pause the bot",
       resume: "Could not resume the bot",
       restart: "Could not restart the bot",
       openFolder: "Could not open the folder",
+      chief: "Could not change the chief",
       archive: "Could not archive the bot",
     },
     fresh: {

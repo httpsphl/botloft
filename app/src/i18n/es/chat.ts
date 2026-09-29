@@ -105,6 +105,8 @@ export const chat: Messages["chat"] = {
       `${bot} editará archivos, ejecutará comandos y usará internet en este equipo sin pedirte permiso antes.`,
     bypassRisk:
       "No se limita a su carpeta: puede leer y cambiar tus otros archivos, los de otros bots y los del propio Botloft. Un mensaje de otra persona podría llevarlo a hacer algo que no querías.",
+    bypassChief: (bot: string) =>
+      `${bot} es el jefe del equipo, así que también creará bots nuevos sin preguntar.`,
     bypassAdvice:
       "Actívalo solo para un bot en el que confíes para todo, y solo mientras lo necesites.",
     badge: "No pregunta nada",
@@ -137,6 +139,24 @@ export const chat: Messages["chat"] = {
     failed: "No se pudo cambiar el modelo",
     later: (bot: string, model: string) =>
       `${bot} cambia a ${model} cuando termine lo que está haciendo.`,
+  },
+  suggestion: {
+    title: (bot: string) => `${bot} sugiere un bot nuevo`,
+    why: "Por qué",
+    name: "Nombre",
+    role: "Rol",
+    model: "Modelo",
+    instructions: "Instrucciones",
+    startsNow: (bot: string) => `Empieza enseguida y recibe el trabajo de ${bot}.`,
+    noteLabel: (bot: string) => `Qué decirle a ${bot} si dices que no`,
+    notePlaceholder: (bot: string) => `Si dices que no, dile a ${bot} por qué (opcional)`,
+    create: "Crear bot",
+    decline: "Ahora no",
+    createFailed: "No se pudo crear el bot",
+    declineFailed: "No se pudo enviar la respuesta",
+    created: (name: string) => `Creaste ${name}`,
+    declined: (name: string) => `Rechazaste ${name}`,
+    expired: (name: string) => `${name} no se respondió a tiempo`,
   },
   plan: {
     ready: (bot: string) => `${bot} hizo un plan y quiere seguir con él`,

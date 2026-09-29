@@ -21,6 +21,13 @@ export const crews = {
     chooseFolder: "Choose folder…",
     pickTitle: "Choose where the crew works",
     useDefault: "Use a new folder",
+    goal: "What is this crew for?",
+    goalPlaceholder: "Build and keep up my bakery's website",
+    goalHint:
+      "The crew starts with a chief, who reads this, plans the work and suggests the bots it needs.",
+    chiefModel: "Chief's model",
+    chiefName: "Chief",
+    chiefRole: "Leads the crew: plans the work, suggests new bots and hands out tasks",
     renameTitle: "Rename crew",
     create: "Create crew",
     name: "Name",

@@ -10,6 +10,7 @@ import { Button } from "../../ui/Button";
 import { AccountArea } from "../account/AccountArea";
 import { BotAvatar } from "../bots/BotAvatar";
 import { BotStateBadge, stateView } from "../bots/BotStateBadge";
+import { ChiefBadge, isChief } from "../bots/ChiefBadge";
 import { CrewDialog } from "./CrewDialog";
 
 /** Crews as sections and their bots as conversations (spec 15.1). */
@@ -94,7 +95,10 @@ function Conversation({ bot, crew }: { bot: Bot; crew: Crew }) {
         <BotAvatar color={bot.color} size={32} />
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-2">
-            <span className="min-w-0 flex-1 truncate font-medium text-sm">{bot.name}</span>
+            <span className="flex min-w-0 flex-1 items-center gap-1">
+              <span className="truncate font-medium text-sm">{bot.name}</span>
+              {isChief(bot, crew) && <ChiefBadge crew={crew} compact />}
+            </span>
             {activity && (
               <time
                 className="shrink-0 text-muted text-xs"

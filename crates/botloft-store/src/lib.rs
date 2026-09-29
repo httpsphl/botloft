@@ -124,6 +124,7 @@ pub(crate) mod tests {
                 slug: "ops".to_owned(),
                 work_folder: String::new(),
                 work_folder_chosen: false,
+                lead_bot_id: None,
                 paused: false,
                 created_at: 0,
                 archived_at: None,

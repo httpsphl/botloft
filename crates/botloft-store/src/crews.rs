@@ -6,7 +6,7 @@ use rusqlite::{OptionalExtension, Row, params};
 
 use crate::{Result, Store, parse_column, unique_as_duplicate};
 
-const COLUMNS: &str = "id, name, slug, paused, created_at, archived_at, work_dir";
+const COLUMNS: &str = "id, name, slug, paused, created_at, archived_at, work_dir, lead_bot_id";
 
 /// A crew without a chosen folder comes back with an empty `work_folder`;
 /// the daemon fills in the `shared` folder, which depends on its paths.
@@ -18,6 +18,9 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<Crew> {
         slug: row.get(2)?,
         work_folder_chosen: work_dir.is_some(),
         work_folder: work_dir.unwrap_or_default(),
+        lead_bot_id: row
+            .get::<_, Option<String>>(7)?
+            .and_then(|id| id.parse().ok()),
         paused: row.get(3)?,
         created_at: row.get(4)?,
         archived_at: row.get(5)?,
@@ -32,7 +35,7 @@ impl Store {
     pub fn insert_crew(&self, crew: &Crew) -> Result<()> {
         self.conn
             .execute(
-                &format!("INSERT INTO crews ({COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)"),
+                &format!("INSERT INTO crews ({COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)"),
                 params![
                     crew.id.as_str(),
                     crew.name,
@@ -40,7 +43,8 @@ impl Store {
                     crew.paused,
                     crew.created_at,
                     crew.archived_at,
-                    work_dir(crew)
+                    work_dir(crew),
+                    crew.lead_bot_id.as_ref().map(|id| id.as_str())
                 ],
             )
             .map_err(|err| unique_as_duplicate(err, "crew slug"))?;
@@ -76,17 +80,19 @@ impl Store {
         )?)
     }
 
-    /// Saves the mutable fields: name, paused, archived_at and the chosen
-    /// work folder.
+    /// Saves the mutable fields: name, paused, archived_at, the chosen work
+    /// folder and the chief.
     pub fn update_crew(&self, crew: &Crew) -> Result<()> {
         self.conn.execute(
-            "UPDATE crews SET name = ?2, paused = ?3, archived_at = ?4, work_dir = ?5 WHERE id = ?1",
+            "UPDATE crews SET name = ?2, paused = ?3, archived_at = ?4, work_dir = ?5, \
+             lead_bot_id = ?6 WHERE id = ?1",
             params![
                 crew.id.as_str(),
                 crew.name,
                 crew.paused,
                 crew.archived_at,
-                work_dir(crew)
+                work_dir(crew),
+                crew.lead_bot_id.as_ref().map(|id| id.as_str())
             ],
         )?;
         Ok(())
@@ -120,6 +126,7 @@ mod tests {
             slug: slug.to_owned(),
             work_folder: String::new(),
             work_folder_chosen: false,
+            lead_bot_id: None,
             paused: false,
             created_at,
             archived_at: None,

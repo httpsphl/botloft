@@ -105,6 +105,8 @@ export const chat: Messages["chat"] = {
       `${bot} vai editar arquivos, rodar comandos e usar a internet neste computador sem pedir sua permissão antes.`,
     bypassRisk:
       "Ele não fica preso à pasta dele: pode ler e alterar seus outros arquivos, os arquivos de outros bots e os do próprio Botloft. Uma mensagem de outra pessoa pode levá-lo a fazer algo que você não queria.",
+    bypassChief: (bot: string) =>
+      `${bot} é o chefe da equipe, então também vai criar bots novos sem perguntar.`,
     bypassAdvice: "Ative só para um bot em quem você confia para tudo, e só enquanto precisar.",
     badge: "Não pergunta nada",
     badgeHint: "Este bot faz tudo sem perguntar. Mude isso no seletor de modo, embaixo do chat.",
@@ -135,6 +137,24 @@ export const chat: Messages["chat"] = {
     failed: "Não foi possível trocar o modelo",
     later: (bot: string, model: string) =>
       `${bot} muda para ${model} quando terminar o que está fazendo.`,
+  },
+  suggestion: {
+    title: (bot: string) => `${bot} sugere um bot novo`,
+    why: "Por quê",
+    name: "Nome",
+    role: "Função",
+    model: "Modelo",
+    instructions: "Instruções",
+    startsNow: (bot: string) => `Ele começa na hora e recebe o trabalho de ${bot}.`,
+    noteLabel: (bot: string) => `O que dizer a ${bot} se você recusar`,
+    notePlaceholder: (bot: string) => `Se recusar, diga a ${bot} o porquê (opcional)`,
+    create: "Criar bot",
+    decline: "Agora não",
+    createFailed: "Não foi possível criar o bot",
+    declineFailed: "Não foi possível enviar a resposta",
+    created: (name: string) => `Você criou ${name}`,
+    declined: (name: string) => `Você recusou ${name}`,
+    expired: (name: string) => `${name} não foi respondido a tempo`,
   },
   plan: {
     ready: (bot: string) => `${bot} fez um plano e quer seguir com ele`,

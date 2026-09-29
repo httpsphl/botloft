@@ -11,6 +11,10 @@ pub const TOOL_INPUT_MAX: usize = 4 * 1024;
 pub const PLAN_INPUT_MAX: usize = 32 * 1024;
 /// The tool Claude Code uses to leave plan mode with a plan (spec 10.1).
 pub const PLAN_TOOL: &str = "ExitPlanMode";
+/// The chief's tool to suggest a new bot (spec 10.2).
+pub const SUGGEST_TOOL: &str = "mcp__botloft__suggest_bot";
+/// Longest suggestion kept, in bytes: the owner reads and edits all of it.
+pub const SUGGESTION_INPUT_MAX: usize = 64 * 1024;
 /// Longest tool output kept, in bytes.
 pub const TOOL_OUTPUT_MAX: usize = 8 * 1024;
 /// Longest activity line, in characters.
@@ -43,10 +47,10 @@ pub fn one_line(text: &str, max: usize) -> String {
 
 /// Longest input kept for `tool`, in bytes.
 pub fn tool_input_max(tool: &str) -> usize {
-    if tool == PLAN_TOOL {
-        PLAN_INPUT_MAX
-    } else {
-        TOOL_INPUT_MAX
+    match tool {
+        PLAN_TOOL => PLAN_INPUT_MAX,
+        SUGGEST_TOOL => SUGGESTION_INPUT_MAX,
+        _ => TOOL_INPUT_MAX,
     }
 }
 
@@ -91,6 +95,7 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
             field(input, "to").map(|to| format!("to @{}", to.trim_start_matches('@')))
         }
         "mcp__botloft__complete_task" => field(input, "task_id").map(|id| format!("task {id}")),
+        SUGGEST_TOOL => field(input, "name").map(str::to_owned),
         _ => None,
     };
     one_line(&summary.unwrap_or_default(), SUMMARY_MAX_CHARS)

@@ -5,6 +5,7 @@ import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { BotAvatar } from "../bots/BotAvatar";
 import { BotStateBadge } from "../bots/BotStateBadge";
+import { ChiefBadge, isChief } from "../bots/ChiefBadge";
 
 /** The crew's bots as cards; a card opens the bot. */
 export function CrewBots({ crew, bots, onNewBot }: { crew: Crew; bots: Bot[]; onNewBot(): void }) {
@@ -33,7 +34,10 @@ export function CrewBots({ crew, bots, onNewBot }: { crew: Crew; bots: Bot[]; on
             <div className="flex w-full items-center gap-2.5">
               <BotAvatar color={bot.color} size={32} />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold">{bot.name}</p>
+                <p className="flex items-center gap-1.5">
+                  <span className="truncate font-semibold">{bot.name}</span>
+                  {isChief(bot, crew) && <ChiefBadge crew={crew} compact />}
+                </p>
                 <p className="truncate font-mono text-muted text-xs">@{bot.handle}</p>
               </div>
             </div>

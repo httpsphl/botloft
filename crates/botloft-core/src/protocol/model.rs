@@ -19,6 +19,9 @@ pub struct Crew {
     pub work_folder: String,
     /// Whether the owner chose `work_folder`.
     pub work_folder_chosen: bool,
+    /// The bot that leads the crew and may suggest new bots (spec 10.2);
+    /// `null` when the crew has no chief.
+    pub lead_bot_id: Option<BotId>,
     pub paused: bool,
     /// Unix time in milliseconds.
     pub created_at: i64,
