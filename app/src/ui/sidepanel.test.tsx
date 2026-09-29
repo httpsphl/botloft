@@ -1,5 +1,6 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { PanelClosing } from "./panelMotion";
 import { SidePanel } from "./SidePanel";
 
 beforeEach(() => localStorage.clear());
@@ -48,5 +49,56 @@ describe("side panel", () => {
     localStorage.setItem("botloft.panel.test", "12");
     render(panel());
     expect(width()).toBe(320);
+  });
+});
+
+/**
+ * The animation named `name` ends on the panel itself. jsdom has no
+ * AnimationEvent, so React listens for the prefixed name there.
+ */
+function ends(element: HTMLElement, name: string) {
+  const event = new Event("webkitAnimationEnd", { bubbles: true });
+  Object.defineProperty(event, "animationName", { value: name });
+  act(() => {
+    fireEvent(element, event);
+  });
+}
+
+describe("side panel motion", () => {
+  test("slides open, then stays open", () => {
+    const { container } = render(panel());
+    const aside = container.querySelector("aside") as HTMLElement;
+    expect(aside.className).toContain("panel-opening");
+    ends(aside, "panel-open");
+    expect(aside.className).not.toContain("panel-opening");
+  });
+
+  test("while closing it leaves the page to the rest, and goes when the slide ends", () => {
+    const closed = vi.fn();
+    const { container } = render(
+      <PanelClosing.Provider value={{ closed }}>{panel()}</PanelClosing.Provider>,
+    );
+    const aside = container.querySelector("aside") as HTMLElement;
+    expect(aside.className).toContain("panel-closing");
+    expect(aside.getAttribute("aria-hidden")).toBe("true");
+    expect(screen.queryByRole("complementary")).toBeNull();
+    ends(aside, "panel-close");
+    expect(closed).toHaveBeenCalled();
+  });
+
+  test("a panel replacing another starts from that one's width", () => {
+    localStorage.setItem("botloft.panel.first", "480");
+    const view = render(
+      <SidePanel label="First" name="first" defaultWidth={320}>
+        one
+      </SidePanel>,
+    );
+    view.rerender(
+      <SidePanel key="second" label="Second" name="second" defaultWidth={320}>
+        two
+      </SidePanel>,
+    );
+    const aside = view.container.querySelector("aside") as HTMLElement;
+    expect(aside.style.getPropertyValue("--panel-from")).toBe("480px");
   });
 });

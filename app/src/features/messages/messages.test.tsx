@@ -64,7 +64,9 @@ describe("messages", () => {
     expect(await within(messages()).findByText("note 1")).toBeDefined();
     expect(within(messages()).getAllByRole("listitem")).toHaveLength(60);
     expect(screen.queryByRole("button", { name: "Load older messages" })).toBeNull();
-  });
+    // Sixty messages drawn twice: about 2 s alone, past the default 5 s
+    // when the whole suite runs at once.
+  }, 15_000);
 
   test("a message that was not delivered can be retried from the title bar", async () => {
     const { fake, lead, writer } = crew();

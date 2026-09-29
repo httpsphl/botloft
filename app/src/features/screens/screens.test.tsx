@@ -103,17 +103,45 @@ describe("design area", () => {
     expect(within(panel()).getByText("landing.html")).toBeDefined();
   });
 
-  test("with another panel open, the button marks the drawing instead", async () => {
+  test("a screen being written takes the place of another panel, once", async () => {
     const { fake, scout } = crew();
     await openScout(fake);
     fireEvent.click(screen.getByRole("button", { name: "Show files" }));
     act(() => {
       fake.screens.draft(scout.id, "C:\\Work\\a.html", "<p>");
     });
+    expect(await within(panel()).findByRole("list", { name: "Screens" })).toBeDefined();
+    expect(screen.queryByRole("complementary", { name: "Files from Scout" })).toBeNull();
+
+    // Closed, it stays closed while that screen is written; the button marks it.
+    fireEvent.click(toggle());
+    act(() => {
+      fake.screens.draft(scout.id, "C:\\Work\\a.html", "<p>More");
+    });
     await waitFor(() =>
       expect(toggle().getAttribute("aria-label")).toBe("Show screens: Scout is drawing a screen"),
     );
-    expect(screen.getByRole("complementary", { name: "Files from Scout" })).toBeDefined();
+    expect(screen.queryByRole("complementary", { name: "Scout's screens" })).toBeNull();
+  });
+
+  test("the browser in the owner's hands stays when a screen starts", async () => {
+    const { fake, scout } = crew();
+    fake.browser.open(scout.id, "https://example.com/", "Example");
+    await openScout(fake);
+    fireEvent.click(screen.getByRole("button", { name: /^Show browser/ }));
+    await waitFor(() => expect(fake.browser.watching).toBe(scout.id));
+    act(() => {
+      fake.browser.frame(scout.id, "AAAA");
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "Take control" }));
+    expect(await screen.findByText("You are in control")).toBeDefined();
+    act(() => {
+      fake.screens.draft(scout.id, "C:\\Work\\a.html", "<p>");
+    });
+    await waitFor(() =>
+      expect(toggle().getAttribute("aria-label")).toBe("Show screens: Scout is drawing a screen"),
+    );
+    expect(screen.getByRole("complementary", { name: "Scout's browser" })).toBeDefined();
   });
 
   test("a Write of an HTML file in the chat opens its screen", async () => {

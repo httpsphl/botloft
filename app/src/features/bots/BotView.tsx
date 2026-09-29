@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
@@ -7,6 +7,7 @@ import { routinesOf } from "../../store/app";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
+import { PanelClosing } from "../../ui/panelMotion";
 import { SidePanel } from "../../ui/SidePanel";
 import { type Tab, Tabs, tabId } from "../../ui/Tabs";
 import { BrowserPanel } from "../browser/BrowserPanel";
@@ -22,6 +23,7 @@ import { ShowScreen } from "../screens/showScreen";
 import { useScreens } from "../screens/useScreens";
 import { BotHeader } from "./BotHeader";
 import { stateView } from "./BotStateBadge";
+import { useFollowBot } from "./useFollowBot";
 
 type Pane = "chat" | "routines";
 /** What the panel beside the chat shows. */
@@ -34,6 +36,19 @@ type Side = "details" | "files" | "browser" | "screens" | null;
 export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
   const t = useT();
   const [side, setSide] = useState<Side>(null);
+  // The panel on screen: the one open, or the last one while it slides
+  // closed (spec 15.1).
+  const [leaving, setLeaving] = useState<Side>(null);
+  useEffect(() => {
+    if (side !== null) {
+      setLeaving(side);
+    }
+  }, [side]);
+  const beside = side ?? leaving;
+  const closing = useMemo(
+    () => (side === null && leaving !== null ? { closed: () => setLeaving(null) } : null),
+    [side, leaving],
+  );
   const [pane, setPane] = useState<Pane>("chat");
   const files = useBotFiles(bot);
   // What the owner has seen: files newer than this are new to them.
@@ -90,25 +105,8 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
     setScreenPath(path);
     void screens.refresh();
   };
-  // The design area opens by itself when the bot starts drawing a screen,
-  // once per screen, if nothing else is open beside the chat (spec 22.5).
-  const drawn = useRef(new Set<string>());
-  // biome-ignore lint/correctness/useExhaustiveDependencies: another bot starts with its own screens
-  useEffect(() => {
-    drawn.current = new Set();
-    setScreenPath(null);
-  }, [bot.id]);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only a new screen being written opens it
-  useEffect(() => {
-    const path = screens.writing?.toLowerCase();
-    if (path && !drawn.current.has(path)) {
-      drawn.current.add(path);
-      if (side === null) {
-        setSide("screens");
-        setScreenPath(null);
-      }
-    }
-  }, [screens.writing]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: another bot's screen is not this bot's
+  useEffect(() => setScreenPath(null), [bot.id]);
   const showBrowser = (options?: { take?: boolean }) => {
     if (filesOpen) {
       seen();
@@ -118,6 +116,13 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
       setTakeBrowser((count) => count + 1);
     }
   };
+  // The panel follows what the bot starts doing (spec 15.1).
+  useFollowBot({
+    bot,
+    side,
+    writing: screens.writing,
+    open: (panel) => (panel === "browser" ? showBrowser() : showScreen(null)),
+  });
   const view = stateView(bot, crew.paused, t);
   const tabs: Tab<Pane>[] = [
     { id: "chat", label: t.routines.chatTab },
@@ -161,27 +166,31 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
             <BotRoutines bot={bot} />
           )}
         </div>
-        {side === "details" && <Details bot={bot} onClose={() => setSide(null)} />}
-        {browserOpen && <BrowserPanel bot={bot} take={takeBrowser} onClose={() => setSide(null)} />}
-        {screensOpen && (
-          <ScreensPanel
-            bot={bot}
-            data={screens}
-            path={screenPath}
-            onPath={setScreenPath}
-            onClose={() => setSide(null)}
-          />
-        )}
-        {filesOpen && (
-          <FilesPanel
-            bot={bot}
-            data={files}
-            since={since}
-            path={shown}
-            onPath={setShown}
-            onClose={toggleFiles}
-          />
-        )}
+        <PanelClosing.Provider value={closing}>
+          {beside === "details" && <Details bot={bot} onClose={() => setSide(null)} />}
+          {beside === "browser" && (
+            <BrowserPanel bot={bot} take={takeBrowser} onClose={() => setSide(null)} />
+          )}
+          {beside === "screens" && (
+            <ScreensPanel
+              bot={bot}
+              data={screens}
+              path={screenPath}
+              onPath={setScreenPath}
+              onClose={() => setSide(null)}
+            />
+          )}
+          {beside === "files" && (
+            <FilesPanel
+              bot={bot}
+              data={files}
+              since={since}
+              path={shown}
+              onPath={setShown}
+              onClose={toggleFiles}
+            />
+          )}
+        </PanelClosing.Provider>
       </div>
     </section>
   );

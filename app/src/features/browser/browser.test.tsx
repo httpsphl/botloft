@@ -68,18 +68,33 @@ describe("browser panel", () => {
     expect(within(panel()).queryByText("Opened elsewhere.com")).toBeNull();
   });
 
-  test("the button marks a bot that is browsing while the panel is closed", async () => {
+  test("opens by itself when the bot starts browsing, and the button marks it once closed", async () => {
     const { fake, scout } = crew();
     await openScout(fake);
+    fireEvent.click(screen.getByRole("button", { name: "Show files" }));
     expect(toggle().getAttribute("aria-label")).toBe("Show browser");
     act(() => {
       fake.browser.open(scout.id, "https://example.com/", "Example");
     });
-    await waitFor(() =>
-      expect(toggle().getAttribute("aria-label")).toBe("Show browser: Scout is using the browser"),
-    );
+    // It takes the place of the files, so the owner sees the bot browse.
+    expect(await screen.findByRole("complementary", { name: "Scout's browser" })).toBeDefined();
+    expect(screen.queryByRole("complementary", { name: "Files from Scout" })).toBeNull();
+
     fireEvent.click(toggle());
-    expect(toggle().getAttribute("aria-label")).toBe("Hide browser");
+    expect(toggle().getAttribute("aria-label")).toBe("Show browser: Scout is using the browser");
+    // Going on browsing does not open it again.
+    act(() => {
+      fake.browser.open(scout.id, "https://example.com/more", "More");
+    });
+    expect(screen.queryByRole("complementary", { name: "Scout's browser" })).toBeNull();
+  });
+
+  test("a browser already open when the bot is opened stays behind its button", async () => {
+    const { fake, scout } = crew();
+    fake.browser.open(scout.id, "https://example.com/", "Example");
+    await openScout(fake);
+    expect(toggle().getAttribute("aria-label")).toBe("Show browser: Scout is using the browser");
+    expect(screen.queryByRole("complementary", { name: "Scout's browser" })).toBeNull();
   });
 
   test("a closed browser keeps its last page, faded; one that failed says why", async () => {

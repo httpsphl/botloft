@@ -101,6 +101,9 @@ describe("the owner's hands in the browser", () => {
     const { fake, scout } = crew();
     fake.browser.ask(scout.id, "Sign in to your GitHub account");
     await openScout(fake);
+    // The bot needs a hand: its browser opens by itself.
+    expect(await screen.findByRole("complementary", { name: "Scout's browser" })).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Hide browser" }));
     expect(
       screen.getByRole("button", { name: "Show browser: Scout needs you in the browser" }),
     ).toBeDefined();

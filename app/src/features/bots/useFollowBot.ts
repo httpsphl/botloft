@@ -1,0 +1,65 @@
+// The panel beside the chat follows what the bot starts doing (spec 15.1),
+// so the owner sees it happen: its browser starting or a request for a
+// hand opens the browser (spec 21.8), and a screen it starts writing opens
+// the design area (spec 22.5), whatever panel was open. Each opens once per
+// start; closing it leaves the button's dot. The browser in the owner's
+// hands is never taken away.
+
+import { useEffect, useRef } from "react";
+import type { Bot } from "../../lib/protocol.gen";
+import { useApp } from "../../store/context";
+
+export type Followed = "browser" | "screens";
+
+export function useFollowBot({
+  bot,
+  side,
+  writing,
+  open,
+}: {
+  bot: Pick<Bot, "id">;
+  /** The panel open now, if any. */
+  side: string | null;
+  /** The screen the bot is writing now, if any. */
+  writing: string | null;
+  open(panel: Followed): void;
+}): void {
+  const browser = useApp((state) => state.browsers[bot.id]);
+  const browsing = browser?.status === "open" || browser?.status === "starting";
+  const asking = Boolean(browser?.ask);
+  const held = browser?.control === "owner";
+  // What was going on when the bot was opened: a browser left open stays
+  // behind its button, a request for a hand does not.
+  const before = useRef<{ browsing: boolean; asking: boolean } | null>(null);
+  const drawn = useRef(new Set<string>());
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: another bot starts afresh
+  useEffect(() => {
+    before.current = null;
+    drawn.current = new Set();
+  }, [bot.id]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only a change in what the bot does opens it
+  useEffect(() => {
+    const was = before.current ?? { browsing, asking: false };
+    before.current = { browsing, asking };
+    if ((asking && !was.asking) || (browsing && !was.browsing)) {
+      if (side !== "browser") {
+        open("browser");
+      }
+    }
+  }, [bot.id, browsing, asking]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only a new screen being written opens it
+  useEffect(() => {
+    const path = writing?.toLowerCase();
+    if (!path || drawn.current.has(path)) {
+      return;
+    }
+    drawn.current.add(path);
+    if (side === "screens" || (held && side === "browser")) {
+      return;
+    }
+    open("screens");
+  }, [bot.id, writing]);
+}
