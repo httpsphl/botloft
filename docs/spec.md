@@ -697,7 +697,7 @@ M2 a M4 foram entregues com ConPTY, terminal com replay, inbox por named pipe e 
 
 ## 18. Fora do MVP (ordem sugerida)
 
-1. Rotinas (cron com timezone, intervalo) com política de sobreposição.
+1. Rotinas: horário semanal, intervalo ou cron, com fuso, sobreposição e horários perdidos. Desenho na seção 20.
 2. Caixa de perguntas ao owner (bot pergunta, owner responde, resposta volta como mensagem).
 3. "Permitir sempre" nas aprovações, gravado como regra do bot.
 4. Busca FTS5 em mensagens e no chat.
@@ -741,3 +741,135 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28. "Co
 | Sintaxe de caminho Windows em permission rules | 7.5 | Confirmado (`permissions`) e **testado com 2.1.283** (interativo) e **2.1.284** (`-p --setting-sources project,local`): `Read(//c/.../**)` em `deny` bloqueou a leitura com "File is in a directory that is denied by your permission settings", sem perguntar, e o `result` listou a negação em `permission_denials` | feito (M4.1) |
 
 Itens do runtime anterior (ConPTY, hooks em exec form, `crossSessionInbound`, linha de auth do inbox, diálogo de confiança, `ESC[6n` do ConPTY, consultas do terminal no replay) foram verificados no M2–M4 e deixaram de se aplicar com a ADR 0001; o histórico está no git e na ADR.
+
+## 20. Rotinas
+
+Status: **desenho**, primeiro item depois do MVP (seção 18). A implementação começa depois que o M5 fechar, nos marcos R1 e R2 (20.11).
+
+### 20.1 O que é
+
+Uma rotina faz um bot trabalhar sozinho num horário ou num intervalo. Na hora marcada, o daemon põe na conversa do bot uma message com o pedido que o dono escreveu, e ela segue o caminho de qualquer message (9.1): gravada antes, entregue pelo courier, com retry. Não há processo nem sessão à parte: o bot responde no mesmo chat, com a mesma memória, e o que ele faz aparece como sempre. Isso mantém o princípio 3 (uma conversa por bot).
+
+Exemplos: "todo dia útil às 9h, resuma o que chegou em `shared/inbox`"; "a cada 2 horas, confira se o site responde e avise o @deploy se não".
+
+### 20.2 Quando roda
+
+O horário fica guardado como JSON estruturado (`schedule`), e não como texto cron, para o app mostrar e editar sem jargão:
+
+| `kind` | Campos | No app |
+|---|---|---|
+| `weekly` | `days` (1 = segunda … 7 = domingo, ao menos um), `time` (`HH:MM`) | "Todo dia às 09:00", "Dias úteis às 09:00", "Segunda e quinta às 14:30" |
+| `interval` | `minutes` (de 5 a 10 080) | "A cada 2 horas" |
+| `cron` | `expr` (5 campos, sem segundos) | só em "Avançado"; o app mostra a expressão como está |
+
+- Horários de calendário (`weekly`, `cron`) valem no fuso da rotina (`timezone`, nome IANA como `America/Sao_Paulo`). O app manda o fuso do sistema ao criar (`Intl.DateTimeFormat().resolvedOptions().timeZone`). Mudar o fuso do Windows depois não mexe em rotinas existentes.
+- `interval` conta a partir do último horário marcado, e não do fim do trabalho: `próximo = último marcado + minutes`, ancorado na criação. Não deriva.
+- Horário que não existe (o relógio pula na entrada do horário de verão): roda no primeiro instante válido depois do pulo. Horário que acontece duas vezes (saída do horário de verão): roda uma vez, na primeira.
+- Espaçamento mínimo de 5 minutos, também para `cron`: o daemon confere as próximas 20 ocorrências e recusa com erro de validação. Rotina frequente demais gasta o plano do dono sem ele perceber.
+- `cron`: 5 campos (minuto, hora, dia do mês, mês, dia da semana). Com dia do mês e dia da semana restritos, basta bater um dos dois, como no cron clássico.
+- A biblioteca (`croner` está na stack; a 4.0 tem fuso e cron de 5 ou 6 campos, mas a documentação não diz como trata o horário de verão) é escolhida na implementação, contra os testes de fuso e horário de verão desta seção.
+
+### 20.3 Execuções
+
+Cada disparo vira uma `routine_run`, com o horário marcado (`scheduled_for`), um `status` e a message que gerou.
+
+| `status` | Quando |
+|---|---|
+| `queued` | a message foi gravada e espera a entrega ou o fim do turno dela |
+| `done` | o turno que começou com essa message terminou |
+| `failed` | a delivery morreu (`dead`) ou o turno terminou com erro |
+| `skipped` | não disparou; `reason`: `overlap`, `bot_paused` ou `missed` |
+
+- **Fim de uma execução:** o daemon já sabe quando o turno de uma message começa (o replay com o mesmo `uuid`, 9.1 passo 7). O `result` seguinte fecha esse turno: a execução vira `done`, ou `failed` se o `result` trouxer erro. Se o processo morrer com a execução aberta, a delivery volta para a fila (9.1 passo 8) e a execução continua `queued`.
+- **Sobreposição:** o horário chega com a execução anterior ainda `queued` (o bot está lento, parado por limite de uso, sem login ou fora do ar).
+  - `skip` (padrão): registra `skipped` com `reason: overlap`. Um bot lento ou fora do ar não acumula pedidos repetidos.
+  - `queue`: grava mesmo assim, mas só uma execução espera atrás da aberta; as outras viram `skipped`.
+- **Bot ou crew pausados:** o horário vira `skipped` (`bot_paused`); a rotina não guarda pedidos para quando voltar. Bot ou crew arquivados: a rotina é arquivada junto.
+- **Rodar agora:** `routines.runNow` cria uma execução fora de hora (`scheduled_for` = agora), sem mexer no próximo horário, e vale a mesma regra de sobreposição.
+
+### 20.4 Horários perdidos
+
+Com o daemon parado, o PC dormindo ou ninguém logado, nada dispara. Na volta (no boot do daemon e a cada ciclo, comparando `next_run_at` com agora):
+
+- `missed: run_once` (padrão): se passou algum horário, roda **uma vez** agora, com `scheduled_for` = o último horário perdido. Os outros viram uma só entrada `skipped` (`missed`) com a contagem (`skipped_count`). Uma rotina diária com o PC desligado por uma semana roda uma vez ao ligar, e não sete.
+- `missed: skip`: nada roda; registra o `skipped` e segue para o próximo horário.
+- O PC não acorda para rodar rotina (a tarefa agendada não usa `WakeToRun`), e o app diz isso nas opções.
+
+### 20.5 O que o bot recebe
+
+A message tem `kind: routine` e `from_kind: system`, com um envelope em inglês como o dos outros remetentes (9.3):
+
+```
+[botloft] routine "Resumo da manhã" · scheduled 2026-10-01 09:00 (America/Sao_Paulo)
+Nobody is watching live: do the work, then report it in your reply.
+
+<pedido do dono>
+```
+
+- O horário do envelope é absoluto, no fuso da rotina: o bot não sabe a hora atual.
+- O pedido tem a autoridade do dono, que o escreveu, mas chega com envelope para o bot saber que é automático e que ninguém está olhando naquela hora.
+- No chat, o item `inbound` mostra o nome da rotina. Na lista de conversas, a linha é `kind: message`.
+
+### 20.6 Agendador
+
+- Módulo `routines/` no daemon, com o relógio injetável (`Clock`) como o courier. Ele dorme até o `next_run_at` mais próximo, por no máximo 60 s (para acompanhar mudança do relógio e a volta do sono), ou até ser acordado (rotina criada, editada, ligada ou desligada; bot pausado).
+- `next_run_at` fica gravado e é recalculado a cada disparo, edição e volta de horário perdido. O cálculo usa a hora de parede no fuso da rotina, nunca o relógio monotônico.
+- Disparar é uma transação: `routine_run`, `message`, `delivery` e o item `inbound`, como no `messages.send`. Depois o courier é acordado.
+- Testes com `FakeRuntime` e relógio manual: `weekly`, `interval` e `cron`; fuso; horário de verão (pulo e repetição); horários perdidos; sobreposição; pausa; rodar agora; fim da execução pelo `result`.
+
+### 20.7 Dados
+
+Migration nova:
+
+| Tabela | Colunas |
+|---|---|
+| `routines` | `id` (`rtn_`), `bot_id`, `name`, `prompt`, `schedule` (JSON), `timezone`, `overlap` (`skip`, `queue`), `missed` (`run_once`, `skip`), `enabled`, `next_run_at`, `created_at`, `updated_at`, `archived_at` |
+| `routine_runs` | `id` (`rrn_`), `routine_id`, `scheduled_for`, `status`, `reason`, `skipped_count`, `message_id`, `created_at`, `finished_at` |
+| `messages` | `kind` ganha `routine`; coluna nova `routine_id` |
+
+Índices: `routines(enabled, next_run_at)` e `routine_runs(routine_id, id)`.
+
+### 20.8 Protocolo
+
+| Método | Params | Result |
+|---|---|---|
+| `routines.list` | `botId?` | `Routine[]`, com `nextRunAt` e a última execução |
+| `routines.create` | `botId, name, prompt, schedule, timezone, overlap?, missed?` | `Routine` |
+| `routines.update` | `routineId` e os mesmos campos, opcionais | `Routine` |
+| `routines.setEnabled` | `routineId, enabled` | `Routine` |
+| `routines.runNow` | `routineId` | `RoutineRun` |
+| `routines.archive` | `routineId` | `Routine` |
+| `routines.runs` | `routineId, before?, limit?` | `RoutineRun[]`, mais nova primeiro |
+
+- Notificações: `routine.changed` e `routine.run`.
+- Validação (`-32004`), com código de erro para o app escrever a mensagem no idioma do dono (15.6): nome de 1 a 80 caracteres; pedido dentro do limite de uma message; `days` não vazio; `time` válido; `minutes` de 5 a 10 080; `cron` válido e com espaçamento de pelo menos 5 minutos; `timezone` conhecido.
+
+### 20.9 App
+
+Sem jargão (15.2): o dono não vê "cron", "overlap" nem "timezone" no caminho principal.
+
+- No bot, uma aba **Rotinas** com a lista: nome, quando ("Dias úteis às 09:00"), a próxima vez ("amanhã às 09:00"), como foi a última (feita, pulada ou com erro), um interruptor para ligar e desligar, "Rodar agora", editar e apagar.
+- Criar e editar: "Nome", "O que o bot deve fazer" e "Quando": todo dia, dias úteis, dias escolhidos, ou a cada N minutos ou horas, com o horário.
+- Em "Mais opções":
+  - o fuso (o do sistema por padrão, mostrado pelo nome da cidade);
+  - "Se a anterior ainda não terminou": pular ou esperar a vez;
+  - "Se o computador estava desligado na hora": rodar quando ligar, ou pular;
+  - "Avançado": expressão cron.
+- No chat, a message da rotina aparece com a etiqueta "Rotina · <nome>".
+- Na página da crew, uma aba com as rotinas de todos os bots dela.
+- Uma execução `failed` entra na marca da barra de tarefas (15.2) até o dono abrir o bot.
+- Textos nos três idiomas (15.6); a frase de "quando" é montada pelo app a partir do `schedule`.
+
+### 20.10 Fora desta etapa
+
+- Bots criando rotinas por uma tool MCP: depois, com aprovação do dono.
+- Sinais entre bots disparando rotinas (seção 18, item 7).
+- Notificação do Windows quando uma rotina termina ou falha.
+- Acordar o PC para uma rotina.
+
+### 20.11 Marcos
+
+| Marco | Entrega | Pronto quando |
+|---|---|---|
+| **R1** Agendador | migration, `routines/`, courier com `kind: routine`, fim de execução pelo `result`, RPC e notificações, testes com relógio manual | com `FakeRuntime`, rotinas `weekly` e `interval` disparam no horário, pulam por sobreposição e rodam uma vez depois de horário perdido |
+| **R2** App | aba Rotinas no bot e na crew, editor, etiqueta no chat, marca na barra de tarefas, textos nos três idiomas | criar pelo app uma rotina "a cada 5 minutos", ver duas execuções com o Claude Code real, desligá-la e ver que para |
