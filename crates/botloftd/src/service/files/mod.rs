@@ -13,7 +13,8 @@ use botloft_core::ids::BotId;
 use botloft_core::protocol::{BotFile, FileData, FilesListParams, FilesReadParams};
 use botloft_store::BotRecord;
 
-use self::scan::{Found, Root, key, keys, media_type, millis, walk};
+pub(crate) use self::scan::media_type;
+use self::scan::{Found, Root, key, keys, millis, walk};
 use super::{ApiError, ApiResult, bots, crews};
 use crate::state::Daemon;
 

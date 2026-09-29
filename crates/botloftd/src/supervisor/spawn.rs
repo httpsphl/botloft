@@ -152,6 +152,7 @@ impl Supervisor {
         approvals::expire_for_bot(daemon, bot);
         courier::requeue_unread(daemon, bot, generation);
         routines::process_ended(daemon, bot);
+        crate::screens::turn_ended(daemon, bot);
         self.wake();
     }
 }

@@ -846,6 +846,63 @@ export type BrowserView = { state: BrowserState, frame: BrowserFrame | null, };
 
 export type BrowserWatchParams = { botId: BotId, };
 
+/**
+ * The device a screen is drawn for.
+ */
+export type ScreenDevice = "desktop" | "tablet" | "mobile";
+
+/**
+ * An HTML file the bot made, with where the app loads it.
+ */
+export type Screen = { 
+/**
+ * Absolute path.
+ */
+path: string, name: string, 
+/**
+ * As in `BotFile`.
+ */
+folder: string, 
+/**
+ * Unix time in milliseconds; the draft's time for a file not written yet.
+ */
+modifiedAt: number, 
+/**
+ * Where the app loads it (spec 22.2); changes when the file does.
+ */
+url: string, 
+/**
+ * What the file asks for with `<meta name="botloft-device">`.
+ */
+device: ScreenDevice | null, 
+/**
+ * The bot is writing it now.
+ */
+writing: boolean, };
+
+export type ScreensListParams = { botId: BotId, };
+
+/**
+ * A new version of a screen the bot is writing (spec 22.3).
+ */
+export type ScreenDraft = { botId: BotId, 
+/**
+ * Absolute path of the file being written.
+ */
+path: string, 
+/**
+ * Where to load this version.
+ */
+url: string, 
+/**
+ * Counts up with each version of this draft.
+ */
+rev: number, 
+/**
+ * The write ended: the file on disk is the screen again.
+ */
+done: boolean, };
+
 /** Params and result of every request method. */
 export interface RpcMethods {
   "session.hello": { params: HelloParams; result: HelloResult };
@@ -886,6 +943,7 @@ export interface RpcMethods {
   "browser.list": { params: undefined; result: Array<BrowserState> };
   "browser.watch": { params: BrowserWatchParams; result: BrowserView };
   "browser.unwatch": { params: undefined; result: null };
+  "screens.list": { params: ScreensListParams; result: Array<Screen> };
 }
 
 /** Params of every server notification. */
@@ -903,6 +961,7 @@ export interface RpcNotifications {
   "browser.changed": BrowserState;
   "browser.action": BrowserAction;
   "browser.frame": BrowserFrame;
+  "screen.draft": ScreenDraft;
 }
 
 export const RpcErrorCode = {

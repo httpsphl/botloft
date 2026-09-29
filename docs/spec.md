@@ -500,12 +500,13 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `deliveries.retry` | `deliveryId` | `Delivery` |
 | `tasks.list` | `crewId?, status?` | `Task[]` |
 | `browser.list`, `browser.watch`, `browser.unwatch` | seção 21.7 | o navegador dos bots e a tela ao vivo |
+| `screens.list` | seção 22.4 | as telas HTML do bot |
 
 `Crew` traz `workFolder`, o caminho da pasta de trabalho (a escolhida ou a `shared\`), `workFolderChosen` e `leadBotId`, o chefe (10.2). `Bot` traz também `permissionMode`, `model` e `modelInUse` (7.4) e `lastActivity`: o último item do chat resumido em uma linha, para a lista de conversas: `kind` (`owner`, `message`, `reply`, `tool`, `approval`, `notice`), `text` e `at`. O `text` não tem palavras do daemon: a mensagem do dono vem sem "You:" e a aprovação só com o nome da ferramenta, e o app completa no idioma do dono.
 
 ### 11.3 Notificações do servidor
 
-`bot.state`, `bot.changed`, `crew.changed`, `chat.item`, `chat.delta`, `message.created`, `delivery.changed`, `task.changed`, das rotinas `routine.changed` e `routine.run` (20.8), e do navegador `browser.changed`, `browser.action` e, só para quem assiste, `browser.frame` (21.7).
+`bot.state`, `bot.changed`, `crew.changed`, `chat.item`, `chat.delta`, `message.created`, `delivery.changed`, `task.changed`, das rotinas `routine.changed` e `routine.run` (20.8), e do navegador `browser.changed`, `browser.action` e, só para quem assiste, `browser.frame` (21.7), e das telas `screen.draft` (22.3).
 
 ### 11.4 Erros
 
@@ -584,6 +585,7 @@ app/src/
     chat/         conversa com o bot: itens, texto ao vivo, aprovações, compositor com anexos
     files/        painel dos arquivos que o bot fez: lista, prévia, abrir
     browser/      painel do navegador do bot: tela ao vivo, cursor, pedido de site (21.8)
+    screens/      área de design: as telas HTML do bot, ao vivo enquanto ele escreve (22.5)
     messages/     timeline da crew, estado de entrega, deliveries com falha (botão na barra de título, retry)
     tasks/        tarefas da crew (abertas por padrão, todas sob demanda)
     settings/
@@ -619,8 +621,8 @@ Layout, como um app de mensagens:
 - **Nova crew:** nome; "Para que é esta equipe?", o objetivo que vira as instruções do chefe, com a explicação de que a equipe começa com um Chefe que planeja o trabalho e sugere os bots de que precisa; "Pasta de trabalho", com "Escolher pasta…" (o seletor do Windows; sem escolha, "Uma pasta nova dentro do Botloft", a `shared\`); e "Modelo do Chefe". Criada, o app abre o chat do chefe.
 - **Chefe:** uma coroa ao lado do nome na barra lateral e nos cartões da crew, e "Chefe" no cabeçalho do bot, com a dica "Lidera <crew>: planeja o trabalho e sugere bots novos". O menu do bot tem "Tornar chefe da equipe" ou "Deixar de ser chefe".
 - **Sugestão de bot** (10.2): um cartão no chat do chefe, "<chefe> sugere um bot novo", com o porquê e os campos editáveis Nome, Modelo, Função e Instruções, a linha de que o bot começa na hora e recebe o trabalho do chefe, um campo para dizer ao chefe por que não, e os botões Criar bot e Agora não. Respondido, vira uma linha ("Você criou Designer", "Você recusou Designer") que abre o que foi sugerido.
-- **Detalhes do bot** (pasta, instruções, sessão) ficam num painel, fora do caminho da conversa. Detalhes e arquivos são painéis laterais que o dono redimensiona arrastando a borda esquerda (ou com as setas do teclado, Shift anda mais; duplo clique volta ao padrão): 256 a 900 px, sempre deixando ao chat ao menos 22rem, e a largura de cada um fica no `localStorage` (`botloft.panel.details`, `botloft.panel.files`, `botloft.panel.browser`). O chat encolhe com eles e nunca passa por baixo nem por cima do painel.
-- **Arquivos do bot** (8.4): um botão "Mostrar arquivos" no cabeçalho abre, à direita do chat, um painel com o que o bot fez, do mais novo ao mais antigo (ícone pelo tipo, nome, pasta, tamanho, "há 5 min"). Um clique mostra o arquivo no próprio painel: imagem, PDF, markdown e texto aparecem; o resto diz que não tem prévia. "Abrir" usa o programa que o Windows escolheu e "Mostrar na pasta" abre o Explorer com o arquivo marcado. A lista é lida ao abrir o bot, a cada 4 s enquanto ele trabalha e de novo quando ele para. Com o painel fechado, o botão ganha um contador dos arquivos que apareceram desde a última vez que o dono olhou; abertos, esses levam a etiqueta "Novo". No chat, a linha de uma ferramenta que mudou um arquivo (`Write`, `Edit`...; item `tool` com `file`, 8.2) e não falhou ganha o botão "Ver em arquivos", que abre o painel direto na prévia desse arquivo; se ele não existe mais, o painel diz. Detalhes, arquivos e o navegador (21.8) dividem o mesmo lugar: abrir um fecha o outro.
+- **Detalhes do bot** (pasta, instruções, sessão) ficam num painel, fora do caminho da conversa. Detalhes e arquivos são painéis laterais que o dono redimensiona arrastando a borda esquerda (ou com as setas do teclado, Shift anda mais; duplo clique volta ao padrão): 256 a 900 px, sempre deixando ao chat ao menos 22rem, e a largura de cada um fica no `localStorage` (`botloft.panel.details`, `botloft.panel.files`, `botloft.panel.browser`, `botloft.panel.screens`). O chat encolhe com eles e nunca passa por baixo nem por cima do painel.
+- **Arquivos do bot** (8.4): um botão "Mostrar arquivos" no cabeçalho abre, à direita do chat, um painel com o que o bot fez, do mais novo ao mais antigo (ícone pelo tipo, nome, pasta, tamanho, "há 5 min"). Um clique mostra o arquivo no próprio painel: imagem, PDF, markdown e texto aparecem; o resto diz que não tem prévia. "Abrir" usa o programa que o Windows escolheu e "Mostrar na pasta" abre o Explorer com o arquivo marcado. A lista é lida ao abrir o bot, a cada 4 s enquanto ele trabalha e de novo quando ele para. Com o painel fechado, o botão ganha um contador dos arquivos que apareceram desde a última vez que o dono olhou; abertos, esses levam a etiqueta "Novo". No chat, a linha de uma ferramenta que mudou um arquivo (`Write`, `Edit`...; item `tool` com `file`, 8.2) e não falhou ganha o botão "Ver em arquivos", que abre o painel direto na prévia desse arquivo; se ele não existe mais, o painel diz. Detalhes, arquivos, o navegador (21.8) e as telas (22.5) dividem o mesmo lugar: abrir um fecha o outro.
 
 ### 15.2 Comandos Tauri
 
@@ -638,7 +640,7 @@ Layout, como um app de mensagens:
 | `open_url` | abre no navegador padrão um link de uma resposta do bot; só `http` e `https`, porque qualquer outro esquema pode iniciar um programa. Seguir o link dentro do app trocaria a janela pela página |
 | overlay na taskbar | não é comando próprio: o app usa `setOverlayIcon` da janela (permissão `core:window:allow-set-overlay-icon`) e marca o ícone com um ponto enquanto algo espera o dono: aprovação pendente, bot em `auth_error`, ou mensagem não entregue a um bot ativo. Entregas mortas para bot arquivado não contam: foram abandonadas de propósito |
 
-O app acha o daemon como o daemon acha a si mesmo (seção 5): `BOTLOFT_HOME` ou `%LOCALAPPDATA%\Botloft`, com a porta lida do `config.toml` dessa pasta (45710 se ausente). Um daemon de dev com seu próprio `BOTLOFT_HOME` é encontrado sem configuração extra. A CSP libera `ws://127.0.0.1:*` pelo mesmo motivo, e `blob:` para a imagem e o PDF da prévia de arquivos (15.1).
+O app acha o daemon como o daemon acha a si mesmo (seção 5): `BOTLOFT_HOME` ou `%LOCALAPPDATA%\Botloft`, com a porta lida do `config.toml` dessa pasta (45710 se ausente). Um daemon de dev com seu próprio `BOTLOFT_HOME` é encontrado sem configuração extra. A CSP libera `ws://127.0.0.1:*` pelo mesmo motivo, `blob:` para a imagem e o PDF da prévia de arquivos (15.1) e `http://127.0.0.1:*` em `frame-src` para as telas (22.2).
 
 Onboarding (M5): **configuração sem perguntas e sem jargão.** O dono não precisa saber que existe um daemon, uma porta ou uma tarefa agendada; a interface nunca usa essas palavras. Fala de "Botloft" e de "rodar em segundo plano", e o texto técnico (erro do daemon, caminho, porta) fica dobrado sob "Details".
 
@@ -1045,4 +1047,71 @@ Esqueceu a senha? [e5 link "Recuperar acesso"]
 | **N1** Navegador no daemon | `browser/` (processo, CDP, abas, leitura da página, ações), tools `browser_*`, sites e aprovação, RPC e notificações, migration, testes com o Edge real e páginas locais | um bot abre uma página local, preenche um formulário e lê o resultado; no modo Manual, o primeiro acesso a um site espera o dono |
 | **N2** Painel ao vivo | painel do navegador com quadros, cursor e legenda, botão no cabeçalho, "Ver no navegador" no chat, cartão de site, textos nos três idiomas | ver pelo app, ao vivo, um bot real pesquisar e clicar |
 | **N3** Dono no controle | clicar e digitar na tela ao vivo para fazer um login ou passar de um captcha, com o bot esperando | depois |
-| **N4** Telas | o bot desenhando telas (HTML) que aparecem lado a lado numa área de design, atualizadas enquanto ele escreve | depois |
+| **N4** Telas | o bot desenhando telas (HTML) que aparecem lado a lado numa área de design, atualizadas enquanto ele escreve | seção 22 |
+
+## 22. Telas
+
+Status: **T1 e T2 implementados** (22.8). É o N4 da seção 21.
+
+### 22.1 O que é
+
+Uma área de design ao lado do chat: cada página HTML que o bot faz aparece como uma prancheta, renderizada de verdade, e se monta na frente do dono enquanto o bot escreve o arquivo. O dono conversa com o bot e vê o resultado ao mesmo tempo.
+
+- **Tela** é um arquivo `.html` ou `.htm` que o bot fez: a lista de arquivos (8.4) filtrada, dentro da pasta de trabalho da crew ou da pasta do bot. Não há ferramenta nova: basta o bot escrever HTML. As regras do bot (5.1) contam isso a ele e pedem uma tela por arquivo.
+- **Ao vivo:** enquanto o modelo escreve um `Write` de um `.html`, o Claude Code manda a entrada da ferramenta em pedaços (`stream_event` com `content_block_delta` e `input_json_delta`; visto com 2.1.284: 379 pedaços para um arquivo de 3 KB). O daemon junta os pedaços num rascunho da tela, e o app mostra cada versão (22.3).
+- Depois de um `Write` ou `Edit`, a tela recarrega do disco.
+- **Aparelho:** cada tela tem o tamanho de um computador (1280 × 800), tablet (834 × 1112) ou celular (390 × 844). Vale o que o bot pede com `<meta name="botloft-device" content="mobile">` (ou `tablet`, `desktop`) nos primeiros 8 KB do arquivo, ou computador; o dono troca por tela no app.
+
+### 22.2 Servidor das telas
+
+- `GET /view/<chave>/<raiz>/<caminho>`, no mesmo servidor do daemon (só 127.0.0.1). A `<chave>` tem 128 bits aleatórios, é uma por bot, fica só na memória e muda a cada início do daemon; só o app a recebe, em `screens.list`. `<raiz>` é `w` (pasta de trabalho da crew) ou `b` (pasta do bot). O caminho é resolvido de verdade e precisa ficar dentro da raiz: `..`, links para fora e entradas ocultas dão 404, sem dizer por quê. CSS, imagens, fontes e scripts ao lado do HTML carregam pelo mesmo caminho, como num site.
+- Toda resposta leva `Content-Security-Policy: sandbox allow-scripts allow-forms allow-popups allow-modals`: a página roda numa origem opaca, sem acesso ao daemon nem aos cookies e ao armazenamento de 127.0.0.1, também se aberta direto. E ainda `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer` e, para um pedido com `Origin: null` (a própria tela buscando um arquivo dela), `Access-Control-Allow-Origin: null`. O tipo sai da extensão (8.4). Acima de 20 MiB, 404.
+- Enquanto um arquivo tem rascunho, o endereço dele serve o rascunho.
+- A CSP do app ganha `frame-src http://127.0.0.1:*`: as telas abrem num `iframe` do endereço delas, com os próprios scripts e as bibliotecas que carregam da internet, o que não funcionaria num `srcdoc`, que herda a CSP do app.
+- O log registra só o status, em `debug`.
+
+### 22.3 Rascunho ao vivo
+
+- Na leitura do stdout (8.1), o daemon acompanha, por bot, o bloco `tool_use` que o modelo está escrevendo: `content_block_start` com `name: "Write"` começa um rascunho com o `id` do bloco, cada `input_json_delta` soma ao JSON parcial, `content_block_stop` fecha a escrita. Eventos de subagentes ficam de fora, como no chat.
+- Do JSON parcial, o daemon tira `file_path` (quando a string dele fecha) e o começo de `content` que já chegou, com os escapes completos desfeitos. Só vira rascunho um `.html` ou `.htm` numa das duas raízes.
+- Notificação `screen.draft {botId, path, url, rev, done}`: `url` já aponta para aquela versão (`?rev=<n>`), no máximo uma a cada 250 ms e uma quando a escrita fecha. O rascunho fica até o resultado daquele `tool_use` chegar (gravado, negado ou com erro), e então sai uma última com `done: true`, e o endereço volta a servir o disco. Um arquivo que o dono negou some da área de design. O fim do turno (`result`) também fecha os rascunhos que sobraram.
+- Rascunho não vai para o banco, para o disco nem para o log.
+
+### 22.4 Protocolo
+
+| Método | Params | Result |
+|---|---|---|
+| `screens.list` | `botId` | `Screen[]`, da mais nova para a mais antiga |
+
+- `Screen`: `path`, `name`, `folder` (como em `BotFile`), `modifiedAt`, `url` (com `?v=<modifiedAt>`, para o app recarregar quando muda), `device` (a dica do arquivo, ou `null`) e `writing` (tem rascunho agora). Um arquivo que ainda não existe mas tem rascunho entra também. Arquivos escritos pelo bot fora das duas raízes não entram: não há como servi-los.
+- Notificação `screen.draft` (22.3), para todos.
+
+### 22.5 App
+
+- No cabeçalho do bot, o botão **Telas**, ao lado do Navegador. Com uma tela sendo escrita e o painel fechado, o botão ganha um ponto que pulsa; se nenhum painel está aberto, o de telas abre sozinho quando começa uma escrita, uma vez por tela.
+- O painel divide o lugar com detalhes, arquivos e navegador (15.1), redimensionável (`botloft.panel.screens`, 640 px de início) e com o botão de alargar.
+- **Visão geral:** um quadro com fundo pontilhado, como nos apps de design, com as telas lado a lado, cada uma com o nome em cima e o tamanho do aparelho, reduzidas pelo zoom do quadro (menos, mais e ajustar; `botloft.screens.zoom`). A que está sendo escrita ganha a borda na cor do bot, o mascote trabalhando e "Escrevendo…", e o quadro rola até ela. Cada versão nova carrega por trás e troca quando pronta, sem piscar. Nessa visão as telas não recebem clique: um clique abre a tela.
+- **Uma tela:** na largura do painel e de verdade (rolar, clicar, preencher), com Computador, Tablet e Celular (`botloft.screens.devices`, por arquivo), "Abrir" (`open_file`, 15.2, no navegador do Windows), "Mostrar na pasta" e a volta para todas.
+- Até 12 telas no quadro; "Mostrar mais" traz as outras.
+- Sem telas: o mascote e "<bot> ainda não fez nenhuma tela", com a explicação de que cada página HTML que ele escrever aparece ali e se monta enquanto ele escreve.
+- No chat, a linha de um `Write` ou `Edit` de `.html` que não falhou ganha "Ver em telas", que abre o painel nessa tela.
+- Textos nos três idiomas (15.6).
+
+### 22.6 Segurança
+
+- A tela roda HTML e JavaScript escritos pelo bot. A CSP de sandbox (22.2) a isola do app e do daemon; o `iframe` no app também usa `sandbox="allow-scripts allow-forms allow-popups allow-modals"`, sem `allow-same-origin`. Um script da tela pode acessar a internet, como a própria página abriria num navegador.
+- A chave só dá leitura, só dos arquivos das duas raízes, e some quando o daemon reinicia.
+
+### 22.7 Fora desta etapa
+
+- Apontar uma parte da tela e pedir a mudança ao bot.
+- As telas de todos os bots da crew num quadro só.
+- Exportar telas como imagem ou PDF.
+- Rascunho ao vivo de um `Edit` (hoje a tela recarrega quando ele termina).
+
+### 22.8 Marcos
+
+| Marco | Entrega | Pronto quando |
+|---|---|---|
+| **T1** Telas no daemon | rascunho a partir do stream, JSON parcial, `/view` com sandbox, `screens.list`, `screen.draft`, regras do bot, testes com `FakeRuntime` | um `Write` de `.html` transmitido pelo `FakeRuntime` aparece como rascunho em `/view` e vira o arquivo depois do resultado |
+| **T2** Área de design | painel de telas, quadro com zoom, tela em foco, aparelhos, escrita ao vivo, "Ver em telas" no chat, textos nos três idiomas | ver pelo app um bot real escrever uma tela e ela se montar enquanto ele escreve |

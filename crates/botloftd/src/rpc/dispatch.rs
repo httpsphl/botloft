@@ -9,7 +9,7 @@ use super::jsonrpc::{RpcError, empty_params};
 use crate::approvals;
 use crate::service::{
     self, ApiResult, attachments, bots, chat, crews, deliveries, files, lead, messages, models,
-    modes, routines, tasks,
+    modes, routines, screens, tasks,
 };
 use crate::state::Daemon;
 
@@ -56,6 +56,7 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::ROUTINES_RUNS => reply(routines::runs(daemon, parse(params)?)),
         method::TASKS_LIST => reply(tasks::list(daemon, parse(params)?)),
         method::BROWSER_LIST => reply(Ok(daemon.browsers.list())),
+        method::SCREENS_LIST => reply(screens::list(daemon, parse(params)?)),
         method::SESSION_HELLO => Err(RpcError::new(
             error_code::CONFLICT,
             "this connection is already authenticated",
