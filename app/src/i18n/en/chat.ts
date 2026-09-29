@@ -106,6 +106,32 @@ export const chat = {
     badgeHint:
       "This bot does everything without asking. Change it in the mode picker below the chat.",
   },
+  model: {
+    title: "Model",
+    button: (model: string) => `Model: ${model}`,
+    names: {
+      default: "Plan default",
+      fable: "Fable",
+      opus: "Opus",
+      sonnet: "Sonnet",
+      haiku: "Haiku",
+    },
+    short: "Default",
+    hints: {
+      default: (bot: string, inUse: string | null) =>
+        inUse
+          ? `${bot} uses your plan's default model, now ${inUse}`
+          : `${bot} uses your plan's default model`,
+      fable: (bot: string) => `${bot} is at its most capable, for the hardest work`,
+      opus: (bot: string) => `${bot} handles long, complex tasks well`,
+      sonnet: (bot: string) => `${bot} is fast and capable, good for most work`,
+      haiku: (bot: string) => `${bot} is quickest and uses less of your plan, for simple tasks`,
+    },
+    cost: "More capable models use up your plan's limit faster.",
+    failed: "Could not change the model",
+    later: (bot: string, model: string) =>
+      `${bot} switches to ${model} when it finishes what it's doing.`,
+  },
   plan: {
     ready: (bot: string) => `${bot} made a plan and wants to go ahead`,
     noteLabel: (bot: string) => `What ${bot} should change in the plan`,
@@ -126,6 +152,8 @@ export const chat = {
     signedOut:
       "Claude Code is not signed in, or the account can't be used right now. Sign in to Claude, or check your Claude plan.",
     usageLimit: "Your Claude plan reached its usage limit. Messages wait until it resets.",
+    modelUnavailable:
+      "This bot's model isn't available: it may not be on your Claude plan. Pick another model below the chat.",
     turnFailed: (detail: string) => `The bot couldn't finish this: ${detail}`,
   },
 };

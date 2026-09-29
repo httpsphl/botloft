@@ -88,6 +88,12 @@ function seed(fake: FakeBotloft): void {
   const analyst = fake.addBot(research.id, "Analyst", "Crunches the numbers behind each claim");
   const planner = fake.addBot(research.id, "Planner", "Plans changes before touching the code");
   void fake.call("bots.setPermissionMode", { botId: planner.id, mode: "plan" });
+  void fake.call("bots.setModel", { botId: analyst.id, model: "haiku" });
+  // What Claude Code reported: the plan's default, and the chosen Haiku.
+  for (const bot of [scout, writer, reviewer, planner]) {
+    fake.bot(bot.id).modelInUse = "claude-opus-5-5";
+  }
+  fake.bot(analyst.id).modelInUse = "claude-haiku-4-5-20251001";
   fake.setBotState(scout.id, "idle", 3);
   fake.setBotState(writer.id, "busy", 2);
   fake.setBotState(reviewer.id, "needs_approval", 5);

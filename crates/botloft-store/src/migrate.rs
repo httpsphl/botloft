@@ -11,6 +11,7 @@ const MIGRATIONS: &[(u32, &str)] = &[
     (2, include_str!("../migrations/0002_messages.sql")),
     (3, include_str!("../migrations/0003_chat.sql")),
     (4, include_str!("../migrations/0004_permission_mode.sql")),
+    (5, include_str!("../migrations/0005_bot_model.sql")),
 ];
 
 /// Schema version after every migration has run.

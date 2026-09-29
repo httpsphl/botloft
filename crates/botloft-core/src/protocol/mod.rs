@@ -80,6 +80,7 @@ pub mod method {
     pub const BOTS_UPDATE: &str = "bots.update";
     pub const BOTS_SET_PAUSED: &str = "bots.setPaused";
     pub const BOTS_SET_PERMISSION_MODE: &str = "bots.setPermissionMode";
+    pub const BOTS_SET_MODEL: &str = "bots.setModel";
     pub const BOTS_ARCHIVE: &str = "bots.archive";
     pub const BOTS_RESTART: &str = "bots.restart";
     pub const CHAT_HISTORY: &str = "chat.history";

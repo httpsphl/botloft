@@ -22,6 +22,8 @@ const SIGN_IN_ERRORS: &[&str] = &[
     "billing_error",
     "account_on_hold",
 ];
+/// The model does not exist or the account cannot use it (spec 7.4).
+const MODEL_NOT_FOUND: &str = "model_not_found";
 /// When a rate limit gives no reset time.
 const DEFAULT_LIMIT_MS: i64 = 5 * 60 * 1000;
 
@@ -62,6 +64,9 @@ fn session(daemon: &Daemon, bot: &BotId, event: &Value) {
     daemon.supervisor.remember_session(bot, session);
     if let Some(mode) = event["permissionMode"].as_str() {
         service::modes::reported(daemon, bot, mode);
+    }
+    if let Some(model) = event["model"].as_str() {
+        service::models::reported(daemon, bot, model);
     }
 }
 
@@ -147,6 +152,12 @@ fn failed_turn(daemon: &Daemon, bot: &BotId, generation: u64, error: &str, event
         (
             NoticeCode::UsageLimit,
             "The account reached its usage limit. Messages wait until it resets.".to_owned(),
+        )
+    } else if error == MODEL_NOT_FOUND {
+        (
+            NoticeCode::ModelUnavailable,
+            "Claude Code could not use this bot's model: it may not exist or not be on the              account's plan. Pick another model."
+                .to_owned(),
         )
     } else if detail.is_empty() {
         (NoticeCode::TurnFailed, error.to_owned())

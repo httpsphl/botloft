@@ -18,6 +18,7 @@ import { fileSize } from "../../lib/format";
 import { type Bot, FIELD_LIMITS } from "../../lib/protocol.gen";
 import { useApi } from "../../store/context";
 import { rememberImage } from "./images";
+import { ModelPicker } from "./ModelPicker";
 import { ModePicker } from "./ModePicker";
 import type { Files, PendingFile } from "./useFiles";
 
@@ -66,7 +67,7 @@ export function ChatComposer({
   const t = useT();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
-  /** A new mode that waits for the bot to finish what it is doing. */
+  /** A new mode or model that waits for the bot to finish what it is doing. */
   const [later, setLater] = useState<string | null>(null);
   const field = useRef<HTMLTextAreaElement>(null);
   const picker = useRef<HTMLInputElement>(null);
@@ -201,6 +202,7 @@ export function ChatComposer({
               ? t.chat.composer.tooLong(text.length, FIELD_LIMITS.message)
               : text && t.chat.composer.keys}
           </span>
+          <ModelPicker bot={bot} onLater={setLater} />
           <button
             type="submit"
             aria-label={t.chat.composer.send}

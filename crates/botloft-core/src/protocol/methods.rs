@@ -4,7 +4,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use super::{DeliveryBacklog, PermissionMode};
+use super::{BotModel, DeliveryBacklog, PermissionMode};
 use crate::ids::{BotId, CrewId};
 
 /// Identifies the connecting app in `session.hello`.
@@ -168,6 +168,10 @@ pub struct BotsCreateParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub color: Option<String>,
+    /// The account's default when absent.
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub model: Option<BotModel>,
 }
 
 /// Fields left out stay unchanged.
@@ -204,6 +208,14 @@ pub struct BotsSetPausedParams {
 pub struct BotsSetPermissionModeParams {
     pub bot_id: BotId,
     pub mode: PermissionMode,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BotsSetModelParams {
+    pub bot_id: BotId,
+    pub model: BotModel,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -80,6 +80,32 @@ impl PermissionMode {
     }
 }
 
+text_enum!(
+    /// Which Claude model a bot runs on (spec 7.4): Claude Code's `--model`
+    /// aliases, or the account's default.
+    BotModel, "model" {
+        /// No `--model`: the default of the owner's Claude plan.
+        Default => "default",
+        Fable => "fable",
+        Opus => "opus",
+        Sonnet => "sonnet",
+        Haiku => "haiku",
+    }
+);
+
+impl BotModel {
+    /// The value of Claude Code's `--model`; `None` leaves the flag out.
+    pub fn cli_value(self) -> Option<&'static str> {
+        match self {
+            Self::Default => None,
+            Self::Fable => Some("fable"),
+            Self::Opus => Some("opus"),
+            Self::Sonnet => Some("sonnet"),
+            Self::Haiku => Some("haiku"),
+        }
+    }
+}
+
 /// A persistent Claude Code session with a name, a role and instructions.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -99,6 +125,10 @@ pub struct Bot {
     pub color: String,
     pub paused: bool,
     pub permission_mode: PermissionMode,
+    pub model: BotModel,
+    /// The model id Claude Code reported when the bot last started a turn
+    /// (`claude-opus-5-5`); `null` before its first turn.
+    pub model_in_use: Option<String>,
     pub state: BotState,
     /// Current process generation; `null` if the bot has not started since
     /// the daemon did. Changes on every (re)start.

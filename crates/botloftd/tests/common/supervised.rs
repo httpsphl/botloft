@@ -35,6 +35,7 @@ pub async fn setup() -> Setup {
             role: String::new(),
             instructions: String::new(),
             color: None,
+            model: None,
         },
     )
     .expect("bot");

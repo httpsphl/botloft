@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use botloft_core::protocol::BotState;
+use botloft_core::protocol::{BotState, PermissionMode};
 use tokio::time::Instant;
 
 use crate::runtime::ProcessControl;
@@ -24,7 +24,8 @@ pub(super) struct Slot {
     pub approvals: u32,
     /// While `rate_limited`: Unix ms when the limit resets.
     pub limited_until: Option<i64>,
-    /// A new permission mode waits for the running turn to end (spec 7.4).
+    /// A new permission mode or model waits for the running turn to end
+    /// (spec 7.4).
     pub restart_when_idle: bool,
 }
 
@@ -72,6 +73,8 @@ pub(super) struct Running {
     /// Started with `--resume`.
     pub resumed: bool,
     pub token_hash: String,
+    /// The `--permission-mode` it started with.
+    pub permission_mode: PermissionMode,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

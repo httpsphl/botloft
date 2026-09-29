@@ -219,6 +219,7 @@ Eventos de uma generation antiga são ignorados. Todo processo novo emite `bot.s
      --setting-sources project,local
      --mcp-config <workspace>\.botloft\mcp.json --strict-mcp-config
      --permission-mode <modo do bot>
+     [--model <modelo do bot>]
      --permission-prompt-tool mcp__botloft__permission_prompt
      --allowedTools mcp__botloft
    ```
@@ -228,7 +229,8 @@ Eventos de uma generation antiga são ignorados. Todo processo novo emite `bot.s
    - Qualquer outra ferramenta que peça permissão passa pela tool de aprovação (10.1) e vira um pedido no chat.
    - `--permission-mode` vem do modo do bot (`Bot.permissionMode`), que o dono escolhe no chat (15.1): `default` (Manual: pergunta antes de editar, rodar comandos e usar a rede), `accept_edits` (`acceptEdits`: edita arquivos sem perguntar), `plan` (planeja e pede para seguir, 10.1), `auto` (um classificador libera o que é seguro e o resto vira pedido) e `bypass_permissions` (`bypassPermissions`: faz tudo sem perguntar, ver 13). Bot novo começa em `default`. `dontAsk` não é oferecido: nega o que não estiver liberado, e o bot não teria como pedir. Regras `deny` valem em todos os modos.
    - O Claude Code só lê a flag ao iniciar e não entra em `bypassPermissions` no meio da sessão. Por isso mudar o modo reinicia o processo com `--resume`, e a conversa continua: na hora se o bot está parado, ou quando o turno em andamento e as aprovações dele terminam, sem cortar o trabalho.
-   - O Claude Code sai do modo `plan` sozinho quando o dono aprova o plano. Cada turno começa com um `system/init` que traz `permissionMode` (19); se o modo gravado é `plan` e o init diz outro, o daemon grava o novo, sem reiniciar, para o app mostrar o que o bot faz e um reinício manter. Qualquer outra diferença vem de um turno do processo antigo, que está para reiniciar no modo que o dono acabou de escolher, e é ignorada.
+   - `--model` vem do modelo do bot (`Bot.model`), que o dono escolhe no chat ou ao criar o bot (15.1): `fable`, `opus`, `sonnet` ou `haiku`, os apelidos do Claude Code, que apontam sempre para a versão mais nova de cada família. `default` deixa a flag de fora, e o Claude Code usa o padrão da conta, que depende do plano (19). Bot novo começa em `default`. O Claude Code não troca de modelo sozinho conforme a tarefa. Mudar o modelo reinicia o processo como a troca de modo, e `--resume` com `--model` passa a usar o modelo novo. O `system/init` de cada turno traz o modelo em uso (`claude-opus-5-5`); o daemon o guarda em `Bot.modelInUse` para o app dizer qual é o padrão do plano. Um modelo que a conta não pode usar falha o turno com o erro `model_not_found` (8.1), e o processo continua vivo.
+   - O Claude Code sai do modo `plan` sozinho quando o dono aprova o plano. Cada turno começa com um `system/init` que traz `permissionMode` (19); se o processo começou em `plan`, o modo gravado ainda é `plan` e o init diz outro, o daemon grava o novo, sem reiniciar, para o app mostrar o que o bot faz e um reinício manter. Qualquer outra diferença vem de um processo que está para reiniciar no modo que o dono acabou de escolher, e é ignorada.
 5. Ambiente: o bloco padrão do usuário (`CreateEnvironmentBlock`, o mesmo de um logon novo), **não** o ambiente do daemon. Um daemon iniciado de dentro de uma sessão do Claude Code herda `CLAUDECODE`, `CLAUDE_CODE_MESSAGING_SOCKET`, `ANTHROPIC_BASE_URL` e outras variáveis da sessão, que fariam o bot se achar filho dela. Por cima vão `BOTLOFT_BOT_ID`, `BOTLOFT_BOT_TOKEN` e `BOTLOFT_PORT`.
 6. stdin, stdout e stderr em pipes, sem console (`CREATE_NO_WINDOW`). O stdin fica aberto enquanto o processo vive; fechá-lo encerra o Claude Code com código 0. O stderr vai para o log em nível `debug`, sem conteúdo de mensagem.
 
@@ -256,13 +258,13 @@ Uma linha JSON por evento, em UTF-8. Linha que não é JSON, ou maior que 8 MiB,
 
 | Evento | O que vira |
 |---|---|
-| `system/init` | guarda `session_id` em `bots.session_id` (vem no começo de cada turno) |
+| `system/init` | guarda `session_id` em `bots.session_id` (vem no começo de cada turno); segue `permissionMode` e guarda `model` (7.4) |
 | `user` com `isReplay: true` | a message com aquele `uuid` começou a ser processada: a delivery ganha `read_at` (9.1) |
 | `stream_event` com `text_delta` | texto ao vivo da resposta (`chat.delta`, 8.3); não é gravado |
 | `assistant`, bloco `text` | item `reply` com o texto (markdown) |
 | `assistant`, bloco `tool_use` | item `tool` em `running`, com resumo da entrada |
 | `user`, bloco `tool_result` | atualiza o item `tool` do mesmo `tool_use_id`: `done` ou `failed` e um trecho da saída |
-| `assistant` com `error` | item `notice` e, conforme o erro, estado `rate_limited` ou `auth_error` (7.2) |
+| `assistant` com `error` | item `notice` e, conforme o erro, estado `rate_limited` ou `auth_error` (7.2); `model_not_found` vira o aviso `model_unavailable` |
 | `rate_limit_event` | uso da conta (janelas de 5 h e 7 dias) em `system.status.usage`; status diferente de `allowed` leva a `rate_limited` |
 | `result` | item `turn` com duração, custo e erro (se houve); fecha um turno pendente |
 
@@ -279,7 +281,7 @@ Todo item tem `id` (`cht_`), `botId`, `kind`, `createdAt` e `updatedAt`.
 | `tool` | `toolUseId`, `name`, `summary`, `input`, `status` (`running`, `done`, `failed`), `output` | ferramenta usada pelo bot |
 | `approval` | `approvalId`, `toolName`, `summary`, `input`, `status` (`pending`, `allowed`, `denied`, `expired`), `note` | pedido de permissão (10.1) |
 | `turn` | `durationMs`, `costUsd`, `error` | fim de um turno |
-| `notice` | `level` (`info`, `warning`, `error`), `code` (`signed_out`, `usage_limit`, `turn_failed`; ausente em avisos antigos), `text` | avisos do daemon: limite de uso, login, turno com erro. O app escreve os avisos com `code` no idioma do dono; `text` fica em inglês para quem não conhece o código e, em `turn_failed`, traz o detalhe do erro |
+| `notice` | `level` (`info`, `warning`, `error`), `code` (`signed_out`, `usage_limit`, `turn_failed`, `model_unavailable`; ausente em avisos antigos), `text` | avisos do daemon: limite de uso, login, turno com erro. O app escreve os avisos com `code` no idioma do dono; `text` fica em inglês para quem não conhece o código e, em `turn_failed`, traz o detalhe do erro |
 
 - `summary` é uma frase curta feita pelo daemon a partir da entrada: o comando do `Bash`, o arquivo do `Read`/`Edit`/`Write`, o padrão do `Grep`/`Glob`, a URL do `WebFetch`, a busca do `WebSearch`, o destinatário do `send_message`. Ferramenta desconhecida mostra só o nome.
 - `input` guarda o JSON da entrada até 4 KB; `output`, até 8 KB de texto. O resto fica só no transcript do próprio Claude Code.
@@ -439,10 +441,11 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `crews.setPaused` | `crewId, paused` | `Crew` |
 | `crews.archive` | `crewId` | `Crew` |
 | `bots.list` | `crewId?` | `Bot[]` |
-| `bots.create` | `crewId, name, role, instructions, color?` | `Bot` |
+| `bots.create` | `crewId, name, role, instructions, color?, model?` | `Bot` |
 | `bots.update` | `botId, name?, role?, instructions?, color?` | `Bot` |
 | `bots.setPaused` | `botId, paused` | `Bot` |
 | `bots.setPermissionMode` | `botId, mode` (`default`, `accept_edits`, `plan`, `auto`, `bypass_permissions`) | `Bot`; o bot reinicia no novo modo quando nada estiver em andamento (7.4) |
+| `bots.setModel` | `botId, model` (`default`, `fable`, `opus`, `sonnet`, `haiku`) | `Bot`; o bot reinicia no novo modelo quando nada estiver em andamento (7.4) |
 | `bots.restart` | `botId, fresh?` | `Bot` |
 | `bots.archive` | `botId` | `Bot` |
 | `chat.history` | `botId, before?, limit?` | `ChatItem[]`, mais novo primeiro; `limit` de 1 a 200, 50 se ausente |
@@ -454,7 +457,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `deliveries.retry` | `deliveryId` | `Delivery` |
 | `tasks.list` | `crewId?, status?` | `Task[]` |
 
-`Bot` traz também `permissionMode` (7.4) e `lastActivity`: o último item do chat resumido em uma linha, para a lista de conversas: `kind` (`owner`, `message`, `reply`, `tool`, `approval`, `notice`), `text` e `at`. O `text` não tem palavras do daemon: a mensagem do dono vem sem "You:" e a aprovação só com o nome da ferramenta, e o app completa no idioma do dono.
+`Bot` traz também `permissionMode`, `model` e `modelInUse` (7.4) e `lastActivity`: o último item do chat resumido em uma linha, para a lista de conversas: `kind` (`owner`, `message`, `reply`, `tool`, `approval`, `notice`), `text` e `at`. O `text` não tem palavras do daemon: a mensagem do dono vem sem "You:" e a aprovação só com o nome da ferramenta, e o app completa no idioma do dono.
 
 ### 11.3 Notificações do servidor
 
@@ -479,7 +482,7 @@ Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations 
 | Tabela | Colunas principais |
 |---|---|
 | `crews` | `id, name, slug, paused, created_at, archived_at` |
-| `bots` | `id, crew_id, name, handle, slug, role, instructions, color, paused, permission_mode, token_hash, session_id, created_at, archived_at` |
+| `bots` | `id, crew_id, name, handle, slug, role, instructions, color, paused, permission_mode, model, model_in_use, token_hash, session_id, created_at, archived_at` |
 | `messages` | `id, crew_id, from_kind (owner/bot/system), from_bot_id, to_bot_id, kind (note/task/result/system), body, task_id, created_at` |
 | `attachments` | `id, message_id, name, media_type, size, path, created_at` |
 | `deliveries` | `id, message_id, bot_id, state, attempts, next_attempt_at, lease_until, last_error, sent_generation, turn_uuid, read_at, updated_at` |
@@ -561,6 +564,7 @@ Layout, como um app de mensagens:
 - **Área da conta**, no pé da barra lateral, como nos apps de chat: um círculo com a inicial, o nome do dono (do Windows) e o plano do Claude ("Plano Max"; sem plano, a organização ou o e-mail; desconectado, "Sem conta do Claude conectada"). Um clique abre um menu para cima com o e-mail e: **Uso** (as janelas de uso do plano, 8.1, com a parte usada e quando renovam; antes da primeira resposta de um bot, um aviso de que ainda não há dados), **Configurações** (tema, tamanho, idioma e as versões do Botloft e do Claude Code), **Idioma** (submenu ao lado, com a escolha na hora), **Novidades** (a página de releases no navegador) e **Ajuda** (o README no navegador). Tema, tamanho e idioma saíram da barra de título; ela só mostra o idioma nas telas de preparo, que ainda não têm barra lateral.
 - **Área principal com um bot:** cabeçalho com nome, estado e ações; o chat; o compositor embaixo. O compositor aceita texto, colar imagem e arrastar ou escolher arquivos. Enter envia e Shift+Enter quebra linha (a dica aparece enquanto o dono escreve).
 - **Modo do bot**, no compositor, ao lado do clipe, como no Claude Code: um botão com o modo atual abre um menu para cima, "Modo", com Automático, Manual, Aceitar edições e Plano, cada um com uma linha que fala do bot pelo nome ("Scout decide o que precisa do seu OK") e a marca no atual. Separado, "Ignorar permissões" com o botão Ativar, que abre uma confirmação dizendo que o bot não fica preso à pasta dele (13). Nesse modo o botão fica vermelho e o cabeçalho mostra "Não pergunta nada" em vermelho. Com o bot ocupado, uma linha acima do compositor avisa que ele muda de modo quando terminar o que está fazendo.
+- **Modelo do bot**, no compositor, ao lado do botão de enviar: mostra o modelo em uso ("Opus 5.5"; antes do primeiro turno, o nome escolhido ou "Padrão") e abre um menu para cima, "Modelo", com Padrão do plano, Fable, Opus, Sonnet e Haiku. Cada um tem uma linha que fala do bot pelo nome ("Scout fica rápido e capaz, bom para quase tudo"; o padrão diz qual modelo é hoje), e o pé do menu lembra que modelos mais capazes gastam o limite do plano mais rápido. A janela de criar e editar bot tem a mesma escolha. Com o bot ocupado, a mesma linha acima do compositor avisa que ele troca quando terminar.
 - **Área principal com uma crew:** a timeline (messages entre os bots e do dono) e as tasks.
 - **Detalhes do bot** (pasta, instruções, sessão) ficam num painel, fora do caminho da conversa.
 
@@ -689,6 +693,7 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28. "Co
 | `permissionMode` no `system/init` | 7.4 | **Visto com 2.1.284**: o `system/init` de cada turno traz `permissionMode` com o valor da CLI (`default`, `acceptEdits`, `plan`, `auto`, `bypassPermissions`) | feito |
 | Modos de permissão em `-p` | 7.4 | Confirmado (`permission-modes`): `deny` vale em todos os modos, inclusive `bypassPermissions`, que não pode ser ligado no meio da sessão; em `-p`, `auto` manda para a tool de aprovação o que o classificador não libera e `plan` continua bloqueando edições. O `auto` depende do plano e do modelo; o que `--permission-mode auto` faz sem ele ainda não foi visto | manual (PR) |
 | `ExitPlanMode` em `-p` | 10.1 | A lista de ferramentas diz que ele pede permissão. Não visto: se o pedido chega à tool de aprovação com `{plan}` na entrada, e para qual modo o bot vai depois de aprovado (o daemon segue o `system/init` do turno seguinte) | manual (PR) |
+| Modelo em `-p` | 7.4 | Confirmado (`model-config`, `sessions`): apelidos `fable`, `opus`, `sonnet`, `haiku` (e `best`, `opusplan`, `[1m]`, não usados); sem `model` nas settings, vale o padrão da conta; `--resume` mantém o modelo da sessão, a menos que `--model` escolha outro. **Visto com 2.1.284** (plano Max): sem `--model`, o `system/init` traz `"model": "claude-opus-5-5"`; um modelo inexistente sobe o processo, o init o repete, e cada turno termina com `assistant.error: "model_not_found"` e `result.is_error`; `/model haiku` mandado como mensagem troca o modelo no meio da sessão, com uma resposta sintética e sem custo, mas o daemon reinicia o processo em vez disso, como na troca de modo. Qual é o padrão em cada plano, e quais modelos cada plano tem, não está documentado | feito |
 | Regras `allow` do projeto em `-p` sem confiança | 7.4 | Confirmado (`permissions`): não são aplicadas numa pasta nunca confiada; `deny` vale sempre. Por isso `--allowedTools mcp__botloft` | M4.1 |
 | `--session-id`, `--resume` em `-p` | 7.3 | Confirmado (`cli-reference`, `sessions`): a sessão retoma histórico e modelo; flags como `--mcp-config` têm de ser passadas de novo. **Testado com 2.1.284**: depois de reiniciar o bot e depois de reiniciar o daemon, o bot lembrou arquivos, a imagem e a mensagem de outro bot | feito (M4.1) |
 | Tools MCP adiadas | 10 | **Visto com 2.1.284**: as tools do `botloft` chegam adiadas; antes da primeira `send_message` o bot chama `ToolSearch` com `select:mcp__botloft__send_message`. O chat mostra isso como "load send_message" | feito (M4.1) |

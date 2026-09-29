@@ -141,6 +141,8 @@ pub(crate) mod tests {
                         color: "#FF7A59".to_owned(),
                         paused: false,
                         permission_mode: botloft_core::protocol::PermissionMode::Default,
+                        model: botloft_core::protocol::BotModel::Default,
+                        model_in_use: None,
                         created_at: 0,
                         archived_at: None,
                     };

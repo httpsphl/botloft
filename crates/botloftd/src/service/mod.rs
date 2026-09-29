@@ -7,6 +7,7 @@ pub mod chat;
 pub mod crews;
 pub mod deliveries;
 pub mod messages;
+pub mod models;
 pub mod modes;
 pub mod tasks;
 

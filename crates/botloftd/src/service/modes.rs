@@ -21,20 +21,22 @@ pub fn set_permission_mode(daemon: &Daemon, params: BotsSetPermissionModeParams)
     let bot = changed(daemon, &store, &crew, record);
     drop(store);
     info!(bot = %params.bot_id, mode = params.mode.as_str(), "permission mode changed");
-    daemon.supervisor.permission_mode_changed(&params.bot_id);
+    daemon.supervisor.launch_settings_changed(&params.bot_id);
     Ok(bot)
 }
 
 /// The mode Claude Code reports in `system/init`. It leaves plan mode by
 /// itself when the owner approves a plan; the stored mode follows, so the
 /// app shows what the bot does and a restart keeps it. Any other difference
-/// comes from a turn of a process that is about to restart into the mode
-/// the owner just picked, and is ignored.
+/// comes from a process that is about to restart into the mode the owner
+/// just picked, and is ignored.
 pub(crate) fn reported(daemon: &Daemon, bot: &BotId, reported: &str) {
     let Some(mode) = PermissionMode::from_cli(reported) else {
         return;
     };
-    if mode == PermissionMode::Plan || daemon.supervisor.mode_change_pending(bot) {
+    if mode == PermissionMode::Plan
+        || daemon.supervisor.launched_mode(bot) != Some(PermissionMode::Plan)
+    {
         return;
     }
     let store = daemon.store();

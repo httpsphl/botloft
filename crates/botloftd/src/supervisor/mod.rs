@@ -5,8 +5,8 @@
 //! Lock order: the store lock may be held while taking the supervisor lock
 //! (service calls read states), never the other way around.
 
-mod modes;
 mod reconcile;
+mod relaunch;
 mod settings;
 mod sign_in;
 mod slot;

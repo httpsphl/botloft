@@ -74,6 +74,7 @@ impl Supervisor {
                     started: Instant::now(),
                     resumed: launch.resumed,
                     token_hash: launch.token_hash,
+                    permission_mode: bot.permission_mode,
                 });
                 self.count_busy(slot.state, BotState::Launching);
                 slot.state = BotState::Launching;
@@ -208,6 +209,11 @@ fn launch_spec(
         args.push(arg.into());
     }
     args.push(mcp.into_os_string());
+    // Without the flag, Claude Code uses the default of the owner's plan.
+    if let Some(model) = bot.model.cli_value() {
+        args.push("--model".into());
+        args.push(model.into());
+    }
 
     let mut env = platform::user_environment()?;
     env.retain(|(name, _)| {

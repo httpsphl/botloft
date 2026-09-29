@@ -79,7 +79,7 @@ async fn a_busy_bot_finishes_its_turn_before_changing_mode() {
     set_mode(&s, PermissionMode::Auto);
     tokio::time::sleep(Duration::from_secs(30)).await;
     assert_eq!(s.runtime.processes().len(), 1, "the turn is not cut short");
-    assert!(s.daemon.supervisor.mode_change_pending(&s.bot));
+    assert!(s.daemon.supervisor.relaunch_pending(&s.bot));
 
     first.emit(stream::result(false)).await;
     let second = s.runtime.process(2).await;
@@ -87,7 +87,7 @@ async fn a_busy_bot_finishes_its_turn_before_changing_mode() {
         arg_after(&second, "--permission-mode").as_deref(),
         Some("auto")
     );
-    assert!(!s.daemon.supervisor.mode_change_pending(&s.bot));
+    assert!(!s.daemon.supervisor.relaunch_pending(&s.bot));
 }
 
 #[tokio::test(start_paused = true)]
@@ -125,4 +125,34 @@ async fn a_turn_of_the_old_process_does_not_undo_the_owners_choice() {
     assert_eq!(stored_mode(&s), PermissionMode::AcceptEdits);
     first.emit(stream::init(&session)).await;
     assert_eq!(stored_mode(&s), PermissionMode::AcceptEdits);
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_plan_approved_while_a_new_model_waits_still_leaves_plan_mode() {
+    let s = setup().await;
+    s.runtime.process(1).await;
+    s.until(BotState::Idle).await;
+    set_mode(&s, PermissionMode::Plan);
+    let planning = s.runtime.process(2).await;
+    s.until(BotState::Idle).await;
+    let session = arg_after(&planning, "--resume").expect("session");
+    s.message("plan it");
+    botloftd::service::models::set_model(
+        &s.daemon,
+        botloft_core::protocol::BotsSetModelParams {
+            bot_id: s.bot.clone(),
+            model: botloft_core::protocol::BotModel::Sonnet,
+        },
+    )
+    .expect("set model");
+
+    planning.emit(init_with_mode(&session, "default")).await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    assert_eq!(stored_mode(&s), PermissionMode::Default);
+    planning.emit(stream::result(false)).await;
+    let next = s.runtime.process(3).await;
+    assert_eq!(
+        arg_after(&next, "--permission-mode").as_deref(),
+        Some("default")
+    );
 }

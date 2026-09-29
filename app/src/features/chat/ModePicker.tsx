@@ -3,7 +3,6 @@
 // held to its folder.
 
 import {
-  Check,
   ChevronDown,
   FilePen,
   Hand,
@@ -12,14 +11,15 @@ import {
   ShieldOff,
   WandSparkles,
 } from "lucide-react";
-import { type ReactNode, useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import type { Bot, PermissionMode } from "../../lib/protocol.gen";
 import { useApi, useApp } from "../../store/context";
 import { Confirm } from "../../ui/Confirm";
-import { POPOVER, POPOVER_ITEM } from "../../ui/surface";
+import { POPOVER } from "../../ui/surface";
 import { attempt } from "../../ui/toast";
 import { useDismiss } from "../../ui/useDismiss";
+import { PickerOption } from "./PickerOption";
 
 const MODES: { mode: PermissionMode; icon: LucideIcon }[] = [
   { mode: "auto", icon: WandSparkles },
@@ -67,7 +67,7 @@ export function ModePicker({ bot, onLater }: { bot: Bot; onLater(text: string): 
         >
           <p className="px-2.5 pt-1.5 pb-1 font-medium text-muted text-xs">{m.title}</p>
           {MODES.map(({ mode, icon }) => (
-            <Option
+            <PickerOption
               key={mode}
               icon={icon}
               name={m.names[mode]}
@@ -77,7 +77,7 @@ export function ModePicker({ bot, onLater }: { bot: Bot; onLater(text: string): 
             />
           ))}
           <div className="mx-1 my-1 border-line border-t" />
-          <Option
+          <PickerOption
             icon={ShieldOff}
             danger
             name={m.names.bypass_permissions}
@@ -127,44 +127,5 @@ export function ModePicker({ bot, onLater }: { bot: Bot; onLater(text: string): 
         </Confirm>
       )}
     </div>
-  );
-}
-
-function Option({
-  icon: Icon,
-  name,
-  hint,
-  checked,
-  danger = false,
-  trailing,
-  onSelect,
-}: {
-  icon: LucideIcon;
-  name: string;
-  hint: string;
-  checked: boolean;
-  danger?: boolean;
-  trailing?: ReactNode;
-  onSelect(): void;
-}) {
-  return (
-    <button
-      type="button"
-      role="menuitemradio"
-      aria-checked={checked}
-      onClick={onSelect}
-      className={`gap-2.5 py-2 ${POPOVER_ITEM}`}
-    >
-      <Icon
-        aria-hidden
-        size={16}
-        className={`shrink-0 ${danger ? "text-danger" : "text-ink-soft"}`}
-      />
-      <span className="min-w-0 flex-1">
-        <span className={`block font-medium ${danger ? "text-danger" : "text-ink"}`}>{name}</span>
-        <span className="block text-muted text-xs">{hint}</span>
-      </span>
-      {checked ? <Check aria-hidden size={15} className="shrink-0 text-ink" /> : trailing}
-    </button>
   );
 }

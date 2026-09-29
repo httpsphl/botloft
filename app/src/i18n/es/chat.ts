@@ -111,6 +111,33 @@ export const chat: Messages["chat"] = {
     badgeHint:
       "Este bot lo hace todo sin preguntar. Cámbialo en el selector de modo, debajo del chat.",
   },
+  model: {
+    title: "Modelo",
+    button: (model: string) => `Modelo: ${model}`,
+    names: {
+      default: "Predeterminado del plan",
+      fable: "Fable",
+      opus: "Opus",
+      sonnet: "Sonnet",
+      haiku: "Haiku",
+    },
+    short: "Predeterminado",
+    hints: {
+      default: (bot: string, inUse: string | null) =>
+        inUse
+          ? `${bot} usa el modelo predeterminado de tu plan, ahora ${inUse}`
+          : `${bot} usa el modelo predeterminado de tu plan`,
+      fable: (bot: string) => `${bot} rinde al máximo, para el trabajo más difícil`,
+      opus: (bot: string) => `${bot} maneja bien tareas largas y complejas`,
+      sonnet: (bot: string) => `${bot} es rápido y capaz, bueno para casi todo`,
+      haiku: (bot: string) =>
+        `${bot} es el más rápido y gasta menos de tu plan, para tareas simples`,
+    },
+    cost: "Los modelos más capaces gastan el límite de tu plan más rápido.",
+    failed: "No se pudo cambiar el modelo",
+    later: (bot: string, model: string) =>
+      `${bot} cambia a ${model} cuando termine lo que está haciendo.`,
+  },
   plan: {
     ready: (bot: string) => `${bot} hizo un plan y quiere seguir con él`,
     noteLabel: (bot: string) => `Qué debe cambiar ${bot} en el plan`,
@@ -132,6 +159,8 @@ export const chat: Messages["chat"] = {
       "Claude Code no tiene una sesión iniciada, o la cuenta no se puede usar ahora. Inicia sesión en Claude o revisa tu plan de Claude.",
     usageLimit:
       "Tu plan de Claude alcanzó su límite de uso. Los mensajes esperarán hasta que se restablezca.",
+    modelUnavailable:
+      "El modelo de este bot no está disponible: quizá no esté en tu plan de Claude. Elige otro modelo debajo del chat.",
     turnFailed: (detail: string) => `El bot no pudo terminar esto: ${detail}`,
   },
 };
