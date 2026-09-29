@@ -8,6 +8,7 @@ import { fileSize, fromNow } from "../../lib/format";
 import type { Bot, BotFile } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
+import { SidePanel } from "../../ui/SidePanel";
 import { BotAvatar } from "../bots/BotAvatar";
 import { FilePreview } from "./FilePreview";
 import { fileIcon } from "./kinds";
@@ -34,10 +35,7 @@ export function FilesPanel({
   const chosen = data.files.find((file) => file.path === path);
 
   return (
-    <aside
-      aria-label={t.panel(bot.name)}
-      className="flex w-[26rem] shrink-0 flex-col border-line border-l bg-panel"
-    >
+    <SidePanel label={t.panel(bot.name)} name="files" defaultWidth={416}>
       <header className="flex h-11 shrink-0 items-center justify-between border-line border-b pr-1.5 pl-4">
         <h2 className="font-semibold text-sm">{t.heading}</h2>
         <div className="flex items-center gap-0.5">
@@ -58,7 +56,7 @@ export function FilesPanel({
       ) : (
         <List bot={bot} data={data} since={since} onOpen={onPath} />
       )}
-    </aside>
+    </SidePanel>
   );
 }
 

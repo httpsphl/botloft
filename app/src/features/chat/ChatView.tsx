@@ -102,7 +102,7 @@ export function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
   return (
     <section
       aria-label={t.chat.view.label(bot.name)}
-      className="relative flex min-h-0 flex-1 flex-col"
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col"
       onDragOver={(event) => {
         if (hasFiles(event)) {
           event.preventDefault();
@@ -131,7 +131,7 @@ export function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
             element.scrollHeight - element.scrollTop - element.clientHeight < STICKY_PX;
         }}
       >
-        <div className="mx-auto flex max-w-3xl flex-col px-5 pt-5 pb-3">
+        <div className="flex flex-col px-5 pt-5 pb-3">
           {chat.error && (
             <Callout tone="danger" title={t.chat.view.loadFailed}>
               {chat.error}
@@ -167,7 +167,7 @@ export function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
           </SeenSince.Provider>
         </div>
       </div>
-      <div className="mx-auto w-full max-w-3xl">
+      <div className="w-full">
         <ChatComposer
           bot={bot}
           files={files}

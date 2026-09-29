@@ -3,6 +3,7 @@ import type { Messages } from "../en";
 export const common: Messages["common"] = {
   cancel: "Cancelar",
   close: "Fechar",
+  resize: "Redimensionar painel",
   dismiss: "Dispensar",
   details: "Detalhes",
   tryAgain: "Tentar de novo",
