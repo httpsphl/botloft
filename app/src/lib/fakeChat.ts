@@ -9,10 +9,14 @@ import type {
   Approval,
   ApprovalItem,
   BotId,
+  BotModel,
   ChatBody,
   ChatItem,
   ToolItem,
 } from "./protocol.gen";
+
+/** The chief's tool to suggest a bot (spec 10.2). */
+export const SUGGEST_TOOL = "mcp__botloft__suggest_bot";
 
 /** The conversation-list line for an item, like the daemon's (spec 8.3). */
 export function activityLine(body: ChatBody): { kind: ActivityKind; text: string } | null {
@@ -138,7 +142,7 @@ export class FakeChat {
           .reverse()
           .slice(0, limit ?? 50);
       },
-      "approvals.answer": ({ approvalId, allow, note }) => {
+      "approvals.answer": ({ approvalId, allow, note, input }) => {
         const approval = this.approvals.get(approvalId);
         if (!approval) {
           throw notFound(`approval ${approvalId}`);
@@ -154,12 +158,36 @@ export class FakeChat {
         if (allow && approval.toolName === "ExitPlanMode" && bot?.permissionMode === "plan") {
           void this.fake.call("bots.setPermissionMode", { botId: bot.id, mode: "default" });
         }
+        // An allowed suggestion becomes a bot, as the owner left it.
+        if (allow && approval.toolName === SUGGEST_TOOL && bot) {
+          if (input !== undefined) {
+            approval.input = input;
+          }
+          const { name, role, instructions, model } = JSON.parse(approval.input) as {
+            name: string;
+            role: string;
+            instructions: string;
+            model?: BotModel;
+          };
+          void this.fake.call("bots.create", {
+            crewId: bot.crewId,
+            name,
+            role,
+            instructions,
+            ...(model && { model }),
+          });
+        }
         const item = this.items.find(
           (entry) => entry.body.kind === "approval" && entry.body.approvalId === approvalId,
         );
         if (item) {
           const body = item.body as { kind: "approval" } & ApprovalItem;
-          this.update(item.id, { ...body, status: approval.status, note: approval.note });
+          this.update(item.id, {
+            ...body,
+            input: approval.input,
+            status: approval.status,
+            note: approval.note,
+          });
         }
         return approval;
       },

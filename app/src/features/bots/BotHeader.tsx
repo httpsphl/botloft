@@ -1,5 +1,6 @@
 import {
   Archive,
+  Crown,
   Ellipsis,
   FolderOpen,
   PanelRight,
@@ -21,6 +22,7 @@ import { attempt } from "../../ui/toast";
 import { BotAvatar } from "./BotAvatar";
 import { BotDialog } from "./BotDialog";
 import { BotStateBadge } from "./BotStateBadge";
+import { ChiefBadge, isChief } from "./ChiefBadge";
 
 type Open = "edit" | "archive" | "fresh" | null;
 
@@ -41,6 +43,8 @@ export function BotHeader({
   const api = useApi();
   const host = useHost();
   const putBot = useApp((state) => state.putBot);
+  const putCrew = useApp((state) => state.putCrew);
+  const chief = isChief(bot, crew);
   const [open, setOpen] = useState<Open>(null);
   const close = () => setOpen(null);
   const stopped = bot.paused || crew.paused;
@@ -48,6 +52,10 @@ export function BotHeader({
   const setPaused = (paused: boolean) =>
     attempt(paused ? words.failed.pause : words.failed.resume, async () =>
       putBot(await api.call("bots.setPaused", { botId: bot.id, paused })),
+    );
+  const setChief = (on: boolean) =>
+    attempt(words.failed.chief, async () =>
+      putCrew(await api.call("crews.setLead", { crewId: crew.id, botId: on ? bot.id : null })),
     );
   const restart = (fresh: boolean) =>
     attempt(words.failed.restart, async () =>
@@ -66,6 +74,7 @@ export function BotHeader({
         </div>
         <div className="mt-0.5 flex items-center gap-3 text-sm">
           <BotStateBadge bot={bot} crewPaused={crew.paused} />
+          {chief && <ChiefBadge crew={crew} />}
           {bot.permissionMode === "bypass_permissions" && (
             <span
               title={t.chat.mode.badgeHint}
@@ -102,6 +111,11 @@ export function BotHeader({
         icon={Ellipsis}
         items={[
           { label: words.edit, icon: Pencil, onSelect: () => setOpen("edit") },
+          {
+            label: chief ? words.stopChief : words.makeChief,
+            icon: Crown,
+            onSelect: () => setChief(!chief),
+          },
           {
             label: words.restartFresh,
             icon: RefreshCcw,

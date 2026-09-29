@@ -26,6 +26,7 @@ Princípios:
 |---|---|
 | **Crew** | Grupo de bots que podem conversar entre si. Trabalha numa pasta: a `shared/` dela ou uma que o dono escolhe. |
 | **Bot** | Uma sessão Claude Code persistente com nome, papel e instruções. |
+| **Chefe** | O bot que lidera a crew (`Crew.leadBotId`): nasce com ela, planeja o trabalho, distribui tarefas e é o único que sugere bots novos (10.2). |
 | **Workspace** | Pasta de trabalho do bot, onde o Claude Code roda. |
 | **Message** | Texto enviado a um bot, pelo dono, por outro bot ou pelo daemon. Pode trazer anexos (só do dono). |
 | **Delivery** | Entrega de uma message ao processo do bot. Tem estado, tentativas e prazo. |
@@ -125,7 +126,7 @@ O **handle** do bot (`@revisao`) é derivado do nome pela mesma regra, acompanha
   attachments\<aaaa-mm-dd>\        arquivos que o dono mandou no chat (9.5)
   .claude\
     settings.json                  regra de negação para os segredos (gerado pelo daemon, sobrescrito a cada start)
-    rules\botloft.md               identidade, papel, crew, pasta de trabalho e guia de uso das tools (gerado pelo daemon)
+    rules\botloft.md               identidade, papel, crew, pasta de trabalho, guia de uso das tools e, no chefe, como liderar (gerado pelo daemon)
   .botloft\
     mcp.json                       config MCP do bot (gerado pelo daemon)
 ```
@@ -156,6 +157,7 @@ retry_backoff_max_ms = 120000
 [bots]
 approval_timeout_minutes = 60 # sem resposta do dono, a ferramenta é negada
 attachment_max_mb = 20        # por arquivo; no máximo 10 arquivos por message
+max_per_crew = 12             # até onde as sugestões do chefe levam uma crew (10.2)
 
 [tasks]
 max_hops = 4
@@ -391,10 +393,11 @@ Transporte: Streamable HTTP, só POST e resposta `application/json`, sem sessão
 
 | Tool | Entrada | Saída (JSON em texto) |
 |---|---|---|
-| `crew_roster` | nenhuma | `crew`, `you` e os outros bots da crew: handle, nome, papel, estado |
+| `crew_roster` | nenhuma | `crew`, `you`, `you_lead` e os outros bots da crew: handle, nome, papel, estado e `chief` |
 | `send_message` | `to` (handle, com ou sem `@`), `body`, `kind?` (`note` padrão, `task`), `deadline_minutes?` (só task) | `message_id`, `task_id` e `due` (task), e um lembrete de que a resposta chega depois |
 | `complete_task` | `task_id`, `result`, `status?` (`done` padrão, `failed`) | `task_id`, `status` e quem recebe o resultado |
 | `my_tasks` | `role?` (`assigned`, `requested`) | tasks `open` e `expired`: id, de, para, status, prazo relativo, hops e o pedido original |
+| `suggest_bot` | `name`, `role`, `instructions` (até 8 000 caracteres), `model?`, `reason` (até 1 000) | `created` e, criado, `handle`, `name`, `role`, `model` e um lembrete para mandar a primeira task; recusado ou sem resposta, o porquê (10.2). Só o chefe |
 | `permission_prompt` | `tool_name`, `input`, `tool_use_id` | decisão do dono (10.1). Chamada pelo Claude Code, não pelo modelo |
 
 - Erro que o modelo pode corrigir (handle desconhecido, argumento inválido, limite de hops, task de outro bot) volta como resultado com `isError: true` e uma frase explicando. Só tool desconhecida ou chamada malformada vira erro JSON-RPC (`-32602`).
@@ -421,6 +424,17 @@ Com `--permission-prompt-tool mcp__botloft__permission_prompt`, toda ferramenta 
 
 A aprovação só abre se `tool_use_id` for de uma ferramenta em `running` no chat daquele bot. O daemon espera até 2 s pelo evento, que às vezes chega depois da chamada. Senão nega na hora, sem incomodar o dono. Assim um bot que chame `permission_prompt` por conta própria não consegue pôr um pedido inventado na frente do dono. A descrição da tool também diz para não chamá-la.
 
+### 10.2 Chefe e sugestões de bots
+
+Toda crew nova nasce com um **chefe**: `crews.create` com `lead` cria a crew e esse bot juntos, e `Crew.leadBotId` aponta para ele. O app escreve nome e papel no idioma do dono ("Chefe", "Lidera a equipe: planeja o trabalho, sugere bots novos e distribui as tarefas"); as instruções são o objetivo que o dono escreveu para a crew. O chefe é gravado antes de o supervisor poder subi-lo, então o primeiro start já lê que lidera. O dono troca o chefe (`crews.setLead`) ou deixa a crew sem nenhum; o chefe antigo e o novo têm as regras regravadas e reiniciam quando nada estiver em andamento (7.4). Arquivar o chefe deixa a crew sem chefe. Crews de antes não têm chefe até o dono escolher um.
+
+- **Regras do chefe:** além das de todo bot, uma seção "You lead this crew": planejar, dividir o trabalho em partes que rodam em paralelo e distribuí-las com `send_message` (`kind: "task"`); conferir os resultados antes de responder ao dono; quando faltar um especialista, sugerir um bot com `suggest_bot`; escolher o modelo pelo trabalho (`haiku` para o simples e repetitivo, `sonnet` para quase tudo, `opus` ou `fable` só para o raciocínio mais difícil, lembrando que gastam mais do plano); manter a crew pequena; e contar ao dono o que cada bot faz, para ele acompanhar e falar com cada um no chat dele. Os outros bots leem que, se a crew precisar de outro bot, devem pedir ao chefe, que o `crew_roster` marca com `chief`.
+- **`suggest_bot`:** aparece para todos os bots, mas só o chefe pode usar; os outros recebem um erro que manda pedir ao chefe. Antes de incomodar o dono, o daemon confere os campos (os de um bot, mais o limite de instruções e o porquê), que o nome está livre na crew e que a crew tem menos de `max_per_crew` bots ativos. Um pedido impossível volta como erro ao chefe.
+- **Aprovação:** a sugestão vira um pedido no chat do chefe, pelo mesmo caminho das aprovações (10.1): `approval` com `toolName: "mcp__botloft__suggest_bot"`, entrada até 64 KB e resumo com o nome sugerido. O chefe fica `needs_approval`, e a chamada MCP espera a resposta até `approval_timeout_minutes`. A tool vem liberada por `--allowedTools mcp__botloft`, então o Claude Code não pede permissão antes: quem decide é o dono, pelo cartão.
+- **Resposta:** permitir cria o bot na crew do chefe, com modo Manual e o modelo sugerido. O dono pode mudar nome, papel, modelo e instruções antes: `approvals.answer` leva `input`, o JSON da sugestão como ele deixou, que substitui a entrada gravada (o cartão mostra o que foi criado); `input` só vale para sugestões. Negar volta ao chefe com a nota do dono, e nada é criado. Sem resposta no prazo, o chefe lê que pode sugerir de novo depois. O bot novo sobe na hora e aparece na barra lateral, com o próprio chat; o resultado da tool lembra o chefe de mandar a primeira task.
+- **Chefe em `bypass_permissions`:** a sugestão cria o bot na hora, sem cartão, como tudo o que esse modo faz sem perguntar (13). O resultado diz ao chefe que foi criado sem pedir.
+- Bots criados assim são bots comuns: o dono conversa, muda, pausa e arquiva cada um como qualquer outro.
+
 ## 11. Protocolo do app (JSON-RPC 2.0 sobre WebSocket)
 
 Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests com `id`, respostas com `result` ou `error`, notificações do servidor sem `id`. O maior frame aceito do app é de 32 MiB, por causa dos anexos.
@@ -440,9 +454,10 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `system.status` | | versão, uptime, versão e caminho do claude (`claudeVersion`, `claudePath`), `runtimeError` (por que os bots não sobem), `claudeSignedIn` (7.3; `null` antes de conferir), `account` (o dono para a área da conta do app: `name`, o nome de exibição da conta do Windows, `GetUserNameExW(NameDisplay)`, ou o nome de usuário sem ele, lido uma vez; e `claude`, a conta do Claude com `email`, `plan` e `organization`, ou `null` desconectado), backlog de entrega, `usage` (uso da conta, 8.1) |
 | `system.refresh` | | pede uma nova conferência do Claude Code (login e, se falhou, o executável) e responde na hora com o `system.status` atual; o app relê o status até ver o resultado |
 | `crews.list` | | `Crew[]` |
-| `crews.create` | `name, workFolder?` | `Crew` |
+| `crews.create` | `name, workFolder?, lead?` (`{name, role, instructions, model?}`: o chefe, 10.2) | `Crew` |
 | `crews.rename` | `crewId, name` | `Crew` |
 | `crews.setPaused` | `crewId, paused` | `Crew` |
+| `crews.setLead` | `crewId, botId` (ou `null`, sem chefe) | `Crew`; o chefe antigo e o novo reiniciam quando nada estiver em andamento (10.2) |
 | `crews.setWorkFolder` | `crewId, workFolder` (caminho, ou `null` para voltar à `shared\`) | `Crew`; os bots reiniciam na pasta nova quando nada estiver em andamento (5) |
 | `crews.archive` | `crewId` | `Crew` |
 | `bots.list` | `crewId?` | `Bot[]` |
@@ -454,7 +469,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `bots.restart` | `botId, fresh?` | `Bot` |
 | `bots.archive` | `botId` | `Bot` |
 | `chat.history` | `botId, before?, limit?` | `ChatItem[]`, mais novo primeiro; `limit` de 1 a 200, 50 se ausente |
-| `approvals.answer` | `approvalId, allow, note?` | `Approval` |
+| `approvals.answer` | `approvalId, allow, note?, input?` (`input`: a sugestão de bot como o dono a deixou, 10.2) | `Approval` |
 | `messages.send` | `botId, body, attachments?` (`[{name, mediaType, data}]`, data em base64) | `Message` |
 | `messages.list` | `crewId?, botId?, before?, limit?` | `Message[]` |
 | `attachments.read` | `attachmentId` | `{mediaType, data}`, data em base64 (9.5) |
@@ -462,7 +477,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `deliveries.retry` | `deliveryId` | `Delivery` |
 | `tasks.list` | `crewId?, status?` | `Task[]` |
 
-`Crew` traz `workFolder`, o caminho da pasta de trabalho (a escolhida ou a `shared\`), e `workFolderChosen`. `Bot` traz também `permissionMode`, `model` e `modelInUse` (7.4) e `lastActivity`: o último item do chat resumido em uma linha, para a lista de conversas: `kind` (`owner`, `message`, `reply`, `tool`, `approval`, `notice`), `text` e `at`. O `text` não tem palavras do daemon: a mensagem do dono vem sem "You:" e a aprovação só com o nome da ferramenta, e o app completa no idioma do dono.
+`Crew` traz `workFolder`, o caminho da pasta de trabalho (a escolhida ou a `shared\`), `workFolderChosen` e `leadBotId`, o chefe (10.2). `Bot` traz também `permissionMode`, `model` e `modelInUse` (7.4) e `lastActivity`: o último item do chat resumido em uma linha, para a lista de conversas: `kind` (`owner`, `message`, `reply`, `tool`, `approval`, `notice`), `text` e `at`. O `text` não tem palavras do daemon: a mensagem do dono vem sem "You:" e a aprovação só com o nome da ferramenta, e o app completa no idioma do dono.
 
 ### 11.3 Notificações do servidor
 
@@ -486,7 +501,7 @@ Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations 
 
 | Tabela | Colunas principais |
 |---|---|
-| `crews` | `id, name, slug, paused, work_dir, created_at, archived_at` (`work_dir` é a pasta escolhida; `NULL` usa a `shared`) |
+| `crews` | `id, name, slug, paused, work_dir, lead_bot_id, created_at, archived_at` (`work_dir` é a pasta escolhida; `NULL` usa a `shared`. `lead_bot_id` é o chefe, sem chave estrangeira: ele é gravado junto com a crew) |
 | `bots` | `id, crew_id, name, handle, slug, role, instructions, color, paused, permission_mode, model, model_in_use, token_hash, session_id, created_at, archived_at` |
 | `messages` | `id, crew_id, from_kind (owner/bot/system), from_bot_id, to_bot_id, kind (note/task/result/system), body, task_id, created_at` |
 | `attachments` | `id, message_id, name, media_type, size, path, created_at` |
@@ -508,7 +523,7 @@ Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations 
 - Nome de anexo vira só o nome do arquivo (sem `..`, sem pasta, sem caracteres proibidos no Windows) antes de ir para o disco.
 - Isolamento entre bots é cooperativo (mesmo usuário do Windows). Documentar isso no README sem prometer sandbox.
 - Pasta de trabalho escolhida (5): todos os bots da crew a editam como a própria pasta. Por isso ela não pode tocar a pasta de dados do Botloft (segredos, banco) nem conter os workspaces de todos os bots, e não pode ser um disco inteiro.
-- Modo `bypass_permissions` (7.4): o bot faz tudo sem perguntar. As regras `deny` de leitura só cobrem as ferramentas de arquivo do Claude Code, alguns comandos do Bash (`cat`, `head`, `tail`, `sed`, `tee`) e redirecionamentos, não um script em Python ou Node, e o Windows nativo não tem sandbox. Um bot nesse modo pode ler `secrets\owner.token`, o banco e as pastas de outros bots, e uma mensagem de outra pessoa pode levá-lo a isso. O app só liga o modo depois de uma confirmação que diz isso, e o bot fica marcado em vermelho (15.1).
+- Modo `bypass_permissions` (7.4): o bot faz tudo sem perguntar. As regras `deny` de leitura só cobrem as ferramentas de arquivo do Claude Code, alguns comandos do Bash (`cat`, `head`, `tail`, `sed`, `tee`) e redirecionamentos, não um script em Python ou Node, e o Windows nativo não tem sandbox. Um bot nesse modo pode ler `secrets\owner.token`, o banco e as pastas de outros bots, e uma mensagem de outra pessoa pode levá-lo a isso. O app só liga o modo depois de uma confirmação que diz isso, e o bot fica marcado em vermelho (15.1). Um chefe nesse modo também cria bots sem perguntar (10.2), e a confirmação diz isso quando o bot é o chefe.
 
 ## 14. Integração com o Windows
 
@@ -572,7 +587,9 @@ Layout, como um app de mensagens:
 - **Modo do bot**, no compositor, ao lado do clipe, como no Claude Code: um botão com o modo atual abre um menu para cima, "Modo", com Automático, Manual, Aceitar edições e Plano, cada um com uma linha que fala do bot pelo nome ("Scout decide o que precisa do seu OK") e a marca no atual. Separado, "Ignorar permissões" com o botão Ativar, que abre uma confirmação dizendo que o bot não fica preso à pasta dele (13). Nesse modo o botão fica vermelho e o cabeçalho mostra "Não pergunta nada" em vermelho. Com o bot ocupado, uma linha acima do compositor avisa que ele muda de modo quando terminar o que está fazendo.
 - **Modelo do bot**, no compositor, ao lado do botão de enviar: mostra o modelo em uso ("Opus 5.5"; antes do primeiro turno, o nome escolhido ou "Padrão") e abre um menu para cima, "Modelo", com Padrão do plano, Fable, Opus, Sonnet e Haiku. Cada um tem uma linha que fala do bot pelo nome ("Scout fica rápido e capaz, bom para quase tudo"; o padrão diz qual modelo é hoje), e o pé do menu lembra que modelos mais capazes gastam o limite do plano mais rápido. A janela de criar e editar bot tem a mesma escolha. Com o bot ocupado, a mesma linha acima do compositor avisa que ele troca quando terminar.
 - **Área principal com uma crew:** a timeline (messages entre os bots e do dono) e as tasks. Embaixo do nome, "Trabalha em <pasta>", que abre a pasta no Explorer; o menu da crew tem "Abrir pasta de trabalho" e "Mudar pasta de trabalho…", que abre o seletor de pastas do Windows e confirma antes de mudar, avisando que cada bot reinicia quando terminar o que está fazendo.
-- **Nova crew:** nome e "Pasta de trabalho", com "Escolher pasta…" (o seletor do Windows); sem escolha, "Uma pasta nova dentro do Botloft" (a `shared\`).
+- **Nova crew:** nome; "Para que é esta equipe?", o objetivo que vira as instruções do chefe, com a explicação de que a equipe começa com um Chefe que planeja o trabalho e sugere os bots de que precisa; "Pasta de trabalho", com "Escolher pasta…" (o seletor do Windows; sem escolha, "Uma pasta nova dentro do Botloft", a `shared\`); e "Modelo do Chefe". Criada, o app abre o chat do chefe.
+- **Chefe:** uma coroa ao lado do nome na barra lateral e nos cartões da crew, e "Chefe" no cabeçalho do bot, com a dica "Lidera <crew>: planeja o trabalho e sugere bots novos". O menu do bot tem "Tornar chefe da equipe" ou "Deixar de ser chefe".
+- **Sugestão de bot** (10.2): um cartão no chat do chefe, "<chefe> sugere um bot novo", com o porquê e os campos editáveis Nome, Modelo, Função e Instruções, a linha de que o bot começa na hora e recebe o trabalho do chefe, um campo para dizer ao chefe por que não, e os botões Criar bot e Agora não. Respondido, vira uma linha ("Você criou Designer", "Você recusou Designer") que abre o que foi sugerido.
 - **Detalhes do bot** (pasta, instruções, sessão) ficam num painel, fora do caminho da conversa.
 
 ### 15.2 Comandos Tauri
@@ -703,6 +720,7 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28. "Co
 | `ExitPlanMode` em `-p` | 10.1 | A lista de ferramentas diz que ele pede permissão. Não visto: se o pedido chega à tool de aprovação com `{plan}` na entrada, e para qual modo o bot vai depois de aprovado (o daemon segue o `system/init` do turno seguinte) | manual (PR) |
 | Modelo em `-p` | 7.4 | Confirmado (`model-config`, `sessions`): apelidos `fable`, `opus`, `sonnet`, `haiku` (e `best`, `opusplan`, `[1m]`, não usados); sem `model` nas settings, vale o padrão da conta; `--resume` mantém o modelo da sessão, a menos que `--model` escolha outro. **Visto com 2.1.284** (plano Max): sem `--model`, o `system/init` traz `"model": "claude-opus-5-5"`; um modelo inexistente sobe o processo, o init o repete, e cada turno termina com `assistant.error: "model_not_found"` e `result.is_error`; `/model haiku` mandado como mensagem troca o modelo no meio da sessão, com uma resposta sintética e sem custo, mas o daemon reinicia o processo em vez disso, como na troca de modo. Qual é o padrão em cada plano, e quais modelos cada plano tem, não está documentado | feito |
 | `--add-dir` em `-p` | 5, 7.4 | Confirmado (`cli-reference`, `memory`): pastas a mais que o Claude Code trata como de trabalho; o `CLAUDE.md` delas só carrega com `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1`. **Testado com 2.1.284** (`--setting-sources project,local`, `acceptEdits`): com a flag e a variável, o bot citou o `CLAUDE.md` da pasta sem abrir arquivo e gravou nela sem pedir; sem a flag, o `Write` na mesma pasta foi negado (`permission_denials`). A flag aceita vários valores: a linha de comando do daemon não tem prompt posicional, então nada é engolido | feito |
+| Chefe e `suggest_bot` com o Claude Code real | 10.2 | **Testado com 2.1.284** (daemon e app de dev): a crew criada pelo app subiu o chefe com `--model sonnet` e `--add-dir` na pasta da crew. Pedido um site, o chefe carregou `crew_roster`, `suggest_bot` e `send_message` pelo `ToolSearch` e sugeriu um Designer com papel, instruções, modelo e porquê; a chamada esperou o cartão. Com o modelo trocado para `haiku` no cartão, o bot subiu com `--model haiku`, e o chefe citou a troca. O chefe mandou uma task, o Designer entregou com `complete_task`, e o chefe conferiu o resultado e corrigiu o HTML. O log de `debug` não teve texto de mensagem | feito |
 | Regras `allow` do projeto em `-p` sem confiança | 7.4 | Confirmado (`permissions`): não são aplicadas numa pasta nunca confiada; `deny` vale sempre. Por isso `--allowedTools mcp__botloft` | M4.1 |
 | `--session-id`, `--resume` em `-p` | 7.3 | Confirmado (`cli-reference`, `sessions`): a sessão retoma histórico e modelo; flags como `--mcp-config` têm de ser passadas de novo. **Testado com 2.1.284**: depois de reiniciar o bot e depois de reiniciar o daemon, o bot lembrou arquivos, a imagem e a mensagem de outro bot | feito (M4.1) |
 | Tools MCP adiadas | 10 | **Visto com 2.1.284**: as tools do `botloft` chegam adiadas; antes da primeira `send_message` o bot chama `ToolSearch` com `select:mcp__botloft__send_message`. O chat mostra isso como "load send_message" | feito (M4.1) |

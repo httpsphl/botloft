@@ -14,6 +14,7 @@ import {
   type LucideIcon,
   Send,
   SquareTerminal,
+  UserPlus,
   Users,
   Wrench,
   X,
@@ -39,6 +40,7 @@ const ICONS: Record<string, LucideIcon> = {
   Task: Users,
   Agent: Users,
   send_message: Send,
+  suggest_bot: UserPlus,
 };
 
 /** `mcp__botloft__send_message` reads as `send_message`. */

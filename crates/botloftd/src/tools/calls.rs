@@ -17,7 +17,7 @@ use tracing::warn;
 use super::Failure;
 use super::catalog::{COMPLETE_TASK, CREW_ROSTER, MY_TASKS, SEND_MESSAGE};
 use crate::service::tasks::{self, BotMessage};
-use crate::service::{ApiError, bots};
+use crate::service::{ApiError, bots, lead};
 use crate::state::Daemon;
 
 /// What the bot reads when a tool fails.
@@ -38,6 +38,11 @@ pub(super) fn call(daemon: &Daemon, bot: &BotId, params: &Value) -> Result<Value
         MY_TASKS => parse(arguments).and_then(|args| my_tasks(daemon, bot, args)),
         other => return Err(invalid(&format!("Unknown tool: {other}"))),
     };
+    Ok(tool_result(outcome))
+}
+
+/// A tool result: the value as JSON text, or the error the bot reads.
+pub(super) fn tool_result(outcome: Outcome) -> Value {
     let (text, is_error) = match outcome {
         Ok(value) => (
             serde_json::to_string_pretty(&value).unwrap_or_default(),
@@ -45,23 +50,23 @@ pub(super) fn call(daemon: &Daemon, bot: &BotId, params: &Value) -> Result<Value
         ),
         Err(message) => (message, true),
     };
-    Ok(json!({
+    json!({
         "content": [{ "type": "text", "text": text }],
         "isError": is_error,
-    }))
+    })
 }
 
 fn invalid(message: &str) -> Failure {
     Failure::new(StatusCode::OK, error_code::INVALID_PARAMS, message)
 }
 
-fn parse<T: DeserializeOwned>(arguments: Value) -> Result<T, String> {
+pub(super) fn parse<T: DeserializeOwned>(arguments: Value) -> Result<T, String> {
     serde_json::from_value(arguments).map_err(|err| format!("invalid arguments: {err}"))
 }
 
 /// The message a bot may see. Internal errors can name paths; they go to
 /// the log instead.
-fn explain(err: ApiError) -> String {
+pub(super) fn explain(err: ApiError) -> String {
     match err {
         ApiError::Internal(_) | ApiError::Workspace(_) => {
             warn!(error = %err, "a tool call failed");
@@ -81,10 +86,21 @@ fn roster(daemon: &Daemon, bot: &BotId) -> Outcome {
         .iter()
         .filter(|other| other.id != me.id)
         .map(|other| {
-            json!({ "handle": other.handle, "name": other.name, "role": other.role, "state": other.state })
+            json!({
+                "handle": other.handle,
+                "name": other.name,
+                "role": other.role,
+                "state": other.state,
+                "chief": lead::is_lead(&crew, &other.id),
+            })
         })
         .collect();
-    Ok(json!({ "crew": crew.name, "you": me.handle, "bots": others }))
+    Ok(json!({
+        "crew": crew.name,
+        "you": me.handle,
+        "you_lead": lead::is_lead(&crew, &me.id),
+        "bots": others,
+    }))
 }
 
 #[derive(Deserialize)]

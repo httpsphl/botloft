@@ -126,6 +126,33 @@ pub struct CrewsCreateParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub work_folder: Option<String>,
+    /// The chief, created with the crew (spec 10.2).
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub lead: Option<NewLead>,
+}
+
+/// The bot that leads a new crew. The app writes its name and role in the
+/// owner's language; the instructions carry the crew's goal.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct NewLead {
+    pub name: String,
+    pub role: String,
+    pub instructions: String,
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub model: Option<BotModel>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct CrewsSetLeadParams {
+    pub crew_id: CrewId,
+    /// `null` leaves the crew without a chief.
+    pub bot_id: Option<BotId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -9,6 +9,7 @@
 mod calls;
 mod catalog;
 mod era;
+mod suggest;
 
 use std::sync::Arc;
 
@@ -30,8 +31,9 @@ use crate::state::Daemon;
 const CACHE_TTL_MS: u64 = 60 * 60 * 1000;
 
 const INSTRUCTIONS: &str = "Tools to work with your Botloft crew: see who is in it, send notes \
-    or tasks to other bots, and report the result of tasks assigned to you. The owner writes to \
-    you directly; messages from other bots and from Botloft start with [botloft].";
+    or tasks to other bots, report the result of tasks assigned to you and, for the crew's chief, \
+    suggest new bots. The owner writes to you directly; messages from other bots and from Botloft \
+    start with [botloft].";
 
 /// A JSON-RPC error with the HTTP status it goes out with.
 struct Failure {
@@ -107,11 +109,15 @@ pub async fn handle(
         return StatusCode::ACCEPTED.into_response();
     };
     let answered = match era(&headers, &request) {
-        // Holds the request until the owner answers (spec 10.1).
-        Ok(era) if is_permission_prompt(&request) => {
+        // Both hold the request until the owner answers (spec 10.1, 10.2).
+        Ok(era) if called(&request) == Some(catalog::PERMISSION_PROMPT) => {
             permission(&daemon, &bot, generation, &request)
                 .await
                 .map(|result| decorate(era, &request, result))
+        }
+        Ok(era) if called(&request) == Some(catalog::SUGGEST_BOT) => {
+            let result = suggest::suggest(&daemon, &bot, generation, arguments(&request)).await;
+            Ok(decorate(era, &request, result))
         }
         Ok(era) => answer(&daemon, &bot, era, &request),
         Err(failure) => Err(failure),
@@ -139,14 +145,25 @@ fn json_response(status: StatusCode, body: String) -> Response {
     (status, [(header::CONTENT_TYPE, "application/json")], body).into_response()
 }
 
-fn is_permission_prompt(request: &Request) -> bool {
-    request.method == "tools/call"
-        && request
-            .params
-            .as_ref()
-            .and_then(|params| params.get("name"))
-            .and_then(Value::as_str)
-            == Some(catalog::PERMISSION_PROMPT)
+/// The tool a `tools/call` names.
+fn called(request: &Request) -> Option<&str> {
+    if request.method != "tools/call" {
+        return None;
+    }
+    request
+        .params
+        .as_ref()
+        .and_then(|params| params.get("name"))
+        .and_then(Value::as_str)
+}
+
+fn arguments(request: &Request) -> Value {
+    request
+        .params
+        .as_ref()
+        .and_then(|params| params.get("arguments"))
+        .cloned()
+        .unwrap_or_else(|| json!({}))
 }
 
 async fn permission(
@@ -155,19 +172,14 @@ async fn permission(
     generation: u64,
     request: &Request,
 ) -> Result<Value, Failure> {
-    let arguments = request
-        .params
-        .as_ref()
-        .and_then(|params| params.get("arguments"))
-        .cloned()
-        .unwrap_or_else(|| json!({}));
-    let args: approvals::PromptArgs = serde_json::from_value(arguments).map_err(|err| {
-        Failure::new(
-            StatusCode::OK,
-            error_code::INVALID_PARAMS,
-            format!("invalid arguments: {err}"),
-        )
-    })?;
+    let args: approvals::PromptArgs =
+        serde_json::from_value(arguments(request)).map_err(|err| {
+            Failure::new(
+                StatusCode::OK,
+                error_code::INVALID_PARAMS,
+                format!("invalid arguments: {err}"),
+            )
+        })?;
     let decision = approvals::prompt(daemon, bot, generation, args).await;
     Ok(json!({ "content": [{ "type": "text", "text": decision }], "isError": false }))
 }

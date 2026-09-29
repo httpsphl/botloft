@@ -32,16 +32,62 @@ pub fn list(daemon: &Daemon, params: BotsListParams) -> ApiResult<Vec<Bot>> {
 }
 
 pub fn create(daemon: &Daemon, params: BotsCreateParams) -> ApiResult<Bot> {
-    let name = validate::name("name", &params.name)?;
-    let role = validate::role(&params.role)?;
-    let instructions = validate::instructions(&params.instructions)?;
+    let new = NewBot::check(
+        &params.name,
+        &params.role,
+        &params.instructions,
+        params.color,
+        params.model,
+    )?;
     let store = daemon.store();
     let crew = crews::active(&store, &params.crew_id)?;
+    let record = insert(daemon, &store, &crew, BotId::generate(), new)?;
+    let bot = changed(daemon, &store, &crew, record);
+    daemon.supervisor.wake();
+    Ok(bot)
+}
 
-    let handle = slug::slugify(&name, "bot");
-    ensure_handle_free(&store, &crew.id, &handle, None)?;
-    let color = match params.color {
-        Some(color) => parse_color(&color)?,
+/// The fields of a new bot, checked.
+pub(crate) struct NewBot {
+    pub name: String,
+    pub role: String,
+    pub instructions: String,
+    pub color: Option<String>,
+    pub model: BotModel,
+}
+
+impl NewBot {
+    pub(crate) fn check(
+        name: &str,
+        role: &str,
+        instructions: &str,
+        color: Option<String>,
+        model: Option<BotModel>,
+    ) -> ApiResult<Self> {
+        Ok(Self {
+            name: validate::name("name", name)?,
+            role: validate::role(role)?,
+            instructions: validate::instructions(instructions)?,
+            color: color.as_deref().map(parse_color).transpose()?,
+            model: model.unwrap_or(BotModel::Default),
+        })
+    }
+}
+
+/// Saves a bot in `crew` and writes its workspace, under the caller's lock
+/// on the store; the caller announces it and wakes the supervisor. When
+/// `crew.lead_bot_id` already names `id`, its rules say it leads.
+pub(crate) fn insert(
+    daemon: &Daemon,
+    store: &Store,
+    crew: &Crew,
+    id: BotId,
+    new: NewBot,
+) -> ApiResult<BotRecord> {
+    let handle = slug::slugify(&new.name, "bot");
+    ensure_handle_free(store, &crew.id, &handle, None)?;
+    let color = match new.color {
+        Some(color) => color,
         None => avatar::palette_color(store.count_bots(&crew.id)?).to_owned(),
     };
     let slug = pick_slug(&handle, |candidate| {
@@ -51,26 +97,24 @@ pub fn create(daemon: &Daemon, params: BotsCreateParams) -> ApiResult<Bot> {
     })?;
 
     let record = BotRecord {
-        id: BotId::generate(),
+        id,
         crew_id: crew.id.clone(),
-        name,
+        name: new.name,
         handle,
         slug,
-        role,
-        instructions,
+        role: new.role,
+        instructions: new.instructions,
         color,
         paused: false,
         permission_mode: PermissionMode::Default,
-        model: params.model.unwrap_or(BotModel::Default),
+        model: new.model,
         model_in_use: None,
         created_at: now_ms(),
         archived_at: None,
     };
-    workspace::prepare_bot(daemon.workspace_env(), &crew, &record).map_err(ApiError::Workspace)?;
+    workspace::prepare_bot(daemon.workspace_env(), crew, &record).map_err(ApiError::Workspace)?;
     store.insert_bot(&record)?;
-    let bot = changed(daemon, &store, &crew, record);
-    daemon.supervisor.wake();
-    Ok(bot)
+    Ok(record)
 }
 
 pub fn update(daemon: &Daemon, params: BotsUpdateParams) -> ApiResult<Bot> {
@@ -138,6 +182,7 @@ pub fn archive(daemon: &Daemon, params: BotIdParams) -> ApiResult<Bot> {
     }
     record.archived_at = Some(now_ms());
     store.update_bot(&record)?;
+    super::lead::forget_archived(daemon, &store, &crew, &record.id)?;
     let bot = changed(daemon, &store, &crew, record);
     daemon.supervisor.wake();
     Ok(bot)
@@ -203,7 +248,7 @@ pub(crate) fn active(store: &Store, id: &BotId) -> ApiResult<(Crew, BotRecord)> 
     Ok((crew, record))
 }
 
-fn ensure_handle_free(
+pub(crate) fn ensure_handle_free(
     store: &Store,
     crew: &CrewId,
     handle: &str,

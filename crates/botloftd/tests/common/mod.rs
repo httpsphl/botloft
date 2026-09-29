@@ -64,6 +64,7 @@ pub fn bot_settings() -> BotSettings {
     BotSettings {
         approval_timeout: Duration::from_secs(3),
         attachment_max_bytes: 1024 * 1024,
+        max_per_crew: 3,
     }
 }
 

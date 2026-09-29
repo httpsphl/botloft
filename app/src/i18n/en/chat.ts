@@ -100,6 +100,8 @@ export const chat = {
       `${bot} will edit files, run commands and use the internet on this computer without asking you first.`,
     bypassRisk:
       "It is not limited to its folder: it can read and change your other files, other bots' files and Botloft's own files. A message from someone else could get it to do something you did not want.",
+    bypassChief: (bot: string) =>
+      `${bot} leads its crew, so it will also create new bots without asking you.`,
     bypassAdvice:
       "Turn this on only for a bot you trust with everything, and only while you need it.",
     badge: "Asks nothing",
@@ -131,6 +133,24 @@ export const chat = {
     failed: "Could not change the model",
     later: (bot: string, model: string) =>
       `${bot} switches to ${model} when it finishes what it's doing.`,
+  },
+  suggestion: {
+    title: (bot: string) => `${bot} suggests a new bot`,
+    why: "Why",
+    name: "Name",
+    role: "Role",
+    model: "Model",
+    instructions: "Instructions",
+    startsNow: (bot: string) => `It starts right away and gets its work from ${bot}.`,
+    noteLabel: (bot: string) => `What to tell ${bot} if you say no`,
+    notePlaceholder: (bot: string) => `If you say no, tell ${bot} why (optional)`,
+    create: "Create bot",
+    decline: "Not now",
+    createFailed: "Could not create the bot",
+    declineFailed: "Could not send the answer",
+    created: (name: string) => `You created ${name}`,
+    declined: (name: string) => `You said no to ${name}`,
+    expired: (name: string) => `${name} was not answered in time`,
   },
   plan: {
     ready: (bot: string) => `${bot} made a plan and wants to go ahead`,

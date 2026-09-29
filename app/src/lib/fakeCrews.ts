@@ -2,6 +2,7 @@
 // pausing and archiving, with the notifications each change sends.
 
 import type { FakeBotloft, Handlers } from "./fake";
+import { botHandlers } from "./fakeBots";
 import { checkName, invalid, slugify } from "./fakeRules";
 import type { Crew } from "./protocol.gen";
 
@@ -20,7 +21,7 @@ function checkFolder(folder: string): string {
 export function crewHandlers(fake: FakeBotloft): Pick<Handlers, CrewMethods> {
   return {
     "crews.list": () => [...fake.crews.values()].filter((crew) => crew.archivedAt === null),
-    "crews.create": ({ name, workFolder }) => {
+    "crews.create": ({ name, workFolder, lead }) => {
       const checked = checkName(name);
       const slug = slugify(checked, "crew");
       const crew: Crew = {
@@ -29,11 +30,26 @@ export function crewHandlers(fake: FakeBotloft): Pick<Handlers, CrewMethods> {
         slug,
         workFolder: workFolder === undefined ? sharedFolder(slug) : checkFolder(workFolder),
         workFolderChosen: workFolder !== undefined,
+        leadBotId: null,
         paused: false,
         createdAt: fake.now,
         archivedAt: null,
       };
       fake.crews.set(crew.id, crew);
+      fake.changedCrew(crew);
+      if (lead) {
+        const chief = botHandlers(fake)["bots.create"]({ crewId: crew.id, ...lead });
+        crew.leadBotId = chief.id;
+        fake.changedCrew(crew);
+      }
+      return crew;
+    },
+    "crews.setLead": ({ crewId, botId }) => {
+      const crew = fake.crew(crewId);
+      if (botId !== null && fake.bot(botId).crewId !== crewId) {
+        throw invalid(`bot ${botId} is not in crew ${crewId}`);
+      }
+      crew.leadBotId = botId;
       return fake.changedCrew(crew);
     },
     "crews.rename": ({ crewId, name }) => {

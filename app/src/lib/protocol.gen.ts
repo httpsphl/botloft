@@ -71,7 +71,12 @@ workFolder: string,
 /**
  * Whether the owner chose `work_folder`.
  */
-workFolderChosen: boolean, paused: boolean, 
+workFolderChosen: boolean, 
+/**
+ * The bot that leads the crew and may suggest new bots (spec 10.2);
+ * `null` when the crew has no chief.
+ */
+leadBotId: BotId | null, paused: boolean, 
 /**
  * Unix time in milliseconds.
  */
@@ -270,7 +275,11 @@ export type CrewsCreateParams = { name: string,
  * Absolute path of the folder the crew works in; the crew's `shared`
  * folder when absent.
  */
-workFolder?: string, };
+workFolder?: string, 
+/**
+ * The chief, created with the crew (spec 10.2).
+ */
+lead?: NewLead, };
 
 export type CrewsRenameParams = { crewId: CrewId, name: string, };
 
@@ -281,6 +290,18 @@ export type CrewsSetWorkFolderParams = { crewId: CrewId,
  * `null` goes back to the crew's `shared` folder.
  */
 workFolder: string | null, };
+
+/**
+ * The bot that leads a new crew. The app writes its name and role in the
+ * owner's language; the instructions carry the crew's goal.
+ */
+export type NewLead = { name: string, role: string, instructions: string, model?: BotModel, };
+
+export type CrewsSetLeadParams = { crewId: CrewId, 
+/**
+ * `null` leaves the crew without a chief.
+ */
+botId: BotId | null, };
 
 export type CrewIdParams = { crewId: CrewId, };
 
@@ -604,7 +625,12 @@ export type ApprovalsAnswerParams = { approvalId: ApprovalId, allow: boolean,
 /**
  * Passed to the bot with a denial.
  */
-note?: string, };
+note?: string, 
+/**
+ * A bot suggestion as the owner changed it before allowing it, in the
+ * JSON of the tool's input (spec 10.2). Ignored for other requests.
+ */
+input?: string, };
 
 /** Params and result of every request method. */
 export interface RpcMethods {
@@ -616,6 +642,7 @@ export interface RpcMethods {
   "crews.rename": { params: CrewsRenameParams; result: Crew };
   "crews.setPaused": { params: CrewsSetPausedParams; result: Crew };
   "crews.setWorkFolder": { params: CrewsSetWorkFolderParams; result: Crew };
+  "crews.setLead": { params: CrewsSetLeadParams; result: Crew };
   "crews.archive": { params: CrewIdParams; result: Crew };
   "bots.list": { params: BotsListParams; result: Array<Bot> };
   "bots.create": { params: BotsCreateParams; result: Bot };

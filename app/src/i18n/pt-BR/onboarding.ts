@@ -44,7 +44,7 @@ export const onboarding: Messages["onboarding"] = {
   welcome: {
     title: "Boas-vindas ao Botloft",
     intro:
-      "Uma equipe é um grupo de bots do Claude Code que ficam rodando, trocam mensagens entre si e compartilham uma pasta. Comece com uma equipe e um ou dois bots.",
+      "Uma equipe é um grupo de bots do Claude Code que ficam rodando, trocam mensagens entre si e compartilham uma pasta. Cada equipe começa com um Chefe: diga a ele para que é a equipe, e ele planeja o trabalho e sugere os bots de que precisa.",
     botloft: "Botloft",
     running:
       "Rodando em segundo plano. Inicia com o Windows, então seus bots continuam trabalhando depois que você fecha esta janela.",

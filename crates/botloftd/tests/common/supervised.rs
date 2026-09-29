@@ -31,6 +31,7 @@ pub async fn setup() -> Setup {
         CrewsCreateParams {
             name: "Ops".into(),
             work_folder: None,
+            lead: None,
         },
     )
     .expect("crew");
