@@ -1,5 +1,6 @@
 import { CircleCheck, CircleX, LoaderCircle, Plus } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { useT } from "../../i18n";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { CrewDialog } from "../crews/CrewDialog";
@@ -8,73 +9,66 @@ import { SignInButton } from "./SignIn";
 
 /** First run: what is ready, what is not, and the first crew. */
 export function Welcome() {
+  const w = useT().onboarding.welcome;
   const system = useApp((state) => state.system);
   const [creating, setCreating] = useState(false);
 
   let claude: ReactNode;
   if (!system || (system.claudeVersion === null && system.runtimeError === null)) {
-    claude = <Check state="pending" title="Claude Code" detail="Checking…" />;
+    claude = <Check state="pending" title={w.claudeCode} detail={w.checking} />;
   } else if (system.runtimeError) {
     claude = (
       <Check
         state="bad"
-        title="Claude Code"
+        title={w.claudeCode}
         detail={<ClaudeCodeHelp error={system.runtimeError} />}
       />
     );
   } else {
-    claude = <Check state="ok" title="Claude Code" detail={`Version ${system.claudeVersion}`} />;
+    claude = (
+      <Check state="ok" title={w.claudeCode} detail={w.version(system.claudeVersion ?? "")} />
+    );
   }
 
   // Only once Claude Code is there: signing in needs it.
   let account: ReactNode = null;
   if (system && !system.runtimeError && system.claudeVersion !== null) {
     if (system.claudeSignedIn === true) {
-      account = <Check state="ok" title="Claude account" detail="Signed in." />;
+      account = <Check state="ok" title={w.account} detail={w.signedIn} />;
     } else if (system.claudeSignedIn === false) {
       account = (
         <Check
           state="bad"
-          title="Claude account"
+          title={w.account}
           detail={
             <>
-              <p>Your bots work with your Claude account. Sign in once and they are ready.</p>
+              <p>{w.signedOut}</p>
               <SignInButton />
             </>
           }
         />
       );
     } else {
-      account = <Check state="pending" title="Claude account" detail="Checking…" />;
+      account = <Check state="pending" title={w.account} detail={w.checking} />;
     }
   }
 
   return (
     <main className="min-h-0 flex-1 overflow-y-auto p-8">
       <div className="mx-auto max-w-xl">
-        <h1 className="font-semibold text-2xl tracking-tight">Welcome to Botloft</h1>
-        <p className="mt-1 text-ink-soft leading-relaxed">
-          A crew is a group of Claude Code bots that keep running, message each other and share a
-          folder. Start with one crew and a bot or two.
-        </p>
+        <h1 className="font-semibold text-2xl tracking-tight">{w.title}</h1>
+        <p className="mt-1 text-ink-soft leading-relaxed">{w.intro}</p>
         <ul className="mt-6 flex flex-col border border-line bg-panel">
-          <Check
-            state="ok"
-            title="Botloft"
-            detail="Running in the background. It starts with Windows, so your bots keep working after you close this window."
-          />
+          <Check state="ok" title={w.botloft} detail={w.running} />
           {claude}
           {account}
         </ul>
         <div className="mt-4 border border-line bg-panel p-4 text-sm leading-relaxed">
-          <p className="font-semibold">Bots ask before they change things</p>
-          <p className="mt-1 text-ink-soft">
-            When a bot wants to run a command or edit a file, it asks in its chat and waits for you
-            to allow or deny it.
-          </p>
+          <p className="font-semibold">{w.askFirstTitle}</p>
+          <p className="mt-1 text-ink-soft">{w.askFirstBody}</p>
         </div>
         <Button className="mt-6" variant="primary" icon={Plus} onClick={() => setCreating(true)}>
-          Create your first crew
+          {w.createCrew}
         </Button>
       </div>
       {creating && <CrewDialog onClose={() => setCreating(false)} />}
@@ -91,6 +85,7 @@ function Check({
   title: string;
   detail: ReactNode;
 }) {
+  const w = useT().onboarding.welcome;
   const Icon = state === "ok" ? CircleCheck : state === "bad" ? CircleX : LoaderCircle;
   const tone = state === "ok" ? "text-ok" : state === "bad" ? "text-danger" : "text-muted";
   return (
@@ -104,7 +99,7 @@ function Check({
         <p className="font-semibold">
           {title}
           <span className="sr-only">
-            : {state === "ok" ? "ready" : state === "bad" ? "not ready" : "checking"}
+            : {state === "ok" ? w.ready : state === "bad" ? w.notReady : w.stillChecking}
           </span>
         </p>
         <div className="text-ink-soft" data-selectable>

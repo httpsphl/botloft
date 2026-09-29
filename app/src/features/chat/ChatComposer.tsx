@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useT } from "../../i18n";
 import { errorText } from "../../lib/api";
 import { fileSize } from "../../lib/format";
 import { type Bot, FIELD_LIMITS } from "../../lib/protocol.gen";
@@ -21,6 +22,7 @@ import type { Files, PendingFile } from "./useFiles";
 const MAX_HEIGHT_PX = 240;
 
 function Chip({ file, onRemove }: { file: PendingFile; onRemove(): void }) {
+  const t = useT();
   return (
     <li className="relative flex h-14 items-center gap-2 rounded-md border border-line bg-canvas pr-7 pl-1.5">
       {file.preview ? (
@@ -36,7 +38,7 @@ function Chip({ file, onRemove }: { file: PendingFile; onRemove(): void }) {
       </div>
       <button
         type="button"
-        aria-label={`Remove ${file.name}`}
+        aria-label={t.chat.composer.remove(file.name)}
         onClick={onRemove}
         className="absolute top-1 right-1 grid h-5 w-5 place-items-center rounded-full text-muted hover:bg-sunken hover:text-ink"
       >
@@ -59,6 +61,7 @@ export function ChatComposer({
   onSent(): void;
 }) {
   const api = useApi();
+  const t = useT();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const field = useRef<HTMLTextAreaElement>(null);
@@ -128,21 +131,20 @@ export function ChatComposer({
 
   return (
     <form onSubmit={send} className="shrink-0 px-5 pt-2 pb-4">
-      {stopped && (
-        <p className="mb-1.5 text-muted text-xs">
-          {bot.name} is paused. What you send waits until it runs again.
-        </p>
-      )}
+      {stopped && <p className="mb-1.5 text-muted text-xs">{t.chat.composer.paused(bot.name)}</p>}
       <div className="rounded-lg border border-line-strong bg-panel focus-within:border-accent">
         {files.files.length > 0 && (
-          <ul aria-label="Files to send" className="flex flex-wrap gap-2 px-2.5 pt-2.5">
+          <ul
+            aria-label={t.chat.composer.filesToSend}
+            className="flex flex-wrap gap-2 px-2.5 pt-2.5"
+          >
             {files.files.map((file) => (
               <Chip key={file.key} file={file} onRemove={() => files.remove(file.key)} />
             ))}
           </ul>
         )}
         <label htmlFor={fieldId} className="sr-only">
-          Message to {bot.name}
+          {t.chat.composer.label(bot.name)}
         </label>
         <textarea
           id={fieldId}
@@ -152,14 +154,14 @@ export function ChatComposer({
           onChange={(event) => setText(event.target.value)}
           onKeyDown={onKeyDown}
           onPaste={onPaste}
-          placeholder={`Message ${bot.name}`}
+          placeholder={t.chat.composer.placeholder(bot.name)}
           className="block max-h-60 w-full resize-none bg-transparent px-3.5 pt-3 pb-1 leading-relaxed outline-none placeholder:text-muted"
         />
         <div className="flex items-center gap-2 px-2 pb-2">
           <button
             type="button"
-            aria-label="Attach files"
-            title="Attach files (or paste, or drop them on the chat)"
+            aria-label={t.chat.composer.attach}
+            title={t.chat.composer.attachHint}
             onClick={() => picker.current?.click()}
             className="grid h-8 w-8 place-items-center rounded-[3px] text-muted hover:bg-sunken hover:text-ink"
           >
@@ -178,12 +180,12 @@ export function ChatComposer({
           />
           <span className={`flex-1 text-xs ${tooLong ? "text-danger" : "text-muted"}`}>
             {tooLong
-              ? `${text.length}/${FIELD_LIMITS.message} characters`
-              : "Enter to send, Shift+Enter for a new line"}
+              ? t.chat.composer.tooLong(text.length, FIELD_LIMITS.message)
+              : t.chat.composer.keys}
           </span>
           <button
             type="submit"
-            aria-label="Send"
+            aria-label={t.chat.composer.send}
             disabled={empty || tooLong || busy}
             className="grid h-8 w-8 place-items-center rounded-full bg-ink text-canvas hover:bg-ink-soft disabled:opacity-35"
           >

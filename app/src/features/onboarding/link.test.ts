@@ -82,7 +82,7 @@ describe("link to the daemon", () => {
     expect(link.getState().current).toEqual({
       step: "outdated",
       daemonVersion: "0.0.9",
-      error: "The daemon still reports version 0.0.9.",
+      error: "It still reports version 0.0.9.",
     });
     expect(connections).toHaveLength(0);
   });

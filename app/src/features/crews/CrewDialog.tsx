@@ -1,4 +1,5 @@
 import { type FormEvent, useState } from "react";
+import { useT } from "../../i18n";
 import { errorText } from "../../lib/api";
 import { type Crew, FIELD_LIMITS } from "../../lib/protocol.gen";
 import { useApi, useApp } from "../../store/context";
@@ -8,6 +9,7 @@ import { TextField } from "../../ui/Field";
 
 /** Creates a crew, or renames `crew`. */
 export function CrewDialog({ crew, onClose }: { crew?: Crew; onClose(): void }) {
+  const t = useT();
   const api = useApi();
   const putCrew = useApp((state) => state.putCrew);
   const selectCrew = useApp((state) => state.selectCrew);
@@ -37,29 +39,25 @@ export function CrewDialog({ crew, onClose }: { crew?: Crew; onClose(): void }) 
   const formId = "crew-form";
   return (
     <Dialog
-      title={crew ? "Rename crew" : "New crew"}
+      title={crew ? t.crews.dialog.renameTitle : t.crews.newCrew}
       onClose={onClose}
       footer={
         <>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={onClose}>{t.common.cancel}</Button>
           <Button variant="primary" type="submit" form={formId} disabled={busy}>
-            {crew ? "Rename" : "Create crew"}
+            {crew ? t.crews.rename : t.crews.dialog.create}
           </Button>
         </>
       }
     >
       <form id={formId} onSubmit={submit} className="flex flex-col gap-3">
         <TextField
-          label="Name"
+          label={t.crews.dialog.name}
           value={name}
           max={FIELD_LIMITS.name}
           onChange={(event) => setName(event.target.value)}
-          placeholder="Research"
-          hint={
-            crew
-              ? `The folder keeps its name (${crew.slug}).`
-              : "Bots in a crew can message each other and share a folder."
-          }
+          placeholder={t.crews.dialog.namePlaceholder}
+          hint={crew ? t.crews.dialog.renameHint(crew.slug) : t.crews.dialog.createHint}
           autoFocus
           required
         />

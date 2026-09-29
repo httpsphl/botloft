@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react";
+import { Check, type LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "./Button";
 
@@ -7,6 +7,8 @@ export interface MenuItem {
   icon?: LucideIcon;
   danger?: boolean;
   disabled?: boolean;
+  /** Makes the item one of a set of choices, marked when chosen. */
+  checked?: boolean;
   onSelect(): void;
 }
 
@@ -56,11 +58,13 @@ export function Menu({
           role="menu"
           className="absolute top-full right-0 z-30 mt-1 min-w-60 border border-line-strong bg-panel py-1"
         >
-          {items.map(({ label: itemLabel, icon: Icon, danger, disabled, onSelect }) => (
+          {items.map(({ label: itemLabel, icon: Icon, danger, disabled, checked, onSelect }) => (
             <button
               key={itemLabel}
               type="button"
-              role="menuitem"
+              {...(checked === undefined
+                ? { role: "menuitem" }
+                : { role: "menuitemradio", "aria-checked": checked })}
               disabled={disabled}
               onClick={() => {
                 setOpen(false);
@@ -69,6 +73,9 @@ export function Menu({
               className={`flex h-8 w-full items-center gap-2 whitespace-nowrap px-3 text-left text-sm hover:bg-sunken disabled:opacity-45 ${danger ? "text-danger" : "text-ink"}`}
             >
               {Icon && <Icon aria-hidden size={14} />}
+              {checked !== undefined && (
+                <Check aria-hidden size={14} className={checked ? "" : "invisible"} />
+              )}
               {itemLabel}
             </button>
           ))}

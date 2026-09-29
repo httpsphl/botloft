@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { useState } from "react";
+import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
@@ -10,8 +11,9 @@ import { stateView } from "./BotStateBadge";
 
 /** A bot's conversation, with its details in a side panel (spec 15.1). */
 export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
+  const t = useT();
   const [details, setDetails] = useState(false);
-  const view = stateView(bot, crew.paused);
+  const view = stateView(bot, crew.paused, t);
 
   return (
     <section aria-label={bot.name} className="flex min-h-0 flex-1 flex-col">
@@ -39,11 +41,12 @@ function Notices({
   crew: Crew;
   view: ReturnType<typeof stateView>;
 }) {
+  const t = useT();
   const notices = [];
   if (crew.paused && !bot.paused) {
     notices.push(
-      <Callout key="crew" title={`${crew.name} is paused`}>
-        Its bots stay stopped until you resume the crew.
+      <Callout key="crew" title={t.bots.notices.crewPaused(crew.name)}>
+        {t.bots.notices.crewPausedBody}
       </Callout>,
     );
   }
@@ -63,36 +66,37 @@ function Notices({
 }
 
 function Details({ bot, onClose }: { bot: Bot; onClose(): void }) {
+  const words = useT().bots.details;
   return (
     <aside
-      aria-label={`About ${bot.name}`}
+      aria-label={words.title(bot.name)}
       className="flex w-80 shrink-0 flex-col border-line border-l bg-panel"
     >
       <header className="flex h-11 shrink-0 items-center justify-between border-line border-b pr-1.5 pl-4">
-        <h2 className="font-semibold text-sm">About {bot.name}</h2>
-        <Button variant="ghost" size="sm" icon={X} label="Close details" onClick={onClose} />
+        <h2 className="font-semibold text-sm">{words.title(bot.name)}</h2>
+        <Button variant="ghost" size="sm" icon={X} label={words.close} onClick={onClose} />
       </header>
       <dl className="flex min-h-0 flex-col gap-4 overflow-y-auto p-4 text-sm">
         <div>
-          <dt className="text-muted text-xs">Role</dt>
-          <dd className="mt-0.5 text-ink-soft">{bot.role || "No role yet."}</dd>
+          <dt className="text-muted text-xs">{words.role}</dt>
+          <dd className="mt-0.5 text-ink-soft">{bot.role || words.noRole}</dd>
         </div>
         <div>
-          <dt className="text-muted text-xs">Folder</dt>
+          <dt className="text-muted text-xs">{words.folder}</dt>
           <dd className="mt-0.5 break-all font-mono text-xs" data-selectable>
             {bot.workspace}
           </dd>
         </div>
         <div>
-          <dt className="text-muted text-xs">Process</dt>
+          <dt className="text-muted text-xs">{words.process}</dt>
           <dd className="mt-0.5 font-mono text-xs">
-            {bot.generation === null ? "not started" : `generation ${bot.generation}`}
+            {bot.generation === null ? words.notStarted : words.generation(bot.generation)}
           </dd>
         </div>
         <div>
-          <dt className="text-muted text-xs">Instructions</dt>
+          <dt className="text-muted text-xs">{words.instructions}</dt>
           <dd className="mt-0.5 whitespace-pre-wrap text-ink-soft" data-selectable>
-            {bot.instructions || "None yet."}
+            {bot.instructions || words.noInstructions}
           </dd>
         </div>
       </dl>

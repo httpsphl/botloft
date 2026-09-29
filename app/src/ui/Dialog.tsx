@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { type ReactNode, useEffect, useId } from "react";
+import { useT } from "../i18n";
 import { Button } from "./Button";
 
 interface DialogProps {
@@ -13,6 +14,7 @@ interface DialogProps {
 
 /** A modal panel. Escape and the close button call `onClose`. */
 export function Dialog({ title, onClose, children, footer, width = "md" }: DialogProps) {
+  const t = useT();
   const titleId = useId();
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -37,7 +39,7 @@ export function Dialog({ title, onClose, children, footer, width = "md" }: Dialo
           <h2 id={titleId} className="font-semibold text-base tracking-tight">
             {title}
           </h2>
-          <Button variant="ghost" icon={X} label="Close" onClick={onClose} />
+          <Button variant="ghost" icon={X} label={t.common.close} onClick={onClose} />
         </header>
         <div className="min-h-0 overflow-y-auto p-4">{children}</div>
         {footer && (

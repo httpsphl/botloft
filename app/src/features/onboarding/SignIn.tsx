@@ -4,6 +4,7 @@
 
 import { LogIn } from "lucide-react";
 import { useState } from "react";
+import { useT } from "../../i18n";
 import { errorText } from "../../lib/api";
 import type { SystemStatus } from "../../lib/protocol.gen";
 import { useApi, useApp, useAppStore, useHost } from "../../store/context";
@@ -55,6 +56,7 @@ export function useClaudeSignIn() {
 
 /** "Sign in to Claude", with what happens while the window is open. */
 export function SignInButton() {
+  const s = useT().onboarding.signIn;
   const { signIn, state, available } = useClaudeSignIn();
   if (!available) {
     return null;
@@ -63,17 +65,16 @@ export function SignInButton() {
   return (
     <div className="mt-2 flex flex-col items-start gap-2">
       <Button variant="primary" size="sm" icon={LogIn} onClick={signIn} disabled={waiting}>
-        {waiting ? "Waiting for you to sign in…" : "Sign in to Claude"}
+        {waiting ? s.waiting : s.button}
       </Button>
       {waiting && (
         <p role="status" className="text-ink-soft text-xs">
-          A window opened with Claude's sign-in. Finish it in your browser; Botloft continues by
-          itself.
+          {s.waitingNote}
         </p>
       )}
       {state.stage === "failed" && (
-        <Callout tone="danger" title="The sign-in didn't finish">
-          Try again, and finish the sign-in in the browser before closing its window.
+        <Callout tone="danger" title={s.failedTitle}>
+          {s.failedBody}
           {state.error && <Details>{state.error}</Details>}
         </Callout>
       )}

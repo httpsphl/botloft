@@ -3,6 +3,7 @@
 
 import { File, FileImage, FileText, FolderOpen, LoaderCircle } from "lucide-react";
 import { useState } from "react";
+import { useT } from "../../i18n";
 import { fileSize } from "../../lib/format";
 import type { Attachment } from "../../lib/protocol.gen";
 import { useHost } from "../../store/context";
@@ -16,10 +17,11 @@ export function attachmentFolder(workspace: string, attachment: Attachment): str
   return [workspace, ...parts].join("\\");
 }
 
-function kindLabel(mediaType: string): string {
+/** `file` is the word for a file of no known type. */
+function kindLabel(mediaType: string, file: string): string {
   const [kind, sub] = mediaType.split("/");
   if (!sub || mediaType === "application/octet-stream") {
-    return "File";
+    return file;
   }
   return (sub.split(/[.+-]/).at(-1) ?? kind ?? "file").toUpperCase();
 }
@@ -34,6 +36,7 @@ function FileCard({
   note?: string;
 }) {
   const host = useHost();
+  const t = useT();
   const Icon = attachment.mediaType.startsWith("image/")
     ? FileImage
     : attachment.mediaType.startsWith("text/") || attachment.mediaType.endsWith("pdf")
@@ -47,16 +50,17 @@ function FileCard({
           {attachment.name}
         </p>
         <p className="truncate text-muted text-xs">
-          {note ?? `${kindLabel(attachment.mediaType)} · ${fileSize(attachment.size)}`}
+          {note ??
+            `${kindLabel(attachment.mediaType, t.chat.attachments.file)} · ${fileSize(attachment.size)}`}
         </p>
       </div>
       {workspace && (
         <button
           type="button"
-          aria-label={`Show ${attachment.name} in its folder`}
-          title="Show in folder"
+          aria-label={t.chat.attachments.showInFolder(attachment.name)}
+          title={t.chat.attachments.showInFolderHint}
           onClick={() =>
-            attempt("Could not open the folder", () =>
+            attempt(t.chat.attachments.openFolderFailed, () =>
               host.openPath(attachmentFolder(workspace, attachment)),
             )
           }
@@ -76,6 +80,7 @@ function Thumbnail({
   attachment: Attachment;
   workspace: string | null;
 }) {
+  const t = useT();
   const source = useImage(attachment);
   const [open, setOpen] = useState(false);
   if (source.kind === "none") {
@@ -83,18 +88,14 @@ function Thumbnail({
   }
   if (source.kind === "missing") {
     return (
-      <FileCard
-        attachment={attachment}
-        workspace={workspace}
-        note="No longer in the bot's folder"
-      />
+      <FileCard attachment={attachment} workspace={workspace} note={t.chat.attachments.missing} />
     );
   }
   if (source.kind === "loading") {
     return (
       <div className="grid h-32 w-44 place-items-center rounded-md border border-line bg-sunken">
         <LoaderCircle
-          aria-label={`Loading ${attachment.name}`}
+          aria-label={t.chat.attachments.loading(attachment.name)}
           className="animate-spin text-muted"
         />
       </div>
@@ -133,12 +134,13 @@ export function AttachmentList({
   workspace: string | null;
   align?: "start" | "end";
 }) {
+  const t = useT();
   if (attachments.length === 0) {
     return null;
   }
   return (
     <ul
-      aria-label="Attachments"
+      aria-label={t.chat.attachments.label}
       className={`flex flex-wrap gap-2 ${align === "end" ? "justify-end" : ""}`}
     >
       {attachments.map((attachment) => (

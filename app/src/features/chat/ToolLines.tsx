@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
+import { useT } from "../../i18n";
 import type { ChatItem, ToolItem } from "../../lib/protocol.gen";
 
 const ICONS: Record<string, LucideIcon> = {
@@ -53,19 +54,25 @@ export function pretty(text: string): string {
 }
 
 function Status({ status }: { status: ToolItem["status"] }) {
+  const t = useT();
   switch (status) {
     case "running":
       return (
-        <LoaderCircle aria-label="Running" size={13} className="shrink-0 animate-spin text-work" />
+        <LoaderCircle
+          aria-label={t.chat.tools.running}
+          size={13}
+          className="shrink-0 animate-spin text-work"
+        />
       );
     case "done":
-      return <Check aria-label="Done" size={13} className="shrink-0 text-ok" />;
+      return <Check aria-label={t.chat.tools.done} size={13} className="shrink-0 text-ok" />;
     case "failed":
-      return <X aria-label="Failed" size={13} className="shrink-0 text-danger" />;
+      return <X aria-label={t.chat.tools.failed} size={13} className="shrink-0 text-danger" />;
   }
 }
 
 function ToolLine({ tool }: { tool: ToolItem }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const label = toolLabel(tool.name);
   const Icon = ICONS[label] ?? Wrench;
@@ -93,12 +100,12 @@ function ToolLine({ tool }: { tool: ToolItem }) {
       </button>
       {open && (
         <div className="mt-1 mb-2 ml-7 flex flex-col gap-1.5" data-selectable>
-          <p className="text-muted text-xs">Input</p>
+          <p className="text-muted text-xs">{t.chat.tools.input}</p>
           <pre className={block}>{pretty(tool.input)}</pre>
           {tool.output !== null && (
             <>
               <p className={`text-xs ${tool.status === "failed" ? "text-danger" : "text-muted"}`}>
-                {tool.status === "failed" ? "Error" : "Output"}
+                {tool.status === "failed" ? t.chat.tools.error : t.chat.tools.output}
               </p>
               <pre className={block}>{tool.output}</pre>
             </>
@@ -110,8 +117,9 @@ function ToolLine({ tool }: { tool: ToolItem }) {
 }
 
 export function ToolLines({ items }: { items: ChatItem[] }) {
+  const t = useT();
   return (
-    <ul aria-label="Tool calls" className="-mx-1.5 flex flex-col">
+    <ul aria-label={t.chat.tools.label} className="-mx-1.5 flex flex-col">
       {items.map((item) =>
         item.body.kind === "tool" ? <ToolLine key={item.id} tool={item.body} /> : null,
       )}

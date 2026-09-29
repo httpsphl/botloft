@@ -57,6 +57,7 @@ Em dev, use `$env:BOTLOFT_HOME = "$PWD\.dev\home"` (caminho absoluto) no daemon 
 - IDs são ULID com prefixo (`crw_`, `bot_`, `msg_`, `dlv_`, `tsk_`, `cht_`, `apr_`, `att_`). Tempo em ms Unix.
 - Tudo que é específico de Windows fica em `crates/botloftd/src/platform/`. O resto do daemon não chama Win32 direto.
 - A UI depende só da interface `BotloftApi` (`app/src/lib/api.ts`). Testes de componente usam `FakeBotloft`.
+- Nenhum texto de interface escrito direto no componente: tudo vai em `app/src/i18n/{en,pt-BR,es}/<área>.ts` e é lido com `useT()` (ou `t()` fora do React). Texto novo entra nos três idiomas no mesmo commit; o TypeScript acusa o que faltar (spec 15.6). Palavras simples, sem "daemon" nem outro jargão.
 - Nunca edite `app/src/lib/protocol.gen.ts` à mão.
 - Commits pequenos, no formato Conventional Commits (`feat(courier): ...`).
 

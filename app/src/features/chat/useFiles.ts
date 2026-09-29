@@ -2,6 +2,7 @@
 // picked, pasted or dropped. Images keep a data URL for their thumbnail.
 
 import { useCallback, useState } from "react";
+import { t } from "../../i18n";
 import { fileSize } from "../../lib/format";
 import { FIELD_LIMITS } from "../../lib/protocol.gen";
 import { isImage } from "./images";
@@ -28,7 +29,7 @@ let nextKey = 1;
 function read(file: File): Promise<PendingFile> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => reject(reader.error ?? new Error(`could not read ${file.name}`));
+    reader.onerror = () => reject(reader.error ?? new Error(t().chat.files.unreadable(file.name)));
     reader.onload = () => {
       const url = String(reader.result);
       const mediaType = file.type || "application/octet-stream";
@@ -57,13 +58,11 @@ export function useFiles() {
       const count = files.length + picked.length;
       const total = [...files, ...picked].reduce((sum, file) => sum + file.size, 0);
       if (count > FIELD_LIMITS.attachments) {
-        setError(`A message can carry up to ${FIELD_LIMITS.attachments} files.`);
+        setError(t().chat.files.tooMany(FIELD_LIMITS.attachments));
         return;
       }
       if (total > MESSAGE_FILES_MAX_BYTES) {
-        setError(
-          `Files in one message can add up to ${fileSize(MESSAGE_FILES_MAX_BYTES)}. Send them in parts.`,
-        );
+        setError(t().chat.files.tooBig(fileSize(MESSAGE_FILES_MAX_BYTES)));
         return;
       }
       setError(null);

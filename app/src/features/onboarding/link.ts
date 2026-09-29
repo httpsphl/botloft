@@ -5,6 +5,7 @@
 // of looping.
 
 import { createStore, type StoreApi } from "zustand/vanilla";
+import { t } from "../../i18n";
 import { errorText } from "../../lib/api";
 import type { Client } from "../../lib/client";
 import type { DaemonStatus, Host } from "../../lib/host";
@@ -39,8 +40,6 @@ export interface Link {
 }
 
 export type Connect = (port: number, token: string) => Client;
-
-const LATE = "It started but did not answer in time. Its log is in the logs folder.";
 
 export function createLink(host: Host, connect: Connect): StoreApi<Link> {
   let api: Client | null = null;
@@ -111,7 +110,7 @@ export function createLink(host: Host, connect: Connect): StoreApi<Link> {
                 current: {
                   step: "outdated",
                   daemonVersion: status.version,
-                  error: error ?? `The daemon still reports version ${status.version}.`,
+                  error: error ?? t().onboarding.outdated.stillOld(status.version),
                 },
               });
               return;
@@ -145,7 +144,7 @@ export function createLink(host: Host, connect: Connect): StoreApi<Link> {
       try {
         status = await work();
         if (status.state === "stopped") {
-          error = LATE;
+          error = t().onboarding.late;
         }
       } catch (failure) {
         error = errorText(failure);

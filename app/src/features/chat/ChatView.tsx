@@ -3,6 +3,7 @@
 
 import { LoaderCircle, Paperclip } from "lucide-react";
 import { type DragEvent, type ReactNode, useLayoutEffect, useRef, useState } from "react";
+import { useT } from "../../i18n";
 import { day } from "../../lib/format";
 import type { Bot } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
@@ -22,6 +23,7 @@ const STICKY_PX = 80;
 const hasFiles = (event: DragEvent) => event.dataTransfer.types.includes("Files");
 
 export function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
+  const t = useT();
   const chat = useChat(bot.id);
   const files = useFiles();
   const scroller = useRef<HTMLDivElement>(null);
@@ -94,7 +96,7 @@ export function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
 
   return (
     <section
-      aria-label={`Chat with ${bot.name}`}
+      aria-label={t.chat.view.label(bot.name)}
       className="relative flex min-h-0 flex-1 flex-col"
       onDragOver={(event) => {
         if (hasFiles(event)) {
@@ -126,34 +128,32 @@ export function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
       >
         <div className="mx-auto flex max-w-5xl flex-col px-5 pt-4 pb-2">
           {chat.error && (
-            <Callout tone="danger" title="Could not load the chat">
+            <Callout tone="danger" title={t.chat.view.loadFailed}>
               {chat.error}
             </Callout>
           )}
           {chat.items.length > 0 && !chat.complete && (
             <div className="flex justify-center pb-3">
               <Button size="sm" disabled={chat.loading} onClick={loadOlder}>
-                Load earlier messages
+                {t.chat.view.loadEarlier}
               </Button>
             </div>
           )}
           {chat.items.length === 0 && chat.loading && (
             <p role="status" className="flex items-center gap-2 py-6 text-muted text-sm">
               <LoaderCircle aria-hidden size={14} className="animate-spin" />
-              Loading the chat…
+              {t.chat.view.loading}
             </p>
           )}
           {chat.items.length === 0 && !chat.loading && !chat.error && !live && (
             <div className="flex flex-col items-center gap-3 py-16 text-center">
               <BotAvatar color={bot.color} size={56} />
-              <p className="font-semibold text-base">Start a conversation with {bot.name}</p>
+              <p className="font-semibold text-base">{t.chat.view.emptyTitle(bot.name)}</p>
               {bot.role && <p className="max-w-md text-ink-soft text-sm">{bot.role}</p>}
-              <p className="max-w-md text-muted text-sm">
-                Ask for anything its folder and tools can do. You can attach files and images too.
-              </p>
+              <p className="max-w-md text-muted text-sm">{t.chat.view.emptyBody}</p>
             </div>
           )}
-          <ol aria-label="Messages" className="flex flex-col gap-5">
+          <ol aria-label={t.chat.view.messages} className="flex flex-col gap-5">
             {list}
           </ol>
         </div>
@@ -172,7 +172,7 @@ export function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
         <div className="pointer-events-none absolute inset-3 grid place-items-center rounded-lg border-2 border-accent border-dashed bg-canvas/85">
           <p className="flex items-center gap-2 font-medium">
             <Paperclip aria-hidden size={16} />
-            Drop to attach to your message
+            {t.chat.view.dropToAttach}
           </p>
         </div>
       )}

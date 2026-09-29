@@ -3,6 +3,7 @@
 
 import { ArrowDownToLine, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useT } from "../../i18n";
 import { errorText } from "../../lib/api";
 import type { AppUpdate } from "../../lib/host";
 import { useHost } from "../../store/context";
@@ -38,6 +39,7 @@ function useAppUpdate(): AppUpdate | null {
 }
 
 export function UpdateButton() {
+  const u = useT().updates;
   const update = useAppUpdate();
   const [open, setOpen] = useState(false);
   if (!update) {
@@ -51,7 +53,7 @@ export function UpdateButton() {
         className="mr-1 flex h-7 items-center gap-1.5 px-2 font-medium text-work text-xs hover:bg-sunken"
       >
         <ArrowDownToLine aria-hidden size={13} />
-        Update available
+        {u.available}
       </button>
       {open && <UpdateDialog update={update} onClose={() => setOpen(false)} />}
     </>
@@ -64,6 +66,8 @@ type Progress =
   | { stage: "failed"; error: string };
 
 function UpdateDialog({ update, onClose }: { update: AppUpdate; onClose(): void }) {
+  const t = useT();
+  const u = t.updates;
   const [progress, setProgress] = useState<Progress>({ stage: "idle" });
   const busy = progress.stage === "downloading";
 
@@ -79,12 +83,12 @@ function UpdateDialog({ update, onClose }: { update: AppUpdate; onClose(): void 
 
   return (
     <Dialog
-      title="Update Botloft"
+      title={u.title}
       onClose={busy ? () => {} : onClose}
       footer={
         <>
           <Button onClick={onClose} disabled={busy}>
-            Later
+            {u.later}
           </Button>
           <Button
             variant="primary"
@@ -92,34 +96,31 @@ function UpdateDialog({ update, onClose }: { update: AppUpdate; onClose(): void 
             onClick={install}
             disabled={busy}
           >
-            {progress.stage === "failed" ? "Try again" : "Update now"}
+            {progress.stage === "failed" ? t.common.tryAgain : u.updateNow}
           </Button>
         </>
       }
     >
       <div className="flex flex-col gap-3 text-sm leading-relaxed">
-        <p>
-          Botloft {update.version} is ready. Botloft closes, installs the update and opens again.
-          Your bots pause for a moment and pick up where they left off.
-        </p>
+        <p>{u.ready(update.version)}</p>
         {update.notes && (
           <details>
-            <summary className="cursor-pointer text-ink-soft hover:text-ink">What's new</summary>
+            <summary className="cursor-pointer text-ink-soft hover:text-ink">{u.whatsNew}</summary>
             <p className="mt-1 whitespace-pre-wrap text-ink-soft">{update.notes}</p>
           </details>
         )}
         {progress.stage === "downloading" && (
           <p role="status" className="text-ink-soft">
             {progress.fraction === null
-              ? "Downloading…"
+              ? u.downloading
               : progress.fraction >= 1
-                ? "Installing…"
-                : `Downloading… ${Math.round(progress.fraction * 100)}%`}
+                ? u.installing
+                : u.downloadingPercent(Math.round(progress.fraction * 100))}
           </p>
         )}
         {progress.stage === "failed" && (
-          <Callout tone="danger" title="The update didn't install">
-            Botloft keeps working on the current version.
+          <Callout tone="danger" title={u.failedTitle}>
+            {u.failedBody}
             <Details>{progress.error}</Details>
           </Callout>
         )}

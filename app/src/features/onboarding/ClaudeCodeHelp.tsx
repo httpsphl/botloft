@@ -1,4 +1,5 @@
 import { ExternalLink } from "lucide-react";
+import { useT } from "../../i18n";
 import { useHost } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Details } from "../../ui/Details";
@@ -9,20 +10,18 @@ export const CLAUDE_CODE_SETUP = "https://code.claude.com/docs/en/setup";
 
 /** What to do when bots cannot start because Claude Code is missing or unusable. */
 export function ClaudeCodeHelp({ error }: { error: string }) {
+  const c = useT().onboarding.claudeCode;
   const host = useHost();
   return (
     <div>
-      <p>
-        Botloft runs your bots with Claude Code. Install it or update it, open it once to sign in,
-        and Botloft picks it up within 30 seconds.
-      </p>
+      <p>{c.help}</p>
       <Button
         className="mt-2"
         size="sm"
         icon={ExternalLink}
-        onClick={() => attempt("Could not open the link", () => host.openUrl(CLAUDE_CODE_SETUP))}
+        onClick={() => attempt(c.openFailed, () => host.openUrl(CLAUDE_CODE_SETUP))}
       >
-        How to install Claude Code
+        {c.install}
       </Button>
       <Details>{error}</Details>
     </div>
