@@ -3,6 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::BrowserControl;
 use crate::ids::BotId;
 
 /// Where a bot's browser is.
@@ -33,6 +34,10 @@ pub struct BrowserState {
     pub tabs: u32,
     /// Why it could not start, when `failed`.
     pub error: Option<String>,
+    /// Who uses it now (spec 21.10).
+    pub control: BrowserControl,
+    /// What the bot asked the owner to do in it, while it waits.
+    pub ask: Option<String>,
     /// Unix time in milliseconds.
     pub updated_at: i64,
 }
@@ -47,6 +52,8 @@ impl BrowserState {
             loading: false,
             tabs: 0,
             error: None,
+            control: BrowserControl::Bot,
+            ask: None,
             updated_at: now,
         }
     }

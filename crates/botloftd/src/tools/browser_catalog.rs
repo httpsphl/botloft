@@ -151,6 +151,28 @@ pub(super) fn tools() -> Vec<Value> {
             "annotations": { "readOnlyHint": true },
         }),
         json!({
+            "name": "browser_ask_owner",
+            "title": "Ask the owner for a hand",
+            "description": "Asks the owner to do something in your browser themselves and waits \
+                until they are done: signing in to their account, solving a captcha, typing a \
+                code sent to their phone, anything only they should or can do. Open the page \
+                first; they take over your browser, and it comes back to you on the same page. \
+                Never ask for passwords, codes or card numbers in the chat: ask with this tool, \
+                so the owner types them where you never see them.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "task": {
+                        "type": "string",
+                        "description": "What the owner should do, in one sentence in their \
+                            language, like \"Sign in to your GitHub account\".",
+                    },
+                },
+                "required": ["task"],
+                "additionalProperties": false,
+            },
+        }),
+        json!({
             "name": "browser_close",
             "title": "Close the browser",
             "description": "Closes your browser when you are done with it. It also closes by \

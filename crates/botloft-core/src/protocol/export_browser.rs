@@ -1,4 +1,4 @@
-//! The browser and screens part of the TypeScript bindings (spec 21.7, 22.4).
+//! The browser and screens part of the TypeScript bindings (spec 21.7, 21.10, 22.4).
 
 use std::fmt::Write as _;
 
@@ -7,12 +7,18 @@ use super::Out;
 
 pub(super) fn decls(out: &mut Out) {
     out.decl::<BrowserStatus>();
+    out.decl::<BrowserControl>();
     out.decl::<BrowserState>();
     out.decl::<BrowserFrame>();
     out.decl::<BrowserActionKind>();
     out.decl::<BrowserAction>();
     out.decl::<BrowserView>();
     out.decl::<BrowserWatchParams>();
+    out.decl::<MouseAction>();
+    out.decl::<MouseButton>();
+    out.decl::<BrowserInput>();
+    out.decl::<BrowserControlParams>();
+    out.decl::<BrowserInputParams>();
     out.decl::<ScreenDevice>();
     out.decl::<Screen>();
     out.decl::<ScreensListParams>();
@@ -31,6 +37,15 @@ pub(super) fn methods(out: &mut Out) {
         &out.name::<BrowserView>(),
     );
     out.method(method::BROWSER_UNWATCH, "undefined", "null");
+    let control = out.name::<BrowserControlParams>();
+    let state = out.name::<BrowserState>();
+    out.method(method::BROWSER_TAKE, &control, &state);
+    out.method(method::BROWSER_RELEASE, &control, &state);
+    out.method(
+        method::BROWSER_INPUT,
+        &out.name::<BrowserInputParams>(),
+        "null",
+    );
     out.method(
         method::SCREENS_LIST,
         &out.name::<ScreensListParams>(),

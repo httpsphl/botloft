@@ -60,7 +60,8 @@ impl Browsers {
         }
     }
 
-    /// Makes room for one more browser by closing the one idle longest.
+    /// Makes room for one more browser by closing the one idle longest;
+    /// never one in the owner's hands.
     pub(super) fn make_room(&self, starting: &BotId) {
         let victim = {
             let slots = lock(&self.slots);
@@ -71,7 +72,10 @@ impl Browsers {
             slots
                 .iter()
                 .filter(|(bot, slot)| {
-                    *bot != starting && slot.session.is_some() && slot.calls.try_lock().is_ok()
+                    *bot != starting
+                        && slot.session.is_some()
+                        && slot.calls.try_lock().is_ok()
+                        && slot.held.borrow().is_none()
                 })
                 .min_by_key(|(_, slot)| slot.used)
                 .map(|(bot, _)| bot.clone())

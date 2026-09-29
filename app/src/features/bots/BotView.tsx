@@ -76,6 +76,9 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
     return status === "open" || status === "starting";
   });
   const browserOpen = side === "browser";
+  const asking = useApp((state) => Boolean(state.browsers[bot.id]?.ask));
+  // Each ask to open the browser in the owner's hands counts up (spec 21.10).
+  const [takeBrowser, setTakeBrowser] = useState(0);
   const screens = useScreens(bot);
   const screensOpen = side === "screens";
   const [screenPath, setScreenPath] = useState<string | null>(null);
@@ -106,11 +109,14 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
       }
     }
   }, [screens.writing]);
-  const showBrowser = () => {
+  const showBrowser = (options?: { take?: boolean }) => {
     if (filesOpen) {
       seen();
     }
     setSide("browser");
+    if (options?.take) {
+      setTakeBrowser((count) => count + 1);
+    }
   };
   const view = stateView(bot, crew.paused, t);
   const tabs: Tab<Pane>[] = [
@@ -133,6 +139,7 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
         onToggleFiles={toggleFiles}
         browserOpen={browserOpen}
         browsing={browsing}
+        asking={asking}
         onToggleBrowser={() => (browserOpen ? setSide(null) : showBrowser())}
         screensOpen={screensOpen}
         drawing={screens.writing !== null}
@@ -155,7 +162,7 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
           )}
         </div>
         {side === "details" && <Details bot={bot} onClose={() => setSide(null)} />}
-        {browserOpen && <BrowserPanel bot={bot} onClose={() => setSide(null)} />}
+        {browserOpen && <BrowserPanel bot={bot} take={takeBrowser} onClose={() => setSide(null)} />}
         {screensOpen && (
           <ScreensPanel
             bot={bot}

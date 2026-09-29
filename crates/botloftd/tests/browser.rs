@@ -4,79 +4,8 @@
 
 mod common;
 
-use common::bots::ready_bot;
-use common::mcp::Mcp;
-use common::{Client, TestDaemon, site};
+use common::browsing::{answer_site, call, ref_of, setup};
 use serde_json::{Value, json};
-use tokio::task::JoinHandle;
-
-struct Browsing {
-    t: TestDaemon,
-    app: Client,
-    bot: Value,
-    mcp: Mcp,
-    site: String,
-}
-
-/// A bot in Manual mode and a local site, or `None` without Edge.
-async fn setup() -> Option<Browsing> {
-    if botloftd::browser::find_program("").is_none() {
-        eprintln!("Microsoft Edge is not installed; skipping");
-        return None;
-    }
-    let t = TestDaemon::start_supervised().await;
-    let mut app = t.session().await;
-    let crew = app
-        .call("crews.create", json!({ "name": "Web" }))
-        .await
-        .expect("crew");
-    let (bot, _, mcp) = ready_bot(&t, &mut app, &crew, "Scout").await;
-    let site = format!("http://{}", site::serve().await);
-    Some(Browsing {
-        t,
-        app,
-        bot,
-        mcp,
-        site,
-    })
-}
-
-fn call(mcp: &Mcp, name: &str, arguments: Value) -> JoinHandle<Result<String, String>> {
-    let mut mcp = Mcp::new(mcp.addr, mcp.token.clone());
-    let name = name.to_owned();
-    tokio::spawn(async move { mcp.tool_text(&name, arguments).await })
-}
-
-/// Waits for the bot to ask about a site and answers.
-async fn answer_site(app: &mut Client, allow: bool, note: Option<&str>) -> Value {
-    let asked = loop {
-        let changed = app.notification("chat.item").await;
-        let body = &changed["item"]["body"];
-        if body["kind"] == "approval" && body["status"] == "pending" {
-            break body.clone();
-        }
-    };
-    assert_eq!(asked["toolName"], "mcp__botloft__browser");
-    let mut answer = json!({ "approvalId": asked["approvalId"], "allow": allow });
-    if let Some(note) = note {
-        answer["note"] = json!(note);
-    }
-    app.call("approvals.answer", answer).await.expect("answer");
-    asked
-}
-
-/// The ref of the first control on the page whose line has `what`.
-fn ref_of(page: &str, what: &str) -> String {
-    let start = page
-        .find(what)
-        .unwrap_or_else(|| panic!("{what} is not on the page:\n{page}"));
-    let open = page[..start].rfind('[').expect("a control");
-    page[open + 1..]
-        .split_whitespace()
-        .next()
-        .expect("ref")
-        .to_owned()
-}
 
 #[tokio::test(flavor = "multi_thread")]
 async fn a_bot_fills_a_form_after_the_owner_allows_the_site() {

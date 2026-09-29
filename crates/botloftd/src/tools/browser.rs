@@ -1,6 +1,7 @@
 //! The browser tools (spec 21.4): each acts in the bot's own browser, asks
 //! the owner before a new site when the bot's mode asks first (spec 21.5),
-//! and answers with the page as it is after the action.
+//! waits while the owner has it (spec 21.10), and answers with the page as
+//! it is after the action.
 
 use std::path::PathBuf;
 
@@ -10,10 +11,11 @@ use serde_json::{Value, json};
 use tracing::debug;
 
 use super::browser_args::Tool;
+use super::browser_help::ask_owner;
 use super::browser_reply::{answer, describe, report, unavailable};
 use super::browser_sites::{allowed, page_allowed};
 use super::calls::explain;
-use crate::browser::{Done, Scroll, sites};
+use crate::browser::{Done, OWNER_WAIT, Scroll, sites};
 use crate::service::bots;
 use crate::state::Daemon;
 
@@ -68,6 +70,27 @@ async fn run(
     let tool = Tool::parse(name, arguments)?;
     let bot = about(daemon, id)?;
     let call = daemon.browsers.begin(id).await;
+    if let Tool::AskOwner { task } = &tool {
+        let session = call.running().ok_or(
+            "Your browser is not open. Open the page where you need the owner with browser_open \
+             first.",
+        )?;
+        ask_owner(daemon, id, generation, &session, task).await?;
+        let session = call.running().ok_or(
+            "The owner is done, but your browser closed meanwhile. Open the page again with \
+             browser_open.",
+        )?;
+        let done = "The owner is done and gave your browser back. This is the page now.";
+        return answer(&session, &bot, 0, Some(vec![done.to_owned()])).await;
+    }
+    // The owner has the browser: wait until they give it back.
+    if !daemon.browsers.wait_for_owner(id, OWNER_WAIT).await {
+        return Err(
+            "The owner is using your browser and has not given it back. Try again later, or ask \
+             them with browser_ask_owner if you need them."
+                .to_owned(),
+        );
+    }
     if let Tool::Close = tool {
         daemon.browsers.close(id);
         return Ok(Reply::Text(
@@ -159,7 +182,7 @@ async fn run(
             }
             (BrowserActionKind::Back, Ok(Done::default()))
         }
-        Tool::Open { .. } | Tool::Close => unreachable!("handled above"),
+        Tool::Open { .. } | Tool::Close | Tool::AskOwner { .. } => unreachable!("handled above"),
     };
     let done = done.map_err(|err| describe(&err))?;
     report(daemon, id, kind, &done);

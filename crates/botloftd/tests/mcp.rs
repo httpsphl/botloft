@@ -81,6 +81,7 @@ async fn claude_code_discovers_the_server_and_lists_the_tools() {
             "browser_scroll",
             "browser_back",
             "browser_screenshot",
+            "browser_ask_owner",
             "browser_close",
             "permission_prompt"
         ]
@@ -126,7 +127,7 @@ async fn earlier_revisions_start_with_initialize() {
     let listed = mcp::post(t.addr, &legacy, &list).await;
     assert_eq!(
         listed.body["result"]["tools"].as_array().map(Vec::len),
-        Some(16)
+        Some(17)
     );
     let unknown = json!({ "jsonrpc": "2.0", "id": 2, "method": "prompts/list" }).to_string();
     let unknown = mcp::post(t.addr, &legacy, &unknown).await;

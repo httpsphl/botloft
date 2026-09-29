@@ -9,6 +9,7 @@
 mod browser;
 mod browser_args;
 mod browser_catalog;
+mod browser_help;
 mod browser_reply;
 mod browser_sites;
 mod calls;
@@ -38,7 +39,7 @@ const CACHE_TTL_MS: u64 = 60 * 60 * 1000;
 const INSTRUCTIONS: &str = "Tools to work with your Botloft crew: see who is in it, send notes \
     or tasks to other bots, report the result of tasks assigned to you and, for the crew's chief, \
     suggest new bots. The browser_ tools drive your own web browser, which the owner can watch \
-    live. The owner writes to you directly; messages from other bots and from Botloft start with \
+    live and take over when you ask with browser_ask_owner. The owner writes to you directly; messages from other bots and from Botloft start with \
     [botloft].";
 
 /// A JSON-RPC error with the HTTP status it goes out with.

@@ -102,6 +102,7 @@ impl Call<'_> {
             let current = match lock(&slots).get_mut(&bot) {
                 Some(slot) if slot.session.as_ref().is_some_and(|(n, _)| *n == start) => {
                     slot.session = None;
+                    slot.held.send_replace(None);
                     true
                 }
                 _ => false,

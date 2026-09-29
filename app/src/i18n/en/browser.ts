@@ -1,5 +1,6 @@
 // Each bot's own browser (spec 21.8): the panel beside its chat where the
-// owner watches it live, and the card where it asks to use a new site.
+// owner watches it live, the card where it asks to use a new site, and the
+// owner taking the browser into their own hands (spec 21.10).
 
 export const browser = {
   heading: "Browser",
@@ -46,5 +47,29 @@ export const browser = {
     allowed: (site: string) => `You allowed ${site}`,
     denied: (site: string) => `You declined ${site}`,
     expired: (site: string) => `No answer about ${site}`,
+  },
+  hands: {
+    take: "Take control",
+    takeWhy: (bot: string) =>
+      `To sign in to an account or get past a captcha. ${bot} waits meanwhile.`,
+    takeFailed: "Could not take the browser",
+    holding: "You are in control",
+    waits: (bot: string) => `${bot}'s actions in the browser wait until you give it back.`,
+    giveBack: (bot: string) => `Done, give it back to ${bot}`,
+    giveBackFailed: "Could not give the browser back",
+    clickToType: "Click the screen to type",
+    typing: "What you type goes to the page",
+    screen: (bot: string) => `${bot}'s browser, in your hands`,
+  },
+  help: {
+    needs: (bot: string) => `${bot} needs you in the browser`,
+    asks: (bot: string, task: string) => `${bot} asks: ${task}`,
+    why: "Take control, do it on the page yourself and give it back. The bot doesn't see what you type in password fields.",
+    take: "Take the browser",
+    done: "Done",
+    wontDo: "I won't do it",
+    doneLine: (task: string) => `You did it: ${task}`,
+    wontLine: (task: string) => `You didn't do it: ${task}`,
+    expired: (task: string) => `No answer: ${task}`,
   },
 };

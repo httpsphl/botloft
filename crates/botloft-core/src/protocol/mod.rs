@@ -50,6 +50,7 @@ macro_rules! text_enum {
 }
 
 mod browser;
+mod browser_input;
 mod chat;
 #[cfg(test)]
 mod export;
@@ -61,6 +62,7 @@ mod routines;
 mod screens;
 
 pub use browser::*;
+pub use browser_input::*;
 pub use chat::*;
 pub use files::*;
 pub use messaging::*;
@@ -113,6 +115,9 @@ pub mod method {
     pub const BROWSER_LIST: &str = "browser.list";
     pub const BROWSER_WATCH: &str = "browser.watch";
     pub const BROWSER_UNWATCH: &str = "browser.unwatch";
+    pub const BROWSER_TAKE: &str = "browser.take";
+    pub const BROWSER_RELEASE: &str = "browser.release";
+    pub const BROWSER_INPUT: &str = "browser.input";
     pub const SCREENS_LIST: &str = "screens.list";
 }
 
