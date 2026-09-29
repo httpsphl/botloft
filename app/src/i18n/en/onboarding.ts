@@ -45,7 +45,7 @@ export const onboarding = {
   welcome: {
     title: "Welcome to Botloft",
     intro:
-      "A crew is a group of Claude Code bots that keep running, message each other and share a folder. Start with one crew and a bot or two.",
+      "A crew is a group of Claude Code bots that keep running, message each other and share a folder. Each crew starts with a chief: tell it what the crew is for, and it plans the work and suggests the bots it needs.",
     botloft: "Botloft",
     running:
       "Running in the background. It starts with Windows, so your bots keep working after you close this window.",
