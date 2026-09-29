@@ -1,0 +1,88 @@
+import { cleanup, render } from "@testing-library/react";
+import { afterEach, describe, expect, test } from "vitest";
+import { BotAvatar } from "./BotAvatar";
+import { BotStateBadge } from "./BotStateBadge";
+import { BODY, DRAWN_IN, SHADES } from "./mascotArt";
+import { retint, toHex, toHsl } from "./retint";
+
+afterEach(cleanup);
+
+const channels = (hex: string): [number, number, number] => {
+  const at = (index: number) => Number.parseInt(hex.slice(index, index + 2), 16);
+  return [at(1), at(3), at(5)];
+};
+
+describe("retint", () => {
+  test("hex and hsl round-trip", () => {
+    for (const hex of ["#ff7a59", "#5ec8ff", "#a48bff", "#9be564", "#e8d5b0", "#121212"]) {
+      expect(toHex(...toHsl(hex))).toBe(hex);
+    }
+  });
+
+  test("the color it was drawn in keeps the artwork as drawn", () => {
+    const drawnIn = toHex(DRAWN_IN.h, DRAWN_IN.s, DRAWN_IN.l);
+    for (const { fill } of SHADES) {
+      const [r, g, b] = channels(retint(fill, drawnIn));
+      const [r0, g0, b0] = channels(fill.toLowerCase());
+      expect(Math.abs(r - r0) + Math.abs(g - g0) + Math.abs(b - b0)).toBeLessThanOrEqual(6);
+    }
+  });
+
+  test("white leaves no hue, for Botloft's own white mascot", () => {
+    const [r, g, b] = channels(retint(BODY, "#ffffff"));
+    expect(r).toBe(g);
+    expect(g).toBe(b);
+  });
+});
+
+describe("mascot", () => {
+  test("every shading layer has its own color, which keys it", () => {
+    expect(new Set(SHADES.map((shade) => shade.fill)).size).toBe(SHADES.length);
+  });
+
+  test("each avatar clips to its own outline", () => {
+    const { container } = render(
+      <>
+        <BotAvatar color="#ff7a59" />
+        <BotAvatar color="#5ec8ff" />
+      </>,
+    );
+    const clips = [...container.querySelectorAll("clipPath")].map((clip) => clip.id);
+    expect(new Set(clips).size).toBe(2);
+    const used = [...container.querySelectorAll("[clip-path]")].map((g) =>
+      g.getAttribute("clip-path"),
+    );
+    expect(used).toEqual(clips.map((id) => `url(#${id})`));
+  });
+
+  test("the mood drives the motion, and only a working bot throws embers", () => {
+    const { container, rerender } = render(<BotAvatar color="#ff7a59" mood="idle" />);
+    const svg = () => container.querySelector("svg");
+    expect(svg()?.dataset.mood).toBe("idle");
+    expect(container.querySelectorAll(".avatar-spark")).toHaveLength(0);
+
+    rerender(<BotAvatar color="#ff7a59" mood="working" />);
+    expect(container.querySelectorAll(".avatar-spark")).toHaveLength(3);
+
+    rerender(<BotAvatar color="#ff7a59" />);
+    expect(svg()?.dataset.mood).toBeUndefined();
+  });
+
+  test("framed sits on the icon square without the thin edge", () => {
+    const { container } = render(<BotAvatar color="#ffffff" framed />);
+    expect(container.querySelector("svg")?.getAttribute("class")).toContain("bg-[#0b0b0b]");
+    expect(container.querySelector('[stroke="var(--avatar-edge)"]')).toBeNull();
+  });
+});
+
+describe("state badge", () => {
+  test("ready pulses and working runs its line", () => {
+    const { container, rerender } = render(
+      <BotStateBadge bot={{ state: "idle", paused: false }} />,
+    );
+    expect(container.querySelectorAll(".state-ring")).toHaveLength(2);
+
+    rerender(<BotStateBadge bot={{ state: "busy", paused: false }} />);
+    expect(container.querySelector(".state-trace")?.getAttribute("pathLength")).toBe("100");
+  });
+});

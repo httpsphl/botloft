@@ -111,46 +111,27 @@
 }
 
 @layer components {
-  /* The mascot (features/bots/BotAvatar.tsx). Its mood follows what the
-     bot does: it blinks, flickers while it works, hops while it waits for
-     the owner, and sleeps while paused. The state still has its own icon
-     and label. */
-  .avatar-flame,
-  .avatar-eye {
+  /* The state icons of "Ready" and "Working" (features/bots/StateIcons.tsx):
+     two rings spread from the dot, one after the other; a bright stretch
+     runs along the pulse line. The mascot has its own file (mascot.css). */
+  .state-ring,
+  .state-trace {
     transform-box: fill-box;
+    transform-origin: 50%;
   }
 
-  .avatar-flame {
-    transform-origin: 50% 100%;
+  .state-ring {
+    opacity: 0;
+    animation: ring 2.6s var(--ease-out) infinite;
   }
 
-  .avatar-eye {
-    transform-origin: 50% 55%;
-    transition: transform 400ms var(--ease-out);
+  .state-ring-late {
+    animation-delay: 1.3s;
   }
 
-  [data-mood] .avatar-eye {
-    animation: blink 7s infinite;
-    animation-delay: var(--blink-delay, 0s);
-  }
-
-  [data-mood="working"] .avatar-flame {
-    animation: flicker 1.5s ease-in-out infinite;
-    animation-delay: var(--blink-delay, 0s);
-  }
-
-  [data-mood="waiting"] .avatar-flame {
-    animation: hop 2.6s var(--ease-out) infinite;
-  }
-
-  [data-mood="sleeping"] .avatar-eye {
-    animation: none;
-    transform: scaleY(0.12);
-  }
-
-  [data-mood="tired"] .avatar-eye {
-    animation: none;
-    transform: scaleY(0.45);
+  .state-trace {
+    stroke-dasharray: 26 74;
+    animation: trace 1.5s linear infinite;
   }
 
   /* Text still being written: a caret after the last line. */
@@ -181,48 +162,20 @@
   }
 }
 
-@keyframes blink {
-  0%,
-  45%,
-  49%,
-  100% {
-    transform: scaleY(1);
+@keyframes ring {
+  from {
+    opacity: 0.6;
+    transform: scale(1);
   }
-  47% {
-    transform: scaleY(0.1);
-  }
-}
-
-@keyframes flicker {
-  0%,
-  100% {
-    transform: scale(1, 1) skewX(0deg);
-  }
-  25% {
-    transform: scale(0.97, 1.04) skewX(-2deg);
-  }
-  50% {
-    transform: scale(1.02, 0.98) skewX(1.5deg);
-  }
-  75% {
-    transform: scale(0.99, 1.03) skewX(-1deg);
+  to {
+    opacity: 0;
+    transform: scale(2);
   }
 }
 
-@keyframes hop {
-  0%,
-  45%,
-  100% {
-    transform: translateY(0) scale(1, 1);
-  }
-  10% {
-    transform: translateY(0) scale(1.08, 0.92);
-  }
-  22% {
-    transform: translateY(-12%) scale(0.96, 1.05);
-  }
-  34% {
-    transform: translateY(0) scale(1.05, 0.95);
+@keyframes trace {
+  to {
+    stroke-dashoffset: -100px;
   }
 }
 
@@ -278,6 +231,11 @@
   ::view-transition-old(*),
   ::view-transition-new(*) {
     animation: none !important;
+  }
+
+  /* A still stretch would read as a broken line: light up all of it. */
+  .state-trace {
+    stroke-dasharray: none;
   }
 }
 /* biome-ignore-end lint/complexity/noImportantStyles: less motion must win over every animation, inline delays included */
