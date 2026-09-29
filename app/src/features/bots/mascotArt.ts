@@ -14,8 +14,12 @@ export interface Ellipse {
   turn: number;
 }
 
-/** The drawing without room to hop or to throw sparks. */
-export const VIEW_BOX = [-124.2, -80.5, 860.5, 860.5] as const;
+/**
+ * A square just around the body (x 29 to 583, y 129 to 740), with the same
+ * thin margin the first mascot had: the body fills the avatar's height as
+ * it did. Hops and sparks go past it; the avatar's SVG shows its overflow.
+ */
+export const VIEW_BOX = [-10.75, 117.25, 634, 634] as const;
 
 /** Where the body sits, for the square of the app icon (`framed`). */
 export const CENTER = { x: 306, y: 404.8 };
