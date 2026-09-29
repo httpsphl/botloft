@@ -122,6 +122,8 @@ pub(crate) mod tests {
                 id: CrewId::generate(),
                 name: "Ops".to_owned(),
                 slug: "ops".to_owned(),
+                work_folder: String::new(),
+                work_folder_chosen: false,
                 paused: false,
                 created_at: 0,
                 archived_at: None,
@@ -140,6 +142,9 @@ pub(crate) mod tests {
                         instructions: String::new(),
                         color: "#FF7A59".to_owned(),
                         paused: false,
+                        permission_mode: botloft_core::protocol::PermissionMode::Default,
+                        model: botloft_core::protocol::BotModel::Default,
+                        model_in_use: None,
                         created_at: 0,
                         archived_at: None,
                     };

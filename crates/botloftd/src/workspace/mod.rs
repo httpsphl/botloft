@@ -3,6 +3,7 @@
 //! bot's own `CLAUDE.md`.
 
 mod files;
+pub mod folder;
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -22,14 +23,16 @@ pub struct WorkspaceEnv<'a> {
     pub approval_timeout: Duration,
 }
 
-/// Creates the crew folder and its `shared` folder.
-pub fn prepare_crew(paths: &Paths, crew_slug: &str) -> io::Result<()> {
-    std::fs::create_dir_all(paths.shared_dir(crew_slug))
+/// Creates the crew folder, its `shared` folder and the work folder the
+/// owner chose, if it went missing.
+pub fn prepare_crew(paths: &Paths, crew: &Crew) -> io::Result<()> {
+    std::fs::create_dir_all(paths.shared_dir(&crew.slug))?;
+    std::fs::create_dir_all(paths.work_folder(crew))
 }
 
 /// Creates the workspace and writes every generated file. Returns the path.
 pub fn prepare_bot(env: WorkspaceEnv<'_>, crew: &Crew, bot: &BotRecord) -> io::Result<PathBuf> {
-    prepare_crew(env.paths, &crew.slug)?;
+    prepare_crew(env.paths, crew)?;
     let dir = env.paths.bot_workspace(&crew.slug, &bot.slug);
     std::fs::create_dir_all(dir.join(".claude").join("rules"))?;
     std::fs::create_dir_all(dir.join(".botloft"))?;
@@ -55,7 +58,7 @@ pub fn write_rules(paths: &Paths, crew: &Crew, bot: &BotRecord) -> io::Result<()
     let dir = paths.bot_workspace(&crew.slug, &bot.slug);
     let rules_dir = dir.join(".claude").join("rules");
     std::fs::create_dir_all(&rules_dir)?;
-    let text = files::rules_md(crew, bot, &paths.shared_dir(&crew.slug));
+    let text = files::rules_md(crew, bot, &paths.work_folder(crew));
     write_atomic(&rules_dir.join("botloft.md"), text.as_bytes())
 }
 
@@ -88,6 +91,8 @@ mod tests {
             id: CrewId::generate(),
             name: "Site".to_owned(),
             slug: "site".to_owned(),
+            work_folder: String::new(),
+            work_folder_chosen: false,
             paused: false,
             created_at: 0,
             archived_at: None,
@@ -102,6 +107,9 @@ mod tests {
             instructions: String::new(),
             color: "#FF7A59".to_owned(),
             paused: false,
+            permission_mode: botloft_core::protocol::PermissionMode::Default,
+            model: botloft_core::protocol::BotModel::Default,
+            model_in_use: None,
             created_at: 0,
             archived_at: None,
         };

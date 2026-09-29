@@ -1,4 +1,4 @@
-// Dev only: a morning's work between four research bots, for the preview.
+// Dev only: a morning's work between five research bots, for the preview.
 
 import type { FakeBotloft } from "../lib/fake";
 import type { BotId } from "../lib/protocol.gen";
@@ -23,11 +23,22 @@ const SUMMARY = `Done. The summary is in \`shared/summaries/week-39.md\`.
 
 Your chart matches the numbers in the first paper. I asked @writer to turn this into the weekly report.`;
 
+const PLAN = `## Cache the weekly report
+
+The report is rebuilt on every visit, and Monday is when everyone opens it.
+
+1. Build the report once when the week closes and save it in \`shared/cache/\`.
+2. Serve the saved copy; rebuild it only when a source file changes.
+3. Add a test that the saved copy matches a fresh build.
+
+**Not changing:** the report's layout or its sources.`;
+
 interface Crew {
   scout: BotId;
   writer: BotId;
   reviewer: BotId;
   analyst: BotId;
+  planner: BotId;
 }
 
 const MINUTE = 60 * 1000;
@@ -124,5 +135,16 @@ export function seedChats(fake: FakeBotloft, crew: Crew): void {
     text: "The account reached its usage limit. Messages wait until it resets.",
   });
   chat.turn(crew.analyst, "rate_limit");
+
+  at(8);
+  void fake.call("messages.send", {
+    botId: crew.planner,
+    body: "The report pages are slow on Mondays. Plan a fix, but don't change anything yet.",
+  });
+  at(7);
+  chat.finish(chat.tool(crew.planner, "Grep", { summary: "buildReport" }), "3 matches");
+  const plan = JSON.stringify({ plan: PLAN });
+  chat.tool(crew.planner, "ExitPlanMode", { summary: "Cache the weekly report", input: plan });
+  chat.ask(crew.planner, "ExitPlanMode", "Cache the weekly report", plan);
   fake.now = end;
 }

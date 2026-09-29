@@ -44,6 +44,7 @@ impl Supervisor {
             if slot.is_working() {
                 supervisor.set_state(bot, slot, slot.working_state());
             }
+            supervisor.relaunch_if_idle(bot, slot);
         });
     }
 

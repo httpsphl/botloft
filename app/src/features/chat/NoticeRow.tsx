@@ -36,6 +36,8 @@ function noticeText(notice: NoticeItem, words: Messages["chat"]["notice"]): stri
       return words.usageLimit;
     case "turn_failed":
       return words.turnFailed(notice.text);
+    case "model_unavailable":
+      return words.modelUnavailable;
     default:
       return notice.text;
   }

@@ -62,7 +62,16 @@ export type Crew = { id: CrewId, name: string,
 /**
  * Folder name under the workspaces root. Set at creation, never changes.
  */
-slug: string, paused: boolean, 
+slug: string, 
+/**
+ * Absolute path of the folder the crew works in (spec 5): one the owner
+ * chose, or the crew's `shared` folder.
+ */
+workFolder: string, 
+/**
+ * Whether the owner chose `work_folder`.
+ */
+workFolderChosen: boolean, paused: boolean, 
 /**
  * Unix time in milliseconds.
  */
@@ -76,6 +85,18 @@ archivedAt: number | null, };
  * Lifecycle state of a bot (spec 7.1).
  */
 export type BotState = "offline" | "launching" | "idle" | "busy" | "needs_approval" | "rate_limited" | "auth_error" | "backoff" | "archived";
+
+/**
+ * How much a bot may do without asking the owner: Claude Code's
+ * permission modes (spec 7.4).
+ */
+export type PermissionMode = "default" | "accept_edits" | "plan" | "auto" | "bypass_permissions";
+
+/**
+ * Which Claude model a bot runs on (spec 7.4): Claude Code's `--model`
+ * aliases, or the account's default.
+ */
+export type BotModel = "default" | "fable" | "opus" | "sonnet" | "haiku";
 
 /**
  * What the conversation-list line shows; the app words it.
@@ -111,7 +132,12 @@ slug: string, role: string, instructions: string,
 /**
  * Avatar color, `#RRGGBB`.
  */
-color: string, paused: boolean, state: BotState, 
+color: string, paused: boolean, permissionMode: PermissionMode, model: BotModel, 
+/**
+ * The model id Claude Code reported when the bot last started a turn
+ * (`claude-opus-5-5`); `null` before its first turn.
+ */
+modelInUse: string | null, state: BotState, 
 /**
  * Current process generation; `null` if the bot has not started since
  * the daemon did. Changes on every (re)start.
@@ -239,11 +265,22 @@ account: OwnerAccount, deliveries: DeliveryBacklog,
  */
 usage: AccountUsage | null, };
 
-export type CrewsCreateParams = { name: string, };
+export type CrewsCreateParams = { name: string, 
+/**
+ * Absolute path of the folder the crew works in; the crew's `shared`
+ * folder when absent.
+ */
+workFolder?: string, };
 
 export type CrewsRenameParams = { crewId: CrewId, name: string, };
 
 export type CrewsSetPausedParams = { crewId: CrewId, paused: boolean, };
+
+export type CrewsSetWorkFolderParams = { crewId: CrewId, 
+/**
+ * `null` goes back to the crew's `shared` folder.
+ */
+workFolder: string | null, };
 
 export type CrewIdParams = { crewId: CrewId, };
 
@@ -257,7 +294,11 @@ export type BotsCreateParams = { crewId: CrewId, name: string, role: string, ins
 /**
  * Avatar color `#RRGGBB`; the next palette color when absent.
  */
-color?: string, };
+color?: string, 
+/**
+ * The account's default when absent.
+ */
+model?: BotModel, };
 
 /**
  * Fields left out stay unchanged.
@@ -265,6 +306,10 @@ color?: string, };
 export type BotsUpdateParams = { botId: BotId, name?: string, role?: string, instructions?: string, color?: string, };
 
 export type BotsSetPausedParams = { botId: BotId, paused: boolean, };
+
+export type BotsSetPermissionModeParams = { botId: BotId, mode: PermissionMode, };
+
+export type BotsSetModelParams = { botId: BotId, model: BotModel, };
 
 export type BotIdParams = { botId: BotId, };
 
@@ -454,7 +499,7 @@ export type NoticeLevel = "info" | "warning" | "error";
 /**
  * What a notice is about, so the app can say it in the owner's language.
  */
-export type NoticeCode = "signed_out" | "usage_limit" | "turn_failed";
+export type NoticeCode = "signed_out" | "usage_limit" | "turn_failed" | "model_unavailable";
 
 export type InboundItem = { message: Message, };
 
@@ -570,11 +615,14 @@ export interface RpcMethods {
   "crews.create": { params: CrewsCreateParams; result: Crew };
   "crews.rename": { params: CrewsRenameParams; result: Crew };
   "crews.setPaused": { params: CrewsSetPausedParams; result: Crew };
+  "crews.setWorkFolder": { params: CrewsSetWorkFolderParams; result: Crew };
   "crews.archive": { params: CrewIdParams; result: Crew };
   "bots.list": { params: BotsListParams; result: Array<Bot> };
   "bots.create": { params: BotsCreateParams; result: Bot };
   "bots.update": { params: BotsUpdateParams; result: Bot };
   "bots.setPaused": { params: BotsSetPausedParams; result: Bot };
+  "bots.setPermissionMode": { params: BotsSetPermissionModeParams; result: Bot };
+  "bots.setModel": { params: BotsSetModelParams; result: Bot };
   "bots.archive": { params: BotIdParams; result: Bot };
   "bots.restart": { params: BotsRestartParams; result: Bot };
   "chat.history": { params: ChatHistoryParams; result: Array<ChatItem> };

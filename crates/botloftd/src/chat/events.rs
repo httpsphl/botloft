@@ -2,7 +2,7 @@
 //! (spec 8.1). Fields are read defensively: the format is not documented
 //! and grows between Claude Code versions.
 
-use botloft_core::chat::{TOOL_INPUT_MAX, TOOL_OUTPUT_MAX, clip, tool_summary};
+use botloft_core::chat::{TOOL_OUTPUT_MAX, clip, tool_input_max, tool_summary};
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{
     AccountUsage, ChatBody, ChatDelta, NoticeCode, NoticeItem, NoticeLevel, ReplyItem, ToolItem,
@@ -12,6 +12,7 @@ use serde_json::Value;
 use tracing::{debug, warn};
 
 use super::items;
+use crate::service;
 use crate::state::{Daemon, Event};
 
 /// Errors that restarting cannot fix: Claude Code needs the owner.
@@ -21,6 +22,8 @@ const SIGN_IN_ERRORS: &[&str] = &[
     "billing_error",
     "account_on_hold",
 ];
+/// The model does not exist or the account cannot use it (spec 7.4).
+const MODEL_NOT_FOUND: &str = "model_not_found";
 /// When a rate limit gives no reset time.
 const DEFAULT_LIMIT_MS: i64 = 5 * 60 * 1000;
 
@@ -59,6 +62,12 @@ fn session(daemon: &Daemon, bot: &BotId, event: &Value) {
     }
     drop(store);
     daemon.supervisor.remember_session(bot, session);
+    if let Some(mode) = event["permissionMode"].as_str() {
+        service::modes::reported(daemon, bot, mode);
+    }
+    if let Some(model) = event["model"].as_str() {
+        service::models::reported(daemon, bot, model);
+    }
 }
 
 fn delta(daemon: &Daemon, bot: &BotId, event: &Value) {
@@ -111,7 +120,7 @@ fn assistant(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
                         tool_use_id: block["id"].as_str().unwrap_or_default().to_owned(),
                         name: name.to_owned(),
                         summary: tool_summary(name, input),
-                        input: clip(&input.to_string(), TOOL_INPUT_MAX),
+                        input: clip(&input.to_string(), tool_input_max(name)),
                         status: ToolStatus::Running,
                         output: None,
                     }),
@@ -143,6 +152,12 @@ fn failed_turn(daemon: &Daemon, bot: &BotId, generation: u64, error: &str, event
         (
             NoticeCode::UsageLimit,
             "The account reached its usage limit. Messages wait until it resets.".to_owned(),
+        )
+    } else if error == MODEL_NOT_FOUND {
+        (
+            NoticeCode::ModelUnavailable,
+            "Claude Code could not use this bot's model: it may not exist or not be on the              account's plan. Pick another model."
+                .to_owned(),
         )
     } else if detail.is_empty() {
         (NoticeCode::TurnFailed, error.to_owned())

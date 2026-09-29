@@ -6,6 +6,7 @@
 //! (service calls read states), never the other way around.
 
 mod reconcile;
+mod relaunch;
 mod settings;
 mod sign_in;
 mod slot;

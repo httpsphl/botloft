@@ -87,6 +87,8 @@ fn export_bindings() {
     out.decl::<AttachmentId>();
     out.decl::<Crew>();
     out.decl::<BotState>();
+    out.decl::<PermissionMode>();
+    out.decl::<BotModel>();
     out.decl::<ActivityKind>();
     out.decl::<Activity>();
     out.decl::<Bot>();
@@ -102,11 +104,14 @@ fn export_bindings() {
     out.decl::<CrewsCreateParams>();
     out.decl::<CrewsRenameParams>();
     out.decl::<CrewsSetPausedParams>();
+    out.decl::<CrewsSetWorkFolderParams>();
     out.decl::<CrewIdParams>();
     out.decl::<BotsListParams>();
     out.decl::<BotsCreateParams>();
     out.decl::<BotsUpdateParams>();
     out.decl::<BotsSetPausedParams>();
+    out.decl::<BotsSetPermissionModeParams>();
+    out.decl::<BotsSetModelParams>();
     out.decl::<BotIdParams>();
     out.decl::<BotsRestartParams>();
     out.decl::<BotStateChanged>();
@@ -183,6 +188,11 @@ fn export_bindings() {
         &out.name::<CrewsSetPausedParams>(),
         &crew,
     );
+    out.method(
+        method::CREWS_SET_WORK_FOLDER,
+        &out.name::<CrewsSetWorkFolderParams>(),
+        &crew,
+    );
     out.method(method::CREWS_ARCHIVE, &out.name::<CrewIdParams>(), &crew);
     out.method(method::BOTS_LIST, &out.name::<BotsListParams>(), &bots);
     out.method(method::BOTS_CREATE, &out.name::<BotsCreateParams>(), &bot);
@@ -190,6 +200,16 @@ fn export_bindings() {
     out.method(
         method::BOTS_SET_PAUSED,
         &out.name::<BotsSetPausedParams>(),
+        &bot,
+    );
+    out.method(
+        method::BOTS_SET_PERMISSION_MODE,
+        &out.name::<BotsSetPermissionModeParams>(),
+        &bot,
+    );
+    out.method(
+        method::BOTS_SET_MODEL,
+        &out.name::<BotsSetModelParams>(),
         &bot,
     );
     out.method(method::BOTS_ARCHIVE, &out.name::<BotIdParams>(), &bot);

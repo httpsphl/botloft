@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard};
 use std::time::Duration;
 
-use botloft_core::chat::{TOOL_INPUT_MAX, clip, tool_summary};
+use botloft_core::chat::{clip, tool_input_max, tool_summary};
 use botloft_core::ids::{ApprovalId, BotId, ChatItemId};
 use botloft_core::protocol::{
     Approval, ApprovalItem, ApprovalStatus, ApprovalsAnswerParams, ChatBody, ToolStatus,
@@ -197,7 +197,7 @@ fn open(daemon: &Daemon, bot: &BotId, args: &PromptArgs) -> Option<Pending> {
         bot_id: bot.clone(),
         tool_name: args.tool_name.clone(),
         summary: tool_summary(&args.tool_name, &args.input),
-        input: clip(&args.input.to_string(), TOOL_INPUT_MAX),
+        input: clip(&args.input.to_string(), tool_input_max(&args.tool_name)),
         status: ApprovalStatus::Pending,
         note: None,
         created_at: now,

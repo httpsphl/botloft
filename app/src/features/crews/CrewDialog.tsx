@@ -6,6 +6,7 @@ import { useApi, useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Dialog } from "../../ui/Dialog";
 import { TextField } from "../../ui/Field";
+import { WorkFolderField } from "./WorkFolderField";
 
 /** Creates a crew, or renames `crew`. */
 export function CrewDialog({ crew, onClose }: { crew?: Crew; onClose(): void }) {
@@ -14,6 +15,7 @@ export function CrewDialog({ crew, onClose }: { crew?: Crew; onClose(): void }) 
   const putCrew = useApp((state) => state.putCrew);
   const selectCrew = useApp((state) => state.selectCrew);
   const [name, setName] = useState(crew?.name ?? "");
+  const [folder, setFolder] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -24,7 +26,7 @@ export function CrewDialog({ crew, onClose }: { crew?: Crew; onClose(): void }) 
     try {
       const saved = crew
         ? await api.call("crews.rename", { crewId: crew.id, name })
-        : await api.call("crews.create", { name });
+        : await api.call("crews.create", { name, ...(folder && { workFolder: folder }) });
       putCrew(saved);
       if (!crew) {
         selectCrew(saved.id);
@@ -61,6 +63,7 @@ export function CrewDialog({ crew, onClose }: { crew?: Crew; onClose(): void }) 
           autoFocus
           required
         />
+        {!crew && <WorkFolderField value={folder} onChange={setFolder} />}
         {error && (
           <p role="alert" className="text-danger text-sm">
             {error}

@@ -3,11 +3,12 @@
 // handles, archiving, and the notifications each change sends.
 
 import type { BotloftApi } from "./api";
+import { botHandlers } from "./fakeBots";
 import { FakeChat } from "./fakeChat";
 import { FakeConversation } from "./fakeConversation";
-import { checkName, conflict, invalid, notFound, slugify } from "./fakeRules";
+import { crewHandlers } from "./fakeCrews";
+import { conflict, invalid, notFound, slugify } from "./fakeRules";
 import {
-  AVATAR_PALETTE,
   type Bot,
   type BotId,
   type BotState,
@@ -142,7 +143,8 @@ export class FakeBotloft implements BotloftApi {
     return `${prefix}_${String(counter).padStart(4, "0")}`;
   }
 
-  private crew(crewId: CrewId, active = true): Crew {
+  /** The crew; archived ones only when `active` is false. */
+  crew(crewId: CrewId, active = true): Crew {
     const crew = this.crews.get(crewId);
     if (!crew) {
       throw notFound(`crew ${crewId}`);
@@ -165,23 +167,23 @@ export class FakeBotloft implements BotloftApi {
     return bot;
   }
 
-  private activeBots(crewId?: CrewId): Bot[] {
+  activeBots(crewId?: CrewId): Bot[] {
     return [...this.bots.values()].filter(
       (bot) => bot.archivedAt === null && (crewId === undefined || bot.crewId === crewId),
     );
   }
 
-  private changedCrew(crew: Crew): Crew {
+  changedCrew(crew: Crew): Crew {
     this.emit({ name: "crew.changed", params: crew });
     return crew;
   }
 
-  private changedBot(bot: Bot): Bot {
+  changedBot(bot: Bot): Bot {
     this.emit({ name: "bot.changed", params: bot });
     return bot;
   }
 
-  private handle(name: string, crewId: CrewId, except?: BotId): string {
+  handle(name: string, crewId: CrewId, except?: BotId): string {
     const handle = slugify(name, "bot");
     const taken = this.activeBots(crewId).some((bot) => bot.handle === handle && bot.id !== except);
     if (taken) {
@@ -200,104 +202,8 @@ export class FakeBotloft implements BotloftApi {
       this.refreshes += 1;
       return this.system;
     },
-    "crews.list": () => [...this.crews.values()].filter((crew) => crew.archivedAt === null),
-    "crews.create": ({ name }) => {
-      const checked = checkName(name);
-      const crew: Crew = {
-        id: this.id("crw"),
-        name: checked,
-        slug: slugify(checked, "crew"),
-        paused: false,
-        createdAt: this.now,
-        archivedAt: null,
-      };
-      this.crews.set(crew.id, crew);
-      return this.changedCrew(crew);
-    },
-    "crews.rename": ({ crewId, name }) => {
-      const crew = this.crew(crewId);
-      crew.name = checkName(name);
-      return this.changedCrew(crew);
-    },
-    "crews.setPaused": ({ crewId, paused }) => {
-      const crew = this.crew(crewId);
-      crew.paused = paused;
-      return this.changedCrew(crew);
-    },
-    "crews.archive": ({ crewId }) => {
-      const crew = this.crew(crewId, false);
-      if (crew.archivedAt === null) {
-        crew.archivedAt = this.now;
-        for (const bot of this.activeBots(crewId)) {
-          bot.archivedAt = this.now;
-          bot.state = "archived";
-          this.changedBot(bot);
-        }
-        this.changedCrew(crew);
-      }
-      return crew;
-    },
-    "bots.list": ({ crewId }) => {
-      if (crewId !== undefined) {
-        this.crew(crewId);
-      }
-      return this.activeBots(crewId);
-    },
-    "bots.create": ({ crewId, name, role, instructions, color }) => {
-      const crew = this.crew(crewId);
-      const checked = checkName(name);
-      const handle = this.handle(checked, crewId);
-      const index = [...this.bots.values()].filter((bot) => bot.crewId === crewId).length;
-      const bot: Bot = {
-        id: this.id("bot"),
-        crewId,
-        name: checked,
-        handle,
-        slug: handle,
-        role: role.trim(),
-        instructions,
-        color: color ?? AVATAR_PALETTE[index % AVATAR_PALETTE.length] ?? "#FF7A59",
-        paused: false,
-        state: crew.paused ? "offline" : "launching",
-        generation: crew.paused ? null : 1,
-        workspace: `C:\\Users\\owner\\Botloft\\${crew.slug}\\${handle}`,
-        lastActivity: null,
-        createdAt: this.now,
-        archivedAt: null,
-      };
-      this.bots.set(bot.id, bot);
-      return this.changedBot(bot);
-    },
-    "bots.update": ({ botId, name, role, instructions, color }) => {
-      const bot = this.bot(botId);
-      if (name !== undefined) {
-        bot.name = checkName(name);
-        bot.handle = this.handle(bot.name, bot.crewId, botId);
-      }
-      bot.role = role?.trim() ?? bot.role;
-      bot.instructions = instructions ?? bot.instructions;
-      bot.color = color ?? bot.color;
-      return this.changedBot(bot);
-    },
-    "bots.setPaused": ({ botId, paused }) => {
-      const bot = this.bot(botId);
-      bot.paused = paused;
-      return this.changedBot(bot);
-    },
-    "bots.restart": ({ botId }) => {
-      const bot = this.bot(botId);
-      this.setBotState(botId, "launching", (bot.generation ?? 0) + 1);
-      return bot;
-    },
-    "bots.archive": ({ botId }) => {
-      const bot = this.bot(botId, false);
-      if (bot.archivedAt === null) {
-        bot.archivedAt = this.now;
-        bot.state = "archived";
-        this.changedBot(bot);
-      }
-      return bot;
-    },
+    ...crewHandlers(this),
+    ...botHandlers(this),
     ...this.chat.handlers(),
     ...this.conversation.handlers(),
   };

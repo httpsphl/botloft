@@ -1,6 +1,7 @@
 import {
   type InputHTMLAttributes,
   type ReactNode,
+  type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
   useId,
 } from "react";
@@ -69,6 +70,28 @@ export function TextArea({
   return (
     <Frame id={id} label={label} hint={hint} max={max} length={length}>
       <textarea id={id} className={`${control} resize-y py-2 leading-relaxed`} {...input} />
+    </Frame>
+  );
+}
+
+export function SelectField({
+  label,
+  hint,
+  options,
+  ...select
+}: Framing & {
+  options: { value: string; label: string }[];
+} & SelectHTMLAttributes<HTMLSelectElement>) {
+  const id = useId();
+  return (
+    <Frame id={id} label={label} hint={hint}>
+      <select id={id} className={`${control} h-8`} {...select}>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
     </Frame>
   );
 }

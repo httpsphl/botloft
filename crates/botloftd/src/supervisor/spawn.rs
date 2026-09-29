@@ -23,6 +23,8 @@ use crate::{approvals, courier, workspace};
 
 /// Tools the bot uses without asking: its crew tools (spec 7.4).
 const ALLOWED_TOOLS: &str = "mcp__botloft";
+/// Makes Claude Code load `CLAUDE.md` from `--add-dir` folders (spec 5).
+const ADDITIONAL_MEMORY: &str = "CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD";
 /// Where permission requests go (spec 10.1).
 const PERMISSION_TOOL: &str = "mcp__botloft__permission_prompt";
 
@@ -67,12 +69,14 @@ impl Supervisor {
                 slot.turns = 0;
                 slot.approvals = 0;
                 slot.limited_until = None;
+                slot.restart_when_idle = false;
                 tokens.insert(launch.token_hash.clone(), (bot.id.clone(), generation));
                 slot.running = Some(Running {
                     control: process.control,
                     started: Instant::now(),
                     resumed: launch.resumed,
                     token_hash: launch.token_hash,
+                    permission_mode: bot.permission_mode,
                 });
                 self.count_busy(slot.state, BotState::Launching);
                 slot.state = BotState::Launching;
@@ -197,7 +201,7 @@ fn launch_spec(
         "project,local",
         "--strict-mcp-config",
         "--permission-mode",
-        "default",
+        bot.permission_mode.cli_value(),
         "--permission-prompt-tool",
         PERMISSION_TOOL,
         "--allowedTools",
@@ -207,6 +211,14 @@ fn launch_spec(
         args.push(arg.into());
     }
     args.push(mcp.into_os_string());
+    // The crew's work folder, which the bot edits like its own (spec 5).
+    args.push("--add-dir".into());
+    args.push(daemon.paths.work_folder(crew).into_os_string());
+    // Without the flag, Claude Code uses the default of the owner's plan.
+    if let Some(model) = bot.model.cli_value() {
+        args.push("--model".into());
+        args.push(model.into());
+    }
 
     let mut env = platform::user_environment()?;
     env.retain(|(name, _)| {
@@ -219,6 +231,8 @@ fn launch_spec(
         ("BOTLOFT_BOT_ID", OsString::from(bot.id.as_str())),
         ("BOTLOFT_BOT_TOKEN", OsString::from(&token)),
         ("BOTLOFT_PORT", OsString::from(daemon.port.to_string())),
+        // Loads the work folder's CLAUDE.md with the bot's memory.
+        (ADDITIONAL_MEMORY, OsString::from("1")),
     ] {
         env.push((OsString::from(name), value));
     }

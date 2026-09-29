@@ -2,18 +2,18 @@
 // and Deny. Once answered it shrinks to one line.
 
 import { Ban, Check, Hand, TimerOff } from "lucide-react";
-import { useId, useState } from "react";
+import { useId } from "react";
 import { useT } from "../../i18n";
 import type { ApprovalItem, Bot } from "../../lib/protocol.gen";
-import { useApi } from "../../store/context";
 import { Button } from "../../ui/Button";
-import { attempt } from "../../ui/toast";
+import { PLAN_TOOL, PlanCard } from "./PlanCard";
 import { pretty, toolLabel } from "./ToolLines";
+import { useAnswer } from "./useAnswer";
 
 function Answered({ approval }: { approval: ApprovalItem }) {
   const t = useT();
   const label = toolLabel(approval.toolName);
-  const line = "flex min-w-0 items-center gap-2 px-1.5 py-1 text-sm";
+  const line = "flex min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 text-sm";
   switch (approval.status) {
     case "allowed":
       return (
@@ -44,48 +44,47 @@ function Answered({ approval }: { approval: ApprovalItem }) {
 }
 
 export function ApprovalCard({ approval, bot }: { approval: ApprovalItem; bot: Bot }) {
-  const api = useApi();
+  return approval.toolName === PLAN_TOOL ? (
+    <PlanCard approval={approval} bot={bot} />
+  ) : (
+    <ToolApproval approval={approval} bot={bot} />
+  );
+}
+
+function ToolApproval({ approval, bot }: { approval: ApprovalItem; bot: Bot }) {
   const t = useT();
-  const [note, setNote] = useState("");
-  const [busy, setBusy] = useState(false);
+  const { note, setNote, busy, answer } = useAnswer(approval, {
+    allow: t.chat.approval.allowFailed,
+    deny: t.chat.approval.denyFailed,
+  });
   const noteId = useId();
   if (approval.status !== "pending") {
     return <Answered approval={approval} />;
   }
   const label = toolLabel(approval.toolName);
-  const answer = async (allow: boolean) => {
-    setBusy(true);
-    const trimmed = note.trim();
-    await attempt(allow ? t.chat.approval.allowFailed : t.chat.approval.denyFailed, () =>
-      api.call("approvals.answer", {
-        approvalId: approval.approvalId,
-        allow,
-        ...(allow || !trimmed ? {} : { note: trimmed }),
-      }),
-    );
-    setBusy(false);
-  };
 
   return (
     <section
       aria-label={t.chat.approval.asks(bot.name, label)}
-      className="my-1 max-w-2xl rounded-md border border-warn/60 border-l-4 bg-panel px-3.5 py-3"
+      className="my-1 max-w-2xl rounded-2xl border border-warn/40 bg-panel px-4 py-3.5 shadow-sm"
     >
-      <p className="flex items-center gap-2 font-semibold text-sm">
-        <Hand aria-hidden size={15} className="text-warn" />
+      <p className="flex items-center gap-2.5 font-semibold text-sm">
+        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-warn/12 text-warn">
+          <Hand aria-hidden size={15} />
+        </span>
         {t.chat.approval.wants(bot.name, label)}
       </p>
       {approval.summary && (
-        <p className="mt-1.5 break-words font-mono text-ink-soft text-xs" data-selectable>
+        <p className="mt-2 break-words font-mono text-ink-soft text-xs" data-selectable>
           {approval.summary}
         </p>
       )}
-      <details className="mt-1.5 text-xs">
+      <details className="mt-2 text-xs">
         <summary className="cursor-default text-muted hover:text-ink">
           {t.chat.approval.fullInput}
         </summary>
         <pre
-          className="mt-1 max-h-56 overflow-auto whitespace-pre-wrap break-all rounded-[3px] border border-line bg-sunken px-2.5 py-1.5 font-mono"
+          className="mt-1.5 max-h-56 overflow-auto whitespace-pre-wrap break-all rounded-lg border border-line bg-sunken px-2.5 py-1.5 font-mono"
           data-selectable
         >
           {pretty(approval.input)}
@@ -99,7 +98,7 @@ export function ApprovalCard({ approval, bot }: { approval: ApprovalItem; bot: B
         value={note}
         onChange={(event) => setNote(event.target.value)}
         placeholder={t.chat.approval.notePlaceholder}
-        className="mt-3 h-8 w-full rounded-[3px] border border-line-strong bg-canvas px-2.5 text-sm outline-none placeholder:text-muted focus:border-accent"
+        className="mt-3 h-9 w-full rounded-xl border border-line-strong bg-canvas px-3 text-sm outline-none placeholder:text-muted focus:border-muted"
       />
       <div className="mt-2.5 flex gap-2">
         <Button variant="primary" icon={Check} disabled={busy} onClick={() => answer(true)}>

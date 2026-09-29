@@ -42,6 +42,8 @@ text_enum!(
         UsageLimit => "usage_limit",
         /// The turn failed; `text` holds Claude Code's detail or error code.
         TurnFailed => "turn_failed",
+        /// The bot's model does not exist or the account cannot use it.
+        ModelUnavailable => "model_unavailable",
     }
 );
 

@@ -7,6 +7,10 @@ use crate::protocol::{ActivityKind, ChatBody, SenderKind};
 
 /// Longest tool input kept, in bytes.
 pub const TOOL_INPUT_MAX: usize = 4 * 1024;
+/// Longest plan kept, in bytes: the owner reads all of it to approve it.
+pub const PLAN_INPUT_MAX: usize = 32 * 1024;
+/// The tool Claude Code uses to leave plan mode with a plan (spec 10.1).
+pub const PLAN_TOOL: &str = "ExitPlanMode";
 /// Longest tool output kept, in bytes.
 pub const TOOL_OUTPUT_MAX: usize = 8 * 1024;
 /// Longest activity line, in characters.
@@ -37,6 +41,15 @@ pub fn one_line(text: &str, max: usize) -> String {
     format!("{}…", cut.trim_end())
 }
 
+/// Longest input kept for `tool`, in bytes.
+pub fn tool_input_max(tool: &str) -> usize {
+    if tool == PLAN_TOOL {
+        PLAN_INPUT_MAX
+    } else {
+        TOOL_INPUT_MAX
+    }
+}
+
 fn field<'a>(input: &'a Value, name: &str) -> Option<&'a str> {
     input.get(name).and_then(Value::as_str)
 }
@@ -59,6 +72,13 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
         "WebSearch" => field(input, "query").map(str::to_owned),
         "Task" | "Agent" => field(input, "description").map(str::to_owned),
         "TodoWrite" => Some("Updated the plan".to_owned()),
+        // The plan's first line, usually its title.
+        PLAN_TOOL => field(input, "plan").and_then(|plan| {
+            plan.lines()
+                .map(|line| line.trim_start_matches('#').trim())
+                .find(|line| !line.is_empty())
+                .map(str::to_owned)
+        }),
         // Claude Code loads deferred tools (such as ours) by name first.
         "ToolSearch" => field(input, "query").map(|query| match query.strip_prefix("select:") {
             Some(names) => {
@@ -171,6 +191,16 @@ mod tests {
             "notebook jupyter"
         );
         assert_eq!(tool_summary("SomethingNew", &json!({ "a": 1 })), "");
+        assert_eq!(
+            tool_summary(
+                PLAN_TOOL,
+                &json!({ "plan": "
+## Move the cache
+
+1. Read" })
+            ),
+            "Move the cache"
+        );
         assert_eq!(tool_label("mcp__botloft__send_message"), "send_message");
         assert_eq!(tool_label("Bash"), "Bash");
     }

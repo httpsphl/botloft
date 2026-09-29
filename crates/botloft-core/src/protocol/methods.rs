@@ -4,7 +4,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use super::DeliveryBacklog;
+use super::{BotModel, DeliveryBacklog, PermissionMode};
 use crate::ids::{BotId, CrewId};
 
 /// Identifies the connecting app in `session.hello`.
@@ -121,6 +121,20 @@ pub struct UsageWindow {
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct CrewsCreateParams {
     pub name: String,
+    /// Absolute path of the folder the crew works in; the crew's `shared`
+    /// folder when absent.
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub work_folder: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct CrewsSetWorkFolderParams {
+    pub crew_id: CrewId,
+    /// `null` goes back to the crew's `shared` folder.
+    pub work_folder: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -168,6 +182,10 @@ pub struct BotsCreateParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub color: Option<String>,
+    /// The account's default when absent.
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub model: Option<BotModel>,
 }
 
 /// Fields left out stay unchanged.
@@ -196,6 +214,22 @@ pub struct BotsUpdateParams {
 pub struct BotsSetPausedParams {
     pub bot_id: BotId,
     pub paused: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BotsSetPermissionModeParams {
+    pub bot_id: BotId,
+    pub mode: PermissionMode,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BotsSetModelParams {
+    pub bot_id: BotId,
+    pub model: BotModel,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

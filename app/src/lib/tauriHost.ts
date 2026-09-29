@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { Image } from "@tauri-apps/api/image";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { open } from "@tauri-apps/plugin-dialog";
 import { check } from "@tauri-apps/plugin-updater";
 import type { AppUpdate, DaemonStatus, Host } from "./host";
 
@@ -75,6 +76,15 @@ export function tauriHost(): Host {
     checkForUpdate,
     readOwnerToken: () => invoke<string>("read_owner_token"),
     openPath: (path) => invoke<void>("open_path", { path }),
+    pickFolder: async (title, start) => {
+      const picked = await open({
+        directory: true,
+        multiple: false,
+        title,
+        ...(start ? { defaultPath: start } : {}),
+      });
+      return typeof picked === "string" ? picked : null;
+    },
     openUrl: (url) => invoke<void>("open_url", { url }),
     window: {
       minimize: () => window.minimize(),

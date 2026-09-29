@@ -2,12 +2,20 @@ import { Check } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { useT } from "../../i18n";
 import { errorText } from "../../lib/api";
-import { AVATAR_PALETTE, type Bot, type CrewId, FIELD_LIMITS } from "../../lib/protocol.gen";
+import {
+  AVATAR_PALETTE,
+  type Bot,
+  type BotModel,
+  type CrewId,
+  FIELD_LIMITS,
+} from "../../lib/protocol.gen";
 import { useApi, useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Dialog } from "../../ui/Dialog";
-import { TextArea, TextField } from "../../ui/Field";
+import { SelectField, TextArea, TextField } from "../../ui/Field";
 import { BotAvatar } from "./BotAvatar";
+
+const MODELS: BotModel[] = ["default", "fable", "opus", "sonnet", "haiku"];
 
 type Props = { onClose(): void } & ({ crewId: CrewId; bot?: undefined } | { bot: Bot });
 
@@ -22,6 +30,7 @@ export function BotDialog(props: Props) {
   const [role, setRole] = useState(editing?.role ?? "");
   const [instructions, setInstructions] = useState(editing?.instructions ?? "");
   const [color, setColor] = useState<string | undefined>(editing?.color);
+  const [model, setModel] = useState<BotModel>(editing?.model ?? "default");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -39,6 +48,10 @@ export function BotDialog(props: Props) {
           ...(instructions !== editing.instructions && { instructions }),
           ...(color !== undefined && color !== editing.color && { color }),
         });
+        if (model !== editing.model) {
+          // The bot restarts on it once nothing is in progress.
+          bot = await api.call("bots.setModel", { botId: editing.id, model });
+        }
       } else {
         bot = await api.call("bots.create", {
           crewId: props.crewId,
@@ -46,6 +59,7 @@ export function BotDialog(props: Props) {
           role,
           instructions,
           ...(color !== undefined && { color }),
+          ...(model !== "default" && { model }),
         });
       }
       putBot(bot);
@@ -100,6 +114,13 @@ export function BotDialog(props: Props) {
           onChange={(event) => setInstructions(event.target.value)}
           placeholder={t.bots.dialog.instructionsPlaceholder}
           hint={editing ? t.bots.dialog.instructionsHint : undefined}
+        />
+        <SelectField
+          label={t.chat.model.title}
+          value={model}
+          onChange={(event) => setModel(event.target.value as BotModel)}
+          options={MODELS.map((value) => ({ value, label: t.chat.model.names[value] }))}
+          hint={t.chat.model.cost}
         />
         <fieldset className="flex flex-col gap-1.5">
           <legend className="mb-1.5 font-medium text-ink-soft text-sm">

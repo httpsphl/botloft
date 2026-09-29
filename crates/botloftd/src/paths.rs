@@ -3,6 +3,8 @@
 use std::io;
 use std::path::{Path, PathBuf};
 
+use botloft_core::protocol::Crew;
+
 use crate::config::Config;
 
 /// Environment variable that moves the daemon's data directory, so a dev
@@ -59,6 +61,15 @@ impl Paths {
 
     pub fn bot_workspace(&self, crew_slug: &str, bot_slug: &str) -> PathBuf {
         self.crew_dir(crew_slug).join(bot_slug)
+    }
+
+    /// The folder the crew works in: the one the owner chose, or `shared`.
+    pub fn work_folder(&self, crew: &Crew) -> PathBuf {
+        if crew.work_folder_chosen {
+            PathBuf::from(&crew.work_folder)
+        } else {
+            self.shared_dir(&crew.slug)
+        }
     }
 }
 

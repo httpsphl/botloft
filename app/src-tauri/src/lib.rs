@@ -99,6 +99,8 @@ pub fn run() {
     tauri::Builder::default()
         // Checks the release feed and installs signed updates (spec 15.5).
         .plugin(tauri_plugin_updater::Builder::new().build())
+        // The folder picker for a crew's work folder (spec 5).
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             daemon_status,
             daemon_install,

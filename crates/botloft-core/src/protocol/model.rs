@@ -14,6 +14,11 @@ pub struct Crew {
     pub name: String,
     /// Folder name under the workspaces root. Set at creation, never changes.
     pub slug: String,
+    /// Absolute path of the folder the crew works in (spec 5): one the owner
+    /// chose, or the crew's `shared` folder.
+    pub work_folder: String,
+    /// Whether the owner chose `work_folder`.
+    pub work_folder_chosen: bool,
     pub paused: bool,
     /// Unix time in milliseconds.
     pub created_at: i64,
@@ -37,6 +42,75 @@ pub enum BotState {
     Archived,
 }
 
+text_enum!(
+    /// How much a bot may do without asking the owner: Claude Code's
+    /// permission modes (spec 7.4).
+    PermissionMode, "permission mode" {
+        /// Asks before edits, commands and the network ("Manual").
+        Default => "default",
+        /// Edits files and runs common file commands without asking.
+        AcceptEdits => "accept_edits",
+        /// Plans first, then asks to go ahead with the plan.
+        Plan => "plan",
+        /// A classifier reviews each action; what it does not allow is asked.
+        Auto => "auto",
+        /// Does everything without asking.
+        BypassPermissions => "bypass_permissions",
+    }
+);
+
+impl PermissionMode {
+    /// The value of Claude Code's `--permission-mode`, and what it reports
+    /// in `system/init`.
+    pub fn cli_value(self) -> &'static str {
+        match self {
+            Self::Default => "default",
+            Self::AcceptEdits => "acceptEdits",
+            Self::Plan => "plan",
+            Self::Auto => "auto",
+            Self::BypassPermissions => "bypassPermissions",
+        }
+    }
+
+    pub fn from_cli(value: &str) -> Option<Self> {
+        [
+            Self::Default,
+            Self::AcceptEdits,
+            Self::Plan,
+            Self::Auto,
+            Self::BypassPermissions,
+        ]
+        .into_iter()
+        .find(|mode| mode.cli_value() == value)
+    }
+}
+
+text_enum!(
+    /// Which Claude model a bot runs on (spec 7.4): Claude Code's `--model`
+    /// aliases, or the account's default.
+    BotModel, "model" {
+        /// No `--model`: the default of the owner's Claude plan.
+        Default => "default",
+        Fable => "fable",
+        Opus => "opus",
+        Sonnet => "sonnet",
+        Haiku => "haiku",
+    }
+);
+
+impl BotModel {
+    /// The value of Claude Code's `--model`; `None` leaves the flag out.
+    pub fn cli_value(self) -> Option<&'static str> {
+        match self {
+            Self::Default => None,
+            Self::Fable => Some("fable"),
+            Self::Opus => Some("opus"),
+            Self::Sonnet => Some("sonnet"),
+            Self::Haiku => Some("haiku"),
+        }
+    }
+}
+
 /// A persistent Claude Code session with a name, a role and instructions.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -55,6 +129,11 @@ pub struct Bot {
     /// Avatar color, `#RRGGBB`.
     pub color: String,
     pub paused: bool,
+    pub permission_mode: PermissionMode,
+    pub model: BotModel,
+    /// The model id Claude Code reported when the bot last started a turn
+    /// (`claude-opus-5-5`); `null` before its first turn.
+    pub model_in_use: Option<String>,
     pub state: BotState,
     /// Current process generation; `null` if the bot has not started since
     /// the daemon did. Changes on every (re)start.

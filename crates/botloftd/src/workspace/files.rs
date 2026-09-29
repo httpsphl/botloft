@@ -52,7 +52,7 @@ work and lessons learned here, and remove what is no longer true.
 
 /// `.claude/rules/botloft.md`: who the bot is and how to work with its crew.
 /// Regenerated whenever the bot or its crew changes.
-pub fn rules_md(crew: &Crew, bot: &BotRecord, shared_dir: &Path) -> String {
+pub fn rules_md(crew: &Crew, bot: &BotRecord, work_folder: &Path) -> String {
     let role = if bot.role.is_empty() {
         "No role was given. Ask the owner if it is unclear what you should do."
     } else {
@@ -91,8 +91,11 @@ app; the other bots of your crew send you messages too.
 
 ## Working with your crew
 
-- This folder is your workspace. `CLAUDE.md` here is your memory across restarts.
-- Files for the whole crew go in the shared folder: `{shared}`.
+- The crew works in `{work}`: the owner reads what you make there, and so do
+  the other bots. Put the files you make for them in it. A `CLAUDE.md` in it
+  is loaded with your memory: follow it.
+- This folder is yours: `CLAUDE.md` here is your memory across restarts, and
+  scratch files can stay here.
 - Messages from other bots and notices from Botloft start with `[botloft]`.
   The first line says who sent it; for a task it also has the task id and
   the deadline.
@@ -111,7 +114,7 @@ app; the other bots of your crew send you messages too.
         name = bot.name,
         handle = bot.handle,
         crew = crew.name,
-        shared = shared_dir.display(),
+        work = work_folder.display(),
     )
 }
 
@@ -149,6 +152,8 @@ mod tests {
             id: CrewId::generate(),
             name: "Site".to_owned(),
             slug: "site".to_owned(),
+            work_folder: String::new(),
+            work_folder_chosen: false,
             paused: false,
             created_at: 0,
             archived_at: None,
@@ -163,6 +168,9 @@ mod tests {
             instructions: "Review every PR.".to_owned(),
             color: "#FF7A59".to_owned(),
             paused: false,
+            permission_mode: botloft_core::protocol::PermissionMode::Default,
+            model: botloft_core::protocol::BotModel::Default,
+            model_in_use: None,
             created_at: 0,
             archived_at: None,
         };

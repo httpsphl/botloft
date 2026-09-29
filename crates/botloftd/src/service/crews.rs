@@ -3,6 +3,7 @@
 use botloft_core::ids::CrewId;
 use botloft_core::protocol::{
     Crew, CrewIdParams, CrewsCreateParams, CrewsRenameParams, CrewsSetPausedParams,
+    CrewsSetWorkFolderParams,
 };
 use botloft_core::{now_ms, slug, validate};
 use botloft_store::Store;
@@ -13,7 +14,11 @@ use crate::state::{Daemon, Event};
 use crate::workspace;
 
 pub fn list(daemon: &Daemon) -> ApiResult<Vec<Crew>> {
-    Ok(daemon.store().crews(false)?)
+    let crews = daemon.store().crews(false)?;
+    Ok(crews
+        .into_iter()
+        .map(|crew| present(daemon, crew))
+        .collect())
 }
 
 pub fn create(daemon: &Daemon, params: CrewsCreateParams) -> ApiResult<Crew> {
@@ -23,19 +28,25 @@ pub fn create(daemon: &Daemon, params: CrewsCreateParams) -> ApiResult<Crew> {
     let slug = pick_slug(&slug::slugify(&name, "crew"), |candidate| {
         Ok(store.crew_slug_exists(candidate)? || daemon.paths.crew_dir(candidate).exists())
     })?;
-    workspace::prepare_crew(&daemon.paths, &slug).map_err(ApiError::Workspace)?;
+    let chosen = params
+        .work_folder
+        .as_deref()
+        .map(|input| choose_folder(daemon, input))
+        .transpose()?;
 
     let crew = Crew {
         id: CrewId::generate(),
         name,
         slug,
+        work_folder_chosen: chosen.is_some(),
+        work_folder: chosen.unwrap_or_default(),
         paused: false,
         created_at: now_ms(),
         archived_at: None,
     };
+    workspace::prepare_crew(&daemon.paths, &crew).map_err(ApiError::Workspace)?;
     store.insert_crew(&crew)?;
-    daemon.emit(Event::CrewChanged(crew.clone()));
-    Ok(crew)
+    Ok(changed(daemon, crew))
 }
 
 pub fn rename(daemon: &Daemon, params: CrewsRenameParams) -> ApiResult<Crew> {
@@ -51,8 +62,41 @@ pub fn rename(daemon: &Daemon, params: CrewsRenameParams) -> ApiResult<Crew> {
             warn!(bot = %bot.id, "could not refresh the bot rules after a crew rename: {err}");
         }
     }
-    daemon.emit(Event::CrewChanged(crew.clone()));
-    Ok(crew)
+    Ok(changed(daemon, crew))
+}
+
+/// Moves the crew to another work folder, or back to `shared`. Each bot
+/// restarts to reach it once nothing is in progress (spec 7.4).
+pub fn set_work_folder(daemon: &Daemon, params: CrewsSetWorkFolderParams) -> ApiResult<Crew> {
+    let chosen = params
+        .work_folder
+        .as_deref()
+        .map(|input| choose_folder(daemon, input))
+        .transpose()?;
+    let store = daemon.store();
+    let mut crew = active(&store, &params.crew_id)?;
+    if crew.work_folder_chosen == chosen.is_some()
+        && chosen
+            .as_deref()
+            .is_none_or(|path| path == crew.work_folder)
+    {
+        return Ok(present(daemon, crew));
+    }
+    crew.work_folder_chosen = chosen.is_some();
+    crew.work_folder = chosen.unwrap_or_default();
+    workspace::prepare_crew(&daemon.paths, &crew).map_err(ApiError::Workspace)?;
+    store.update_crew(&crew)?;
+
+    let bots = store.bots(Some(&crew.id), false)?;
+    drop(store);
+    for bot in &bots {
+        if let Err(err) = workspace::write_rules(&daemon.paths, &crew, bot) {
+            warn!(bot = %bot.id, "could not refresh the bot rules after a folder change: {err}");
+        }
+        daemon.supervisor.launch_settings_changed(&bot.id);
+    }
+    tracing::info!(crew = %crew.id, "work folder changed");
+    Ok(changed(daemon, crew))
 }
 
 pub fn set_paused(daemon: &Daemon, params: CrewsSetPausedParams) -> ApiResult<Crew> {
@@ -61,10 +105,11 @@ pub fn set_paused(daemon: &Daemon, params: CrewsSetPausedParams) -> ApiResult<Cr
     if crew.paused != params.paused {
         crew.paused = params.paused;
         store.update_crew(&crew)?;
-        daemon.emit(Event::CrewChanged(crew.clone()));
+        let crew = changed(daemon, crew);
         daemon.supervisor.wake();
+        return Ok(crew);
     }
-    Ok(crew)
+    Ok(present(daemon, crew))
 }
 
 /// Archives the crew and its bots. Archiving twice is not an error.
@@ -72,7 +117,7 @@ pub fn archive(daemon: &Daemon, params: CrewIdParams) -> ApiResult<Crew> {
     let store = daemon.store();
     let crew = find(&store, &params.crew_id)?;
     if crew.archived_at.is_some() {
-        return Ok(crew);
+        return Ok(present(daemon, crew));
     }
     let bots = store.bots(Some(&crew.id), false)?;
     store.archive_crew(&crew.id, now_ms())?;
@@ -85,9 +130,29 @@ pub fn archive(daemon: &Daemon, params: CrewIdParams) -> ApiResult<Crew> {
             )));
         }
     }
-    daemon.emit(Event::CrewChanged(crew.clone()));
+    let crew = changed(daemon, crew);
     daemon.supervisor.wake();
     Ok(crew)
+}
+
+/// The crew as the app sees it: with the path of its `shared` folder when
+/// the owner chose none.
+pub(crate) fn present(daemon: &Daemon, mut crew: Crew) -> Crew {
+    if !crew.work_folder_chosen {
+        crew.work_folder = daemon.paths.work_folder(&crew).display().to_string();
+    }
+    crew
+}
+
+fn changed(daemon: &Daemon, crew: Crew) -> Crew {
+    let crew = present(daemon, crew);
+    daemon.emit(Event::CrewChanged(crew.clone()));
+    crew
+}
+
+fn choose_folder(daemon: &Daemon, input: &str) -> ApiResult<String> {
+    let path = workspace::folder::choose(&daemon.paths, input).map_err(ApiError::validation)?;
+    Ok(path.display().to_string())
 }
 
 pub(crate) fn find(store: &Store, id: &CrewId) -> ApiResult<Crew> {
