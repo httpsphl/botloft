@@ -3,6 +3,7 @@
 import type { Messages } from "../en";
 import { account } from "./account";
 import { bots } from "./bots";
+import { browser } from "./browser";
 import { chat } from "./chat";
 import { common } from "./common";
 import { crews } from "./crews";
@@ -20,6 +21,7 @@ export const es: Messages = {
   updates,
   account,
   bots,
+  browser,
   chat,
   crews,
   files,

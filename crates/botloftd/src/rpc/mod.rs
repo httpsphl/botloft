@@ -3,6 +3,7 @@
 
 mod dispatch;
 pub mod jsonrpc;
+mod watching;
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -11,13 +12,14 @@ use axum::extract::ws::{Message, WebSocket};
 use botloft_core::protocol::{
     HelloParams, HelloResult, PROTOCOL_VERSION, error_code, method, notification,
 };
-use futures_util::stream::SplitStream;
+use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
 use serde_json::Value;
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::{broadcast, mpsc, watch};
 use tracing::{debug, warn};
 
 use self::jsonrpc::RpcError;
+use self::watching::Watch;
 use crate::state::{Daemon, Event};
 
 /// How long a new connection may take to send `session.hello`.
@@ -26,24 +28,51 @@ const HELLO_TIMEOUT: Duration = Duration::from_secs(10);
 const OUTBOX: usize = 256;
 
 pub async fn serve_connection(socket: WebSocket, daemon: Arc<Daemon>) {
-    let (mut sink, mut stream) = socket.split();
-    let (outbox, mut queued) = mpsc::channel::<String>(OUTBOX);
-    let writer = tokio::spawn(async move {
-        while let Some(text) = queued.recv().await {
-            if sink.send(Message::Text(text.into())).await.is_err() {
-                return;
-            }
-        }
-        let _ = sink.send(Message::Close(None)).await;
-    });
+    let (sink, mut stream) = socket.split();
+    let (outbox, queued) = mpsc::channel::<String>(OUTBOX);
+    // Live browser frames skip the queue: only the newest one waits.
+    let (frames, newest) = watch::channel::<Option<String>>(None);
+    let writer = tokio::spawn(write(sink, queued, newest));
 
     // Subscribe before answering hello so no change slips in between.
     let events = daemon.subscribe();
     if authenticate(&mut stream, &outbox, &daemon).await {
-        run(stream, &outbox, events, &daemon).await;
+        run(stream, &outbox, &frames, events, &daemon).await;
     }
     drop(outbox);
+    drop(frames);
     let _ = writer.await;
+}
+
+async fn write(
+    mut sink: SplitSink<WebSocket, Message>,
+    mut queued: mpsc::Receiver<String>,
+    mut frames: watch::Receiver<Option<String>>,
+) {
+    let mut frames_open = true;
+    loop {
+        let text = tokio::select! {
+            biased;
+            text = queued.recv() => match text {
+                Some(text) => text,
+                None => break,
+            },
+            changed = frames.changed(), if frames_open => {
+                if changed.is_err() {
+                    frames_open = false;
+                    continue;
+                }
+                match frames.borrow_and_update().clone() {
+                    Some(frame) => frame,
+                    None => continue,
+                }
+            }
+        };
+        if sink.send(Message::Text(text.into())).await.is_err() {
+            return;
+        }
+    }
+    let _ = sink.send(Message::Close(None)).await;
 }
 
 async fn authenticate(
@@ -103,13 +132,15 @@ fn hello(daemon: &Daemon, request: jsonrpc::Request) -> Result<HelloResult, RpcE
 async fn run(
     mut stream: SplitStream<WebSocket>,
     outbox: &mpsc::Sender<String>,
+    frames: &watch::Sender<Option<String>>,
     mut events: broadcast::Receiver<Event>,
     daemon: &Daemon,
 ) {
+    let mut watch = Watch::default();
     loop {
         let frame = tokio::select! {
             message = stream.next() => match message {
-                Some(Ok(Message::Text(text))) => handle(daemon, &text),
+                Some(Ok(Message::Text(text))) => handle(daemon, &text, &mut watch, frames),
                 Some(Ok(Message::Close(_)) | Err(_)) | None => return,
                 Some(Ok(_)) => None,
             },
@@ -122,6 +153,10 @@ async fn run(
                 }
                 Err(broadcast::error::RecvError::Closed) => return,
             },
+            frame = watch.next_frame() => {
+                frames.send_replace(frame);
+                None
+            }
         };
         if let Some(frame) = frame
             && outbox.send(frame).await.is_err()
@@ -131,19 +166,30 @@ async fn run(
     }
 }
 
-fn handle(daemon: &Daemon, text: &str) -> Option<String> {
+fn handle(
+    daemon: &Daemon,
+    text: &str,
+    watch: &mut Watch,
+    frames: &watch::Sender<Option<String>>,
+) -> Option<String> {
     let request = match jsonrpc::parse(text) {
         Ok(request) => request,
         Err((id, err)) => return Some(jsonrpc::failure(&id, &err)),
     };
     debug!(method = %request.method, "rpc request");
     let id = request.id.clone()?;
-    Some(
-        match dispatch::dispatch(daemon, &request.method, request.params) {
-            Ok(value) => jsonrpc::success(&id, value),
-            Err(err) => jsonrpc::failure(&id, &err),
-        },
-    )
+    // Watching a browser belongs to this connection (spec 21.7).
+    let result = match request.method.as_str() {
+        method::BROWSER_WATCH | method::BROWSER_UNWATCH => {
+            frames.send_replace(None);
+            watch.request(daemon, &request.method, request.params)
+        }
+        name => dispatch::dispatch(daemon, name, request.params),
+    };
+    Some(match result {
+        Ok(value) => jsonrpc::success(&id, value),
+        Err(err) => jsonrpc::failure(&id, &err),
+    })
 }
 
 fn to_notification(event: &Event) -> String {
@@ -165,6 +211,12 @@ fn to_notification(event: &Event) -> String {
             (notification::ROUTINE_CHANGED, serde_json::to_value(routine))
         }
         Event::RoutineRun(run) => (notification::ROUTINE_RUN, serde_json::to_value(run)),
+        Event::BrowserChanged(state) => {
+            (notification::BROWSER_CHANGED, serde_json::to_value(state))
+        }
+        Event::BrowserAction(action) => {
+            (notification::BROWSER_ACTION, serde_json::to_value(action))
+        }
     };
     jsonrpc::notification(name, params.unwrap_or(Value::Null))
 }

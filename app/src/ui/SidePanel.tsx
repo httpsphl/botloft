@@ -34,6 +34,7 @@ export function SidePanel({
   label,
   name,
   defaultWidth,
+  expanded = false,
   children,
 }: {
   label: string;
@@ -41,6 +42,8 @@ export function SidePanel({
   name: string;
   /** Width in px until the owner drags it. */
   defaultWidth: number;
+  /** Takes all the room the main area can spare, until turned off. */
+  expanded?: boolean;
   children: ReactNode;
 }) {
   const t = useT();
@@ -98,11 +101,16 @@ export function SidePanel({
     <aside
       ref={panel}
       aria-label={label}
-      style={{ width, maxWidth: `calc(100% - ${KEEP_FOR_MAIN})`, minWidth: MIN_PX }}
+      style={{
+        width: expanded ? `calc(100% - ${KEEP_FOR_MAIN})` : width,
+        maxWidth: `calc(100% - ${KEEP_FOR_MAIN})`,
+        minWidth: MIN_PX,
+      }}
       className="relative flex shrink-0 flex-col border-line border-l bg-panel"
     >
       {/* biome-ignore lint/a11y/useSemanticElements: a separator that can be dragged and focused is a widget, not an <hr> */}
       <div
+        hidden={expanded}
         role="separator"
         aria-orientation="vertical"
         aria-label={t.common.resize}

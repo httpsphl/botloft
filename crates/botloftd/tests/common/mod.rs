@@ -6,6 +6,7 @@
 pub mod bots;
 pub mod mcp;
 pub mod routines;
+pub mod site;
 pub mod stream;
 pub mod supervised;
 
@@ -16,6 +17,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use botloft_store::Store;
+use botloftd::browser::BrowserSettings;
 use botloftd::clock::ManualClock;
 use botloftd::courier::{self, CourierSettings};
 use botloftd::paths::Paths;
@@ -108,6 +110,7 @@ pub fn new_daemon(settings: SupervisorSettings) -> Parts {
             default_deadline: Duration::from_secs(120 * 60),
         },
         bots: bot_settings(),
+        browser: BrowserSettings::default(),
     });
     Parts {
         daemon,

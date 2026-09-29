@@ -7,6 +7,7 @@ import type { BotloftApi, ConnectionState, ServerEvent } from "../lib/api";
 import type {
   Bot,
   BotId,
+  BrowserState,
   Crew,
   CrewId,
   Delivery,
@@ -35,6 +36,8 @@ export interface AppState {
   tasks: Record<TaskId, Task>;
   /** Every routine that is not archived (spec 20), then every change. */
   routines: Record<RoutineId, Routine>;
+  /** The bots' browsers that are not closed (spec 21.7), then every change. */
+  browsers: Record<BotId, BrowserState>;
   /** When the owner last had each bot open, for failed routine runs. */
   seenAt: Record<BotId, number>;
   selectedCrewId: CrewId | null;
@@ -46,6 +49,7 @@ export interface AppState {
   putBot(bot: Bot): void;
   putDelivery(delivery: Delivery): void;
   putRoutine(routine: Routine): void;
+  putBrowser(browser: BrowserState): void;
 }
 
 export type AppStore = StoreApi<AppState>;
@@ -87,6 +91,7 @@ export function createAppStore(api: BotloftApi): AppStore {
     deliveries: {},
     tasks: {},
     routines: {},
+    browsers: {},
     seenAt: loadSeen(),
     selectedCrewId: null,
     selectedBotId: null,
@@ -107,6 +112,7 @@ export function createAppStore(api: BotloftApi): AppStore {
     putCrew: (crew) => set((state) => withCrew(state, crew)),
     putBot: (bot) => set((state) => withBot(state, bot)),
     putRoutine: (routine) => set((state) => withRoutine(state, routine)),
+    putBrowser: (browser) => set((state) => withBrowser(state, browser)),
     putDelivery: (delivery) =>
       set((state) => ({ deliveries: { ...state.deliveries, [delivery.messageId]: delivery } })),
   }));
@@ -165,6 +171,8 @@ export function applyEvent(state: AppState, event: ServerEvent): Partial<AppStat
       return { tasks: { ...state.tasks, [event.params.id]: event.params } };
     case "routine.changed":
       return withRoutine(state, event.params);
+    case "browser.changed":
+      return withBrowser(state, event.params);
     case "routine.run": {
       const routine = state.routines[event.params.routineId];
       const last = routine?.lastRun;
@@ -177,6 +185,14 @@ export function applyEvent(state: AppState, event: ServerEvent): Partial<AppStat
     default:
       return null;
   }
+}
+
+/** Adds or replaces a browser; a closed one leaves the store. */
+function withBrowser(state: AppState, browser: BrowserState): Partial<AppState> {
+  const { [browser.botId]: _, ...rest } = state.browsers;
+  return {
+    browsers: browser.status === "closed" ? rest : { ...rest, [browser.botId]: browser },
+  };
 }
 
 /** Adds or replaces a routine; an archived one leaves the store. */

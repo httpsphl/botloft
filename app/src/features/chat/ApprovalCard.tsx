@@ -6,6 +6,7 @@ import { useId } from "react";
 import { useT } from "../../i18n";
 import type { ApprovalItem, Bot } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
+import { SITE_TOOL, SiteCard } from "../browser/SiteCard";
 import { PLAN_TOOL, PlanCard } from "./PlanCard";
 import { SUGGEST_TOOL, SuggestionCard } from "./SuggestionCard";
 import { pretty, toolLabel } from "./ToolLines";
@@ -50,6 +51,8 @@ export function ApprovalCard({ approval, bot }: { approval: ApprovalItem; bot: B
       return <PlanCard approval={approval} bot={bot} />;
     case SUGGEST_TOOL:
       return <SuggestionCard approval={approval} bot={bot} />;
+    case SITE_TOOL:
+      return <SiteCard approval={approval} bot={bot} />;
     default:
       return <ToolApproval approval={approval} bot={bot} />;
   }

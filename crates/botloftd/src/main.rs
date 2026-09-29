@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use botloft_store::Store;
+use botloftd::browser::{self, BrowserSettings};
 use botloftd::clock::SystemClock;
 use botloftd::config::Config;
 use botloftd::courier::{self, CourierSettings};
@@ -116,6 +117,7 @@ fn run(paths: Paths, config: Config) -> anyhow::Result<()> {
         courier: CourierSettings::from_config(&config),
         tasks: TaskSettings::from_config(&config),
         bots: BotSettings::from_config(&config),
+        browser: BrowserSettings::from_config(&config),
     });
     // No bot process survived the last run, so nobody waits for these.
     approvals::expire_all(&daemon);
@@ -136,6 +138,7 @@ fn run(paths: Paths, config: Config) -> anyhow::Result<()> {
         tokio::spawn(supervisor::run(Arc::clone(&daemon)));
         tokio::spawn(courier::run(Arc::clone(&daemon)));
         tokio::spawn(routines::run(Arc::clone(&daemon)));
+        tokio::spawn(browser::run(Arc::clone(&daemon)));
         if config.keep_awake {
             tokio::spawn(keep_awake::run(daemon.supervisor.busy_bots()));
         }

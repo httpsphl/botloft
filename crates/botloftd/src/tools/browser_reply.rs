@@ -1,0 +1,97 @@
+//! What the browser tools answer (spec 21.6): the page as the bot reads it,
+//! the action for the owner's cursor, and errors in words the bot can act
+//! on.
+
+use botloft_core::ids::BotId;
+use botloft_core::protocol::{BrowserAction, BrowserActionKind};
+
+use super::browser::{Bot, Reply};
+use super::browser_sites::outside_file;
+use crate::browser::{BrowserError, Done, Session, sites};
+use crate::state::Daemon;
+
+/// The page as the bot reads it, with what happened on the way.
+pub(super) async fn answer(
+    session: &Session,
+    bot: &Bot,
+    from: usize,
+    notes: Option<Vec<String>>,
+) -> Result<Reply, String> {
+    let reading = session.read(from).await.map_err(|err| describe(&err))?;
+    if sites::is_file(&reading.url) {
+        outside_file(session, bot, &reading.url).await?;
+    }
+    let mut out = format!(
+        "Page: {}\nURL: {}\n",
+        if reading.title.is_empty() {
+            "(no title)"
+        } else {
+            &reading.title
+        },
+        reading.url
+    );
+    for note in session.take_notes().iter().chain(notes.iter().flatten()) {
+        out.push_str(note);
+        out.push('\n');
+    }
+    out.push('\n');
+    if reading.text.is_empty() {
+        out.push_str(if from > 0 {
+            "(Nothing more.)"
+        } else {
+            "(The page shows no text.)"
+        });
+    } else {
+        out.push_str(&reading.text);
+    }
+    let next = from + reading.text.encode_utf16().count();
+    if reading.total > next {
+        out.push_str(&format!(
+            "\n\n[{} more characters: call browser_look with from: {next}]",
+            reading.total - next
+        ));
+    }
+    Ok(Reply::Text(out))
+}
+
+pub(super) fn report(daemon: &Daemon, bot: &BotId, kind: BrowserActionKind, done: &Done) {
+    daemon.browsers.action(BrowserAction {
+        bot_id: bot.clone(),
+        kind,
+        x: done.point.map(|(x, _)| x),
+        y: done.point.map(|(_, y)| y),
+        label: done.label.clone(),
+        at: daemon.clock.now_ms(),
+    });
+}
+
+pub(super) fn describe(err: &BrowserError) -> String {
+    match err {
+        BrowserError::Io(_) | BrowserError::Cdp(_) => {
+            format!("The browser failed: {err}. Try again; if it keeps failing, tell the owner.")
+        }
+        other => {
+            let text = capitalize(&other.to_string());
+            if text.ends_with(['.', '!', '?']) {
+                text
+            } else {
+                format!("{text}.")
+            }
+        }
+    }
+}
+
+pub(super) fn unavailable(err: &BrowserError) -> String {
+    format!(
+        "Your browser could not start: {err}. Tell the owner; Botloft uses Microsoft Edge, or \
+         another Chromium browser set in its config."
+    )
+}
+
+fn capitalize(text: &str) -> String {
+    let mut chars = text.chars();
+    chars
+        .next()
+        .map(|first| first.to_uppercase().chain(chars).collect())
+        .unwrap_or_default()
+}

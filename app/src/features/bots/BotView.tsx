@@ -9,6 +9,8 @@ import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { SidePanel } from "../../ui/SidePanel";
 import { type Tab, Tabs, tabId } from "../../ui/Tabs";
+import { BrowserPanel } from "../browser/BrowserPanel";
+import { ShowBrowser } from "../browser/showBrowser";
 import { ChatView } from "../chat/ChatView";
 import { FilesPanel } from "../files/FilesPanel";
 import { ShowFile } from "../files/showFile";
@@ -20,7 +22,7 @@ import { stateView } from "./BotStateBadge";
 
 type Pane = "chat" | "routines";
 /** What the panel beside the chat shows. */
-type Side = "details" | "files" | null;
+type Side = "details" | "files" | "browser" | null;
 
 /**
  * A bot's conversation and its routines, with its details in a side panel
@@ -66,6 +68,17 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
   };
   const fresh = filesOpen ? 0 : files.files.filter((file) => file.modifiedAt > seenAt).length;
   const routines = useApp(useShallow((state) => routinesOf(state, bot.id)));
+  const browsing = useApp((state) => {
+    const status = state.browsers[bot.id]?.status;
+    return status === "open" || status === "starting";
+  });
+  const browserOpen = side === "browser";
+  const showBrowser = () => {
+    if (filesOpen) {
+      seen();
+    }
+    setSide("browser");
+  };
   const view = stateView(bot, crew.paused, t);
   const tabs: Tab<Pane>[] = [
     { id: "chat", label: t.routines.chatTab },
@@ -85,6 +98,9 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
         filesOpen={filesOpen}
         freshFiles={fresh}
         onToggleFiles={toggleFiles}
+        browserOpen={browserOpen}
+        browsing={browsing}
+        onToggleBrowser={() => (browserOpen ? setSide(null) : showBrowser())}
       />
       <Notices bot={bot} crew={crew} view={view} />
       <Tabs<Pane> label={bot.name} tabs={tabs} value={pane} onChange={setPane} />
@@ -92,13 +108,16 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
         <div role="tabpanel" aria-labelledby={tabId(pane)} className="flex min-h-0 min-w-0 flex-1">
           {pane === "chat" ? (
             <ShowFile.Provider value={showFile}>
-              <ChatView bot={bot} stopped={bot.paused || crew.paused} />
+              <ShowBrowser.Provider value={showBrowser}>
+                <ChatView bot={bot} stopped={bot.paused || crew.paused} />
+              </ShowBrowser.Provider>
             </ShowFile.Provider>
           ) : (
             <BotRoutines bot={bot} />
           )}
         </div>
         {side === "details" && <Details bot={bot} onClose={() => setSide(null)} />}
+        {browserOpen && <BrowserPanel bot={bot} onClose={() => setSide(null)} />}
         {filesOpen && (
           <FilesPanel
             bot={bot}

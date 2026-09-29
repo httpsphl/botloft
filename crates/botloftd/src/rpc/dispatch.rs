@@ -55,6 +55,7 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::ROUTINES_ARCHIVE => reply(routines::archive(daemon, parse(params)?)),
         method::ROUTINES_RUNS => reply(routines::runs(daemon, parse(params)?)),
         method::TASKS_LIST => reply(tasks::list(daemon, parse(params)?)),
+        method::BROWSER_LIST => reply(Ok(daemon.browsers.list())),
         method::SESSION_HELLO => Err(RpcError::new(
             error_code::CONFLICT,
             "this connection is already authenticated",

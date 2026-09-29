@@ -90,6 +90,35 @@ impl Mcp {
         post(self.addr, &headers, &body.to_string()).await
     }
 
+    /// Calls a tool and returns its whole result.
+    pub async fn tool_result(&mut self, name: &str, arguments: Value) -> Value {
+        let reply = self
+            .request(
+                "tools/call",
+                json!({ "name": name, "arguments": arguments }),
+            )
+            .await;
+        assert_eq!(reply.status, 200, "{:?}", reply.body);
+        reply.body["result"].clone()
+    }
+
+    /// Calls a tool that answers in plain text: `Ok(text)`, or `Err(text)`
+    /// when it reports an error.
+    pub async fn tool_text(&mut self, name: &str, arguments: Value) -> Result<String, String> {
+        let result = self.tool_result(name, arguments).await;
+        let text = result["content"]
+            .as_array()
+            .and_then(|parts| parts.iter().find(|part| part["type"] == "text"))
+            .and_then(|part| part["text"].as_str())
+            .expect("text content")
+            .to_owned();
+        if result["isError"] == json!(true) {
+            Err(text)
+        } else {
+            Ok(text)
+        }
+    }
+
     /// Calls a tool: `Ok(output)` or `Err(message)` when it reports an error.
     pub async fn tool(&mut self, name: &str, arguments: Value) -> Result<Value, String> {
         let reply = self
