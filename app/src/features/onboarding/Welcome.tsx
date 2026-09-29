@@ -3,6 +3,7 @@ import { type ReactNode, useState } from "react";
 import { useT } from "../../i18n";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
+import { BotAvatar } from "../bots/BotAvatar";
 import { CrewDialog } from "../crews/CrewDialog";
 import { ClaudeCodeHelp } from "./ClaudeCodeHelp";
 import { SignInButton } from "./SignIn";
@@ -56,6 +57,9 @@ export function Welcome() {
   return (
     <main className="min-h-0 flex-1 overflow-y-auto p-8">
       <div className="mx-auto max-w-xl">
+        <span className="mb-3 inline-block animate-float">
+          <BotAvatar color="#ff7a59" size={56} mood="idle" />
+        </span>
         <h1 className="font-semibold text-2xl tracking-tight">{w.title}</h1>
         <p className="mt-1 text-ink-soft leading-relaxed">{w.intro}</p>
         <ul className="mt-6 flex flex-col overflow-hidden rounded-xl border border-line bg-panel">

@@ -628,6 +628,14 @@ Ferramenta de trabalho densa e calma: tipografia forte, grid firme, estados dos 
 
 Tamanho: a janela inteira é desenhada numa escala (zoom do webview, `setZoom`), então texto, espaçamento, ícones e avatares crescem juntos. Níveis 100%, 110%, 125% e 150%; o padrão é **125%**, porque o desenho a 100% ficava miúdo num monitor sem ampliação do Windows. Quem já usa a ampliação alta volta para 100% em Configurações (área da conta) ou com Ctrl+-; Ctrl+= aumenta e Ctrl+0 volta ao padrão. A escolha fica no `localStorage` (`botloft.zoom`) e é aplicada antes da primeira pintura, para a janela não piscar pequena. Acima de 150% a janela mínima (900 px) não cabe o layout.
 
+Movimento: o app se mexe para parecer vivo, sem atrapalhar o trabalho. Animações curtas (150 a 400 ms, saída suave) em CSS, sem biblioteca (`motion.css`), e todas param quando o Windows desliga os efeitos de animação (`prefers-reduced-motion`).
+
+- **Mascote:** cada bot tem um humor que segue o estado. Ele pisca de vez em quando (cada bot num ritmo, para uma equipe não piscar junta), tremula como chama enquanto trabalha (`busy`, `launching`), dá pulinhos enquanto espera o dono (`needs_approval`), fica de olhos cansados no limite de uso e dorme, de olhos fechados, pausado ou parado. Mexem-se os mascotes da barra lateral, do cabeçalho, dos cartões da crew e da resposta em andamento; o histórico do chat fica parado. O humor soma ao estado, que continua com cor, ícone e texto.
+- **Chegadas:** o que chega enquanto o dono olha entra subindo e aparecendo: mensagens, ferramentas, pedidos, avisos e bots novos na barra lateral. O que já estava lá quando ele abriu o chat (ou o app) aparece parado, e páginas antigas carregadas em cima não se mexem. A resposta já aparece enquanto é escrita, então não anima de novo ao terminar.
+- **Trabalhando:** os três pontos pulam em sequência; o texto sendo escrito tem um cursor piscando no fim; a mão de "Precisa de aprovação" acena; um pedido pendente pulsa uma vez ao aparecer.
+- **Trocar de bot ou de crew:** o painel principal some rápido e o novo sobe (View Transitions do webview); a barra lateral fica onde está.
+- **Superfícies:** menus e seletores abrem a partir de onde estão presos; diálogos aparecem com o fundo escurecendo; avisos entram deslizando; `<details>` abre deslizando; a linha da aba selecionada desliza até a nova; as barras de uso enchem ao abrir; botões afundam um pouco ao clicar; o mascote da tela de boas-vindas e do chat vazio flutua.
+
 No chat:
 
 - O chat é uma coluna centralizada (48rem), com o compositor na mesma largura; o dia é uma pílula no meio.
@@ -638,7 +646,7 @@ No chat:
 - Pedido para seguir com um plano (10.1) é um cartão com o plano em markdown, um campo para o que deve mudar e os botões Aprovar plano e Pedir mudanças. Respondido, vira uma linha que abre o plano de novo.
 - Anexos aparecem como miniatura (imagem) ou cartão com nome, tipo e tamanho.
 
-Identidade: o mascote do Botloft é uma chama com olhos, desenhada em vetor em `app/app-icon.svg`. O ícone do app é o mascote branco sobre fundo preto. Cada bot usa o mesmo personagem como avatar, com uma cor própria escolhida na criação, sem fundo e com um contorno fino e discreto (escuro no tema claro, claro no escuro) para as cores claras não sumirem. O mascote branco do próprio Botloft (barra de título, mensagens do daemon) fica sobre o quadrado preto do ícone do app, que é o que o torna visível no tema claro. A cor do avatar identifica o bot e não comunica estado: estado continua sendo cor + ícone + texto, como descrito acima.
+Identidade: o mascote do Botloft é uma chama com olhos, desenhada em vetor em `app/app-icon.svg`. O ícone do app é o mascote branco sobre fundo preto. Cada bot usa o mesmo personagem como avatar, com uma cor própria escolhida na criação, sem fundo e com um contorno fino e discreto (escuro no tema claro, claro no escuro) para as cores claras não sumirem. O mascote branco do próprio Botloft (barra de título, mensagens do daemon) fica sobre o quadrado preto do ícone do app, que é o que o torna visível no tema claro. A cor do avatar identifica o bot e não comunica estado: estado continua sendo cor + ícone + texto, como descrito acima. O mascote se mexe conforme o que o bot faz (ver Movimento), sem substituir isso.
 
 ### 15.4 Instalador e sidecar
 

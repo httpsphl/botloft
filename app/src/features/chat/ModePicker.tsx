@@ -64,7 +64,7 @@ export function ModePicker({ bot, onLater }: { bot: Bot; onLater(text: string): 
         <div
           role="menu"
           aria-label={m.title}
-          className={`absolute bottom-full left-0 mb-2 w-[22rem] max-w-[80vw] ${POPOVER}`}
+          className={`absolute bottom-full left-0 mb-2 w-[22rem] max-w-[80vw] origin-bottom-left ${POPOVER}`}
         >
           <p className="px-2.5 pt-1.5 pb-1 font-medium text-muted text-xs">{m.title}</p>
           {MODES.map(({ mode, icon }) => (
@@ -113,7 +113,11 @@ export function ModePicker({ bot, onLater }: { bot: Bot; onLater(text: string): 
       >
         <Icon aria-hidden size={15} />
         <span className="whitespace-nowrap">{m.names[current]}</span>
-        <ChevronDown aria-hidden size={14} className="opacity-60" />
+        <ChevronDown
+          aria-hidden
+          size={14}
+          className={`opacity-60 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
       </button>
       {confirming && (
         <Confirm

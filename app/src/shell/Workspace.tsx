@@ -50,7 +50,7 @@ export function Workspace() {
     main = (
       <div className="flex min-h-0 flex-1">
         <Sidebar />
-        <main className="flex min-w-0 flex-1 flex-col">
+        <main className="flex min-w-0 flex-1 flex-col [view-transition-name:main-pane]">
           {runtimeError ? (
             <div className="border-line border-b p-3">
               <Callout tone="danger" title={t.shell.botsCantStart}>

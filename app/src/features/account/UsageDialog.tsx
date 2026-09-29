@@ -55,7 +55,10 @@ function Window({ window }: { window: UsageWindow }) {
         aria-valuemax={100}
         className="h-2 w-full bg-sunken"
       >
-        <div className={`h-full ${tone}`} style={{ width: `${percent}%` }} />
+        <div
+          className={`h-full origin-left animate-grow ${tone}`}
+          style={{ width: `${percent}%` }}
+        />
       </div>
       {window.resetsAt !== null && (
         <span className="text-muted text-xs">{u.resets(fromNow(window.resetsAt))}</span>

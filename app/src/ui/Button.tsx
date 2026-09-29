@@ -35,7 +35,7 @@ export function Button({
       type={type}
       aria-label={label}
       title={label}
-      className={`inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg font-medium transition-colors disabled:pointer-events-none disabled:opacity-45 ${height} ${padding} ${variants[variant]} ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg font-medium transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-45 ${height} ${padding} ${variants[variant]} ${className}`}
       {...rest}
     >
       {Icon && <Icon aria-hidden size={size === "sm" ? 14 : 15} strokeWidth={2} />}

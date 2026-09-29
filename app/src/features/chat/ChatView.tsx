@@ -2,13 +2,14 @@
 // written, and the composer. Files dropped anywhere on it are attached.
 
 import { LoaderCircle, Paperclip } from "lucide-react";
-import { type DragEvent, type ReactNode, useLayoutEffect, useRef, useState } from "react";
+import { type DragEvent, type ReactNode, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import { day } from "../../lib/format";
 import type { Bot } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
-import { BotAvatar } from "../bots/BotAvatar";
+import { SeenSince } from "../../ui/motion";
+import { BotAvatar, moodOf } from "../bots/BotAvatar";
 import { BotRun, type Live } from "./BotRun";
 import { ChatComposer } from "./ChatComposer";
 import { InboundRow } from "./InboundRow";
@@ -31,6 +32,10 @@ export function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
   /** Distance from the bottom to keep while older items load above. */
   const anchor = useRef<number | null>(null);
   const [dragging, setDragging] = useState(false);
+  // What was there when the owner opened this chat stays still; what
+  // arrives while they look animates in.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new bot is a new chat
+  const openedAt = useMemo(() => Date.now(), [bot.id]);
   const last = chat.items.at(-1);
   /** Changes whenever the end of the chat does. */
   const end = `${chat.items.length}/${last?.id}/${last?.updatedAt}/${chat.draft.length}`;
@@ -67,7 +72,7 @@ export function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
   const list: ReactNode[] = rows.map((row, index) => {
     if (row.kind === "day") {
       return (
-        <li key={row.key} className="flex justify-center">
+        <li key={row.key} className="flex animate-fade justify-center">
           <span className="rounded-full bg-sunken px-3 py-1 font-medium text-muted text-xs">
             {day(row.at)}
           </span>
@@ -78,7 +83,7 @@ export function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
       return <InboundRow key={row.key} message={row.message} bot={bot} />;
     }
     if (row.kind === "notice") {
-      return <NoticeRow key={row.key} notice={row.notice} />;
+      return <NoticeRow key={row.key} notice={row.notice} at={row.item.createdAt} />;
     }
     const isLast = index === rows.length - 1;
     return (
@@ -147,15 +152,19 @@ export function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
           )}
           {chat.items.length === 0 && !chat.loading && !chat.error && !live && (
             <div className="flex flex-col items-center gap-3 py-16 text-center">
-              <BotAvatar color={bot.color} size={56} />
+              <span className="animate-float">
+                <BotAvatar color={bot.color} size={56} mood={moodOf(bot, stopped)} />
+              </span>
               <p className="font-semibold text-base">{t.chat.view.emptyTitle(bot.name)}</p>
               {bot.role && <p className="max-w-md text-ink-soft text-sm">{bot.role}</p>}
               <p className="max-w-md text-muted text-sm">{t.chat.view.emptyBody}</p>
             </div>
           )}
-          <ol aria-label={t.chat.view.messages} className="flex flex-col gap-6">
-            {list}
-          </ol>
+          <SeenSince.Provider value={openedAt}>
+            <ol aria-label={t.chat.view.messages} className="flex flex-col gap-6">
+              {list}
+            </ol>
+          </SeenSince.Provider>
         </div>
       </div>
       <div className="mx-auto w-full max-w-3xl">

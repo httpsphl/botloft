@@ -125,7 +125,7 @@ function AccountMenu({
     <div
       role="menu"
       aria-label={name}
-      className={`absolute right-2 bottom-full left-2 mb-1 ${POPOVER}`}
+      className={`absolute right-2 bottom-full left-2 mb-1 origin-bottom ${POPOVER}`}
     >
       {email && (
         <p className="truncate px-2.5 pt-1.5 pb-2 text-muted text-xs" data-selectable>
@@ -151,7 +151,7 @@ function AccountMenu({
           <div
             role="menu"
             aria-label={m.language}
-            className={`absolute bottom-0 left-full ml-2 min-w-56 ${POPOVER}`}
+            className={`absolute bottom-0 left-full ml-2 min-w-56 origin-bottom-left ${POPOVER}`}
           >
             {[{ id: "system" as const, name: t.shell.language.system(systemName) }, ...LOCALES].map(
               (entry) => (

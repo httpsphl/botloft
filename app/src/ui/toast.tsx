@@ -46,7 +46,7 @@ export function Toaster() {
         <div
           key={toast.id}
           role="alert"
-          className="pointer-events-auto flex items-start gap-2 rounded-xl border border-danger/45 bg-panel py-2.5 pr-2 pl-3.5 text-sm shadow-lift"
+          className="pointer-events-auto flex animate-toast items-start gap-2 rounded-xl border border-danger/45 bg-panel py-2.5 pr-2 pl-3.5 text-sm shadow-lift"
         >
           <p className="min-w-0 flex-1 break-words" data-selectable>
             {toast.text}

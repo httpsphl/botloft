@@ -60,9 +60,16 @@ const components: Components = {
   img: ({ src, alt }) => <Picture src={src} alt={alt} />,
 };
 
-export const Markdown = memo(function Markdown({ text }: { text: string }) {
+/** `streaming` shows a caret after the text, while the bot still writes it. */
+export const Markdown = memo(function Markdown({
+  text,
+  streaming = false,
+}: {
+  text: string;
+  streaming?: boolean;
+}) {
   return (
-    <div className="chat-md" data-selectable>
+    <div className={`chat-md ${streaming ? "is-streaming" : ""}`} data-selectable>
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {text}
       </ReactMarkdown>

@@ -7,8 +7,9 @@ import type { Activity, Bot, Crew } from "../../lib/protocol.gen";
 import { botsOf, crewList } from "../../store/app";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
+import { APP_OPENED } from "../../ui/motion";
 import { AccountArea } from "../account/AccountArea";
-import { BotAvatar } from "../bots/BotAvatar";
+import { BotAvatar, moodOf } from "../bots/BotAvatar";
 import { BotStateBadge, stateView } from "../bots/BotStateBadge";
 import { ChiefBadge, isChief } from "../bots/ChiefBadge";
 import { CrewDialog } from "./CrewDialog";
@@ -45,7 +46,8 @@ export function Sidebar() {
   );
 }
 
-const row = "relative flex w-full items-center rounded-lg text-left hover:bg-sunken";
+const row =
+  "relative flex w-full items-center rounded-lg text-left transition-colors duration-150 hover:bg-sunken";
 
 function CrewEntry({ crew }: { crew: Crew }) {
   const t = useT();
@@ -84,7 +86,7 @@ function Conversation({ bot, crew }: { bot: Bot; crew: Crew }) {
   const selectBot = useApp((state) => state.selectBot);
   const activity = bot.lastActivity;
   return (
-    <li>
+    <li className={bot.createdAt > APP_OPENED ? "animate-rise" : undefined}>
       <button
         type="button"
         aria-current={selected ? "page" : undefined}
@@ -92,7 +94,7 @@ function Conversation({ bot, crew }: { bot: Bot; crew: Crew }) {
         onClick={() => selectBot(bot.id)}
         className={`${row} gap-2.5 px-2.5 py-2 ${selected ? "bg-sunken" : ""}`}
       >
-        <BotAvatar color={bot.color} size={32} />
+        <BotAvatar color={bot.color} size={32} mood={moodOf(bot, crew.paused)} />
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-2">
             <span className="flex min-w-0 flex-1 items-center gap-1">
