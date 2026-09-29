@@ -19,6 +19,7 @@ pub struct Config {
     pub supervisor: SupervisorConfig,
     pub courier: CourierConfig,
     pub bots: BotsConfig,
+    pub browser: BrowserConfig,
     pub tasks: TasksConfig,
 }
 
@@ -33,6 +34,7 @@ impl Default for Config {
             supervisor: SupervisorConfig::default(),
             courier: CourierConfig::default(),
             bots: BotsConfig::default(),
+            browser: BrowserConfig::default(),
             tasks: TasksConfig::default(),
         }
     }
@@ -99,6 +101,28 @@ impl Default for BotsConfig {
     }
 }
 
+/// The bots' browser (spec 21.9).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct BrowserConfig {
+    /// Empty means the Microsoft Edge that comes with Windows.
+    pub path: String,
+    /// Closes a browser nobody used or watched for this long.
+    pub idle_minutes: u64,
+    /// Browsers open at the same time.
+    pub max_open: usize,
+}
+
+impl Default for BrowserConfig {
+    fn default() -> Self {
+        Self {
+            path: String::new(),
+            idle_minutes: 10,
+            max_open: 4,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct TasksConfig {
@@ -155,6 +179,9 @@ impl Config {
         if config.port == 0 {
             return Err("port must be between 1 and 65535".to_owned());
         }
+        if config.browser.max_open == 0 || config.browser.idle_minutes == 0 {
+            return Err("browser.max_open and browser.idle_minutes must be at least 1".to_owned());
+        }
         if !LOG_LEVELS.contains(&config.log_level.as_str()) {
             return Err(format!(
                 "log_level must be one of {}",
@@ -202,6 +229,7 @@ mod tests {
         assert!(Config::parse("[courier]\nmax_attempt = 1").is_err());
         assert!(Config::parse("port = 0").is_err());
         assert!(Config::parse("log_level = 'loud'").is_err());
+        assert!(Config::parse("[browser]\nmax_open = 0").is_err());
     }
 
     #[test]

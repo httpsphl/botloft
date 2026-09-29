@@ -122,6 +122,11 @@ pub fn set_paused(daemon: &Daemon, params: CrewsSetPausedParams) -> ApiResult<Cr
     if crew.paused != params.paused {
         crew.paused = params.paused;
         store.update_crew(&crew)?;
+        if crew.paused {
+            for bot in store.bots(Some(&crew.id), false)? {
+                daemon.browsers.close(&bot.id);
+            }
+        }
         let crew = changed(daemon, crew);
         daemon.supervisor.wake();
         return Ok(crew);
@@ -142,6 +147,7 @@ pub fn archive(daemon: &Daemon, params: CrewIdParams) -> ApiResult<Crew> {
     let crew = find(&store, &crew.id)?;
     for bot in &bots {
         super::routines::archive_of(daemon, &store, &bot.id);
+        daemon.browsers.forget(&bot.id);
     }
     for bot in bots {
         if let Some(bot) = store.bot(&bot.id)? {

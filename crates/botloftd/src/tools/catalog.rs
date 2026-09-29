@@ -17,6 +17,16 @@ pub const SUGGEST_BOT: &str = "suggest_bot";
 pub const PERMISSION_PROMPT: &str = "permission_prompt";
 
 pub fn tools() -> Value {
+    let mut tools = crew_tools();
+    if let Value::Array(list) = &mut tools {
+        // Before permission_prompt, which stays last.
+        let at = list.len() - 1;
+        list.splice(at..at, super::browser_catalog::tools());
+    }
+    tools
+}
+
+fn crew_tools() -> Value {
     json!([
         {
             "name": CREW_ROSTER,

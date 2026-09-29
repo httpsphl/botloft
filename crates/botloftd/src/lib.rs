@@ -4,6 +4,7 @@
 
 pub mod approvals;
 pub mod autostart;
+pub mod browser;
 pub mod chat;
 pub mod clock;
 pub mod config;
