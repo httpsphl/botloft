@@ -37,10 +37,41 @@ impl Supervisor {
         });
     }
 
+    /// A turn began (`system/init`, spec 8.1). With no message written
+    /// for it, it is Claude Code's own: a subagent finished and it went on
+    /// by itself. The bot is working all the same.
+    pub(crate) fn turn_began(&self, bot: &BotId, generation: u64) {
+        self.with_current(bot, generation, |supervisor, slot| {
+            if slot.turns == 0 {
+                slot.own_turn = true;
+            }
+            if slot.is_working() {
+                supervisor.set_state(bot, slot, slot.working_state());
+            }
+        });
+    }
+
+    /// Claude Code lists the subagents it runs in the background (`system/
+    /// background_tasks_changed`); the whole list comes each time. They work
+    /// after the turn that started them has ended.
+    pub(crate) fn agents_running(&self, bot: &BotId, generation: u64, agents: u32) {
+        self.with_current(bot, generation, |supervisor, slot| {
+            slot.agents = agents;
+            if slot.is_working() {
+                supervisor.set_state(bot, slot, slot.working_state());
+            }
+            supervisor.relaunch_if_idle(bot, slot);
+        });
+    }
+
     /// A `result` closed one turn.
     pub(crate) fn turn_ended(&self, bot: &BotId, generation: u64) {
         self.with_current(bot, generation, |supervisor, slot| {
-            slot.turns = slot.turns.saturating_sub(1);
+            if slot.own_turn {
+                slot.own_turn = false;
+            } else {
+                slot.turns = slot.turns.saturating_sub(1);
+            }
             if slot.is_working() {
                 supervisor.set_state(bot, slot, slot.working_state());
             }

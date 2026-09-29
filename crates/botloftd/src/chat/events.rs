@@ -37,7 +37,15 @@ pub(super) fn apply(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value
     // Subagents work inside a tool call; their traffic stays out of the chat.
     let from_subagent = !event["parent_tool_use_id"].is_null();
     match kind {
-        "system" if subtype == Some("init") => session(daemon, bot, event),
+        "system" if subtype == Some("init") => {
+            session(daemon, bot, event);
+            daemon.supervisor.turn_began(bot, generation);
+        }
+        "system" if subtype == Some("background_tasks_changed") => {
+            daemon
+                .supervisor
+                .agents_running(bot, generation, agent_count(event));
+        }
         "stream_event" if !from_subagent => delta(daemon, bot, event),
         "assistant" if !from_subagent => assistant(daemon, bot, generation, event),
         "user" if event["isReplay"].as_bool() == Some(true) => replay(daemon, bot, event),
@@ -46,6 +54,19 @@ pub(super) fn apply(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value
         "result" => result(daemon, bot, generation, event),
         _ => debug!(bot = %bot, kind, subtype, "stream event not used"),
     }
+}
+
+/// How many of the background tasks Claude Code lists are subagents. Shell
+/// commands and monitors can run for as long as the bot lives, so they do
+/// not count as work.
+fn agent_count(event: &Value) -> u32 {
+    let agents = event["tasks"].as_array().map_or(0, |tasks| {
+        tasks
+            .iter()
+            .filter(|task| task["task_type"] == "local_agent")
+            .count()
+    });
+    u32::try_from(agents).unwrap_or(u32::MAX)
 }
 
 /// Every turn starts with the session id; the next start resumes it.
