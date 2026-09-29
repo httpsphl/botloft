@@ -4,6 +4,7 @@
 
 import type { BotloftApi } from "./api";
 import { botHandlers } from "./fakeBots";
+import { FakeBrowser } from "./fakeBrowser";
 import { FakeChat } from "./fakeChat";
 import { FakeConversation } from "./fakeConversation";
 import { crewHandlers } from "./fakeCrews";
@@ -60,6 +61,7 @@ export class FakeBotloft implements BotloftApi {
   readonly conversation = new FakeConversation(this);
   readonly routines = new FakeRoutines(this);
   readonly files = new FakeFiles(this);
+  readonly browser = new FakeBrowser(this);
   /** Clock for created and updated times. */
   now = Date.now();
   closed = false;
@@ -211,6 +213,7 @@ export class FakeBotloft implements BotloftApi {
     ...this.chat.handlers(),
     ...this.conversation.handlers(),
     ...this.files.handlers(),
+    ...this.browser.handlers(),
     ...this.routines.handlers(),
   };
 }

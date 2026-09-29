@@ -2,6 +2,7 @@
 
 import { account } from "./account";
 import { bots } from "./bots";
+import { browser } from "./browser";
 import { chat } from "./chat";
 import { common } from "./common";
 import { crews } from "./crews";
@@ -19,6 +20,7 @@ export const en = {
   updates,
   account,
   bots,
+  browser,
   chat,
   crews,
   files,
