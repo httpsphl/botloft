@@ -218,7 +218,7 @@ Eventos de uma generation antiga são ignorados. Todo processo novo emite `bot.s
      (--session-id <uuid> | --resume <session_id>)
      --setting-sources project,local
      --mcp-config <workspace>\.botloft\mcp.json --strict-mcp-config
-     --permission-mode default
+     --permission-mode <modo do bot>
      --permission-prompt-tool mcp__botloft__permission_prompt
      --allowedTools mcp__botloft
    ```
@@ -226,6 +226,9 @@ Eventos de uma generation antiga são ignorados. Todo processo novo emite `bot.s
    - `--setting-sources project,local` e `--strict-mcp-config` deixam de fora hooks, skills, agents, modo de permissão e servidores MCP pessoais do dono: o bot vê o que o Botloft gera. O login da conta não é uma fonte de settings e continua valendo.
    - `--allowedTools mcp__botloft` libera as tools da crew sem aprovação. Uma regra `allow` no `settings.json` do projeto não bastaria: em `-p`, numa pasta que nunca passou pelo diálogo de confiança, o Claude Code não aplica as regras `allow` do projeto (documentado em `permissions`).
    - Qualquer outra ferramenta que peça permissão passa pela tool de aprovação (10.1) e vira um pedido no chat.
+   - `--permission-mode` vem do modo do bot (`Bot.permissionMode`), que o dono escolhe no chat (15.1): `default` (Manual: pergunta antes de editar, rodar comandos e usar a rede), `accept_edits` (`acceptEdits`: edita arquivos sem perguntar), `plan` (planeja e pede para seguir, 10.1), `auto` (um classificador libera o que é seguro e o resto vira pedido) e `bypass_permissions` (`bypassPermissions`: faz tudo sem perguntar, ver 13). Bot novo começa em `default`. `dontAsk` não é oferecido: nega o que não estiver liberado, e o bot não teria como pedir. Regras `deny` valem em todos os modos.
+   - O Claude Code só lê a flag ao iniciar e não entra em `bypassPermissions` no meio da sessão. Por isso mudar o modo reinicia o processo com `--resume`, e a conversa continua: na hora se o bot está parado, ou quando o turno em andamento e as aprovações dele terminam, sem cortar o trabalho.
+   - O Claude Code sai do modo `plan` sozinho quando o dono aprova o plano. Cada turno começa com um `system/init` que traz `permissionMode` (19); se o modo gravado é `plan` e o init diz outro, o daemon grava o novo, sem reiniciar, para o app mostrar o que o bot faz e um reinício manter. Qualquer outra diferença vem de um turno do processo antigo, que está para reiniciar no modo que o dono acabou de escolher, e é ignorada.
 5. Ambiente: o bloco padrão do usuário (`CreateEnvironmentBlock`, o mesmo de um logon novo), **não** o ambiente do daemon. Um daemon iniciado de dentro de uma sessão do Claude Code herda `CLAUDECODE`, `CLAUDE_CODE_MESSAGING_SOCKET`, `ANTHROPIC_BASE_URL` e outras variáveis da sessão, que fariam o bot se achar filho dela. Por cima vão `BOTLOFT_BOT_ID`, `BOTLOFT_BOT_TOKEN` e `BOTLOFT_PORT`.
 6. stdin, stdout e stderr em pipes, sem console (`CREATE_NO_WINDOW`). O stdin fica aberto enquanto o processo vive; fechá-lo encerra o Claude Code com código 0. O stderr vai para o log em nível `debug`, sem conteúdo de mensagem.
 
@@ -408,6 +411,8 @@ Com `--permission-prompt-tool mcp__botloft__permission_prompt`, toda ferramenta 
 
 "Permitir sempre" (gravar uma regra para o bot) fica para depois do MVP.
 
+**Plano.** No modo `plan`, o bot pede para seguir com a ferramenta `ExitPlanMode`, cuja entrada traz o plano em markdown (`{plan}`). O pedido passa pela mesma tool e vira no chat um cartão com o plano inteiro: a entrada dessa ferramenta é guardada até 32 KB (as outras, até 4 KB) e o resumo é a primeira linha do plano. "Aprovar plano" permite; "Pedir mudanças" nega com a nota do dono, e o bot continua planejando. Depois de aprovado, o Claude Code troca de modo sozinho (7.4). Que o pedido passa pela tool em `-p` e para qual modo o bot vai ainda precisam de teste real (19).
+
 A aprovação só abre se `tool_use_id` for de uma ferramenta em `running` no chat daquele bot. O daemon espera até 2 s pelo evento, que às vezes chega depois da chamada. Senão nega na hora, sem incomodar o dono. Assim um bot que chame `permission_prompt` por conta própria não consegue pôr um pedido inventado na frente do dono. A descrição da tool também diz para não chamá-la.
 
 ## 11. Protocolo do app (JSON-RPC 2.0 sobre WebSocket)
@@ -437,6 +442,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `bots.create` | `crewId, name, role, instructions, color?` | `Bot` |
 | `bots.update` | `botId, name?, role?, instructions?, color?` | `Bot` |
 | `bots.setPaused` | `botId, paused` | `Bot` |
+| `bots.setPermissionMode` | `botId, mode` (`default`, `accept_edits`, `plan`, `auto`, `bypass_permissions`) | `Bot`; o bot reinicia no novo modo quando nada estiver em andamento (7.4) |
 | `bots.restart` | `botId, fresh?` | `Bot` |
 | `bots.archive` | `botId` | `Bot` |
 | `chat.history` | `botId, before?, limit?` | `ChatItem[]`, mais novo primeiro; `limit` de 1 a 200, 50 se ausente |
@@ -448,7 +454,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `deliveries.retry` | `deliveryId` | `Delivery` |
 | `tasks.list` | `crewId?, status?` | `Task[]` |
 
-`Bot` traz também `lastActivity`: o último item do chat resumido em uma linha, para a lista de conversas: `kind` (`owner`, `message`, `reply`, `tool`, `approval`, `notice`), `text` e `at`. O `text` não tem palavras do daemon: a mensagem do dono vem sem "You:" e a aprovação só com o nome da ferramenta, e o app completa no idioma do dono.
+`Bot` traz também `permissionMode` (7.4) e `lastActivity`: o último item do chat resumido em uma linha, para a lista de conversas: `kind` (`owner`, `message`, `reply`, `tool`, `approval`, `notice`), `text` e `at`. O `text` não tem palavras do daemon: a mensagem do dono vem sem "You:" e a aprovação só com o nome da ferramenta, e o app completa no idioma do dono.
 
 ### 11.3 Notificações do servidor
 
@@ -473,7 +479,7 @@ Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations 
 | Tabela | Colunas principais |
 |---|---|
 | `crews` | `id, name, slug, paused, created_at, archived_at` |
-| `bots` | `id, crew_id, name, handle, slug, role, instructions, color, paused, token_hash, session_id, created_at, archived_at` |
+| `bots` | `id, crew_id, name, handle, slug, role, instructions, color, paused, permission_mode, token_hash, session_id, created_at, archived_at` |
 | `messages` | `id, crew_id, from_kind (owner/bot/system), from_bot_id, to_bot_id, kind (note/task/result/system), body, task_id, created_at` |
 | `attachments` | `id, message_id, name, media_type, size, path, created_at` |
 | `deliveries` | `id, message_id, bot_id, state, attempts, next_attempt_at, lease_until, last_error, sent_generation, turn_uuid, read_at, updated_at` |
@@ -493,6 +499,7 @@ Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations 
 - `log_level` vale só para os crates do Botloft; dependências ficam em `warn`, porque em `debug`/`trace` a pilha de WebSocket registra frames, que podem conter mensagens. `RUST_LOG` sobrepõe tudo e é só para depuração local.
 - Nome de anexo vira só o nome do arquivo (sem `..`, sem pasta, sem caracteres proibidos no Windows) antes de ir para o disco.
 - Isolamento entre bots é cooperativo (mesmo usuário do Windows). Documentar isso no README sem prometer sandbox.
+- Modo `bypass_permissions` (7.4): o bot faz tudo sem perguntar. As regras `deny` de leitura só cobrem as ferramentas de arquivo do Claude Code, alguns comandos do Bash (`cat`, `head`, `tail`, `sed`, `tee`) e redirecionamentos, não um script em Python ou Node, e o Windows nativo não tem sandbox. Um bot nesse modo pode ler `secrets\owner.token`, o banco e as pastas de outros bots, e uma mensagem de outra pessoa pode levá-lo a isso. O app só liga o modo depois de uma confirmação que diz isso, e o bot fica marcado em vermelho (15.1).
 
 ## 14. Integração com o Windows
 
@@ -552,7 +559,8 @@ Layout, como um app de mensagens:
 
 - **Barra lateral:** crews como seções, com os bots como conversas. Cada conversa mostra avatar, nome, estado (cor, ícone e texto) e a prévia da última atividade (`lastActivity`) com a hora. Ela aparece desde a conexão, também na tela de boas-vindas antes da primeira crew.
 - **Área da conta**, no pé da barra lateral, como nos apps de chat: um círculo com a inicial, o nome do dono (do Windows) e o plano do Claude ("Plano Max"; sem plano, a organização ou o e-mail; desconectado, "Sem conta do Claude conectada"). Um clique abre um menu para cima com o e-mail e: **Uso** (as janelas de uso do plano, 8.1, com a parte usada e quando renovam; antes da primeira resposta de um bot, um aviso de que ainda não há dados), **Configurações** (tema, tamanho, idioma e as versões do Botloft e do Claude Code), **Idioma** (submenu ao lado, com a escolha na hora), **Novidades** (a página de releases no navegador) e **Ajuda** (o README no navegador). Tema, tamanho e idioma saíram da barra de título; ela só mostra o idioma nas telas de preparo, que ainda não têm barra lateral.
-- **Área principal com um bot:** cabeçalho com nome, estado e ações; o chat; o compositor embaixo. O compositor aceita texto, colar imagem e arrastar ou escolher arquivos. Enter envia e Shift+Enter quebra linha.
+- **Área principal com um bot:** cabeçalho com nome, estado e ações; o chat; o compositor embaixo. O compositor aceita texto, colar imagem e arrastar ou escolher arquivos. Enter envia e Shift+Enter quebra linha (a dica aparece enquanto o dono escreve).
+- **Modo do bot**, no compositor, ao lado do clipe, como no Claude Code: um botão com o modo atual abre um menu para cima, "Modo", com Automático, Manual, Aceitar edições e Plano, cada um com uma linha que fala do bot pelo nome ("Scout decide o que precisa do seu OK") e a marca no atual. Separado, "Ignorar permissões" com o botão Ativar, que abre uma confirmação dizendo que o bot não fica preso à pasta dele (13). Nesse modo o botão fica vermelho e o cabeçalho mostra "Não pergunta nada" em vermelho. Com o bot ocupado, uma linha acima do compositor avisa que ele muda de modo quando terminar o que está fazendo.
 - **Área principal com uma crew:** a timeline (messages entre os bots e do dono) e as tasks.
 - **Detalhes do bot** (pasta, instruções, sessão) ficam num painel, fora do caminho da conversa.
 
@@ -587,16 +595,18 @@ Em dev, `pnpm tauri dev` usa o `target\debug\botloftd.exe` como sidecar e instal
 
 ### 15.3 Direção visual
 
-Ferramenta de trabalho densa e calma: tipografia forte, grid firme, estados dos bots legíveis de longe (cor + ícone + texto, nunca só cor). Sem gradiente, sem sombra pesada, sem visual de template. Tema escuro e claro. Barra de título própria (`decorations: false`) com controles de janela do Windows.
+Ferramenta de trabalho densa e calma: tipografia forte, grid firme, estados dos bots legíveis de longe (cor + ícone + texto, nunca só cor). Sem gradiente, sem sombra pesada, sem visual de template. Cantos arredondados, como nos apps de chat: botões, campos e linhas de menu com 8 px; cartões, avisos e menus com 12 px; compositor, diálogos e cartões do chat com 16 px. Menus e diálogos flutuam com uma sombra leve (`shadow-lift`, mais forte no tema escuro). Na barra lateral, a conversa aberta é um bloco arredondado recuado das bordas. Tema escuro e claro. Barra de título própria (`decorations: false`) com controles de janela do Windows.
 
 Tamanho: a janela inteira é desenhada numa escala (zoom do webview, `setZoom`), então texto, espaçamento, ícones e avatares crescem juntos. Níveis 100%, 110%, 125% e 150%; o padrão é **125%**, porque o desenho a 100% ficava miúdo num monitor sem ampliação do Windows. Quem já usa a ampliação alta volta para 100% em Configurações (área da conta) ou com Ctrl+-; Ctrl+= aumenta e Ctrl+0 volta ao padrão. A escolha fica no `localStorage` (`botloft.zoom`) e é aplicada antes da primeira pintura, para a janela não piscar pequena. Acima de 150% a janela mínima (900 px) não cabe o layout.
 
 No chat:
 
+- O chat é uma coluna centralizada (48rem), com o compositor na mesma largura; o dia é uma pílula no meio.
 - O dono fala em balões à direita; o bot, à esquerda, com markdown.
 - Mensagens de outros bots aparecem à esquerda, com o avatar e o nome de quem mandou.
 - O que o bot faz com as ferramentas aparece em linhas compactas (ícone, ferramenta, resumo e estado), agrupadas por turno, que abrem para mostrar entrada e saída.
 - Pedido de aprovação é um cartão com o que o bot quer fazer e os botões Permitir e Negar.
+- Pedido para seguir com um plano (10.1) é um cartão com o plano em markdown, um campo para o que deve mudar e os botões Aprovar plano e Pedir mudanças. Respondido, vira uma linha que abre o plano de novo.
 - Anexos aparecem como miniatura (imagem) ou cartão com nome, tipo e tamanho.
 
 Identidade: o mascote do Botloft é uma chama com olhos, desenhada em vetor em `app/app-icon.svg`. O ícone do app é o mascote branco sobre fundo preto. Cada bot usa o mesmo personagem como avatar, com uma cor própria escolhida na criação, sem fundo e com um contorno fino e discreto (escuro no tema claro, claro no escuro) para as cores claras não sumirem. O mascote branco do próprio Botloft (barra de título, mensagens do daemon) fica sobre o quadrado preto do ícone do app, que é o que o torna visível no tema claro. A cor do avatar identifica o bot e não comunica estado: estado continua sendo cor + ícone + texto, como descrito acima.
@@ -676,6 +686,9 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28. "Co
 | `--setting-sources project,local` | 7.4 | Confirmado (`cli-reference`). **Testado com 2.1.284**: sem os hooks, skills e agents do usuário; modo `default`; login da assinatura continua valendo | feito (M4.1) |
 | `claude auth status` | 7.3 | Confirmado (`cli-reference`): JSON por padrão, sai com 0 conectado e 1 desconectado. **Testado com 2.1.284**: conectado traz `"loggedIn": true`; com `CLAUDE_CONFIG_DIR` vazio, `"loggedIn": false`, `"authMethod": "none"` e saída 1. As credenciais ficam em `%USERPROFILE%\.claude\.credentials.json` (`authentication`) | feito |
 | `claude auth login` | 15.2 | Confirmado (`cli-reference`, `authentication`): abre o navegador e volta por um servidor local; se o navegador não alcançar esse servidor, mostra um código para colar no terminal. Se o subcomando sai sozinho depois do login ainda não foi visto: o app só depende do código de saída | manual (PR) |
+| `permissionMode` no `system/init` | 7.4 | **Visto com 2.1.284**: o `system/init` de cada turno traz `permissionMode` com o valor da CLI (`default`, `acceptEdits`, `plan`, `auto`, `bypassPermissions`) | feito |
+| Modos de permissão em `-p` | 7.4 | Confirmado (`permission-modes`): `deny` vale em todos os modos, inclusive `bypassPermissions`, que não pode ser ligado no meio da sessão; em `-p`, `auto` manda para a tool de aprovação o que o classificador não libera e `plan` continua bloqueando edições. O `auto` depende do plano e do modelo; o que `--permission-mode auto` faz sem ele ainda não foi visto | manual (PR) |
+| `ExitPlanMode` em `-p` | 10.1 | A lista de ferramentas diz que ele pede permissão. Não visto: se o pedido chega à tool de aprovação com `{plan}` na entrada, e para qual modo o bot vai depois de aprovado (o daemon segue o `system/init` do turno seguinte) | manual (PR) |
 | Regras `allow` do projeto em `-p` sem confiança | 7.4 | Confirmado (`permissions`): não são aplicadas numa pasta nunca confiada; `deny` vale sempre. Por isso `--allowedTools mcp__botloft` | M4.1 |
 | `--session-id`, `--resume` em `-p` | 7.3 | Confirmado (`cli-reference`, `sessions`): a sessão retoma histórico e modelo; flags como `--mcp-config` têm de ser passadas de novo. **Testado com 2.1.284**: depois de reiniciar o bot e depois de reiniciar o daemon, o bot lembrou arquivos, a imagem e a mensagem de outro bot | feito (M4.1) |
 | Tools MCP adiadas | 10 | **Visto com 2.1.284**: as tools do `botloft` chegam adiadas; antes da primeira `send_message` o bot chama `ToolSearch` com `select:mcp__botloft__send_message`. O chat mostra isso como "load send_message" | feito (M4.1) |

@@ -1,6 +1,7 @@
 //! `bots` table.
 
 use botloft_core::ids::{BotId, CrewId};
+use botloft_core::protocol::PermissionMode;
 use rusqlite::{OptionalExtension, Row, params};
 
 use crate::{Result, Store, parse_column, unique_as_duplicate};
@@ -18,12 +19,13 @@ pub struct BotRecord {
     pub instructions: String,
     pub color: String,
     pub paused: bool,
+    pub permission_mode: PermissionMode,
     pub created_at: i64,
     pub archived_at: Option<i64>,
 }
 
-const COLUMNS: &str =
-    "id, crew_id, name, handle, slug, role, instructions, color, paused, created_at, archived_at";
+const COLUMNS: &str = "id, crew_id, name, handle, slug, role, instructions, color, paused, created_at, archived_at, \
+     permission_mode";
 
 fn from_row(row: &Row<'_>) -> rusqlite::Result<BotRecord> {
     Ok(BotRecord {
@@ -38,6 +40,7 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<BotRecord> {
         paused: row.get(8)?,
         created_at: row.get(9)?,
         archived_at: row.get(10)?,
+        permission_mode: parse_column(row, 11)?,
     })
 }
 
@@ -47,7 +50,7 @@ impl Store {
             .execute(
                 &format!(
                     "INSERT INTO bots ({COLUMNS}) \
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)"
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)"
                 ),
                 params![
                     bot.id.as_str(),
@@ -60,7 +63,8 @@ impl Store {
                     bot.color,
                     bot.paused,
                     bot.created_at,
-                    bot.archived_at
+                    bot.archived_at,
+                    bot.permission_mode.as_str()
                 ],
             )
             .map_err(|err| unique_as_duplicate(err, "bot handle or slug"))?;
@@ -128,7 +132,7 @@ impl Store {
         self.conn
             .execute(
                 "UPDATE bots SET name = ?2, handle = ?3, role = ?4, instructions = ?5, \
-                 color = ?6, paused = ?7, archived_at = ?8 WHERE id = ?1",
+                 color = ?6, paused = ?7, archived_at = ?8, permission_mode = ?9 WHERE id = ?1",
                 params![
                     bot.id.as_str(),
                     bot.name,
@@ -137,7 +141,8 @@ impl Store {
                     bot.instructions,
                     bot.color,
                     bot.paused,
-                    bot.archived_at
+                    bot.archived_at,
+                    bot.permission_mode.as_str()
                 ],
             )
             .map_err(|err| unique_as_duplicate(err, "bot handle"))?;
@@ -199,6 +204,7 @@ mod tests {
             instructions: "Be brief.\nCite sources.".to_owned(),
             color: "#FF7A59".to_owned(),
             paused: false,
+            permission_mode: PermissionMode::Default,
             created_at,
             archived_at: None,
         }

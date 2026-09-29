@@ -9,6 +9,7 @@ import {
   FileText,
   Globe,
   ListChecks,
+  ListTodo,
   LoaderCircle,
   type LucideIcon,
   Send,
@@ -34,6 +35,7 @@ const ICONS: Record<string, LucideIcon> = {
   WebFetch: Globe,
   WebSearch: Globe,
   TodoWrite: ListChecks,
+  ExitPlanMode: ListTodo,
   Task: Users,
   Agent: Users,
   send_message: Send,
@@ -77,14 +79,14 @@ function ToolLine({ tool }: { tool: ToolItem }) {
   const label = toolLabel(tool.name);
   const Icon = ICONS[label] ?? Wrench;
   const block =
-    "max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-[3px] border border-line bg-sunken px-2.5 py-1.5 font-mono text-xs leading-relaxed";
+    "max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-lg border border-line bg-sunken px-2.5 py-1.5 font-mono text-xs leading-relaxed";
   return (
     <li>
       <button
         type="button"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
-        className="group flex w-full min-w-0 items-center gap-2 rounded-[3px] px-1.5 py-1 text-left text-sm hover:bg-sunken"
+        className="group flex w-full min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 text-left text-sm hover:bg-sunken"
       >
         <Icon aria-hidden size={14} className="shrink-0 text-muted" />
         <span className="shrink-0 font-medium">{label}</span>

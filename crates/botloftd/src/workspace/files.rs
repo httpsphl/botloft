@@ -163,6 +163,7 @@ mod tests {
             instructions: "Review every PR.".to_owned(),
             color: "#FF7A59".to_owned(),
             paused: false,
+            permission_mode: botloft_core::protocol::PermissionMode::Default,
             created_at: 0,
             archived_at: None,
         };

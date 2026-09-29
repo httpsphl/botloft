@@ -78,6 +78,12 @@ archivedAt: number | null, };
 export type BotState = "offline" | "launching" | "idle" | "busy" | "needs_approval" | "rate_limited" | "auth_error" | "backoff" | "archived";
 
 /**
+ * How much a bot may do without asking the owner: Claude Code's
+ * permission modes (spec 7.4).
+ */
+export type PermissionMode = "default" | "accept_edits" | "plan" | "auto" | "bypass_permissions";
+
+/**
  * What the conversation-list line shows; the app words it.
  */
 export type ActivityKind = "owner" | "message" | "reply" | "tool" | "approval" | "notice";
@@ -111,7 +117,7 @@ slug: string, role: string, instructions: string,
 /**
  * Avatar color, `#RRGGBB`.
  */
-color: string, paused: boolean, state: BotState, 
+color: string, paused: boolean, permissionMode: PermissionMode, state: BotState, 
 /**
  * Current process generation; `null` if the bot has not started since
  * the daemon did. Changes on every (re)start.
@@ -265,6 +271,8 @@ color?: string, };
 export type BotsUpdateParams = { botId: BotId, name?: string, role?: string, instructions?: string, color?: string, };
 
 export type BotsSetPausedParams = { botId: BotId, paused: boolean, };
+
+export type BotsSetPermissionModeParams = { botId: BotId, mode: PermissionMode, };
 
 export type BotIdParams = { botId: BotId, };
 
@@ -575,6 +583,7 @@ export interface RpcMethods {
   "bots.create": { params: BotsCreateParams; result: Bot };
   "bots.update": { params: BotsUpdateParams; result: Bot };
   "bots.setPaused": { params: BotsSetPausedParams; result: Bot };
+  "bots.setPermissionMode": { params: BotsSetPermissionModeParams; result: Bot };
   "bots.archive": { params: BotIdParams; result: Bot };
   "bots.restart": { params: BotsRestartParams; result: Bot };
   "chat.history": { params: ChatHistoryParams; result: Array<ChatItem> };

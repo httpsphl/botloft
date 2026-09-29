@@ -4,7 +4,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use super::DeliveryBacklog;
+use super::{DeliveryBacklog, PermissionMode};
 use crate::ids::{BotId, CrewId};
 
 /// Identifies the connecting app in `session.hello`.
@@ -196,6 +196,14 @@ pub struct BotsUpdateParams {
 pub struct BotsSetPausedParams {
     pub bot_id: BotId,
     pub paused: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BotsSetPermissionModeParams {
+    pub bot_id: BotId,
+    pub mode: PermissionMode,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

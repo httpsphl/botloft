@@ -258,6 +258,7 @@ export class FakeBotloft implements BotloftApi {
         instructions,
         color: color ?? AVATAR_PALETTE[index % AVATAR_PALETTE.length] ?? "#FF7A59",
         paused: false,
+        permissionMode: "default",
         state: crew.paused ? "offline" : "launching",
         generation: crew.paused ? null : 1,
         workspace: `C:\\Users\\owner\\Botloft\\${crew.slug}\\${handle}`,
@@ -282,6 +283,11 @@ export class FakeBotloft implements BotloftApi {
     "bots.setPaused": ({ botId, paused }) => {
       const bot = this.bot(botId);
       bot.paused = paused;
+      return this.changedBot(bot);
+    },
+    "bots.setPermissionMode": ({ botId, mode }) => {
+      const bot = this.bot(botId);
+      bot.permissionMode = mode;
       return this.changedBot(bot);
     },
     "bots.restart": ({ botId }) => {

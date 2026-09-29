@@ -102,6 +102,7 @@ mod tests {
             instructions: String::new(),
             color: "#FF7A59".to_owned(),
             paused: false,
+            permission_mode: botloft_core::protocol::PermissionMode::Default,
             created_at: 0,
             archived_at: None,
         };

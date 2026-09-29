@@ -67,6 +67,7 @@ impl Supervisor {
                 slot.turns = 0;
                 slot.approvals = 0;
                 slot.limited_until = None;
+                slot.restart_when_idle = false;
                 tokens.insert(launch.token_hash.clone(), (bot.id.clone(), generation));
                 slot.running = Some(Running {
                     control: process.control,
@@ -197,7 +198,7 @@ fn launch_spec(
         "project,local",
         "--strict-mcp-config",
         "--permission-mode",
-        "default",
+        bot.permission_mode.cli_value(),
         "--permission-prompt-tool",
         PERMISSION_TOOL,
         "--allowedTools",

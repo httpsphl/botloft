@@ -149,6 +149,11 @@ export class FakeChat {
         approval.status = allow ? "allowed" : "denied";
         approval.note = allow ? null : (note ?? null);
         approval.answeredAt = this.fake.now;
+        // Claude Code leaves plan mode once the plan is approved.
+        const bot = this.fake.bots.get(approval.botId);
+        if (allow && approval.toolName === "ExitPlanMode" && bot?.permissionMode === "plan") {
+          void this.fake.call("bots.setPermissionMode", { botId: bot.id, mode: "default" });
+        }
         const item = this.items.find(
           (entry) => entry.body.kind === "approval" && entry.body.approvalId === approvalId,
         );

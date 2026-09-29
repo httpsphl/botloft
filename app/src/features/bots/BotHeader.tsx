@@ -8,6 +8,7 @@ import {
   Play,
   RefreshCcw,
   RotateCw,
+  ShieldOff,
 } from "lucide-react";
 import { useState } from "react";
 import { useT } from "../../i18n";
@@ -65,6 +66,15 @@ export function BotHeader({
         </div>
         <div className="mt-0.5 flex items-center gap-3 text-sm">
           <BotStateBadge bot={bot} crewPaused={crew.paused} />
+          {bot.permissionMode === "bypass_permissions" && (
+            <span
+              title={t.chat.mode.badgeHint}
+              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-danger/10 px-2 py-0.5 font-medium text-danger text-xs"
+            >
+              <ShieldOff aria-hidden size={12} />
+              {t.chat.mode.badge}
+            </span>
+          )}
           <span className="truncate text-muted">{bot.role || words.noRole}</span>
         </div>
       </div>

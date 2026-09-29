@@ -6,6 +6,7 @@ import {
   type ClipboardEvent,
   type FormEvent,
   type KeyboardEvent,
+  useEffect,
   useId,
   useLayoutEffect,
   useRef,
@@ -17,6 +18,7 @@ import { fileSize } from "../../lib/format";
 import { type Bot, FIELD_LIMITS } from "../../lib/protocol.gen";
 import { useApi } from "../../store/context";
 import { rememberImage } from "./images";
+import { ModePicker } from "./ModePicker";
 import type { Files, PendingFile } from "./useFiles";
 
 const MAX_HEIGHT_PX = 240;
@@ -24,9 +26,9 @@ const MAX_HEIGHT_PX = 240;
 function Chip({ file, onRemove }: { file: PendingFile; onRemove(): void }) {
   const t = useT();
   return (
-    <li className="relative flex h-14 items-center gap-2 rounded-md border border-line bg-canvas pr-7 pl-1.5">
+    <li className="relative flex h-14 items-center gap-2 rounded-xl border border-line bg-canvas pr-7 pl-1.5">
       {file.preview ? (
-        <img src={file.preview} alt="" className="h-11 w-11 rounded-[3px] object-cover" />
+        <img src={file.preview} alt="" className="h-11 w-11 rounded-lg object-cover" />
       ) : (
         <FileIcon aria-hidden size={20} className="mx-1 text-muted" />
       )}
@@ -64,11 +66,20 @@ export function ChatComposer({
   const t = useT();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  /** A new mode that waits for the bot to finish what it is doing. */
+  const [later, setLater] = useState<string | null>(null);
   const field = useRef<HTMLTextAreaElement>(null);
   const picker = useRef<HTMLInputElement>(null);
   const fieldId = useId();
   const tooLong = text.length > FIELD_LIMITS.message;
   const empty = !text.trim() && files.files.length === 0;
+
+  const working = bot.state === "busy" || bot.state === "needs_approval";
+  useEffect(() => {
+    if (!working) {
+      setLater(null);
+    }
+  }, [working]);
 
   // Grows with the text up to a limit, then scrolls.
   useLayoutEffect(() => {
@@ -130,14 +141,18 @@ export function ChatComposer({
   };
 
   return (
-    <form onSubmit={send} className="shrink-0 px-5 pt-2 pb-4">
-      {stopped && <p className="mb-1.5 text-muted text-xs">{t.chat.composer.paused(bot.name)}</p>}
-      <div className="rounded-lg border border-line-strong bg-panel focus-within:border-accent">
+    <form onSubmit={send} className="shrink-0 px-5 pt-2 pb-5">
+      {stopped && (
+        <p className="mb-1.5 px-2 text-muted text-xs">{t.chat.composer.paused(bot.name)}</p>
+      )}
+      {later && (
+        <p role="status" className="mb-1.5 px-2 text-muted text-xs">
+          {later}
+        </p>
+      )}
+      <div className="rounded-2xl border border-line-strong bg-panel shadow-sm transition-colors focus-within:border-muted">
         {files.files.length > 0 && (
-          <ul
-            aria-label={t.chat.composer.filesToSend}
-            className="flex flex-wrap gap-2 px-2.5 pt-2.5"
-          >
+          <ul aria-label={t.chat.composer.filesToSend} className="flex flex-wrap gap-2 px-3 pt-3">
             {files.files.map((file) => (
               <Chip key={file.key} file={file} onRemove={() => files.remove(file.key)} />
             ))}
@@ -155,15 +170,15 @@ export function ChatComposer({
           onKeyDown={onKeyDown}
           onPaste={onPaste}
           placeholder={t.chat.composer.placeholder(bot.name)}
-          className="block max-h-60 w-full resize-none bg-transparent px-3.5 pt-3 pb-1 leading-relaxed outline-none placeholder:text-muted"
+          className="block max-h-60 w-full resize-none bg-transparent px-4 pt-3.5 pb-1.5 leading-relaxed outline-none placeholder:text-muted"
         />
-        <div className="flex items-center gap-2 px-2 pb-2">
+        <div className="flex items-center gap-1 px-2.5 pb-2.5">
           <button
             type="button"
             aria-label={t.chat.composer.attach}
             title={t.chat.composer.attachHint}
             onClick={() => picker.current?.click()}
-            className="grid h-8 w-8 place-items-center rounded-[3px] text-muted hover:bg-sunken hover:text-ink"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted hover:bg-sunken hover:text-ink"
           >
             <Paperclip aria-hidden size={16} />
           </button>
@@ -178,16 +193,19 @@ export function ChatComposer({
               event.target.value = "";
             }}
           />
-          <span className={`flex-1 text-xs ${tooLong ? "text-danger" : "text-muted"}`}>
+          <ModePicker bot={bot} onLater={setLater} />
+          <span
+            className={`min-w-0 flex-1 truncate px-1 text-right text-xs ${tooLong ? "text-danger" : "text-muted"}`}
+          >
             {tooLong
               ? t.chat.composer.tooLong(text.length, FIELD_LIMITS.message)
-              : t.chat.composer.keys}
+              : text && t.chat.composer.keys}
           </span>
           <button
             type="submit"
             aria-label={t.chat.composer.send}
             disabled={empty || tooLong || busy}
-            className="grid h-8 w-8 place-items-center rounded-full bg-ink text-canvas hover:bg-ink-soft disabled:opacity-35"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent text-canvas transition-opacity hover:opacity-90 disabled:bg-line-strong disabled:opacity-60"
           >
             <ArrowUp aria-hidden size={16} strokeWidth={2.25} />
           </button>

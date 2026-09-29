@@ -37,6 +37,49 @@ pub enum BotState {
     Archived,
 }
 
+text_enum!(
+    /// How much a bot may do without asking the owner: Claude Code's
+    /// permission modes (spec 7.4).
+    PermissionMode, "permission mode" {
+        /// Asks before edits, commands and the network ("Manual").
+        Default => "default",
+        /// Edits files and runs common file commands without asking.
+        AcceptEdits => "accept_edits",
+        /// Plans first, then asks to go ahead with the plan.
+        Plan => "plan",
+        /// A classifier reviews each action; what it does not allow is asked.
+        Auto => "auto",
+        /// Does everything without asking.
+        BypassPermissions => "bypass_permissions",
+    }
+);
+
+impl PermissionMode {
+    /// The value of Claude Code's `--permission-mode`, and what it reports
+    /// in `system/init`.
+    pub fn cli_value(self) -> &'static str {
+        match self {
+            Self::Default => "default",
+            Self::AcceptEdits => "acceptEdits",
+            Self::Plan => "plan",
+            Self::Auto => "auto",
+            Self::BypassPermissions => "bypassPermissions",
+        }
+    }
+
+    pub fn from_cli(value: &str) -> Option<Self> {
+        [
+            Self::Default,
+            Self::AcceptEdits,
+            Self::Plan,
+            Self::Auto,
+            Self::BypassPermissions,
+        ]
+        .into_iter()
+        .find(|mode| mode.cli_value() == value)
+    }
+}
+
 /// A persistent Claude Code session with a name, a role and instructions.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -55,6 +98,7 @@ pub struct Bot {
     /// Avatar color, `#RRGGBB`.
     pub color: String,
     pub paused: bool,
+    pub permission_mode: PermissionMode,
     pub state: BotState,
     /// Current process generation; `null` if the bot has not started since
     /// the daemon did. Changes on every (re)start.

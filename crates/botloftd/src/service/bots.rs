@@ -3,7 +3,7 @@
 use botloft_core::ids::{BotId, CrewId};
 use botloft_core::protocol::{
     Bot, BotIdParams, BotState, BotsCreateParams, BotsListParams, BotsRestartParams,
-    BotsSetPausedParams, BotsUpdateParams, Crew,
+    BotsSetPausedParams, BotsUpdateParams, Crew, PermissionMode,
 };
 use botloft_core::{avatar, now_ms, slug, validate};
 use botloft_store::{BotRecord, Store};
@@ -60,6 +60,7 @@ pub fn create(daemon: &Daemon, params: BotsCreateParams) -> ApiResult<Bot> {
         instructions,
         color,
         paused: false,
+        permission_mode: PermissionMode::Default,
         created_at: now_ms(),
         archived_at: None,
     };
@@ -166,6 +167,7 @@ pub(crate) fn to_protocol(daemon: &Daemon, store: &Store, crew: &Crew, record: B
         instructions: record.instructions,
         color: record.color,
         paused: record.paused,
+        permission_mode: record.permission_mode,
         state,
         generation,
         workspace: workspace.to_string_lossy().into_owned(),
@@ -175,7 +177,7 @@ pub(crate) fn to_protocol(daemon: &Daemon, store: &Store, crew: &Crew, record: B
     }
 }
 
-fn changed(daemon: &Daemon, store: &Store, crew: &Crew, record: BotRecord) -> Bot {
+pub(crate) fn changed(daemon: &Daemon, store: &Store, crew: &Crew, record: BotRecord) -> Bot {
     let bot = to_protocol(daemon, store, crew, record);
     daemon.emit(Event::BotChanged(bot.clone()));
     bot

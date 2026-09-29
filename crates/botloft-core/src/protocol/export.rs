@@ -87,6 +87,7 @@ fn export_bindings() {
     out.decl::<AttachmentId>();
     out.decl::<Crew>();
     out.decl::<BotState>();
+    out.decl::<PermissionMode>();
     out.decl::<ActivityKind>();
     out.decl::<Activity>();
     out.decl::<Bot>();
@@ -107,6 +108,7 @@ fn export_bindings() {
     out.decl::<BotsCreateParams>();
     out.decl::<BotsUpdateParams>();
     out.decl::<BotsSetPausedParams>();
+    out.decl::<BotsSetPermissionModeParams>();
     out.decl::<BotIdParams>();
     out.decl::<BotsRestartParams>();
     out.decl::<BotStateChanged>();
@@ -190,6 +192,11 @@ fn export_bindings() {
     out.method(
         method::BOTS_SET_PAUSED,
         &out.name::<BotsSetPausedParams>(),
+        &bot,
+    );
+    out.method(
+        method::BOTS_SET_PERMISSION_MODE,
+        &out.name::<BotsSetPermissionModeParams>(),
         &bot,
     );
     out.method(method::BOTS_ARCHIVE, &out.name::<BotIdParams>(), &bot);

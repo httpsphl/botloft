@@ -79,6 +79,50 @@ export const chat: Messages["chat"] = {
     denied: (tool: string) => `Denegaste ${tool}`,
     expired: (tool: string) => `${tool} no se aprobó a tiempo`,
   },
+  mode: {
+    title: "Modo",
+    button: (mode: string) => `Modo: ${mode}`,
+    names: {
+      auto: "Automático",
+      default: "Manual",
+      accept_edits: "Aceptar ediciones",
+      plan: "Plan",
+      bypass_permissions: "Omitir permisos",
+    },
+    hints: {
+      auto: (bot: string) => `${bot} decide qué necesita tu aprobación`,
+      default: (bot: string) => `${bot} siempre pregunta antes de hacer cambios`,
+      accept_edits: (bot: string) => `${bot} edita archivos sin preguntar`,
+      plan: (bot: string) => `${bot} crea un plan antes de hacer cambios`,
+      bypass_permissions: (bot: string) => `${bot} lo hace todo sin preguntar`,
+    },
+    turnOn: "Activar",
+    failed: "No se pudo cambiar el modo",
+    later: (bot: string, mode: string) =>
+      `${bot} cambiará a ${mode} cuando termine lo que está haciendo.`,
+    bypassTitle: (bot: string) => `¿Dejar que ${bot} haga todo sin preguntar?`,
+    bypassBody: (bot: string) =>
+      `${bot} editará archivos, ejecutará comandos y usará internet en este equipo sin pedirte permiso antes.`,
+    bypassRisk:
+      "No se limita a su carpeta: puede leer y cambiar tus otros archivos, los de otros bots y los del propio Botloft. Un mensaje de otra persona podría llevarlo a hacer algo que no querías.",
+    bypassAdvice:
+      "Actívalo solo para un bot en el que confíes para todo, y solo mientras lo necesites.",
+    badge: "No pregunta nada",
+    badgeHint:
+      "Este bot lo hace todo sin preguntar. Cámbialo en el selector de modo, debajo del chat.",
+  },
+  plan: {
+    ready: (bot: string) => `${bot} hizo un plan y quiere seguir con él`,
+    noteLabel: (bot: string) => `Qué debe cambiar ${bot} en el plan`,
+    notePlaceholder: "¿Qué debe cambiar? Se envía al bot si pides cambios (opcional)",
+    approve: "Aprobar plan",
+    keepPlanning: "Pedir cambios",
+    approveFailed: "No se pudo aprobar el plan",
+    keepFailed: "No se pudo devolver el plan",
+    approved: "Aprobaste el plan",
+    sentBack: "Pediste cambios en el plan",
+    expired: "El plan no se aprobó a tiempo",
+  },
   markdown: {
     image: "imagen",
     openLinkFailed: "No se pudo abrir el enlace",

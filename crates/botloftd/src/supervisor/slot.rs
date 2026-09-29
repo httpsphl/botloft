@@ -24,6 +24,8 @@ pub(super) struct Slot {
     pub approvals: u32,
     /// While `rate_limited`: Unix ms when the limit resets.
     pub limited_until: Option<i64>,
+    /// A new permission mode waits for the running turn to end (spec 7.4).
+    pub restart_when_idle: bool,
 }
 
 impl Slot {
@@ -39,6 +41,7 @@ impl Slot {
             turns: 0,
             approvals: 0,
             limited_until: None,
+            restart_when_idle: false,
         }
     }
 

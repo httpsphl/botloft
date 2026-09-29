@@ -2,7 +2,7 @@
 //! (spec 8.1). Fields are read defensively: the format is not documented
 //! and grows between Claude Code versions.
 
-use botloft_core::chat::{TOOL_INPUT_MAX, TOOL_OUTPUT_MAX, clip, tool_summary};
+use botloft_core::chat::{TOOL_OUTPUT_MAX, clip, tool_input_max, tool_summary};
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{
     AccountUsage, ChatBody, ChatDelta, NoticeCode, NoticeItem, NoticeLevel, ReplyItem, ToolItem,
@@ -12,6 +12,7 @@ use serde_json::Value;
 use tracing::{debug, warn};
 
 use super::items;
+use crate::service;
 use crate::state::{Daemon, Event};
 
 /// Errors that restarting cannot fix: Claude Code needs the owner.
@@ -59,6 +60,9 @@ fn session(daemon: &Daemon, bot: &BotId, event: &Value) {
     }
     drop(store);
     daemon.supervisor.remember_session(bot, session);
+    if let Some(mode) = event["permissionMode"].as_str() {
+        service::modes::reported(daemon, bot, mode);
+    }
 }
 
 fn delta(daemon: &Daemon, bot: &BotId, event: &Value) {
@@ -111,7 +115,7 @@ fn assistant(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
                         tool_use_id: block["id"].as_str().unwrap_or_default().to_owned(),
                         name: name.to_owned(),
                         summary: tool_summary(name, input),
-                        input: clip(&input.to_string(), TOOL_INPUT_MAX),
+                        input: clip(&input.to_string(), tool_input_max(name)),
                         status: ToolStatus::Running,
                         output: None,
                     }),
