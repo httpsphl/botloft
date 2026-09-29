@@ -1,0 +1,16 @@
+/* Side panels slide open (spec 15.1): the panel widens from the window's
+   right edge while its content, already at its full width, comes in with
+   it, and the chat narrows smoothly instead of jumping. Reduced motion
+   makes it instant (motion.css). */
+
+@keyframes panel-open {
+  from {
+    width: 0;
+    min-width: 0;
+  }
+}
+
+.panel-opening {
+  overflow: hidden;
+  animation: panel-open 280ms var(--ease-out) both;
+}

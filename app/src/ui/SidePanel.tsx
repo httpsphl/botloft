@@ -1,8 +1,17 @@
 // A panel beside the main area whose width the owner sets by dragging its
 // left edge (or with the arrow keys), remembered per panel. It never takes
-// more than the main area can spare, so the chat keeps its room.
+// more than the main area can spare, so the chat keeps its room. It slides
+// open from the right edge (panels.css).
 
-import { type KeyboardEvent, type PointerEvent, type ReactNode, useRef, useState } from "react";
+import {
+  type AnimationEvent,
+  type KeyboardEvent,
+  type PointerEvent,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useT } from "../i18n";
 
 const MIN_PX = 256;
@@ -10,6 +19,8 @@ const MAX_PX = 900;
 const KEY_STEP_PX = 24;
 /** What the main area keeps whatever the panel's width, in rem. */
 const KEEP_FOR_MAIN = "22rem";
+/** How long opening takes, with room for the animation to report its end. */
+const OPENING_MS = 400;
 
 function stored(name: string, fallback: number): number {
   try {
@@ -50,6 +61,18 @@ export function SidePanel({
   const [width, setWidth] = useState(() => stored(name, defaultWidth));
   const panel = useRef<HTMLElement>(null);
   const drag = useRef<{ x: number; width: number; scale: number } | null>(null);
+  // While it slides open, the content keeps its full width and is cut at
+  // the moving edge, so it comes in without reflowing.
+  const [opening, setOpening] = useState(true);
+  useEffect(() => {
+    const done = setTimeout(() => setOpening(false), OPENING_MS);
+    return () => clearTimeout(done);
+  }, []);
+  const opened = (event: AnimationEvent<HTMLElement>) => {
+    if (event.target === event.currentTarget && event.animationName === "panel-open") {
+      setOpening(false);
+    }
+  };
 
   const set = (next: number, keep = false) => {
     const clamped = clamp(next);
@@ -106,7 +129,8 @@ export function SidePanel({
         maxWidth: `calc(100% - ${KEEP_FOR_MAIN})`,
         minWidth: MIN_PX,
       }}
-      className="relative flex shrink-0 flex-col border-line border-l bg-panel"
+      className={`relative flex shrink-0 flex-col border-line border-l bg-panel ${opening ? "panel-opening" : ""}`}
+      onAnimationEnd={opened}
     >
       {/* biome-ignore lint/a11y/useSemanticElements: a separator that can be dragged and focused is a widget, not an <hr> */}
       <div
@@ -128,7 +152,12 @@ export function SidePanel({
       >
         <span className="absolute inset-y-0 left-[3px] w-0.5 bg-transparent transition-colors group-hover:bg-line-strong group-focus-visible:bg-work group-active:bg-work" />
       </div>
-      {children}
+      <div
+        className="flex min-h-0 flex-1 flex-col"
+        style={opening && !expanded ? { width, alignSelf: "flex-start" } : undefined}
+      >
+        {children}
+      </div>
     </aside>
   );
 }
