@@ -1,13 +1,14 @@
 // The window's own title bar (spec 15.3: `decorations: false`), with the
 // Windows controls on the right. Empty space drags the window.
 
-import { Copy, Languages, Minus, Monitor, Moon, Square, Sun, X } from "lucide-react";
+import { ALargeSmall, Copy, Languages, Minus, Monitor, Moon, Square, Sun, X } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { BotAvatar } from "../features/bots/BotAvatar";
 import { LOCALES, setLocaleChoice, systemLocale, useLocale, useT } from "../i18n";
 import { useHost } from "../store/context";
 import { Menu } from "../ui/Menu";
 import { setTheme, type ThemeChoice, useTheme } from "./theme";
+import { DEFAULT_ZOOM, setZoom, useZoom, ZOOM_LEVELS } from "./zoom";
 
 const NEXT_THEME: Record<ThemeChoice, ThemeChoice> = {
   system: "light",
@@ -37,6 +38,7 @@ export function TitleBar({ children, status }: { children?: ReactNode; status?: 
       </div>
       <div className="flex items-center gap-1 pr-2">
         {status}
+        <ZoomMenu />
         <LanguageMenu />
         <button
           type="button"
@@ -50,6 +52,23 @@ export function TitleBar({ children, status }: { children?: ReactNode; status?: 
       </div>
       <WindowControls />
     </header>
+  );
+}
+
+/** How big the app is drawn (spec 15.3); Ctrl+= and Ctrl+- do the same. */
+function ZoomMenu() {
+  const t = useT();
+  const zoom = useZoom();
+  return (
+    <Menu
+      label={t.shell.zoom.label}
+      icon={ALargeSmall}
+      items={ZOOM_LEVELS.map((level) => ({
+        label: t.shell.zoom.level(Math.round(level * 100), level === DEFAULT_ZOOM),
+        checked: zoom === level,
+        onSelect: () => setZoom(level),
+      }))}
+    />
   );
 }
 

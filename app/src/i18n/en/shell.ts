@@ -15,6 +15,11 @@ export const shell = {
     label: (theme: string) => `Theme: ${theme}`,
     hint: (theme: string) => `Theme: ${theme} (click to change)`,
   },
+  zoom: {
+    label: "Size",
+    level: (percent: number, isDefault: boolean) =>
+      isDefault ? `${percent}% (default)` : `${percent}%`,
+  },
   language: {
     label: "Language",
     /** The "follow Windows" entry, with the language that gives. */

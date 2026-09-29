@@ -2,6 +2,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { Image } from "@tauri-apps/api/image";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { check } from "@tauri-apps/plugin-updater";
 import type { AppUpdate, DaemonStatus, Host } from "./host";
@@ -70,6 +71,7 @@ export function tauriHost(): Host {
     installDaemon: () => invoke<DaemonStatus>("daemon_install"),
     restartDaemon: () => invoke<DaemonStatus>("daemon_restart"),
     signInToClaude: (path) => invoke<boolean>("claude_sign_in", { path }),
+    setZoom: (factor) => getCurrentWebview().setZoom(factor),
     checkForUpdate,
     readOwnerToken: () => invoke<string>("read_owner_token"),
     openPath: (path) => invoke<void>("open_path", { path }),

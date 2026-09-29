@@ -57,6 +57,8 @@ export interface Host {
    * waits for it to end. Resolves whether it signed in.
    */
   signInToClaude(claudePath: string): Promise<boolean>;
+  /** Draws the whole window at `factor` times its size (1 = 100%). */
+  setZoom(factor: number): Promise<void>;
   /** A newer version of the app, or null when this one is the latest. */
   checkForUpdate(): Promise<AppUpdate | null>;
   readOwnerToken(): Promise<string>;

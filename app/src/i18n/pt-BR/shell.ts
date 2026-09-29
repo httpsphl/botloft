@@ -14,6 +14,11 @@ export const shell: Messages["shell"] = {
     label: (theme: string) => `Tema: ${theme}`,
     hint: (theme: string) => `Tema: ${theme} (clique para trocar)`,
   },
+  zoom: {
+    label: "Tamanho",
+    level: (percent: number, isDefault: boolean) =>
+      isDefault ? `${percent}% (padrão)` : `${percent}%`,
+  },
   language: {
     label: "Idioma",
     system: (name: string) => `Idioma do sistema: ${name}`,
