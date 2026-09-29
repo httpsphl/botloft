@@ -35,10 +35,29 @@ export const account = {
     keepWorkingOn: "Your bots go on working and answering after you close this window.",
     keepWorkingOff:
       "Closing Botloft stops every bot. They pick up where they left off when you open it again.",
+    tray: "Show Botloft near the clock",
+    trayOn:
+      "With the window closed, its icon stays near the clock: a click opens Botloft, and it tells you when a bot needs you.",
+    trayOff:
+      "Closing the window closes Botloft. The bots keep working, with no icon or notifications.",
     startWithWindows: "Start with Windows",
     startWithWindowsOn:
       "When you sign in to Windows, your bots get back to work on their own, without opening this window.",
     startWithWindowsOff: "After you restart the computer, the bots wait until you open Botloft.",
+    openAtSignIn: "Open the window when you sign in to Windows",
+    openAtSignInOn: "Botloft's window opens when you sign in to Windows.",
+    openAtSignInNearClock: "Botloft starts near the clock, without opening the window.",
+    openAtSignInOff: "The window opens only when you open Botloft.",
+    alerts: "Notifications",
+    notifyNeeds: "When a bot needs you",
+    notifyNeedsHint:
+      "A Windows notification when a bot asks for permission or needs you to sign in, if Botloft is not in front.",
+    notifyDone: "When a bot finishes",
+    notifyDoneHint: "A notification when a bot finishes what it was doing.",
+    sound: "Play a sound",
+    soundHint: "A short sound with each notification, also with Botloft in front.",
+    alertsNeedTray:
+      "With the window closed, notifications only come with Botloft near the clock (in General).",
     keepAwake: "Keep the computer awake while bots work",
     keepAwakeHint: "It still sleeps when you close the lid or choose Sleep.",
     saveFailed: "Could not change the setting",

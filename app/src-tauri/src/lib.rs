@@ -3,6 +3,8 @@
 
 mod claude;
 mod daemon;
+mod sign_in;
+mod window;
 
 use std::path::Path;
 
@@ -126,6 +128,18 @@ async fn reveal_file(path: String) -> Result<(), String> {
     .await
 }
 
+/// Opens Botloft when the owner signs in to Windows, or stops doing so.
+#[tauri::command]
+async fn open_at_sign_in(on: bool) -> Result<(), String> {
+    blocking(move || sign_in::set(on)).await
+}
+
+/// Whether Windows opened this app at sign-in, with its window hidden.
+#[tauri::command]
+fn launched_at_sign_in() -> bool {
+    sign_in::launched_at_sign_in()
+}
+
 /// Whether `url` is a plain web link, safe to hand to the default browser.
 fn is_web_link(url: &str) -> bool {
     let rest = url
@@ -157,11 +171,26 @@ async fn open_url(url: String) -> Result<(), String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    // Opening Botloft again brings the running one forward. Not in a dev
+    // build, which runs beside the installed app.
+    #[cfg(not(debug_assertions))]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        window::reopened(app);
+    }));
+    builder
         // Checks the release feed and installs signed updates (spec 15.5).
         .plugin(tauri_plugin_updater::Builder::new().build())
         // The folder picker for a crew's work folder (spec 5).
         .plugin(tauri_plugin_dialog::init())
+        // Windows notifications when a bot needs the owner (spec 15.1).
+        .plugin(tauri_plugin_notification::init())
+        .setup(|app| {
+            if !sign_in::launched_at_sign_in() {
+                window::bring_forward(app.handle());
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             daemon_status,
             daemon_install,
@@ -172,7 +201,9 @@ pub fn run() {
             open_path,
             open_file,
             reveal_file,
-            open_url
+            open_url,
+            open_at_sign_in,
+            launched_at_sign_in
         ])
         .run(tauri::generate_context!())
         .expect("error while running the Botloft app");

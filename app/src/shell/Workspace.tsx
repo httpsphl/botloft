@@ -15,8 +15,11 @@ import { UpdateButton } from "../features/updates/UpdateButton";
 import { useT } from "../i18n";
 import { useApp } from "../store/context";
 import { Callout } from "../ui/Callout";
+import { useBotAlerts } from "./alerts";
 import { useAttentionMark } from "./attention";
+import { useOpenAtSignIn } from "./signIn";
 import { TitleBar } from "./TitleBar";
+import { useTray } from "./tray";
 
 export function Workspace() {
   const t = useT();
@@ -26,6 +29,9 @@ export function Workspace() {
   const runtimeError = useApp((state) => state.system?.runtimeError ?? null);
   const signedOut = useApp((state) => state.system?.claudeSignedIn === false);
   useAttentionMark();
+  useTray();
+  useBotAlerts();
+  useOpenAtSignIn();
 
   let main: ReactNode;
   if (loadError) {

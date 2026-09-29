@@ -63,6 +63,50 @@ describe("settings", () => {
     ).toEqual([{ startWithWindows: false }, { keepAwake: false }]);
   });
 
+  test("the icon and the window at sign-in show only where they apply", async () => {
+    renderApp();
+    const dialog = await openSettings();
+    const icon = () =>
+      within(dialog).queryByRole("switch", { name: "Show Botloft near the clock" });
+    const atSignIn = () =>
+      within(dialog).queryByRole("switch", {
+        name: "Open the window when you sign in to Windows",
+      });
+    await waitFor(() => expect(atSignIn()).not.toBeNull());
+    expect(dialog.textContent).toContain(
+      "Botloft starts near the clock, without opening the window.",
+    );
+    fireEvent.click(icon() as HTMLElement);
+    expect(dialog.textContent).toContain("Closing the window closes Botloft.");
+    expect(dialog.textContent).toContain("The window opens only when you open Botloft.");
+    fireEvent.click(
+      within(dialog).getByRole("switch", { name: "Keep working after you close Botloft" }),
+    );
+    expect(icon()).toBeNull();
+    fireEvent.click(within(dialog).getByRole("switch", { name: "Start with Windows" }));
+    await waitFor(() => expect(atSignIn()).toBeNull());
+  });
+
+  test("notifications: when, and with a sound", async () => {
+    renderApp();
+    const dialog = await openSettings();
+    fireEvent.click(within(dialog).getByRole("tab", { name: "Notifications" }));
+    const on = (name: string) =>
+      within(dialog).getByRole("switch", { name }).getAttribute("aria-checked");
+    expect([on("When a bot needs you"), on("When a bot finishes"), on("Play a sound")]).toEqual([
+      "true",
+      "false",
+      "true",
+    ]);
+    fireEvent.click(within(dialog).getByRole("switch", { name: "When a bot finishes" }));
+    expect(prefs.notifyDone.get()).toBe(true);
+    expect(dialog.textContent).not.toContain("notifications only come");
+    act(() => prefs.tray.set(false));
+    expect(dialog.textContent).toContain(
+      "With the window closed, notifications only come with Botloft near the clock",
+    );
+  });
+
   test("a setting that cannot be saved goes back", async () => {
     const { fake } = renderApp();
     const dialog = await openSettings();
@@ -90,12 +134,15 @@ describe("settings", () => {
 });
 
 describe("closing the window", () => {
-  test("leaves the bots working unless the owner chose otherwise", async () => {
+  test("leaves the bots working: near the clock, or closed without the icon", async () => {
     const { host } = renderApp();
     await screen.findByRole("heading", { name: "Welcome to Botloft" });
+    await waitFor(() => expect(host.tray).not.toBeNull());
     await act(() => host.requestClose());
-    expect(host.closed).toBe(true);
-    expect(host.stops).toBe(0);
+    expect([host.hidden, host.closed, host.stops]).toEqual([true, false, 0]);
+    act(() => prefs.tray.set(false));
+    await act(() => host.requestClose());
+    expect([host.closed, host.stops]).toEqual([true, 0]);
   });
 
   test("stops the bots, with the window out of sight first, when chosen", async () => {

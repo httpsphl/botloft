@@ -58,6 +58,16 @@ export const prefs = {
   followBot: pref<boolean>("botloft.followBot", true, ON_OFF),
   /** No motion in the window, whatever Windows says. */
   lessMotion: pref<boolean>("botloft.lessMotion", false, ON_OFF),
+  /** With the bots working, closing the window leaves Botloft near the clock. */
+  tray: pref<boolean>("botloft.tray", true, ON_OFF),
+  /** When Windows opens Botloft at sign-in, the window opens too. */
+  openAtSignIn: pref<boolean>("botloft.openAtSignIn", false, ON_OFF),
+  /** A Windows notification when a bot needs the owner. */
+  notifyNeeds: pref<boolean>("botloft.notifyNeeds", true, ON_OFF),
+  /** A Windows notification when a bot finishes what it was doing. */
+  notifyDone: pref<boolean>("botloft.notifyDone", false, ON_OFF),
+  /** A short sound with each of those. */
+  sound: pref<boolean>("botloft.sound", true, ON_OFF),
 };
 
 export function usePref<T extends Value>(choice: Pref<T>): T {

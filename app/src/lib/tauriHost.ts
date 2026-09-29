@@ -1,12 +1,19 @@
 // `Host` over the Tauri commands in `src-tauri/src/lib.rs`.
 
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { Image } from "@tauri-apps/api/image";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/plugin-dialog";
+import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification,
+} from "@tauri-apps/plugin-notification";
 import { check } from "@tauri-apps/plugin-updater";
 import type { AppUpdate, DaemonStatus, Host } from "./host";
+import { hideTray, showTray } from "./tauriTray";
 
 const DOT = 16;
 
@@ -72,6 +79,18 @@ export function tauriHost(): Host {
     installDaemon: () => invoke<DaemonStatus>("daemon_install"),
     restartDaemon: () => invoke<DaemonStatus>("daemon_restart"),
     stopDaemon: () => invoke<void>("daemon_stop"),
+    // A dev build never registers itself: it needs the dev server.
+    setOpenAtSignIn: (on) =>
+      import.meta.env.DEV ? Promise.resolve() : invoke<void>("open_at_sign_in", { on }),
+    launchedAtSignIn: () => invoke<boolean>("launched_at_sign_in"),
+    notify: async ({ title, body, sound }) => {
+      if (!(await isPermissionGranted()) && (await requestPermission()) !== "granted") {
+        return;
+      }
+      sendNotification({ title, body, ...(sound ? { sound: "Default" } : {}) });
+    },
+    showTray,
+    hideTray,
     signInToClaude: (path) => invoke<boolean>("claude_sign_in", { path }),
     setZoom: (factor) => getCurrentWebview().setZoom(factor),
     checkForUpdate,
@@ -94,7 +113,20 @@ export function tauriHost(): Host {
       toggleMaximize: () => window.toggleMaximize(),
       close: () => window.close(),
       hide: () => window.hide(),
-      onCloseRequested: (before) => window.onCloseRequested(() => before()),
+      show: async () => {
+        await window.show();
+        await window.unminimize();
+        await window.setFocus();
+      },
+      quit: () => window.destroy(),
+      inFront: () => document.visibilityState === "visible" && document.hasFocus(),
+      onCloseRequested: (before) =>
+        window.onCloseRequested(async (event) => {
+          if ((await before()) === "stay") {
+            event.preventDefault();
+          }
+        }),
+      onReopened: (listener) => listen("botloft://reopened", () => listener()),
       isMaximized: () => window.isMaximized(),
       onResized: (listener) => window.onResized(() => listener()),
       setAttention: async (on) => {

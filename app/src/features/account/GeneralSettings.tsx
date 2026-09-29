@@ -1,5 +1,5 @@
-// Settings, "General": the language, and what Botloft does in the
-// background (spec 15.1).
+// Settings, "General": the language, what Botloft does in the background
+// and when Windows starts (spec 15.1).
 
 import {
   LOCALES,
@@ -18,6 +18,9 @@ export function GeneralSettings() {
   const t = useT();
   const s = t.account.settings;
   const whenClosed = usePref(prefs.whenClosed);
+  const tray = usePref(prefs.tray);
+  const openAtSignIn = usePref(prefs.openAtSignIn);
+  const nearClock = whenClosed === "keep" && tray;
   const { settings, change } = useDaemonSettings();
   const startWithWindows = settings?.startWithWindows ?? true;
   const { choice: locale } = useLocale();
@@ -39,6 +42,14 @@ export function GeneralSettings() {
           checked={whenClosed === "keep"}
           onChange={(on) => prefs.whenClosed.set(on ? "keep" : "stop")}
         />
+        {whenClosed === "keep" && (
+          <Toggle
+            label={s.tray}
+            hint={tray ? s.trayOn : s.trayOff}
+            checked={tray}
+            onChange={prefs.tray.set}
+          />
+        )}
         <Toggle
           label={s.startWithWindows}
           hint={startWithWindows ? s.startWithWindowsOn : s.startWithWindowsOff}
@@ -46,6 +57,20 @@ export function GeneralSettings() {
           disabled={!settings}
           onChange={(on) => change({ startWithWindows: on })}
         />
+        {startWithWindows && settings && (
+          <Toggle
+            label={s.openAtSignIn}
+            hint={
+              openAtSignIn
+                ? s.openAtSignInOn
+                : nearClock
+                  ? s.openAtSignInNearClock
+                  : s.openAtSignInOff
+            }
+            checked={openAtSignIn}
+            onChange={prefs.openAtSignIn.set}
+          />
+        )}
         <Toggle
           label={s.keepAwake}
           hint={s.keepAwakeHint}

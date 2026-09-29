@@ -35,11 +35,29 @@ export const account: Messages["account"] = {
     keepWorkingOn: "Seus bots seguem trabalhando e respondendo depois que você fecha esta janela.",
     keepWorkingOff:
       "Ao fechar o Botloft, todos os bots param. Eles continuam de onde pararam quando você abrir de novo.",
+    tray: "Mostrar o Botloft perto do relógio",
+    trayOn:
+      "Com a janela fechada, o ícone fica perto do relógio: um clique abre o Botloft, e ele avisa quando um bot precisa de você.",
+    trayOff: "Fechar a janela fecha o Botloft. Os bots seguem trabalhando, sem ícone nem avisos.",
     startWithWindows: "Iniciar com o Windows",
     startWithWindowsOn:
       "Quando você entra no Windows, seus bots voltam a trabalhar sozinhos, sem abrir esta janela.",
     startWithWindowsOff:
       "Depois que você reinicia o computador, os bots esperam você abrir o Botloft.",
+    openAtSignIn: "Abrir a janela ao entrar no Windows",
+    openAtSignInOn: "A janela do Botloft abre quando você entra no Windows.",
+    openAtSignInNearClock: "O Botloft começa perto do relógio, sem abrir a janela.",
+    openAtSignInOff: "A janela só abre quando você abrir o Botloft.",
+    alerts: "Avisos",
+    notifyNeeds: "Quando um bot precisar de você",
+    notifyNeedsHint:
+      "Um aviso do Windows quando um bot pede permissão ou precisa que você entre na conta, se o Botloft não estiver na frente.",
+    notifyDone: "Quando um bot terminar",
+    notifyDoneHint: "Um aviso quando um bot termina o que estava fazendo.",
+    sound: "Tocar um som",
+    soundHint: "Um som curto com cada aviso, também com o Botloft na frente.",
+    alertsNeedTray:
+      "Com a janela fechada, os avisos só chegam com o Botloft perto do relógio (em Geral).",
     keepAwake: "Não deixar o computador dormir enquanto os bots trabalham",
     keepAwakeHint: "Ele ainda dorme quando você fecha a tampa ou escolhe Suspender.",
     saveFailed: "Não foi possível mudar a configuração",

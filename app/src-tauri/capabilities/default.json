@@ -13,9 +13,14 @@
     "core:window:allow-close",
     "core:window:allow-hide",
     "core:window:allow-destroy",
+    "core:window:allow-show",
+    "core:window:allow-unminimize",
+    "core:window:allow-set-focus",
+    "core:app:allow-default-window-icon",
     "core:window:allow-set-overlay-icon",
     "core:webview:allow-set-webview-zoom",
     "updater:default",
-    "dialog:allow-open"
+    "dialog:allow-open",
+    "notification:default"
   ]
 }

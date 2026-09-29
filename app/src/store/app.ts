@@ -14,6 +14,7 @@ import type {
   MessageId,
   Routine,
   RoutineId,
+  Settings,
   SystemStatus,
   Task,
   TaskId,
@@ -26,6 +27,8 @@ export interface AppState {
   loaded: boolean;
   loadError: string | null;
   system: SystemStatus | null;
+  /** The daemon's part of Settings (spec 11.2); null until read, or from an older daemon. */
+  settings: Settings | null;
   crews: Record<CrewId, Crew>;
   bots: Record<BotId, Bot>;
   /**
@@ -50,6 +53,7 @@ export interface AppState {
   putDelivery(delivery: Delivery): void;
   putRoutine(routine: Routine): void;
   putBrowser(browser: BrowserState): void;
+  putSettings(settings: Settings | null): void;
 }
 
 export type AppStore = StoreApi<AppState>;
@@ -86,6 +90,7 @@ export function createAppStore(api: BotloftApi): AppStore {
     loaded: false,
     loadError: null,
     system: null,
+    settings: null,
     crews: {},
     bots: {},
     deliveries: {},
@@ -113,6 +118,7 @@ export function createAppStore(api: BotloftApi): AppStore {
     putBot: (bot) => set((state) => withBot(state, bot)),
     putRoutine: (routine) => set((state) => withRoutine(state, routine)),
     putBrowser: (browser) => set((state) => withBrowser(state, browser)),
+    putSettings: (settings) => set({ settings }),
     putDelivery: (delivery) =>
       set((state) => ({ deliveries: { ...state.deliveries, [delivery.messageId]: delivery } })),
   }));
