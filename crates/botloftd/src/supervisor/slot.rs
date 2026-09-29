@@ -20,6 +20,11 @@ pub(super) struct Slot {
     pub stop: Option<StopIntent>,
     /// Messages written to the process whose turn has not ended yet.
     pub turns: u32,
+    /// Claude Code is in a turn nobody asked for: a subagent it had running
+    /// finished, and it went on by itself. No message is behind it.
+    pub own_turn: bool,
+    /// Subagents Claude Code runs in the background, between turns too.
+    pub agents: u32,
     /// Permission requests waiting for the owner.
     pub approvals: u32,
     /// While `rate_limited`: Unix ms when the limit resets.
@@ -40,17 +45,32 @@ impl Slot {
             fresh_next: false,
             stop: None,
             turns: 0,
+            own_turn: false,
+            agents: 0,
             approvals: 0,
             limited_until: None,
             restart_when_idle: false,
         }
     }
 
+    /// Forgets the work of a process that is gone or replaced.
+    pub fn clear_work(&mut self) {
+        self.turns = 0;
+        self.own_turn = false;
+        self.agents = 0;
+        self.approvals = 0;
+    }
+
+    /// A turn, a subagent or an approval is in progress.
+    pub fn has_work(&self) -> bool {
+        self.turns > 0 || self.own_turn || self.agents > 0 || self.approvals > 0
+    }
+
     /// The state that follows from the counters once nothing blocks the bot.
     pub fn working_state(&self) -> BotState {
         if self.approvals > 0 {
             BotState::NeedsApproval
-        } else if self.turns > 0 {
+        } else if self.has_work() {
             BotState::Busy
         } else {
             BotState::Idle
@@ -138,6 +158,15 @@ mod tests {
         assert_eq!(slot.working_state(), BotState::Busy);
         slot.approvals = 1;
         assert_eq!(slot.working_state(), BotState::NeedsApproval);
+
+        let mut slot = Slot::new(Backoff::new(Duration::ZERO, Duration::ZERO));
+        slot.own_turn = true;
+        assert_eq!(slot.working_state(), BotState::Busy);
+        slot.own_turn = false;
+        slot.agents = 1;
+        assert_eq!(slot.working_state(), BotState::Busy);
+        slot.clear_work();
+        assert_eq!(slot.working_state(), BotState::Idle);
     }
 
     #[test]
