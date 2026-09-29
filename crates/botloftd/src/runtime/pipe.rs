@@ -13,7 +13,7 @@ use tokio::sync::mpsc;
 use tracing::debug;
 
 use super::{
-    EVENT_BUFFER, Process, ProcessControl, ProcessEvent, Runtime, SignInCheck, SpawnSpec, claude,
+    AuthCheck, EVENT_BUFFER, Process, ProcessControl, ProcessEvent, Runtime, SpawnSpec, claude,
 };
 use crate::platform::{self, ProcessJob};
 
@@ -24,11 +24,11 @@ const STDERR_LINE_MAX: usize = 300;
 pub struct PipeRuntime;
 
 impl Runtime for PipeRuntime {
-    fn signed_in(&self, program: std::path::PathBuf) -> SignInCheck {
+    fn auth_status(&self, program: std::path::PathBuf) -> AuthCheck {
         Box::pin(async move {
             tokio::task::spawn_blocking(move || {
                 let env = platform::user_environment()?;
-                claude::signed_in(&program, &env)
+                claude::auth_status(&program, &env)
             })
             .await
             .map_err(io::Error::other)?

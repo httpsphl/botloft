@@ -6,6 +6,10 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 use std::time::{Duration, Instant};
 
+use botloft_core::protocol::ClaudeAccount;
+
+use super::AuthStatus;
+
 /// First version with the inbox as a named pipe on native Windows.
 pub const MIN_VERSION: (u32, u32, u32) = (2, 1, 234);
 const PROBE_TIMEOUT: Duration = Duration::from_secs(15);
@@ -108,16 +112,34 @@ pub fn probe(path: &Path, env: &[(OsString, OsString)]) -> Result<Claude, Claude
 
 /// Runs `claude auth status`, documented to print JSON with `loggedIn` and
 /// to exit with 0 when signed in and 1 when not (spec 19).
-pub fn signed_in(path: &Path, env: &[(OsString, OsString)]) -> io::Result<bool> {
+pub fn auth_status(path: &Path, env: &[(OsString, OsString)]) -> io::Result<AuthStatus> {
     let output = run(path, &["auth", "status", "--json"], env)?;
-    Ok(parse_signed_in(&output.stdout).unwrap_or(output.status.success()))
+    Ok(parse_auth_status(&output.stdout).unwrap_or(AuthStatus {
+        signed_in: output.status.success(),
+        account: None,
+    }))
 }
 
-fn parse_signed_in(stdout: &[u8]) -> Option<bool> {
-    serde_json::from_slice::<serde_json::Value>(stdout)
-        .ok()?
-        .get("loggedIn")?
-        .as_bool()
+/// Reads `loggedIn`, and when signed in `email`, `subscriptionType` and
+/// `orgName` (seen with 2.1.284).
+fn parse_auth_status(stdout: &[u8]) -> Option<AuthStatus> {
+    let json = serde_json::from_slice::<serde_json::Value>(stdout).ok()?;
+    let signed_in = json.get("loggedIn")?.as_bool()?;
+    let text = |key: &str| {
+        json.get(key)
+            .and_then(|value| value.as_str())
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_owned)
+    };
+    Some(AuthStatus {
+        signed_in,
+        account: signed_in.then(|| ClaudeAccount {
+            email: text("email"),
+            plan: text("subscriptionType"),
+            organization: text("orgName"),
+        }),
+    })
 }
 
 /// Runs Claude Code without a window and with `env` only, giving up after
@@ -176,16 +198,31 @@ mod tests {
     }
 
     #[test]
-    fn reads_the_sign_in_from_auth_status() {
+    fn reads_the_sign_in_and_account_from_auth_status() {
+        let signed_in = parse_auth_status(
+            br#"{"loggedIn": true, "authMethod": "claude.ai", "email": "ana@example.com",
+                "orgName": "Exemplo", "subscriptionType": "max"}"#,
+        )
+        .expect("parsed");
+        assert!(signed_in.signed_in);
         assert_eq!(
-            parse_signed_in(br#"{"loggedIn": true, "authMethod": "claude.ai"}"#),
-            Some(true)
+            signed_in.account,
+            Some(ClaudeAccount {
+                email: Some("ana@example.com".into()),
+                plan: Some("max".into()),
+                organization: Some("Exemplo".into()),
+            })
         );
+        let signed_out =
+            parse_auth_status(br#"{"loggedIn": false, "authMethod": "none"}"#).expect("parsed");
         assert_eq!(
-            parse_signed_in(br#"{"loggedIn": false, "authMethod": "none"}"#),
-            Some(false)
+            signed_out,
+            AuthStatus {
+                signed_in: false,
+                account: None
+            }
         );
-        assert_eq!(parse_signed_in(b"Logged in"), None);
+        assert_eq!(parse_auth_status(b"Logged in"), None);
     }
 
     #[test]

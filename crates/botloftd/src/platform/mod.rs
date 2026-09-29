@@ -12,12 +12,12 @@ use std::path::{Path, PathBuf};
 
 #[cfg(unix)]
 pub use unix::{
-    KeepAwake, ProcessJob, delete_task, find_task, leave_own_console, register_task,
+    KeepAwake, ProcessJob, delete_task, find_task, leave_own_console, owner_name, register_task,
     restrict_to_current_user, run_task, stop_task, user_environment,
 };
 #[cfg(windows)]
 pub use windows::{
-    KeepAwake, ProcessJob, delete_task, find_task, leave_own_console, register_task,
+    KeepAwake, ProcessJob, delete_task, find_task, leave_own_console, owner_name, register_task,
     restrict_to_current_user, run_task, stop_task, user_environment,
 };
 
@@ -96,6 +96,11 @@ mod tests {
         assert!(has("PATH"));
         assert!(!has("CLAUDECODE"));
         assert!(!has("CLAUDE_CODE_MESSAGING_SOCKET"));
+    }
+
+    #[test]
+    fn the_owner_has_a_name() {
+        assert!(!owner_name().trim().is_empty());
     }
 
     #[test]

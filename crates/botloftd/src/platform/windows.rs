@@ -4,6 +4,7 @@
 mod console;
 mod env;
 mod job;
+mod owner;
 mod power;
 mod task;
 mod task_xml;
@@ -11,6 +12,7 @@ mod task_xml;
 pub use console::leave_own_console;
 pub use env::user_environment;
 pub use job::ProcessJob;
+pub use owner::owner_name;
 pub use power::KeepAwake;
 pub use task::{delete_task, find_task, register_task, run_task, stop_task};
 

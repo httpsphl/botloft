@@ -4,7 +4,7 @@
 //! When it turns from signed out to signed in, the bots a sign-in error
 //! stopped start again by themselves: the owner just signed in.
 
-use botloft_core::protocol::BotState;
+use botloft_core::protocol::{BotState, ClaudeAccount};
 use tokio::time::Instant;
 use tracing::{debug, info};
 
@@ -13,6 +13,7 @@ use super::{ClaudeStatus, Inner, REPROBE_AFTER, Supervisor};
 #[derive(Debug, Default)]
 pub(super) struct SignIn {
     known: Option<bool>,
+    account: Option<ClaudeAccount>,
     checked_at: Option<Instant>,
     recheck: bool,
 }
@@ -34,6 +35,11 @@ impl Supervisor {
     /// Whether Claude Code is signed in; `None` until checked.
     pub fn claude_signed_in(&self) -> Option<bool> {
         self.lock().sign_in.known
+    }
+
+    /// The Claude account Claude Code is signed in to, once checked.
+    pub fn claude_account(&self) -> Option<ClaudeAccount> {
+        self.lock().sign_in.account.clone()
     }
 
     /// Checks Claude Code again now: the sign-in, and the executable if it
@@ -64,12 +70,14 @@ impl Supervisor {
                 _ => return,
             }
         };
-        let checked = self.runtime.signed_in(program).await;
+        let checked = self.runtime.auth_status(program).await;
         let mut inner = self.lock();
         inner.sign_in.recheck = false;
         inner.sign_in.checked_at = Some(Instant::now());
         match checked {
-            Ok(signed_in) => {
+            Ok(status) => {
+                let signed_in = status.signed_in;
+                inner.sign_in.account = status.account;
                 let was = inner.sign_in.known.replace(signed_in);
                 if signed_in && was == Some(false) {
                     info!("Claude Code is signed in again; starting the bots it stopped");

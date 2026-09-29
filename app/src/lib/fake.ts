@@ -42,6 +42,10 @@ export class FakeBotloft implements BotloftApi {
     runtimeError: null,
     claudePath: "C:\\Users\\owner\\.local\\bin\\claude.exe",
     claudeSignedIn: true,
+    account: {
+      name: "Ana Lima",
+      claude: { email: "ana@example.com", plan: "max", organization: null },
+    },
     deliveries: { pending: 0, dead: 0 },
     usage: null,
   };

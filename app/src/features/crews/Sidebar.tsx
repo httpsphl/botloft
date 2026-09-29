@@ -7,6 +7,7 @@ import type { Activity, Bot, Crew } from "../../lib/protocol.gen";
 import { botsOf, crewList } from "../../store/app";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
+import { AccountArea } from "../account/AccountArea";
 import { BotAvatar } from "../bots/BotAvatar";
 import { BotStateBadge, stateView } from "../bots/BotStateBadge";
 import { CrewDialog } from "./CrewDialog";
@@ -17,29 +18,29 @@ export function Sidebar() {
   const crews = useApp(useShallow(crewList));
   const [creating, setCreating] = useState(false);
   return (
-    <nav
-      aria-label={t.crews.sidebar.label}
-      className="flex w-72 shrink-0 flex-col border-line border-r bg-panel"
-    >
-      <div className="flex h-10 shrink-0 items-center justify-between pr-1.5 pl-4">
-        <h2 className="font-semibold text-muted text-xs uppercase tracking-[0.12em]">
-          {t.crews.sidebar.label}
-        </h2>
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={Plus}
-          label={t.crews.newCrew}
-          onClick={() => setCreating(true)}
-        />
-      </div>
-      <ul className="min-h-0 flex-1 overflow-y-auto pb-3">
-        {crews.map((crew) => (
-          <CrewEntry key={crew.id} crew={crew} />
-        ))}
-      </ul>
+    <div className="flex w-72 shrink-0 flex-col border-line border-r bg-panel">
+      <nav aria-label={t.crews.sidebar.label} className="flex min-h-0 flex-1 flex-col">
+        <div className="flex h-10 shrink-0 items-center justify-between pr-1.5 pl-4">
+          <h2 className="font-semibold text-muted text-xs uppercase tracking-[0.12em]">
+            {t.crews.sidebar.label}
+          </h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={Plus}
+            label={t.crews.newCrew}
+            onClick={() => setCreating(true)}
+          />
+        </div>
+        <ul className="min-h-0 flex-1 overflow-y-auto pb-3">
+          {crews.map((crew) => (
+            <CrewEntry key={crew.id} crew={crew} />
+          ))}
+        </ul>
+      </nav>
+      <AccountArea />
       {creating && <CrewDialog onClose={() => setCreating(false)} />}
-    </nav>
+    </div>
   );
 }
 

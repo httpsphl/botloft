@@ -12,7 +12,11 @@ use tokio::sync::{Notify, mpsc};
 
 use serde_json::Value;
 
-use super::{EVENT_BUFFER, Process, ProcessControl, ProcessEvent, Runtime, SignInCheck, SpawnSpec};
+use botloft_core::protocol::ClaudeAccount;
+
+use super::{
+    AuthCheck, AuthStatus, EVENT_BUFFER, Process, ProcessControl, ProcessEvent, Runtime, SpawnSpec,
+};
 
 #[derive(Clone, Default)]
 pub struct FakeRuntime {
@@ -93,10 +97,18 @@ impl FakeRuntime {
 }
 
 impl Runtime for FakeRuntime {
-    fn signed_in(&self, _program: std::path::PathBuf) -> SignInCheck {
+    fn auth_status(&self, _program: std::path::PathBuf) -> AuthCheck {
         let mut state = lock(&self.state);
         state.sign_in_checks += 1;
-        Box::pin(std::future::ready(Ok(state.signed_in)))
+        let signed_in = state.signed_in;
+        Box::pin(std::future::ready(Ok(AuthStatus {
+            signed_in,
+            account: signed_in.then(|| ClaudeAccount {
+                email: Some("owner@example.com".into()),
+                plan: Some("max".into()),
+                organization: None,
+            }),
+        })))
     }
 
     fn spawn(&self, spec: SpawnSpec) -> io::Result<Process> {

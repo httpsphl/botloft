@@ -8,15 +8,7 @@ export const shell = {
     restore: "Restore",
     close: "Close",
   },
-  theme: {
-    system: "system",
-    light: "light",
-    dark: "dark",
-    label: (theme: string) => `Theme: ${theme}`,
-    hint: (theme: string) => `Theme: ${theme} (click to change)`,
-  },
   zoom: {
-    label: "Size",
     level: (percent: number, isDefault: boolean) =>
       isDefault ? `${percent}% (default)` : `${percent}%`,
   },

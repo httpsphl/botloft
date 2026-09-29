@@ -1,5 +1,6 @@
 // English, the reference: every other language has exactly this shape.
 
+import { account } from "./account";
 import { bots } from "./bots";
 import { chat } from "./chat";
 import { common } from "./common";
@@ -9,6 +10,16 @@ import { onboarding } from "./onboarding";
 import { shell } from "./shell";
 import { updates } from "./updates";
 
-export const en = { common, shell, onboarding, updates, bots, chat, crews, messages };
+export const en = {
+  common,
+  shell,
+  onboarding,
+  updates,
+  account,
+  bots,
+  chat,
+  crews,
+  messages,
+};
 
 export type Messages = typeof en;

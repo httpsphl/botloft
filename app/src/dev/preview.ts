@@ -64,6 +64,19 @@ function previewHost(): FakeHost {
 }
 
 function seed(fake: FakeBotloft): void {
+  const now = Date.now();
+  fake.system = {
+    ...fake.system,
+    usage: {
+      status: "allowed",
+      resetsAt: now + 2 * 3600_000,
+      observedAt: now - 5 * 60_000,
+      windows: [
+        { name: "five_hour", utilization: 0.34, resetsAt: now + 2 * 3600_000 },
+        { name: "seven_day", utilization: 0.62, resetsAt: now + 3 * 86_400_000 },
+      ],
+    },
+  };
   const research = fake.addCrew("Research");
   const scout = fake.addBot(research.id, "Scout", "Finds sources and summarizes them");
   const writer = fake.addBot(research.id, "Writer", "Turns notes into a weekly report");

@@ -68,6 +68,11 @@ pub fn user_environment() -> io::Result<Vec<(OsString, OsString)>> {
         .collect())
 }
 
+/// The login name; Unix has no display name to ask for.
+pub fn owner_name() -> String {
+    std::env::var("USER").unwrap_or_default()
+}
+
 /// Nothing to leave: Unix never opens a console for the daemon.
 pub fn leave_own_console() {}
 

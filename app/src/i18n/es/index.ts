@@ -1,6 +1,7 @@
 // Spanish.
 
 import type { Messages } from "../en";
+import { account } from "./account";
 import { bots } from "./bots";
 import { chat } from "./chat";
 import { common } from "./common";
@@ -10,4 +11,14 @@ import { onboarding } from "./onboarding";
 import { shell } from "./shell";
 import { updates } from "./updates";
 
-export const es: Messages = { common, shell, onboarding, updates, bots, chat, crews, messages };
+export const es: Messages = {
+  common,
+  shell,
+  onboarding,
+  updates,
+  account,
+  bots,
+  chat,
+  crews,
+  messages,
+};

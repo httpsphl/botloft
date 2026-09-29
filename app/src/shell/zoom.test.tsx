@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 import { App } from "../App";
 import type { Client } from "../lib/client";
@@ -27,14 +27,16 @@ describe("app size", () => {
     expect(host.zoom).toBe(1.25);
   });
 
-  test("the size menu sets the size and remembers it", async () => {
+  test("settings set the size and remember it", async () => {
     const host = renderApp();
     await screen.findByRole("heading", { name: "Welcome to Botloft" });
-    fireEvent.click(screen.getByRole("button", { name: "Size" }));
+    fireEvent.click(screen.getByRole("button", { name: /Ana Lima/ }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
+    const sizes = screen.getByRole("radiogroup", { name: "Size" });
     expect(
-      screen.getByRole("menuitemradio", { name: "125% (default)" }).getAttribute("aria-checked"),
-    ).toBe("true");
-    fireEvent.click(screen.getByRole("menuitemradio", { name: "150%" }));
+      (within(sizes).getByRole("radio", { name: "125% (default)" }) as HTMLInputElement).checked,
+    ).toBe(true);
+    fireEvent.click(within(sizes).getByRole("radio", { name: "150%" }));
     await waitFor(() => expect(host.zoom).toBe(1.5));
     expect(localStorage.getItem("botloft.zoom")).toBe("1.5");
   });

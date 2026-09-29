@@ -27,7 +27,7 @@ export function App({ host, connect }: { host: Host; connect: Connect }) {
         </DaemonProvider>
       ) : (
         <div className="flex h-full flex-col">
-          <TitleBar />
+          <TitleBar language />
           <Onboarding link={link} />
         </div>
       )}

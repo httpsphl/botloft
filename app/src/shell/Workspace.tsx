@@ -39,7 +39,13 @@ export function Workspace() {
   } else if (!loaded) {
     main = null;
   } else if (!hasCrews) {
-    main = <Welcome />;
+    // The sidebar stays, with the account area, before the first crew too.
+    main = (
+      <div className="flex min-h-0 flex-1">
+        <Sidebar />
+        <Welcome />
+      </div>
+    );
   } else {
     main = (
       <div className="flex min-h-0 flex-1">
