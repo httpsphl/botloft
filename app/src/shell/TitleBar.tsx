@@ -27,7 +27,7 @@ export function TitleBar({ children, status }: { children?: ReactNode; status?: 
       className="flex h-9 shrink-0 items-center border-line border-b bg-panel"
     >
       <div data-tauri-drag-region className="flex items-center gap-2 pr-4 pl-3">
-        <BotAvatar color="#ffffff" size={18} />
+        <BotAvatar color="#ffffff" size={18} framed />
         <span data-tauri-drag-region className="font-semibold text-sm tracking-tight">
           Botloft
         </span>

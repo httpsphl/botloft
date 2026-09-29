@@ -32,7 +32,7 @@ function Sender({ message, bots }: { message: Message; bots: Record<BotId, Bot> 
     case "system":
       return (
         <span className="inline-flex items-center gap-1.5 font-medium">
-          <BotAvatar color="#ffffff" size={14} />
+          <BotAvatar color="#ffffff" size={14} framed />
           {t.messages.row.system}
         </span>
       );

@@ -23,6 +23,8 @@
   --warn: #a35f00;
   --danger: #c2372a;
   --idle-state: #6f6f69;
+  /* The thin edge around a bot's avatar, so light colors hold their shape. */
+  --avatar-edge: rgb(0 0 0 / 0.2);
 }
 
 [data-theme="dark"] {
@@ -41,6 +43,7 @@
   --warn: #f0b24a;
   --danger: #ff6d60;
   --idle-state: #8c8c86;
+  --avatar-edge: rgb(255 255 255 / 0.14);
 }
 
 @theme inline {

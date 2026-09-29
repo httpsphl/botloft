@@ -61,7 +61,11 @@ function OtherMessage({ message }: { message: Message }) {
   const name = system ? "Botloft" : (sender?.name ?? t.chat.inbound.archivedBot);
   return (
     <li className="flex gap-3 pr-16">
-      <BotAvatar color={system ? "#ffffff" : (sender?.color ?? "#6f6f69")} size={28} />
+      <BotAvatar
+        color={system ? "#ffffff" : (sender?.color ?? "#6f6f69")}
+        size={28}
+        framed={system}
+      />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 text-sm">
           <span className="font-semibold">{name}</span>
