@@ -69,12 +69,35 @@ pub(crate) async fn ask(
     input: &Value,
     tool_use_id: &str,
 ) -> Option<Answer> {
+    ask_with(
+        daemon,
+        bot,
+        generation,
+        tool_name,
+        input,
+        tool_use_id,
+        |_| {},
+    )
+    .await
+}
+
+/// `ask`, telling `opened` the request's id once it is in the chat.
+pub(crate) async fn ask_with(
+    daemon: &Daemon,
+    bot: &BotId,
+    generation: u64,
+    tool_name: &str,
+    input: &Value,
+    tool_use_id: &str,
+    opened: impl FnOnce(&ApprovalId),
+) -> Option<Answer> {
     let pending = open(daemon, bot, tool_name, input, tool_use_id)?;
     let (answer, waiting) = oneshot::channel();
     daemon
         .approvals
         .lock()
         .insert(pending.record.approval.id.clone(), answer);
+    opened(&pending.record.approval.id);
     daemon.supervisor.approval_opened(bot, generation);
     let mut guard = Guard {
         daemon,

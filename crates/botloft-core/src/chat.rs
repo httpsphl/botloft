@@ -17,6 +17,9 @@ pub const SUGGEST_TOOL: &str = "mcp__botloft__suggest_bot";
 /// model calls: the daemon opens this request from inside the `browser_*`
 /// tools.
 pub const BROWSER_SITE_TOOL: &str = "mcp__botloft__browser";
+/// A bot asking the owner to do something in its browser themselves (spec
+/// 21.10), opened from inside `browser_ask_owner`.
+pub const BROWSER_HELP_TOOL: &str = "mcp__botloft__browser_help";
 /// Longest suggestion kept, in bytes: the owner reads and edits all of it.
 pub const SUGGESTION_INPUT_MAX: usize = 64 * 1024;
 /// Longest tool output kept, in bytes.
@@ -101,6 +104,9 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
         "mcp__botloft__complete_task" => field(input, "task_id").map(|id| format!("task {id}")),
         SUGGEST_TOOL => field(input, "name").map(str::to_owned),
         BROWSER_SITE_TOOL => field(input, "site").map(str::to_owned),
+        BROWSER_HELP_TOOL | "mcp__botloft__browser_ask_owner" => {
+            field(input, "task").map(str::to_owned)
+        }
         "mcp__botloft__browser_open" => field(input, "url").map(str::to_owned),
         "mcp__botloft__browser_click"
         | "mcp__botloft__browser_type"
@@ -235,6 +241,13 @@ mod tests {
         assert_eq!(
             tool_summary(BROWSER_SITE_TOOL, &json!({ "site": "example.com" })),
             "example.com"
+        );
+        assert_eq!(
+            tool_summary(
+                BROWSER_HELP_TOOL,
+                &json!({ "task": "Sign in to GitHub", "site": "github.com" })
+            ),
+            "Sign in to GitHub"
         );
         assert_eq!(
             tool_summary(

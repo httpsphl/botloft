@@ -37,7 +37,13 @@ pub(super) enum Tool {
     Back,
     Screenshot,
     Close,
+    AskOwner {
+        task: String,
+    },
 }
+
+/// Longest request for the owner's help, in characters.
+const TASK_MAX: usize = 500;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -94,6 +100,12 @@ struct ScrollArgs {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
+struct AskOwner {
+    task: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct Nothing {}
 
 impl Tool {
@@ -145,6 +157,16 @@ impl Tool {
             "back" => parse::<Nothing>(arguments).map(|_| Self::Back)?,
             "screenshot" => parse::<Nothing>(arguments).map(|_| Self::Screenshot)?,
             "close" => parse::<Nothing>(arguments).map(|_| Self::Close)?,
+            "ask_owner" => {
+                let task = parse::<AskOwner>(arguments)?.task.trim().to_owned();
+                if task.is_empty() || task.chars().count() > TASK_MAX {
+                    return Err(format!(
+                        "task must say in one sentence, up to {TASK_MAX} characters, what the \
+                         owner should do"
+                    ));
+                }
+                Self::AskOwner { task }
+            }
             other => return Err(format!("{PREFIX}{other} is not a browser tool")),
         };
         Ok(tool)

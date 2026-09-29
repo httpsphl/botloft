@@ -4,6 +4,7 @@
 #![allow(dead_code)] // each test file uses a different part of the harness
 
 pub mod bots;
+pub mod browsing;
 pub mod mcp;
 pub mod routines;
 pub mod site;

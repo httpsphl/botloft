@@ -419,7 +419,7 @@ Transporte: Streamable HTTP, só POST e resposta `application/json`, sem sessão
 | `my_tasks` | `role?` (`assigned`, `requested`) | tasks `open` e `expired`: id, de, para, status, prazo relativo, hops e o pedido original |
 | `suggest_bot` | `name`, `role`, `instructions` (até 8 000 caracteres), `model?`, `reason` (até 1 000) | `created` e, criado, `handle`, `name`, `role`, `model` e um lembrete para mandar a primeira task; recusado ou sem resposta, o porquê (10.2). Só o chefe |
 | `permission_prompt` | `tool_name`, `input`, `tool_use_id` | decisão do dono (10.1). Chamada pelo Claude Code, não pelo modelo |
-| `browser_*` | seção 21.4 | o navegador do bot: abrir, ler, clicar, digitar, rolar, ver a tela |
+| `browser_*` | seção 21.4 | o navegador do bot: abrir, ler, clicar, digitar, rolar, ver a tela, pedir a mão do dono |
 
 - Erro que o modelo pode corrigir (handle desconhecido, argumento inválido, limite de hops, task de outro bot) volta como resultado com `isError: true` e uma frase explicando. Só tool desconhecida ou chamada malformada vira erro JSON-RPC (`-32602`).
 - Erro interno não expõe detalhes ao bot; vai para o log.
@@ -499,7 +499,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `deliveries.list` | `state?, botId?` | `Delivery[]` |
 | `deliveries.retry` | `deliveryId` | `Delivery` |
 | `tasks.list` | `crewId?, status?` | `Task[]` |
-| `browser.list`, `browser.watch`, `browser.unwatch` | seção 21.7 | o navegador dos bots e a tela ao vivo |
+| `browser.list`, `browser.watch`, `browser.unwatch`, `browser.take`, `browser.release`, `browser.input` | seção 21.7 | o navegador dos bots, a tela ao vivo e o dono no controle |
 | `screens.list` | seção 22.4 | as telas HTML do bot |
 
 `Crew` traz `workFolder`, o caminho da pasta de trabalho (a escolhida ou a `shared\`), `workFolderChosen` e `leadBotId`, o chefe (10.2). `Bot` traz também `permissionMode`, `model` e `modelInUse` (7.4) e `lastActivity`: o último item do chat resumido em uma linha, para a lista de conversas: `kind` (`owner`, `message`, `reply`, `tool`, `approval`, `notice`), `text` e `at`. O `text` não tem palavras do daemon: a mensagem do dono vem sem "You:" e a aprovação só com o nome da ferramenta, e o app completa no idioma do dono.
@@ -584,7 +584,7 @@ app/src/
     bots/         conversas na barra lateral, criar, editar, estado, detalhes
     chat/         conversa com o bot: itens, texto ao vivo, aprovações, compositor com anexos
     files/        painel dos arquivos que o bot fez: lista, prévia, abrir
-    browser/      painel do navegador do bot: tela ao vivo, cursor, pedido de site (21.8)
+    browser/      painel do navegador do bot: tela ao vivo, cursor, pedido de site (21.8), dono no controle (21.10)
     screens/      área de design: as telas HTML do bot, ao vivo enquanto ele escreve (22.5)
     messages/     timeline da crew, estado de entrega, deliveries com falha (botão na barra de título, retry)
     tasks/        tarefas da crew (abertas por padrão, todas sob demanda)
@@ -922,7 +922,7 @@ Sem jargão (15.2): o dono não vê "cron", "overlap" nem "timezone" no caminho 
 
 ## 21. Navegador
 
-Status: **N1 e N2 implementados** (21.10); N3 e N4 depois.
+Status: **N1, N2 e N3 implementados** (21.11); N4 é a seção 22.
 
 ### 21.1 O que é
 
@@ -953,7 +953,7 @@ Cada bot tem um navegador próprio para pesquisar e usar sites: um Microsoft Edg
 
 ### 21.4 Tools
 
-Ficam no servidor `botloft` (10), então `--allowedTools mcp__botloft` as libera no Claude Code; quem decide o que pede o dono é o daemon (21.5). Todas agem no navegador do próprio bot.
+Ficam no servidor `botloft` (11), então `--allowedTools mcp__botloft` as libera no Claude Code; quem decide o que pede o dono é o daemon (21.5). Todas agem no navegador do próprio bot.
 
 | Tool | Entrada | O que faz |
 |---|---|---|
@@ -967,6 +967,7 @@ Ficam no servidor `botloft` (10), então `--allowedTools mcp__botloft` as libera
 | `browser_back` | | volta uma página |
 | `browser_screenshot` | | uma imagem JPEG da tela, para o bot ver o que o texto não diz (layout, gráfico, captcha) |
 | `browser_close` | | fecha o navegador; o perfil fica |
+| `browser_ask_owner` | `task` | pede ao dono que faça algo no navegador com as próprias mãos (entrar numa conta, passar de um captcha) e espera ele terminar (21.10) |
 
 - Toda tool que age devolve a página como ficou (21.6), para o bot não precisar de um `browser_look` a cada passo. `browser_screenshot` devolve uma imagem (`{"type": "image", "mimeType": "image/jpeg"}`), que o Claude Code mostra ao modelo (19).
 - Uma ação por vez em cada navegador: uma segunda chamada espera a primeira.
@@ -1013,8 +1014,11 @@ Esqueceu a senha? [e5 link "Recuperar acesso"]
 | `browser.list` | | `BrowserState[]`: os navegadores que não estão fechados |
 | `browser.watch` | `botId` | `BrowserView {state, frame}`: o estado e o último quadro. A conexão passa a receber os quadros desse bot |
 | `browser.unwatch` | | `null` |
+| `browser.take` | `botId` | `BrowserState`: o dono assume o navegador (21.10). A conexão precisa estar assistindo esse bot, e o navegador aberto |
+| `browser.release` | `botId` | `BrowserState`: devolve o navegador ao bot; um pedido de ajuda aberto recebe **Pronto** |
+| `browser.input` | `botId`, `input` | `null`: um evento do dono na página. Só da conexão que controla |
 
-- `BrowserState`: `botId`, `status` (`closed`, `starting`, `open`, `failed`), `url`, `title`, `loading`, `tabs`, `error` (por que não abriu, em `failed`) e `updatedAt`.
+- `BrowserState`: `botId`, `status` (`closed`, `starting`, `open`, `failed`), `url`, `title`, `loading`, `tabs`, `error` (por que não abriu, em `failed`), `control` (`bot` ou `owner`, 21.10), `ask` (o que o bot pediu ao dono com `browser_ask_owner`, enquanto o pedido está aberto) e `updatedAt`.
 - Notificações para todos: `browser.changed` (`BrowserState`) e `browser.action {botId, kind, x, y, label, at}`, com `kind` `open`, `click`, `type`, `select`, `press`, `scroll` ou `back`; `x` e `y` em pixels da página (1280 × 800) quando a ação tem um ponto; `label` é o nome do elemento, a tecla ou o site, nunca o texto digitado.
 - Só para a conexão que assiste: `browser.frame {botId, data, width, height}`, um JPEG em base64 e o tamanho da página que ele mostra. Cada conexão assiste um bot por vez; `browser.watch` de outro troca, e fechar a conexão para.
 - Os quadros vêm do `Page.startScreencast` (JPEG, qualidade 60, até 1280 × 800), que roda só enquanto alguém assiste, e só quando a tela muda. O daemon confirma cada quadro no máximo ~15 vezes por segundo. Um app lento não acumula quadros: a conexão manda sempre o mais novo quando consegue, e quadros não contam no limite de 1024 notificações (11.1).
@@ -1027,6 +1031,7 @@ Esqueceu a senha? [e5 link "Recuperar acesso"]
 - Sem navegador aberto: o mascote e "<bot> ainda não abriu o navegador", com a explicação de que tudo que ele fizer num site aparece ali ao vivo. Depois de fechado, o último quadro fica apagado com "Navegador fechado". Em `failed`, o motivo em "Details".
 - No chat, a linha de uma tool `browser_*` ganha o ícone do globo e o botão "Ver no navegador", que abre o painel.
 - O pedido de site (21.5) é um cartão próprio: "<bot> quer usar o navegador em **wikipedia.org**", o endereço embaixo, Permitir e Negar. Respondido: "Você permitiu wikipedia.org".
+- O dono no controle e o pedido de ajuda têm a própria parte da tela (21.10).
 
 ### 21.9 Dados e config
 
@@ -1042,13 +1047,50 @@ Esqueceu a senha? [e5 link "Recuperar acesso"]
 
 - **Privacidade:** endereço, título, texto de página, o que o bot digita e os quadros são dados pessoais como os itens do chat (8.5): nunca vão para o log em `info` ou acima. O `debug` registra métodos do CDP e ids.
 
-### 21.10 Marcos
+### 21.10 Dono no controle (N3)
+
+O dono pode usar o navegador do bot com as próprias mãos: clicar, arrastar, rolar e digitar na tela ao vivo. Serve para o que o bot não deve ou não consegue fazer sozinho: entrar numa conta com a senha do dono, passar de um captcha, confirmar um código que chegou no celular dele.
+
+- **Assumir:** "Assumir o controle", no painel (21.8), com o navegador aberto. Quem controla é a conexão que assiste o bot (21.7); parar de assistir (fechar o painel, trocar de bot, fechar o app, cair a conexão) devolve o controle na hora, para o bot nunca ficar preso. Cada navegador tem um só controlador: `browser.take` de outra conexão enquanto um controla é `conflict`.
+- **O bot espera:** enquanto o dono controla, cada tool `browser_*` do bot espera ele devolver, até 10 minutos. Passou disso, a tool volta com erro: o dono está usando o navegador. `browser_ask_owner` não espera, porque é ela que chama o dono. O bot continua `busy` nessa espera, e o painel diz que ele espera.
+- **Devolver:** "Pronto, devolver para <bot>" no painel. Fechar o navegador (bot pausado, `browser_close`, processo que caiu) também devolve.
+- **O que passa:** cliques, arrasto e roda do mouse (`Input.dispatchMouseEvent`), teclas (`Input.dispatchKeyEvent`) e texto colado ou composto (acento, IME: `Input.insertText`), sempre na aba ativa e na ordem em que o dono os fez. A conexão entrega cada evento a uma fila do navegador, que os manda um a um. Uma tecla com texto desce com o texto; Ctrl ou Meta com uma letra desce sem texto e com a tecla virtual do Windows, e o próprio Chromium faz os atalhos de edição (Ctrl+A, Ctrl+Z, Ctrl+Backspace). AltGr (Ctrl+Alt) conta como texto. Colar usa a área de transferência do dono, lida pelo app, nunca a do navegador do bot.
+- **Pontos** em pixels da página (1280 × 800), como `browser.action`; fora dela são recusados.
+- **Privacidade:** o que o dono digita e cola não vai para o log, nem para `browser.action`, nem para o bot. O log registra só que um evento chegou, em `debug`. Depois, o bot lê a página como sempre (21.6), com a senha só como `(password)`.
+- **Sites:** o que o dono abre com as próprias mãos não passa pela permissão de sites, e também não libera o site para o bot: a próxima tool do bot numa página de outro site pergunta como sempre (21.5).
+
+`BrowserInput`, com a etiqueta `kind`:
+
+| `kind` | Campos | Vira |
+|---|---|---|
+| `mouse` | `action` (`move`, `down`, `up`), `x`, `y`, `button` (`left`, `middle`, `right`, `none`), `buttons` (os apertados: 1 esquerdo, 2 direito, 4 do meio), `clicks`, `modifiers` | `mouseMoved`, `mousePressed`, `mouseReleased` |
+| `wheel` | `x`, `y`, `dx`, `dy` (pixels), `modifiers` | `mouseWheel` |
+| `key` | `key` e `code` como no DOM, `modifiers` | a tecla descendo e subindo |
+| `text` | `text`, até 10 000 caracteres | `Input.insertText` |
+
+`modifiers` como no CDP: Alt 1, Ctrl 2, Meta 4, Shift 8.
+
+**Pedir ajuda.** `browser_ask_owner {task}` é o bot pedindo ao dono que faça algo no navegador e esperando. `task` é uma frase para o dono, na língua dele ("Entre na sua conta do GitHub").
+
+- Precisa do navegador aberto. Abre um pedido no chat pelo caminho das aprovações (10.1), com `toolName: "mcp__botloft__browser_help"`, entrada `{task, url, site}` e resumo igual a `task`; o bot fica `needs_approval`, com o prazo das aprovações. `BrowserState.ask` guarda `task` até o pedido fechar.
+- O cartão no chat: "<bot> precisa de você no navegador", a tarefa, o site, e **Assumir o navegador** (abre o painel e assume o controle), **Pronto** e **Não vou fazer**, com nota.
+- Devolver o navegador pelo painel com um pedido aberto responde **Pronto**. Qualquer resposta devolve o controle ao bot.
+- **Pronto:** a tool volta dizendo que o dono terminou, com a página como ficou (21.6). **Não vou fazer:** erro com a nota. Sem resposta no prazo: erro.
+- As regras do bot (5.1) dizem: nunca peça senha, código ou dado de cartão no chat. Peça com `browser_ask_owner`, e o dono digita ele mesmo.
+
+**No app** (21.8):
+
+- Embaixo da tela ao vivo, com o navegador aberto: "Assumir o controle" e a explicação ("Para entrar numa conta ou passar de um captcha. <bot> espera enquanto isso.").
+- Com um pedido aberto, em cima da tela: "<bot> precisa de você" com a tarefa e "Assumir o controle". O botão do navegador no cabeçalho ganha o ponto de atenção.
+- No controle: a tela ganha a borda de destaque, e o cursor do bot some. Uma faixa diz "Você está no controle" e, se o bot espera, que ele espera, com "Pronto, devolver para <bot>". O teclado vai para a página enquanto a tela tem o foco; sem foco, a faixa diz "Clique na tela para digitar". Esc vai para a página, não devolve.
+
+### 21.11 Marcos
 
 | Marco | Entrega | Pronto quando |
 |---|---|---|
 | **N1** Navegador no daemon | `browser/` (processo, CDP, abas, leitura da página, ações), tools `browser_*`, sites e aprovação, RPC e notificações, migration, testes com o Edge real e páginas locais | um bot abre uma página local, preenche um formulário e lê o resultado; no modo Manual, o primeiro acesso a um site espera o dono |
 | **N2** Painel ao vivo | painel do navegador com quadros, cursor e legenda, botão no cabeçalho, "Ver no navegador" no chat, cartão de site, textos nos três idiomas | ver pelo app, ao vivo, um bot real pesquisar e clicar |
-| **N3** Dono no controle | clicar e digitar na tela ao vivo para fazer um login ou passar de um captcha, com o bot esperando | depois |
+| **N3** Dono no controle | `browser.take`, `browser.release`, `browser.input`, `browser_ask_owner` e o pedido de ajuda, a espera das tools, o controle no painel e o cartão no chat, textos nos três idiomas, testes com o Edge real | com o Claude Code real, um bot numa página de login pede ajuda, o dono assume pelo cartão, digita, devolve, e o bot continua na página já dentro da conta |
 | **N4** Telas | o bot desenhando telas (HTML) que aparecem lado a lado numa área de design, atualizadas enquanto ele escreve | seção 22 |
 
 ## 22. Telas

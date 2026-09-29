@@ -6,6 +6,8 @@
 mod call;
 mod cdp;
 mod events;
+mod hands;
+mod input;
 mod keys;
 mod launch;
 mod page;
@@ -22,7 +24,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
-use botloft_core::ids::BotId;
+use botloft_core::ids::{ApprovalId, BotId};
 use botloft_core::protocol::{
     BrowserAction, BrowserFrame, BrowserState, BrowserStatus, BrowserView,
 };
@@ -30,6 +32,7 @@ use tokio::sync::broadcast;
 use tracing::{debug, warn};
 
 pub use self::call::Call;
+pub use self::hands::{Asking, Hands, InputError, OWNER_WAIT, TakeError};
 pub use self::keys::{Key, find as find_key, names as key_names};
 pub use self::launch::find as find_program;
 pub use self::page::{Done, Scroll};
@@ -97,6 +100,8 @@ pub enum Want {
 }
 
 type Frames = tokio::sync::watch::Sender<Option<Arc<BrowserFrame>>>;
+/// Which hold of the owner's has the browser, if any (spec 21.10).
+type Held = tokio::sync::watch::Sender<Option<u64>>;
 
 struct Slot {
     /// One tool call at a time in each browser.
@@ -107,6 +112,9 @@ struct Slot {
     frames: Frames,
     watchers: usize,
     used: Instant,
+    held: Held,
+    /// The bot's open request for the owner's help.
+    asking: Option<ApprovalId>,
 }
 
 type Slots = Arc<Mutex<HashMap<BotId, Slot>>>;
@@ -125,6 +133,7 @@ pub struct Browsers {
     clock: Arc<dyn Clock>,
     slots: Slots,
     starts: std::sync::atomic::AtomicU64,
+    holds: std::sync::atomic::AtomicU64,
 }
 
 impl Browsers {
@@ -141,6 +150,7 @@ impl Browsers {
             clock,
             slots: Slots::default(),
             starts: std::sync::atomic::AtomicU64::new(1),
+            holds: std::sync::atomic::AtomicU64::new(1),
         }
     }
 
@@ -152,6 +162,8 @@ impl Browsers {
             frames: tokio::sync::watch::channel(None).0,
             watchers: 0,
             used: Instant::now(),
+            held: tokio::sync::watch::channel(None).0,
+            asking: None,
         })
     }
 
@@ -189,11 +201,13 @@ impl Browsers {
         update(&self.slots, &self.events, self.clock.as_ref(), bot, change);
     }
 
-    /// Closes the bot's browser; the profile stays.
+    /// Closes the bot's browser; the profile stays. The owner's hands let
+    /// go of it too.
     pub fn close(&self, bot: &BotId) {
-        let session = lock(&self.slots)
-            .get_mut(bot)
-            .and_then(|slot| slot.session.take());
+        let session = lock(&self.slots).get_mut(bot).and_then(|slot| {
+            slot.held.send_replace(None);
+            slot.session.take()
+        });
         if let Some((_, session)) = session {
             debug!(bot = %bot, "browser: closing");
             session.close();

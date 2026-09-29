@@ -784,6 +784,11 @@ export type RoutinesRunsParams = { routineId: RoutineId, before?: RoutineRunId, 
  */
 export type BrowserStatus = "closed" | "starting" | "open" | "failed";
 
+/**
+ * Who uses a bot's browser right now.
+ */
+export type BrowserControl = "bot" | "owner";
+
 export type BrowserState = { botId: BotId, status: BrowserStatus, 
 /**
  * The active tab's address.
@@ -801,6 +806,14 @@ tabs: number,
  * Why it could not start, when `failed`.
  */
 error: string | null, 
+/**
+ * Who uses it now (spec 21.10).
+ */
+control: BrowserControl, 
+/**
+ * What the bot asked the owner to do in it, while it waits.
+ */
+ask: string | null, 
 /**
  * Unix time in milliseconds.
  */
@@ -845,6 +858,31 @@ at: number, };
 export type BrowserView = { state: BrowserState, frame: BrowserFrame | null, };
 
 export type BrowserWatchParams = { botId: BotId, };
+
+export type MouseAction = "move" | "down" | "up";
+
+export type MouseButton = "none" | "left" | "middle" | "right";
+
+/**
+ * One thing the owner did on the page. Points are in CSS pixels of the
+ * page, like `BrowserAction`.
+ */
+export type BrowserInput = { "kind": "mouse", action: MouseAction, x: number, y: number, button: MouseButton, 
+/**
+ * The buttons held: 1 left, 2 right, 4 middle.
+ */
+buttons: number, 
+/**
+ * 2 for a double click.
+ */
+clicks: number, modifiers: number, } | { "kind": "wheel", x: number, y: number, dx: number, dy: number, modifiers: number, } | { "kind": "key", key: string, code: string, modifiers: number, } | { "kind": "text", text: string, };
+
+/**
+ * `browser.take` and `browser.release`.
+ */
+export type BrowserControlParams = { botId: BotId, };
+
+export type BrowserInputParams = { botId: BotId, input: BrowserInput, };
 
 /**
  * The device a screen is drawn for.
@@ -947,6 +985,9 @@ export interface RpcMethods {
   "browser.list": { params: undefined; result: Array<BrowserState> };
   "browser.watch": { params: BrowserWatchParams; result: BrowserView };
   "browser.unwatch": { params: undefined; result: null };
+  "browser.take": { params: BrowserControlParams; result: BrowserState };
+  "browser.release": { params: BrowserControlParams; result: BrowserState };
+  "browser.input": { params: BrowserInputParams; result: null };
   "screens.list": { params: ScreensListParams; result: Array<Screen> };
 }
 
