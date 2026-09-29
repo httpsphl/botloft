@@ -57,7 +57,7 @@ export class FakeBotloft implements BotloftApi {
   };
   /** How many times the app asked for a new Claude Code check. */
   refreshes = 0;
-  settings: Settings = { startWithWindows: true, keepAwake: true };
+  settings: Settings = { startWithWindows: true, keepAwake: true, approvalWaitMinutes: 60 };
   /** Every call, in order. */
   readonly calls: { method: Method; params: unknown }[] = [];
   readonly chat = new FakeChat(this);
@@ -217,6 +217,7 @@ export class FakeBotloft implements BotloftApi {
       this.settings = {
         startWithWindows: change.startWithWindows ?? this.settings.startWithWindows,
         keepAwake: change.keepAwake ?? this.settings.keepAwake,
+        approvalWaitMinutes: change.approvalWaitMinutes ?? this.settings.approvalWaitMinutes,
       };
       return this.settings;
     },

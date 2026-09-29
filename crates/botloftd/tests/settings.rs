@@ -15,7 +15,7 @@ async fn settings_are_read_and_changed_one_at_a_time() {
     let settings = app.call("settings.get", json!(null)).await.expect("get");
     assert_eq!(
         settings,
-        json!({ "startWithWindows": true, "keepAwake": true })
+        json!({ "startWithWindows": true, "keepAwake": true, "approvalWaitMinutes": 0 })
     );
 
     let changed = app
@@ -24,7 +24,7 @@ async fn settings_are_read_and_changed_one_at_a_time() {
         .expect("update");
     assert_eq!(
         changed,
-        json!({ "startWithWindows": true, "keepAwake": false })
+        json!({ "startWithWindows": true, "keepAwake": false, "approvalWaitMinutes": 0 })
     );
     assert!(!*t.daemon.settings.keep_awake().borrow());
 
@@ -34,7 +34,7 @@ async fn settings_are_read_and_changed_one_at_a_time() {
         .expect("update");
     assert_eq!(
         changed,
-        json!({ "startWithWindows": false, "keepAwake": false })
+        json!({ "startWithWindows": false, "keepAwake": false, "approvalWaitMinutes": 0 })
     );
     assert_eq!(
         app.call("settings.get", json!(null)).await.expect("get"),

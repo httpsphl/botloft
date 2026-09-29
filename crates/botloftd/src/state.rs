@@ -2,7 +2,7 @@
 //! courier, the event bus and what the daemon knows about itself.
 
 use std::sync::{Arc, Mutex, MutexGuard};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use botloft_core::protocol::{
     AccountUsage, Bot, BotStateChanged, BrowserAction, BrowserState, ChatDelta, ChatItemChanged,
@@ -47,11 +47,10 @@ pub enum Event {
 /// Events buffered per connection before a slow client is dropped.
 const EVENT_BUFFER: usize = 1024;
 
-/// Settings for what bots may ask of the owner (spec 6, `[bots]`).
+/// Settings for what bots may ask of the owner (spec 6, `[bots]`). How
+/// long a request waits for the owner is live: `LiveSettings`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BotSettings {
-    /// How long a permission request waits for the owner (spec 10.1).
-    pub approval_timeout: Duration,
     /// Largest attachment, per file (spec 9.5).
     pub attachment_max_bytes: u64,
     /// Most bots a chief's suggestions can bring a crew to (spec 10.2).
@@ -61,7 +60,6 @@ pub struct BotSettings {
 impl BotSettings {
     pub fn from_config(config: &Config) -> Self {
         Self {
-            approval_timeout: Duration::from_secs(config.bots.approval_timeout_minutes * 60),
             attachment_max_bytes: config.bots.attachment_max_mb * 1024 * 1024,
             max_per_crew: config.bots.max_per_crew,
         }
@@ -157,7 +155,7 @@ impl Daemon {
         WorkspaceEnv {
             paths: &self.paths,
             port: self.port,
-            approval_timeout: self.bots.approval_timeout,
+            approval_timeout: self.settings.approval_wait(),
         }
     }
 

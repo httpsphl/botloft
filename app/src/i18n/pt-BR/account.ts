@@ -52,6 +52,14 @@ export const account: Messages["account"] = {
     followBot: "Abrir o navegador e as telas quando um bot começar a usar",
     followBotOn: "O painel abre ao lado da conversa, para você ver o que o bot faz.",
     followBotOff: "O botão do painel ganha um ponto, e você abre quando quiser.",
+    approvalWait: "Quanto tempo um pedido de permissão espera por você",
+    approvalWaitHint: "Sem resposta nesse tempo, o pedido do bot é negado e ele segue sem isso.",
+    waitFor: (minutes: number) =>
+      minutes < 60 || minutes % 60 !== 0
+        ? `${minutes} min`
+        : minutes === 60
+          ? "1 hora"
+          : `${minutes / 60} horas`,
     lessMotion: "Menos animações",
     lessMotionHint:
       "A janela fica parada, como quando os efeitos de animação do Windows estão desligados.",

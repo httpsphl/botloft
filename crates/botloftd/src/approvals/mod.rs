@@ -106,7 +106,7 @@ pub(crate) async fn ask_with(
         record: &pending.record,
         settled: false,
     };
-    let decision = tokio::time::timeout(daemon.bots.approval_timeout, waiting).await;
+    let decision = tokio::time::timeout(daemon.settings.approval_wait(), waiting).await;
     guard.settled = true;
     daemon.approvals.lock().remove(&pending.record.approval.id);
     daemon.supervisor.approval_closed(bot, generation);

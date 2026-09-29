@@ -28,6 +28,16 @@ impl Supervisor {
         }
     }
 
+    /// Every running bot picks up new settings of its workspace, as soon
+    /// as nothing is in progress: a longer wait for approvals (spec 10.1)
+    /// is in `mcp.json`, which Claude Code reads when it starts.
+    pub fn workspace_settings_changed(&self) {
+        let bots: Vec<BotId> = self.lock().slots.keys().cloned().collect();
+        for bot in bots {
+            self.launch_settings_changed(&bot);
+        }
+    }
+
     /// Whether new settings wait for the running turn to end.
     pub fn relaunch_pending(&self, bot: &BotId) -> bool {
         self.lock()

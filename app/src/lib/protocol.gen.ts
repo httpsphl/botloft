@@ -721,12 +721,21 @@ startWithWindows: boolean,
 /**
  * The computer does not sleep while a bot works (spec 14).
  */
-keepAwake: boolean, };
+keepAwake: boolean, 
+/**
+ * How long a permission request waits for the owner before it is
+ * denied (spec 10.1).
+ */
+approvalWaitMinutes: number, };
 
 /**
  * The settings to change; the ones left out stay as they are.
  */
-export type SettingsUpdateParams = { startWithWindows?: boolean, keepAwake?: boolean, };
+export type SettingsUpdateParams = { startWithWindows?: boolean, keepAwake?: boolean, 
+/**
+ * From 1 to [`APPROVAL_WAIT_MAX_MINUTES`].
+ */
+approvalWaitMinutes?: number, };
 
 /**
  * When a routine runs (spec 20.2), kept as structure rather than cron text

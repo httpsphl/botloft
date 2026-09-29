@@ -76,3 +76,26 @@ describe("the app's own choices", () => {
     expect(document.documentElement.dataset.motion).toBeUndefined();
   });
 });
+
+describe("requests for permission", () => {
+  test("wait as long as the owner chooses, one set by hand included", async () => {
+    const fake = new FakeBotloft();
+    fake.settings = { ...fake.settings, approvalWaitMinutes: 45 };
+    renderApp(fake);
+    const dialog = await openSettings("Chat");
+    const waits = await within(dialog).findByRole("radiogroup", {
+      name: "How long a request for permission waits for you",
+    });
+    expect(
+      within(waits)
+        .getAllByRole("radio")
+        .map((radio) => radio.parentElement?.textContent),
+    ).toEqual(["15 min", "30 min", "45 min", "1 hour", "2 hours", "4 hours", "8 hours"]);
+    expect((within(waits).getByRole("radio", { name: "45 min" }) as HTMLInputElement).checked).toBe(
+      true,
+    );
+    fireEvent.click(within(waits).getByRole("radio", { name: "4 hours" }));
+    await act(async () => {});
+    expect(fake.settings.approvalWaitMinutes).toBe(240);
+  });
+});
