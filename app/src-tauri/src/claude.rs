@@ -9,7 +9,11 @@ use std::process::Command;
 /// Whether `path` is a Claude Code executable the app may run: the daemon
 /// found it, and the app still checks it is `claude.exe` and nothing else.
 fn is_claude(path: &Path) -> bool {
-    let expected = if cfg!(windows) { "claude.exe" } else { "claude" };
+    let expected = if cfg!(windows) {
+        "claude.exe"
+    } else {
+        "claude"
+    };
     path.is_absolute()
         && path
             .file_name()
@@ -53,7 +57,11 @@ mod tests {
     fn only_claude_code_itself_runs() {
         let dir = std::env::temp_dir().join(format!("botloft-claude-{}", std::process::id()));
         std::fs::create_dir_all(&dir).expect("dir");
-        let name = if cfg!(windows) { "claude.exe" } else { "claude" };
+        let name = if cfg!(windows) {
+            "claude.exe"
+        } else {
+            "claude"
+        };
         let claude = dir.join(name);
         std::fs::write(&claude, b"").expect("write");
         let other = dir.join("calc.exe");
