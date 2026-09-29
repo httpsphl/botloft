@@ -118,6 +118,19 @@
   }
 }
 
+/* The design area (features/screens): a dotted board, as in design apps. */
+@layer components {
+  .design-board {
+    background-color: var(--sunken);
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      color-mix(in srgb, var(--muted) 45%, transparent) 1px,
+      transparent 0
+    );
+    background-size: 18px 18px;
+  }
+}
+
 /* A bot's reply (features/chat/Markdown.tsx). */
 @layer components {
   .chat-md {

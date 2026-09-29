@@ -9,6 +9,7 @@ import {
   Files,
   FileText,
   Globe,
+  LayoutTemplate,
   ListChecks,
   ListTodo,
   LoaderCircle,
@@ -26,6 +27,7 @@ import type { ChatItem, ToolItem } from "../../lib/protocol.gen";
 import { useArrival } from "../../ui/motion";
 import { isBrowserTool, ShowBrowser } from "../browser/showBrowser";
 import { ShowFile } from "../files/showFile";
+import { isScreenFile, ShowScreen } from "../screens/showScreen";
 
 const ICONS: Record<string, LucideIcon> = {
   Bash: SquareTerminal,
@@ -89,6 +91,7 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
   const [open, setOpen] = useState(false);
   const showFile = useContext(ShowFile);
   const showBrowser = useContext(ShowBrowser);
+  const showScreen = useContext(ShowScreen);
   const arrival = useArrival(createdAt);
   const label = toolLabel(tool.name);
   const Icon = iconOf(label);
@@ -127,6 +130,17 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
             className="grid size-6 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-sunken hover:text-ink"
           >
             <Files aria-hidden size={14} />
+          </button>
+        )}
+        {showScreen && tool.file && isScreenFile(tool.file) && tool.status !== "failed" && (
+          <button
+            type="button"
+            title={t.screens.showInPanel}
+            aria-label={`${t.screens.showInPanel}: ${tool.summary}`}
+            onClick={() => showScreen(tool.file as string)}
+            className="grid size-6 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-sunken hover:text-ink"
+          >
+            <LayoutTemplate aria-hidden size={14} />
           </button>
         )}
         {showBrowser && isBrowserTool(tool.name) && (
