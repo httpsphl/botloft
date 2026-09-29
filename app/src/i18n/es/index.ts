@@ -13,6 +13,7 @@ import { onboarding } from "./onboarding";
 import { routines } from "./routines";
 import { screens } from "./screens";
 import { shell } from "./shell";
+import { tools } from "./tools";
 import { updates } from "./updates";
 
 export const es: Messages = {
@@ -29,4 +30,5 @@ export const es: Messages = {
   messages,
   routines,
   screens,
+  tools,
 };

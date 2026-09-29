@@ -12,6 +12,7 @@ import { AccountArea } from "../account/AccountArea";
 import { BotAvatar, moodOf } from "../bots/BotAvatar";
 import { BotStateBadge, stateView } from "../bots/BotStateBadge";
 import { ChiefBadge, isChief } from "../bots/ChiefBadge";
+import { toolAction, toolTitle } from "../chat/toolNames";
 import { CrewDialog } from "./CrewDialog";
 
 /** Crews as sections and their bots as conversations (spec 15.1). */
@@ -113,9 +114,7 @@ function Conversation({ bot, crew }: { bot: Bot; crew: Crew }) {
           <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs">
             <BotStateBadge bot={bot} crewPaused={crew.paused} compact />
             <span className="min-w-0 truncate text-muted">
-              {activity
-                ? activityText(activity, t.crews.sidebar)
-                : bot.role || t.crews.sidebar.noMessages}
+              {activity ? activityText(activity, t) : bot.role || t.crews.sidebar.noMessages}
             </span>
           </span>
         </span>
@@ -125,13 +124,22 @@ function Conversation({ bot, crew }: { bot: Bot; crew: Crew }) {
 }
 
 /** The conversation-list line, worded here from what the daemon sends. */
-function activityText(activity: Activity, t: Messages["crews"]["sidebar"]): string {
+/** The line in the owner's language: the daemon sends no wording. */
+function activityText(activity: Activity, t: Messages): string {
+  const { text, tool } = activity;
   switch (activity.kind) {
     case "owner":
-      return t.fromOwner(activity.text);
+      return t.crews.sidebar.fromOwner(text);
     case "approval":
-      return t.awaitingApproval(activity.text);
+      return t.crews.sidebar.awaitingApproval(tool ? toolAction(tool, t.tools) : text);
+    case "tool": {
+      if (!tool) {
+        return text;
+      }
+      const title = toolTitle(tool, t.tools);
+      return text ? `${title} · ${text}` : title;
+    }
     default:
-      return activity.text;
+      return text;
   }
 }

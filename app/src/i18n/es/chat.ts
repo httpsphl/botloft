@@ -66,8 +66,8 @@ export const chat: Messages["chat"] = {
     error: "Error",
   },
   approval: {
-    asks: (bot: string, tool: string) => `${bot} pide usar ${tool}`,
-    wants: (bot: string, tool: string) => `${bot} quiere usar ${tool}`,
+    asks: (bot: string, action: string) => `${bot} pide ${action}`,
+    wants: (bot: string, action: string) => `${bot} quiere ${action}`,
     fullInput: "Entrada completa",
     noteLabel: (bot: string) => `Nota para ${bot} si deniegas`,
     notePlaceholder: "¿Por qué no? Se envía al bot si deniegas (opcional)",
@@ -75,9 +75,9 @@ export const chat: Messages["chat"] = {
     deny: "Denegar",
     allowFailed: "No se pudo permitir",
     denyFailed: "No se pudo denegar",
-    allowed: (tool: string) => `Permitiste ${tool}`,
-    denied: (tool: string) => `Denegaste ${tool}`,
-    expired: (tool: string) => `${tool} no se aprobó a tiempo`,
+    allowed: (action: string) => `Permitido: ${action}`,
+    denied: (action: string) => `Denegado: ${action}`,
+    expired: (action: string) => `Sin respuesta a tiempo: ${action}`,
   },
   mode: {
     title: "Modo",
