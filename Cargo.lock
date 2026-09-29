@@ -273,7 +273,7 @@ dependencies = [
 
 [[package]]
 name = "botloft-app"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "dirs 7.0.0",
  "serde",
@@ -287,7 +287,7 @@ dependencies = [
 
 [[package]]
 name = "botloft-core"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "deunicode",
  "serde",
@@ -299,7 +299,7 @@ dependencies = [
 
 [[package]]
 name = "botloft-store"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "botloft-core",
  "rusqlite",
@@ -310,7 +310,7 @@ dependencies = [
 
 [[package]]
 name = "botloftd"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "axum",
