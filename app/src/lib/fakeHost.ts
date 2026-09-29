@@ -31,6 +31,11 @@ export class FakeHost implements Host {
   /** Where each folder picker started. */
   readonly pickerStarts: (string | null)[] = [];
   readonly installs: ("install" | "restart")[] = [];
+  /** How many times the app stopped the daemon. */
+  stops = 0;
+  /** What runs before the window closes, as the app set it. */
+  beforeClose: (() => Promise<void>) | null = null;
+  hidden = false;
   /** Paths `signInToClaude` ran, and what it answers. */
   readonly signIns: string[] = [];
   signInResult: boolean | Error = true;
@@ -55,6 +60,17 @@ export class FakeHost implements Host {
 
   restartDaemon(): Promise<DaemonStatus> {
     return this.settle("restart");
+  }
+
+  stopDaemon(): Promise<void> {
+    this.stops += 1;
+    return Promise.resolve();
+  }
+
+  /** Closes the window the way Windows does: what the app set runs first. */
+  async requestClose(): Promise<void> {
+    await this.beforeClose?.();
+    this.closed = true;
   }
 
   signInToClaude(claudePath: string): Promise<boolean> {
@@ -122,9 +138,18 @@ export class FakeHost implements Host {
       this.maximized = !this.maximized;
       return Promise.resolve();
     },
-    close: () => {
-      this.closed = true;
+    close: () => this.requestClose(),
+    hide: () => {
+      this.hidden = true;
       return Promise.resolve();
+    },
+    onCloseRequested: (before: () => Promise<void>) => {
+      this.beforeClose = before;
+      return Promise.resolve(() => {
+        if (this.beforeClose === before) {
+          this.beforeClose = null;
+        }
+      });
     },
     isMaximized: () => Promise.resolve(this.maximized),
     onResized: () => Promise.resolve(() => {}),

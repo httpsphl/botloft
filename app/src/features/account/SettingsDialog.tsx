@@ -1,7 +1,7 @@
-// Settings (spec 15.1): theme, size and language, which used to sit in the
-// title bar, and the versions for when something needs reporting.
+// Settings (spec 15.1): whether Botloft works in the background, the
+// theme, size and language, which used to sit in the title bar, and the
+// versions for when something needs reporting.
 
-import type { ReactNode } from "react";
 import {
   LOCALES,
   type LocaleChoice,
@@ -12,9 +12,11 @@ import {
 } from "../../i18n";
 import { setTheme, type ThemeChoice, useTheme } from "../../shell/theme";
 import { DEFAULT_ZOOM, setZoom, useZoom, ZOOM_LEVELS, type ZoomLevel } from "../../shell/zoom";
-import { useApp } from "../../store/context";
 import { Choices } from "../../ui/Choices";
 import { Dialog } from "../../ui/Dialog";
+import { AboutSettings } from "./AboutSettings";
+import { BackgroundSettings } from "./BackgroundSettings";
+import { Field, Section } from "./settingsParts";
 
 export function SettingsDialog({ onClose }: { onClose(): void }) {
   const t = useT();
@@ -22,7 +24,6 @@ export function SettingsDialog({ onClose }: { onClose(): void }) {
   const { choice: theme } = useTheme();
   const zoom = useZoom();
   const { choice: locale } = useLocale();
-  const system = useApp((state) => state.system);
   const systemName = LOCALES.find((entry) => entry.id === systemLocale())?.name ?? "English";
 
   const themes: { value: ThemeChoice; label: string }[] = [
@@ -42,6 +43,7 @@ export function SettingsDialog({ onClose }: { onClose(): void }) {
   return (
     <Dialog title={s.title} onClose={onClose} width="lg">
       <div className="flex flex-col gap-6">
+        <BackgroundSettings />
         <Section title={s.appearance}>
           <Field label={s.theme}>
             <Choices label={s.theme} value={theme} options={themes} onChange={setTheme} />
@@ -58,33 +60,8 @@ export function SettingsDialog({ onClose }: { onClose(): void }) {
             onChange={setLocaleChoice}
           />
         </Section>
-        <Section title={s.about}>
-          <ul className="text-ink-soft text-sm leading-relaxed" data-selectable>
-            {system && <li>{s.botloft(system.daemonVersion)}</li>}
-            {system?.claudeVersion && <li>{s.claudeCode(system.claudeVersion)}</li>}
-            {system?.account.claude?.email && <li>{system.account.claude.email}</li>}
-          </ul>
-        </Section>
+        <AboutSettings />
       </div>
     </Dialog>
-  );
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="flex flex-col gap-3">
-      <h3 className="font-semibold text-muted text-xs uppercase tracking-[0.12em]">{title}</h3>
-      {children}
-    </section>
-  );
-}
-
-function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <p className="font-medium text-sm">{label}</p>
-      {children}
-      {hint && <p className="text-muted text-xs">{hint}</p>}
-    </div>
   );
 }

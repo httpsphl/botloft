@@ -20,6 +20,7 @@ use std::time::Duration;
 use botloft_store::Store;
 use botloftd::browser::BrowserSettings;
 use botloftd::clock::ManualClock;
+use botloftd::config::Config;
 use botloftd::courier::{self, CourierSettings};
 use botloftd::paths::Paths;
 use botloftd::runtime::claude::Claude;
@@ -27,6 +28,7 @@ use botloftd::runtime::fake::FakeRuntime;
 use botloftd::secrets::TokenHash;
 use botloftd::server;
 use botloftd::service::tasks::TaskSettings;
+use botloftd::settings::LiveSettings;
 use botloftd::state::{BotSettings, Daemon, DaemonOptions};
 use botloftd::supervisor::{self, ClaudeSource, SupervisorSettings};
 use futures_util::{SinkExt, StreamExt};
@@ -112,6 +114,7 @@ pub fn new_daemon(settings: SupervisorSettings) -> Parts {
         },
         bots: bot_settings(),
         browser: BrowserSettings::default(),
+        settings: LiveSettings::new(None, &Config::default()),
     });
     Parts {
         daemon,

@@ -22,6 +22,7 @@ use crate::runtime::Runtime;
 use crate::screens::Screens;
 use crate::secrets::TokenHash;
 use crate::service::tasks::TaskSettings;
+use crate::settings::LiveSettings;
 use crate::supervisor::{Supervisor, SupervisorSettings};
 use crate::workspace::WorkspaceEnv;
 
@@ -80,6 +81,8 @@ pub struct DaemonOptions {
     pub tasks: TaskSettings,
     pub bots: BotSettings,
     pub browser: BrowserSettings,
+    /// What the owner changes in the app's Settings.
+    pub settings: LiveSettings,
 }
 
 pub struct Daemon {
@@ -89,6 +92,7 @@ pub struct Daemon {
     pub courier: Courier,
     pub tasks: TaskSettings,
     pub bots: BotSettings,
+    pub settings: LiveSettings,
     pub approvals: Approvals,
     pub routines: Routines,
     pub browsers: Browsers,
@@ -118,6 +122,7 @@ impl Daemon {
             courier: Courier::new(options.courier),
             tasks: options.tasks,
             bots: options.bots,
+            settings: options.settings,
             approvals: Approvals::default(),
             routines: Routines::default(),
             browsers: Browsers::new(

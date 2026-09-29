@@ -1,19 +1,24 @@
 //! The definition of the daemon's scheduled task, in Task Scheduler XML.
 //!
-//! - A logon trigger for the current user starts the daemon at logon.
+//! - A logon trigger for the current user starts the daemon at logon,
+//!   when the owner wants Botloft to start with Windows.
 //! - A time trigger that began in the past and repeats every minute keeps
 //!   it running: with `IgnoreNew`, a repetition does nothing while the
 //!   daemon runs and starts it again within a minute after it dies. The
 //!   logon trigger cannot repeat for this: its repetition only begins at
 //!   the next logon, not when the task is installed. `RestartOnFailure`
 //!   is not used either: it does not fire when the process exits with an
-//!   error (both tested on Windows 11 25H2, spec 14).
+//!   error (both tested on Windows 11 25H2, spec 14). It is left out while
+//!   the owner has stopped Botloft.
 //! - Interactive token, least privilege: only while the user is logged on,
 //!   in their session, with their Claude Code sign-in.
 //! - No time limit, runs on battery, normal priority. The default priority
 //!   (7) would pass "below normal" on to every bot.
 
-use crate::platform::TaskDefinition;
+use crate::platform::{TaskDefinition, Triggers};
+
+const LOGON_TRIGGER: &str = "<LogonTrigger>";
+const WATCHDOG_TRIGGER: &str = "<TimeTrigger>";
 
 pub(super) fn render(task: &TaskDefinition, user_sid: &str) -> String {
     let sid = escape(user_sid);
@@ -21,6 +26,7 @@ pub(super) fn render(task: &TaskDefinition, user_sid: &str) -> String {
     let command = escape(&task.program.to_string_lossy());
     let arguments = escape(&task.arguments);
     let working_dir = escape(&task.working_dir.to_string_lossy());
+    let triggers = triggers_xml(task.triggers, &sid);
     format!(
         r#"<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
@@ -29,19 +35,7 @@ pub(super) fn render(task: &TaskDefinition, user_sid: &str) -> String {
     <Description>{description}</Description>
   </RegistrationInfo>
   <Triggers>
-    <LogonTrigger>
-      <Enabled>true</Enabled>
-      <UserId>{sid}</UserId>
-    </LogonTrigger>
-    <TimeTrigger>
-      <Enabled>true</Enabled>
-      <StartBoundary>2026-01-01T00:00:00</StartBoundary>
-      <Repetition>
-        <Interval>PT1M</Interval>
-        <StopAtDurationEnd>false</StopAtDurationEnd>
-      </Repetition>
-    </TimeTrigger>
-  </Triggers>
+{triggers}  </Triggers>
   <Principals>
     <Principal id="Author">
       <UserId>{sid}</UserId>
@@ -78,6 +72,41 @@ pub(super) fn render(task: &TaskDefinition, user_sid: &str) -> String {
 </Task>
 "#
     )
+}
+
+fn triggers_xml(triggers: Triggers, sid: &str) -> String {
+    let mut xml = String::new();
+    if triggers.logon {
+        xml.push_str(&format!(
+            r"    {LOGON_TRIGGER}
+      <Enabled>true</Enabled>
+      <UserId>{sid}</UserId>
+    </LogonTrigger>
+"
+        ));
+    }
+    if triggers.watchdog {
+        xml.push_str(&format!(
+            r"    {WATCHDOG_TRIGGER}
+      <Enabled>true</Enabled>
+      <StartBoundary>2026-01-01T00:00:00</StartBoundary>
+      <Repetition>
+        <Interval>PT1M</Interval>
+        <StopAtDurationEnd>false</StopAtDurationEnd>
+      </Repetition>
+    </TimeTrigger>
+"
+        ));
+    }
+    xml
+}
+
+/// Which triggers a registered task has, from its XML.
+pub(super) fn triggers(xml: &str) -> Triggers {
+    Triggers {
+        logon: xml.contains(LOGON_TRIGGER),
+        watchdog: xml.contains(WATCHDOG_TRIGGER),
+    }
 }
 
 /// The command line of the task's first action, as the owner would type it.
@@ -136,6 +165,10 @@ mod tests {
             program: PathBuf::from(r"C:\Users\Ana Lima\AppData\Local\Botloft\bin\botloftd.exe"),
             arguments: r#"serve --home "C:\Users\Ana Lima\AppData\Local\Botloft""#.into(),
             working_dir: PathBuf::from(r"C:\Users\Ana Lima\AppData\Local\Botloft"),
+            triggers: Triggers {
+                logon: true,
+                watchdog: true,
+            },
         }
     }
 
@@ -155,6 +188,24 @@ mod tests {
         assert!(xml.contains("<LogonType>InteractiveToken</LogonType>"));
         assert!(xml.contains("<MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>"));
         assert!(xml.contains("<ExecutionTimeLimit>PT0S</ExecutionTimeLimit>"));
+        assert_eq!(triggers(&xml), task().triggers);
+    }
+
+    #[test]
+    fn each_trigger_can_be_left_out() {
+        for (logon, watchdog) in [(true, false), (false, true), (false, false)] {
+            let mut task = task();
+            task.triggers = Triggers { logon, watchdog };
+            let xml = render(&task, "S-1-5-21-1-2-3-1001");
+            assert_eq!(triggers(&xml), task.triggers);
+            assert_eq!(xml.contains("<Interval>PT1M</Interval>"), watchdog);
+            let users = xml.matches("<UserId>S-1-5-21-1-2-3-1001</UserId>").count();
+            assert_eq!(
+                users,
+                if logon { 2 } else { 1 },
+                "the principal is always there"
+            );
+        }
     }
 
     #[test]

@@ -15,6 +15,7 @@ use botloftd::paths::{self, Paths};
 use botloftd::platform::{self, InstanceLock};
 use botloftd::runtime::PipeRuntime;
 use botloftd::service::tasks::TaskSettings;
+use botloftd::settings::LiveSettings;
 use botloftd::state::{BotSettings, Daemon, DaemonOptions};
 use botloftd::supervisor::{self, SupervisorSettings};
 use botloftd::{approvals, autostart, keep_awake, logging, routines, secrets, server};
@@ -39,6 +40,9 @@ enum Command {
         /// Config file. Defaults to config.toml in the data folder.
         #[arg(long)]
         config: Option<PathBuf>,
+        /// Started by the scheduled task (spec 14).
+        #[arg(long, hide = true)]
+        scheduled: bool,
     },
     /// Start the daemon at logon, as a scheduled task of the current user.
     #[command(subcommand)]
@@ -53,6 +57,9 @@ enum ServiceCommand {
     Status,
     /// Stop the daemon and start it again.
     Restart,
+    /// Stop the daemon until Botloft is opened again, or until the next
+    /// logon if it starts with Windows.
+    Stop,
     /// Stop the daemon and remove the task. Bots and data stay.
     Uninstall,
 }
@@ -73,31 +80,34 @@ fn dispatch(cli: Cli) -> anyhow::Result<()> {
     let home =
         paths::resolve_home(cli.home.as_deref()).context("cannot resolve the data folder")?;
     match cli.command {
-        Command::Serve { config } => serve(home, config),
+        Command::Serve { config, scheduled } => serve(home, config, scheduled),
         Command::Service(ServiceCommand::Install) => autostart::install(&home),
         Command::Service(ServiceCommand::Status) => autostart::status(&home),
         Command::Service(ServiceCommand::Restart) => autostart::restart(&home),
+        Command::Service(ServiceCommand::Stop) => autostart::stop(&home),
         Command::Service(ServiceCommand::Uninstall) => autostart::uninstall(&home),
     }
 }
 
-fn serve(home: PathBuf, config_path: Option<PathBuf>) -> anyhow::Result<()> {
+fn serve(home: PathBuf, config_path: Option<PathBuf>, scheduled: bool) -> anyhow::Result<()> {
     platform::leave_own_console();
     std::fs::create_dir_all(&home).with_context(|| format!("cannot create {}", home.display()))?;
-    let config = match &config_path {
-        Some(path) => Config::load(path, true)?,
-        None => Config::load(&home.join("config.toml"), false)?,
-    };
+    let config_path = config_path.unwrap_or_else(|| home.join("config.toml"));
+    let config = Config::load(&config_path, config_path != home.join("config.toml"))?;
     let paths = Paths::new(home, paths::resolve_workspaces_root(&config)?);
     std::fs::create_dir_all(paths.logs())?;
     let _log_guard = logging::init(&paths.logs(), &config.log_level)?;
     // Started by the scheduled task, nobody sees stderr: the log has to
     // say why the daemon stopped.
-    run(paths, config).inspect_err(|err| error!("{err:#}"))
+    run(paths, config, config_path, scheduled).inspect_err(|err| error!("{err:#}"))
 }
 
-fn run(paths: Paths, config: Config) -> anyhow::Result<()> {
+fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> anyhow::Result<()> {
     let _lock = InstanceLock::acquire(&paths.lock_file())?;
+    if scheduled && !autostart::scheduled_start(&paths.home, config.start_with_windows) {
+        info!("a new sign-in, and Botloft does not start with Windows: waiting to be opened");
+        return Ok(());
+    }
 
     let owner_token = secrets::load_or_create_owner_token(&paths.secrets())
         .context("cannot prepare the owner token")?;
@@ -118,6 +128,7 @@ fn run(paths: Paths, config: Config) -> anyhow::Result<()> {
         tasks: TaskSettings::from_config(&config),
         bots: BotSettings::from_config(&config),
         browser: BrowserSettings::from_config(&config),
+        settings: LiveSettings::new(Some(config_path), &config),
     });
     // No bot process survived the last run, so nobody waits for these.
     approvals::expire_all(&daemon);
@@ -139,9 +150,10 @@ fn run(paths: Paths, config: Config) -> anyhow::Result<()> {
         tokio::spawn(courier::run(Arc::clone(&daemon)));
         tokio::spawn(routines::run(Arc::clone(&daemon)));
         tokio::spawn(browser::run(Arc::clone(&daemon)));
-        if config.keep_awake {
-            tokio::spawn(keep_awake::run(daemon.supervisor.busy_bots()));
-        }
+        tokio::spawn(keep_awake::run(
+            daemon.supervisor.busy_bots(),
+            daemon.settings.keep_awake(),
+        ));
         server::serve(Arc::clone(&daemon), listener, platform::shutdown_signal()).await?;
         daemon.supervisor.shutdown();
         info!("stopped");

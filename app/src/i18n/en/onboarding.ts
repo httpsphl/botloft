@@ -10,9 +10,10 @@ export const onboarding = {
     install: "Getting Botloft ready…",
     update: "Updating Botloft…",
     restart: "Restarting Botloft…",
+    start: "Starting your bots…",
   },
   installNote:
-    "Botloft keeps your bots running in the background, even after you close this window, and starts with Windows.",
+    "Botloft runs your bots in the background. In Settings you choose whether they keep working after you close this window and whether Botloft starts with Windows.",
   stopped: {
     title: "Botloft couldn't start",
     body: "Botloft runs your bots in the background, and that part didn't start.",
@@ -49,6 +50,9 @@ export const onboarding = {
     botloft: "Botloft",
     running:
       "Running in the background. It starts with Windows, so your bots keep working after you close this window.",
+    runningNotAtStart:
+      "Running in the background, so your bots keep working after you close this window.",
+    runningWhileOpen: "Running while this window is open. Closing it stops your bots.",
     claudeCode: "Claude Code",
     checking: "Checking…",
     version: (version: string) => `Version ${version}`,

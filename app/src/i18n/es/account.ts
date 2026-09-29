@@ -30,6 +30,18 @@ export const account: Messages["account"] = {
   },
   settings: {
     title: "Configuración",
+    background: "En segundo plano",
+    keepWorking: "Seguir trabajando después de cerrar Botloft",
+    keepWorkingOn: "Tus bots siguen trabajando y respondiendo después de que cierras esta ventana.",
+    keepWorkingOff:
+      "Al cerrar Botloft, todos los bots se detienen. Siguen donde se quedaron cuando lo vuelves a abrir.",
+    startWithWindows: "Iniciar con Windows",
+    startWithWindowsOn:
+      "Cuando inicias sesión en Windows, tus bots vuelven a trabajar solos, sin abrir esta ventana.",
+    startWithWindowsOff: "Después de reiniciar el equipo, los bots esperan a que abras Botloft.",
+    keepAwake: "Mantener el equipo despierto mientras los bots trabajan",
+    keepAwakeHint: "Igual se suspende si cierras la tapa o eliges Suspender.",
+    saveFailed: "No se pudo cambiar el ajuste",
     appearance: "Apariencia",
     theme: "Tema",
     themes: { system: "Sistema", light: "Claro", dark: "Oscuro" },
@@ -39,5 +51,11 @@ export const account: Messages["account"] = {
     about: "Acerca de",
     claudeCode: (version: string) => `Claude Code ${version}`,
     botloft: (version: string) => `Botloft ${version}`,
+    checkUpdates: "Buscar actualizaciones",
+    checking: "Buscando…",
+    upToDate: "Tienes la versión más reciente.",
+    updateFound: (version: string) => `Salió Botloft ${version}.`,
+    seeUpdate: "Ver la actualización",
+    checkFailed: "No se pudieron buscar actualizaciones. Inténtalo más tarde.",
   },
 };

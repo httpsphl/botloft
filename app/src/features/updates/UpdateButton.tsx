@@ -65,7 +65,7 @@ type Progress =
   | { stage: "downloading"; fraction: number | null }
   | { stage: "failed"; error: string };
 
-function UpdateDialog({ update, onClose }: { update: AppUpdate; onClose(): void }) {
+export function UpdateDialog({ update, onClose }: { update: AppUpdate; onClose(): void }) {
   const t = useT();
   const u = t.updates;
   const [progress, setProgress] = useState<Progress>({ stage: "idle" });

@@ -4,7 +4,10 @@
 //! owner's Claude Code sign-in.
 
 pub mod binary;
+mod choice;
 pub mod health;
+
+pub use choice::{scheduled_start, set_start_with_windows, stop};
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -14,7 +17,7 @@ use sha2::{Digest, Sha256};
 
 use crate::config::Config;
 use crate::paths;
-use crate::platform::{self, TaskDefinition, TaskState};
+use crate::platform::{self, TaskDefinition, TaskState, Triggers};
 
 /// How long a daemon may take to stop or to answer after starting.
 const STOP_TIMEOUT: Duration = Duration::from_secs(10);
@@ -42,20 +45,34 @@ fn quote(arg: &str) -> String {
     format!("\"{arg}{}\"", "\\".repeat(trailing))
 }
 
-fn definition(home: &Path, program: &Path) -> TaskDefinition {
+/// `--scheduled` tells the daemon the task started it (`choice`).
+fn definition(home: &Path, program: &Path, triggers: Triggers) -> TaskDefinition {
     let home_text = home.to_string_lossy();
     TaskDefinition {
         description: format!(
             "Starts the Botloft daemon at logon and keeps it running. Data folder: {home_text}"
         ),
         program: program.to_owned(),
-        arguments: format!("serve --home {}", quote(&home_text)),
+        arguments: format!("serve --home {} --scheduled", quote(&home_text)),
         working_dir: home.to_owned(),
+        triggers,
     }
 }
 
+/// Registers the task with `triggers`, running the installed daemon.
+fn register(home: &Path, triggers: Triggers) -> anyhow::Result<()> {
+    let name = task_name(home);
+    let program = bin_dir(home).join(binary::EXE_NAME);
+    platform::register_task(&name, &definition(home, &program, triggers))
+        .with_context(|| format!("cannot register the scheduled task {name}"))
+}
+
+fn config(home: &Path) -> anyhow::Result<Config> {
+    Ok(Config::load(&home.join("config.toml"), false)?)
+}
+
 fn port(home: &Path) -> anyhow::Result<u16> {
-    Ok(Config::load(&home.join("config.toml"), false)?.port)
+    Ok(config(home)?.port)
 }
 
 fn bin_dir(home: &Path) -> PathBuf {
@@ -67,13 +84,15 @@ fn bin_dir(home: &Path) -> PathBuf {
 /// binary is left alone, so its bots are not interrupted.
 pub fn install(home: &Path) -> anyhow::Result<()> {
     std::fs::create_dir_all(home).with_context(|| format!("cannot create {}", home.display()))?;
-    let port = port(home)?;
+    let config = config(home)?;
+    let port = config.port;
     let exe = std::env::current_exe().context("cannot find this program")?;
     let installed = binary::install(&exe, &bin_dir(home))
         .with_context(|| format!("cannot copy the daemon to {}", bin_dir(home).display()))?;
     let name = task_name(home);
-    platform::register_task(&name, &definition(home, &installed.path))
-        .with_context(|| format!("cannot register the scheduled task {name}"))?;
+    register(home, choice::running(config.start_with_windows))?;
+    // The owner opened Botloft: it runs in this sign-in.
+    choice::mark_sign_in(home);
     println!(
         "Scheduled task {name} starts {} at logon.",
         installed.path.display()
@@ -85,7 +104,7 @@ pub fn install(home: &Path) -> anyhow::Result<()> {
         println!("The daemon {VERSION} is already running on 127.0.0.1:{port}.");
         return Ok(());
     }
-    restart_task(&name, port)
+    restart_task(home, port)
 }
 
 /// Stops the daemon and starts it again from the task.
@@ -94,11 +113,13 @@ pub fn restart(home: &Path) -> anyhow::Result<()> {
     if platform::find_task(&name)?.is_none() {
         bail!("the scheduled task {name} is not installed; run `botloftd service install`");
     }
-    restart_task(&name, port(home)?)
+    restart_task(home, port(home)?)
 }
 
-fn restart_task(name: &str, port: u16) -> anyhow::Result<()> {
+fn restart_task(home: &Path, port: u16) -> anyhow::Result<()> {
+    let name = &task_name(home);
     stop_task(name, port)?;
+    choice::mark_sign_in(home);
     platform::run_task(name).with_context(|| format!("cannot start the scheduled task {name}"))?;
     let up = health::wait(port, START_TIMEOUT, |health| {
         health.is_some_and(|health| health.version == VERSION)
@@ -206,8 +227,9 @@ mod tests {
         let task = definition(
             Path::new(r"C:\data"),
             Path::new(r"C:\data\bin\botloftd.exe"),
+            choice::running(true),
         );
-        assert_eq!(task.arguments, r#"serve --home "C:\data""#);
+        assert_eq!(task.arguments, r#"serve --home "C:\data" --scheduled"#);
         assert!(task.description.ends_with(r"Data folder: C:\data"));
     }
 

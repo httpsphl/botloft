@@ -35,6 +35,13 @@ export interface AppWindow {
   minimize(): Promise<void>;
   toggleMaximize(): Promise<void>;
   close(): Promise<void>;
+  hide(): Promise<void>;
+  /**
+   * Runs `before` when the window is about to close (the close button,
+   * Alt+F4, the taskbar), and closes it once it settles. Returns the
+   * unsubscribe function.
+   */
+  onCloseRequested(before: () => Promise<void>): Promise<() => void>;
   isMaximized(): Promise<boolean>;
   /** Called when the window is resized; returns the unsubscribe function. */
   onResized(listener: () => void): Promise<() => void>;
@@ -52,6 +59,11 @@ export interface Host {
   installDaemon(): Promise<DaemonStatus>;
   /** Stops the daemon and starts it again from its scheduled task. */
   restartDaemon(): Promise<DaemonStatus>;
+  /**
+   * Stops the daemon until the app opens again, or until the next sign-in
+   * when it starts with Windows (spec 14).
+   */
+  stopDaemon(): Promise<void>;
   /**
    * Opens Claude Code's sign-in (`claude auth login`) in its own window and
    * waits for it to end. Resolves whether it signed in.

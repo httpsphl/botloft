@@ -60,6 +60,7 @@ mod methods;
 mod model;
 mod routines;
 mod screens;
+mod settings;
 
 pub use browser::*;
 pub use browser_input::*;
@@ -70,6 +71,7 @@ pub use methods::*;
 pub use model::*;
 pub use routines::*;
 pub use screens::*;
+pub use settings::*;
 
 /// Version negotiated in `session.hello`. 2 replaced the terminal with the
 /// chat (ADR 0001).
@@ -119,6 +121,8 @@ pub mod method {
     pub const BROWSER_RELEASE: &str = "browser.release";
     pub const BROWSER_INPUT: &str = "browser.input";
     pub const SCREENS_LIST: &str = "screens.list";
+    pub const SETTINGS_GET: &str = "settings.get";
+    pub const SETTINGS_UPDATE: &str = "settings.update";
 }
 
 /// Server notification method names.

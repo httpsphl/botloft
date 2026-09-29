@@ -19,6 +19,7 @@ import {
   type Crew,
   type CrewId,
   PROTOCOL_VERSION,
+  type Settings,
   type SystemStatus,
 } from "./protocol.gen";
 import type {
@@ -56,6 +57,7 @@ export class FakeBotloft implements BotloftApi {
   };
   /** How many times the app asked for a new Claude Code check. */
   refreshes = 0;
+  settings: Settings = { startWithWindows: true, keepAwake: true };
   /** Every call, in order. */
   readonly calls: { method: Method; params: unknown }[] = [];
   readonly chat = new FakeChat(this);
@@ -209,6 +211,14 @@ export class FakeBotloft implements BotloftApi {
     "system.refresh": () => {
       this.refreshes += 1;
       return this.system;
+    },
+    "settings.get": () => this.settings,
+    "settings.update": (change) => {
+      this.settings = {
+        startWithWindows: change.startWithWindows ?? this.settings.startWithWindows,
+        keepAwake: change.keepAwake ?? this.settings.keepAwake,
+      };
+      return this.settings;
     },
     ...crewHandlers(this),
     ...botHandlers(this),

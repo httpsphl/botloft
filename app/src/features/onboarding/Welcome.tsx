@@ -1,8 +1,10 @@
 import { CircleCheck, CircleX, LoaderCircle, Plus } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useT } from "../../i18n";
+import { useWhenClosed } from "../../shell/closing";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
+import { useDaemonSettings } from "../account/useDaemonSettings";
 import { BotAvatar } from "../bots/BotAvatar";
 import { CrewDialog } from "../crews/CrewDialog";
 import { ClaudeCodeHelp } from "./ClaudeCodeHelp";
@@ -13,6 +15,14 @@ export function Welcome() {
   const w = useT().onboarding.welcome;
   const system = useApp((state) => state.system);
   const [creating, setCreating] = useState(false);
+  const whenClosed = useWhenClosed();
+  const { settings } = useDaemonSettings();
+  const running =
+    whenClosed === "stop"
+      ? w.runningWhileOpen
+      : settings?.startWithWindows === false
+        ? w.runningNotAtStart
+        : w.running;
 
   let claude: ReactNode;
   if (!system || (system.claudeVersion === null && system.runtimeError === null)) {
@@ -63,7 +73,7 @@ export function Welcome() {
         <h1 className="font-semibold text-2xl tracking-tight">{w.title}</h1>
         <p className="mt-1 text-ink-soft leading-relaxed">{w.intro}</p>
         <ul className="mt-6 flex flex-col overflow-hidden rounded-xl border border-line bg-panel">
-          <Check state="ok" title={w.botloft} detail={w.running} />
+          <Check state="ok" title={w.botloft} detail={running} />
           {claude}
           {account}
         </ul>

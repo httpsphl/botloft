@@ -3,6 +3,7 @@ import { useStore } from "zustand";
 import { type Connect, createLink } from "./features/onboarding/link";
 import { Onboarding } from "./features/onboarding/Onboarding";
 import type { Host } from "./lib/host";
+import { useCloseBehavior } from "./shell/closing";
 import { TitleBar } from "./shell/TitleBar";
 import { useThemeRoot } from "./shell/theme";
 import { Workspace } from "./shell/Workspace";
@@ -13,6 +14,7 @@ import { Toaster } from "./ui/toast";
 export function App({ host, connect }: { host: Host; connect: Connect }) {
   useThemeRoot();
   useZoomRoot(host);
+  useCloseBehavior(host);
   const [link] = useState(() => createLink(host, connect));
   const current = useStore(link, (state) => state.current);
   useEffect(() => {

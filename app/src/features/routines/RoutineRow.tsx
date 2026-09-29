@@ -18,6 +18,7 @@ import { useApi, useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Confirm } from "../../ui/Confirm";
 import { Menu } from "../../ui/Menu";
+import { Switch } from "../../ui/Switch";
 import { attempt } from "../../ui/toast";
 import { BotAvatar } from "../bots/BotAvatar";
 import { describeSchedule, nextText } from "./describe";
@@ -52,22 +53,12 @@ export function RoutineRow({
 
   return (
     <li className="flex items-start gap-3 rounded-xl border border-line bg-panel px-4 py-3">
-      <button
-        type="button"
-        role="switch"
-        aria-checked={routine.enabled}
-        aria-label={r.toggle(routine.name)}
-        onClick={toggle}
-        className={`relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors duration-200 ${
-          routine.enabled ? "bg-accent" : "bg-line-strong"
-        }`}
-      >
-        <span
-          className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-            routine.enabled ? "translate-x-4" : ""
-          }`}
-        />
-      </button>
+      <Switch
+        checked={routine.enabled}
+        label={r.toggle(routine.name)}
+        onChange={toggle}
+        className="mt-0.5"
+      />
       <div className="min-w-0 flex-1">
         {showBot && (
           <p className="mb-0.5 flex items-center gap-1.5 text-muted text-xs">

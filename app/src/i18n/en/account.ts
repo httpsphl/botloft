@@ -30,6 +30,18 @@ export const account = {
   },
   settings: {
     title: "Settings",
+    background: "In the background",
+    keepWorking: "Keep working after you close Botloft",
+    keepWorkingOn: "Your bots go on working and answering after you close this window.",
+    keepWorkingOff:
+      "Closing Botloft stops every bot. They pick up where they left off when you open it again.",
+    startWithWindows: "Start with Windows",
+    startWithWindowsOn:
+      "When you sign in to Windows, your bots get back to work on their own, without opening this window.",
+    startWithWindowsOff: "After you restart the computer, the bots wait until you open Botloft.",
+    keepAwake: "Keep the computer awake while bots work",
+    keepAwakeHint: "It still sleeps when you close the lid or choose Sleep.",
+    saveFailed: "Could not change the setting",
     appearance: "Appearance",
     theme: "Theme",
     themes: { system: "System", light: "Light", dark: "Dark" },
@@ -39,5 +51,11 @@ export const account = {
     about: "About",
     claudeCode: (version: string) => `Claude Code ${version}`,
     botloft: (version: string) => `Botloft ${version}`,
+    checkUpdates: "Check for updates",
+    checking: "Checking…",
+    upToDate: "You have the latest version.",
+    updateFound: (version: string) => `Botloft ${version} is out.`,
+    seeUpdate: "See the update",
+    checkFailed: "Could not check for updates. Try again later.",
   },
 };

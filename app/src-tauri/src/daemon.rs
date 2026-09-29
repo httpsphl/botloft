@@ -159,6 +159,12 @@ pub fn restart(endpoint: &Endpoint) -> Result<DaemonStatus, String> {
     Ok(status(endpoint))
 }
 
+/// Stops the daemon and keeps its scheduled task from bringing it back
+/// before the app opens again (spec 14).
+pub fn stop(endpoint: &Endpoint) -> Result<(), String> {
+    run_service(endpoint, "stop")
+}
+
 /// Runs `botloftd --home <home> service <command>` without a window and
 /// returns its error message if it fails.
 fn run_service(endpoint: &Endpoint, command: &str) -> Result<(), String> {

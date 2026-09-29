@@ -36,6 +36,14 @@ async fn daemon_restart() -> Result<DaemonStatus, String> {
     blocking(|| daemon::restart(&daemon::endpoint()?)).await
 }
 
+/// Stops the daemon until the app opens again, or until the next sign-in
+/// when it starts with Windows: for an owner who wants the bots to stop
+/// when they close Botloft.
+#[tauri::command]
+async fn daemon_stop() -> Result<(), String> {
+    blocking(|| daemon::stop(&daemon::endpoint()?)).await
+}
+
 /// Opens Claude Code's sign-in in its own window and waits for it to end.
 /// Returns whether it signed in.
 #[tauri::command]
@@ -158,6 +166,7 @@ pub fn run() {
             daemon_status,
             daemon_install,
             daemon_restart,
+            daemon_stop,
             claude_sign_in,
             read_owner_token,
             open_path,

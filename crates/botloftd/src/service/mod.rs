@@ -13,6 +13,7 @@ pub mod models;
 pub mod modes;
 pub mod routines;
 pub mod screens;
+pub mod settings;
 pub mod tasks;
 
 use botloft_core::protocol::{OwnerAccount, PROTOCOL_VERSION, SystemStatus, error_code};
@@ -39,6 +40,8 @@ pub enum ApiError {
     },
     #[error("could not update the workspace: {0}")]
     Workspace(#[source] std::io::Error),
+    #[error("could not save the settings: {0}")]
+    Settings(String),
     #[error("internal error")]
     Internal(#[source] StoreError),
 }
@@ -49,7 +52,9 @@ impl ApiError {
             Self::NotFound(_) => error_code::NOT_FOUND,
             Self::Conflict(_) => error_code::CONFLICT,
             Self::Validation(_) | Self::Rule { .. } => error_code::VALIDATION,
-            Self::Workspace(_) | Self::Internal(_) => error_code::INTERNAL_ERROR,
+            Self::Workspace(_) | Self::Settings(_) | Self::Internal(_) => {
+                error_code::INTERNAL_ERROR
+            }
         }
     }
 

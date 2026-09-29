@@ -88,8 +88,8 @@ impl Scheduler {
     }
 }
 
-/// Creates the task, or replaces its definition if it exists. It runs as
-/// the current user, only while they are logged on.
+/// Creates the task, or replaces its definition if it exists (which also
+/// enables it). It runs as the current user, only while they are logged on.
 pub fn register_task(name: &str, task: &TaskDefinition) -> io::Result<()> {
     let xml = task_xml::render(task, &CurrentUser::query()?.sid_string()?);
     let scheduler = Scheduler::connect()?;
@@ -123,9 +123,11 @@ pub fn find_task(name: &str) -> io::Result<Option<TaskInfo>> {
         TASK_STATE_DISABLED => TaskState::Disabled,
         _ => TaskState::Unknown,
     };
+    let xml = xml.to_string();
     Ok(Some(TaskInfo {
         state,
-        command: task_xml::command_line(&xml.to_string()),
+        command: task_xml::command_line(&xml),
+        triggers: task_xml::triggers(&xml),
     }))
 }
 
