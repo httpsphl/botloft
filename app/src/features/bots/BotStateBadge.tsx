@@ -1,25 +1,23 @@
 import {
-  Activity,
   Archive,
-  CircleDot,
   Hand,
   Hourglass,
   KeyRound,
   LoaderCircle,
-  type LucideIcon,
   Pause,
   Power,
   RotateCw,
 } from "lucide-react";
 import { type Messages, t, useT } from "../../i18n";
 import type { Bot, BotState } from "../../lib/protocol.gen";
+import { ReadyIcon, type StateIcon, WorkingIcon } from "./StateIcons";
 
 type Tone = "ok" | "work" | "warn" | "danger" | "quiet";
 
 export interface StateView {
   label: string;
   tone: Tone;
-  icon: LucideIcon;
+  icon: StateIcon;
   spin?: boolean;
   /** One sentence on what the state means for the owner. */
   hint: string;
@@ -31,8 +29,8 @@ type Look = Omit<StateView, "label" | "hint">;
 const looks: Record<BotState, Look> = {
   offline: { tone: "quiet", icon: Power },
   launching: { tone: "work", icon: LoaderCircle, spin: true },
-  idle: { tone: "ok", icon: CircleDot },
-  busy: { tone: "work", icon: Activity },
+  idle: { tone: "ok", icon: ReadyIcon },
+  busy: { tone: "work", icon: WorkingIcon },
   needs_approval: { tone: "warn", icon: Hand },
   rate_limited: { tone: "warn", icon: Hourglass },
   auth_error: { tone: "danger", icon: KeyRound },

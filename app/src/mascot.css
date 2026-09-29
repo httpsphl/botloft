@@ -1,0 +1,168 @@
+/* The mascot (features/bots/BotAvatar.tsx, spec 15.3). Its mood follows
+   what the bot does, on top of the state's own icon and label: the flame
+   burns (its outline morphs, and the clipped shading follows it), the eyes
+   blink by closing from top and bottom, embers float off the top while it
+   works, it hops while it waits for the owner, burns low with heavy eyes
+   when tired, and sleeps as a small ember with its eyes shut. Less motion
+   (motion.css) stops all of it on the plain outline. */
+
+@layer components {
+  .avatar-hop,
+  .avatar-eye,
+  .avatar-hl,
+  .avatar-spark {
+    transform-box: fill-box;
+  }
+
+  .avatar-hop {
+    transform-origin: 50% 100%;
+  }
+
+  .avatar-eye {
+    transform-origin: 50%;
+    transition: opacity 320ms var(--ease-out);
+  }
+
+  .avatar-closed,
+  .avatar-spark {
+    opacity: 0;
+  }
+
+  .avatar-closed {
+    transition: opacity 320ms var(--ease-out);
+  }
+
+  [data-mood] .avatar-eye {
+    animation: eye-blink 7s infinite;
+    animation-delay: var(--blink-delay, 0s);
+  }
+
+  [data-mood="idle"] .avatar-fire {
+    animation: fire-idle 3.6s linear infinite;
+    animation-delay: var(--blink-delay, 0s);
+  }
+
+  [data-mood="working"] .avatar-fire {
+    animation: fire-working 1.5s linear infinite;
+    animation-delay: var(--blink-delay, 0s);
+  }
+
+  [data-mood="waiting"] .avatar-fire {
+    animation: fire-waiting 1.8s linear infinite;
+  }
+
+  [data-mood="tired"] .avatar-fire {
+    animation: fire-tired 5.2s linear infinite;
+  }
+
+  [data-mood="sleeping"] .avatar-fire {
+    animation: fire-sleeping 6s linear infinite;
+  }
+
+  [data-mood="waiting"] .avatar-hop {
+    animation: hop 2.6s var(--ease-out) infinite;
+  }
+
+  /* Heavy lids, slanting down to the outside, that droop now and then. */
+  [data-mood="tired"] .avatar-eye-l {
+    clip-path: polygon(0 34%, 100% 22%, 100% 100%, 0 100%);
+    animation: eye-tired-l 6s infinite;
+  }
+
+  [data-mood="tired"] .avatar-eye-r {
+    clip-path: polygon(0 22%, 100% 34%, 100% 100%, 0 100%);
+    animation: eye-tired-r 6s infinite;
+  }
+
+  [data-mood="tired"] .avatar-hl {
+    transform: translateY(12px);
+  }
+
+  [data-mood="sleeping"] .avatar-eye {
+    opacity: 0;
+    animation: none;
+  }
+
+  [data-mood="sleeping"] .avatar-closed {
+    opacity: 1;
+  }
+
+  [data-mood="working"] .avatar-spark {
+    animation: spark 1.5s ease-out infinite;
+    animation-delay: var(--spark-delay, 0s);
+  }
+}
+
+@keyframes eye-blink {
+  0%,
+  91%,
+  100% {
+    clip-path: inset(0);
+  }
+  94% {
+    clip-path: inset(50% 0);
+  }
+}
+
+@keyframes eye-tired-l {
+  0%,
+  78%,
+  100% {
+    clip-path: polygon(0 34%, 100% 22%, 100% 100%, 0 100%);
+  }
+  84% {
+    clip-path: polygon(0 58%, 100% 46%, 100% 100%, 0 100%);
+  }
+  90% {
+    clip-path: polygon(0 30%, 100% 18%, 100% 100%, 0 100%);
+  }
+}
+
+@keyframes eye-tired-r {
+  0%,
+  78%,
+  100% {
+    clip-path: polygon(0 22%, 100% 34%, 100% 100%, 0 100%);
+  }
+  84% {
+    clip-path: polygon(0 46%, 100% 58%, 100% 100%, 0 100%);
+  }
+  90% {
+    clip-path: polygon(0 18%, 100% 30%, 100% 100%, 0 100%);
+  }
+}
+
+@keyframes hop {
+  0%,
+  45%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  10% {
+    transform: translateY(0) scale(1.08, 0.92);
+  }
+  22% {
+    transform: translateY(-12%) scale(0.96, 1.05);
+  }
+  34% {
+    transform: translateY(0) scale(1.05, 0.95);
+  }
+}
+
+/* An ember: it flares up, then drifts off to one side as it fades. */
+@keyframes spark {
+  0% {
+    opacity: 0;
+    transform: translate(0) scale(0.25) rotate(0);
+  }
+  18% {
+    opacity: 1;
+    transform: translate(calc(var(--spark-drift, 20px) * 0.15), -40px) scale(1)
+      rotate(calc(var(--spark-turn, 0deg) * 0.3));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--spark-drift, 20px), -200px) scale(0.2)
+      rotate(var(--spark-turn, 0deg));
+  }
+}
