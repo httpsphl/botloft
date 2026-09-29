@@ -102,3 +102,8 @@ pub fn stop_task(_name: &str) -> io::Result<()> {
 pub fn delete_task(_name: &str) -> io::Result<bool> {
     Err(no_tasks())
 }
+
+/// Unix has no Windows sign-in to tell apart.
+pub fn sign_in_id() -> Option<String> {
+    None
+}

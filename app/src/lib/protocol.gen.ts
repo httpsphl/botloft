@@ -705,6 +705,25 @@ note?: string,
 input?: string, };
 
 /**
+ * The daemon's part of the app's Settings.
+ */
+export type Settings = { 
+/**
+ * Botloft starts when the owner signs in to Windows (spec 14). Off,
+ * the bots wait until the owner opens the app.
+ */
+startWithWindows: boolean, 
+/**
+ * The computer does not sleep while a bot works (spec 14).
+ */
+keepAwake: boolean, };
+
+/**
+ * The settings to change; the ones left out stay as they are.
+ */
+export type SettingsUpdateParams = { startWithWindows?: boolean, keepAwake?: boolean, };
+
+/**
  * When a routine runs (spec 20.2), kept as structure rather than cron text
  * so the app can show and edit it without jargon.
  */
@@ -950,6 +969,8 @@ export interface RpcMethods {
   "session.hello": { params: HelloParams; result: HelloResult };
   "system.status": { params: undefined; result: SystemStatus };
   "system.refresh": { params: undefined; result: SystemStatus };
+  "settings.get": { params: undefined; result: Settings };
+  "settings.update": { params: SettingsUpdateParams; result: Settings };
   "crews.list": { params: undefined; result: Array<Crew> };
   "crews.create": { params: CrewsCreateParams; result: Crew };
   "crews.rename": { params: CrewsRenameParams; result: Crew };

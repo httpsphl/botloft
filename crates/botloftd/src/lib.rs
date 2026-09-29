@@ -20,6 +20,7 @@ pub mod screens;
 pub mod secrets;
 pub mod server;
 pub mod service;
+pub mod settings;
 pub mod state;
 pub mod supervisor;
 pub mod tools;

@@ -14,6 +14,9 @@ pub struct Config {
     pub workspaces_root: String,
     /// Empty means resolve `claude` from PATH.
     pub claude_path: String,
+    /// Start when the owner signs in to Windows (spec 14).
+    pub start_with_windows: bool,
+    /// Keep the computer awake while a bot works (spec 14).
     pub keep_awake: bool,
     pub log_level: String,
     pub supervisor: SupervisorConfig,
@@ -29,6 +32,7 @@ impl Default for Config {
             port: 45710,
             workspaces_root: String::new(),
             claude_path: String::new(),
+            start_with_windows: true,
             keep_awake: true,
             log_level: "info".to_owned(),
             supervisor: SupervisorConfig::default(),

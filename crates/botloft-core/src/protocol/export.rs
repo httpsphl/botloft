@@ -162,6 +162,8 @@ fn export_bindings() {
     out.decl::<ChatDelta>();
     out.decl::<ChatHistoryParams>();
     out.decl::<ApprovalsAnswerParams>();
+    out.decl::<Settings>();
+    out.decl::<SettingsUpdateParams>();
     routines::decls(&mut out);
     browser::decls(&mut out);
 
@@ -187,6 +189,12 @@ fn export_bindings() {
         method::SYSTEM_REFRESH,
         "undefined",
         &out.name::<SystemStatus>(),
+    );
+    out.method(method::SETTINGS_GET, "undefined", &out.name::<Settings>());
+    out.method(
+        method::SETTINGS_UPDATE,
+        &out.name::<SettingsUpdateParams>(),
+        &out.name::<Settings>(),
     );
     out.method(method::CREWS_LIST, "undefined", &crews);
     out.method(
