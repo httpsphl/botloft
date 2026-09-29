@@ -10,6 +10,7 @@ pub mod lead;
 pub mod messages;
 pub mod models;
 pub mod modes;
+pub mod routines;
 pub mod tasks;
 
 use botloft_core::protocol::{OwnerAccount, PROTOCOL_VERSION, SystemStatus, error_code};
@@ -28,6 +29,12 @@ pub enum ApiError {
     Conflict(String),
     #[error(transparent)]
     Validation(#[from] ValidationError),
+    /// A validation the app words itself, by `reason` (spec 20.8).
+    #[error("{message}")]
+    Rule {
+        reason: &'static str,
+        message: String,
+    },
     #[error("could not update the workspace: {0}")]
     Workspace(#[source] std::io::Error),
     #[error("internal error")]
@@ -39,7 +46,7 @@ impl ApiError {
         match self {
             Self::NotFound(_) => error_code::NOT_FOUND,
             Self::Conflict(_) => error_code::CONFLICT,
-            Self::Validation(_) => error_code::VALIDATION,
+            Self::Validation(_) | Self::Rule { .. } => error_code::VALIDATION,
             Self::Workspace(_) | Self::Internal(_) => error_code::INTERNAL_ERROR,
         }
     }

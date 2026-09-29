@@ -42,6 +42,7 @@ fn expire(daemon: &Daemon, store: &Store, task: &Task, now: i64) -> ApiResult<()
             task.id
         ),
         task_id: Some(task.id.clone()),
+        routine_id: None,
         attachments: Vec::new(),
         created_at: now,
     };

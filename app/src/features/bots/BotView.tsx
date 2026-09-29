@@ -1,19 +1,38 @@
 import { X } from "lucide-react";
 import { useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
+import { routinesOf } from "../../store/app";
+import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
+import { type Tab, Tabs, tabId } from "../../ui/Tabs";
 import { ChatView } from "../chat/ChatView";
 import { SignInButton } from "../onboarding/SignIn";
+import { BotRoutines } from "../routines/RoutineList";
 import { BotHeader } from "./BotHeader";
 import { stateView } from "./BotStateBadge";
 
-/** A bot's conversation, with its details in a side panel (spec 15.1). */
+type Pane = "chat" | "routines";
+
+/**
+ * A bot's conversation and its routines, with its details in a side panel
+ * (spec 15.1, 20.9).
+ */
 export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
   const t = useT();
   const [details, setDetails] = useState(false);
+  const [pane, setPane] = useState<Pane>("chat");
+  const routines = useApp(useShallow((state) => routinesOf(state, bot.id)));
   const view = stateView(bot, crew.paused, t);
+  const tabs: Tab<Pane>[] = [
+    { id: "chat", label: t.routines.chatTab },
+    {
+      id: "routines",
+      label: routines.length > 0 ? `${t.routines.tab} (${routines.length})` : t.routines.tab,
+    },
+  ];
 
   return (
     <section aria-label={bot.name} className="flex min-h-0 flex-1 flex-col">
@@ -24,8 +43,15 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
         onToggleDetails={() => setDetails(!details)}
       />
       <Notices bot={bot} crew={crew} view={view} />
+      <Tabs<Pane> label={bot.name} tabs={tabs} value={pane} onChange={setPane} />
       <div className="flex min-h-0 flex-1">
-        <ChatView bot={bot} stopped={bot.paused || crew.paused} />
+        <div role="tabpanel" aria-labelledby={tabId(pane)} className="flex min-h-0 min-w-0 flex-1">
+          {pane === "chat" ? (
+            <ChatView bot={bot} stopped={bot.paused || crew.paused} />
+          ) : (
+            <BotRoutines bot={bot} />
+          )}
+        </div>
         {details && <Details bot={bot} onClose={() => setDetails(false)} />}
       </div>
     </section>

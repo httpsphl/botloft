@@ -48,6 +48,13 @@ export function syncStore(store: AppStore, api: BotloftApi): () => void {
       })
       .catch(() => {});
     api
+      .call("routines.list", {})
+      .then(
+        (list) =>
+          alive && store.setState({ routines: Object.fromEntries(list.map((r) => [r.id, r])) }),
+      )
+      .catch(() => {});
+    api
       .call("tasks.list", {})
       .then(
         (list) =>

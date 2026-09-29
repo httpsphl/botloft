@@ -183,6 +183,7 @@ pub fn archive(daemon: &Daemon, params: BotIdParams) -> ApiResult<Bot> {
     record.archived_at = Some(now_ms());
     store.update_bot(&record)?;
     super::lead::forget_archived(daemon, &store, &crew, &record.id)?;
+    super::routines::archive_of(daemon, &store, &record.id);
     let bot = changed(daemon, &store, &crew, record);
     daemon.supervisor.wake();
     Ok(bot)

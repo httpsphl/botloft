@@ -16,7 +16,7 @@ use botloftd::runtime::PipeRuntime;
 use botloftd::service::tasks::TaskSettings;
 use botloftd::state::{BotSettings, Daemon, DaemonOptions};
 use botloftd::supervisor::{self, SupervisorSettings};
-use botloftd::{approvals, autostart, keep_awake, logging, secrets, server};
+use botloftd::{approvals, autostart, keep_awake, logging, routines, secrets, server};
 use clap::{Parser, Subcommand};
 use tokio::net::TcpListener;
 use tracing::{error, info};
@@ -135,6 +135,7 @@ fn run(paths: Paths, config: Config) -> anyhow::Result<()> {
         info!(port = config.port, "listening on 127.0.0.1");
         tokio::spawn(supervisor::run(Arc::clone(&daemon)));
         tokio::spawn(courier::run(Arc::clone(&daemon)));
+        tokio::spawn(routines::run(Arc::clone(&daemon)));
         if config.keep_awake {
             tokio::spawn(keep_awake::run(daemon.supervisor.busy_bots()));
         }

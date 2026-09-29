@@ -11,6 +11,8 @@ import type {
   CrewId,
   Delivery,
   MessageId,
+  Routine,
+  RoutineId,
   SystemStatus,
   Task,
   TaskId,
@@ -31,6 +33,10 @@ export interface AppState {
    */
   deliveries: Record<MessageId, Delivery>;
   tasks: Record<TaskId, Task>;
+  /** Every routine that is not archived (spec 20), then every change. */
+  routines: Record<RoutineId, Routine>;
+  /** When the owner last had each bot open, for failed routine runs. */
+  seenAt: Record<BotId, number>;
   selectedCrewId: CrewId | null;
   selectedBotId: BotId | null;
   selectCrew(crewId: CrewId | null): void;
@@ -39,6 +45,7 @@ export interface AppState {
   putCrew(crew: Crew): void;
   putBot(bot: Bot): void;
   putDelivery(delivery: Delivery): void;
+  putRoutine(routine: Routine): void;
 }
 
 export type AppStore = StoreApi<AppState>;
@@ -79,6 +86,8 @@ export function createAppStore(api: BotloftApi): AppStore {
     bots: {},
     deliveries: {},
     tasks: {},
+    routines: {},
+    seenAt: loadSeen(),
     selectedCrewId: null,
     selectedBotId: null,
     selectCrew: (crewId) => {
@@ -90,11 +99,14 @@ export function createAppStore(api: BotloftApi): AppStore {
     selectBot: (botId) => {
       const bot = get().bots[botId];
       if (bot && get().selectedBotId !== botId) {
-        viewTransition(() => set({ selectedCrewId: bot.crewId, selectedBotId: botId }));
+        const seenAt = { ...get().seenAt, [botId]: Date.now() };
+        saveSeen(seenAt);
+        viewTransition(() => set({ selectedCrewId: bot.crewId, selectedBotId: botId, seenAt }));
       }
     },
     putCrew: (crew) => set((state) => withCrew(state, crew)),
     putBot: (bot) => set((state) => withBot(state, bot)),
+    putRoutine: (routine) => set((state) => withRoutine(state, routine)),
     putDelivery: (delivery) =>
       set((state) => ({ deliveries: { ...state.deliveries, [delivery.messageId]: delivery } })),
   }));
@@ -151,7 +163,63 @@ export function applyEvent(state: AppState, event: ServerEvent): Partial<AppStat
       return { deliveries: { ...state.deliveries, [event.params.messageId]: event.params } };
     case "task.changed":
       return { tasks: { ...state.tasks, [event.params.id]: event.params } };
+    case "routine.changed":
+      return withRoutine(state, event.params);
+    case "routine.run": {
+      const routine = state.routines[event.params.routineId];
+      const last = routine?.lastRun;
+      // The notification of a newer run may arrive before its routine's.
+      if (!routine || (last && last.id > event.params.id)) {
+        return null;
+      }
+      return withRoutine(state, { ...routine, lastRun: event.params });
+    }
     default:
       return null;
   }
+}
+
+/** Adds or replaces a routine; an archived one leaves the store. */
+function withRoutine(state: AppState, routine: Routine): Partial<AppState> {
+  const { [routine.id]: _, ...rest } = state.routines;
+  return { routines: routine.archivedAt === null ? { ...rest, [routine.id]: routine } : rest };
+}
+
+const SEEN_KEY = "botloft.seen";
+
+/** When each bot was last open, remembered across restarts of the app. */
+function loadSeen(): Record<BotId, number> {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(SEEN_KEY) ?? "{}");
+    return typeof parsed === "object" && parsed !== null ? (parsed as Record<BotId, number>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveSeen(seen: Record<BotId, number>): void {
+  try {
+    localStorage.setItem(SEEN_KEY, JSON.stringify(seen));
+  } catch {
+    // Storage may be off; the mark just shows again after a restart.
+  }
+}
+
+/** The routines of `botId`, oldest first. */
+export function routinesOf(state: AppState, botId: BotId): Routine[] {
+  return Object.values(state.routines)
+    .filter((routine) => routine.botId === botId)
+    .sort(byCreation);
+}
+
+/** Routines whose last run failed after the owner last had their bot open. */
+export function unseenFailures(state: AppState): Routine[] {
+  return Object.values(state.routines).filter((routine) => {
+    const last = routine.lastRun;
+    return (
+      last?.status === "failed" &&
+      routine.botId !== state.selectedBotId &&
+      (last.finishedAt ?? 0) > (state.seenAt[routine.botId] ?? 0)
+    );
+  });
 }

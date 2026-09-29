@@ -12,6 +12,7 @@ pub mod keep_awake;
 pub mod logging;
 pub mod paths;
 pub mod platform;
+pub mod routines;
 pub mod rpc;
 pub mod runtime;
 pub mod secrets;

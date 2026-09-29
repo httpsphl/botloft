@@ -23,12 +23,13 @@ import { attempt } from "../../ui/toast";
 import { BotDialog } from "../bots/BotDialog";
 import { Composer } from "../messages/Composer";
 import { Timeline } from "../messages/Timeline";
+import { CrewRoutines } from "../routines/RoutineList";
 import { TaskList } from "../tasks/TaskList";
 import { CrewBots } from "./CrewBots";
 import { CrewDialog } from "./CrewDialog";
 
 type Open = "bot" | "rename" | "archive" | { move: string } | null;
-type Pane = "bots" | "timeline" | "tasks";
+type Pane = "bots" | "timeline" | "tasks" | "routines";
 
 export function CrewView({ crew }: { crew: Crew }) {
   const t = useT();
@@ -44,6 +45,7 @@ export function CrewView({ crew }: { crew: Crew }) {
     { id: "bots", label: words.tabs.bots },
     { id: "timeline", label: words.tabs.timeline },
     { id: "tasks", label: words.tabs.tasks },
+    { id: "routines", label: t.routines.tab },
   ];
 
   const openFolder = () => attempt(words.failed.openFolder, () => host.openPath(crew.workFolder));
@@ -141,6 +143,16 @@ export function CrewView({ crew }: { crew: Crew }) {
           className="flex min-h-0 flex-1 flex-col"
         >
           <TaskList crewId={crew.id} />
+        </div>
+      )}
+
+      {pane === "routines" && (
+        <div
+          role="tabpanel"
+          aria-labelledby={tabId("routines")}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <CrewRoutines crew={crew} />
         </div>
       )}
 

@@ -10,8 +10,12 @@ use ts_rs::{Config, TS};
 use super::*;
 use crate::avatar::PALETTE;
 use crate::ids::{
-    ApprovalId, AttachmentId, BotId, ChatItemId, CrewId, DeliveryId, MessageId, TaskId,
+    ApprovalId, AttachmentId, BotId, ChatItemId, CrewId, DeliveryId, MessageId, RoutineId,
+    RoutineRunId, TaskId,
 };
+
+#[path = "export_routines.rs"]
+mod routines;
 use crate::validate;
 
 const HEADER: &str = "\
@@ -85,6 +89,8 @@ fn export_bindings() {
     out.decl::<ChatItemId>();
     out.decl::<ApprovalId>();
     out.decl::<AttachmentId>();
+    out.decl::<RoutineId>();
+    out.decl::<RoutineRunId>();
     out.decl::<Crew>();
     out.decl::<BotState>();
     out.decl::<PermissionMode>();
@@ -150,6 +156,7 @@ fn export_bindings() {
     out.decl::<ChatDelta>();
     out.decl::<ChatHistoryParams>();
     out.decl::<ApprovalsAnswerParams>();
+    routines::decls(&mut out);
 
     let crew = out.name::<Crew>();
     let bot = out.name::<Bot>();
@@ -263,6 +270,7 @@ fn export_bindings() {
         &out.name::<TasksListParams>(),
         &out.name::<Vec<Task>>(),
     );
+    routines::methods(&mut out);
     out.text.push_str("}\n\n");
 
     out.text
@@ -288,6 +296,7 @@ fn export_bindings() {
         notification::DELIVERY_CHANGED
     );
     let _ = writeln!(out.text, "  \"{}\": {task};", notification::TASK_CHANGED);
+    routines::notifications(&mut out);
     out.text.push_str("}\n\n");
 
     out.text.push_str("export const RpcErrorCode = {\n");

@@ -161,6 +161,10 @@ fn to_notification(event: &Event) -> String {
             serde_json::to_value(delivery),
         ),
         Event::TaskChanged(task) => (notification::TASK_CHANGED, serde_json::to_value(task)),
+        Event::RoutineChanged(routine) => {
+            (notification::ROUTINE_CHANGED, serde_json::to_value(routine))
+        }
+        Event::RoutineRun(run) => (notification::ROUTINE_RUN, serde_json::to_value(run)),
     };
     jsonrpc::notification(name, params.unwrap_or(Value::Null))
 }

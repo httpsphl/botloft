@@ -41,6 +41,7 @@ pub fn send(daemon: &Daemon, params: MessagesSendParams) -> ApiResult<Message> {
         kind: MessageKind::Note,
         body,
         task_id: None,
+        routine_id: None,
         attachments,
         created_at: now,
     };

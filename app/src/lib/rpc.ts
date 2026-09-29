@@ -30,11 +30,14 @@ export const ClientErrorCode = {
 
 export class RpcError extends Error {
   readonly code: number;
+  /** Why a validation failed, when the app words it itself (spec 20.8). */
+  readonly reason: string | undefined;
 
-  constructor(code: number, message: string) {
+  constructor(code: number, message: string, reason?: string) {
     super(message);
     this.name = "RpcError";
     this.code = code;
+    this.reason = reason;
   }
 }
 
@@ -215,7 +218,7 @@ export class RpcConnection {
       method?: unknown;
       params?: unknown;
       result?: unknown;
-      error?: { code?: unknown; message?: unknown };
+      error?: { code?: unknown; message?: unknown; data?: { reason?: unknown } };
     };
     try {
       frame = JSON.parse(text);
@@ -232,7 +235,10 @@ export class RpcConnection {
       if (frame.error) {
         const code = typeof frame.error.code === "number" ? frame.error.code : 0;
         const message = typeof frame.error.message === "string" ? frame.error.message : "error";
-        pending.reject(new RpcError(code, message));
+        const reason = frame.error.data?.reason;
+        pending.reject(
+          new RpcError(code, message, typeof reason === "string" ? reason : undefined),
+        );
       } else {
         pending.resolve(frame.result ?? null);
       }

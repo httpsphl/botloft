@@ -5,6 +5,7 @@
 
 pub mod bots;
 pub mod mcp;
+pub mod routines;
 pub mod stream;
 pub mod supervised;
 

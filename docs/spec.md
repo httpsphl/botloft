@@ -85,7 +85,7 @@ Tipos do protocolo ficam em `botloft-core` e são exportados para TypeScript com
 | Processo do bot | `tokio::process` com pipes | stdin/stdout de linhas JSON, sem PTY |
 | Win32 | crate `windows` | ACL, Job Objects, ambiente do usuário, keep-awake |
 | MCP | servidor Streamable HTTP próprio e mínimo (JSON-RPC) | Poucas tools, sem dependência pesada |
-| Tempo | `time` + `croner` (rotinas, pós-MVP) | |
+| Tempo | `time`; `jiff` para os fusos das rotinas (seção 20) | `jiff` traz a base de fusos IANA embutida no Windows, que não tem uma; o cron das rotinas é avaliado pelo próprio daemon |
 | IDs | ULID com prefixo (`bot_`, `crw_`, `msg_`, `dlv_`, `tsk_`, `cht_`, `apr_`, `att_`) | Ordenável, legível em log |
 | App | Tauri v2, React 19, TypeScript strict, Vite, Tailwind v4 | |
 | Estado no app | Zustand | Leve, sem boilerplate |
@@ -351,6 +351,7 @@ Reply with send_message(to: "revisor"). When the task is done, call complete_tas
 - Nota de outro bot: primeira linha `[botloft] from @revisor · crew Exemplo` e só a instrução de resposta.
 - Resultado de task: `· result of task tsk_... · done` (ou `failed`) e a instrução de resposta.
 - Aviso do daemon (task vencida): `from Botloft` e o texto do aviso, sem instrução.
+- Rotina: `routine "<nome>" · scheduled <data e hora> (<fuso>)` e o aviso de que ninguém está olhando (20.5).
 - O prazo é relativo (`due in 45 min`, `due in 2 h`, `overdue`) e calculado na hora do envio: o bot não sabe a hora atual, e o app mostra o horário absoluto a partir de `deadline_at`.
 
 ### 9.4 Tasks entre bots
@@ -481,7 +482,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 
 ### 11.3 Notificações do servidor
 
-`bot.state`, `bot.changed`, `crew.changed`, `chat.item`, `chat.delta`, `message.created`, `delivery.changed`, `task.changed`.
+`bot.state`, `bot.changed`, `crew.changed`, `chat.item`, `chat.delta`, `message.created`, `delivery.changed`, `task.changed`, e das rotinas `routine.changed` e `routine.run` (20.8).
 
 ### 11.4 Erros
 
@@ -510,6 +511,7 @@ Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations 
 | `chat_items` | `id, bot_id, kind, data (JSON), created_at, updated_at` |
 | `approvals` | `id, bot_id, tool_use_id, tool_name, input, status, note, created_at, answered_at` |
 | `settings` | `key, value` |
+| `routines`, `routine_runs` | seção 20.7; `messages` ganha `routine_id` |
 
 Índices mínimos: `deliveries(state, next_attempt_at)`, `messages(crew_id, created_at)`, `tasks(assignee_bot_id, status)`, `bots(crew_id)`, `chat_items(bot_id, id)`, `attachments(message_id)`.
 
@@ -530,7 +532,7 @@ Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations 
 | Tema | Solução |
 |---|---|
 | Iniciar com o Windows | `botloftd service install` registra uma **Tarefa Agendada por usuário**, pela API COM do Agendador (as mensagens do `schtasks.exe` são traduzidas e não dá para lê-las). Dois gatilhos: "ao fazer logon" do usuário, que sobe o daemon na hora, e um gatilho de horário com início no passado repetido **a cada 1 min**, que o traz de volta se ele morrer: com `MultipleInstancesPolicy = IgnoreNew`, a repetição não faz nada enquanto o daemon roda. Token interativo e privilégio mínimo (só com o usuário logado, na sessão dele), sem limite de execução, roda na bateria, prioridade 5 (a padrão, 7, passaria "abaixo do normal" para todos os bots). A ação é `<home>\bin\botloftd.exe serve --home <home>`. Não usar Windows Service: roda em outra sessão e sem acesso à autenticação do Claude Code do usuário. Subcomandos `service status`, `service restart`, `service uninstall` (os dados ficam). |
-| Reinício da tarefa (testado no Windows 11 25H2) | `RestartOnFailure` **não** reinicia a tarefa quando o processo sai com código de erro, nem numa execução por gatilho de horário nem numa sob demanda. A repetição de um gatilho de logon só começa no próximo logon, não quando a tarefa é registrada. Por isso o gatilho de horário faz o papel de vigia: morto o daemon, ele voltou em 43 s |
+| Reinício da tarefa (testado no Windows 11 25H2) | `RestartOnFailure` **não** reinicia a tarefa quando o processo sai com código de erro, nem numa execução por gatilho de horário nem numa sob demanda. A repetição de um gatilho de logon só começa no próximo logon, não quando a tarefa é registrada. Por isso o gatilho de horário faz o papel de vigia: morto o daemon, ele voltou em 43 s. **Reboot** (0.2.0, 2026-09-29): o daemon subiu 1 s depois do logon, pelo gatilho de logon, com o app fechado, e o bot voltou 13 s depois |
 | Uma tarefa por pasta de dados | `Botloft` para `%LOCALAPPDATA%\Botloft`; `Botloft-<8 hex do SHA-256 do caminho>` para outra pasta (`--home` ou `BOTLOFT_HOME` de dev), para instalar um daemon de dev sem tocar no real. `--home` vale para todos os subcomandos e vem antes de `BOTLOFT_HOME` |
 | Binário instalado | `service install` copia o próprio executável para `<home>\bin\botloftd.exe` e a tarefa roda essa cópia, nunca a do app: assim o instalador do app troca os arquivos dele com o daemon rodando. Um exe em uso não pode ser sobrescrito mas pode ser renomeado, então o antigo vai para `botloftd.<n>.old` e é apagado numa instalação seguinte. Se o binário não mudou e o daemon dessa versão já roda pela tarefa, `install` não o reinicia; senão para a tarefa, espera o `/health` sumir, inicia de novo e espera o `/health` com a nova versão (20 s) |
 | Janela de console | O manifesto do daemon pede `consoleAllocationPolicy = detached` (Windows 11 24H2 e depois): iniciado pela tarefa, ele não ganha console nem janela; num terminal, continua usando o console do terminal. Em Windows mais antigo, `serve` larga o console se for o único processo nele (`FreeConsole`). O manifesto entra como recurso (`embed-resource`), porque a ferramenta de manifesto do linker não conhece o elemento e avisa a cada build |
@@ -697,7 +699,7 @@ M2 a M4 foram entregues com ConPTY, terminal com replay, inbox por named pipe e 
 
 ## 18. Fora do MVP (ordem sugerida)
 
-1. Rotinas (cron com timezone, intervalo) com política de sobreposição.
+1. Rotinas: horário semanal, intervalo ou cron, com fuso, sobreposição e horários perdidos. Desenho na seção 20.
 2. Caixa de perguntas ao owner (bot pergunta, owner responde, resposta volta como mensagem).
 3. "Permitir sempre" nas aprovações, gravado como regra do bot.
 4. Busca FTS5 em mensagens e no chat.
@@ -729,6 +731,7 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28. "Co
 | Modelo em `-p` | 7.4 | Confirmado (`model-config`, `sessions`): apelidos `fable`, `opus`, `sonnet`, `haiku` (e `best`, `opusplan`, `[1m]`, não usados); sem `model` nas settings, vale o padrão da conta; `--resume` mantém o modelo da sessão, a menos que `--model` escolha outro. **Visto com 2.1.284** (plano Max): sem `--model`, o `system/init` traz `"model": "claude-opus-5-5"`; um modelo inexistente sobe o processo, o init o repete, e cada turno termina com `assistant.error: "model_not_found"` e `result.is_error`; `/model haiku` mandado como mensagem troca o modelo no meio da sessão, com uma resposta sintética e sem custo, mas o daemon reinicia o processo em vez disso, como na troca de modo. Qual é o padrão em cada plano, e quais modelos cada plano tem, não está documentado | feito |
 | `--add-dir` em `-p` | 5, 7.4 | Confirmado (`cli-reference`, `memory`): pastas a mais que o Claude Code trata como de trabalho; o `CLAUDE.md` delas só carrega com `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1`. **Testado com 2.1.284** (`--setting-sources project,local`, `acceptEdits`): com a flag e a variável, o bot citou o `CLAUDE.md` da pasta sem abrir arquivo e gravou nela sem pedir; sem a flag, o `Write` na mesma pasta foi negado (`permission_denials`). A flag aceita vários valores: a linha de comando do daemon não tem prompt posicional, então nada é engolido | feito |
 | Chefe e `suggest_bot` com o Claude Code real | 10.2 | **Testado com 2.1.284** (daemon e app de dev): a crew criada pelo app subiu o chefe com `--model sonnet` e `--add-dir` na pasta da crew. Pedido um site, o chefe carregou `crew_roster`, `suggest_bot` e `send_message` pelo `ToolSearch` e sugeriu um Designer com papel, instruções, modelo e porquê; a chamada esperou o cartão. Com o modelo trocado para `haiku` no cartão, o bot subiu com `--model haiku`, e o chefe citou a troca. O chefe mandou uma task, o Designer entregou com `complete_task`, e o chefe conferiu o resultado e corrigiu o HTML. O log de `debug` não teve texto de mensagem | feito |
+| Rotinas com o Claude Code real | 20 | **Testado com 2.1.284** (daemon e app de dev): uma rotina "a cada 5 minutos" criada pelo app, num chefe em Haiku, rodou às 09:10 e às 09:15, contadas a partir da criação; cada message chegou com o envelope da rotina, apareceu no chat com "Rotina · <nome>" e fechou como `done` com o `result` do turno. Desligada, não rodou às 09:20. O log de `debug` só teve ids | feito |
 | Regras `allow` do projeto em `-p` sem confiança | 7.4 | Confirmado (`permissions`): não são aplicadas numa pasta nunca confiada; `deny` vale sempre. Por isso `--allowedTools mcp__botloft` | M4.1 |
 | `--session-id`, `--resume` em `-p` | 7.3 | Confirmado (`cli-reference`, `sessions`): a sessão retoma histórico e modelo; flags como `--mcp-config` têm de ser passadas de novo. **Testado com 2.1.284**: depois de reiniciar o bot e depois de reiniciar o daemon, o bot lembrou arquivos, a imagem e a mensagem de outro bot | feito (M4.1) |
 | Tools MCP adiadas | 10 | **Visto com 2.1.284**: as tools do `botloft` chegam adiadas; antes da primeira `send_message` o bot chama `ToolSearch` com `select:mcp__botloft__send_message`. O chat mostra isso como "load send_message" | feito (M4.1) |
@@ -741,3 +744,138 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28. "Co
 | Sintaxe de caminho Windows em permission rules | 7.5 | Confirmado (`permissions`) e **testado com 2.1.283** (interativo) e **2.1.284** (`-p --setting-sources project,local`): `Read(//c/.../**)` em `deny` bloqueou a leitura com "File is in a directory that is denied by your permission settings", sem perguntar, e o `result` listou a negação em `permission_denials` | feito (M4.1) |
 
 Itens do runtime anterior (ConPTY, hooks em exec form, `crossSessionInbound`, linha de auth do inbox, diálogo de confiança, `ESC[6n` do ConPTY, consultas do terminal no replay) foram verificados no M2–M4 e deixaram de se aplicar com a ADR 0001; o histórico está no git e na ADR.
+
+## 20. Rotinas
+
+Status: primeiro item depois do MVP (seção 18), em dois marcos (20.11), **implementados**.
+
+### 20.1 O que é
+
+Uma rotina faz um bot trabalhar sozinho num horário ou num intervalo. Na hora marcada, o daemon põe na conversa do bot uma message com o pedido que o dono escreveu, e ela segue o caminho de qualquer message (9.1): gravada antes, entregue pelo courier, com retry. Não há processo nem sessão à parte: o bot responde no mesmo chat, com a mesma memória, e o que ele faz aparece como sempre. Isso mantém o princípio 3 (uma conversa por bot).
+
+Exemplos: "todo dia útil às 9h, resuma o que chegou em `shared/inbox`"; "a cada 2 horas, confira se o site responde e avise o @deploy se não".
+
+### 20.2 Quando roda
+
+O horário fica guardado como JSON estruturado (`schedule`), e não como texto cron, para o app mostrar e editar sem jargão:
+
+| `kind` | Campos | No app |
+|---|---|---|
+| `weekly` | `days` (1 = segunda … 7 = domingo, ao menos um), `time` (`HH:MM`) | "Todo dia às 09:00", "Dias úteis às 09:00", "Segunda e quinta às 14:30" |
+| `interval` | `minutes` (de 5 a 10 080) | "A cada 2 horas" |
+| `cron` | `expr` (5 campos, sem segundos) | só em "Avançado"; o app mostra a expressão como está |
+
+- Horários de calendário (`weekly`, `cron`) valem no fuso da rotina (`timezone`, nome IANA como `America/Sao_Paulo`). O app manda o fuso do sistema ao criar (`Intl.DateTimeFormat().resolvedOptions().timeZone`). Mudar o fuso do Windows depois não mexe em rotinas existentes.
+- `interval` conta a partir do último horário marcado, e não do fim do trabalho: `próximo = último marcado + minutes`, ancorado na criação. Não deriva.
+- Horário que não existe (o relógio pula na entrada do horário de verão): roda no primeiro instante válido depois do pulo. Horário que acontece duas vezes (saída do horário de verão): roda uma vez, na primeira.
+- Espaçamento mínimo de 5 minutos, também para `cron`: o daemon confere as próximas 20 ocorrências e recusa com erro de validação. Rotina frequente demais gasta o plano do dono sem ele perceber.
+- `cron`: 5 campos (minuto, hora, dia do mês, mês, dia da semana). Com dia do mês e dia da semana restritos, basta bater um dos dois, como no cron clássico.
+- Fusos com `jiff`, que traz a base IANA embutida (o Windows não tem uma). O daemon avalia o próprio cron: anda pelos dias no fuso da rotina e resolve cada hora de parede pelas regras acima; no pulo, acha o instante exato da mudança de offset. Testado com o pulo e a repetição de Nova York em 2026, com o fuso de São Paulo e de Lisboa, e com `0 0 29 2 *`, que só roda em 2028.
+
+### 20.3 Execuções
+
+Cada disparo vira uma `routine_run`, com o horário marcado (`scheduled_for`), um `status` e a message que gerou.
+
+| `status` | Quando |
+|---|---|
+| `queued` | a message foi gravada e espera a entrega ou o fim do turno dela |
+| `done` | o turno que começou com essa message terminou |
+| `failed` | a delivery morreu (`dead`) ou o turno terminou com erro |
+| `skipped` | não disparou; `reason`: `overlap`, `bot_paused` ou `missed` |
+
+- **Fim de uma execução:** o daemon já sabe quando o turno de uma message começa (o replay com o mesmo `uuid`, 9.1 passo 7). O `result` seguinte fecha esse turno: a execução vira `done`, ou `failed` se o `result` trouxer erro. Se o processo morrer antes de ler a message, a delivery volta para a fila (9.1 passo 8) e a execução continua `queued`; se morrer no meio do turno, a execução vira `failed`, porque ninguém mais vai fechar aquele turno. Pelo mesmo motivo, ao subir, o daemon marca `failed` as execuções cujo turno começou sob o daemon anterior. Uma delivery `dead` também leva a execução a `failed`.
+- **Sobreposição:** o horário chega com a execução anterior ainda `queued` (o bot está lento, parado por limite de uso, sem login ou fora do ar).
+  - `skip` (padrão): registra `skipped` com `reason: overlap`. Um bot lento ou fora do ar não acumula pedidos repetidos.
+  - `queue`: grava mesmo assim, mas só uma execução espera atrás da aberta; as outras viram `skipped`.
+- **Bot ou crew pausados:** o horário vira `skipped` (`bot_paused`); a rotina não guarda pedidos para quando voltar. Bot ou crew arquivados: a rotina é arquivada junto.
+- **Rodar agora:** `routines.runNow` cria uma execução fora de hora (`scheduled_for` = agora), sem mexer no próximo horário, e vale a mesma regra de sobreposição.
+
+### 20.4 Horários perdidos
+
+Com o daemon parado, o PC dormindo ou ninguém logado, nada dispara. Na volta (no boot do daemon e a cada ciclo, comparando `next_run_at` com agora):
+
+- `missed: run_once` (padrão): se passou algum horário, roda **uma vez** agora, com `scheduled_for` = o último horário perdido. Os outros viram uma só entrada `skipped` (`missed`) com a contagem (`skipped_count`). Uma rotina diária com o PC desligado por uma semana roda uma vez ao ligar, e não sete.
+- `missed: skip`: nada roda; registra o `skipped` e segue para o próximo horário.
+- Um horário conta como no horário até 2 minutos de atraso (o agendador acorda ao menos uma vez por minuto); depois disso, conta como perdido.
+- Religar uma rotina desligada conta a partir de agora: o que passou com ela desligada não é perdido.
+- O PC não acorda para rodar rotina (a tarefa agendada não usa `WakeToRun`), e o app diz isso nas opções.
+
+### 20.5 O que o bot recebe
+
+A message tem `kind: routine` e `from_kind: system`, com um envelope em inglês como o dos outros remetentes (9.3):
+
+```
+[botloft] routine "Resumo da manhã" · scheduled 2026-10-01 09:00 (America/Sao_Paulo)
+Nobody is watching live: do the work, then report it in your reply.
+
+<pedido do dono>
+```
+
+- O horário do envelope é absoluto, no fuso da rotina: o bot não sabe a hora atual.
+- O pedido tem a autoridade do dono, que o escreveu, mas chega com envelope para o bot saber que é automático e que ninguém está olhando naquela hora.
+- No chat, o item `inbound` mostra o nome da rotina. Na lista de conversas, a linha é `kind: message`.
+
+### 20.6 Agendador
+
+- Módulo `routines/` no daemon, com o relógio injetável (`Clock`) como o courier. Ele dorme até o `next_run_at` mais próximo, por no máximo 60 s (para acompanhar mudança do relógio e a volta do sono), ou até ser acordado (rotina criada, editada, ligada ou desligada; bot pausado).
+- `next_run_at` fica gravado e é recalculado a cada disparo, edição e volta de horário perdido. O cálculo usa a hora de parede no fuso da rotina, nunca o relógio monotônico.
+- Disparar é uma transação: `routine_run`, `message`, `delivery` e o item `inbound`, como no `messages.send`. Depois o courier é acordado.
+- Testes com `FakeRuntime` e relógio manual: `weekly`, `interval` e `cron`; fuso; horário de verão (pulo e repetição); horários perdidos; sobreposição; pausa; rodar agora; fim da execução pelo `result`.
+
+### 20.7 Dados
+
+Migration nova:
+
+| Tabela | Colunas |
+|---|---|
+| `routines` | `id` (`rtn_`), `bot_id`, `name`, `prompt`, `schedule` (JSON), `timezone`, `overlap` (`skip`, `queue`), `missed` (`run_once`, `skip`), `enabled`, `next_run_at`, `created_at`, `updated_at`, `archived_at` |
+| `routine_runs` | `id` (`rrn_`), `routine_id`, `scheduled_for`, `status`, `reason`, `skipped_count`, `message_id`, `created_at`, `finished_at` |
+| `messages` | `kind` ganha `routine`; coluna nova `routine_id` |
+
+Índices: `routines(enabled, next_run_at)` e `routine_runs(routine_id, id)`.
+
+### 20.8 Protocolo
+
+| Método | Params | Result |
+|---|---|---|
+| `routines.list` | `botId?` | `Routine[]`, com `nextRunAt` e a última execução |
+| `routines.create` | `botId, name, prompt, schedule, timezone, overlap?, missed?` | `Routine` |
+| `routines.update` | `routineId` e os mesmos campos, opcionais | `Routine` |
+| `routines.setEnabled` | `routineId, enabled` | `Routine` |
+| `routines.runNow` | `routineId` | `RoutineRun` |
+| `routines.archive` | `routineId` | `Routine` |
+| `routines.runs` | `routineId, before?, limit?` | `RoutineRun[]`, mais nova primeiro |
+
+- Notificações: `routine.changed` e `routine.run`.
+- Validação (`-32004`): nome de 1 a 80 caracteres; pedido dentro do limite de uma message; `days` não vazio e de 1 a 7; `time` válido; `minutes` de 5 a 10 080; `cron` válido e com espaçamento de pelo menos 5 minutos; `timezone` conhecido. Os problemas do horário vêm com `data.reason` (`timezone_unknown`, `days_empty`, `days_range`, `time_invalid`, `interval_range`, `cron_invalid`, `too_often`, `never_runs`), que o app escreve no idioma do dono (15.6); a mensagem em inglês fica para quem não conhece o código.
+
+### 20.9 App
+
+Sem jargão (15.2): o dono não vê "cron", "overlap" nem "timezone" no caminho principal.
+
+- No bot, abas **Conversa** e **Rotinas** (com a contagem, "Rotinas (2)"). A lista: um interruptor para ligar e desligar, o nome, quando ("Dias úteis às 09:00"), a próxima vez no fuso da rotina ("amanhã às 09:00"; desligada, "Desligada"), como foi a última (rodando, rodou bem, falhou, ou pulada e por quê), "Rodar agora" e um menu com editar e apagar (com confirmação). Sem rotinas, uma explicação e "Nova rotina".
+- Criar e editar: "Nome", "O que <bot> deve fazer?" e "Quando": todo dia, dias úteis, dias escolhidos (os sete dias como botões, com os nomes do idioma), ou a cada N minutos ou horas; para os três primeiros, o horário. Nomes de dias e horas vêm do `Intl`, no idioma do app.
+- Em "Mais opções":
+  - o fuso (o do sistema por padrão, mostrado pelo nome da cidade);
+  - "Se a anterior ainda não terminou": pular ou esperar a vez;
+  - "Se o computador estava desligado na hora": rodar quando ligar, ou pular;
+  - "Avançado": expressão cron.
+- No chat, a message da rotina aparece com a etiqueta "Rotina · <nome>".
+- Na página da crew, uma aba com as rotinas de todos os bots dela.
+- Uma execução `failed` entra na marca da barra de tarefas (15.2) até o dono abrir o bot. O app guarda quando o dono abriu cada bot (`localStorage`, `botloft.seen`); um bot aberto não marca.
+- O store carrega `routines.list` a cada conexão e segue `routine.changed` e `routine.run`.
+- Textos nos três idiomas (15.6); a frase de "quando" é montada pelo app a partir do `schedule`.
+
+### 20.10 Fora desta etapa
+
+- Bots criando rotinas por uma tool MCP: depois, com aprovação do dono.
+- Sinais entre bots disparando rotinas (seção 18, item 7).
+- Notificação do Windows quando uma rotina termina ou falha.
+- Acordar o PC para uma rotina.
+
+### 20.11 Marcos
+
+| Marco | Entrega | Pronto quando |
+|---|---|---|
+| **R1** Agendador | migration, `routines/`, courier com `kind: routine`, fim de execução pelo `result`, RPC e notificações, testes com relógio manual | com `FakeRuntime`, rotinas `weekly` e `interval` disparam no horário, pulam por sobreposição e rodam uma vez depois de horário perdido |
+| **R2** App | aba Rotinas no bot e na crew, editor, etiqueta no chat, marca na barra de tarefas, textos nos três idiomas | criar pelo app uma rotina "a cada 5 minutos", ver duas execuções com o Claude Code real, desligá-la e ver que para |

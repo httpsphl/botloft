@@ -100,6 +100,14 @@ prefixed_id!(
     /// Identifies a file the owner attached to a message.
     AttachmentId, "attachment", "att_"
 );
+prefixed_id!(
+    /// Identifies a routine (spec 20).
+    RoutineId, "routine", "rtn_"
+);
+prefixed_id!(
+    /// Identifies one run of a routine.
+    RoutineRunId, "routine run", "rrn_"
+);
 
 /// A random version 4 UUID, for Claude Code session ids and the uuid of
 /// each message written to a bot (spec 7.3, 9.2).

@@ -140,6 +140,9 @@ pub fn archive(daemon: &Daemon, params: CrewIdParams) -> ApiResult<Crew> {
     store.archive_crew(&crew.id, now_ms())?;
 
     let crew = find(&store, &crew.id)?;
+    for bot in &bots {
+        super::routines::archive_of(daemon, &store, &bot.id);
+    }
     for bot in bots {
         if let Some(bot) = store.bot(&bot.id)? {
             daemon.emit(Event::BotChanged(bots::to_protocol(

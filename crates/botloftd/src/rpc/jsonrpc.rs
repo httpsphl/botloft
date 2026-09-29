@@ -10,6 +10,8 @@ use crate::service::ApiError;
 pub struct RpcError {
     pub code: i32,
     pub message: String,
+    /// `{"reason": ...}` for a validation the app words itself.
+    pub data: Option<Value>,
 }
 
 impl RpcError {
@@ -17,6 +19,7 @@ impl RpcError {
         Self {
             code,
             message: message.into(),
+            data: None,
         }
     }
 }
@@ -29,7 +32,14 @@ impl From<ApiError> for RpcError {
             // warn level, never message bodies or tokens.
             tracing::warn!(error = %err, source = ?std::error::Error::source(&err), "request failed");
         }
-        Self::new(code, err.to_string())
+        let data = match &err {
+            ApiError::Rule { reason, .. } => Some(json!({ "reason": reason })),
+            _ => None,
+        };
+        Self {
+            data,
+            ..Self::new(code, err.to_string())
+        }
     }
 }
 
@@ -87,12 +97,11 @@ pub fn success(id: &Value, result: Value) -> String {
 }
 
 pub fn failure(id: &Value, err: &RpcError) -> String {
-    json!({
-        "jsonrpc": "2.0",
-        "id": id,
-        "error": { "code": err.code, "message": err.message },
-    })
-    .to_string()
+    let mut error = json!({ "code": err.code, "message": err.message });
+    if let Some(data) = &err.data {
+        error["data"] = data.clone();
+    }
+    json!({ "jsonrpc": "2.0", "id": id, "error": error }).to_string()
 }
 
 pub fn notification(method: &str, params: Value) -> String {
@@ -107,6 +116,20 @@ pub fn empty_params() -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_rule_goes_out_with_its_reason() {
+        let err = RpcError::from(ApiError::Rule {
+            reason: "too_often",
+            message: "runs must be at least 5 minutes apart".into(),
+        });
+        let text = failure(&json!(3), &err);
+        let value: Value = serde_json::from_str(&text).expect("json");
+        assert_eq!(value["error"]["code"], error_code::VALIDATION);
+        assert_eq!(value["error"]["data"]["reason"], "too_often");
+        let plain = failure(&json!(4), &RpcError::new(error_code::NOT_FOUND, "gone"));
+        assert!(!plain.contains("data"));
+    }
 
     #[test]
     fn parses_a_request() {

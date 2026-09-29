@@ -23,6 +23,6 @@ export function openBot(name: string) {
   fireEvent.click(within(sidebar()).getByRole("button", { name: new RegExp(name) }));
 }
 
-export function openTab(name: string) {
+export function openTab(name: string | RegExp) {
   fireEvent.click(screen.getByRole("tab", { name }));
 }
