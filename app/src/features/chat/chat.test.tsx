@@ -71,7 +71,8 @@ describe("chat", () => {
         input: '{"command":"npm test"}',
       });
     });
-    const line = within(chat()).getByRole("button", { name: /Bash/ });
+    const line = within(chat()).getByRole("button", { name: /Run a command/ });
+    expect(within(line).getByText("Run the tests")).toBeDefined();
     expect(within(line).getByLabelText("Running")).toBeDefined();
     act(() => {
       if (call) {
@@ -93,13 +94,13 @@ describe("chat", () => {
     act(() => {
       fake.chat.ask(scout.id, "Bash", "rm -rf build", '{"command":"rm -rf build"}');
     });
-    const card = screen.getByRole("region", { name: "Scout asks to use Bash" });
+    const card = screen.getByRole("region", { name: "Scout asks to run a command" });
     expect(within(card).getByText("rm -rf build")).toBeDefined();
     fireEvent.change(within(card).getByLabelText("Note for Scout if you deny"), {
       target: { value: "keep the cache" },
     });
     fireEvent.click(within(card).getByRole("button", { name: "Deny" }));
-    expect(await within(chat()).findByText("You denied Bash")).toBeDefined();
+    expect(await within(chat()).findByText("Denied: run a command")).toBeDefined();
     expect(fake.calls.at(-1)).toEqual({
       method: "approvals.answer",
       params: { approvalId: expect.any(String), allow: false, note: "keep the cache" },
@@ -108,9 +109,9 @@ describe("chat", () => {
     act(() => {
       fake.chat.ask(scout.id, "Write", "notes.md");
     });
-    const next = screen.getByRole("region", { name: "Scout asks to use Write" });
+    const next = screen.getByRole("region", { name: "Scout asks to write a file" });
     fireEvent.click(within(next).getByRole("button", { name: "Allow" }));
-    expect(await within(chat()).findByText("You allowed Write")).toBeDefined();
+    expect(await within(chat()).findByText("Allowed: write a file")).toBeDefined();
   });
 
   test("files are picked or dropped, shown before sending, and sent with the text", async () => {

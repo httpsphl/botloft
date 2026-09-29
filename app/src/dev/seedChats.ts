@@ -93,7 +93,7 @@ export function seedChats(fake: FakeBotloft, crew: Crew): void {
   at(92);
   chat.reply(crew.scout, SUMMARY);
   const handoff = chat.tool(crew.scout, "mcp__botloft__send_message", {
-    summary: "to @writer",
+    summary: "@writer",
     input: JSON.stringify({ to: "writer", kind: "task", body: "Turn week-39.md into the report" }),
   });
   chat.finish(handoff, '{"ok":true}');

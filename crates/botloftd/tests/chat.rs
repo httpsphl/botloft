@@ -81,7 +81,9 @@ async fn what_the_bot_prints_becomes_the_chat() {
     let running = kind(&mut c.app, "tool").await;
     assert_eq!(running["item"]["body"]["status"], "running");
     assert_eq!(running["item"]["body"]["summary"], "Run the tests");
-    assert_eq!(running["activity"]["text"], "Bash · Run the tests");
+    // The app names the tool in the owner's language.
+    assert_eq!(running["activity"]["text"], "Run the tests");
+    assert_eq!(running["activity"]["tool"], "Bash");
     let done = kind(&mut c.app, "tool").await;
     assert_eq!(done["item"]["id"], running["item"]["id"]);
     assert_eq!(done["item"]["body"]["status"], "done");
@@ -152,9 +154,11 @@ async fn approvals_wait_for_the_owner() {
         (&json!("pending"), &json!("Bash"))
     );
     assert_eq!(body["summary"], "rm -rf build");
-    // The app words the line ("Waiting for approval: Bash") in the owner's language.
+    // The app words the line ("Waiting for approval: run a command") in the
+    // owner's language.
     assert_eq!(pending["activity"]["kind"], "approval");
-    assert_eq!(pending["activity"]["text"], "Bash");
+    assert_eq!(pending["activity"]["tool"], "Bash");
+    assert_eq!(pending["activity"]["text"], "rm -rf build");
     c.t.until_state(&lead, BotState::NeedsApproval).await;
 
     let answered = c

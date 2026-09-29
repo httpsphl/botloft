@@ -239,8 +239,12 @@ pub struct ApprovalsAnswerParams {
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct Activity {
     pub kind: ActivityKind,
-    /// One line, at most 120 characters, without wording of its own.
+    /// One line, at most 120 characters, without wording of its own: for
+    /// a tool or a request, what it is about.
     pub text: String,
+    /// The tool, for a tool call or a request: the app names it.
+    #[serde(default)]
+    pub tool: Option<String>,
     /// Unix time in milliseconds.
     pub at: i64,
 }

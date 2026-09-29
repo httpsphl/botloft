@@ -29,6 +29,7 @@ import { useArrival } from "../../ui/motion";
 import { isBrowserTool, ShowBrowser } from "../browser/showBrowser";
 import { ShowFile } from "../files/showFile";
 import { isScreenFile, ShowScreen } from "../screens/showScreen";
+import { toolDetail, toolKey, toolTitle } from "./toolNames";
 
 const ICONS: Record<string, LucideIcon> = {
   Bash: SquareTerminal,
@@ -54,11 +55,6 @@ const ICONS: Record<string, LucideIcon> = {
 /** The browser tools share the globe (spec 21.4). */
 function iconOf(label: string): LucideIcon {
   return ICONS[label] ?? (label.startsWith("browser_") ? Globe : Wrench);
-}
-
-/** `mcp__botloft__send_message` reads as `send_message`. */
-export function toolLabel(name: string): string {
-  return name.split("__").at(-1) ?? name;
 }
 
 /** JSON indented for reading; anything else as it came. */
@@ -95,8 +91,9 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
   const showBrowser = useContext(ShowBrowser);
   const showScreen = useContext(ShowScreen);
   const arrival = useArrival(createdAt);
-  const label = toolLabel(tool.name);
-  const Icon = iconOf(label);
+  const title = toolTitle(tool.name, t.tools);
+  const detail = toolDetail(tool, t.tools);
+  const Icon = iconOf(toolKey(tool.name));
   const block =
     "max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-lg border border-line bg-sunken px-2.5 py-1.5 font-mono text-xs leading-relaxed";
   return (
@@ -109,12 +106,9 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
           className="group flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 py-1 text-left text-sm transition-colors hover:bg-sunken"
         >
           <Icon aria-hidden size={14} className="shrink-0 text-muted" />
-          <span className="shrink-0 font-medium">{label}</span>
-          <span
-            className="min-w-0 flex-1 truncate font-mono text-muted text-xs"
-            title={tool.summary}
-          >
-            {tool.summary}
+          <span className="shrink-0 font-medium">{title}</span>
+          <span className="min-w-0 flex-1 truncate font-mono text-muted text-xs" title={detail}>
+            {detail}
           </span>
           <Status status={tool.status} />
           <ChevronRight
@@ -149,7 +143,7 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
           <button
             type="button"
             title={t.browser.showInPanel}
-            aria-label={`${t.browser.showInPanel}: ${label}`}
+            aria-label={`${t.browser.showInPanel}: ${title}`}
             onClick={() => showBrowser()}
             className="grid size-6 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-sunken hover:text-ink"
           >

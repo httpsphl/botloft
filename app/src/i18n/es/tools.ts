@@ -1,0 +1,57 @@
+// Lo que los bots hacen con sus herramientas, en palabras simples: las
+// líneas de herramienta del chat, los pedidos para permitir una y la lista
+// de conversaciones.
+
+import type { Messages } from "../en";
+
+export const tools: Messages["tools"] = {
+  names: {
+    Bash: "Ejecutar un comando",
+    PowerShell: "Ejecutar un comando",
+    BashOutput: "Leer la salida de un comando",
+    KillShell: "Detener un comando",
+    KillBash: "Detener un comando",
+    Read: "Leer un archivo",
+    Write: "Escribir un archivo",
+    Edit: "Editar un archivo",
+    MultiEdit: "Editar un archivo",
+    NotebookEdit: "Editar un cuaderno",
+    Grep: "Buscar en los archivos",
+    Glob: "Encontrar archivos",
+    LS: "Listar una carpeta",
+    WebFetch: "Leer una página web",
+    WebSearch: "Buscar en la web",
+    TodoWrite: "Actualizar la lista de tareas",
+    ExitPlanMode: "Presentar el plan",
+    Task: "Llamar a un ayudante",
+    Agent: "Llamar a un ayudante",
+    ToolSearch: "Cargar herramientas",
+    SlashCommand: "Ejecutar un atajo",
+    Skill: "Usar una habilidad",
+    crew_roster: "Ver el equipo",
+    send_message: "Enviar un mensaje",
+    complete_task: "Terminar una tarea",
+    my_tasks: "Ver sus tareas",
+    suggest_bot: "Sugerir un bot",
+    browser: "Usar un sitio",
+    browser_help: "Pedir tu ayuda",
+    browser_open: "Abrir una página",
+    browser_look: "Leer la página",
+    browser_click: "Hacer clic",
+    browser_type: "Escribir en un campo",
+    browser_select: "Elegir una opción",
+    browser_press: "Pulsar una tecla",
+    browser_scroll: "Desplazar la página",
+    browser_back: "Volver una página",
+    browser_screenshot: "Mirar la pantalla",
+    browser_close: "Cerrar el navegador",
+    browser_ask_owner: "Pedir tu ayuda",
+  },
+  scroll: {
+    down: "hacia abajo",
+    up: "hacia arriba",
+    top: "hasta arriba",
+    bottom: "hasta el final",
+  },
+  use: (tool) => `usar ${tool}`,
+};

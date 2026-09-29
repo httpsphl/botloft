@@ -1,8 +1,8 @@
 //! Saving chat items and telling the app (spec 8.3).
 
-use botloft_core::chat::activity_line;
+use botloft_core::chat::activity;
 use botloft_core::ids::{BotId, ChatItemId};
-use botloft_core::protocol::{Activity, ChatBody, ChatItem, ChatItemChanged};
+use botloft_core::protocol::{ChatBody, ChatItem, ChatItemChanged};
 use tracing::warn;
 
 use crate::state::{Daemon, Event};
@@ -28,11 +28,7 @@ pub(crate) fn add(daemon: &Daemon, bot: &BotId, body: ChatBody) -> Option<ChatIt
 
 /// Announces an item that is already saved, e.g. the one a message created.
 pub(crate) fn announce(daemon: &Daemon, item: ChatItem) {
-    let activity = activity_line(&item.body).map(|(kind, text)| Activity {
-        kind,
-        text,
-        at: item.updated_at,
-    });
+    let activity = activity(&item.body, item.updated_at);
     daemon.emit(Event::ChatItem(ChatItemChanged { item, activity }));
 }
 

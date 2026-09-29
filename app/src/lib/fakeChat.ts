@@ -21,8 +21,10 @@ export const SUGGEST_TOOL = "mcp__botloft__suggest_bot";
 const HELP_TOOL = "mcp__botloft__browser_help";
 
 /** The conversation-list line for an item, like the daemon's (spec 8.3). */
-export function activityLine(body: ChatBody): { kind: ActivityKind; text: string } | null {
-  const label = (name: string) => name.split("__").at(-1) ?? name;
+export function activityLine(
+  body: ChatBody,
+): { kind: ActivityKind; text: string; tool: string | null } | null {
+  let tool: string | null = null;
   let kind: ActivityKind;
   let text: string;
   switch (body.kind) {
@@ -36,11 +38,13 @@ export function activityLine(body: ChatBody): { kind: ActivityKind; text: string
       break;
     case "tool":
       kind = "tool";
-      text = body.summary ? `${label(body.name)} · ${body.summary}` : label(body.name);
+      text = body.summary;
+      tool = body.name;
       break;
     case "approval":
       kind = "approval";
-      text = label(body.toolName);
+      text = body.summary;
+      tool = body.toolName;
       break;
     case "notice":
       kind = "notice";
@@ -50,7 +54,7 @@ export function activityLine(body: ChatBody): { kind: ActivityKind; text: string
       return null;
   }
   const flat = text.split(/\s+/).filter(Boolean).join(" ");
-  return { kind, text: flat.length <= 120 ? flat : `${flat.slice(0, 119).trimEnd()}…` };
+  return { kind, text: flat.length <= 120 ? flat : `${flat.slice(0, 119).trimEnd()}…`, tool };
 }
 
 export class FakeChat {

@@ -123,9 +123,14 @@ export type ActivityKind = "owner" | "message" | "reply" | "tool" | "approval" |
  */
 export type Activity = { kind: ActivityKind, 
 /**
- * One line, at most 120 characters, without wording of its own.
+ * One line, at most 120 characters, without wording of its own: for
+ * a tool or a request, what it is about.
  */
 text: string, 
+/**
+ * The tool, for a tool call or a request: the app names it.
+ */
+tool: string | null, 
 /**
  * Unix time in milliseconds.
  */

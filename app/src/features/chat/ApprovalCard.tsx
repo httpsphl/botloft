@@ -10,12 +10,13 @@ import { HELP_TOOL, HelpCard } from "../browser/HelpCard";
 import { SITE_TOOL, SiteCard } from "../browser/SiteCard";
 import { PLAN_TOOL, PlanCard } from "./PlanCard";
 import { SUGGEST_TOOL, SuggestionCard } from "./SuggestionCard";
-import { pretty, toolLabel } from "./ToolLines";
+import { pretty } from "./ToolLines";
+import { toolAction } from "./toolNames";
 import { useAnswer } from "./useAnswer";
 
 function Answered({ approval }: { approval: ApprovalItem }) {
   const t = useT();
-  const label = toolLabel(approval.toolName);
+  const label = toolAction(approval.toolName, t.tools);
   const line = "flex min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 text-sm";
   switch (approval.status) {
     case "allowed":
@@ -71,7 +72,7 @@ function ToolApproval({ approval, bot }: { approval: ApprovalItem; bot: Bot }) {
   if (approval.status !== "pending") {
     return <Answered approval={approval} />;
   }
-  const label = toolLabel(approval.toolName);
+  const label = toolAction(approval.toolName, t.tools);
 
   return (
     <section

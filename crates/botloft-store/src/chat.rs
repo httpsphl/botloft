@@ -1,7 +1,7 @@
 //! `chat_items` table: each bot's chat (spec 8). The body is stored as the
 //! protocol's JSON, so new item kinds need no migration.
 
-use botloft_core::chat::activity_line;
+use botloft_core::chat::activity;
 use botloft_core::ids::{BotId, ChatItemId};
 use botloft_core::protocol::{Activity, ChatBody, ChatItem};
 use rusqlite::types::Type;
@@ -153,13 +153,7 @@ impl Store {
              ORDER BY rowid DESC LIMIT 1"
         ))?;
         let item = stmt.query_row([bot.as_str()], from_row).optional()?;
-        Ok(item.and_then(|item| {
-            activity_line(&item.body).map(|(kind, text)| Activity {
-                kind,
-                text,
-                at: item.updated_at,
-            })
-        }))
+        Ok(item.and_then(|item| activity(&item.body, item.updated_at)))
     }
 }
 
@@ -309,6 +303,7 @@ mod tests {
             Some(Activity {
                 kind: ActivityKind::Reply,
                 text: "All done. Details below".into(),
+                tool: None,
                 at: 7
             })
         );
