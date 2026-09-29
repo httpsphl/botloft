@@ -10,6 +10,16 @@ export function encodeBytes(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
+/** The bytes `base64` stands for. */
+export function decodeBytes(base64: string): Uint8Array<ArrayBuffer> {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let at = 0; at < binary.length; at += 1) {
+    bytes[at] = binary.charCodeAt(at);
+  }
+  return bytes;
+}
+
 /** Bytes that base64 of `length` characters decodes to. */
 export function decodedSize(base64: string): number {
   const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;

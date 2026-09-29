@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
@@ -9,12 +9,16 @@ import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { type Tab, Tabs, tabId } from "../../ui/Tabs";
 import { ChatView } from "../chat/ChatView";
+import { FilesPanel } from "../files/FilesPanel";
+import { useBotFiles } from "../files/useBotFiles";
 import { SignInButton } from "../onboarding/SignIn";
 import { BotRoutines } from "../routines/RoutineList";
 import { BotHeader } from "./BotHeader";
 import { stateView } from "./BotStateBadge";
 
 type Pane = "chat" | "routines";
+/** What the panel beside the chat shows. */
+type Side = "details" | "files" | null;
 
 /**
  * A bot's conversation and its routines, with its details in a side panel
@@ -22,8 +26,26 @@ type Pane = "chat" | "routines";
  */
 export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
   const t = useT();
-  const [details, setDetails] = useState(false);
+  const [side, setSide] = useState<Side>(null);
   const [pane, setPane] = useState<Pane>("chat");
+  const files = useBotFiles(bot);
+  // What the owner has seen: files newer than this are new to them.
+  const [seenAt, setSeenAt] = useState(() => Date.now());
+  const [since, setSince] = useState(seenAt);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new bot has its own files to see
+  useEffect(() => {
+    const now = Date.now();
+    setSeenAt(now);
+    setSince(now);
+  }, [bot.id]);
+  const filesOpen = side === "files";
+  const toggleFiles = () => {
+    // What was there when the panel opened or closed counts as seen.
+    setSince(seenAt);
+    setSeenAt(Date.now());
+    setSide(filesOpen ? null : "files");
+  };
+  const fresh = filesOpen ? 0 : files.files.filter((file) => file.modifiedAt > seenAt).length;
   const routines = useApp(useShallow((state) => routinesOf(state, bot.id)));
   const view = stateView(bot, crew.paused, t);
   const tabs: Tab<Pane>[] = [
@@ -39,8 +61,11 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
       <BotHeader
         bot={bot}
         crew={crew}
-        detailsOpen={details}
-        onToggleDetails={() => setDetails(!details)}
+        detailsOpen={side === "details"}
+        onToggleDetails={() => setSide(side === "details" ? null : "details")}
+        filesOpen={filesOpen}
+        freshFiles={fresh}
+        onToggleFiles={toggleFiles}
       />
       <Notices bot={bot} crew={crew} view={view} />
       <Tabs<Pane> label={bot.name} tabs={tabs} value={pane} onChange={setPane} />
@@ -52,7 +77,8 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
             <BotRoutines bot={bot} />
           )}
         </div>
-        {details && <Details bot={bot} onClose={() => setDetails(false)} />}
+        {side === "details" && <Details bot={bot} onClose={() => setSide(null)} />}
+        {filesOpen && <FilesPanel bot={bot} data={files} since={since} onClose={toggleFiles} />}
       </div>
     </section>
   );

@@ -284,7 +284,7 @@ Todo item tem `id` (`cht_`), `botId`, `kind`, `createdAt` e `updatedAt`.
 |---|---|---|
 | `inbound` | `message` (a `Message`, com anexos) | criado junto com a message para o bot: dono, outro bot ou daemon |
 | `reply` | `text` | texto do bot |
-| `tool` | `toolUseId`, `name`, `summary`, `input`, `status` (`running`, `done`, `failed`), `output` | ferramenta usada pelo bot |
+| `tool` | `toolUseId`, `name`, `summary`, `input`, `status` (`running`, `done`, `failed`), `output`, `file` | ferramenta usada pelo bot; `file` é o caminho completo que uma chamada de `Write`, `Edit`, `MultiEdit` ou `NotebookEdit` altera (ausente nas outras e nos itens antigos) |
 | `approval` | `approvalId`, `toolName`, `summary`, `input`, `status` (`pending`, `allowed`, `denied`, `expired`), `note` | pedido de permissão (10.1) |
 | `turn` | `durationMs`, `costUsd`, `error` | fim de um turno |
 | `notice` | `level` (`info`, `warning`, `error`), `code` (`signed_out`, `usage_limit`, `turn_failed`, `model_unavailable`; ausente em avisos antigos), `text` | avisos do daemon: limite de uso, login, turno com erro. O app escreve os avisos com `code` no idioma do dono; `text` fica em inglês para quem não conhece o código e, em `turn_failed`, traz o detalhe do erro |
@@ -299,7 +299,16 @@ Todo item tem `id` (`cht_`), `botId`, `kind`, `createdAt` e `updatedAt`.
 - `chat.item {item, activity}`: item novo ou atualizado (tool que terminou, aprovação respondida). `activity` é a nova linha da conversa na barra lateral, quando mudou.
 - `chat.delta {botId, text}`: pedaço do texto que o bot está escrevendo, na ordem. O app junta os pedaços num balão provisório, trocado pelo `reply` quando ele chega. Um app que conecta no meio de um turno não vê o texto parcial já passado, só o que vier depois e o `reply` final.
 
-### 8.4 Privacidade
+### 8.4 Arquivos do bot
+
+O app mostra os arquivos que o bot fez num painel ao lado do chat (15.1). O daemon os acha de duas maneiras, porque um script ou comando (um PDF gerado por um `PowerShell`, por exemplo) não diz o que criou:
+
+- **Pastas:** a pasta de trabalho da crew e a pasta do bot (5), percorridas com limites: até 6 níveis, 20 mil entradas vistas, sem links, sem entradas ocultas (`.`, `~$`) nem pastas geradas (`node_modules`, `target`, `__pycache__`, `venv`, `site-packages`). Na pasta do bot ficam de fora `CLAUDE.md` e `attachments\` (o que o daemon escreve e o que o dono mandou). Só entra arquivo alterado **depois de o bot ser criado**: o que já existia na pasta escolhida pelo dono não é do bot.
+- **Chamadas do bot:** os caminhos dos itens `tool` com `file` (8.2), mesmo fora dessas pastas, se o arquivo ainda existe. Esses vêm com `writtenByBot`.
+
+`files.list {botId}` devolve até 200 `BotFile` (`path`, `name`, `folder` relativa à pasta de trabalho ou à do bot, `mediaType` pela extensão, `size`, `modifiedAt`, `writtenByBot`), do mais novo para o mais antigo. `files.read {botId, path}` devolve `{mediaType, data}` (base64) de um arquivo que a lista poderia mostrar: dentro de uma das duas pastas ou escrito pelo bot. Qualquer outro caminho, relativo ou que suba de pasta dá `not_found`, para o painel não ler o resto do computador. Acima de 20 MiB dá `validation`. Nenhum caminho nem conteúdo vai para o log em `info` ou acima (8.5).
+
+### 8.5 Privacidade
 
 Itens do chat são dado pessoal como o corpo das messages: nunca vão para o log em nível `info` ou acima. O log de `debug` registra só tipos de evento e ids.
 
@@ -474,6 +483,8 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `messages.send` | `botId, body, attachments?` (`[{name, mediaType, data}]`, data em base64) | `Message` |
 | `messages.list` | `crewId?, botId?, before?, limit?` | `Message[]` |
 | `attachments.read` | `attachmentId` | `{mediaType, data}`, data em base64 (9.5) |
+| `files.list` | `botId` | `BotFile[]`: os arquivos que o bot fez, do mais novo ao mais antigo (8.4) |
+| `files.read` | `botId, path` | `{mediaType, data}`, data em base64, de um arquivo da lista (8.4) |
 | `deliveries.list` | `state?, botId?` | `Delivery[]` |
 | `deliveries.retry` | `deliveryId` | `Delivery` |
 | `tasks.list` | `crewId?, status?` | `Task[]` |
@@ -557,6 +568,7 @@ app/src/
     crews/        lista, criar, renomear, pausar; página da crew com timeline e tasks
     bots/         conversas na barra lateral, criar, editar, estado, detalhes
     chat/         conversa com o bot: itens, texto ao vivo, aprovações, compositor com anexos
+    files/        painel dos arquivos que o bot fez: lista, prévia, abrir
     messages/     timeline da crew, estado de entrega, deliveries com falha (botão na barra de título, retry)
     tasks/        tarefas da crew (abertas por padrão, todas sob demanda)
     settings/
@@ -593,6 +605,7 @@ Layout, como um app de mensagens:
 - **Chefe:** uma coroa ao lado do nome na barra lateral e nos cartões da crew, e "Chefe" no cabeçalho do bot, com a dica "Lidera <crew>: planeja o trabalho e sugere bots novos". O menu do bot tem "Tornar chefe da equipe" ou "Deixar de ser chefe".
 - **Sugestão de bot** (10.2): um cartão no chat do chefe, "<chefe> sugere um bot novo", com o porquê e os campos editáveis Nome, Modelo, Função e Instruções, a linha de que o bot começa na hora e recebe o trabalho do chefe, um campo para dizer ao chefe por que não, e os botões Criar bot e Agora não. Respondido, vira uma linha ("Você criou Designer", "Você recusou Designer") que abre o que foi sugerido.
 - **Detalhes do bot** (pasta, instruções, sessão) ficam num painel, fora do caminho da conversa.
+- **Arquivos do bot** (8.4): um botão "Mostrar arquivos" no cabeçalho abre, à direita do chat, um painel com o que o bot fez, do mais novo ao mais antigo (ícone pelo tipo, nome, pasta, tamanho, "há 5 min"). Um clique mostra o arquivo no próprio painel: imagem, PDF, markdown e texto aparecem; o resto diz que não tem prévia. "Abrir" usa o programa que o Windows escolheu e "Mostrar na pasta" abre o Explorer com o arquivo marcado. A lista é lida ao abrir o bot, a cada 4 s enquanto ele trabalha e de novo quando ele para. Com o painel fechado, o botão ganha um contador dos arquivos que apareceram desde a última vez que o dono olhou; abertos, esses levam a etiqueta "Novo". Detalhes e arquivos dividem o mesmo lugar: abrir um fecha o outro.
 
 ### 15.2 Comandos Tauri
 
@@ -605,10 +618,12 @@ Layout, como um app de mensagens:
 | `read_owner_token` | lê `secrets\owner.token` (só no app local) |
 | `open_path` | abre uma pasta no Explorer; recusa arquivos, que o Explorer executaria |
 | seletor de pastas | não é comando próprio: o app usa o `tauri-plugin-dialog` (`open({directory: true})`, permissão `dialog:allow-open`) para a pasta de trabalho da crew (5) |
+| `open_file` | abre um arquivo do bot com o programa que o Windows usa para ele (`explorer.exe <arquivo>`). Só extensões de documento, imagem, som e vídeo (`pdf`, `png`, `md`, `docx`, `xlsx`, `mp4`...); qualquer outra, como `.exe`, `.bat`, `.ps1` ou `.lnk`, é recusada, porque o Explorer a executaria |
+| `reveal_file` | abre o Explorer na pasta do arquivo, com ele marcado (`/select,`). Nada é executado |
 | `open_url` | abre no navegador padrão um link de uma resposta do bot; só `http` e `https`, porque qualquer outro esquema pode iniciar um programa. Seguir o link dentro do app trocaria a janela pela página |
 | overlay na taskbar | não é comando próprio: o app usa `setOverlayIcon` da janela (permissão `core:window:allow-set-overlay-icon`) e marca o ícone com um ponto enquanto algo espera o dono: aprovação pendente, bot em `auth_error`, ou mensagem não entregue a um bot ativo. Entregas mortas para bot arquivado não contam: foram abandonadas de propósito |
 
-O app acha o daemon como o daemon acha a si mesmo (seção 5): `BOTLOFT_HOME` ou `%LOCALAPPDATA%\Botloft`, com a porta lida do `config.toml` dessa pasta (45710 se ausente). Um daemon de dev com seu próprio `BOTLOFT_HOME` é encontrado sem configuração extra. A CSP libera `ws://127.0.0.1:*` pelo mesmo motivo.
+O app acha o daemon como o daemon acha a si mesmo (seção 5): `BOTLOFT_HOME` ou `%LOCALAPPDATA%\Botloft`, com a porta lida do `config.toml` dessa pasta (45710 se ausente). Um daemon de dev com seu próprio `BOTLOFT_HOME` é encontrado sem configuração extra. A CSP libera `ws://127.0.0.1:*` pelo mesmo motivo, e `blob:` para a imagem e o PDF da prévia de arquivos (15.1).
 
 Onboarding (M5): **configuração sem perguntas e sem jargão.** O dono não precisa saber que existe um daemon, uma porta ou uma tarefa agendada; a interface nunca usa essas palavras. Fala de "Botloft" e de "rodar em segundo plano", e o texto técnico (erro do daemon, caminho, porta) fica dobrado sob "Details".
 
@@ -732,6 +747,7 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28. "Co
 | `--add-dir` em `-p` | 5, 7.4 | Confirmado (`cli-reference`, `memory`): pastas a mais que o Claude Code trata como de trabalho; o `CLAUDE.md` delas só carrega com `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1`. **Testado com 2.1.284** (`--setting-sources project,local`, `acceptEdits`): com a flag e a variável, o bot citou o `CLAUDE.md` da pasta sem abrir arquivo e gravou nela sem pedir; sem a flag, o `Write` na mesma pasta foi negado (`permission_denials`). A flag aceita vários valores: a linha de comando do daemon não tem prompt posicional, então nada é engolido | feito |
 | Chefe e `suggest_bot` com o Claude Code real | 10.2 | **Testado com 2.1.284** (daemon e app de dev): a crew criada pelo app subiu o chefe com `--model sonnet` e `--add-dir` na pasta da crew. Pedido um site, o chefe carregou `crew_roster`, `suggest_bot` e `send_message` pelo `ToolSearch` e sugeriu um Designer com papel, instruções, modelo e porquê; a chamada esperou o cartão. Com o modelo trocado para `haiku` no cartão, o bot subiu com `--model haiku`, e o chefe citou a troca. O chefe mandou uma task, o Designer entregou com `complete_task`, e o chefe conferiu o resultado e corrigiu o HTML. O log de `debug` não teve texto de mensagem | feito |
 | Rotinas com o Claude Code real | 20 | **Testado com 2.1.284** (daemon e app de dev): uma rotina "a cada 5 minutos" criada pelo app, num chefe em Haiku, rodou às 09:10 e às 09:15, contadas a partir da criação; cada message chegou com o envelope da rotina, apareceu no chat com "Rotina · <nome>" e fechou como `done` com o `result` do turno. Desligada, não rodou às 09:20. O log de `debug` só teve ids | feito |
+| Prévia de PDF no painel de arquivos | 15.1 | O PDF vai para um `<iframe src="blob:...">` (a CSP libera `frame-src blob:`). Não visto no WebView2 do app: no navegador de dev o painel funciona com imagem, markdown e texto | manual (PR): abrir um PDF no painel com `pnpm tauri dev` |
 | Regras `allow` do projeto em `-p` sem confiança | 7.4 | Confirmado (`permissions`): não são aplicadas numa pasta nunca confiada; `deny` vale sempre. Por isso `--allowedTools mcp__botloft` | M4.1 |
 | `--session-id`, `--resume` em `-p` | 7.3 | Confirmado (`cli-reference`, `sessions`): a sessão retoma histórico e modelo; flags como `--mcp-config` têm de ser passadas de novo. **Testado com 2.1.284**: depois de reiniciar o bot e depois de reiniciar o daemon, o bot lembrou arquivos, a imagem e a mensagem de outro bot | feito (M4.1) |
 | Tools MCP adiadas | 10 | **Visto com 2.1.284**: as tools do `botloft` chegam adiadas; antes da primeira `send_message` o bot chama `ToolSearch` com `select:mcp__botloft__send_message`. O chat mostra isso como "load send_message" | feito (M4.1) |

@@ -76,6 +76,8 @@ export function tauriHost(): Host {
     checkForUpdate,
     readOwnerToken: () => invoke<string>("read_owner_token"),
     openPath: (path) => invoke<void>("open_path", { path }),
+    openFile: (path) => invoke<void>("open_file", { path }),
+    revealFile: (path) => invoke<void>("reveal_file", { path }),
     pickFolder: async (title, start) => {
       const picked = await open({
         directory: true,

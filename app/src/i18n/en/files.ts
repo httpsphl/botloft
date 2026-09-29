@@ -1,0 +1,32 @@
+// The files a bot made (spec 15.1, 8.5): the panel beside its chat.
+
+export const files = {
+  heading: "Files",
+  panel: (bot: string) => `Files from ${bot}`,
+  show: "Show files",
+  hide: "Hide files",
+  close: "Close",
+  refresh: "Refresh",
+  fresh: (count: number) => (count === 1 ? "1 new file" : `${count} new files`),
+  newTag: "New",
+  list: "Files",
+  emptyTitle: (bot: string) => `${bot} hasn't made any files yet`,
+  emptyBody: "What it creates for you, like a report or a spreadsheet, shows up here.",
+  loadFailed: "Couldn't load the files",
+  madeByBot: (bot: string) => `Made by ${bot}`,
+  back: "All files",
+  open: "Open",
+  reveal: "Show in folder",
+  failed: {
+    open: "Could not open the file",
+    reveal: "Could not show the file",
+  },
+  preview: {
+    loading: "Loading…",
+    failed: "Couldn't show this file",
+    none: "There's no preview for this kind of file. Open it to see it.",
+    tooBig: "This file is too big to show here. Open it to see it.",
+    cut: "Only the start of the file is shown.",
+    gone: "This file is no longer there.",
+  },
+};

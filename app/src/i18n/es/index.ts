@@ -6,6 +6,7 @@ import { bots } from "./bots";
 import { chat } from "./chat";
 import { common } from "./common";
 import { crews } from "./crews";
+import { files } from "./files";
 import { messages } from "./messages";
 import { onboarding } from "./onboarding";
 import { routines } from "./routines";
@@ -21,6 +22,7 @@ export const es: Messages = {
   bots,
   chat,
   crews,
+  files,
   messages,
   routines,
 };
