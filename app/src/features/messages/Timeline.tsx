@@ -1,5 +1,6 @@
 import { LoaderCircle } from "lucide-react";
 import { type ReactNode, useLayoutEffect, useRef } from "react";
+import { useT } from "../../i18n";
 import type { Message } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
@@ -20,6 +21,8 @@ export function Timeline({
   /** The composer, given what to call with a message it sent. */
   composer: (onSent: (message: Message) => void) => ReactNode;
 }) {
+  const t = useT();
+  const text = t.messages.timeline;
   const { messages, complete, loading, error, loadOlder, add } = useMessages(filter);
   const scroller = useRef<HTMLDivElement>(null);
   const atEnd = useRef(true);
@@ -47,7 +50,7 @@ export function Timeline({
       >
         {error && (
           <div className="p-4">
-            <Callout tone="danger" title="Could not load messages">
+            <Callout tone="danger" title={text.loadFailed}>
               {error}
             </Callout>
           </div>
@@ -55,18 +58,18 @@ export function Timeline({
         {count > 0 && !complete && (
           <div className="flex justify-center py-3">
             <Button size="sm" disabled={loading} onClick={loadOlder}>
-              Load older messages
+              {text.loadOlder}
             </Button>
           </div>
         )}
         {count === 0 && loading && (
           <p role="status" className="flex items-center gap-2 p-5 text-muted text-sm">
             <LoaderCircle aria-hidden size={14} className="animate-spin" />
-            Loading messages…
+            {text.loading}
           </p>
         )}
         {count === 0 && !loading && !error && <p className="p-5 text-muted text-sm">{empty}</p>}
-        <ol aria-label="Messages">
+        <ol aria-label={text.list}>
           {messages.map((message) => (
             <MessageRow key={message.id} message={message} />
           ))}

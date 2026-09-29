@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
 import { type FormEvent, useState } from "react";
+import { useT } from "../../i18n";
 import { errorText } from "../../lib/api";
 import { AVATAR_PALETTE, type Bot, type CrewId, FIELD_LIMITS } from "../../lib/protocol.gen";
 import { useApi, useApp } from "../../store/context";
@@ -12,6 +13,7 @@ type Props = { onClose(): void } & ({ crewId: CrewId; bot?: undefined } | { bot:
 
 /** Creates a bot in `crewId`, or edits `bot`. */
 export function BotDialog(props: Props) {
+  const t = useT();
   const api = useApi();
   const putBot = useApp((state) => state.putBot);
   const selectBot = useApp((state) => state.selectBot);
@@ -58,14 +60,14 @@ export function BotDialog(props: Props) {
   const formId = "bot-form";
   return (
     <Dialog
-      title={editing ? `Edit ${editing.name}` : "New bot"}
+      title={editing ? t.bots.dialog.editTitle(editing.name) : t.bots.dialog.newTitle}
       onClose={props.onClose}
       width="lg"
       footer={
         <>
-          <Button onClick={props.onClose}>Cancel</Button>
+          <Button onClick={props.onClose}>{t.common.cancel}</Button>
           <Button variant="primary" type="submit" form={formId} disabled={busy}>
-            {editing ? "Save" : "Create bot"}
+            {editing ? t.bots.dialog.save : t.bots.dialog.create}
           </Button>
         </>
       }
@@ -73,44 +75,42 @@ export function BotDialog(props: Props) {
       <form id={formId} onSubmit={submit} className="flex flex-col gap-4">
         <div className="grid grid-cols-[1fr_1.4fr] gap-3">
           <TextField
-            label="Name"
+            label={t.bots.dialog.name}
             value={name}
             max={FIELD_LIMITS.name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="Reviewer"
-            hint="Other bots reach it by the handle made from this name."
+            placeholder={t.bots.dialog.namePlaceholder}
+            hint={t.bots.dialog.nameHint}
             autoFocus
             required
           />
           <TextField
-            label="Role"
+            label={t.bots.dialog.role}
             value={role}
             max={FIELD_LIMITS.role}
             onChange={(event) => setRole(event.target.value)}
-            placeholder="Reviews pull requests before they merge"
+            placeholder={t.bots.dialog.rolePlaceholder}
           />
         </div>
         <TextArea
-          label="Instructions"
+          label={t.bots.dialog.instructions}
           value={instructions}
           max={FIELD_LIMITS.instructions}
           rows={8}
           onChange={(event) => setInstructions(event.target.value)}
-          placeholder="How this bot works, what it may do on its own and when to ask."
-          hint={
-            editing
-              ? "Saved to the bot's rules now; the bot reads them the next time it starts."
-              : undefined
-          }
+          placeholder={t.bots.dialog.instructionsPlaceholder}
+          hint={editing ? t.bots.dialog.instructionsHint : undefined}
         />
         <fieldset className="flex flex-col gap-1.5">
-          <legend className="mb-1.5 font-medium text-ink-soft text-sm">Color</legend>
+          <legend className="mb-1.5 font-medium text-ink-soft text-sm">
+            {t.bots.dialog.color}
+          </legend>
           <div className="flex items-center gap-1.5">
             {AVATAR_PALETTE.map((swatch) => (
               <button
                 key={swatch}
                 type="button"
-                aria-label={`Color ${swatch}`}
+                aria-label={t.bots.dialog.swatch(swatch)}
                 aria-pressed={color === swatch}
                 onClick={() => setColor(swatch)}
                 className={`relative rounded-[3px] p-0.5 ${color === swatch ? "ring-2 ring-accent" : ""}`}
@@ -123,7 +123,7 @@ export function BotDialog(props: Props) {
             ))}
           </div>
           {!editing && color === undefined && (
-            <p className="text-muted text-xs">Left unset, the bot gets the crew's next color.</p>
+            <p className="text-muted text-xs">{t.bots.dialog.colorUnset}</p>
           )}
         </fieldset>
         {error && (

@@ -1,6 +1,7 @@
 import { Archive, Ellipsis, FolderOpen, Pause, Pencil, Play, Plus } from "lucide-react";
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
 import { botsOf } from "../../store/app";
 import { useApi, useApp, useHost } from "../../store/context";
@@ -25,13 +26,9 @@ export function sharedFolder(bots: Bot[]): string | null {
 type Open = "bot" | "rename" | "archive" | null;
 type Pane = "bots" | "timeline" | "tasks";
 
-const TABS: Tab<Pane>[] = [
-  { id: "bots", label: "Bots" },
-  { id: "timeline", label: "Timeline" },
-  { id: "tasks", label: "Tasks" },
-];
-
 export function CrewView({ crew }: { crew: Crew }) {
+  const t = useT();
+  const words = t.crews.view;
   const api = useApi();
   const host = useHost();
   const putCrew = useApp((state) => state.putCrew);
@@ -40,9 +37,14 @@ export function CrewView({ crew }: { crew: Crew }) {
   const [pane, setPane] = useState<Pane>("bots");
   const shared = sharedFolder(bots);
   const close = () => setOpen(null);
+  const tabs: Tab<Pane>[] = [
+    { id: "bots", label: words.tabs.bots },
+    { id: "timeline", label: words.tabs.timeline },
+    { id: "tasks", label: words.tabs.tasks },
+  ];
 
   const setPaused = (paused: boolean) =>
-    attempt(paused ? "Could not pause the crew" : "Could not resume the crew", async () =>
+    attempt(paused ? words.failed.pause : words.failed.resume, async () =>
       putCrew(await api.call("crews.setPaused", { crewId: crew.id, paused })),
     );
 
@@ -52,36 +54,36 @@ export function CrewView({ crew }: { crew: Crew }) {
         <div className="min-w-0 flex-1">
           <h1 className="truncate font-semibold text-xl tracking-tight">{crew.name}</h1>
           <p className="mt-0.5 text-muted text-sm">
-            {bots.length === 1 ? "1 bot" : `${bots.length} bots`}
-            {crew.paused && " · paused: its bots stay stopped until you resume it"}
+            {words.bots(bots.length)}
+            {crew.paused && ` · ${words.pausedNote}`}
           </p>
         </div>
         <Button variant="primary" icon={Plus} onClick={() => setOpen("bot")}>
-          New bot
+          {t.crews.newBot}
         </Button>
         {crew.paused ? (
           <Button icon={Play} onClick={() => setPaused(false)}>
-            Resume crew
+            {words.resume}
           </Button>
         ) : (
           <Button icon={Pause} onClick={() => setPaused(true)}>
-            Pause crew
+            {words.pause}
           </Button>
         )}
         <Menu
-          label="More crew actions"
+          label={words.moreActions}
           icon={Ellipsis}
           items={[
-            { label: "Rename", icon: Pencil, onSelect: () => setOpen("rename") },
+            { label: t.crews.rename, icon: Pencil, onSelect: () => setOpen("rename") },
             {
-              label: "Open shared folder",
+              label: words.openShared,
               icon: FolderOpen,
               disabled: !shared,
               onSelect: () =>
-                shared && attempt("Could not open the folder", () => host.openPath(shared)),
+                shared && attempt(words.failed.openFolder, () => host.openPath(shared)),
             },
             {
-              label: "Archive crew",
+              label: words.archive,
               icon: Archive,
               danger: true,
               onSelect: () => setOpen("archive"),
@@ -90,7 +92,7 @@ export function CrewView({ crew }: { crew: Crew }) {
         />
       </header>
 
-      <Tabs<Pane> label="Crew views" tabs={TABS} value={pane} onChange={setPane} />
+      <Tabs<Pane> label={words.tabs.label} tabs={tabs} value={pane} onChange={setPane} />
       {pane === "bots" && (
         <div
           role="tabpanel"
@@ -108,7 +110,7 @@ export function CrewView({ crew }: { crew: Crew }) {
         >
           <Timeline
             filter={{ crewId: crew.id }}
-            empty="No messages yet. Write to a bot below; what the bots send each other shows up here too."
+            empty={words.timelineEmpty}
             composer={(onSent) => <Composer crewId={crew.id} onSent={onSent} />}
           />
         </div>
@@ -127,18 +129,16 @@ export function CrewView({ crew }: { crew: Crew }) {
       {open === "rename" && <CrewDialog crew={crew} onClose={close} />}
       {open === "archive" && (
         <Confirm
-          title={`Archive ${crew.name}?`}
-          confirmLabel="Archive crew"
+          title={words.archiveTitle(crew.name)}
+          confirmLabel={words.archive}
           onClose={close}
           onConfirm={() =>
-            attempt("Could not archive the crew", async () =>
+            attempt(words.failed.archive, async () =>
               putCrew(await api.call("crews.archive", { crewId: crew.id })),
             )
           }
         >
-          The crew leaves the app.{" "}
-          {bots.length > 0 &&
-            `${bots.length === 1 ? "Its bot stops" : `Its ${bots.length} bots stop`}, and messages still waiting for them are not delivered.`}
+          {words.archiveBody(bots.length)}
         </Confirm>
       )}
     </section>

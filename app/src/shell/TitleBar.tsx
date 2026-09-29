@@ -1,10 +1,12 @@
 // The window's own title bar (spec 15.3: `decorations: false`), with the
 // Windows controls on the right. Empty space drags the window.
 
-import { Copy, Minus, Monitor, Moon, Square, Sun, X } from "lucide-react";
+import { Copy, Languages, Minus, Monitor, Moon, Square, Sun, X } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { BotAvatar } from "../features/bots/BotAvatar";
+import { LOCALES, setLocaleChoice, systemLocale, useLocale, useT } from "../i18n";
 import { useHost } from "../store/context";
+import { Menu } from "../ui/Menu";
 import { setTheme, type ThemeChoice, useTheme } from "./theme";
 
 const NEXT_THEME: Record<ThemeChoice, ThemeChoice> = {
@@ -15,8 +17,10 @@ const NEXT_THEME: Record<ThemeChoice, ThemeChoice> = {
 const THEME_ICON = { system: Monitor, light: Sun, dark: Moon };
 
 export function TitleBar({ children, status }: { children?: ReactNode; status?: ReactNode }) {
+  const t = useT();
   const { choice } = useTheme();
   const ThemeIcon = THEME_ICON[choice];
+  const themeName = t.shell.theme[choice];
   return (
     <header
       data-tauri-drag-region
@@ -33,10 +37,11 @@ export function TitleBar({ children, status }: { children?: ReactNode; status?: 
       </div>
       <div className="flex items-center gap-1 pr-2">
         {status}
+        <LanguageMenu />
         <button
           type="button"
-          aria-label={`Theme: ${choice}`}
-          title={`Theme: ${choice} (click to change)`}
+          aria-label={t.shell.theme.label(themeName)}
+          title={t.shell.theme.hint(themeName)}
           onClick={() => setTheme(NEXT_THEME[choice])}
           className="grid h-7 w-7 place-items-center text-muted hover:bg-sunken hover:text-ink"
         >
@@ -48,7 +53,33 @@ export function TitleBar({ children, status }: { children?: ReactNode; status?: 
   );
 }
 
+/** Picks the app's language; "system" follows Windows (spec 15.6). */
+function LanguageMenu() {
+  const t = useT();
+  const { choice } = useLocale();
+  const system = LOCALES.find((locale) => locale.id === systemLocale())?.name ?? "English";
+  return (
+    <Menu
+      label={t.shell.language.label}
+      icon={Languages}
+      items={[
+        {
+          label: t.shell.language.system(system),
+          checked: choice === "system",
+          onSelect: () => setLocaleChoice("system"),
+        },
+        ...LOCALES.map((locale) => ({
+          label: locale.name,
+          checked: choice === locale.id,
+          onSelect: () => setLocaleChoice(locale.id),
+        })),
+      ]}
+    />
+  );
+}
+
 function WindowControls() {
+  const t = useT();
   const { window } = useHost();
   const [maximized, setMaximized] = useState(false);
 
@@ -82,7 +113,7 @@ function WindowControls() {
     <div className="flex self-stretch">
       <button
         type="button"
-        aria-label="Minimize"
+        aria-label={t.shell.window.minimize}
         onClick={() => window.minimize()}
         className={`${control} hover:bg-sunken`}
       >
@@ -90,7 +121,7 @@ function WindowControls() {
       </button>
       <button
         type="button"
-        aria-label={maximized ? "Restore" : "Maximize"}
+        aria-label={maximized ? t.shell.window.restore : t.shell.window.maximize}
         onClick={() => window.toggleMaximize()}
         className={`${control} hover:bg-sunken`}
       >
@@ -102,7 +133,7 @@ function WindowControls() {
       </button>
       <button
         type="button"
-        aria-label="Close"
+        aria-label={t.shell.window.close}
         onClick={() => window.close()}
         className={`${control} hover:bg-[#c42b1c] hover:text-white`}
       >

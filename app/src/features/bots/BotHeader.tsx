@@ -10,6 +10,7 @@ import {
   RotateCw,
 } from "lucide-react";
 import { useState } from "react";
+import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
 import { useApi, useApp, useHost } from "../../store/context";
 import { Button } from "../../ui/Button";
@@ -34,6 +35,8 @@ export function BotHeader({
   detailsOpen: boolean;
   onToggleDetails(): void;
 }) {
+  const t = useT();
+  const words = t.bots.header;
   const api = useApi();
   const host = useHost();
   const putBot = useApp((state) => state.putBot);
@@ -42,11 +45,11 @@ export function BotHeader({
   const stopped = bot.paused || crew.paused;
 
   const setPaused = (paused: boolean) =>
-    attempt(paused ? "Could not pause the bot" : "Could not resume the bot", async () =>
+    attempt(paused ? words.failed.pause : words.failed.resume, async () =>
       putBot(await api.call("bots.setPaused", { botId: bot.id, paused })),
     );
   const restart = (fresh: boolean) =>
-    attempt("Could not restart the bot", async () =>
+    attempt(words.failed.restart, async () =>
       putBot(await api.call("bots.restart", { botId: bot.id, fresh })),
     );
 
@@ -62,73 +65,71 @@ export function BotHeader({
         </div>
         <div className="mt-0.5 flex items-center gap-3 text-sm">
           <BotStateBadge bot={bot} crewPaused={crew.paused} />
-          <span className="truncate text-muted">{bot.role || "No role"}</span>
+          <span className="truncate text-muted">{bot.role || words.noRole}</span>
         </div>
       </div>
       {bot.paused ? (
         <Button icon={Play} onClick={() => setPaused(false)}>
-          Resume
+          {words.resume}
         </Button>
       ) : (
         <Button icon={Pause} onClick={() => setPaused(true)}>
-          Pause
+          {words.pause}
         </Button>
       )}
       <Button icon={RotateCw} disabled={stopped} onClick={() => restart(false)}>
-        Restart
+        {words.restart}
       </Button>
       <Button
         variant={detailsOpen ? "secondary" : "ghost"}
         icon={PanelRight}
-        label={detailsOpen ? "Hide details" : "Show details"}
+        label={detailsOpen ? words.hideDetails : words.showDetails}
         aria-pressed={detailsOpen}
         onClick={onToggleDetails}
       />
       <Menu
-        label="More bot actions"
+        label={words.more}
         icon={Ellipsis}
         items={[
-          { label: "Edit", icon: Pencil, onSelect: () => setOpen("edit") },
+          { label: words.edit, icon: Pencil, onSelect: () => setOpen("edit") },
           {
-            label: "Restart with a new conversation",
+            label: words.restartFresh,
             icon: RefreshCcw,
             disabled: stopped,
             onSelect: () => setOpen("fresh"),
           },
           {
-            label: "Open folder",
+            label: words.openFolder,
             icon: FolderOpen,
-            onSelect: () =>
-              attempt("Could not open the folder", () => host.openPath(bot.workspace)),
+            onSelect: () => attempt(words.failed.openFolder, () => host.openPath(bot.workspace)),
           },
-          { label: "Archive bot", icon: Archive, danger: true, onSelect: () => setOpen("archive") },
+          { label: words.archive, icon: Archive, danger: true, onSelect: () => setOpen("archive") },
         ]}
       />
 
       {open === "edit" && <BotDialog bot={bot} onClose={close} />}
       {open === "fresh" && (
         <Confirm
-          title="Start a new conversation?"
-          confirmLabel="Restart"
+          title={words.fresh.title}
+          confirmLabel={words.fresh.confirm}
           onClose={close}
           onConfirm={() => restart(true)}
         >
-          {bot.name} restarts without its current conversation. Its folder and its CLAUDE.md stay as
-          they are.
+          {words.fresh.body(bot.name)}
         </Confirm>
       )}
       {open === "archive" && (
         <Confirm
-          title={`Archive ${bot.name}?`}
-          confirmLabel="Archive bot"
+          title={words.archiveConfirm.title(bot.name)}
+          confirmLabel={words.archiveConfirm.confirm}
           onClose={close}
           onConfirm={() =>
-            attempt("Could not archive the bot", async () =>
+            attempt(words.failed.archive, async () =>
               putBot(await api.call("bots.archive", { botId: bot.id })),
             )
           }
         >
-          The bot stops and leaves the crew. Messages still waiting for it are not delivered.
+          {words.archiveConfirm.body}
         </Confirm>
       )}
     </header>

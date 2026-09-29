@@ -613,6 +613,16 @@ Identidade: o mascote do Botloft é uma chama com olhos, desenhada em vetor em `
 - Os artefatos são assinados com a chave do updater do Tauri (`createUpdaterArtifacts`), e a chave pública fica no `tauri.conf.json`. `requireSignedVersion` exige que a assinatura traga a versão, para um feed adulterado não empurrar uma versão antiga de volta. O instalador não tem assinatura Authenticode, então o SmartScreen avisa na primeira execução.
 - Release: a versão fica só no `[workspace.package]` do `Cargo.toml` (o `tauri.conf.json` não repete a versão e usa a do crate). Um push de tag `vX.Y.Z` roda `.github/workflows/release.yml`, que confere tag e versão, roda `pnpm bundle` com `TAURI_SIGNING_PRIVATE_KEY` (segredo do repositório) e abre um release **rascunho** com o instalador, o `.sig` e o `latest.json` (`app/scripts/release.mjs`). O updater só enxerga o release depois que o dono o publica.
 
+### 15.6 Idiomas
+
+- O app fala **inglês, português (Brasil) e espanhol**. Todo texto que o dono lê fica em `app/src/i18n/<idioma>/`, um arquivo por área (`common`, `shell`, `onboarding`, `updates`, `bots`, `chat`, `crews`, `messages`). O inglês é a referência: o formato dele é o tipo `Messages`, e um texto que falte ou sobre em outro idioma não compila. Texto com valores é função (`ready(version)`), com o plural escrito para cada idioma.
+- Componentes leem com `useT()`; código fora do React (toasts, formatação, erros da conexão) com `t()` na hora do uso.
+- Escolha no botão de idioma da barra de título (também nas telas de preparo): "Idioma do sistema" segue o Windows (o primeiro idioma suportado entre os preferidos; `pt-PT` vira `pt-BR`; nenhum, inglês) ou um idioma fixo. A escolha fica no `localStorage` do app (`botloft.locale`) e marca `<html lang>`.
+- Datas e horas (`lib/format.ts`) usam o idioma escolhido.
+- O daemon não escreve texto para o dono: avisos vêm com `code` e a linha da conversa com `kind` (8.2, 11.2), e o app escreve. Continuam como vêm: nomes, mensagens, respostas e saídas de ferramenta; o resumo de ferramenta que o daemon faz a partir da entrada (o comando, o arquivo); e as mensagens de erro do daemon (validação, falhas), mostradas como texto técnico.
+- O instalador NSIS também traz os três idiomas e escolhe pelo idioma do Windows.
+- Tom: palavras simples, sem jargão; "você" em português, "tú" em espanhol. Glossário: crew = equipe / equipo; task = tarefa / tarea; Allow / Deny = Permitir / Negar / Denegar; role = função / rol.
+
 ## 16. Qualidade
 
 - Rust: `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`.

@@ -7,6 +7,7 @@ import { ExternalLink, ImageOff } from "lucide-react";
 import { memo, type ReactNode } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useT } from "../../i18n";
 import { useHost } from "../../store/context";
 import { attempt } from "../../ui/toast";
 
@@ -16,6 +17,7 @@ function isWeb(href: string | undefined): href is string {
 
 function Link({ href, children }: { href: string | undefined; children?: ReactNode }) {
   const host = useHost();
+  const t = useT();
   if (!isWeb(href)) {
     return <span className="underline decoration-dotted">{children}</span>;
   }
@@ -25,7 +27,7 @@ function Link({ href, children }: { href: string | undefined; children?: ReactNo
       title={href}
       onClick={(event) => {
         event.preventDefault();
-        void attempt("Could not open the link", () => host.openUrl(href));
+        void attempt(t.chat.markdown.openLinkFailed, () => host.openUrl(href));
       }}
       className="text-work underline decoration-1 underline-offset-2 hover:decoration-2"
     >
@@ -35,7 +37,8 @@ function Link({ href, children }: { href: string | undefined; children?: ReactNo
 }
 
 function Picture({ src, alt }: { src: string | Blob | undefined; alt: string | undefined }) {
-  const label = alt || "image";
+  const t = useT();
+  const label = alt || t.chat.markdown.image;
   const href = typeof src === "string" ? src : undefined;
   return (
     <span className="inline-flex items-center gap-1 text-muted">

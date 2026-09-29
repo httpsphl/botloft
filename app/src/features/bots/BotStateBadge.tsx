@@ -11,6 +11,7 @@ import {
   Power,
   RotateCw,
 } from "lucide-react";
+import { type Messages, t, useT } from "../../i18n";
 import type { Bot, BotState } from "../../lib/protocol.gen";
 
 type Tone = "ok" | "work" | "warn" | "danger" | "quiet";
@@ -24,57 +25,38 @@ export interface StateView {
   hint: string;
 }
 
-const views: Record<BotState, StateView> = {
-  offline: { label: "Offline", tone: "quiet", icon: Power, hint: "Not running." },
-  launching: {
-    label: "Starting",
-    tone: "work",
-    icon: LoaderCircle,
-    spin: true,
-    hint: "Claude Code is starting.",
-  },
-  idle: { label: "Idle", tone: "ok", icon: CircleDot, hint: "Ready for work." },
-  busy: { label: "Working", tone: "work", icon: Activity, hint: "Working on something." },
-  needs_approval: {
-    label: "Needs approval",
-    tone: "warn",
-    icon: Hand,
-    hint: "Waiting for you to allow or deny a tool in its chat.",
-  },
-  rate_limited: {
-    label: "Usage limit",
-    tone: "warn",
-    icon: Hourglass,
-    hint: "Your Claude plan hit its usage limit; messages wait until it resets.",
-  },
-  auth_error: {
-    label: "Sign-in needed",
-    tone: "danger",
-    icon: KeyRound,
-    hint: "Claude Code is not signed in, or the account can't be used. Sign in to Claude and the bot starts again by itself. Already signed in? Check your Claude plan, then restart the bot.",
-  },
-  backoff: {
-    label: "Restarting",
-    tone: "warn",
-    icon: RotateCw,
-    hint: "It stopped unexpectedly; Botloft starts it again shortly.",
-  },
-  archived: { label: "Archived", tone: "quiet", icon: Archive, hint: "Archived." },
+/** How a state looks; its words come from the current language. */
+type Look = Omit<StateView, "label" | "hint">;
+
+const looks: Record<BotState, Look> = {
+  offline: { tone: "quiet", icon: Power },
+  launching: { tone: "work", icon: LoaderCircle, spin: true },
+  idle: { tone: "ok", icon: CircleDot },
+  busy: { tone: "work", icon: Activity },
+  needs_approval: { tone: "warn", icon: Hand },
+  rate_limited: { tone: "warn", icon: Hourglass },
+  auth_error: { tone: "danger", icon: KeyRound },
+  backoff: { tone: "warn", icon: RotateCw },
+  archived: { tone: "quiet", icon: Archive },
 };
 
-const paused: StateView = {
-  label: "Paused",
-  tone: "quiet",
-  icon: Pause,
-  hint: "Paused; resume to start it.",
-};
+const pausedLook: Look = { tone: "quiet", icon: Pause };
 
-/** How a bot's state reads in the UI. Paused and stopped reads as paused. */
-export function stateView(bot: Pick<Bot, "state" | "paused">, crewPaused = false): StateView {
+/**
+ * How a bot's state reads in the UI. Paused and stopped reads as paused.
+ * Components pass the messages from `useT()` so they follow a language
+ * change; other callers get the current language.
+ */
+export function stateView(
+  bot: Pick<Bot, "state" | "paused">,
+  crewPaused = false,
+  messages: Messages = t(),
+): StateView {
+  const words = messages.bots.states;
   if ((bot.paused || crewPaused) && bot.state === "offline") {
-    return paused;
+    return { ...pausedLook, ...words.paused };
   }
-  return views[bot.state];
+  return { ...looks[bot.state], ...words[bot.state] };
 }
 
 const toneText: Record<Tone, string> = {
@@ -94,7 +76,8 @@ export function BotStateBadge({
   crewPaused?: boolean;
   compact?: boolean;
 }) {
-  const view = stateView(bot, crewPaused);
+  const messages = useT();
+  const view = stateView(bot, crewPaused, messages);
   const Icon = view.icon;
   return (
     <span

@@ -2,6 +2,7 @@
 // another bot's or Botloft's on the left under its name (spec 15.3).
 
 import { ListTodo, Reply } from "lucide-react";
+import { useT } from "../../i18n";
 import { when } from "../../lib/format";
 import type { Bot, Message } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
@@ -39,6 +40,7 @@ function OwnerMessage({ message, bot }: { message: Message; bot: Bot }) {
 }
 
 function TaskTag({ message }: { message: Message }) {
+  const t = useT();
   if (message.kind !== "task" && message.kind !== "result") {
     return null;
   }
@@ -46,16 +48,17 @@ function TaskTag({ message }: { message: Message }) {
   return (
     <span className="inline-flex items-center gap-1 rounded-[3px] border border-line px-1.5 text-muted text-xs">
       <Icon aria-hidden size={11} />
-      {message.kind === "task" ? "Task" : "Result"}
+      {message.kind === "task" ? t.chat.inbound.task : t.chat.inbound.result}
     </span>
   );
 }
 
 function OtherMessage({ message }: { message: Message }) {
+  const t = useT();
   const sender = useApp((state) => (message.fromBotId ? state.bots[message.fromBotId] : undefined));
   const delivery = useApp((state) => state.deliveries[message.id]);
   const system = message.fromKind === "system";
-  const name = system ? "Botloft" : (sender?.name ?? "An archived bot");
+  const name = system ? "Botloft" : (sender?.name ?? t.chat.inbound.archivedBot);
   return (
     <li className="flex gap-3 pr-16">
       <BotAvatar color={system ? "#ffffff" : (sender?.color ?? "#6f6f69")} size={28} />

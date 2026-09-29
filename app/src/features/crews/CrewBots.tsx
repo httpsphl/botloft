@@ -1,4 +1,5 @@
 import { Plus } from "lucide-react";
+import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
@@ -7,16 +8,15 @@ import { BotStateBadge } from "../bots/BotStateBadge";
 
 /** The crew's bots as cards; a card opens the bot. */
 export function CrewBots({ crew, bots, onNewBot }: { crew: Crew; bots: Bot[]; onNewBot(): void }) {
+  const t = useT();
   const selectBot = useApp((state) => state.selectBot);
   if (bots.length === 0) {
     return (
       <div className="border border-line border-dashed px-6 py-10 text-center">
-        <p className="font-medium">No bots in {crew.name} yet.</p>
-        <p className="mt-1 text-muted text-sm">
-          A bot is a Claude Code session that keeps running, with its own folder and role.
-        </p>
+        <p className="font-medium">{t.crews.bots.empty(crew.name)}</p>
+        <p className="mt-1 text-muted text-sm">{t.crews.bots.emptyHint}</p>
         <Button className="mt-4" variant="primary" icon={Plus} onClick={onNewBot}>
-          New bot
+          {t.crews.newBot}
         </Button>
       </div>
     );
@@ -38,7 +38,7 @@ export function CrewBots({ crew, bots, onNewBot }: { crew: Crew; bots: Bot[]; on
               </div>
             </div>
             <p className="line-clamp-2 min-h-10 text-ink-soft text-sm">
-              {bot.role || "No role yet."}
+              {bot.role || t.crews.bots.noRole}
             </p>
             <BotStateBadge bot={bot} crewPaused={crew.paused} />
           </button>

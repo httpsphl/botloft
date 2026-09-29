@@ -1,6 +1,7 @@
 import { CircleX, RotateCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { useT } from "../../i18n";
 import { when } from "../../lib/format";
 import type { Delivery, Message, MessageId } from "../../lib/protocol.gen";
 import type { AppState } from "../../store/app";
@@ -21,6 +22,7 @@ export function actionableDead(state: AppState): Delivery[] {
 
 /** Title-bar button for messages that were not delivered, with a list to retry them. */
 export function FailedDeliveries() {
+  const t = useT();
   const dead = useApp(useShallow(actionableDead));
   const [open, setOpen] = useState(false);
   if (dead.length === 0) {
@@ -34,7 +36,7 @@ export function FailedDeliveries() {
         className="mr-1 flex h-7 items-center gap-1.5 px-2 font-medium text-danger text-xs hover:bg-sunken"
       >
         <CircleX aria-hidden size={13} />
-        {dead.length} not delivered
+        {t.messages.failed.button(dead.length)}
       </button>
       {open && <FailedDialog dead={dead} onClose={() => setOpen(false)} />}
     </>
@@ -43,6 +45,8 @@ export function FailedDeliveries() {
 
 function FailedDialog({ dead, onClose }: { dead: Delivery[]; onClose(): void }) {
   const api = useApi();
+  const t = useT();
+  const text = t.messages.failed;
   const bots = useApp((state) => state.bots);
   const putDelivery = useApp((state) => state.putDelivery);
   const [bodies, setBodies] = useState<Record<MessageId, Message>>({});
@@ -68,18 +72,18 @@ function FailedDialog({ dead, onClose }: { dead: Delivery[]; onClose(): void }) 
   }, [api, botIds]);
 
   const retry = (delivery: Delivery) =>
-    attempt("Could not retry the delivery", async () =>
+    attempt(t.messages.delivery.retryFailed, async () =>
       putDelivery(await api.call("deliveries.retry", { deliveryId: delivery.id })),
     );
 
   return (
     <Dialog
-      title="Messages not delivered"
+      title={text.title}
       onClose={onClose}
       width="lg"
       footer={
         <>
-          <Button onClick={onClose}>Close</Button>
+          <Button onClick={onClose}>{t.common.close}</Button>
           <Button
             variant="primary"
             icon={RotateCw}
@@ -89,15 +93,12 @@ function FailedDialog({ dead, onClose }: { dead: Delivery[]; onClose(): void }) 
               }
             }}
           >
-            Retry all
+            {text.retryAll}
           </Button>
         </>
       }
     >
-      <p className="mb-3 text-ink-soft text-sm">
-        Botloft stopped trying after several attempts. Retrying puts a message back in line; it goes
-        out when the bot is ready.
-      </p>
+      <p className="mb-3 text-ink-soft text-sm">{text.explanation}</p>
       <ul className="flex flex-col border border-line">
         {dead.map((delivery) => {
           const bot = bots[delivery.botId];
@@ -106,10 +107,9 @@ function FailedDialog({ dead, onClose }: { dead: Delivery[]; onClose(): void }) 
             <li key={delivery.id} className="border-line border-b p-3 last:border-b-0">
               <div className="flex items-center gap-2 text-sm">
                 {bot && <BotAvatar color={bot.color} size={14} />}
-                <span className="font-medium">To {bot?.name}</span>
+                <span className="font-medium">{text.to(bot?.name ?? "")}</span>
                 <span className="text-muted text-xs">
-                  {when(delivery.updatedAt)} · {delivery.attempts}{" "}
-                  {delivery.attempts === 1 ? "try" : "tries"}
+                  {when(delivery.updatedAt)} · {text.tries(delivery.attempts)}
                 </span>
                 <Button
                   size="sm"
@@ -117,7 +117,7 @@ function FailedDialog({ dead, onClose }: { dead: Delivery[]; onClose(): void }) 
                   className="ml-auto"
                   onClick={() => retry(delivery)}
                 >
-                  Retry
+                  {t.messages.delivery.retry}
                 </Button>
               </div>
               {delivery.lastError && (

@@ -6,6 +6,7 @@
     "windows": {
       "nsis": {
         "installMode": "currentUser",
+        "languages": ["English", "PortugueseBR", "Spanish"],
         "installerHooks": "./windows/hooks.nsh"
       }
     }

@@ -1,6 +1,7 @@
 import { SendHorizontal } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, useId, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { useT } from "../../i18n";
 import { errorText } from "../../lib/api";
 import { type BotId, type CrewId, FIELD_LIMITS, type Message } from "../../lib/protocol.gen";
 import { botsOf } from "../../store/app";
@@ -21,6 +22,7 @@ export function Composer({
   onSent(message: Message): void;
 }) {
   const api = useApi();
+  const t = useT();
   const bots = useApp(useShallow((state) => botsOf(state, crewId)));
   const [chosen, setChosen] = useState<BotId | null>(null);
   const [body, setBody] = useState("");
@@ -62,13 +64,13 @@ export function Composer({
     <form onSubmit={send} className="shrink-0 border-line border-t bg-panel px-5 py-3">
       <div className="mb-1.5 flex items-center gap-2 text-sm">
         <label htmlFor={fieldId} className="font-medium text-ink-soft">
-          Message to
+          {t.messages.composer.messageTo}
         </label>
         {botId ? (
           <span className="font-medium">{recipient?.name}</span>
         ) : (
           <select
-            aria-label="Recipient"
+            aria-label={t.messages.composer.recipient}
             value={to ?? ""}
             onChange={(event) => setChosen(event.target.value)}
             className="h-7 rounded-[3px] border border-line-strong bg-canvas px-1.5 text-sm"
@@ -91,7 +93,7 @@ export function Composer({
           rows={3}
           onChange={(event) => setBody(event.target.value)}
           onKeyDown={onKeyDown}
-          placeholder={`Write to @${recipient?.handle ?? "bot"}. Ctrl+Enter sends.`}
+          placeholder={t.messages.composer.placeholder(recipient?.handle)}
           className="min-h-16 flex-1 resize-y rounded-[3px] border border-line-strong bg-canvas px-2.5 py-2 text-sm leading-relaxed outline-none placeholder:text-muted focus:border-accent"
         />
         <Button
@@ -100,7 +102,7 @@ export function Composer({
           icon={SendHorizontal}
           disabled={busy || !body.trim() || tooLong}
         >
-          Send
+          {t.messages.composer.send}
         </Button>
       </div>
       {error && (

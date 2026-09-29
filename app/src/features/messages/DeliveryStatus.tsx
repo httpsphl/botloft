@@ -1,4 +1,5 @@
 import { CheckCheck, CircleCheck, CircleX, Clock, LoaderCircle, RotateCw } from "lucide-react";
+import { useT } from "../../i18n";
 import { fromNow } from "../../lib/format";
 import type { Delivery } from "../../lib/protocol.gen";
 import { useApi, useApp } from "../../store/context";
@@ -8,6 +9,8 @@ import { attempt } from "../../ui/toast";
 /** Where a message is on its way to the bot (spec 9.1). */
 export function DeliveryStatus({ delivery }: { delivery: Delivery }) {
   const api = useApi();
+  const t = useT();
+  const text = t.messages.delivery;
   const putDelivery = useApp((state) => state.putDelivery);
   const line = "flex items-center gap-1.5 text-xs";
 
@@ -16,19 +19,19 @@ export function DeliveryStatus({ delivery }: { delivery: Delivery }) {
       return delivery.readAt === null ? (
         <p className={`${line} text-muted`}>
           <CircleCheck aria-hidden size={12} />
-          Delivered
+          {text.delivered}
         </p>
       ) : (
-        <p className={`${line} text-muted`} title="The bot began working on it">
+        <p className={`${line} text-muted`} title={text.readTitle}>
           <CheckCheck aria-hidden size={12} />
-          Read
+          {text.read}
         </p>
       );
     case "sending":
       return (
         <p className={`${line} text-work`}>
           <LoaderCircle aria-hidden size={12} className="animate-spin" />
-          Delivering
+          {text.delivering}
         </p>
       );
     case "pending":
@@ -36,8 +39,8 @@ export function DeliveryStatus({ delivery }: { delivery: Delivery }) {
         <p className={`${line} ${delivery.attempts > 0 ? "text-warn" : "text-muted"}`}>
           <Clock aria-hidden size={12} />
           {delivery.attempts > 0
-            ? `Retrying ${fromNow(delivery.nextAttemptAt)}, after ${delivery.attempts} failed ${delivery.attempts === 1 ? "try" : "tries"}`
-            : "Waiting for the bot"}
+            ? text.retrying(fromNow(delivery.nextAttemptAt), delivery.attempts)
+            : text.waiting}
           {delivery.lastError && <span className="text-muted">· {delivery.lastError}</span>}
         </p>
       );
@@ -45,7 +48,7 @@ export function DeliveryStatus({ delivery }: { delivery: Delivery }) {
       return (
         <div className={`${line} flex-wrap text-danger`}>
           <CircleX aria-hidden size={12} />
-          <span className="font-medium">Not delivered</span>
+          <span className="font-medium">{text.notDelivered}</span>
           {delivery.lastError && <span className="text-ink-soft">· {delivery.lastError}</span>}
           <Button
             size="sm"
@@ -53,12 +56,12 @@ export function DeliveryStatus({ delivery }: { delivery: Delivery }) {
             icon={RotateCw}
             className="ml-1"
             onClick={() =>
-              attempt("Could not retry the delivery", async () =>
+              attempt(text.retryFailed, async () =>
                 putDelivery(await api.call("deliveries.retry", { deliveryId: delivery.id })),
               )
             }
           >
-            Retry
+            {text.retry}
           </Button>
         </div>
       );

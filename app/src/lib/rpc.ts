@@ -1,6 +1,7 @@
 // JSON-RPC 2.0 over WebSocket to botloftd (spec 11): `session.hello`
 // first, requests queued while disconnected, and reconnection with backoff.
 
+import { t } from "../i18n";
 import {
   type ClientInfo,
   type HelloResult,
@@ -110,13 +111,13 @@ export class RpcConnection {
     clearTimeout(this.retryTimer);
     this.setState({ kind: "closed" });
     this.dropSocket();
-    this.failAll(new RpcError(ClientErrorCode.closed, "the connection was closed"));
+    this.failAll(new RpcError(ClientErrorCode.closed, t().common.errors.closed));
   }
 
   request<M extends Method>(method: M, ...params: ParamsArg<M>): Promise<Result<M>> {
     return new Promise<Result<M>>((resolve, reject) => {
       if (this.state.kind === "closed" || this.state.kind === "failed") {
-        reject(new RpcError(ClientErrorCode.closed, "not connected to Botloft"));
+        reject(new RpcError(ClientErrorCode.closed, t().common.errors.notConnected));
         return;
       }
       const pending: Pending = {
@@ -196,7 +197,9 @@ export class RpcConnection {
     const id = this.nextId++;
     pending.timer = setTimeout(() => {
       this.inflight.delete(id);
-      pending.reject(new RpcError(ClientErrorCode.timeout, `${pending.method} timed out`));
+      pending.reject(
+        new RpcError(ClientErrorCode.timeout, t().common.errors.timedOut(pending.method)),
+      );
     }, this.options.requestTimeoutMs);
     this.inflight.set(id, pending);
     const frame: Record<string, unknown> = { jsonrpc: "2.0", id, method: pending.method };
@@ -251,7 +254,7 @@ export class RpcConnection {
       this.inflight.delete(id);
       clearTimeout(pending.timer);
       pending.reject(
-        new RpcError(ClientErrorCode.connectionLost, "lost the connection to Botloft"),
+        new RpcError(ClientErrorCode.connectionLost, t().common.errors.connectionLost),
       );
     }
     if (this.state.kind === "failed" || this.state.kind === "closed") {

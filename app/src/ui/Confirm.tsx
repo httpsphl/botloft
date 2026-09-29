@@ -1,4 +1,5 @@
 import { type ReactNode, useState } from "react";
+import { useT } from "../i18n";
 import { Button } from "./Button";
 import { Dialog } from "./Dialog";
 
@@ -16,6 +17,7 @@ export function Confirm({
   onConfirm(): Promise<unknown>;
   onClose(): void;
 }) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const confirm = async () => {
     setBusy(true);
@@ -32,7 +34,7 @@ export function Confirm({
       onClose={onClose}
       footer={
         <>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={onClose}>{t.common.cancel}</Button>
           <Button variant="danger" disabled={busy} onClick={confirm}>
             {confirmLabel}
           </Button>

@@ -3,6 +3,7 @@
 // also shows the reply being written.
 
 import { CircleAlert } from "lucide-react";
+import { useT } from "../../i18n";
 import { duration, when } from "../../lib/format";
 import type { Bot, ChatItem, TurnItem } from "../../lib/protocol.gen";
 import { BotAvatar } from "../bots/BotAvatar";
@@ -19,25 +20,31 @@ export interface Live {
 }
 
 function TurnEnd({ turn }: { turn: TurnItem }) {
+  const t = useT();
   if (turn.error) {
     return (
       <p className="flex items-center gap-1.5 text-danger text-xs">
         <CircleAlert aria-hidden size={12} />
-        The turn stopped: {turn.error.replaceAll("_", " ")}
+        {t.chat.run.stopped(turn.error.replaceAll("_", " "))}
       </p>
     );
   }
-  const cost = turn.costUsd === null ? "" : ` · about $${turn.costUsd.toFixed(2)} of usage`;
+  const time = duration(turn.durationMs);
   return (
-    <p className="text-muted text-xs" title={`Took ${duration(turn.durationMs)}${cost}`}>
-      Done in {duration(turn.durationMs)}
+    <p className="text-muted text-xs" title={t.chat.run.took(time, turn.costUsd)}>
+      {t.chat.run.done(time)}
     </p>
   );
 }
 
 function Working() {
+  const t = useT();
   return (
-    <p role="status" className="flex items-center gap-1 py-1 text-muted" aria-label="Working">
+    <p
+      role="status"
+      className="flex items-center gap-1 py-1 text-muted"
+      aria-label={t.chat.run.working}
+    >
       {[0, 150, 300].map((delay) => (
         <span
           key={delay}

@@ -12,12 +12,14 @@ import { ClaudeCodeHelp } from "../features/onboarding/ClaudeCodeHelp";
 import { SignInButton } from "../features/onboarding/SignIn";
 import { Welcome } from "../features/onboarding/Welcome";
 import { UpdateButton } from "../features/updates/UpdateButton";
+import { useT } from "../i18n";
 import { useApp } from "../store/context";
 import { Callout } from "../ui/Callout";
 import { useAttentionMark } from "./attention";
 import { TitleBar } from "./TitleBar";
 
 export function Workspace() {
+  const t = useT();
   const loaded = useApp((state) => state.loaded);
   const loadError = useApp((state) => state.loadError);
   const hasCrews = useApp((state) => Object.keys(state.crews).length > 0);
@@ -29,7 +31,7 @@ export function Workspace() {
   if (loadError) {
     main = (
       <div className="p-6">
-        <Callout tone="danger" title="Could not load your crews">
+        <Callout tone="danger" title={t.shell.loadFailed}>
           {loadError}
         </Callout>
       </div>
@@ -45,16 +47,15 @@ export function Workspace() {
         <main className="flex min-w-0 flex-1 flex-col">
           {runtimeError ? (
             <div className="border-line border-b p-3">
-              <Callout tone="danger" title="Bots can't start">
+              <Callout tone="danger" title={t.shell.botsCantStart}>
                 <ClaudeCodeHelp error={runtimeError} />
               </Callout>
             </div>
           ) : (
             signedOut && (
               <div className="border-line border-b p-3">
-                <Callout tone="danger" title="Sign in to Claude">
-                  Your bots work with your Claude account. Sign in once and they start by
-                  themselves.
+                <Callout tone="danger" title={t.shell.signIn.title}>
+                  {t.shell.signIn.body}
                   <SignInButton />
                 </Callout>
               </div>
@@ -85,6 +86,7 @@ export function Workspace() {
 }
 
 function Selection() {
+  const t = useT();
   const crew = useApp((state) => (state.selectedCrewId ? state.crews[state.selectedCrewId] : null));
   const bot = useApp((state) => (state.selectedBotId ? state.bots[state.selectedBotId] : null));
   if (crew && bot) {
@@ -93,9 +95,7 @@ function Selection() {
   if (crew) {
     return <CrewView key={crew.id} crew={crew} />;
   }
-  return (
-    <p className="p-6 text-muted">Pick a crew on the left, or create one with the + button.</p>
-  );
+  return <p className="p-6 text-muted">{t.shell.pickCrew}</p>;
 }
 
 function Breadcrumb() {
@@ -128,6 +128,7 @@ function Breadcrumb() {
 
 /** Shown only when the connection is not healthy. */
 function ConnectionStatus() {
+  const t = useT();
   const connection = useApp((state) => state.connection);
   if (connection.kind === "open") {
     return null;
@@ -140,7 +141,7 @@ function ConnectionStatus() {
       className={`mr-1 flex items-center gap-1.5 px-2 font-medium text-xs ${lost ? "text-danger" : "text-warn"}`}
     >
       <Icon aria-hidden size={13} className={lost ? "" : "animate-spin"} />
-      {lost ? "Disconnected" : "Reconnecting…"}
+      {lost ? t.shell.connection.lost : t.shell.connection.reconnecting}
     </span>
   );
 }
