@@ -73,7 +73,7 @@ export function Composer({
             aria-label={t.messages.composer.recipient}
             value={to ?? ""}
             onChange={(event) => setChosen(event.target.value)}
-            className="h-7 rounded-[3px] border border-line-strong bg-canvas px-1.5 text-sm"
+            className="h-7 rounded-lg border border-line-strong bg-canvas px-1.5 text-sm"
           >
             {bots.map((bot) => (
               <option key={bot.id} value={bot.id}>
@@ -94,7 +94,7 @@ export function Composer({
           onChange={(event) => setBody(event.target.value)}
           onKeyDown={onKeyDown}
           placeholder={t.messages.composer.placeholder(recipient?.handle)}
-          className="min-h-16 flex-1 resize-y rounded-[3px] border border-line-strong bg-canvas px-2.5 py-2 text-sm leading-relaxed outline-none placeholder:text-muted focus:border-accent"
+          className="min-h-16 flex-1 resize-y rounded-xl border border-line-strong bg-canvas px-2.5 py-2 text-sm leading-relaxed outline-none placeholder:text-muted focus:border-accent"
         />
         <Button
           variant="primary"

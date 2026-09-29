@@ -32,7 +32,7 @@ export function Sidebar() {
             onClick={() => setCreating(true)}
           />
         </div>
-        <ul className="min-h-0 flex-1 overflow-y-auto pb-3">
+        <ul className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
           {crews.map((crew) => (
             <CrewEntry key={crew.id} crew={crew} />
           ))}
@@ -44,8 +44,7 @@ export function Sidebar() {
   );
 }
 
-const row = "relative flex w-full items-center text-left hover:bg-sunken";
-const marker = "before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-accent";
+const row = "relative flex w-full items-center rounded-lg text-left hover:bg-sunken";
 
 function CrewEntry({ crew }: { crew: Crew }) {
   const t = useT();
@@ -59,7 +58,7 @@ function CrewEntry({ crew }: { crew: Crew }) {
         type="button"
         aria-current={selected ? "page" : undefined}
         onClick={() => selectCrew(crew.id)}
-        className={`${row} h-8 gap-2 pr-3 pl-4 font-semibold text-sm ${selected ? `bg-sunken ${marker}` : ""}`}
+        className={`${row} h-8 gap-2 px-2.5 font-semibold text-sm ${selected ? "bg-sunken" : ""}`}
       >
         <span className="min-w-0 flex-1 truncate">{crew.name}</span>
         {crew.paused && (
@@ -90,7 +89,7 @@ function Conversation({ bot, crew }: { bot: Bot; crew: Crew }) {
         aria-current={selected ? "page" : undefined}
         aria-label={`${bot.name}, ${stateView(bot, crew.paused).label}`}
         onClick={() => selectBot(bot.id)}
-        className={`${row} gap-2.5 py-2 pr-3 pl-4 ${selected ? `bg-sunken ${marker}` : ""}`}
+        className={`${row} gap-2.5 px-2.5 py-2 ${selected ? "bg-sunken" : ""}`}
       >
         <BotAvatar color={bot.color} size={32} />
         <span className="min-w-0 flex-1">

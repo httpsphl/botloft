@@ -25,7 +25,7 @@ export function BotAvatar({
       height={size}
       // A little room around the body, so its edge is not cut at the sides.
       viewBox={framed ? "0 0 1254 1254" : "-24 -24 1302 1302"}
-      className={`shrink-0 ${framed ? "rounded-[3px] bg-[#0b0b0b]" : ""}`}
+      className={`shrink-0 ${framed ? "rounded-lg bg-[#0b0b0b]" : ""}`}
     >
       <path
         d={BODY}

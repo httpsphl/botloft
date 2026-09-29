@@ -43,7 +43,7 @@ function FileCard({
       ? FileText
       : File;
   return (
-    <div className="flex w-64 max-w-full items-center gap-2.5 rounded-md border border-line bg-panel py-2 pr-1.5 pl-2.5">
+    <div className="flex w-64 max-w-full items-center gap-2.5 rounded-xl border border-line bg-panel py-2 pr-1.5 pl-2.5">
       <Icon aria-hidden size={22} className="shrink-0 text-muted" />
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium text-sm" title={attachment.name}>
@@ -64,7 +64,7 @@ function FileCard({
               host.openPath(attachmentFolder(workspace, attachment)),
             )
           }
-          className="grid h-7 w-7 shrink-0 place-items-center rounded-[3px] text-muted hover:bg-sunken hover:text-ink"
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-muted hover:bg-sunken hover:text-ink"
         >
           <FolderOpen aria-hidden size={14} />
         </button>
@@ -93,7 +93,7 @@ function Thumbnail({
   }
   if (source.kind === "loading") {
     return (
-      <div className="grid h-32 w-44 place-items-center rounded-md border border-line bg-sunken">
+      <div className="grid h-32 w-44 place-items-center rounded-xl border border-line bg-sunken">
         <LoaderCircle
           aria-label={t.chat.attachments.loading(attachment.name)}
           className="animate-spin text-muted"
@@ -106,7 +106,7 @@ function Thumbnail({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="overflow-hidden rounded-md border border-line bg-sunken"
+        className="overflow-hidden rounded-xl border border-line bg-sunken"
         title={attachment.name}
       >
         <img

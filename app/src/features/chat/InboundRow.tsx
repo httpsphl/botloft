@@ -21,11 +21,11 @@ function Time({ at }: { at: number }) {
 function OwnerMessage({ message, bot }: { message: Message; bot: Bot }) {
   const delivery = useApp((state) => state.deliveries[message.id]);
   return (
-    <li className="flex flex-col items-end gap-1.5 pl-16">
+    <li className="flex flex-col items-end gap-1.5 pl-12">
       <AttachmentList attachments={message.attachments} workspace={bot.workspace} align="end" />
       {message.body && (
         <p
-          className="max-w-[42rem] whitespace-pre-wrap break-words rounded-lg rounded-br-sm bg-sunken px-3.5 py-2 leading-relaxed"
+          className="max-w-[36rem] whitespace-pre-wrap break-words rounded-2xl rounded-br-md bg-sunken px-4 py-2.5 leading-relaxed"
           data-selectable
         >
           {message.body}
@@ -46,7 +46,7 @@ function TaskTag({ message }: { message: Message }) {
   }
   const Icon = message.kind === "task" ? ListTodo : Reply;
   return (
-    <span className="inline-flex items-center gap-1 rounded-[3px] border border-line px-1.5 text-muted text-xs">
+    <span className="inline-flex items-center gap-1 rounded-md border border-line px-1.5 text-muted text-xs">
       <Icon aria-hidden size={11} />
       {message.kind === "task" ? t.chat.inbound.task : t.chat.inbound.result}
     </span>
@@ -60,7 +60,7 @@ function OtherMessage({ message }: { message: Message }) {
   const system = message.fromKind === "system";
   const name = system ? "Botloft" : (sender?.name ?? t.chat.inbound.archivedBot);
   return (
-    <li className="flex gap-3 pr-16">
+    <li className="flex gap-3 pr-12">
       <BotAvatar
         color={system ? "#ffffff" : (sender?.color ?? "#6f6f69")}
         size={28}
@@ -74,7 +74,7 @@ function OtherMessage({ message }: { message: Message }) {
           <Time at={message.createdAt} />
         </div>
         <p
-          className={`mt-1 max-w-[42rem] whitespace-pre-wrap break-words rounded-lg rounded-tl-sm border border-line bg-panel px-3.5 py-2 leading-relaxed ${system ? "text-ink-soft" : ""}`}
+          className={`mt-1 max-w-[36rem] whitespace-pre-wrap break-words rounded-2xl rounded-tl-md border border-line bg-panel px-4 py-2.5 leading-relaxed ${system ? "text-ink-soft" : ""}`}
           data-selectable
         >
           {message.body}

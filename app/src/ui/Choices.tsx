@@ -23,7 +23,7 @@ export function Choices<T extends string | number>({
         return (
           <label
             key={String(option.value)}
-            className={`flex h-8 cursor-pointer items-center border px-3 text-sm has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-accent ${
+            className={`flex h-8 cursor-pointer items-center rounded-lg border px-3 text-sm has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-accent ${
               chosen
                 ? "border-ink bg-ink text-canvas"
                 : "border-line-strong bg-panel text-ink hover:bg-sunken"

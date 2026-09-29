@@ -12,11 +12,13 @@ import {
   Settings,
   Sparkles,
 } from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useRef, useState } from "react";
 import { LOCALES, setLocaleChoice, systemLocale, useLocale, useT } from "../../i18n";
 import type { ClaudeAccount } from "../../lib/protocol.gen";
 import { useApp, useHost } from "../../store/context";
+import { POPOVER, POPOVER_ITEM } from "../../ui/surface";
 import { attempt } from "../../ui/toast";
+import { useDismiss } from "../../ui/useDismiss";
 import { SettingsDialog } from "./SettingsDialog";
 import { UsageDialog } from "./UsageDialog";
 
@@ -37,23 +39,11 @@ export function AccountArea() {
   const [dialog, setDialog] = useState<"usage" | "settings" | null>(null);
   const root = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const onPointer = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-    const onKey = (event: KeyboardEvent) => event.key === "Escape" && setOpen(false);
-    window.addEventListener("pointerdown", onPointer);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("pointerdown", onPointer);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  useDismiss(
+    open,
+    root,
+    useCallback(() => setOpen(false), []),
+  );
 
   const name = account?.name.trim() || "Botloft";
   const detail = describe(account?.claude ?? null, signedOut, a);
@@ -78,7 +68,7 @@ export function AccountArea() {
         aria-expanded={open}
         aria-label={a.open(name)}
         onClick={() => setOpen(!open)}
-        className={`flex w-full items-center gap-2.5 px-2 py-1.5 text-left hover:bg-sunken ${open ? "bg-sunken" : ""}`}
+        className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-sunken ${open ? "bg-sunken" : ""}`}
       >
         <span
           aria-hidden
@@ -135,10 +125,10 @@ function AccountMenu({
     <div
       role="menu"
       aria-label={name}
-      className="absolute right-2 bottom-full left-2 z-30 mb-1 border border-line-strong bg-panel py-1"
+      className={`absolute right-2 bottom-full left-2 mb-1 ${POPOVER}`}
     >
       {email && (
-        <p className="truncate px-3 pt-1 pb-2 text-muted text-xs" data-selectable>
+        <p className="truncate px-2.5 pt-1.5 pb-2 text-muted text-xs" data-selectable>
           {email}
         </p>
       )}
@@ -161,7 +151,7 @@ function AccountMenu({
           <div
             role="menu"
             aria-label={m.language}
-            className="absolute bottom-0 left-full z-30 ml-1 min-w-56 border border-line-strong bg-panel py-1"
+            className={`absolute bottom-0 left-full ml-2 min-w-56 ${POPOVER}`}
           >
             {[{ id: "system" as const, name: t.shell.language.system(systemName) }, ...LOCALES].map(
               (entry) => (
@@ -171,7 +161,7 @@ function AccountMenu({
                   role="menuitemradio"
                   aria-checked={choice === entry.id}
                   onClick={() => setLocaleChoice(entry.id)}
-                  className="flex h-8 w-full items-center gap-2 whitespace-nowrap px-3 text-left text-sm hover:bg-sunken"
+                  className={`h-8 whitespace-nowrap ${POPOVER_ITEM}`}
                 >
                   <Check aria-hidden size={14} className={choice === entry.id ? "" : "invisible"} />
                   {entry.name}
@@ -181,7 +171,7 @@ function AccountMenu({
           </div>
         )}
       </div>
-      <div className="my-1 border-line border-t" />
+      <div className="mx-1 my-1 border-line border-t" />
       <Item icon={Sparkles} onClick={() => open(RELEASES)}>
         {m.whatsNew}
       </Item>
@@ -212,7 +202,7 @@ function Item({
       aria-haspopup={expanded === undefined ? undefined : "menu"}
       aria-expanded={expanded}
       onClick={onClick}
-      className="flex h-8 w-full items-center gap-2 px-3 text-left text-ink text-sm hover:bg-sunken"
+      className={`h-8 text-ink ${POPOVER_ITEM}`}
     >
       <Icon aria-hidden size={14} className="text-ink-soft" />
       <span className="flex-1">{children}</span>

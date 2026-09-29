@@ -67,9 +67,9 @@ export function BotRun({
 }) {
   const first = items[0];
   return (
-    <li className="flex gap-3 pr-10">
+    <li className="flex gap-3">
       <BotAvatar color={bot.color} size={28} />
-      <div className="flex min-w-0 max-w-[48rem] flex-1 flex-col gap-2">
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="flex items-center gap-2 text-sm">
           <span className="font-semibold">{bot.name}</span>
           {first && (

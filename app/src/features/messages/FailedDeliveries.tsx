@@ -99,7 +99,7 @@ function FailedDialog({ dead, onClose }: { dead: Delivery[]; onClose(): void }) 
       }
     >
       <p className="mb-3 text-ink-soft text-sm">{text.explanation}</p>
-      <ul className="flex flex-col border border-line">
+      <ul className="flex flex-col overflow-hidden rounded-xl border border-line">
         {dead.map((delivery) => {
           const bot = bots[delivery.botId];
           const message = bodies[delivery.messageId];

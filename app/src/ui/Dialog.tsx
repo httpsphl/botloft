@@ -28,22 +28,22 @@ export function Dialog({ title, onClose, children, footer, width = "md" }: Dialo
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-40 grid place-items-center bg-black/55 p-6">
+    <div className="fixed inset-0 z-40 grid place-items-center bg-black/50 p-6">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`flex max-h-full w-full flex-col border border-line-strong bg-panel ${width === "lg" ? "max-w-2xl" : "max-w-md"}`}
+        className={`flex max-h-full w-full flex-col overflow-hidden rounded-2xl border border-line bg-panel shadow-lift ${width === "lg" ? "max-w-2xl" : "max-w-md"}`}
       >
-        <header className="flex h-11 shrink-0 items-center justify-between border-line border-b pr-1.5 pl-4">
+        <header className="flex h-12 shrink-0 items-center justify-between border-line border-b pr-2 pl-5">
           <h2 id={titleId} className="font-semibold text-base tracking-tight">
             {title}
           </h2>
           <Button variant="ghost" icon={X} label={t.common.close} onClick={onClose} />
         </header>
-        <div className="min-h-0 overflow-y-auto p-4">{children}</div>
+        <div className="min-h-0 overflow-y-auto px-5 py-4">{children}</div>
         {footer && (
-          <footer className="flex shrink-0 justify-end gap-2 border-line border-t px-4 py-3">
+          <footer className="flex shrink-0 justify-end gap-2 border-line border-t px-5 py-3">
             {footer}
           </footer>
         )}
