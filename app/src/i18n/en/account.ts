@@ -51,6 +51,15 @@ export const account = {
     followBot: "Open the browser and screens when a bot starts using them",
     followBotOn: "The panel opens beside the chat, so you see what the bot does.",
     followBotOff: "The panel's button gets a dot, and you open it when you want.",
+    approvalWait: "How long a request for permission waits for you",
+    approvalWaitHint:
+      "With no answer by then, the bot's request is denied and it goes on without it.",
+    waitFor: (minutes: number) =>
+      minutes < 60 || minutes % 60 !== 0
+        ? `${minutes} min`
+        : minutes === 60
+          ? "1 hour"
+          : `${minutes / 60} hours`,
     lessMotion: "Less motion",
     lessMotionHint: "A still window, as when the Windows animation effects are off.",
     appearance: "Appearance",

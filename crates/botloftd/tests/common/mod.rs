@@ -65,10 +65,8 @@ pub fn test_settings() -> SupervisorSettings {
     }
 }
 
-/// Approvals time out fast enough for a test to wait for it.
 pub fn bot_settings() -> BotSettings {
     BotSettings {
-        approval_timeout: Duration::from_secs(3),
         attachment_max_bytes: 1024 * 1024,
         max_per_crew: 3,
     }
@@ -114,7 +112,9 @@ pub fn new_daemon(settings: SupervisorSettings) -> Parts {
         },
         bots: bot_settings(),
         browser: BrowserSettings::default(),
-        settings: LiveSettings::new(None, &Config::default()),
+        // Approvals time out fast enough for a test to wait for it.
+        settings: LiveSettings::new(None, &Config::default())
+            .with_approval_wait(Duration::from_secs(3)),
     });
     Parts {
         daemon,

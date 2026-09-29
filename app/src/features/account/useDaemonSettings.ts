@@ -33,6 +33,7 @@ export function useDaemonSettings(): {
       setSettings({
         startWithWindows: update.startWithWindows ?? before.startWithWindows,
         keepAwake: update.keepAwake ?? before.keepAwake,
+        approvalWaitMinutes: update.approvalWaitMinutes ?? before.approvalWaitMinutes,
       });
     }
     attempt(failed, async () => setSettings(await api.call("settings.update", update))).then(

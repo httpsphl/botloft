@@ -52,7 +52,11 @@ describe("settings", () => {
     expect(dialog.textContent).toContain("the bots wait until you open Botloft");
     fireEvent.click(awake);
     await waitFor(() =>
-      expect(fake.settings).toEqual({ startWithWindows: false, keepAwake: false }),
+      expect(fake.settings).toEqual({
+        startWithWindows: false,
+        keepAwake: false,
+        approvalWaitMinutes: 60,
+      }),
     );
     expect(
       fake.calls.filter((call) => call.method === "settings.update").map((c) => c.params),
@@ -123,7 +127,7 @@ describe("closing the window", () => {
 
   test("the welcome screen says Botloft waits for the owner after a restart", async () => {
     const fake = new FakeBotloft();
-    fake.settings = { startWithWindows: false, keepAwake: true };
+    fake.settings = { ...fake.settings, startWithWindows: false };
     renderApp(fake);
     expect(
       await screen.findByText(

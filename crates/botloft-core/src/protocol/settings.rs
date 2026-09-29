@@ -13,6 +13,9 @@ pub struct Settings {
     pub start_with_windows: bool,
     /// The computer does not sleep while a bot works (spec 14).
     pub keep_awake: bool,
+    /// How long a permission request waits for the owner before it is
+    /// denied (spec 10.1).
+    pub approval_wait_minutes: u32,
 }
 
 /// The settings to change; the ones left out stay as they are.
@@ -26,4 +29,11 @@ pub struct SettingsUpdateParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub keep_awake: Option<bool>,
+    /// From 1 to [`APPROVAL_WAIT_MAX_MINUTES`].
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub approval_wait_minutes: Option<u32>,
 }
+
+/// The longest a permission request may wait for the owner: a day.
+pub const APPROVAL_WAIT_MAX_MINUTES: u32 = 24 * 60;
