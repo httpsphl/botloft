@@ -12,8 +12,8 @@ use serde_json::Value;
 use tracing::{debug, warn};
 
 use super::items;
-use crate::service;
 use crate::state::{Daemon, Event};
+use crate::{routines, service};
 
 /// Errors that restarting cannot fix: Claude Code needs the owner.
 const SIGN_IN_ERRORS: &[&str] = &[
@@ -40,7 +40,7 @@ pub(super) fn apply(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value
         "system" if subtype == Some("init") => session(daemon, bot, event),
         "stream_event" if !from_subagent => delta(daemon, bot, event),
         "assistant" if !from_subagent => assistant(daemon, bot, generation, event),
-        "user" if event["isReplay"].as_bool() == Some(true) => replay(daemon, event),
+        "user" if event["isReplay"].as_bool() == Some(true) => replay(daemon, bot, event),
         "user" if !from_subagent => tool_results(daemon, bot, event),
         "rate_limit_event" => rate_limit(daemon, bot, generation, event),
         "result" => result(daemon, bot, generation, event),
@@ -185,13 +185,17 @@ fn failed_turn(daemon: &Daemon, bot: &BotId, generation: u64, error: &str, event
 }
 
 /// The bot began the turn for a message the courier wrote (spec 9.1).
-fn replay(daemon: &Daemon, event: &Value) {
+fn replay(daemon: &Daemon, bot: &BotId, event: &Value) {
     let Some(uuid) = event["uuid"].as_str() else {
         return;
     };
     let now = daemon.clock.now_ms();
-    match daemon.store().mark_read(uuid, now) {
-        Ok(Some(delivery)) => daemon.emit(Event::DeliveryChanged(delivery)),
+    let read = daemon.store().mark_read(uuid, now);
+    match read {
+        Ok(Some(delivery)) => {
+            routines::turn_began(daemon, bot, &delivery.message_id);
+            daemon.emit(Event::DeliveryChanged(delivery));
+        }
         Ok(None) => {}
         Err(err) => warn!("could not mark a delivery read: {err}"),
     }
@@ -290,5 +294,6 @@ fn result(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
             error,
         }),
     );
+    routines::turn_ended(daemon, bot, failed);
     daemon.supervisor.turn_ended(bot, generation);
 }

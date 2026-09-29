@@ -85,7 +85,7 @@ Tipos do protocolo ficam em `botloft-core` e são exportados para TypeScript com
 | Processo do bot | `tokio::process` com pipes | stdin/stdout de linhas JSON, sem PTY |
 | Win32 | crate `windows` | ACL, Job Objects, ambiente do usuário, keep-awake |
 | MCP | servidor Streamable HTTP próprio e mínimo (JSON-RPC) | Poucas tools, sem dependência pesada |
-| Tempo | `time` + `croner` (rotinas, pós-MVP) | |
+| Tempo | `time`; `jiff` para os fusos das rotinas (seção 20) | `jiff` traz a base de fusos IANA embutida no Windows, que não tem uma; o cron das rotinas é avaliado pelo próprio daemon |
 | IDs | ULID com prefixo (`bot_`, `crw_`, `msg_`, `dlv_`, `tsk_`, `cht_`, `apr_`, `att_`) | Ordenável, legível em log |
 | App | Tauri v2, React 19, TypeScript strict, Vite, Tailwind v4 | |
 | Estado no app | Zustand | Leve, sem boilerplate |
@@ -351,6 +351,7 @@ Reply with send_message(to: "revisor"). When the task is done, call complete_tas
 - Nota de outro bot: primeira linha `[botloft] from @revisor · crew Exemplo` e só a instrução de resposta.
 - Resultado de task: `· result of task tsk_... · done` (ou `failed`) e a instrução de resposta.
 - Aviso do daemon (task vencida): `from Botloft` e o texto do aviso, sem instrução.
+- Rotina: `routine "<nome>" · scheduled <data e hora> (<fuso>)` e o aviso de que ninguém está olhando (20.5).
 - O prazo é relativo (`due in 45 min`, `due in 2 h`, `overdue`) e calculado na hora do envio: o bot não sabe a hora atual, e o app mostra o horário absoluto a partir de `deadline_at`.
 
 ### 9.4 Tasks entre bots
@@ -481,7 +482,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 
 ### 11.3 Notificações do servidor
 
-`bot.state`, `bot.changed`, `crew.changed`, `chat.item`, `chat.delta`, `message.created`, `delivery.changed`, `task.changed`.
+`bot.state`, `bot.changed`, `crew.changed`, `chat.item`, `chat.delta`, `message.created`, `delivery.changed`, `task.changed`, e das rotinas `routine.changed` e `routine.run` (20.8).
 
 ### 11.4 Erros
 
@@ -510,6 +511,7 @@ Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations 
 | `chat_items` | `id, bot_id, kind, data (JSON), created_at, updated_at` |
 | `approvals` | `id, bot_id, tool_use_id, tool_name, input, status, note, created_at, answered_at` |
 | `settings` | `key, value` |
+| `routines`, `routine_runs` | seção 20.7; `messages` ganha `routine_id` |
 
 Índices mínimos: `deliveries(state, next_attempt_at)`, `messages(crew_id, created_at)`, `tasks(assignee_bot_id, status)`, `bots(crew_id)`, `chat_items(bot_id, id)`, `attachments(message_id)`.
 
@@ -530,7 +532,7 @@ Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations 
 | Tema | Solução |
 |---|---|
 | Iniciar com o Windows | `botloftd service install` registra uma **Tarefa Agendada por usuário**, pela API COM do Agendador (as mensagens do `schtasks.exe` são traduzidas e não dá para lê-las). Dois gatilhos: "ao fazer logon" do usuário, que sobe o daemon na hora, e um gatilho de horário com início no passado repetido **a cada 1 min**, que o traz de volta se ele morrer: com `MultipleInstancesPolicy = IgnoreNew`, a repetição não faz nada enquanto o daemon roda. Token interativo e privilégio mínimo (só com o usuário logado, na sessão dele), sem limite de execução, roda na bateria, prioridade 5 (a padrão, 7, passaria "abaixo do normal" para todos os bots). A ação é `<home>\bin\botloftd.exe serve --home <home>`. Não usar Windows Service: roda em outra sessão e sem acesso à autenticação do Claude Code do usuário. Subcomandos `service status`, `service restart`, `service uninstall` (os dados ficam). |
-| Reinício da tarefa (testado no Windows 11 25H2) | `RestartOnFailure` **não** reinicia a tarefa quando o processo sai com código de erro, nem numa execução por gatilho de horário nem numa sob demanda. A repetição de um gatilho de logon só começa no próximo logon, não quando a tarefa é registrada. Por isso o gatilho de horário faz o papel de vigia: morto o daemon, ele voltou em 43 s |
+| Reinício da tarefa (testado no Windows 11 25H2) | `RestartOnFailure` **não** reinicia a tarefa quando o processo sai com código de erro, nem numa execução por gatilho de horário nem numa sob demanda. A repetição de um gatilho de logon só começa no próximo logon, não quando a tarefa é registrada. Por isso o gatilho de horário faz o papel de vigia: morto o daemon, ele voltou em 43 s. **Reboot** (0.2.0, 2026-09-29): o daemon subiu 1 s depois do logon, pelo gatilho de logon, com o app fechado, e o bot voltou 13 s depois |
 | Uma tarefa por pasta de dados | `Botloft` para `%LOCALAPPDATA%\Botloft`; `Botloft-<8 hex do SHA-256 do caminho>` para outra pasta (`--home` ou `BOTLOFT_HOME` de dev), para instalar um daemon de dev sem tocar no real. `--home` vale para todos os subcomandos e vem antes de `BOTLOFT_HOME` |
 | Binário instalado | `service install` copia o próprio executável para `<home>\bin\botloftd.exe` e a tarefa roda essa cópia, nunca a do app: assim o instalador do app troca os arquivos dele com o daemon rodando. Um exe em uso não pode ser sobrescrito mas pode ser renomeado, então o antigo vai para `botloftd.<n>.old` e é apagado numa instalação seguinte. Se o binário não mudou e o daemon dessa versão já roda pela tarefa, `install` não o reinicia; senão para a tarefa, espera o `/health` sumir, inicia de novo e espera o `/health` com a nova versão (20 s) |
 | Janela de console | O manifesto do daemon pede `consoleAllocationPolicy = detached` (Windows 11 24H2 e depois): iniciado pela tarefa, ele não ganha console nem janela; num terminal, continua usando o console do terminal. Em Windows mais antigo, `serve` larga o console se for o único processo nele (`FreeConsole`). O manifesto entra como recurso (`embed-resource`), porque a ferramenta de manifesto do linker não conhece o elemento e avisa a cada build |
@@ -744,7 +746,7 @@ Itens do runtime anterior (ConPTY, hooks em exec form, `crossSessionInbound`, li
 
 ## 20. Rotinas
 
-Status: **desenho**, primeiro item depois do MVP (seção 18). A implementação começa depois que o M5 fechar, nos marcos R1 e R2 (20.11).
+Status: primeiro item depois do MVP (seção 18), em dois marcos (20.11). **R1 (agendador) implementado**; R2 (app) a seguir.
 
 ### 20.1 O que é
 
@@ -767,7 +769,7 @@ O horário fica guardado como JSON estruturado (`schedule`), e não como texto c
 - Horário que não existe (o relógio pula na entrada do horário de verão): roda no primeiro instante válido depois do pulo. Horário que acontece duas vezes (saída do horário de verão): roda uma vez, na primeira.
 - Espaçamento mínimo de 5 minutos, também para `cron`: o daemon confere as próximas 20 ocorrências e recusa com erro de validação. Rotina frequente demais gasta o plano do dono sem ele perceber.
 - `cron`: 5 campos (minuto, hora, dia do mês, mês, dia da semana). Com dia do mês e dia da semana restritos, basta bater um dos dois, como no cron clássico.
-- A biblioteca (`croner` está na stack; a 4.0 tem fuso e cron de 5 ou 6 campos, mas a documentação não diz como trata o horário de verão) é escolhida na implementação, contra os testes de fuso e horário de verão desta seção.
+- Fusos com `jiff`, que traz a base IANA embutida (o Windows não tem uma). O daemon avalia o próprio cron: anda pelos dias no fuso da rotina e resolve cada hora de parede pelas regras acima; no pulo, acha o instante exato da mudança de offset. Testado com o pulo e a repetição de Nova York em 2026, com o fuso de São Paulo e de Lisboa, e com `0 0 29 2 *`, que só roda em 2028.
 
 ### 20.3 Execuções
 
@@ -780,7 +782,7 @@ Cada disparo vira uma `routine_run`, com o horário marcado (`scheduled_for`), u
 | `failed` | a delivery morreu (`dead`) ou o turno terminou com erro |
 | `skipped` | não disparou; `reason`: `overlap`, `bot_paused` ou `missed` |
 
-- **Fim de uma execução:** o daemon já sabe quando o turno de uma message começa (o replay com o mesmo `uuid`, 9.1 passo 7). O `result` seguinte fecha esse turno: a execução vira `done`, ou `failed` se o `result` trouxer erro. Se o processo morrer com a execução aberta, a delivery volta para a fila (9.1 passo 8) e a execução continua `queued`.
+- **Fim de uma execução:** o daemon já sabe quando o turno de uma message começa (o replay com o mesmo `uuid`, 9.1 passo 7). O `result` seguinte fecha esse turno: a execução vira `done`, ou `failed` se o `result` trouxer erro. Se o processo morrer antes de ler a message, a delivery volta para a fila (9.1 passo 8) e a execução continua `queued`; se morrer no meio do turno, a execução vira `failed`, porque ninguém mais vai fechar aquele turno. Pelo mesmo motivo, ao subir, o daemon marca `failed` as execuções cujo turno começou sob o daemon anterior. Uma delivery `dead` também leva a execução a `failed`.
 - **Sobreposição:** o horário chega com a execução anterior ainda `queued` (o bot está lento, parado por limite de uso, sem login ou fora do ar).
   - `skip` (padrão): registra `skipped` com `reason: overlap`. Um bot lento ou fora do ar não acumula pedidos repetidos.
   - `queue`: grava mesmo assim, mas só uma execução espera atrás da aberta; as outras viram `skipped`.
@@ -793,6 +795,8 @@ Com o daemon parado, o PC dormindo ou ninguém logado, nada dispara. Na volta (n
 
 - `missed: run_once` (padrão): se passou algum horário, roda **uma vez** agora, com `scheduled_for` = o último horário perdido. Os outros viram uma só entrada `skipped` (`missed`) com a contagem (`skipped_count`). Uma rotina diária com o PC desligado por uma semana roda uma vez ao ligar, e não sete.
 - `missed: skip`: nada roda; registra o `skipped` e segue para o próximo horário.
+- Um horário conta como no horário até 2 minutos de atraso (o agendador acorda ao menos uma vez por minuto); depois disso, conta como perdido.
+- Religar uma rotina desligada conta a partir de agora: o que passou com ela desligada não é perdido.
 - O PC não acorda para rodar rotina (a tarefa agendada não usa `WakeToRun`), e o app diz isso nas opções.
 
 ### 20.5 O que o bot recebe
@@ -842,7 +846,7 @@ Migration nova:
 | `routines.runs` | `routineId, before?, limit?` | `RoutineRun[]`, mais nova primeiro |
 
 - Notificações: `routine.changed` e `routine.run`.
-- Validação (`-32004`), com código de erro para o app escrever a mensagem no idioma do dono (15.6): nome de 1 a 80 caracteres; pedido dentro do limite de uma message; `days` não vazio; `time` válido; `minutes` de 5 a 10 080; `cron` válido e com espaçamento de pelo menos 5 minutos; `timezone` conhecido.
+- Validação (`-32004`); no R1 a mensagem vem em inglês, e o R2 acrescenta o código para o app escrevê-la no idioma do dono (15.6): nome de 1 a 80 caracteres; pedido dentro do limite de uma message; `days` não vazio; `time` válido; `minutes` de 5 a 10 080; `cron` válido e com espaçamento de pelo menos 5 minutos; `timezone` conhecido.
 
 ### 20.9 App
 

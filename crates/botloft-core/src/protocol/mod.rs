@@ -55,11 +55,13 @@ mod export;
 mod messaging;
 mod methods;
 mod model;
+mod routines;
 
 pub use chat::*;
 pub use messaging::*;
 pub use methods::*;
 pub use model::*;
+pub use routines::*;
 
 /// Version negotiated in `session.hello`. 2 replaced the terminal with the
 /// chat (ADR 0001).
@@ -93,6 +95,13 @@ pub mod method {
     pub const DELIVERIES_LIST: &str = "deliveries.list";
     pub const DELIVERIES_RETRY: &str = "deliveries.retry";
     pub const TASKS_LIST: &str = "tasks.list";
+    pub const ROUTINES_LIST: &str = "routines.list";
+    pub const ROUTINES_CREATE: &str = "routines.create";
+    pub const ROUTINES_UPDATE: &str = "routines.update";
+    pub const ROUTINES_SET_ENABLED: &str = "routines.setEnabled";
+    pub const ROUTINES_RUN_NOW: &str = "routines.runNow";
+    pub const ROUTINES_ARCHIVE: &str = "routines.archive";
+    pub const ROUTINES_RUNS: &str = "routines.runs";
 }
 
 /// Server notification method names.
@@ -105,6 +114,8 @@ pub mod notification {
     pub const MESSAGE_CREATED: &str = "message.created";
     pub const DELIVERY_CHANGED: &str = "delivery.changed";
     pub const TASK_CHANGED: &str = "task.changed";
+    pub const ROUTINE_CHANGED: &str = "routine.changed";
+    pub const ROUTINE_RUN: &str = "routine.run";
 }
 
 /// Error codes: the standard JSON-RPC ones plus the daemon's (spec 11.4).

@@ -5,7 +5,8 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
 use botloft_core::protocol::{
-    AccountUsage, Bot, BotStateChanged, ChatDelta, ChatItemChanged, Crew, Delivery, Message, Task,
+    AccountUsage, Bot, BotStateChanged, ChatDelta, ChatItemChanged, Crew, Delivery, Message,
+    Routine, RoutineRun, Task,
 };
 use botloft_store::Store;
 use tokio::sync::broadcast;
@@ -15,6 +16,7 @@ use crate::clock::Clock;
 use crate::config::Config;
 use crate::courier::{Courier, CourierSettings};
 use crate::paths::Paths;
+use crate::routines::Routines;
 use crate::runtime::Runtime;
 use crate::secrets::TokenHash;
 use crate::service::tasks::TaskSettings;
@@ -32,6 +34,8 @@ pub enum Event {
     MessageCreated(Message),
     DeliveryChanged(Delivery),
     TaskChanged(Task),
+    RoutineChanged(Routine),
+    RoutineRun(RoutineRun),
 }
 
 /// Events buffered per connection before a slow client is dropped.
@@ -80,6 +84,7 @@ pub struct Daemon {
     pub tasks: TaskSettings,
     pub bots: BotSettings,
     pub approvals: Approvals,
+    pub routines: Routines,
     /// Time for everything stored or compared with stored times.
     pub clock: Arc<dyn Clock>,
     store: Mutex<Store>,
@@ -106,6 +111,7 @@ impl Daemon {
             tasks: options.tasks,
             bots: options.bots,
             approvals: Approvals::default(),
+            routines: Routines::default(),
             clock: options.clock,
             paths: options.paths,
             port: options.port,

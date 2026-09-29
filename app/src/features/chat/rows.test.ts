@@ -36,6 +36,7 @@ const inbound = (body: string, at?: number) =>
         kind: "note",
         body,
         taskId: null,
+        routineId: null,
         attachments: [],
         createdAt: at ?? start,
       },

@@ -56,6 +56,16 @@ export type ApprovalId = string;
 export type AttachmentId = string;
 
 /**
+ * Identifies a routine (spec 20).
+ */
+export type RoutineId = string;
+
+/**
+ * Identifies one run of a routine.
+ */
+export type RoutineRunId = string;
+
+/**
  * A group of bots that can message each other and share a folder.
  */
 export type Crew = { id: CrewId, name: string, 
@@ -353,7 +363,7 @@ export type SenderKind = "owner" | "bot" | "system";
 /**
  * What a message is for.
  */
-export type MessageKind = "note" | "task" | "result" | "system";
+export type MessageKind = "note" | "task" | "result" | "system" | "routine";
 
 /**
  * Where a delivery is in the courier (spec 9.1).
@@ -411,6 +421,10 @@ fromBotId: BotId | null, toBotId: BotId, kind: MessageKind, body: string,
  * The task this message asks for, answers or reports on.
  */
 taskId: TaskId | null, 
+/**
+ * The routine that sent it (spec 20.5).
+ */
+routineId: RoutineId | null, 
 /**
  * Files the owner attached (spec 9.5); empty for everything else.
  */
@@ -632,6 +646,81 @@ note?: string,
  */
 input?: string, };
 
+/**
+ * When a routine runs (spec 20.2), kept as structure rather than cron text
+ * so the app can show and edit it without jargon.
+ */
+export type Schedule = { "kind": "weekly", days: Array<number>, time: string, } | { "kind": "interval", minutes: number, } | { "kind": "cron", expr: string, };
+
+/**
+ * What happens when a routine's time comes while its last run is still
+ * waiting or working (spec 20.3).
+ */
+export type Overlap = "skip" | "queue";
+
+/**
+ * What happens with times that passed while the daemon was not running
+ * (spec 20.4).
+ */
+export type Missed = "run_once" | "skip";
+
+/**
+ * Where a run is (spec 20.3).
+ */
+export type RunStatus = "queued" | "done" | "failed" | "skipped";
+
+/**
+ * Why a run was skipped.
+ */
+export type SkipReason = "overlap" | "bot_paused" | "missed";
+
+export type RoutineRun = { id: RoutineRunId, routineId: RoutineId, 
+/**
+ * The time it was for; the moment of the click for "run now".
+ */
+scheduledFor: number, status: RunStatus, reason: SkipReason | null, 
+/**
+ * For a `missed` skip: how many times passed.
+ */
+skippedCount: number, 
+/**
+ * The message it sent, unless skipped.
+ */
+messageId: MessageId | null, createdAt: number, finishedAt: number | null, };
+
+export type Routine = { id: RoutineId, botId: BotId, name: string, 
+/**
+ * What the bot is asked to do, as the owner wrote it.
+ */
+prompt: string, schedule: Schedule, 
+/**
+ * IANA name, like `America/Sao_Paulo`.
+ */
+timezone: string, overlap: Overlap, missed: Missed, enabled: boolean, 
+/**
+ * Unix ms of the next scheduled time; `null` while disabled.
+ */
+nextRunAt: number | null, 
+/**
+ * The latest run, skipped ones included.
+ */
+lastRun: RoutineRun | null, createdAt: number, updatedAt: number, archivedAt: number | null, };
+
+export type RoutinesListParams = { botId?: BotId, };
+
+export type RoutinesCreateParams = { botId: BotId, name: string, prompt: string, schedule: Schedule, timezone: string, overlap?: Overlap, missed?: Missed, };
+
+/**
+ * Fields left out stay as they are.
+ */
+export type RoutinesUpdateParams = { routineId: RoutineId, name?: string, prompt?: string, schedule?: Schedule, timezone?: string, overlap?: Overlap, missed?: Missed, };
+
+export type RoutinesSetEnabledParams = { routineId: RoutineId, enabled: boolean, };
+
+export type RoutineIdParams = { routineId: RoutineId, };
+
+export type RoutinesRunsParams = { routineId: RoutineId, before?: RoutineRunId, limit?: number, };
+
 /** Params and result of every request method. */
 export interface RpcMethods {
   "session.hello": { params: HelloParams; result: HelloResult };
@@ -660,6 +749,13 @@ export interface RpcMethods {
   "deliveries.list": { params: DeliveriesListParams; result: Array<Delivery> };
   "deliveries.retry": { params: DeliveryIdParams; result: Delivery };
   "tasks.list": { params: TasksListParams; result: Array<Task> };
+  "routines.list": { params: RoutinesListParams; result: Array<Routine> };
+  "routines.create": { params: RoutinesCreateParams; result: Routine };
+  "routines.update": { params: RoutinesUpdateParams; result: Routine };
+  "routines.setEnabled": { params: RoutinesSetEnabledParams; result: Routine };
+  "routines.runNow": { params: RoutineIdParams; result: RoutineRun };
+  "routines.archive": { params: RoutineIdParams; result: Routine };
+  "routines.runs": { params: RoutinesRunsParams; result: Array<RoutineRun> };
 }
 
 /** Params of every server notification. */
@@ -672,6 +768,8 @@ export interface RpcNotifications {
   "message.created": Message;
   "delivery.changed": Delivery;
   "task.changed": Task;
+  "routine.changed": Routine;
+  "routine.run": RoutineRun;
 }
 
 export const RpcErrorCode = {

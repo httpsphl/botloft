@@ -9,7 +9,7 @@ use super::jsonrpc::{RpcError, empty_params};
 use crate::approvals;
 use crate::service::{
     self, ApiResult, attachments, bots, chat, crews, deliveries, lead, messages, models, modes,
-    tasks,
+    routines, tasks,
 };
 use crate::state::Daemon;
 
@@ -45,6 +45,13 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::ATTACHMENTS_READ => reply(attachments::read(daemon, parse(params)?)),
         method::DELIVERIES_LIST => reply(deliveries::list(daemon, parse(params)?)),
         method::DELIVERIES_RETRY => reply(deliveries::retry(daemon, parse(params)?)),
+        method::ROUTINES_LIST => reply(routines::list(daemon, parse(params)?)),
+        method::ROUTINES_CREATE => reply(routines::create(daemon, parse(params)?)),
+        method::ROUTINES_UPDATE => reply(routines::update(daemon, parse(params)?)),
+        method::ROUTINES_SET_ENABLED => reply(routines::set_enabled(daemon, parse(params)?)),
+        method::ROUTINES_RUN_NOW => reply(routines::run_now(daemon, parse(params)?)),
+        method::ROUTINES_ARCHIVE => reply(routines::archive(daemon, parse(params)?)),
+        method::ROUTINES_RUNS => reply(routines::runs(daemon, parse(params)?)),
         method::TASKS_LIST => reply(tasks::list(daemon, parse(params)?)),
         method::SESSION_HELLO => Err(RpcError::new(
             error_code::CONFLICT,

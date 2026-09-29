@@ -19,7 +19,7 @@ use crate::runtime::claude::Claude;
 use crate::runtime::{ProcessEvent, SpawnSpec};
 use crate::secrets::{self, TokenHash};
 use crate::state::Daemon;
-use crate::{approvals, courier, workspace};
+use crate::{approvals, courier, routines, workspace};
 
 /// Tools the bot uses without asking: its crew tools (spec 7.4).
 const ALLOWED_TOOLS: &str = "mcp__botloft";
@@ -153,6 +153,7 @@ impl Supervisor {
         drop(inner);
         approvals::expire_for_bot(daemon, bot);
         courier::requeue_unread(daemon, bot, generation);
+        routines::process_ended(daemon, bot);
         self.wake();
     }
 }

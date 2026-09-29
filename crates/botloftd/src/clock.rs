@@ -33,6 +33,11 @@ impl ManualClock {
         }
     }
 
+    /// Jumps to `ms` (Unix milliseconds), e.g. a date a test needs.
+    pub fn set(&self, ms: i64) {
+        self.now.store(ms, Ordering::SeqCst);
+    }
+
     pub fn advance(&self, by: Duration) {
         let ms = i64::try_from(by.as_millis()).unwrap_or(i64::MAX);
         self.now.fetch_add(ms, Ordering::SeqCst);

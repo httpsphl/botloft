@@ -52,6 +52,7 @@ export class FakeConversation {
       kind: options.kind ?? (options.from ? "note" : "system"),
       body: options.body,
       taskId: options.taskId ?? null,
+      routineId: null,
       attachments: [],
       createdAt: this.fake.now,
     };
@@ -127,6 +128,7 @@ export class FakeConversation {
           kind: "note",
           body: body.trim(),
           taskId: null,
+          routineId: null,
           attachments: files.map((file) => this.saved(file)),
           createdAt: this.fake.now,
         };

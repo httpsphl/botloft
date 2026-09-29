@@ -35,7 +35,7 @@ impl Envelope<'_> {
                     format!("task {} · {}", task.id, due(task.deadline_at, now_ms))
                 }
                 MessageKind::Result => format!("result of task {} · {}", task.id, task.status),
-                MessageKind::Note | MessageKind::System => {
+                MessageKind::Note | MessageKind::System | MessageKind::Routine => {
                     format!("task {} · {}", task.id, task.status)
                 }
             };
@@ -64,6 +64,28 @@ impl Envelope<'_> {
             Sender::Bot { handle } => format!("@{handle}"),
             Sender::Botloft => "Botloft".to_owned(),
         }
+    }
+}
+
+/// What a routine's message says (spec 20.5): which routine, the time it
+/// is for (absolute: the bot does not know the current time) and that
+/// nobody is watching.
+#[derive(Debug, Clone, Copy)]
+pub struct RoutineEnvelope<'a> {
+    pub name: &'a str,
+    /// Local time in the routine's zone, like `2026-10-01 09:00`.
+    pub scheduled: &'a str,
+    pub timezone: &'a str,
+    pub body: &'a str,
+}
+
+impl RoutineEnvelope<'_> {
+    pub fn render(&self) -> String {
+        format!(
+            "[botloft] routine \"{}\" · scheduled {} ({})\n\
+             Nobody is watching live: do the work, then report it in your reply.\n\n{}",
+            self.name, self.scheduled, self.timezone, self.body
+        )
     }
 }
 
@@ -175,5 +197,22 @@ mod tests {
         assert_eq!(due(90 * MINUTE, 0), "due in 2 h");
         assert_eq!(due(26 * 60 * MINUTE, 0), "due in 26 h");
         assert_eq!(due(0, 5 * MINUTE), "overdue");
+    }
+
+    #[test]
+    fn a_routine_says_what_and_when_and_that_nobody_watches() {
+        let text = RoutineEnvelope {
+            name: "Resumo da manhã",
+            scheduled: "2026-10-01 09:00",
+            timezone: "America/Sao_Paulo",
+            body: "Summarize shared/inbox.",
+        }
+        .render();
+        assert_eq!(
+            text,
+            "[botloft] routine \"Resumo da manhã\" · scheduled 2026-10-01 09:00 (America/Sao_Paulo)\n\
+             Nobody is watching live: do the work, then report it in your reply.\n\n\
+             Summarize shared/inbox."
+        );
     }
 }

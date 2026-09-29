@@ -11,6 +11,8 @@ mod crews;
 mod deliveries;
 mod messages;
 mod migrate;
+mod routine_runs;
+mod routines;
 mod tasks;
 
 use std::path::Path;
@@ -168,6 +170,7 @@ pub(crate) mod tests {
             kind: MessageKind::Note,
             body: body.to_owned(),
             task_id: None,
+            routine_id: None,
             attachments: Vec::new(),
             created_at: 0,
         };

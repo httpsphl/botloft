@@ -9,16 +9,16 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use botloft_core::ids::BotId;
-use botloft_core::protocol::{BotState, Delivery, SenderKind};
+use botloft_core::protocol::{BotState, Delivery, Message, SenderKind};
 use botloft_store::{DeliveryOutcome, Store, StoreError};
 use tokio::sync::Notify;
 use tracing::{debug, warn};
 
 use self::render::{Context, Rendered, render};
 pub use self::settings::CourierSettings;
-use crate::clock;
 use crate::service::tasks;
 use crate::state::{Daemon, Event};
+use crate::{clock, routines};
 
 /// How long to wait for a bot that cannot take messages yet (spec 9.1).
 const WAIT_FOR_BOT: Duration = Duration::from_secs(5);
@@ -193,13 +193,35 @@ fn prepare(
         _ => None,
     };
     let workspace = daemon.paths.bot_workspace(&crew.slug, &bot.slug);
+    let routine = routine_context(store, &message)?;
     let context = Context {
         crew_name: &crew.name,
         sender_handle: sender.as_deref(),
         task: task.as_ref(),
         workspace: &workspace,
+        routine: routine
+            .as_ref()
+            .map(|(name, scheduled, zone)| (name.as_str(), scheduled.as_str(), zone.as_str())),
     };
     Ok(Step::Send(render(&message, &context, now)))
+}
+
+/// A routine's name, the local time the run is for and the zone.
+fn routine_context(
+    store: &Store,
+    message: &Message,
+) -> Result<Option<(String, String, String)>, StoreError> {
+    let Some(id) = &message.routine_id else {
+        return Ok(None);
+    };
+    let (Some(routine), Some(run)) = (store.routine(id)?, store.run_of_message(&message.id)?)
+    else {
+        return Ok(None);
+    };
+    let scheduled = routines::schedule::Plan::new(&routine.schedule, &routine.timezone)
+        .map(|plan| plan.local_time(run.scheduled_for))
+        .unwrap_or_default();
+    Ok(Some((routine.name, scheduled, routine.timezone)))
 }
 
 /// The process of `generation` ended: what it never began goes back in

@@ -4,7 +4,7 @@ use std::path::Path;
 
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64;
-use botloft_core::envelope::{Envelope, Sender};
+use botloft_core::envelope::{Envelope, RoutineEnvelope, Sender};
 use botloft_core::ids::random_uuid;
 use botloft_core::protocol::{Attachment, Message, SenderKind, Task};
 use bytes::Bytes;
@@ -23,6 +23,9 @@ pub(super) struct Context<'a> {
     pub task: Option<&'a Task>,
     /// The recipient's workspace, where attachments were saved.
     pub workspace: &'a Path,
+    /// For a routine's message: its name, the local time it is for and the
+    /// zone (spec 20.5).
+    pub routine: Option<(&'a str, &'a str, &'a str)>,
 }
 
 pub(super) struct Rendered {
@@ -44,7 +47,16 @@ pub(super) fn render(message: &Message, context: &Context<'_>, now: i64) -> Rend
             },
             now,
         ),
-        SenderKind::System => envelope(message, context, Sender::Botloft, now),
+        SenderKind::System => match context.routine {
+            Some((name, scheduled, timezone)) => RoutineEnvelope {
+                name,
+                scheduled,
+                timezone,
+                body: &message.body,
+            }
+            .render(),
+            None => envelope(message, context, Sender::Botloft, now),
+        },
     };
     let mut content = vec![json!({ "type": "text", "text": text })];
     content.extend(
@@ -131,6 +143,7 @@ mod tests {
             kind: MessageKind::Note,
             body: body.into(),
             task_id: None,
+            routine_id: None,
             attachments: Vec::new(),
             created_at: 0,
         }
@@ -149,6 +162,7 @@ mod tests {
             sender_handle: Some("scout"),
             task: None,
             workspace: dir.path(),
+            routine: None,
         };
         let owner = render(&message(SenderKind::Owner, "Ship it"), &context, 0);
         let line = parse(&owner);
@@ -192,6 +206,7 @@ mod tests {
             sender_handle: None,
             task: None,
             workspace: dir.path(),
+            routine: None,
         };
         let line = parse(&render(&owner, &context, 0));
         let content = line["message"]["content"].as_array().expect("blocks");

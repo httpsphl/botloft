@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::ids::{AttachmentId, BotId, CrewId, DeliveryId, MessageId, TaskId};
+use crate::ids::{AttachmentId, BotId, CrewId, DeliveryId, MessageId, RoutineId, TaskId};
 
 text_enum!(
     /// Who wrote a message.
@@ -24,6 +24,8 @@ text_enum!(
         /// The outcome of a task, sent back to whoever asked for it.
         Result => "result",
         System => "system",
+        /// A routine's request, at its time (spec 20.5).
+        Routine => "routine",
     }
 );
 
@@ -66,6 +68,8 @@ pub struct Message {
     pub body: String,
     /// The task this message asks for, answers or reports on.
     pub task_id: Option<TaskId>,
+    /// The routine that sent it (spec 20.5).
+    pub routine_id: Option<RoutineId>,
     /// Files the owner attached (spec 9.5); empty for everything else.
     pub attachments: Vec<Attachment>,
     /// Unix time in milliseconds.
