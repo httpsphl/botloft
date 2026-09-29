@@ -1,5 +1,7 @@
 // Writing to the bot: text, and files picked, pasted or dropped on the
-// chat. Enter sends and Shift+Enter starts a new line (spec 15.1).
+// chat. Enter sends and Shift+Enter starts a new line, or, if the owner
+// chose so in Settings, Ctrl+Enter sends and Enter starts a line (spec
+// 15.1).
 
 import { ArrowUp, File as FileIcon, Paperclip, X } from "lucide-react";
 import {
@@ -16,6 +18,7 @@ import { useT } from "../../i18n";
 import { errorText } from "../../lib/api";
 import { fileSize } from "../../lib/format";
 import { type Bot, FIELD_LIMITS } from "../../lib/protocol.gen";
+import { prefs, usePref } from "../../shell/prefs";
 import { useApi } from "../../store/context";
 import { rememberImage } from "./images";
 import { ModelPicker } from "./ModelPicker";
@@ -126,8 +129,13 @@ export function ChatComposer({
     }
   };
 
+  const enterSends = usePref(prefs.enterSends);
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+    if (event.key !== "Enter" || event.nativeEvent.isComposing) {
+      return;
+    }
+    const withCtrl = event.ctrlKey || event.metaKey;
+    if (enterSends ? !event.shiftKey : withCtrl) {
       event.preventDefault();
       void send();
     }
@@ -200,7 +208,7 @@ export function ChatComposer({
           >
             {tooLong
               ? t.chat.composer.tooLong(text.length, FIELD_LIMITS.message)
-              : text && t.chat.composer.keys}
+              : text && (enterSends ? t.chat.composer.keys : t.chat.composer.keysWithCtrl)}
           </span>
           <ModelPicker bot={bot} onLater={setLater} />
           <button

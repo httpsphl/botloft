@@ -10,7 +10,7 @@ import { errorText } from "../../lib/api";
 import type { Client } from "../../lib/client";
 import type { DaemonStatus, Host } from "../../lib/host";
 import { PROTOCOL_VERSION } from "../../lib/protocol.gen";
-import { whenClosed } from "../../shell/closing";
+import { prefs } from "../../shell/prefs";
 
 export type LinkStep =
   | { step: "checking" }
@@ -100,7 +100,7 @@ export function createLink(host: Host, connect: Connect): StoreApi<Link> {
         case "stopped":
           if (mayChange) {
             // Closing Botloft stopped the bots: opening it brings them back.
-            const action = whenClosed() === "stop" ? "start" : "install";
+            const action = prefs.whenClosed.get() === "stop" ? "start" : "install";
             await change(run, action, () => host.installDaemon());
             return;
           }

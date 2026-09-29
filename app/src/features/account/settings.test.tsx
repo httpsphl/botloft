@@ -5,11 +5,11 @@ import type { Client } from "../../lib/client";
 import { FakeBotloft } from "../../lib/fake";
 import { FakeHost, FakeUpdate } from "../../lib/fakeHost";
 import { RpcError } from "../../lib/rpc";
-import { setWhenClosed } from "../../shell/closing";
+import { prefs, resetPrefs } from "../../shell/prefs";
 
 afterEach(() => {
   cleanup();
-  setWhenClosed("keep");
+  resetPrefs();
 });
 
 function renderApp(fake = new FakeBotloft(), host = new FakeHost()) {
@@ -74,6 +74,7 @@ describe("settings", () => {
   test("about looks for a new version on request", async () => {
     const { host } = renderApp();
     const dialog = await openSettings();
+    fireEvent.click(within(dialog).getByRole("tab", { name: "About" }));
     fireEvent.click(within(dialog).getByRole("button", { name: "Check for updates" }));
     expect(await within(dialog).findByText("You have the latest version.")).toBeDefined();
     host.update = new FakeUpdate("9.9.9");
@@ -96,7 +97,7 @@ describe("closing the window", () => {
   test("stops the bots, with the window out of sight first, when chosen", async () => {
     const { host } = renderApp();
     await screen.findByRole("heading", { name: "Welcome to Botloft" });
-    setWhenClosed("stop");
+    prefs.whenClosed.set("stop");
     await act(() => host.requestClose());
     expect(host.hidden).toBe(true);
     expect(host.stops).toBe(1);
@@ -104,7 +105,7 @@ describe("closing the window", () => {
   });
 
   test("opening Botloft again starts the bots it stopped", async () => {
-    setWhenClosed("stop");
+    prefs.whenClosed.set("stop");
     const host = new FakeHost();
     host.status = { state: "stopped", port: 45710, home: "C:\\data" };
     let finish: () => void = () => {};

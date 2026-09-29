@@ -23,6 +23,7 @@ export const chat = {
     attachHint: "Attach files (or paste, or drop them on the chat)",
     tooLong: (length: number, max: number) => `${length}/${max} characters`,
     keys: "Enter to send, Shift+Enter for a new line",
+    keysWithCtrl: "Ctrl+Enter to send, Enter for a new line",
     send: "Send",
   },
   files: {

@@ -5,11 +5,15 @@
 import { createContext, useContext } from "react";
 import { flushSync } from "react-dom";
 
-/** Whether Windows asked for less motion ("Animation effects" off). */
+/**
+ * Whether Windows asked for less motion ("Animation effects" off), or the
+ * owner did in Settings (`data-motion` on the root).
+ */
 export function reducedMotion(): boolean {
   return (
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    document.documentElement.dataset.motion === "less" ||
+    (typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches)
   );
 }
 

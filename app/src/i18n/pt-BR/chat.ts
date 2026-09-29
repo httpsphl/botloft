@@ -23,6 +23,7 @@ export const chat: Messages["chat"] = {
     attachHint: "Anexar arquivos (ou cole, ou solte no chat)",
     tooLong: (length: number, max: number) => `${length}/${max} caracteres`,
     keys: "Enter para enviar, Shift+Enter para uma nova linha",
+    keysWithCtrl: "Ctrl+Enter para enviar, Enter para uma nova linha",
     send: "Enviar",
   },
   files: {

@@ -1,51 +1,10 @@
 // What closing the window does (spec 15.1): Botloft keeps the bots working
-// in the background, or, if the owner chose so in Settings, stops them
-// until it opens again. The choice is this app's, kept in localStorage
-// like the theme.
+// in the background, or, if the owner chose so in Settings
+// (`prefs.whenClosed`), stops them until it opens again.
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect } from "react";
 import type { Host } from "../lib/host";
-
-export type WhenClosed = "keep" | "stop";
-
-const KEY = "botloft.whenClosed";
-const listeners = new Set<() => void>();
-
-function stored(): WhenClosed {
-  try {
-    return localStorage.getItem(KEY) === "stop" ? "stop" : "keep";
-  } catch {
-    return "keep";
-  }
-}
-
-let choice: WhenClosed = stored();
-
-/** The owner's choice, for code outside React. */
-export function whenClosed(): WhenClosed {
-  return choice;
-}
-
-export function setWhenClosed(next: WhenClosed): void {
-  choice = next;
-  try {
-    localStorage.setItem(KEY, next);
-  } catch {
-    // Private storage off: the choice lasts for this window.
-  }
-  for (const listener of listeners) {
-    listener();
-  }
-}
-
-function subscribe(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-export function useWhenClosed(): WhenClosed {
-  return useSyncExternalStore(subscribe, () => choice);
-}
+import { prefs } from "./prefs";
 
 /**
  * Stops the bots as the window closes, when the owner chose so. The window
@@ -58,7 +17,7 @@ export function useCloseBehavior(host: Host): void {
     let alive = true;
     host.window
       .onCloseRequested(async () => {
-        if (choice !== "stop") {
+        if (prefs.whenClosed.get() !== "stop") {
           return;
         }
         await host.window.hide().catch(() => {});

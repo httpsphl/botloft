@@ -1,0 +1,59 @@
+// Settings, "General": the language, and what Botloft does in the
+// background (spec 15.1).
+
+import {
+  LOCALES,
+  type LocaleChoice,
+  setLocaleChoice,
+  systemLocale,
+  useLocale,
+  useT,
+} from "../../i18n";
+import { prefs, usePref } from "../../shell/prefs";
+import { Select } from "../../ui/Select";
+import { Section, Toggle } from "./settingsParts";
+import { useDaemonSettings } from "./useDaemonSettings";
+
+export function GeneralSettings() {
+  const t = useT();
+  const s = t.account.settings;
+  const whenClosed = usePref(prefs.whenClosed);
+  const { settings, change } = useDaemonSettings();
+  const startWithWindows = settings?.startWithWindows ?? true;
+  const { choice: locale } = useLocale();
+  const systemName = LOCALES.find((entry) => entry.id === systemLocale())?.name ?? "English";
+  const languages: { value: LocaleChoice; label: string }[] = [
+    { value: "system", label: t.shell.language.system(systemName) },
+    ...LOCALES.map((entry) => ({ value: entry.id as LocaleChoice, label: entry.name })),
+  ];
+
+  return (
+    <>
+      <Section title={s.language}>
+        <Select label={s.language} value={locale} options={languages} onChange={setLocaleChoice} />
+      </Section>
+      <Section title={s.background}>
+        <Toggle
+          label={s.keepWorking}
+          hint={whenClosed === "keep" ? s.keepWorkingOn : s.keepWorkingOff}
+          checked={whenClosed === "keep"}
+          onChange={(on) => prefs.whenClosed.set(on ? "keep" : "stop")}
+        />
+        <Toggle
+          label={s.startWithWindows}
+          hint={startWithWindows ? s.startWithWindowsOn : s.startWithWindowsOff}
+          checked={startWithWindows}
+          disabled={!settings}
+          onChange={(on) => change({ startWithWindows: on })}
+        />
+        <Toggle
+          label={s.keepAwake}
+          hint={s.keepAwakeHint}
+          checked={settings?.keepAwake ?? true}
+          disabled={!settings}
+          onChange={(on) => change({ keepAwake: on })}
+        />
+      </Section>
+    </>
+  );
+}

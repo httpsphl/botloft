@@ -4,6 +4,7 @@ import { type Connect, createLink } from "./features/onboarding/link";
 import { Onboarding } from "./features/onboarding/Onboarding";
 import type { Host } from "./lib/host";
 import { useCloseBehavior } from "./shell/closing";
+import { useMotionRoot } from "./shell/motionRoot";
 import { TitleBar } from "./shell/TitleBar";
 import { useThemeRoot } from "./shell/theme";
 import { Workspace } from "./shell/Workspace";
@@ -13,6 +14,7 @@ import { Toaster } from "./ui/toast";
 
 export function App({ host, connect }: { host: Host; connect: Connect }) {
   useThemeRoot();
+  useMotionRoot();
   useZoomRoot(host);
   useCloseBehavior(host);
   const [link] = useState(() => createLink(host, connect));

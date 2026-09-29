@@ -1,66 +1,71 @@
-// Settings (spec 15.1): whether Botloft works in the background, the
-// theme, size and language, which used to sit in the title bar, and the
-// versions for when something needs reporting.
+// Settings (spec 15.1), in parts listed on the left: general (what
+// Botloft does in the background, the language), the chat, the look, and
+// the versions for when something needs reporting.
 
-import {
-  LOCALES,
-  type LocaleChoice,
-  setLocaleChoice,
-  systemLocale,
-  useLocale,
-  useT,
-} from "../../i18n";
-import { setTheme, type ThemeChoice, useTheme } from "../../shell/theme";
-import { DEFAULT_ZOOM, setZoom, useZoom, ZOOM_LEVELS, type ZoomLevel } from "../../shell/zoom";
-import { Choices } from "../../ui/Choices";
+import { Info, type LucideIcon, MessageSquare, Palette, SlidersHorizontal } from "lucide-react";
+import { useId, useState } from "react";
+import { useT } from "../../i18n";
 import { Dialog } from "../../ui/Dialog";
 import { AboutSettings } from "./AboutSettings";
-import { BackgroundSettings } from "./BackgroundSettings";
-import { Field, Section } from "./settingsParts";
+import { AppearanceSettings } from "./AppearanceSettings";
+import { ChatSettings } from "./ChatSettings";
+import { GeneralSettings } from "./GeneralSettings";
+
+type Page = "general" | "chat" | "appearance" | "about";
+
+const PAGES: { id: Page; icon: LucideIcon }[] = [
+  { id: "general", icon: SlidersHorizontal },
+  { id: "chat", icon: MessageSquare },
+  { id: "appearance", icon: Palette },
+  { id: "about", icon: Info },
+];
 
 export function SettingsDialog({ onClose }: { onClose(): void }) {
-  const t = useT();
-  const s = t.account.settings;
-  const { choice: theme } = useTheme();
-  const zoom = useZoom();
-  const { choice: locale } = useLocale();
-  const systemName = LOCALES.find((entry) => entry.id === systemLocale())?.name ?? "English";
-
-  const themes: { value: ThemeChoice; label: string }[] = [
-    { value: "system", label: s.themes.system },
-    { value: "light", label: s.themes.light },
-    { value: "dark", label: s.themes.dark },
-  ];
-  const sizes = ZOOM_LEVELS.map((level) => ({
-    value: level,
-    label: t.shell.zoom.level(Math.round(level * 100), level === DEFAULT_ZOOM),
-  }));
-  const languages: { value: LocaleChoice; label: string }[] = [
-    { value: "system", label: t.shell.language.system(systemName) },
-    ...LOCALES.map((entry) => ({ value: entry.id as LocaleChoice, label: entry.name })),
-  ];
+  const s = useT().account.settings;
+  const [page, setPage] = useState<Page>("general");
+  const id = useId();
 
   return (
     <Dialog title={s.title} onClose={onClose} width="lg">
-      <div className="flex flex-col gap-6">
-        <BackgroundSettings />
-        <Section title={s.appearance}>
-          <Field label={s.theme}>
-            <Choices label={s.theme} value={theme} options={themes} onChange={setTheme} />
-          </Field>
-          <Field label={s.size} hint={s.sizeHint}>
-            <Choices<ZoomLevel> label={s.size} value={zoom} options={sizes} onChange={setZoom} />
-          </Field>
-        </Section>
-        <Section title={s.language}>
-          <Choices
-            label={s.language}
-            value={locale}
-            options={languages}
-            onChange={setLocaleChoice}
-          />
-        </Section>
-        <AboutSettings />
+      <div className="flex min-h-[27rem] gap-5">
+        <div
+          role="tablist"
+          aria-label={s.pages}
+          aria-orientation="vertical"
+          className="flex w-40 shrink-0 flex-col gap-0.5"
+        >
+          {PAGES.map(({ id: each, icon: Icon }) => {
+            const selected = each === page;
+            return (
+              <button
+                key={each}
+                id={`${id}-${each}`}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                aria-controls={`${id}-panel`}
+                onClick={() => setPage(each)}
+                className={`flex h-8 items-center gap-2 rounded-lg px-2.5 text-left font-medium text-sm transition-colors ${
+                  selected ? "bg-sunken text-ink" : "text-ink-soft hover:bg-sunken hover:text-ink"
+                }`}
+              >
+                <Icon aria-hidden size={15} className="shrink-0" />
+                {s[each]}
+              </button>
+            );
+          })}
+        </div>
+        <div
+          id={`${id}-panel`}
+          role="tabpanel"
+          aria-labelledby={`${id}-${page}`}
+          className="flex min-w-0 flex-1 flex-col gap-6"
+        >
+          {page === "general" && <GeneralSettings />}
+          {page === "chat" && <ChatSettings />}
+          {page === "appearance" && <AppearanceSettings />}
+          {page === "about" && <AboutSettings />}
+        </div>
       </div>
     </Dialog>
   );
