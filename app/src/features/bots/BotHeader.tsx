@@ -40,6 +40,7 @@ export function BotHeader({
   onToggleFiles,
   browserOpen,
   browsing,
+  asking,
   onToggleBrowser,
   screensOpen,
   drawing,
@@ -56,6 +57,8 @@ export function BotHeader({
   browserOpen: boolean;
   /** The bot's browser is open (spec 21.8). */
   browsing: boolean;
+  /** The bot asked the owner for a hand in it (spec 21.10). */
+  asking: boolean;
   onToggleBrowser(): void;
   screensOpen: boolean;
   /** The bot is writing a screen (spec 22.5). */
@@ -152,18 +155,20 @@ export function BotHeader({
           label={
             browserOpen
               ? t.browser.hide
-              : browsing
-                ? `${t.browser.show}: ${t.browser.browsing(bot.name)}`
-                : t.browser.show
+              : asking
+                ? `${t.browser.show}: ${t.browser.help.needs(bot.name)}`
+                : browsing
+                  ? `${t.browser.show}: ${t.browser.browsing(bot.name)}`
+                  : t.browser.show
           }
           aria-pressed={browserOpen}
           onClick={onToggleBrowser}
         />
-        {browsing && !browserOpen && (
+        {(browsing || asking) && !browserOpen && (
           <span
             aria-hidden
             className="live-dot pointer-events-none absolute top-0.5 right-0.5"
-            style={{ background: "var(--work)" }}
+            style={{ background: asking ? "var(--warn)" : "var(--work)" }}
           />
         )}
       </span>

@@ -2,7 +2,7 @@
 // tab, with its cursor gliding to each point it acts on, a ring where it
 // clicks, and a line about what it just did.
 
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useT } from "../../i18n";
 import type { Bot, BrowserAction, BrowserFrame } from "../../lib/protocol.gen";
 
@@ -59,12 +59,18 @@ export function LiveView({
   frame,
   action,
   dim = false,
+  held = false,
+  children,
 }: {
   bot: Bot;
   frame: BrowserFrame | null;
   action: BrowserAction | null;
   /** The browser closed: the last picture stays, faded. */
   dim?: boolean;
+  /** The owner has it (spec 21.10): the bot's cursor steps aside. */
+  held?: boolean;
+  /** On top of the picture: the owner's hands. */
+  children?: ReactNode;
 }) {
   const t = useT();
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
@@ -78,11 +84,14 @@ export function LiveView({
   const width = frame?.width ?? PAGE.width;
   const height = frame?.height ?? PAGE.height;
   const ink = inkOn(bot.color);
+  const acting = !dim && !held;
 
   return (
     <figure
       aria-label={t.browser.screen(bot.name)}
-      className="relative m-0 w-full overflow-hidden rounded-xl border border-line bg-canvas shadow-sm"
+      className={`relative m-0 w-full overflow-hidden rounded-xl border bg-canvas shadow-sm transition-[border-color,box-shadow] duration-200 ${
+        held ? "border-accent ring-2 ring-accent/35" : "border-line"
+      }`}
       style={{ aspectRatio: `${width} / ${height}` }}
     >
       {frame && (
@@ -95,7 +104,7 @@ export function LiveView({
           }`}
         />
       )}
-      {!dim && action?.kind === "click" && point && (
+      {acting && action?.kind === "click" && point && (
         <span
           key={action.at}
           aria-hidden
@@ -103,7 +112,7 @@ export function LiveView({
           style={{ left: `${point.x}%`, top: `${point.y}%`, borderColor: bot.color }}
         />
       )}
-      {!dim && cursor && (
+      {acting && cursor && (
         <span
           aria-hidden
           className="browser-cursor"
@@ -128,6 +137,7 @@ export function LiveView({
           </span>
         </span>
       )}
+      {children}
     </figure>
   );
 }

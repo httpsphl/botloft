@@ -1,9 +1,10 @@
 // The bot's own browser beside its chat (spec 21.8): the page it is on,
 // live, with its cursor and a line about what it just did. Watching starts
-// when the panel opens and stops when it closes.
+// when the panel opens and stops when it closes. The owner can take it into
+// their own hands and give it back (spec 21.10).
 
 import { ExternalLink, Globe, LoaderCircle, Lock, Maximize2, Minimize2, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import type { Bot, BrowserState } from "../../lib/protocol.gen";
 import { useApp, useHost } from "../../store/context";
@@ -12,17 +13,42 @@ import { Callout } from "../../ui/Callout";
 import { SidePanel } from "../../ui/SidePanel";
 import { attempt } from "../../ui/toast";
 import { BotAvatar } from "../bots/BotAvatar";
+import { AskCallout, HeldBar, TakeBar } from "./HandsBars";
+import { HandsLayer } from "./HandsLayer";
 import { LiveView, useCaption } from "./LiveView";
 import { useBrowserView } from "./useBrowserView";
+import { useHands } from "./useHands";
 
-export function BrowserPanel({ bot, onClose }: { bot: Bot; onClose(): void }) {
+export function BrowserPanel({
+  bot,
+  take = 0,
+  onClose,
+}: {
+  bot: Bot;
+  /** Counts up each time the owner asks to open it in their hands. */
+  take?: number;
+  onClose(): void;
+}) {
   const t = useT().browser;
   const state = useApp((app) => app.browsers[bot.id]) ?? null;
   const status = state?.status ?? "closed";
-  const { frame, action } = useBrowserView(bot, true);
+  const { frame, action, watched } = useBrowserView(bot, true);
   const [expanded, setExpanded] = useState(false);
   const caption = useCaption(bot, action);
   const live = status === "open" && frame !== null;
+  const hands = useHands(bot, state);
+  const [focused, setFocused] = useState(false);
+  const ask = state?.ask ?? null;
+  // Taking needs the watch first: the daemon ties the hands to it.
+  const taken = useRef(0);
+  useEffect(() => {
+    if (take > taken.current && watched && status === "open") {
+      taken.current = take;
+      if (!hands.held) {
+        void hands.take();
+      }
+    }
+  }, [take, watched, status, hands.held, hands.take]);
 
   return (
     <SidePanel label={t.panel(bot.name)} name="browser" defaultWidth={560} expanded={expanded}>
@@ -66,8 +92,27 @@ export function BrowserPanel({ bot, onClose }: { bot: Bot; onClose(): void }) {
           <Empty bot={bot} />
         ) : (
           <>
+            {live && ask && !hands.held && <AskCallout bot={bot} task={ask} hands={hands} />}
+            {hands.held && <HeldBar bot={bot} task={ask} focused={focused} hands={hands} />}
             <div className="relative">
-              <LiveView bot={bot} frame={frame} action={action} dim={status === "closed"} />
+              <LiveView
+                bot={bot}
+                frame={frame}
+                action={action}
+                dim={status === "closed"}
+                held={hands.held}
+              >
+                {hands.held && frame && (
+                  <HandsLayer
+                    label={t.hands.screen(bot.name)}
+                    keysLabel={t.hands.typing}
+                    width={frame.width}
+                    height={frame.height}
+                    send={hands.send}
+                    onFocus={setFocused}
+                  />
+                )}
+              </LiveView>
               {(status !== "open" || !frame) && (
                 <Overlay
                   busy={status === "starting" || status === "open"}
@@ -76,7 +121,7 @@ export function BrowserPanel({ bot, onClose }: { bot: Bot; onClose(): void }) {
                 />
               )}
             </div>
-            {status === "open" && caption && (
+            {status === "open" && caption && !hands.held && (
               <p
                 key={action?.at}
                 aria-live="polite"
@@ -86,6 +131,7 @@ export function BrowserPanel({ bot, onClose }: { bot: Bot; onClose(): void }) {
                 <span className="truncate">{caption}</span>
               </p>
             )}
+            {live && !hands.held && !ask && <TakeBar bot={bot} hands={hands} />}
           </>
         )}
       </div>

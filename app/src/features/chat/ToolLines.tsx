@@ -9,6 +9,7 @@ import {
   Files,
   FileText,
   Globe,
+  Hand,
   LayoutTemplate,
   ListChecks,
   ListTodo,
@@ -47,6 +48,7 @@ const ICONS: Record<string, LucideIcon> = {
   Agent: Users,
   send_message: Send,
   suggest_bot: UserPlus,
+  browser_ask_owner: Hand,
 };
 
 /** The browser tools share the globe (spec 21.4). */
@@ -148,7 +150,7 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
             type="button"
             title={t.browser.showInPanel}
             aria-label={`${t.browser.showInPanel}: ${label}`}
-            onClick={showBrowser}
+            onClick={() => showBrowser()}
             className="grid size-6 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-sunken hover:text-ink"
           >
             <Globe aria-hidden size={14} />

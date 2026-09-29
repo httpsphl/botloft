@@ -1,5 +1,6 @@
 // O navegador de cada bot (spec 21.8): o painel ao lado do chat onde o dono
-// assiste ao vivo, e o cartão em que o bot pede para usar um site novo.
+// assiste ao vivo, o cartão em que o bot pede para usar um site novo, e o
+// dono assumindo o navegador com as próprias mãos (spec 21.10).
 
 import type { Messages } from "../en";
 
@@ -48,5 +49,29 @@ export const browser: Messages["browser"] = {
     allowed: (site) => `Você permitiu ${site}`,
     denied: (site) => `Você recusou ${site}`,
     expired: (site) => `Sem resposta sobre ${site}`,
+  },
+  hands: {
+    take: "Assumir o controle",
+    takeWhy: (bot) =>
+      `Para entrar numa conta ou passar de um captcha. ${bot} espera enquanto isso.`,
+    takeFailed: "Não foi possível assumir o navegador",
+    holding: "Você está no controle",
+    waits: (bot) => `As ações de ${bot} no navegador esperam você devolver.`,
+    giveBack: (bot) => `Pronto, devolver para ${bot}`,
+    giveBackFailed: "Não foi possível devolver o navegador",
+    clickToType: "Clique na tela para digitar",
+    typing: "O que você digita vai para a página",
+    screen: (bot) => `Navegador de ${bot}, nas suas mãos`,
+  },
+  help: {
+    needs: (bot) => `${bot} precisa de você no navegador`,
+    asks: (bot, task) => `${bot} pede: ${task}`,
+    why: "Assuma o controle, faça isso na página e devolva. O bot não vê o que você digita em campos de senha.",
+    take: "Assumir o navegador",
+    done: "Pronto",
+    wontDo: "Não vou fazer",
+    doneLine: (task) => `Você fez: ${task}`,
+    wontLine: (task) => `Você não fez: ${task}`,
+    expired: (task) => `Sem resposta: ${task}`,
   },
 };

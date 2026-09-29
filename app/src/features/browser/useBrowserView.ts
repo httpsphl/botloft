@@ -11,6 +11,8 @@ export interface BrowserView {
   frame: BrowserFrame | null;
   /** What the bot did last, for the cursor and the caption. */
   action: BrowserAction | null;
+  /** The daemon answered the watch: this connection may take the browser. */
+  watched: boolean;
 }
 
 export function useBrowserView(bot: Bot, watching: boolean): BrowserView {
@@ -19,6 +21,7 @@ export function useBrowserView(bot: Bot, watching: boolean): BrowserView {
   const putBrowser = useApp((state) => state.putBrowser);
   const [frame, setFrame] = useState<BrowserFrame | null>(null);
   const [action, setAction] = useState<BrowserAction | null>(null);
+  const [watched, setWatched] = useState(false);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: another bot's page is not this bot's
   useEffect(() => {
@@ -41,6 +44,7 @@ export function useBrowserView(bot: Bot, watching: boolean): BrowserView {
     api.call("browser.watch", { botId: bot.id }).then(
       (view) => {
         if (alive) {
+          setWatched(true);
           putBrowser(view.state);
           if (view.frame) {
             setFrame((current) => current ?? view.frame);
@@ -51,10 +55,11 @@ export function useBrowserView(bot: Bot, watching: boolean): BrowserView {
     );
     return () => {
       alive = false;
+      setWatched(false);
       unsubscribe();
       api.call("browser.unwatch").catch(() => {});
     };
   }, [api, bot.id, watching, connected, putBrowser]);
 
-  return { frame, action };
+  return { frame, action, watched };
 }

@@ -17,6 +17,8 @@ import type {
 
 /** The chief's tool to suggest a bot (spec 10.2). */
 export const SUGGEST_TOOL = "mcp__botloft__suggest_bot";
+/** A bot asking the owner for a hand in its browser (spec 21.10). */
+const HELP_TOOL = "mcp__botloft__browser_help";
 
 /** The conversation-list line for an item, like the daemon's (spec 8.3). */
 export function activityLine(body: ChatBody): { kind: ActivityKind; text: string } | null {
@@ -177,6 +179,10 @@ export class FakeChat {
             instructions,
             ...(model && { model }),
           });
+        }
+        // Any answer to a request for help gives the browser back (spec 21.10).
+        if (approval.toolName === HELP_TOOL) {
+          this.fake.browser.helped(approval.botId);
         }
         const item = this.items.find(
           (entry) => entry.body.kind === "approval" && entry.body.approvalId === approvalId,
