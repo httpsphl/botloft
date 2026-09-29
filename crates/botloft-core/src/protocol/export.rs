@@ -14,6 +14,8 @@ use crate::ids::{
     RoutineRunId, TaskId,
 };
 
+#[path = "export_browser.rs"]
+mod browser;
 #[path = "export_routines.rs"]
 mod routines;
 use crate::validate;
@@ -161,6 +163,7 @@ fn export_bindings() {
     out.decl::<ChatHistoryParams>();
     out.decl::<ApprovalsAnswerParams>();
     routines::decls(&mut out);
+    browser::decls(&mut out);
 
     let crew = out.name::<Crew>();
     let bot = out.name::<Bot>();
@@ -285,6 +288,7 @@ fn export_bindings() {
         &out.name::<Vec<Task>>(),
     );
     routines::methods(&mut out);
+    browser::methods(&mut out);
     out.text.push_str("}\n\n");
 
     out.text
@@ -311,6 +315,7 @@ fn export_bindings() {
     );
     let _ = writeln!(out.text, "  \"{}\": {task};", notification::TASK_CHANGED);
     routines::notifications(&mut out);
+    browser::notifications(&mut out);
     out.text.push_str("}\n\n");
 
     out.text.push_str("export const RpcErrorCode = {\n");

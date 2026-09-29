@@ -779,6 +779,73 @@ export type RoutineIdParams = { routineId: RoutineId, };
 
 export type RoutinesRunsParams = { routineId: RoutineId, before?: RoutineRunId, limit?: number, };
 
+/**
+ * Where a bot's browser is.
+ */
+export type BrowserStatus = "closed" | "starting" | "open" | "failed";
+
+export type BrowserState = { botId: BotId, status: BrowserStatus, 
+/**
+ * The active tab's address.
+ */
+url: string | null, title: string | null, 
+/**
+ * The active tab is loading a page.
+ */
+loading: boolean, 
+/**
+ * Open tabs.
+ */
+tabs: number, 
+/**
+ * Why it could not start, when `failed`.
+ */
+error: string | null, 
+/**
+ * Unix time in milliseconds.
+ */
+updatedAt: number, };
+
+/**
+ * One picture of the active tab, sent only to the connection watching it.
+ */
+export type BrowserFrame = { botId: BotId, 
+/**
+ * A JPEG, base64.
+ */
+data: string, 
+/**
+ * Size of the page it shows, in CSS pixels: the space of
+ * `BrowserAction` points.
+ */
+width: number, height: number, };
+
+export type BrowserActionKind = "open" | "click" | "type" | "select" | "press" | "scroll" | "back";
+
+/**
+ * Something the bot did in its browser, for the cursor in the app.
+ */
+export type BrowserAction = { botId: BotId, kind: BrowserActionKind, 
+/**
+ * Where on the page, in CSS pixels, when the action has a point.
+ */
+x: number | null, y: number | null, 
+/**
+ * The element's name, the key or the site; never the text typed.
+ */
+label: string | null, 
+/**
+ * Unix time in milliseconds.
+ */
+at: number, };
+
+/**
+ * What `browser.watch` answers: the state and the latest frame.
+ */
+export type BrowserView = { state: BrowserState, frame: BrowserFrame | null, };
+
+export type BrowserWatchParams = { botId: BotId, };
+
 /** Params and result of every request method. */
 export interface RpcMethods {
   "session.hello": { params: HelloParams; result: HelloResult };
@@ -816,6 +883,9 @@ export interface RpcMethods {
   "routines.runNow": { params: RoutineIdParams; result: RoutineRun };
   "routines.archive": { params: RoutineIdParams; result: Routine };
   "routines.runs": { params: RoutinesRunsParams; result: Array<RoutineRun> };
+  "browser.list": { params: undefined; result: Array<BrowserState> };
+  "browser.watch": { params: BrowserWatchParams; result: BrowserView };
+  "browser.unwatch": { params: undefined; result: null };
 }
 
 /** Params of every server notification. */
@@ -830,6 +900,9 @@ export interface RpcNotifications {
   "task.changed": Task;
   "routine.changed": Routine;
   "routine.run": RoutineRun;
+  "browser.changed": BrowserState;
+  "browser.action": BrowserAction;
+  "browser.frame": BrowserFrame;
 }
 
 export const RpcErrorCode = {

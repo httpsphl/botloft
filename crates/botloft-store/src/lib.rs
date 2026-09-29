@@ -6,6 +6,7 @@
 
 mod approvals;
 mod bots;
+mod browser_sites;
 mod chat;
 mod crews;
 mod deliveries;
