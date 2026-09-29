@@ -299,7 +299,7 @@ Todo item tem `id` (`cht_`), `botId`, `kind`, `createdAt` e `updatedAt`.
 | `turn` | `durationMs`, `costUsd`, `error` | fim de um turno |
 | `notice` | `level` (`info`, `warning`, `error`), `code` (`signed_out`, `usage_limit`, `turn_failed`, `model_unavailable`; ausente em avisos antigos), `text` | avisos do daemon: limite de uso, login, turno com erro. O app escreve os avisos com `code` no idioma do dono; `text` fica em inglês para quem não conhece o código e, em `turn_failed`, traz o detalhe do erro |
 
-- `summary` é uma frase curta feita pelo daemon a partir da entrada: o comando do `Bash`, o arquivo do `Read`/`Edit`/`Write`, o padrão do `Grep`/`Glob`, a URL do `WebFetch`, a busca do `WebSearch`, o destinatário do `send_message`. Ferramenta desconhecida mostra só o nome.
+- `summary` é um trecho curto tirado da entrada, sem palavras do daemon: o comando do `Bash`, o arquivo do `Read`/`Edit`/`Write`, o padrão do `Grep`/`Glob`, a URL do `WebFetch`, a busca do `WebSearch`, o destinatário do `send_message` (`@writer`), a tecla do `browser_press`. Fica vazio onde só palavras diriam algo (`TodoWrite`, `complete_task`, `ToolSearch` que carrega ferramentas, a direção do `browser_scroll`) e onde o trecho não diz nada ao dono (a `ref` de um elemento do navegador). O app escreve o nome da ferramenta como uma ação no idioma do dono ("Mandar uma mensagem", "Abrir uma página"; uma ferramenta que ele não conhece aparece pelo nome) e, nas que ficam vazias, o que der para dizer a partir da entrada (as ferramentas carregadas, a direção da rolagem).
 - `input` guarda o JSON da entrada até 4 KB; `output`, até 8 KB de texto. O resto fica só no transcript do próprio Claude Code.
 - A resposta do bot (`reply`) é guardada inteira.
 - Uma message de um bot para outro aparece duas vezes: no chat de quem mandou, como o item `tool` do `send_message`; no chat de quem recebe, como `inbound`.
@@ -502,7 +502,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `browser.list`, `browser.watch`, `browser.unwatch`, `browser.take`, `browser.release`, `browser.input` | seção 21.7 | o navegador dos bots, a tela ao vivo e o dono no controle |
 | `screens.list` | seção 22.4 | as telas HTML do bot |
 
-`Crew` traz `workFolder`, o caminho da pasta de trabalho (a escolhida ou a `shared\`), `workFolderChosen` e `leadBotId`, o chefe (10.2). `Bot` traz também `permissionMode`, `model` e `modelInUse` (7.4) e `lastActivity`: o último item do chat resumido em uma linha, para a lista de conversas: `kind` (`owner`, `message`, `reply`, `tool`, `approval`, `notice`), `text` e `at`. O `text` não tem palavras do daemon: a mensagem do dono vem sem "You:" e a aprovação só com o nome da ferramenta, e o app completa no idioma do dono.
+`Crew` traz `workFolder`, o caminho da pasta de trabalho (a escolhida ou a `shared\`), `workFolderChosen` e `leadBotId`, o chefe (10.2). `Bot` traz também `permissionMode`, `model` e `modelInUse` (7.4) e `lastActivity`: o último item do chat resumido em uma linha, para a lista de conversas: `kind` (`owner`, `message`, `reply`, `tool`, `approval`, `notice`), `text`, `tool` e `at`. O `text` não tem palavras do daemon: a mensagem do dono vem sem "You:", e uma ferramenta ou um pedido vêm só com o resumo, com a ferramenta à parte em `tool`; o app completa no idioma do dono ("Mandar uma mensagem · @writer", "Aguardando aprovação: rodar um comando").
 
 ### 11.3 Notificações do servidor
 
@@ -703,7 +703,7 @@ Identidade: o mascote do Botloft é uma chama com olhos, desenhada em vetor em `
 - Componentes leem com `useT()`; código fora do React (toasts, formatação, erros da conexão) com `t()` na hora do uso.
 - Escolha na área da conta (Idioma, ou Configurações), e no botão de idioma da barra de título só nas telas de preparo: "Idioma do sistema" segue o Windows (o primeiro idioma suportado entre os preferidos; `pt-PT` vira `pt-BR`; nenhum, inglês) ou um idioma fixo. A escolha fica no `localStorage` do app (`botloft.locale`) e marca `<html lang>`.
 - Datas e horas (`lib/format.ts`) usam o idioma escolhido.
-- O daemon não escreve texto para o dono: avisos vêm com `code` e a linha da conversa com `kind` (8.2, 11.2), e o app escreve. Continuam como vêm: nomes, mensagens, respostas e saídas de ferramenta; o resumo de ferramenta que o daemon faz a partir da entrada (o comando, o arquivo); e as mensagens de erro do daemon (validação, falhas), mostradas como texto técnico.
+- O daemon não escreve texto para o dono: avisos vêm com `code` e a linha da conversa com `kind` (8.2, 11.2), e o app escreve. Continuam como vêm: nomes, mensagens, respostas e saídas de ferramenta; o resumo de ferramenta que o daemon tira da entrada (o comando, o arquivo), sem o nome da ferramenta, que o app escreve; e as mensagens de erro do daemon (validação, falhas), mostradas como texto técnico.
 - O instalador NSIS também traz os três idiomas e escolhe pelo idioma do Windows.
 - Tom: palavras simples, sem jargão; "você" em português, "tú" em espanhol. Glossário: crew = equipe / equipo; task = tarefa / tarea; Allow / Deny = Permitir / Negar / Denegar; role = função / rol.
 

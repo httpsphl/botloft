@@ -3,7 +3,7 @@
 
 use serde_json::Value;
 
-use crate::protocol::{ActivityKind, ChatBody, SenderKind};
+use crate::protocol::{Activity, ActivityKind, ChatBody, SenderKind};
 
 /// Longest tool input kept, in bytes.
 pub const TOOL_INPUT_MAX: usize = 4 * 1024;
@@ -82,7 +82,8 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
         "WebFetch" => field(input, "url").map(str::to_owned),
         "WebSearch" => field(input, "query").map(str::to_owned),
         "Task" | "Agent" => field(input, "description").map(str::to_owned),
-        "TodoWrite" => Some("Updated the plan".to_owned()),
+        // The app names these; nothing to add in any language.
+        "TodoWrite" | "mcp__botloft__complete_task" => None,
         // The plan's first line, usually its title.
         PLAN_TOOL => field(input, "plan").and_then(|plan| {
             plan.lines()
@@ -90,31 +91,23 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
                 .find(|line| !line.is_empty())
                 .map(str::to_owned)
         }),
-        // Claude Code loads deferred tools (such as ours) by name first.
-        "ToolSearch" => field(input, "query").map(|query| match query.strip_prefix("select:") {
-            Some(names) => {
-                let labels: Vec<_> = names.split(',').map(|n| tool_label(n.trim())).collect();
-                format!("load {}", labels.join(", "))
-            }
-            None => query.to_owned(),
-        }),
+        // Claude Code loads deferred tools (such as ours) by name first; the
+        // app names the tools loaded, from the input.
+        "ToolSearch" => field(input, "query")
+            .filter(|query| !query.starts_with("select:"))
+            .map(str::to_owned),
         "mcp__botloft__send_message" => {
-            field(input, "to").map(|to| format!("to @{}", to.trim_start_matches('@')))
+            field(input, "to").map(|to| format!("@{}", to.trim_start_matches('@')))
         }
-        "mcp__botloft__complete_task" => field(input, "task_id").map(|id| format!("task {id}")),
         SUGGEST_TOOL => field(input, "name").map(str::to_owned),
         BROWSER_SITE_TOOL => field(input, "site").map(str::to_owned),
         BROWSER_HELP_TOOL | "mcp__botloft__browser_ask_owner" => {
             field(input, "task").map(str::to_owned)
         }
         "mcp__botloft__browser_open" => field(input, "url").map(str::to_owned),
-        "mcp__botloft__browser_click"
-        | "mcp__botloft__browser_type"
-        | "mcp__botloft__browser_select" => field(input, "ref").map(str::to_owned),
+        // Element refs ("e12") mean nothing to the owner, and a direction
+        // needs words: the app says those (spec 21.8).
         "mcp__botloft__browser_press" => field(input, "key").map(str::to_owned),
-        "mcp__botloft__browser_scroll" => field(input, "ref")
-            .or_else(|| field(input, "to"))
-            .map(str::to_owned),
         _ => None,
     };
     one_line(&summary.unwrap_or_default(), SUMMARY_MAX_CHARS)
@@ -143,32 +136,33 @@ pub fn tool_label(name: &str) -> &str {
     name.rsplit("__").next().unwrap_or(name)
 }
 
-/// The conversation-list line for a chat item, and what kind of line it
-/// is; `None` for items that do not change it (turn ends). The text has no
-/// wording of its own ("You:", "Waiting for approval"): the app adds it in
-/// the owner's language.
-pub fn activity_line(body: &ChatBody) -> Option<(ActivityKind, String)> {
+/// The conversation-list line for a chat item, from `at`; `None` for
+/// items that do not change it (turn ends). It has no wording of its own
+/// ("You:", "Waiting for approval", a tool's name): the app adds it in the
+/// owner's language, from `kind` and `tool`.
+pub fn activity(body: &ChatBody, at: i64) -> Option<Activity> {
     let (kind, text) = match body {
         ChatBody::Inbound(item) => match item.message.from_kind {
             SenderKind::Owner => (ActivityKind::Owner, item.message.body.clone()),
             _ => (ActivityKind::Message, item.message.body.clone()),
         },
         ChatBody::Reply(item) => (ActivityKind::Reply, item.text.clone()),
-        ChatBody::Tool(item) => (
-            ActivityKind::Tool,
-            match item.summary.as_str() {
-                "" => tool_label(&item.name).to_owned(),
-                summary => format!("{} · {summary}", tool_label(&item.name)),
-            },
-        ),
-        ChatBody::Approval(item) => (
-            ActivityKind::Approval,
-            tool_label(&item.tool_name).to_owned(),
-        ),
+        ChatBody::Tool(item) => (ActivityKind::Tool, item.summary.clone()),
+        ChatBody::Approval(item) => (ActivityKind::Approval, item.summary.clone()),
         ChatBody::Notice(item) => (ActivityKind::Notice, item.text.clone()),
         ChatBody::Turn(_) => return None,
     };
-    Some((kind, one_line(&text, ACTIVITY_MAX_CHARS)))
+    let tool = match body {
+        ChatBody::Tool(item) => Some(item.name.clone()),
+        ChatBody::Approval(item) => Some(item.tool_name.clone()),
+        _ => None,
+    };
+    Some(Activity {
+        kind,
+        text: one_line(&text, ACTIVITY_MAX_CHARS),
+        tool,
+        at,
+    })
 }
 
 #[cfg(test)]
@@ -210,15 +204,16 @@ mod tests {
                 "mcp__botloft__send_message",
                 &json!({ "to": "@writer", "body": "x" })
             ),
-            "to @writer"
+            "@writer"
         );
         assert_eq!(
             tool_summary(
                 "ToolSearch",
                 &json!({ "query": "select:mcp__botloft__send_message,Read", "max_results": 3 })
             ),
-            "load send_message, Read"
+            ""
         );
+        assert_eq!(tool_summary("TodoWrite", &json!({ "todos": [] })), "");
         assert_eq!(
             tool_summary("ToolSearch", &json!({ "query": "notebook jupyter" })),
             "notebook jupyter"
@@ -236,7 +231,7 @@ mod tests {
                 "mcp__botloft__browser_type",
                 &json!({ "ref": "e4", "text": "secret" })
             ),
-            "e4"
+            ""
         );
         assert_eq!(
             tool_summary(BROWSER_SITE_TOOL, &json!({ "site": "example.com" })),
