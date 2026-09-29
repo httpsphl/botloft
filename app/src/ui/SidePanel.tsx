@@ -1,26 +1,24 @@
 // A panel beside the main area whose width the owner sets by dragging its
 // left edge (or with the arrow keys), remembered per panel. It never takes
 // more than the main area can spare, so the chat keeps its room. It slides
-// open from the right edge (panels.css).
+// open and closed at the right edge (panelMotion.ts).
 
 import {
-  type AnimationEvent,
+  type CSSProperties,
   type KeyboardEvent,
   type PointerEvent,
   type ReactNode,
-  useEffect,
   useRef,
   useState,
 } from "react";
 import { useT } from "../i18n";
+import { usePanelMotion } from "./panelMotion";
 
 const MIN_PX = 256;
 const MAX_PX = 900;
 const KEY_STEP_PX = 24;
 /** What the main area keeps whatever the panel's width, in rem. */
 const KEEP_FOR_MAIN = "22rem";
-/** How long opening takes, with room for the animation to report its end. */
-const OPENING_MS = 400;
 
 function stored(name: string, fallback: number): number {
   try {
@@ -61,18 +59,10 @@ export function SidePanel({
   const [width, setWidth] = useState(() => stored(name, defaultWidth));
   const panel = useRef<HTMLElement>(null);
   const drag = useRef<{ x: number; width: number; scale: number } | null>(null);
-  // While it slides open, the content keeps its full width and is cut at
-  // the moving edge, so it comes in without reflowing.
-  const [opening, setOpening] = useState(true);
-  useEffect(() => {
-    const done = setTimeout(() => setOpening(false), OPENING_MS);
-    return () => clearTimeout(done);
-  }, []);
-  const opened = (event: AnimationEvent<HTMLElement>) => {
-    if (event.target === event.currentTarget && event.animationName === "panel-open") {
-      setOpening(false);
-    }
-  };
+  const { motion, from, ended } = usePanelMotion(panel, width);
+  // While it slides, the content keeps its full width and is cut at the
+  // moving edge, so it comes and goes without reflowing.
+  const sliding = motion !== "open";
 
   const set = (next: number, keep = false) => {
     const clamped = clamp(next);
@@ -124,13 +114,20 @@ export function SidePanel({
     <aside
       ref={panel}
       aria-label={label}
-      style={{
-        width: expanded ? `calc(100% - ${KEEP_FOR_MAIN})` : width,
-        maxWidth: `calc(100% - ${KEEP_FOR_MAIN})`,
-        minWidth: MIN_PX,
-      }}
-      className={`relative flex shrink-0 flex-col border-line border-l bg-panel ${opening ? "panel-opening" : ""}`}
-      onAnimationEnd={opened}
+      aria-hidden={motion === "closing" || undefined}
+      inert={motion === "closing"}
+      style={
+        {
+          width: expanded ? `calc(100% - ${KEEP_FOR_MAIN})` : width,
+          maxWidth: `calc(100% - ${KEEP_FOR_MAIN})`,
+          minWidth: MIN_PX,
+          "--panel-from": `${from}px`,
+        } as CSSProperties
+      }
+      className={`relative flex shrink-0 flex-col border-line border-l bg-panel ${
+        motion === "opening" ? "panel-opening" : motion === "closing" ? "panel-closing" : ""
+      }`}
+      onAnimationEnd={ended}
     >
       {/* biome-ignore lint/a11y/useSemanticElements: a separator that can be dragged and focused is a widget, not an <hr> */}
       <div
@@ -154,7 +151,7 @@ export function SidePanel({
       </div>
       <div
         className="flex min-h-0 flex-1 flex-col"
-        style={opening && !expanded ? { width, alignSelf: "flex-start" } : undefined}
+        style={sliding && !expanded ? { width, alignSelf: "flex-start" } : undefined}
       >
         {children}
       </div>

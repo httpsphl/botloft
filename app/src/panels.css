@@ -1,16 +1,31 @@
-/* Side panels slide open (spec 15.1): the panel widens from the window's
-   right edge while its content, already at its full width, comes in with
-   it, and the chat narrows smoothly instead of jumping. Reduced motion
-   makes it instant (motion.css). */
+/* Side panels slide (spec 15.1, panelMotion.ts): the panel widens from the
+   window's right edge, or from the width of the panel it replaces, while
+   its content, already at its full width, comes in with it, and the chat
+   narrows smoothly instead of jumping. Closing runs it back to the edge.
+   Reduced motion makes both instant (motion.css). */
 
 @keyframes panel-open {
   from {
+    width: var(--panel-from, 0px);
+    min-width: var(--panel-from, 0px);
+  }
+}
+
+@keyframes panel-close {
+  to {
     width: 0;
     min-width: 0;
+    border-left-width: 0;
   }
 }
 
 .panel-opening {
   overflow: hidden;
-  animation: panel-open 280ms var(--ease-out) both;
+  animation: panel-open 460ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.panel-closing {
+  overflow: hidden;
+  pointer-events: none;
+  animation: panel-close 360ms cubic-bezier(0.4, 0, 0.6, 1) both;
 }
