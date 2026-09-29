@@ -70,7 +70,10 @@ async fn an_owner_message_reaches_the_bot_as_its_user_and_is_read() {
         item["item"]["body"],
         json!({ "kind": "inbound", "message": message })
     );
-    assert_eq!(item["activity"]["text"], "You: Olá! Tudo bem?");
+    assert_eq!(
+        (&item["activity"]["kind"], &item["activity"]["text"]),
+        (&json!("owner"), &json!("Olá! Tudo bem?"))
+    );
 
     t.until_state(&bot, BotState::Idle).await;
     t.clock.advance(Duration::from_secs(5));

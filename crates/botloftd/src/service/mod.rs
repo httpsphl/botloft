@@ -66,6 +66,11 @@ pub fn status(daemon: &Daemon) -> ApiResult<SystemStatus> {
         uptime_ms: daemon.uptime_ms(),
         claude_version: daemon.supervisor.claude_version(),
         runtime_error: daemon.supervisor.runtime_error(),
+        claude_path: daemon
+            .supervisor
+            .claude_path()
+            .map(|path| path.display().to_string()),
+        claude_signed_in: daemon.supervisor.claude_signed_in(),
         deliveries,
         usage: daemon.usage(),
     })

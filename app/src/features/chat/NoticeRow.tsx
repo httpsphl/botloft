@@ -19,8 +19,22 @@ export function NoticeRow({ notice }: { notice: NoticeItem }) {
     >
       <Icon aria-hidden size={15} className={`mt-0.5 shrink-0 ${tone}`} />
       <p className="whitespace-pre-wrap break-words text-ink-soft" data-selectable>
-        {notice.text}
+        {noticeText(notice)}
       </p>
     </li>
   );
+}
+
+/** The app's own words for notices it knows; the daemon's text otherwise. */
+function noticeText(notice: NoticeItem): string {
+  switch (notice.code) {
+    case "signed_out":
+      return "Claude Code is not signed in, or the account can't be used right now. Sign in to Claude, or check your Claude plan.";
+    case "usage_limit":
+      return "Your Claude plan reached its usage limit. Messages wait until it resets.";
+    case "turn_failed":
+      return `This turn failed: ${notice.text}`;
+    default:
+      return notice.text;
+  }
 }

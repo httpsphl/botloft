@@ -4,6 +4,7 @@ import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { CrewDialog } from "../crews/CrewDialog";
 import { ClaudeCodeHelp } from "./ClaudeCodeHelp";
+import { SignInButton } from "./SignIn";
 
 /** First run: what is ready, what is not, and the first crew. */
 export function Welcome() {
@@ -25,6 +26,29 @@ export function Welcome() {
     claude = <Check state="ok" title="Claude Code" detail={`Version ${system.claudeVersion}`} />;
   }
 
+  // Only once Claude Code is there: signing in needs it.
+  let account: ReactNode = null;
+  if (system && !system.runtimeError && system.claudeVersion !== null) {
+    if (system.claudeSignedIn === true) {
+      account = <Check state="ok" title="Claude account" detail="Signed in." />;
+    } else if (system.claudeSignedIn === false) {
+      account = (
+        <Check
+          state="bad"
+          title="Claude account"
+          detail={
+            <>
+              <p>Your bots work with your Claude account. Sign in once and they are ready.</p>
+              <SignInButton />
+            </>
+          }
+        />
+      );
+    } else {
+      account = <Check state="pending" title="Claude account" detail="Checking…" />;
+    }
+  }
+
   return (
     <main className="min-h-0 flex-1 overflow-y-auto p-8">
       <div className="mx-auto max-w-xl">
@@ -40,6 +64,7 @@ export function Welcome() {
             detail="Running in the background. It starts with Windows, so your bots keep working after you close this window."
           />
           {claude}
+          {account}
         </ul>
         <div className="mt-4 border border-line bg-panel p-4 text-sm leading-relaxed">
           <p className="font-semibold">Bots ask before they change things</p>

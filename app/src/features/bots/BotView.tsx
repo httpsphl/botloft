@@ -4,6 +4,7 @@ import type { Bot, Crew } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { ChatView } from "../chat/ChatView";
+import { SignInButton } from "../onboarding/SignIn";
 import { BotHeader } from "./BotHeader";
 import { stateView } from "./BotStateBadge";
 
@@ -51,6 +52,7 @@ function Notices({
     notices.push(
       <Callout key="state" tone={view.tone} title={view.label}>
         {view.hint}
+        {bot.state === "auth_error" && <SignInButton />}
       </Callout>,
     );
   }

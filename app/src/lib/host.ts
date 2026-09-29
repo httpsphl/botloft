@@ -52,6 +52,11 @@ export interface Host {
   installDaemon(): Promise<DaemonStatus>;
   /** Stops the daemon and starts it again from its scheduled task. */
   restartDaemon(): Promise<DaemonStatus>;
+  /**
+   * Opens Claude Code's sign-in (`claude auth login`) in its own window and
+   * waits for it to end. Resolves whether it signed in.
+   */
+  signInToClaude(claudePath: string): Promise<boolean>;
   /** A newer version of the app, or null when this one is the latest. */
   checkForUpdate(): Promise<AppUpdate | null>;
   readOwnerToken(): Promise<string>;

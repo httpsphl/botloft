@@ -5,6 +5,7 @@ import type { FakeBotloft, Handlers } from "./fake";
 import { conflict, notFound } from "./fakeRules";
 import type {
   Activity,
+  ActivityKind,
   Approval,
   ApprovalItem,
   BotId,
@@ -14,30 +15,36 @@ import type {
 } from "./protocol.gen";
 
 /** The conversation-list line for an item, like the daemon's (spec 8.3). */
-export function activityLine(body: ChatBody): string | null {
+export function activityLine(body: ChatBody): { kind: ActivityKind; text: string } | null {
   const label = (name: string) => name.split("__").at(-1) ?? name;
+  let kind: ActivityKind;
   let text: string;
   switch (body.kind) {
     case "inbound":
-      text = body.message.fromKind === "owner" ? `You: ${body.message.body}` : body.message.body;
+      kind = body.message.fromKind === "owner" ? "owner" : "message";
+      text = body.message.body;
       break;
     case "reply":
+      kind = "reply";
       text = body.text;
       break;
     case "tool":
+      kind = "tool";
       text = body.summary ? `${label(body.name)} · ${body.summary}` : label(body.name);
       break;
     case "approval":
-      text = `Waiting for approval: ${label(body.toolName)}`;
+      kind = "approval";
+      text = label(body.toolName);
       break;
     case "notice":
+      kind = "notice";
       text = body.text;
       break;
     case "turn":
       return null;
   }
   const flat = text.split(/\s+/).filter(Boolean).join(" ");
-  return flat.length <= 120 ? flat : `${flat.slice(0, 119).trimEnd()}…`;
+  return { kind, text: flat.length <= 120 ? flat : `${flat.slice(0, 119).trimEnd()}…` };
 }
 
 export class FakeChat {
@@ -167,7 +174,7 @@ export class FakeChat {
 
   private announce(item: ChatItem, isNew: boolean): void {
     const line = isNew ? activityLine(item.body) : null;
-    const activity: Activity | null = line === null ? null : { text: line, at: item.updatedAt };
+    const activity: Activity | null = line === null ? null : { ...line, at: item.updatedAt };
     if (activity) {
       const bot = this.fake.bots.get(item.botId);
       if (bot) {

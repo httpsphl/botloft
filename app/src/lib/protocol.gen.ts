@@ -78,11 +78,16 @@ archivedAt: number | null, };
 export type BotState = "offline" | "launching" | "idle" | "busy" | "needs_approval" | "rate_limited" | "auth_error" | "backoff" | "archived";
 
 /**
+ * What the conversation-list line shows; the app words it.
+ */
+export type ActivityKind = "owner" | "message" | "reply" | "tool" | "approval" | "notice";
+
+/**
  * The last thing in a bot's chat, for the conversation list.
  */
-export type Activity = { 
+export type Activity = { kind: ActivityKind, 
 /**
- * One line, at most 120 characters.
+ * One line, at most 120 characters, without wording of its own.
  */
 text: string, 
 /**
@@ -193,7 +198,15 @@ claudeVersion: string | null,
 /**
  * Why bots cannot start (Claude Code missing or too old); `null` when fine.
  */
-runtimeError: string | null, deliveries: DeliveryBacklog, 
+runtimeError: string | null, 
+/**
+ * The Claude Code executable the bots run; `null` until it is found.
+ */
+claudePath: string | null, 
+/**
+ * Whether Claude Code is signed in (`claude auth status`); `null` until checked.
+ */
+claudeSignedIn: boolean | null, deliveries: DeliveryBacklog, 
 /**
  * The Claude account's usage as last reported; `null` before any turn.
  */
@@ -411,6 +424,11 @@ export type ApprovalStatus = "pending" | "allowed" | "denied" | "expired";
 
 export type NoticeLevel = "info" | "warning" | "error";
 
+/**
+ * What a notice is about, so the app can say it in the owner's language.
+ */
+export type NoticeCode = "signed_out" | "usage_limit" | "turn_failed";
+
 export type InboundItem = { message: Message, };
 
 export type ReplyItem = { text: string, };
@@ -445,7 +463,15 @@ costUsd: number | null,
  */
 error: string | null, };
 
-export type NoticeItem = { level: NoticeLevel, text: string, };
+export type NoticeItem = { level: NoticeLevel, 
+/**
+ * Absent on notices stored before codes existed.
+ */
+code?: NoticeCode, 
+/**
+ * English text, or the detail for [`NoticeCode::TurnFailed`].
+ */
+text: string, };
 
 /**
  * What a chat item holds, by `kind`.
@@ -512,6 +538,7 @@ note?: string, };
 export interface RpcMethods {
   "session.hello": { params: HelloParams; result: HelloResult };
   "system.status": { params: undefined; result: SystemStatus };
+  "system.refresh": { params: undefined; result: SystemStatus };
   "crews.list": { params: undefined; result: Array<Crew> };
   "crews.create": { params: CrewsCreateParams; result: Crew };
   "crews.rename": { params: CrewsRenameParams; result: Crew };

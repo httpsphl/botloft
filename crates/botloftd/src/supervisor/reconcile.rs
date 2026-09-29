@@ -23,6 +23,7 @@ impl Supervisor {
             return;
         };
         self.ensure_claude().await;
+        self.ensure_sign_in().await;
         // Read before taking the supervisor lock (lock order, see mod.rs).
         let read = {
             let store = daemon.store();

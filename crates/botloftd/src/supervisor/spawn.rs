@@ -39,6 +39,7 @@ impl Supervisor {
             tokens,
             sessions,
             claude,
+            ..
         } = inner;
         let Some(slot) = slots.get_mut(&bot.id) else {
             return;

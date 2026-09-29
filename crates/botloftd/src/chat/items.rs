@@ -28,7 +28,8 @@ pub(crate) fn add(daemon: &Daemon, bot: &BotId, body: ChatBody) -> Option<ChatIt
 
 /// Announces an item that is already saved, e.g. the one a message created.
 pub(crate) fn announce(daemon: &Daemon, item: ChatItem) {
-    let activity = activity_line(&item.body).map(|text| Activity {
+    let activity = activity_line(&item.body).map(|(kind, text)| Activity {
+        kind,
         text,
         at: item.updated_at,
     });

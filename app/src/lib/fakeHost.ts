@@ -24,6 +24,11 @@ export class FakeHost implements Host {
   token: string | Error = "a".repeat(64);
   readonly opened: string[] = [];
   readonly installs: ("install" | "restart")[] = [];
+  /** Paths `signInToClaude` ran, and what it answers. */
+  readonly signIns: string[] = [];
+  signInResult: boolean | Error = true;
+  /** Runs when a sign-in ends, before it resolves (e.g. to sign the fake daemon in). */
+  onSignIn: () => void = () => {};
   /** What `checkForUpdate` finds, or its error. */
   update: AppUpdate | null | Error = null;
   updateChecks = 0;
@@ -41,6 +46,15 @@ export class FakeHost implements Host {
 
   restartDaemon(): Promise<DaemonStatus> {
     return this.settle("restart");
+  }
+
+  signInToClaude(claudePath: string): Promise<boolean> {
+    this.signIns.push(claudePath);
+    if (this.signInResult instanceof Error) {
+      return Promise.reject(this.signInResult);
+    }
+    this.onSignIn();
+    return Promise.resolve(this.signInResult);
   }
 
   checkForUpdate(): Promise<AppUpdate | null> {

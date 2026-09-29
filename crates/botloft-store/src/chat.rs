@@ -139,7 +139,8 @@ impl Store {
         ))?;
         let item = stmt.query_row([bot.as_str()], from_row).optional()?;
         Ok(item.and_then(|item| {
-            activity_line(&item.body).map(|text| Activity {
+            activity_line(&item.body).map(|(kind, text)| Activity {
+                kind,
                 text,
                 at: item.updated_at,
             })
@@ -149,7 +150,7 @@ impl Store {
 
 #[cfg(test)]
 mod tests {
-    use botloft_core::protocol::{ReplyItem, ToolItem, ToolStatus, TurnItem};
+    use botloft_core::protocol::{ActivityKind, ReplyItem, ToolItem, ToolStatus, TurnItem};
 
     use super::*;
     use crate::tests::Fixture;
@@ -253,6 +254,7 @@ mod tests {
         assert_eq!(
             fx.store.last_activity(bot).expect("activity"),
             Some(Activity {
+                kind: ActivityKind::Reply,
                 text: "All done. Details below".into(),
                 at: 7
             })

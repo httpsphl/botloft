@@ -3,7 +3,7 @@
 
 use serde_json::Value;
 
-use crate::protocol::{ChatBody, SenderKind};
+use crate::protocol::{ActivityKind, ChatBody, SenderKind};
 
 /// Longest tool input kept, in bytes.
 pub const TOOL_INPUT_MAX: usize = 4 * 1024;
@@ -90,26 +90,32 @@ pub fn tool_label(name: &str) -> &str {
     name.rsplit("__").next().unwrap_or(name)
 }
 
-/// The conversation-list line for a chat item; `None` for items that do not
-/// change it (turn ends).
-pub fn activity_line(body: &ChatBody) -> Option<String> {
-    let text = match body {
+/// The conversation-list line for a chat item, and what kind of line it
+/// is; `None` for items that do not change it (turn ends). The text has no
+/// wording of its own ("You:", "Waiting for approval"): the app adds it in
+/// the owner's language.
+pub fn activity_line(body: &ChatBody) -> Option<(ActivityKind, String)> {
+    let (kind, text) = match body {
         ChatBody::Inbound(item) => match item.message.from_kind {
-            SenderKind::Owner => format!("You: {}", item.message.body),
-            _ => item.message.body.clone(),
+            SenderKind::Owner => (ActivityKind::Owner, item.message.body.clone()),
+            _ => (ActivityKind::Message, item.message.body.clone()),
         },
-        ChatBody::Reply(item) => item.text.clone(),
-        ChatBody::Tool(item) => match item.summary.as_str() {
-            "" => tool_label(&item.name).to_owned(),
-            summary => format!("{} · {summary}", tool_label(&item.name)),
-        },
-        ChatBody::Approval(item) => {
-            format!("Waiting for approval: {}", tool_label(&item.tool_name))
-        }
-        ChatBody::Notice(item) => item.text.clone(),
+        ChatBody::Reply(item) => (ActivityKind::Reply, item.text.clone()),
+        ChatBody::Tool(item) => (
+            ActivityKind::Tool,
+            match item.summary.as_str() {
+                "" => tool_label(&item.name).to_owned(),
+                summary => format!("{} · {summary}", tool_label(&item.name)),
+            },
+        ),
+        ChatBody::Approval(item) => (
+            ActivityKind::Approval,
+            tool_label(&item.tool_name).to_owned(),
+        ),
+        ChatBody::Notice(item) => (ActivityKind::Notice, item.text.clone()),
         ChatBody::Turn(_) => return None,
     };
-    Some(one_line(&text, ACTIVITY_MAX_CHARS))
+    Some((kind, one_line(&text, ACTIVITY_MAX_CHARS)))
 }
 
 #[cfg(test)]

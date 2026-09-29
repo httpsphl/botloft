@@ -51,7 +51,7 @@ const views: Record<BotState, StateView> = {
     label: "Sign-in needed",
     tone: "danger",
     icon: KeyRound,
-    hint: "Claude Code is not signed in. Open Claude Code and sign in, then restart the bot.",
+    hint: "Claude Code is not signed in, or the account can't be used. Sign in to Claude and the bot starts again by itself. Already signed in? Check your Claude plan, then restart the bot.",
   },
   backoff: {
     label: "Restarting",

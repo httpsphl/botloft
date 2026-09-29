@@ -9,6 +9,7 @@ import { CrewView } from "../features/crews/CrewView";
 import { Sidebar } from "../features/crews/Sidebar";
 import { FailedDeliveries } from "../features/messages/FailedDeliveries";
 import { ClaudeCodeHelp } from "../features/onboarding/ClaudeCodeHelp";
+import { SignInButton } from "../features/onboarding/SignIn";
 import { Welcome } from "../features/onboarding/Welcome";
 import { UpdateButton } from "../features/updates/UpdateButton";
 import { useApp } from "../store/context";
@@ -21,6 +22,7 @@ export function Workspace() {
   const loadError = useApp((state) => state.loadError);
   const hasCrews = useApp((state) => Object.keys(state.crews).length > 0);
   const runtimeError = useApp((state) => state.system?.runtimeError ?? null);
+  const signedOut = useApp((state) => state.system?.claudeSignedIn === false);
   useAttentionMark();
 
   let main: ReactNode;
@@ -41,12 +43,22 @@ export function Workspace() {
       <div className="flex min-h-0 flex-1">
         <Sidebar />
         <main className="flex min-w-0 flex-1 flex-col">
-          {runtimeError && (
+          {runtimeError ? (
             <div className="border-line border-b p-3">
               <Callout tone="danger" title="Bots can't start">
                 <ClaudeCodeHelp error={runtimeError} />
               </Callout>
             </div>
+          ) : (
+            signedOut && (
+              <div className="border-line border-b p-3">
+                <Callout tone="danger" title="Sign in to Claude">
+                  Your bots work with your Claude account. Sign in once and they start by
+                  themselves.
+                  <SignInButton />
+                </Callout>
+              </div>
+            )
           )}
           <Selection />
         </main>

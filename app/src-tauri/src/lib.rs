@@ -1,6 +1,7 @@
 //! Tauri shell for the Botloft app. The UI talks to `botloftd` over
 //! WebSocket; these commands cover what a web page cannot do (spec 15.2).
 
+mod claude;
 mod daemon;
 
 use std::path::Path;
@@ -33,6 +34,13 @@ async fn daemon_install() -> Result<DaemonStatus, String> {
 #[tauri::command]
 async fn daemon_restart() -> Result<DaemonStatus, String> {
     blocking(|| daemon::restart(&daemon::endpoint()?)).await
+}
+
+/// Opens Claude Code's sign-in in its own window and waits for it to end.
+/// Returns whether it signed in.
+#[tauri::command]
+async fn claude_sign_in(path: String) -> Result<bool, String> {
+    blocking(move || claude::sign_in(Path::new(&path))).await
 }
 
 #[tauri::command]
@@ -95,6 +103,7 @@ pub fn run() {
             daemon_status,
             daemon_install,
             daemon_restart,
+            claude_sign_in,
             read_owner_token,
             open_path,
             open_url
