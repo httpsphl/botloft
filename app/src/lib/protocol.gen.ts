@@ -899,6 +899,10 @@ url: string,
  */
 rev: number, 
 /**
+ * Bytes of the file written so far.
+ */
+bytes: number, 
+/**
  * The write ended: the file on disk is the screen again.
  */
 done: boolean, };

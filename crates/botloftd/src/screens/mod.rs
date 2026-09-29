@@ -193,6 +193,7 @@ fn update(daemon: &Daemon, bot: &BotId, index: u64, stopped: bool) {
         .get("content")
         .map(|content| content.value.clone())
         .unwrap_or_default();
+    let bytes = content.len() as u64;
     let rev = {
         let mut drafts = daemon.screens.drafts();
         let by_place = &mut drafts.entry(bot.clone()).or_default().by_place;
@@ -207,7 +208,7 @@ fn update(daemon: &Daemon, bot: &BotId, index: u64, stopped: bool) {
         draft.rev += 1;
         draft.rev
     };
-    tell(daemon, bot, &place, path, rev, false);
+    tell(daemon, bot, &place, path, (rev, bytes), false);
     // Until the path arrives nothing goes out, so the wait starts here.
     if let Some(stream) = daemon
         .screens
@@ -238,7 +239,15 @@ pub fn tool_done(daemon: &Daemon, bot: &BotId, tool_use_id: &str) {
             .collect()
     };
     for (place, draft) in done {
-        tell(daemon, bot, &place, draft.path, draft.rev + 1, true);
+        let bytes = draft.content.len() as u64;
+        tell(
+            daemon,
+            bot,
+            &place,
+            draft.path,
+            (draft.rev + 1, bytes),
+            true,
+        );
     }
 }
 
@@ -246,11 +255,27 @@ pub fn tool_done(daemon: &Daemon, bot: &BotId, tool_use_id: &str) {
 pub fn turn_ended(daemon: &Daemon, bot: &BotId) {
     let left = daemon.screens.drafts().remove(bot);
     for (place, draft) in left.map(|drafts| drafts.by_place).unwrap_or_default() {
-        tell(daemon, bot, &place, draft.path, draft.rev + 1, true);
+        let bytes = draft.content.len() as u64;
+        tell(
+            daemon,
+            bot,
+            &place,
+            draft.path,
+            (draft.rev + 1, bytes),
+            true,
+        );
     }
 }
 
-fn tell(daemon: &Daemon, bot: &BotId, place: &Place, path: String, rev: u64, done: bool) {
+/// Tells the apps about version `rev` of a draft, `bytes` long.
+fn tell(
+    daemon: &Daemon,
+    bot: &BotId,
+    place: &Place,
+    path: String,
+    (rev, bytes): (u64, u64),
+    done: bool,
+) {
     let key = daemon.screens.key(bot);
     let url = place.url(daemon.port, &key, &format!("rev={rev}"));
     daemon.emit(Event::ScreenDraft(ScreenDraft {
@@ -258,6 +283,7 @@ fn tell(daemon: &Daemon, bot: &BotId, place: &Place, path: String, rev: u64, don
         path,
         url,
         rev,
+        bytes,
         done,
     }));
 }

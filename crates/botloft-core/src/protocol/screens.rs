@@ -65,6 +65,8 @@ pub struct ScreenDraft {
     pub url: String,
     /// Counts up with each version of this draft.
     pub rev: u64,
+    /// Bytes of the file written so far.
+    pub bytes: u64,
     /// The write ended: the file on disk is the screen again.
     pub done: bool,
 }
