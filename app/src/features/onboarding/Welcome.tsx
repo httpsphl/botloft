@@ -1,7 +1,7 @@
 import { CircleCheck, CircleX, LoaderCircle, Plus } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useT } from "../../i18n";
-import { useWhenClosed } from "../../shell/closing";
+import { prefs, usePref } from "../../shell/prefs";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { useDaemonSettings } from "../account/useDaemonSettings";
@@ -15,7 +15,7 @@ export function Welcome() {
   const w = useT().onboarding.welcome;
   const system = useApp((state) => state.system);
   const [creating, setCreating] = useState(false);
-  const whenClosed = useWhenClosed();
+  const whenClosed = usePref(prefs.whenClosed);
   const { settings } = useDaemonSettings();
   const running =
     whenClosed === "stop"

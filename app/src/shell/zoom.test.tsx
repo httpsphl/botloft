@@ -32,6 +32,7 @@ describe("app size", () => {
     await screen.findByRole("heading", { name: "Welcome to Botloft" });
     fireEvent.click(screen.getByRole("button", { name: /Ana Lima/ }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Appearance" }));
     const sizes = screen.getByRole("radiogroup", { name: "Size" });
     expect(
       (within(sizes).getByRole("radio", { name: "125% (default)" }) as HTMLInputElement).checked,

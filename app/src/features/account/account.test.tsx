@@ -90,11 +90,14 @@ describe("account area", () => {
     await openAccount();
     fireEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
     const dialog = screen.getByRole("dialog", { name: "Settings" });
+    fireEvent.click(within(dialog).getByRole("tab", { name: "Appearance" }));
     fireEvent.click(within(dialog).getByRole("radio", { name: "Dark" }));
     expect(document.documentElement.dataset.theme).toBe("dark");
+    fireEvent.click(within(dialog).getByRole("tab", { name: "General" }));
     fireEvent.click(within(dialog).getByRole("radio", { name: "Español" }));
     expect(screen.getByRole("dialog", { name: "Configuración" })).toBeDefined();
     fireEvent.click(screen.getByRole("radio", { name: /Idioma del sistema/ }));
+    fireEvent.click(screen.getByRole("tab", { name: "About" }));
     expect(screen.getByRole("dialog", { name: "Settings" }).textContent).toContain("Botloft 0.1.0");
   });
 

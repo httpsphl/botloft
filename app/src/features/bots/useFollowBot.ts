@@ -3,10 +3,12 @@
 // hand opens the browser (spec 21.8), and a screen it starts writing opens
 // the design area (spec 22.5), whatever panel was open. Each opens once per
 // start; closing it leaves the button's dot. The browser in the owner's
-// hands is never taken away.
+// hands is never taken away. The owner can turn this off in Settings
+// (`prefs.followBot`): then only the buttons' dots say so.
 
 import { useEffect, useRef } from "react";
 import type { Bot } from "../../lib/protocol.gen";
+import { prefs } from "../../shell/prefs";
 import { useApp } from "../../store/context";
 
 export type Followed = "browser" | "screens";
@@ -44,7 +46,7 @@ export function useFollowBot({
     const was = before.current ?? { browsing, asking: false };
     before.current = { browsing, asking };
     if ((asking && !was.asking) || (browsing && !was.browsing)) {
-      if (side !== "browser") {
+      if (side !== "browser" && prefs.followBot.get()) {
         open("browser");
       }
     }
@@ -57,7 +59,7 @@ export function useFollowBot({
       return;
     }
     drawn.current.add(path);
-    if (side === "screens" || (held && side === "browser")) {
+    if (side === "screens" || (held && side === "browser") || !prefs.followBot.get()) {
       return;
     }
     open("screens");
