@@ -2,8 +2,7 @@
 // first, the ones that showed up since the owner last looked marked new. A
 // click shows the file in the panel itself.
 
-import { RefreshCw, X } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, RefreshCw, X } from "lucide-react";
 import { useT } from "../../i18n";
 import { fileSize, fromNow } from "../../lib/format";
 import type { Bot, BotFile } from "../../lib/protocol.gen";
@@ -18,16 +17,20 @@ export function FilesPanel({
   bot,
   data,
   since,
+  path,
+  onPath,
   onClose,
 }: {
   bot: Bot;
   data: BotFiles;
   /** Files modified after this (Unix ms) are marked new. */
   since: number;
+  /** The file shown, or null for the list. */
+  path: string | null;
+  onPath(path: string | null): void;
   onClose(): void;
 }) {
   const t = useT().files;
-  const [path, setPath] = useState<string | null>(null);
   const chosen = data.files.find((file) => file.path === path);
 
   return (
@@ -49,11 +52,28 @@ export function FilesPanel({
         </div>
       </header>
       {chosen ? (
-        <FilePreview bot={bot} file={chosen} onBack={() => setPath(null)} />
+        <FilePreview bot={bot} file={chosen} onBack={() => onPath(null)} />
+      ) : path !== null ? (
+        <Missing onBack={() => onPath(null)} />
       ) : (
-        <List bot={bot} data={data} since={since} onOpen={setPath} />
+        <List bot={bot} data={data} since={since} onOpen={onPath} />
       )}
     </aside>
+  );
+}
+
+/** A file the chat pointed to that the folders no longer have. */
+function Missing({ onBack }: { onBack(): void }) {
+  const t = useT().files;
+  return (
+    <div className="flex flex-col items-start gap-3 p-4">
+      <Button variant="ghost" size="sm" icon={ArrowLeft} onClick={onBack}>
+        {t.back}
+      </Button>
+      <p role="alert" className="text-ink-soft text-sm">
+        {t.preview.gone}
+      </p>
+    </div>
   );
 }
 

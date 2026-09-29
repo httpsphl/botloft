@@ -4,6 +4,7 @@ export const files = {
   heading: "Files",
   panel: (bot: string) => `Files from ${bot}`,
   show: "Show files",
+  showInPanel: "Show in files",
   hide: "Hide files",
   close: "Close",
   refresh: "Refresh",

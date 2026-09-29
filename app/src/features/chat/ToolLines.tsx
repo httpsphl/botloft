@@ -6,6 +6,7 @@ import {
   ChevronRight,
   FilePen,
   FileSearch,
+  Files,
   FileText,
   Globe,
   ListChecks,
@@ -19,10 +20,11 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { useT } from "../../i18n";
 import type { ChatItem, ToolItem } from "../../lib/protocol.gen";
 import { useArrival } from "../../ui/motion";
+import { ShowFile } from "../files/showFile";
 
 const ICONS: Record<string, LucideIcon> = {
   Bash: SquareTerminal,
@@ -79,6 +81,7 @@ function Status({ status }: { status: ToolItem["status"] }) {
 function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  const showFile = useContext(ShowFile);
   const arrival = useArrival(createdAt);
   const label = toolLabel(tool.name);
   const Icon = ICONS[label] ?? Wrench;
@@ -86,24 +89,40 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
     "max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-lg border border-line bg-sunken px-2.5 py-1.5 font-mono text-xs leading-relaxed";
   return (
     <li className={arrival}>
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-        className="group flex w-full min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 text-left text-sm transition-colors hover:bg-sunken"
-      >
-        <Icon aria-hidden size={14} className="shrink-0 text-muted" />
-        <span className="shrink-0 font-medium">{label}</span>
-        <span className="min-w-0 flex-1 truncate font-mono text-muted text-xs" title={tool.summary}>
-          {tool.summary}
-        </span>
-        <Status status={tool.status} />
-        <ChevronRight
-          aria-hidden
-          size={13}
-          className={`shrink-0 text-muted transition-transform ${open ? "rotate-90" : ""}`}
-        />
-      </button>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+          className="group flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 py-1 text-left text-sm transition-colors hover:bg-sunken"
+        >
+          <Icon aria-hidden size={14} className="shrink-0 text-muted" />
+          <span className="shrink-0 font-medium">{label}</span>
+          <span
+            className="min-w-0 flex-1 truncate font-mono text-muted text-xs"
+            title={tool.summary}
+          >
+            {tool.summary}
+          </span>
+          <Status status={tool.status} />
+          <ChevronRight
+            aria-hidden
+            size={13}
+            className={`shrink-0 text-muted transition-transform ${open ? "rotate-90" : ""}`}
+          />
+        </button>
+        {showFile && tool.file && tool.status !== "failed" && (
+          <button
+            type="button"
+            title={t.files.showInPanel}
+            aria-label={`${t.files.showInPanel}: ${tool.summary}`}
+            onClick={() => showFile(tool.file as string)}
+            className="grid size-6 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-sunken hover:text-ink"
+          >
+            <Files aria-hidden size={14} />
+          </button>
+        )}
+      </div>
       {open && (
         <div className="mt-1 mb-2 ml-7 flex animate-rise flex-col gap-1.5" data-selectable>
           <p className="text-muted text-xs">{t.chat.tools.input}</p>

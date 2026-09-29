@@ -10,6 +10,7 @@ import { Callout } from "../../ui/Callout";
 import { type Tab, Tabs, tabId } from "../../ui/Tabs";
 import { ChatView } from "../chat/ChatView";
 import { FilesPanel } from "../files/FilesPanel";
+import { ShowFile } from "../files/showFile";
 import { useBotFiles } from "../files/useBotFiles";
 import { SignInButton } from "../onboarding/SignIn";
 import { BotRoutines } from "../routines/RoutineList";
@@ -38,12 +39,29 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
     setSeenAt(now);
     setSince(now);
   }, [bot.id]);
+  const [shown, setShown] = useState<string | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: another bot's file is not this bot's
+  useEffect(() => setShown(null), [bot.id]);
   const filesOpen = side === "files";
-  const toggleFiles = () => {
+  const seen = () => {
     // What was there when the panel opened or closed counts as seen.
     setSince(seenAt);
     setSeenAt(Date.now());
+  };
+  const toggleFiles = () => {
+    seen();
+    setShown(null);
     setSide(filesOpen ? null : "files");
+  };
+  // A tool line in the chat points to its file: read the list first, so the
+  // file is in it when the panel goes to it.
+  const showFile = async (path: string) => {
+    if (!filesOpen) {
+      seen();
+    }
+    setSide("files");
+    await files.refresh();
+    setShown(path);
   };
   const fresh = filesOpen ? 0 : files.files.filter((file) => file.modifiedAt > seenAt).length;
   const routines = useApp(useShallow((state) => routinesOf(state, bot.id)));
@@ -72,13 +90,24 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
       <div className="flex min-h-0 flex-1">
         <div role="tabpanel" aria-labelledby={tabId(pane)} className="flex min-h-0 min-w-0 flex-1">
           {pane === "chat" ? (
-            <ChatView bot={bot} stopped={bot.paused || crew.paused} />
+            <ShowFile.Provider value={showFile}>
+              <ChatView bot={bot} stopped={bot.paused || crew.paused} />
+            </ShowFile.Provider>
           ) : (
             <BotRoutines bot={bot} />
           )}
         </div>
         {side === "details" && <Details bot={bot} onClose={() => setSide(null)} />}
-        {filesOpen && <FilesPanel bot={bot} data={files} since={since} onClose={toggleFiles} />}
+        {filesOpen && (
+          <FilesPanel
+            bot={bot}
+            data={files}
+            since={since}
+            path={shown}
+            onPath={setShown}
+            onClose={toggleFiles}
+          />
+        )}
       </div>
     </section>
   );
