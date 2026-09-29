@@ -19,7 +19,7 @@ import { Button } from "../../ui/Button";
 import { Confirm } from "../../ui/Confirm";
 import { Menu } from "../../ui/Menu";
 import { attempt } from "../../ui/toast";
-import { BotAvatar } from "./BotAvatar";
+import { BotAvatar, moodOf } from "./BotAvatar";
 import { BotDialog } from "./BotDialog";
 import { BotStateBadge } from "./BotStateBadge";
 import { ChiefBadge, isChief } from "./ChiefBadge";
@@ -64,7 +64,7 @@ export function BotHeader({
 
   return (
     <header className="flex items-center gap-3 border-line border-b px-5 py-2.5">
-      <BotAvatar color={bot.color} size={36} />
+      <BotAvatar color={bot.color} size={36} mood={moodOf(bot, crew.paused)} />
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
           <h1 className="truncate font-semibold text-lg tracking-tight">{bot.name}</h1>

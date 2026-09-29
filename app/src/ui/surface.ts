@@ -1,7 +1,7 @@
 // Shared looks for floating panels, so menus and pickers match.
 
-/** A menu or picker floating over the page. */
-export const POPOVER = "z-30 rounded-xl border border-line bg-panel p-1 shadow-lift";
+/** A menu or picker floating over the page; add the `origin-*` it opens from. */
+export const POPOVER = "z-30 animate-pop rounded-xl border border-line bg-panel p-1 shadow-lift";
 
 /** One row of a popover. */
 export const POPOVER_ITEM =

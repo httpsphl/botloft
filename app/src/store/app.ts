@@ -15,6 +15,7 @@ import type {
   Task,
   TaskId,
 } from "../lib/protocol.gen";
+import { viewTransition } from "../ui/motion";
 
 export interface AppState {
   connection: ConnectionState;
@@ -80,11 +81,16 @@ export function createAppStore(api: BotloftApi): AppStore {
     tasks: {},
     selectedCrewId: null,
     selectedBotId: null,
-    selectCrew: (crewId) => set({ selectedCrewId: crewId, selectedBotId: null }),
+    selectCrew: (crewId) => {
+      const { selectedCrewId, selectedBotId } = get();
+      if (selectedCrewId !== crewId || selectedBotId !== null) {
+        viewTransition(() => set({ selectedCrewId: crewId, selectedBotId: null }));
+      }
+    },
     selectBot: (botId) => {
       const bot = get().bots[botId];
-      if (bot) {
-        set({ selectedCrewId: bot.crewId, selectedBotId: botId });
+      if (bot && get().selectedBotId !== botId) {
+        viewTransition(() => set({ selectedCrewId: bot.crewId, selectedBotId: botId }));
       }
     },
     putCrew: (crew) => set((state) => withCrew(state, crew)),

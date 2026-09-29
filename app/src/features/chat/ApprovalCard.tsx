@@ -70,7 +70,7 @@ function ToolApproval({ approval, bot }: { approval: ApprovalItem; bot: Bot }) {
   return (
     <section
       aria-label={t.chat.approval.asks(bot.name, label)}
-      className="my-1 max-w-2xl rounded-2xl border border-warn/40 bg-panel px-4 py-3.5 shadow-sm"
+      className="my-1 max-w-2xl rounded-2xl border border-warn/40 bg-panel px-4 py-3.5 shadow-sm animate-attention"
     >
       <p className="flex items-center gap-2.5 font-semibold text-sm">
         <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-warn/12 text-warn">

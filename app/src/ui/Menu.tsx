@@ -44,7 +44,10 @@ export function Menu({
         onClick={() => setOpen(!open)}
       />
       {open && (
-        <div role="menu" className={`absolute top-full right-0 mt-1 min-w-60 ${POPOVER}`}>
+        <div
+          role="menu"
+          className={`absolute top-full right-0 mt-1 min-w-60 origin-top-right ${POPOVER}`}
+        >
           {items.map(({ label: itemLabel, icon: Icon, danger, disabled, checked, onSelect }) => (
             <button
               key={itemLabel}

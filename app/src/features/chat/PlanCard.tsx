@@ -43,7 +43,7 @@ export function PlanCard({ approval, bot }: { approval: ApprovalItem; bot: Bot }
   return (
     <section
       aria-label={p.ready(bot.name)}
-      className="my-1 overflow-hidden rounded-2xl border border-line bg-panel shadow-sm"
+      className="my-1 overflow-hidden rounded-2xl border border-line bg-panel shadow-sm animate-attention"
     >
       <p className="flex items-center gap-2.5 border-line border-b px-4 py-3 font-semibold text-sm">
         <span className="grid h-7 w-7 place-items-center rounded-full bg-work/12 text-work">

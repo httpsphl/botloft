@@ -22,6 +22,7 @@ import {
 import { useState } from "react";
 import { useT } from "../../i18n";
 import type { ChatItem, ToolItem } from "../../lib/protocol.gen";
+import { useArrival } from "../../ui/motion";
 
 const ICONS: Record<string, LucideIcon> = {
   Bash: SquareTerminal,
@@ -75,20 +76,21 @@ function Status({ status }: { status: ToolItem["status"] }) {
   }
 }
 
-function ToolLine({ tool }: { tool: ToolItem }) {
+function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  const arrival = useArrival(createdAt);
   const label = toolLabel(tool.name);
   const Icon = ICONS[label] ?? Wrench;
   const block =
     "max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-lg border border-line bg-sunken px-2.5 py-1.5 font-mono text-xs leading-relaxed";
   return (
-    <li>
+    <li className={arrival}>
       <button
         type="button"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
-        className="group flex w-full min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 text-left text-sm hover:bg-sunken"
+        className="group flex w-full min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 text-left text-sm transition-colors hover:bg-sunken"
       >
         <Icon aria-hidden size={14} className="shrink-0 text-muted" />
         <span className="shrink-0 font-medium">{label}</span>
@@ -103,7 +105,7 @@ function ToolLine({ tool }: { tool: ToolItem }) {
         />
       </button>
       {open && (
-        <div className="mt-1 mb-2 ml-7 flex flex-col gap-1.5" data-selectable>
+        <div className="mt-1 mb-2 ml-7 flex animate-rise flex-col gap-1.5" data-selectable>
           <p className="text-muted text-xs">{t.chat.tools.input}</p>
           <pre className={block}>{pretty(tool.input)}</pre>
           {tool.output !== null && (
@@ -125,7 +127,9 @@ export function ToolLines({ items }: { items: ChatItem[] }) {
   return (
     <ul aria-label={t.chat.tools.label} className="-mx-1.5 flex flex-col">
       {items.map((item) =>
-        item.body.kind === "tool" ? <ToolLine key={item.id} tool={item.body} /> : null,
+        item.body.kind === "tool" ? (
+          <ToolLine key={item.id} tool={item.body} createdAt={item.createdAt} />
+        ) : null,
       )}
     </ul>
   );

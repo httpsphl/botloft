@@ -147,7 +147,7 @@ export function ChatComposer({
         <p className="mb-1.5 px-2 text-muted text-xs">{t.chat.composer.paused(bot.name)}</p>
       )}
       {later && (
-        <p role="status" className="mb-1.5 px-2 text-muted text-xs">
+        <p role="status" className="mb-1.5 animate-fade px-2 text-muted text-xs">
           {later}
         </p>
       )}
@@ -207,9 +207,14 @@ export function ChatComposer({
             type="submit"
             aria-label={t.chat.composer.send}
             disabled={empty || tooLong || busy}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent text-canvas transition-opacity hover:opacity-90 disabled:bg-line-strong disabled:opacity-60"
+            className="group/send grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent text-canvas transition-[opacity,transform,background-color] duration-150 hover:opacity-90 active:scale-90 disabled:bg-line-strong disabled:opacity-60"
           >
-            <ArrowUp aria-hidden size={16} strokeWidth={2.25} />
+            <ArrowUp
+              aria-hidden
+              size={16}
+              strokeWidth={2.25}
+              className="transition-transform duration-200 group-hover/send:-translate-y-0.5"
+            />
           </button>
         </div>
       </div>

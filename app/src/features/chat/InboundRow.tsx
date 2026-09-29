@@ -6,6 +6,7 @@ import { useT } from "../../i18n";
 import { when } from "../../lib/format";
 import type { Bot, Message } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
+import { useArrival } from "../../ui/motion";
 import { BotAvatar } from "../bots/BotAvatar";
 import { DeliveryStatus } from "../messages/DeliveryStatus";
 import { AttachmentList } from "./AttachmentList";
@@ -20,8 +21,9 @@ function Time({ at }: { at: number }) {
 
 function OwnerMessage({ message, bot }: { message: Message; bot: Bot }) {
   const delivery = useApp((state) => state.deliveries[message.id]);
+  const arrival = useArrival(message.createdAt);
   return (
-    <li className="flex flex-col items-end gap-1.5 pl-12">
+    <li className={`flex flex-col items-end gap-1.5 pl-12 ${arrival}`}>
       <AttachmentList attachments={message.attachments} workspace={bot.workspace} align="end" />
       {message.body && (
         <p
@@ -59,8 +61,9 @@ function OtherMessage({ message }: { message: Message }) {
   const delivery = useApp((state) => state.deliveries[message.id]);
   const system = message.fromKind === "system";
   const name = system ? "Botloft" : (sender?.name ?? t.chat.inbound.archivedBot);
+  const arrival = useArrival(message.createdAt);
   return (
-    <li className="flex gap-3 pr-12">
+    <li className={`flex gap-3 pr-12 ${arrival}`}>
       <BotAvatar
         color={system ? "#ffffff" : (sender?.color ?? "#6f6f69")}
         size={28}

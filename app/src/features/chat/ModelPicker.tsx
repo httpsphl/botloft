@@ -57,7 +57,7 @@ export function ModelPicker({ bot, onLater }: { bot: Bot; onLater(text: string):
         <div
           role="menu"
           aria-label={m.title}
-          className={`absolute right-0 bottom-full mb-2 w-[22rem] max-w-[80vw] ${POPOVER}`}
+          className={`absolute right-0 bottom-full mb-2 w-[22rem] max-w-[80vw] origin-bottom-right ${POPOVER}`}
         >
           <p className="px-2.5 pt-1.5 pb-1 font-medium text-muted text-xs">{m.title}</p>
           {MODELS.map((model) => (
@@ -86,7 +86,11 @@ export function ModelPicker({ bot, onLater }: { bot: Bot; onLater(text: string):
         }`}
       >
         <span className="whitespace-nowrap">{label}</span>
-        <ChevronDown aria-hidden size={14} className="opacity-60" />
+        <ChevronDown
+          aria-hidden
+          size={14}
+          className={`opacity-60 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
       </button>
     </div>
   );

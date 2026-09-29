@@ -82,9 +82,15 @@ export function BotStateBadge({
   return (
     <span
       title={view.hint}
-      className={`inline-flex shrink-0 items-center gap-1 font-medium ${compact ? "text-xs" : "text-sm"} ${toneText[view.tone]}`}
+      className={`inline-flex shrink-0 items-center gap-1 font-medium transition-colors duration-300 ${compact ? "text-xs" : "text-sm"} ${toneText[view.tone]}`}
     >
-      <Icon aria-hidden size={compact ? 12 : 14} className={view.spin ? "animate-spin" : ""} />
+      <Icon
+        aria-hidden
+        size={compact ? 12 : 14}
+        className={
+          view.spin ? "animate-spin" : bot.state === "needs_approval" ? "animate-wave" : ""
+        }
+      />
       {view.label}
     </span>
   );
