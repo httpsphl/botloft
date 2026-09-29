@@ -13,11 +13,13 @@ const LANGUAGES = [
   { value: "es", label: "Español" },
 ] as const;
 
+type Language = (typeof LANGUAGES)[number]["value"];
+
 function Picker({ onClose }: { onClose(): void }) {
-  const [value, setValue] = useState<(typeof LANGUAGES)[number]["value"]>("system");
+  const [value, setValue] = useState<Language>("system");
   return (
     <Dialog title="Settings" onClose={onClose}>
-      <Select label="Language" value={value} options={LANGUAGES} onChange={setValue} />
+      <Select<Language> label="Language" value={value} options={LANGUAGES} onChange={setValue} />
     </Dialog>
   );
 }

@@ -87,6 +87,7 @@ describe("routines", () => {
     expect(screen.getByRole("tab", { name: "Routines (1)" })).toBeDefined();
   });
 
+  // Many steps through the form: slow when the whole suite runs at once.
   test("chosen days, intervals and cron become their schedules", async () => {
     const { fake } = await openRoutines();
     let dialog = newRoutine("Two days");
@@ -121,7 +122,7 @@ describe("routines", () => {
       schedule: { kind: "cron", expr: "0 2 * * *" },
       overlap: "queue",
     });
-  });
+  }, 15_000);
 
   test("a refusal the daemon explains is worded in the owner's language", async () => {
     const { fake } = await openRoutines();
