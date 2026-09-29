@@ -203,6 +203,8 @@ mod tests {
             id: CrewId::generate(),
             name: "Docs".to_owned(),
             slug: "docs".to_owned(),
+            work_folder: String::new(),
+            work_folder_chosen: false,
             paused: false,
             created_at: 1,
             archived_at: None,

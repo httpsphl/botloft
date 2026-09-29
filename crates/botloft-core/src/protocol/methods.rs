@@ -121,6 +121,20 @@ pub struct UsageWindow {
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct CrewsCreateParams {
     pub name: String,
+    /// Absolute path of the folder the crew works in; the crew's `shared`
+    /// folder when absent.
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub work_folder: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct CrewsSetWorkFolderParams {
+    pub crew_id: CrewId,
+    /// `null` goes back to the crew's `shared` folder.
+    pub work_folder: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

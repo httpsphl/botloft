@@ -6,7 +6,8 @@ import type { BotloftApi } from "./api";
 import { botHandlers } from "./fakeBots";
 import { FakeChat } from "./fakeChat";
 import { FakeConversation } from "./fakeConversation";
-import { checkName, conflict, invalid, notFound, slugify } from "./fakeRules";
+import { crewHandlers } from "./fakeCrews";
+import { conflict, invalid, notFound, slugify } from "./fakeRules";
 import {
   type Bot,
   type BotId,
@@ -201,43 +202,7 @@ export class FakeBotloft implements BotloftApi {
       this.refreshes += 1;
       return this.system;
     },
-    "crews.list": () => [...this.crews.values()].filter((crew) => crew.archivedAt === null),
-    "crews.create": ({ name }) => {
-      const checked = checkName(name);
-      const crew: Crew = {
-        id: this.id("crw"),
-        name: checked,
-        slug: slugify(checked, "crew"),
-        paused: false,
-        createdAt: this.now,
-        archivedAt: null,
-      };
-      this.crews.set(crew.id, crew);
-      return this.changedCrew(crew);
-    },
-    "crews.rename": ({ crewId, name }) => {
-      const crew = this.crew(crewId);
-      crew.name = checkName(name);
-      return this.changedCrew(crew);
-    },
-    "crews.setPaused": ({ crewId, paused }) => {
-      const crew = this.crew(crewId);
-      crew.paused = paused;
-      return this.changedCrew(crew);
-    },
-    "crews.archive": ({ crewId }) => {
-      const crew = this.crew(crewId, false);
-      if (crew.archivedAt === null) {
-        crew.archivedAt = this.now;
-        for (const bot of this.activeBots(crewId)) {
-          bot.archivedAt = this.now;
-          bot.state = "archived";
-          this.changedBot(bot);
-        }
-        this.changedCrew(crew);
-      }
-      return crew;
-    },
+    ...crewHandlers(this),
     ...botHandlers(this),
     ...this.chat.handlers(),
     ...this.conversation.handlers(),

@@ -74,6 +74,7 @@ pub mod method {
     pub const CREWS_CREATE: &str = "crews.create";
     pub const CREWS_RENAME: &str = "crews.rename";
     pub const CREWS_SET_PAUSED: &str = "crews.setPaused";
+    pub const CREWS_SET_WORK_FOLDER: &str = "crews.setWorkFolder";
     pub const CREWS_ARCHIVE: &str = "crews.archive";
     pub const BOTS_LIST: &str = "bots.list";
     pub const BOTS_CREATE: &str = "bots.create";

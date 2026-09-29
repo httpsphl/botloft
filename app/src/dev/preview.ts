@@ -60,6 +60,8 @@ function previewHost(): FakeHost {
     document.documentElement.style.zoom = String(factor);
     return Promise.resolve();
   };
+  // A plain browser has no folder picker: every pick gives this folder.
+  host.nextFolder = "D:\\Projects\\Bakery site";
   return host;
 }
 

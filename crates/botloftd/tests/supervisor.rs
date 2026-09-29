@@ -190,7 +190,14 @@ async fn a_failed_spawn_backs_off_and_retries() {
     let parts = new_daemon(test_settings());
     let (daemon, runtime) = (parts.daemon, parts.runtime);
     runtime.fail_next_spawn();
-    let crew = crews::create(&daemon, CrewsCreateParams { name: "Ops".into() }).expect("crew");
+    let crew = crews::create(
+        &daemon,
+        CrewsCreateParams {
+            name: "Ops".into(),
+            work_folder: None,
+        },
+    )
+    .expect("crew");
     let params = BotsCreateParams {
         crew_id: crew.id,
         name: "Scout".into(),

@@ -122,6 +122,8 @@ pub(crate) mod tests {
                 id: CrewId::generate(),
                 name: "Ops".to_owned(),
                 slug: "ops".to_owned(),
+                work_folder: String::new(),
+                work_folder_chosen: false,
                 paused: false,
                 created_at: 0,
                 archived_at: None,

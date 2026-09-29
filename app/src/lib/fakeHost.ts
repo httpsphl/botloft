@@ -23,6 +23,10 @@ export class FakeHost implements Host {
   afterInstall: DaemonStatus | Error = running();
   token: string | Error = "a".repeat(64);
   readonly opened: string[] = [];
+  /** What the folder picker gives back; null is a cancel. */
+  nextFolder: string | null = null;
+  /** Where each folder picker started. */
+  readonly pickerStarts: (string | null)[] = [];
   readonly installs: ("install" | "restart")[] = [];
   /** Paths `signInToClaude` ran, and what it answers. */
   readonly signIns: string[] = [];
@@ -87,6 +91,11 @@ export class FakeHost implements Host {
   openPath(path: string): Promise<void> {
     this.opened.push(path);
     return Promise.resolve();
+  }
+
+  pickFolder(_title: string, start?: string): Promise<string | null> {
+    this.pickerStarts.push(start ?? null);
+    return Promise.resolve(this.nextFolder);
   }
 
   openUrl(url: string): Promise<void> {

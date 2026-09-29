@@ -15,6 +15,12 @@ export const crews = {
     awaitingApproval: (text: string) => `Waiting for approval: ${text}`,
   },
   dialog: {
+    folder: "Work folder",
+    folderHint: "Where the bots put what they make. It can be a folder you already use.",
+    folderDefault: "A new folder inside Botloft",
+    chooseFolder: "Choose folder…",
+    pickTitle: "Choose where the crew works",
+    useDefault: "Use a new folder",
     renameTitle: "Rename crew",
     create: "Create crew",
     name: "Name",
@@ -28,7 +34,13 @@ export const crews = {
     pause: "Pause crew",
     resume: "Resume crew",
     moreActions: "More crew actions",
-    openShared: "Open shared folder",
+    folder: (path: string) => `Works in ${path}`,
+    openFolder: "Open work folder",
+    changeFolder: "Change work folder…",
+    moveTitle: (crew: string) => `Move ${crew} to another folder?`,
+    moveBody: (path: string) =>
+      `The bots will work in ${path}. Each one restarts when it finishes what it's doing. Files already made stay where they are.`,
+    move: "Move",
     archive: "Archive crew",
     tabs: {
       label: "Crew views",
@@ -46,6 +58,7 @@ export const crews = {
     failed: {
       pause: "Could not pause the crew",
       resume: "Could not resume the crew",
+      changeFolder: "Could not change the folder",
       openFolder: "Could not open the folder",
       archive: "Could not archive the crew",
     },

@@ -62,7 +62,16 @@ export type Crew = { id: CrewId, name: string,
 /**
  * Folder name under the workspaces root. Set at creation, never changes.
  */
-slug: string, paused: boolean, 
+slug: string, 
+/**
+ * Absolute path of the folder the crew works in (spec 5): one the owner
+ * chose, or the crew's `shared` folder.
+ */
+workFolder: string, 
+/**
+ * Whether the owner chose `work_folder`.
+ */
+workFolderChosen: boolean, paused: boolean, 
 /**
  * Unix time in milliseconds.
  */
@@ -256,11 +265,22 @@ account: OwnerAccount, deliveries: DeliveryBacklog,
  */
 usage: AccountUsage | null, };
 
-export type CrewsCreateParams = { name: string, };
+export type CrewsCreateParams = { name: string, 
+/**
+ * Absolute path of the folder the crew works in; the crew's `shared`
+ * folder when absent.
+ */
+workFolder?: string, };
 
 export type CrewsRenameParams = { crewId: CrewId, name: string, };
 
 export type CrewsSetPausedParams = { crewId: CrewId, paused: boolean, };
+
+export type CrewsSetWorkFolderParams = { crewId: CrewId, 
+/**
+ * `null` goes back to the crew's `shared` folder.
+ */
+workFolder: string | null, };
 
 export type CrewIdParams = { crewId: CrewId, };
 
@@ -595,6 +615,7 @@ export interface RpcMethods {
   "crews.create": { params: CrewsCreateParams; result: Crew };
   "crews.rename": { params: CrewsRenameParams; result: Crew };
   "crews.setPaused": { params: CrewsSetPausedParams; result: Crew };
+  "crews.setWorkFolder": { params: CrewsSetWorkFolderParams; result: Crew };
   "crews.archive": { params: CrewIdParams; result: Crew };
   "bots.list": { params: BotsListParams; result: Array<Bot> };
   "bots.create": { params: BotsCreateParams; result: Bot };

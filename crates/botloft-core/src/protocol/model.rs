@@ -14,6 +14,11 @@ pub struct Crew {
     pub name: String,
     /// Folder name under the workspaces root. Set at creation, never changes.
     pub slug: String,
+    /// Absolute path of the folder the crew works in (spec 5): one the owner
+    /// chose, or the crew's `shared` folder.
+    pub work_folder: String,
+    /// Whether the owner chose `work_folder`.
+    pub work_folder_chosen: bool,
     pub paused: bool,
     /// Unix time in milliseconds.
     pub created_at: i64,

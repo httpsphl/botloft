@@ -12,6 +12,12 @@ export const crews: Messages["crews"] = {
     awaitingApproval: (text: string) => `Aguardando aprovação: ${text}`,
   },
   dialog: {
+    folder: "Pasta de trabalho",
+    folderHint: "Onde os bots guardam o que fazem. Pode ser uma pasta que você já usa.",
+    folderDefault: "Uma pasta nova dentro do Botloft",
+    chooseFolder: "Escolher pasta…",
+    pickTitle: "Escolha onde a equipe trabalha",
+    useDefault: "Usar uma pasta nova",
     renameTitle: "Renomear equipe",
     create: "Criar equipe",
     name: "Nome",
@@ -26,7 +32,13 @@ export const crews: Messages["crews"] = {
     pause: "Pausar equipe",
     resume: "Retomar equipe",
     moreActions: "Mais ações da equipe",
-    openShared: "Abrir pasta compartilhada",
+    folder: (path: string) => `Trabalha em ${path}`,
+    openFolder: "Abrir pasta de trabalho",
+    changeFolder: "Mudar pasta de trabalho…",
+    moveTitle: (crew: string) => `Mudar ${crew} para outra pasta?`,
+    moveBody: (path: string) =>
+      `Os bots vão trabalhar em ${path}. Cada um reinicia quando terminar o que está fazendo. O que já foi feito fica onde está.`,
+    move: "Mudar",
     archive: "Arquivar equipe",
     tabs: {
       label: "Visões da equipe",
@@ -44,6 +56,7 @@ export const crews: Messages["crews"] = {
     failed: {
       pause: "Não foi possível pausar a equipe",
       resume: "Não foi possível retomar a equipe",
+      changeFolder: "Não foi possível mudar a pasta",
       openFolder: "Não foi possível abrir a pasta",
       archive: "Não foi possível arquivar a equipe",
     },

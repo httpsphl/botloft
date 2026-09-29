@@ -26,7 +26,14 @@ pub struct Setup {
 pub async fn setup() -> Setup {
     let parts = new_daemon(test_settings());
     let (daemon, runtime, clock, dir) = (parts.daemon, parts.runtime, parts.clock, parts.dir);
-    let crew = crews::create(&daemon, CrewsCreateParams { name: "Ops".into() }).expect("crew");
+    let crew = crews::create(
+        &daemon,
+        CrewsCreateParams {
+            name: "Ops".into(),
+            work_folder: None,
+        },
+    )
+    .expect("crew");
     let bot = bots::create(
         &daemon,
         BotsCreateParams {

@@ -104,6 +104,7 @@ fn export_bindings() {
     out.decl::<CrewsCreateParams>();
     out.decl::<CrewsRenameParams>();
     out.decl::<CrewsSetPausedParams>();
+    out.decl::<CrewsSetWorkFolderParams>();
     out.decl::<CrewIdParams>();
     out.decl::<BotsListParams>();
     out.decl::<BotsCreateParams>();
@@ -185,6 +186,11 @@ fn export_bindings() {
     out.method(
         method::CREWS_SET_PAUSED,
         &out.name::<CrewsSetPausedParams>(),
+        &crew,
+    );
+    out.method(
+        method::CREWS_SET_WORK_FOLDER,
+        &out.name::<CrewsSetWorkFolderParams>(),
         &crew,
     );
     out.method(method::CREWS_ARCHIVE, &out.name::<CrewIdParams>(), &crew);

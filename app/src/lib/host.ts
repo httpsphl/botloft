@@ -64,6 +64,11 @@ export interface Host {
   readOwnerToken(): Promise<string>;
   /** Opens a folder in Explorer. */
   openPath(path: string): Promise<void>;
+  /**
+   * Asks the owner for a folder with Windows' folder picker, starting at
+   * `start` if given. Resolves null if they cancel.
+   */
+  pickFolder(title: string, start?: string): Promise<string | null>;
   /** Opens an http(s) link in the default browser. */
   openUrl(url: string): Promise<void>;
   window: AppWindow;
