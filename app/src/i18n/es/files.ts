@@ -6,6 +6,7 @@ export const files: Messages["files"] = {
   heading: "Archivos",
   panel: (bot) => `Archivos de ${bot}`,
   show: "Mostrar archivos",
+  showInPanel: "Ver en archivos",
   hide: "Ocultar archivos",
   close: "Cerrar",
   refresh: "Actualizar",

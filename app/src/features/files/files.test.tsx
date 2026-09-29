@@ -98,4 +98,44 @@ describe("files panel", () => {
     fireEvent.click(toggle());
     expect(toggle().getAttribute("aria-label")).toBe("Show files");
   });
+
+  test("a Write line in the chat opens its file in the panel", async () => {
+    const { fake, scout } = crew();
+    const file = fake.files.add(scout.id, "notes.md", {
+      text: "# Field notes",
+      writtenByBot: true,
+    });
+    fake.chat.tool(scout.id, "Write", {
+      summary: "notes.md",
+      file: file.path,
+      status: "done",
+    });
+    fake.chat.tool(scout.id, "Write", {
+      summary: "broken.md",
+      file: `${file.path}.broken`,
+      status: "failed",
+    });
+    fake.chat.tool(scout.id, "Bash", { summary: "ls", status: "done" });
+    await openScout(fake);
+    expect(screen.queryByRole("complementary", { name: "Files from Scout" })).toBeNull();
+    // Only a call that changed a file, and worked, has the button.
+    expect(screen.getAllByRole("button", { name: /Show in files/ })).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Show in files: notes.md" }));
+    expect(await within(panel()).findByRole("heading", { name: "Field notes" })).toBeDefined();
+    fireEvent.click(within(panel()).getByRole("button", { name: "All files" }));
+    expect(within(panel()).getByRole("list", { name: "Files" })).toBeDefined();
+  });
+
+  test("a file the chat points to that is gone says so", async () => {
+    const { fake, scout } = crew();
+    fake.chat.tool(scout.id, "Write", {
+      summary: "gone.md",
+      file: "C:Workgone.md",
+      status: "done",
+    });
+    await openScout(fake);
+    fireEvent.click(screen.getByRole("button", { name: "Show in files: gone.md" }));
+    expect(await within(panel()).findByText("This file is no longer there.")).toBeDefined();
+  });
 });

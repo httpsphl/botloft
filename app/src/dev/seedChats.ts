@@ -69,7 +69,12 @@ export function seedChats(fake: FakeBotloft, crew: Crew): void {
     ["Write", "week-39.md"],
   ] as const;
   for (const [name, summary] of files) {
-    const call = chat.tool(crew.scout, name, { summary, input: JSON.stringify({ path: summary }) });
+    const file = name === "Write" ? "C:\\Work\\summaries\\week-39.md" : null;
+    const call = chat.tool(crew.scout, name, {
+      summary,
+      input: JSON.stringify({ path: summary }),
+      file,
+    });
     chat.finish(call, name === "Write" ? "Wrote 42 lines" : "ok");
   }
   at(93);
