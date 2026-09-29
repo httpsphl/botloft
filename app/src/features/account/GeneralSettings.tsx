@@ -1,5 +1,5 @@
-// Settings, "General": what Botloft does in the background and when
-// Windows starts (spec 15.1), and the language.
+// Settings, "General": the language, what Botloft does in the background
+// and when Windows starts (spec 15.1).
 
 import {
   LOCALES,
@@ -10,7 +10,7 @@ import {
   useT,
 } from "../../i18n";
 import { prefs, usePref } from "../../shell/prefs";
-import { Choices } from "../../ui/Choices";
+import { Select } from "../../ui/Select";
 import { Section, Toggle } from "./settingsParts";
 import { useDaemonSettings } from "./useDaemonSettings";
 
@@ -32,6 +32,9 @@ export function GeneralSettings() {
 
   return (
     <>
+      <Section title={s.language}>
+        <Select label={s.language} value={locale} options={languages} onChange={setLocaleChoice} />
+      </Section>
       <Section title={s.background}>
         <Toggle
           label={s.keepWorking}
@@ -75,9 +78,6 @@ export function GeneralSettings() {
           disabled={!settings}
           onChange={(on) => change({ keepAwake: on })}
         />
-      </Section>
-      <Section title={s.language}>
-        <Choices label={s.language} value={locale} options={languages} onChange={setLocaleChoice} />
       </Section>
     </>
   );
