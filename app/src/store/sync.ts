@@ -25,6 +25,11 @@ export function syncStore(store: AppStore, api: BotloftApi): () => void {
     store.setState({ loaded: false, loadError: null });
     const fail = (error: unknown) => alive && store.setState({ loadError: errorText(error) });
     refreshStatus();
+    api.call("settings.get").then(
+      (settings) => alive && store.setState({ settings }),
+      // An older daemon has no settings: they stay unset.
+      () => {},
+    );
     const crews = api.call("crews.list").then((list) => {
       if (alive) {
         store.setState({ crews: Object.fromEntries(list.map((crew) => [crew.id, crew])) });

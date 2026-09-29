@@ -31,17 +31,47 @@ export interface AppUpdate {
   install(progress: (fraction: number | null) => void): Promise<void>;
 }
 
+/** What the icon near the clock shows (spec 15.1). */
+export interface TrayView {
+  /** The tooltip: Botloft and what the bots are doing. */
+  tooltip: string;
+  /** The first line of the menu, which cannot be clicked. */
+  status: string;
+  /** Something waits for the owner: the icon gets a dot. */
+  attention: boolean;
+  open: string;
+  pause: string;
+  quit: string;
+}
+
+export interface TrayActions {
+  open(): void;
+  pause(): void;
+  quit(): void;
+}
+
 export interface AppWindow {
   minimize(): Promise<void>;
   toggleMaximize(): Promise<void>;
   close(): Promise<void>;
   hide(): Promise<void>;
+  /** Shows the window, restored and in front. */
+  show(): Promise<void>;
+  /** Ends the app, whatever `onCloseRequested` would do. */
+  quit(): Promise<void>;
+  /** Whether the window is on screen and has the focus. */
+  inFront(): boolean;
   /**
    * Runs `before` when the window is about to close (the close button,
-   * Alt+F4, the taskbar), and closes it once it settles. Returns the
-   * unsubscribe function.
+   * Alt+F4, the taskbar). Unless it answers "stay", the window closes once
+   * it settles. Returns the unsubscribe function.
    */
-  onCloseRequested(before: () => Promise<void>): Promise<() => void>;
+  onCloseRequested(before: () => Promise<"close" | "stay">): Promise<() => void>;
+  /**
+   * Botloft was opened again while it ran (the Start menu, a notification):
+   * the window already came forward. Returns the unsubscribe function.
+   */
+  onReopened(listener: () => void): Promise<() => void>;
   isMaximized(): Promise<boolean>;
   /** Called when the window is resized; returns the unsubscribe function. */
   onResized(listener: () => void): Promise<() => void>;
@@ -64,6 +94,15 @@ export interface Host {
    * when it starts with Windows (spec 14).
    */
   stopDaemon(): Promise<void>;
+  /** Opens the app when the owner signs in to Windows, or stops doing so. */
+  setOpenAtSignIn(on: boolean): Promise<void>;
+  /** Whether Windows opened the app at sign-in, with its window hidden. */
+  launchedAtSignIn(): Promise<boolean>;
+  /** A Windows notification; `sound` plays the Windows notification sound. */
+  notify(notice: { title: string; body: string; sound: boolean }): Promise<void>;
+  /** Shows the icon near the clock, or updates it. */
+  showTray(view: TrayView, actions: TrayActions): Promise<void>;
+  hideTray(): Promise<void>;
   /**
    * Opens Claude Code's sign-in (`claude auth login`) in its own window and
    * waits for it to end. Resolves whether it signed in.

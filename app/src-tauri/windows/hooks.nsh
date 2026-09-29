@@ -9,5 +9,7 @@
   ${If} $UpdateMode <> 1
     nsExec::Exec '"$INSTDIR\botloftd.exe" service uninstall'
     Pop $0
+    ; Nor does the app open at sign-in any more (spec 15.2).
+    DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "Botloft"
   ${EndIf}
 !macroend

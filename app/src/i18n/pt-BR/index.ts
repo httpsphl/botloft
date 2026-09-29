@@ -2,6 +2,7 @@
 
 import type { Messages } from "../en";
 import { account } from "./account";
+import { alerts } from "./alerts";
 import { bots } from "./bots";
 import { browser } from "./browser";
 import { chat } from "./chat";
@@ -22,6 +23,7 @@ export const ptBR: Messages = {
   onboarding,
   updates,
   account,
+  alerts,
   bots,
   browser,
   chat,

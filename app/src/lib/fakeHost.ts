@@ -1,6 +1,6 @@
 // A `Host` for tests: a daemon that is running unless told otherwise.
 
-import type { AppUpdate, DaemonStatus, Host } from "./host";
+import type { AppUpdate, DaemonStatus, Host, TrayActions, TrayView } from "./host";
 import { PROTOCOL_VERSION } from "./protocol.gen";
 
 /** A current daemon on the default port. */
@@ -34,8 +34,17 @@ export class FakeHost implements Host {
   /** How many times the app stopped the daemon. */
   stops = 0;
   /** What runs before the window closes, as the app set it. */
-  beforeClose: (() => Promise<void>) | null = null;
+  beforeClose: (() => Promise<"close" | "stay">) | null = null;
   hidden = false;
+  /** Whether the window is on screen with the focus. */
+  front = true;
+  /** Whether Windows opens the app at sign-in, as the app last set it. */
+  openAtSignIn: boolean | null = null;
+  atSignIn = false;
+  readonly notices: { title: string; body: string; sound: boolean }[] = [];
+  /** The icon near the clock, while shown, and what its menu does. */
+  tray: { view: TrayView; actions: TrayActions } | null = null;
+  private readonly reopenListeners = new Set<() => void>();
   /** Paths `signInToClaude` ran, and what it answers. */
   readonly signIns: string[] = [];
   signInResult: boolean | Error = true;
@@ -69,8 +78,46 @@ export class FakeHost implements Host {
 
   /** Closes the window the way Windows does: what the app set runs first. */
   async requestClose(): Promise<void> {
-    await this.beforeClose?.();
-    this.closed = true;
+    const outcome = await this.beforeClose?.();
+    if (outcome === "stay") {
+      this.hidden = true;
+      this.front = false;
+    } else {
+      this.closed = true;
+    }
+  }
+
+  /** Botloft opened again from the Start menu or a notification. */
+  reopen(): void {
+    this.hidden = false;
+    this.front = true;
+    for (const listener of this.reopenListeners) {
+      listener();
+    }
+  }
+
+  setOpenAtSignIn(on: boolean): Promise<void> {
+    this.openAtSignIn = on;
+    return Promise.resolve();
+  }
+
+  launchedAtSignIn(): Promise<boolean> {
+    return Promise.resolve(this.atSignIn);
+  }
+
+  notify(notice: { title: string; body: string; sound: boolean }): Promise<void> {
+    this.notices.push(notice);
+    return Promise.resolve();
+  }
+
+  showTray(view: TrayView, actions: TrayActions): Promise<void> {
+    this.tray = { view, actions };
+    return Promise.resolve();
+  }
+
+  hideTray(): Promise<void> {
+    this.tray = null;
+    return Promise.resolve();
   }
 
   signInToClaude(claudePath: string): Promise<boolean> {
@@ -141,9 +188,26 @@ export class FakeHost implements Host {
     close: () => this.requestClose(),
     hide: () => {
       this.hidden = true;
+      this.front = false;
       return Promise.resolve();
     },
-    onCloseRequested: (before: () => Promise<void>) => {
+    show: () => {
+      this.hidden = false;
+      this.front = true;
+      return Promise.resolve();
+    },
+    quit: () => {
+      this.closed = true;
+      return Promise.resolve();
+    },
+    inFront: () => this.front,
+    onReopened: (listener: () => void) => {
+      this.reopenListeners.add(listener);
+      return Promise.resolve(() => {
+        this.reopenListeners.delete(listener);
+      });
+    },
+    onCloseRequested: (before: () => Promise<"close" | "stay">) => {
       this.beforeClose = before;
       return Promise.resolve(() => {
         if (this.beforeClose === before) {

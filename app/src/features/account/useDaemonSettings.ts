@@ -1,10 +1,10 @@
-// The daemon's part of Settings (spec 11.2): read when shown and saved on
-// each change. A change shows at once and goes back if it cannot be saved.
+// The daemon's part of Settings (spec 11.2), kept in the app store: read
+// on each connection and saved on each change. A change shows at once and
+// goes back if it cannot be saved.
 
-import { useEffect, useState } from "react";
 import { useT } from "../../i18n";
 import type { Settings, SettingsUpdateParams } from "../../lib/protocol.gen";
-import { useApi } from "../../store/context";
+import { useApi, useApp } from "../../store/context";
 import { attempt } from "../../ui/toast";
 
 export function useDaemonSettings(): {
@@ -13,31 +13,20 @@ export function useDaemonSettings(): {
 } {
   const api = useApi();
   const failed = useT().account.settings.saveFailed;
-  const [settings, setSettings] = useState<Settings | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    api.call("settings.get").then(
-      (found) => alive && setSettings(found),
-      // Shown without them; the switches wait.
-      () => {},
-    );
-    return () => {
-      alive = false;
-    };
-  }, [api]);
+  const settings = useApp((state) => state.settings);
+  const putSettings = useApp((state) => state.putSettings);
 
   const change = (update: SettingsUpdateParams) => {
     const before = settings;
     if (before) {
-      setSettings({
+      putSettings({
         startWithWindows: update.startWithWindows ?? before.startWithWindows,
         keepAwake: update.keepAwake ?? before.keepAwake,
         approvalWaitMinutes: update.approvalWaitMinutes ?? before.approvalWaitMinutes,
       });
     }
-    attempt(failed, async () => setSettings(await api.call("settings.update", update))).then(
-      (saved) => saved || setSettings(before),
+    attempt(failed, async () => putSettings(await api.call("settings.update", update))).then(
+      (saved) => saved || putSettings(before),
     );
   };
 

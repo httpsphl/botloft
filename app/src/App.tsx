@@ -5,6 +5,7 @@ import { Onboarding } from "./features/onboarding/Onboarding";
 import type { Host } from "./lib/host";
 import { useCloseBehavior } from "./shell/closing";
 import { useMotionRoot } from "./shell/motionRoot";
+import { useSignInWindow } from "./shell/signIn";
 import { TitleBar } from "./shell/TitleBar";
 import { useThemeRoot } from "./shell/theme";
 import { Workspace } from "./shell/Workspace";
@@ -19,6 +20,7 @@ export function App({ host, connect }: { host: Host; connect: Connect }) {
   useCloseBehavior(host);
   const [link] = useState(() => createLink(host, connect));
   const current = useStore(link, (state) => state.current);
+  useSignInWindow(host, current.step);
   useEffect(() => {
     link.getState().check();
   }, [link]);

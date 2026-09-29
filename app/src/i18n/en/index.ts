@@ -1,6 +1,7 @@
 // English, the reference: every other language has exactly this shape.
 
 import { account } from "./account";
+import { alerts } from "./alerts";
 import { bots } from "./bots";
 import { browser } from "./browser";
 import { chat } from "./chat";
@@ -21,6 +22,7 @@ export const en = {
   onboarding,
   updates,
   account,
+  alerts,
   bots,
   browser,
   chat,
