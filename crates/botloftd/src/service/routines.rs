@@ -11,7 +11,8 @@ use botloft_store::Store;
 use tracing::warn;
 
 use super::{ApiError, ApiResult, bots};
-use crate::routines::{self, schedule::Plan};
+use crate::routines;
+use crate::routines::schedule::{Plan, Problem};
 use crate::state::{Daemon, Event};
 
 const NAME_MAX_CHARS: usize = 80;
@@ -174,8 +175,12 @@ fn name(input: &str) -> ApiResult<String> {
 
 /// A checked schedule, its runs at least five minutes apart.
 fn plan(schedule: &Schedule, timezone: &str, now: i64) -> ApiResult<Plan> {
-    let plan = Plan::new(schedule, timezone).map_err(ApiError::validation)?;
-    plan.check_spacing(now).map_err(ApiError::validation)?;
+    let rule = |problem: Problem| ApiError::Rule {
+        reason: problem.reason,
+        message: problem.message,
+    };
+    let plan = Plan::new(schedule, timezone).map_err(rule)?;
+    plan.check_spacing(now).map_err(rule)?;
     Ok(plan)
 }
 

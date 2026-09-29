@@ -1,7 +1,7 @@
 // A message to the bot, in its chat: the owner's on the right in a bubble,
 // another bot's or Botloft's on the left under its name (spec 15.3).
 
-import { ListTodo, Reply } from "lucide-react";
+import { AlarmClock, ListTodo, Reply } from "lucide-react";
 import { useT } from "../../i18n";
 import { when } from "../../lib/format";
 import type { Bot, Message } from "../../lib/protocol.gen";
@@ -43,6 +43,17 @@ function OwnerMessage({ message, bot }: { message: Message; bot: Bot }) {
 
 function TaskTag({ message }: { message: Message }) {
   const t = useT();
+  const routine = useApp((state) =>
+    message.routineId ? state.routines[message.routineId] : undefined,
+  );
+  if (message.kind === "routine") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-md border border-accent/40 px-1.5 text-accent text-xs">
+        <AlarmClock aria-hidden size={11} />
+        {t.routines.tag(routine?.name ?? t.routines.tab)}
+      </span>
+    );
+  }
   if (message.kind !== "task" && message.kind !== "result") {
     return null;
   }

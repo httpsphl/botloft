@@ -12,6 +12,7 @@ import type { Host } from "../lib/host";
 import { PROTOCOL_VERSION } from "../lib/protocol.gen";
 import { seedChats } from "./seedChats";
 import { seedChief } from "./seedChief";
+import { seedRoutines } from "./seedRoutines";
 
 export function previewProps(search: string): { host: Host; connect: Connect } {
   const params = new URLSearchParams(search);
@@ -109,6 +110,7 @@ function seed(fake: FakeBotloft): void {
     analyst: analyst.id,
     planner: planner.id,
   });
+  seedRoutines(fake, { scout: scout.id, analyst: analyst.id });
   const ops = fake.addCrew("Ops");
   const deploy = fake.addBot(ops.id, "Deploy", "Ships the site on Fridays");
   const watcher = fake.addBot(ops.id, "Watcher", "Keeps an eye on the error log");

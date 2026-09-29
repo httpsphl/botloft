@@ -746,7 +746,7 @@ Itens do runtime anterior (ConPTY, hooks em exec form, `crossSessionInbound`, li
 
 ## 20. Rotinas
 
-Status: primeiro item depois do MVP (seção 18), em dois marcos (20.11). **R1 (agendador) implementado**; R2 (app) a seguir.
+Status: primeiro item depois do MVP (seção 18), em dois marcos (20.11), **implementados**.
 
 ### 20.1 O que é
 
@@ -846,14 +846,14 @@ Migration nova:
 | `routines.runs` | `routineId, before?, limit?` | `RoutineRun[]`, mais nova primeiro |
 
 - Notificações: `routine.changed` e `routine.run`.
-- Validação (`-32004`); no R1 a mensagem vem em inglês, e o R2 acrescenta o código para o app escrevê-la no idioma do dono (15.6): nome de 1 a 80 caracteres; pedido dentro do limite de uma message; `days` não vazio; `time` válido; `minutes` de 5 a 10 080; `cron` válido e com espaçamento de pelo menos 5 minutos; `timezone` conhecido.
+- Validação (`-32004`): nome de 1 a 80 caracteres; pedido dentro do limite de uma message; `days` não vazio e de 1 a 7; `time` válido; `minutes` de 5 a 10 080; `cron` válido e com espaçamento de pelo menos 5 minutos; `timezone` conhecido. Os problemas do horário vêm com `data.reason` (`timezone_unknown`, `days_empty`, `days_range`, `time_invalid`, `interval_range`, `cron_invalid`, `too_often`, `never_runs`), que o app escreve no idioma do dono (15.6); a mensagem em inglês fica para quem não conhece o código.
 
 ### 20.9 App
 
 Sem jargão (15.2): o dono não vê "cron", "overlap" nem "timezone" no caminho principal.
 
-- No bot, uma aba **Rotinas** com a lista: nome, quando ("Dias úteis às 09:00"), a próxima vez ("amanhã às 09:00"), como foi a última (feita, pulada ou com erro), um interruptor para ligar e desligar, "Rodar agora", editar e apagar.
-- Criar e editar: "Nome", "O que o bot deve fazer" e "Quando": todo dia, dias úteis, dias escolhidos, ou a cada N minutos ou horas, com o horário.
+- No bot, abas **Conversa** e **Rotinas** (com a contagem, "Rotinas (2)"). A lista: um interruptor para ligar e desligar, o nome, quando ("Dias úteis às 09:00"), a próxima vez no fuso da rotina ("amanhã às 09:00"; desligada, "Desligada"), como foi a última (rodando, rodou bem, falhou, ou pulada e por quê), "Rodar agora" e um menu com editar e apagar (com confirmação). Sem rotinas, uma explicação e "Nova rotina".
+- Criar e editar: "Nome", "O que <bot> deve fazer?" e "Quando": todo dia, dias úteis, dias escolhidos (os sete dias como botões, com os nomes do idioma), ou a cada N minutos ou horas; para os três primeiros, o horário. Nomes de dias e horas vêm do `Intl`, no idioma do app.
 - Em "Mais opções":
   - o fuso (o do sistema por padrão, mostrado pelo nome da cidade);
   - "Se a anterior ainda não terminou": pular ou esperar a vez;
@@ -861,7 +861,8 @@ Sem jargão (15.2): o dono não vê "cron", "overlap" nem "timezone" no caminho 
   - "Avançado": expressão cron.
 - No chat, a message da rotina aparece com a etiqueta "Rotina · <nome>".
 - Na página da crew, uma aba com as rotinas de todos os bots dela.
-- Uma execução `failed` entra na marca da barra de tarefas (15.2) até o dono abrir o bot.
+- Uma execução `failed` entra na marca da barra de tarefas (15.2) até o dono abrir o bot. O app guarda quando o dono abriu cada bot (`localStorage`, `botloft.seen`); um bot aberto não marca.
+- O store carrega `routines.list` a cada conexão e segue `routine.changed` e `routine.run`.
 - Textos nos três idiomas (15.6); a frase de "quando" é montada pelo app a partir do `schedule`.
 
 ### 20.10 Fora desta etapa

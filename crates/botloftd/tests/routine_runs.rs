@@ -12,7 +12,7 @@ use botloft_core::protocol::{
 };
 use botloft_store::DeliveryOutcome;
 use botloftd::routines;
-use botloftd::service::{bots, routines as service};
+use botloftd::service::{ApiError, bots, routines as service};
 use common::routines::*;
 use common::stream;
 
@@ -91,10 +91,24 @@ async fn schedules_too_close_or_unknown_zones_are_refused() {
     };
     let err = service::create(&s.daemon, params.clone()).expect_err("too often");
     assert!(err.to_string().contains("5 minutes"), "{err}");
+    assert!(matches!(
+        err,
+        ApiError::Rule {
+            reason: "too_often",
+            ..
+        }
+    ));
     params.schedule = every(60);
     params.timezone = "Mars/Olympus".into();
     let err = service::create(&s.daemon, params).expect_err("zone");
     assert!(err.to_string().contains("time zone"), "{err}");
+    assert!(matches!(
+        err,
+        ApiError::Rule {
+            reason: "timezone_unknown",
+            ..
+        }
+    ));
 }
 
 #[tokio::test(start_paused = true)]

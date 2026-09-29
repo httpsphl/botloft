@@ -21,6 +21,29 @@ const SPACING_SAMPLES: usize = 20;
 /// four years, or eight across a skipped leap year.
 const SEARCH_DAYS: i64 = 366 * 8 + 2;
 
+/// Why a schedule was refused: a code the app words in the owner's
+/// language (spec 20.8), and an English sentence.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Problem {
+    pub reason: &'static str,
+    pub message: String,
+}
+
+impl Problem {
+    fn new(reason: &'static str, message: impl Into<String>) -> Self {
+        Self {
+            reason,
+            message: message.into(),
+        }
+    }
+}
+
+impl std::fmt::Display for Problem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
 /// A schedule checked and ready to compute times from.
 #[derive(Debug, Clone)]
 pub struct Plan {
@@ -36,20 +59,29 @@ enum Kind {
 }
 
 impl Plan {
-    /// Checks the schedule and the zone. The error is a sentence for the
-    /// owner.
-    pub fn new(schedule: &Schedule, timezone: &str) -> Result<Self, String> {
-        let tz = TimeZone::get(timezone)
-            .map_err(|_| format!("\"{timezone}\" is not a known time zone"))?;
+    /// Checks the schedule and the zone.
+    pub fn new(schedule: &Schedule, timezone: &str) -> Result<Self, Problem> {
+        let tz = TimeZone::get(timezone).map_err(|_| {
+            Problem::new(
+                "timezone_unknown",
+                format!("\"{timezone}\" is not a known time zone"),
+            )
+        })?;
         let kind = match schedule {
             Schedule::Weekly { days, time } => {
                 if days.is_empty() {
-                    return Err("pick at least one day of the week".into());
+                    return Err(Problem::new(
+                        "days_empty",
+                        "pick at least one day of the week",
+                    ));
                 }
                 let mut set = 0u8;
                 for day in days {
                     if !(1..=7).contains(day) {
-                        return Err("days of the week go from 1 (Monday) to 7 (Sunday)".into());
+                        return Err(Problem::new(
+                            "days_range",
+                            "days of the week go from 1 (Monday) to 7 (Sunday)",
+                        ));
                     }
                     set |= 1 << day;
                 }
@@ -60,22 +92,27 @@ impl Plan {
             }
             Schedule::Interval { minutes } => {
                 if !(INTERVAL_MIN_MINUTES..=INTERVAL_MAX_MINUTES).contains(minutes) {
-                    return Err(format!(
-                        "an interval goes from {INTERVAL_MIN_MINUTES} minutes to one week \
-                         ({INTERVAL_MAX_MINUTES} minutes)"
+                    return Err(Problem::new(
+                        "interval_range",
+                        format!(
+                            "an interval goes from {INTERVAL_MIN_MINUTES} minutes to one week \
+                             ({INTERVAL_MAX_MINUTES} minutes)"
+                        ),
                     ));
                 }
                 Kind::Interval {
                     ms: i64::from(*minutes) * 60_000,
                 }
             }
-            Schedule::Cron { expr } => Kind::Cron(Cron::parse(expr)?),
+            Schedule::Cron { expr } => {
+                Kind::Cron(Cron::parse(expr).map_err(|err| Problem::new("cron_invalid", err))?)
+            }
         };
         Ok(Self { kind, tz })
     }
 
     /// Checks that runs are never closer than five minutes, from `now` on.
-    pub fn check_spacing(&self, now: i64) -> Result<(), String> {
+    pub fn check_spacing(&self, now: i64) -> Result<(), Problem> {
         let mut last = self.next_after(now, now);
         let mut samples = 0;
         while let Some(at) = last
@@ -85,13 +122,16 @@ impl Plan {
             if let Some(next) = next
                 && next - at < MIN_SPACING_MS
             {
-                return Err("runs must be at least 5 minutes apart".into());
+                return Err(Problem::new(
+                    "too_often",
+                    "runs must be at least 5 minutes apart",
+                ));
             }
             last = next;
             samples += 1;
         }
         if samples == 0 {
-            return Err("this schedule never runs".into());
+            return Err(Problem::new("never_runs", "this schedule never runs"));
         }
         Ok(())
     }
@@ -185,8 +225,13 @@ impl Plan {
 }
 
 /// `HH:MM`, 24-hour.
-fn clock_time(text: &str) -> Result<Time, String> {
-    let bad = || format!("\"{text}\" is not a time like 09:00");
+fn clock_time(text: &str) -> Result<Time, Problem> {
+    let bad = || {
+        Problem::new(
+            "time_invalid",
+            format!("\"{text}\" is not a time like 09:00"),
+        )
+    };
     let (hour, minute) = text.split_once(':').ok_or_else(bad)?;
     if hour.len() != 2 || minute.len() != 2 {
         return Err(bad());

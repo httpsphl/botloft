@@ -3,15 +3,18 @@
 
 import { useEffect } from "react";
 import { actionableDead } from "../features/messages/FailedDeliveries";
-import type { AppState } from "../store/app";
+import { type AppState, unseenFailures } from "../store/app";
 import { useApp, useHost } from "../store/context";
 
-/** Bots waiting for an answer or a sign-in, and messages that gave up. */
+/**
+ * Bots waiting for an answer or a sign-in, messages that gave up, and
+ * routine runs that failed since the owner last opened their bot.
+ */
 export function attentionCount(state: AppState): number {
   const bots = Object.values(state.bots).filter(
     (bot) => bot.state === "needs_approval" || bot.state === "auth_error",
   ).length;
-  return bots + actionableDead(state).length;
+  return bots + actionableDead(state).length + unseenFailures(state).length;
 }
 
 export function useAttentionMark(): void {
