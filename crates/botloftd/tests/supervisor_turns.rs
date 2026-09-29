@@ -40,6 +40,59 @@ async fn turns_and_approvals_drive_the_state() {
     assert_eq!(s.state(), BotState::Idle);
 }
 
+/// Subagents finish after the turn that started them: Claude Code then goes
+/// on by itself, with no message written for it (spec 7.2).
+#[tokio::test(start_paused = true)]
+async fn a_turn_claude_code_starts_on_its_own_is_busy() {
+    let s = setup().await;
+    let process = s.runtime.process(1).await;
+    s.until(BotState::Idle).await;
+
+    process.emit(stream::init("session-1")).await;
+    s.until(BotState::Busy).await;
+    process.emit(stream::result(false)).await;
+    s.until(BotState::Idle).await;
+
+    // A message written while it works keeps the bot busy past that turn.
+    process.emit(stream::init("session-1")).await;
+    s.until(BotState::Busy).await;
+    s.message("and this too");
+    process.emit(stream::result(false)).await;
+    tokio::time::sleep(Duration::from_millis(20)).await;
+    assert_eq!(s.state(), BotState::Busy, "the message still has its turn");
+    process.emit(stream::init("session-1")).await;
+    process.emit(stream::result(false)).await;
+    s.until(BotState::Idle).await;
+}
+
+#[tokio::test(start_paused = true)]
+async fn subagents_in_the_background_keep_the_bot_busy() {
+    let s = setup().await;
+    let process = s.runtime.process(1).await;
+    s.until(BotState::Idle).await;
+    s.message("research this");
+
+    let tasks = |kinds: &[&str]| {
+        let tasks: Vec<_> = kinds
+            .iter()
+            .enumerate()
+            .map(|(n, kind)| json!({ "task_id": format!("t{n}"), "task_type": kind }))
+            .collect();
+        json!({ "type": "system", "subtype": "background_tasks_changed", "tasks": tasks })
+    };
+    process.emit(tasks(&["local_agent", "local_agent"])).await;
+    process.emit(stream::result(false)).await;
+    tokio::time::sleep(Duration::from_millis(20)).await;
+    assert_eq!(s.state(), BotState::Busy, "the agents are still working");
+
+    process.emit(tasks(&["local_agent"])).await;
+    tokio::time::sleep(Duration::from_millis(20)).await;
+    assert_eq!(s.state(), BotState::Busy);
+    // A shell command left running is not work.
+    process.emit(tasks(&["local_bash"])).await;
+    s.until(BotState::Idle).await;
+}
+
 /// What keeps the computer awake (spec 14): only `busy` counts.
 #[tokio::test(start_paused = true)]
 async fn the_busy_count_follows_turns_approvals_and_crashes() {

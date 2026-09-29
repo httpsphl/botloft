@@ -66,8 +66,7 @@ impl Supervisor {
                 slot.generation = Some(generation);
                 slot.restart_at = None;
                 slot.fresh_next = false;
-                slot.turns = 0;
-                slot.approvals = 0;
+                slot.clear_work();
                 slot.limited_until = None;
                 slot.restart_when_idle = false;
                 tokens.insert(launch.token_hash.clone(), (bot.id.clone(), generation));
@@ -121,8 +120,7 @@ impl Supervisor {
             return;
         };
         tokens.remove(&running.token_hash);
-        slot.turns = 0;
-        slot.approvals = 0;
+        slot.clear_work();
         slot.limited_until = None;
         let ran = running.started.elapsed();
         let resumed = running.resumed;

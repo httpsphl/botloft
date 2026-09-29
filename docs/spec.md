@@ -172,8 +172,8 @@ default_deadline_minutes = 120
 |---|---|
 | `offline` | Sem processo e sem restart agendado (crew ou bot pausado) |
 | `launching` | Processo criado, nos primeiros 1,5 s |
-| `idle` | Processo vivo, sem turno em andamento |
-| `busy` | Turno em andamento ou na fila do Claude Code |
+| `idle` | Processo vivo, sem turno em andamento e sem subagente trabalhando |
+| `busy` | Turno em andamento ou na fila do Claude Code, ou subagente trabalhando em segundo plano |
 | `needs_approval` | Uma ferramenta espera o dono aprovar (10.1) |
 | `rate_limited` | O limite de uso da conta foi atingido; espera `resetsAt` |
 | `auth_error` | Claude Code sem autenticação válida |
@@ -189,7 +189,9 @@ Os estados saem do próprio fluxo de eventos (8.1); não há hooks.
 | spawn do processo | `launching` |
 | processo vivo há 1,5 s | `idle` (o Claude Code fica calado até a primeira mensagem) |
 | delivery escrita no stdin | `busy` (conta um turno pendente) |
-| `result` | `idle` se não sobrou turno pendente, senão continua `busy` |
+| `system/init` sem turno pendente | `busy`: o Claude Code começou um turno por conta própria (um subagente terminou e ele seguiu sozinho), sem message por trás. O `result` dele fecha esse turno sem descontar um turno pendente |
+| `system/background_tasks_changed` | `busy` enquanto a lista trouxer tarefas `local_agent` (subagentes em segundo plano); a lista vem inteira a cada mudança. Comandos e monitores em segundo plano não contam: podem durar tanto quanto o bot |
+| `result` | `idle` se não sobrou turno pendente nem subagente, senão continua `busy` |
 | a tool de aprovação é chamada | `needs_approval` |
 | aprovação respondida ou vencida | `busy` |
 | erro `rate_limit` num turno, ou `rate_limit_event` com status diferente de `allowed` | `rate_limited` até `resetsAt` (5 min se não vier), depois `idle` |
@@ -264,7 +266,8 @@ Uma linha JSON por evento, em UTF-8. Linha que não é JSON, ou maior que 8 MiB,
 
 | Evento | O que vira |
 |---|---|
-| `system/init` | guarda `session_id` em `bots.session_id` (vem no começo de cada turno); segue `permissionMode` e guarda `model` (7.4) |
+| `system/init` | guarda `session_id` em `bots.session_id` (vem no começo de cada turno); segue `permissionMode` e guarda `model` (7.4); um turno sem message por trás deixa o bot `busy` (7.2) |
+| `system/background_tasks_changed` | quantos subagentes (`task_type: local_agent`) rodam em segundo plano (7.2) |
 | `user` com `isReplay: true` | a message com aquele `uuid` começou a ser processada: a delivery ganha `read_at` (9.1) |
 | `stream_event` com `text_delta` | texto ao vivo da resposta (`chat.delta`, 8.3); não é gravado |
 | `assistant`, bloco `text` | item `reply` com o texto (markdown) |
@@ -748,6 +751,7 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28. "Co
 | Chefe e `suggest_bot` com o Claude Code real | 10.2 | **Testado com 2.1.284** (daemon e app de dev): a crew criada pelo app subiu o chefe com `--model sonnet` e `--add-dir` na pasta da crew. Pedido um site, o chefe carregou `crew_roster`, `suggest_bot` e `send_message` pelo `ToolSearch` e sugeriu um Designer com papel, instruções, modelo e porquê; a chamada esperou o cartão. Com o modelo trocado para `haiku` no cartão, o bot subiu com `--model haiku`, e o chefe citou a troca. O chefe mandou uma task, o Designer entregou com `complete_task`, e o chefe conferiu o resultado e corrigiu o HTML. O log de `debug` não teve texto de mensagem | feito |
 | Rotinas com o Claude Code real | 20 | **Testado com 2.1.284** (daemon e app de dev): uma rotina "a cada 5 minutos" criada pelo app, num chefe em Haiku, rodou às 09:10 e às 09:15, contadas a partir da criação; cada message chegou com o envelope da rotina, apareceu no chat com "Rotina · <nome>" e fechou como `done` com o `result` do turno. Desligada, não rodou às 09:20. O log de `debug` só teve ids | feito |
 | Prévia de PDF no painel de arquivos | 15.1 | O PDF vai para um `<iframe src="blob:...">` (a CSP libera `frame-src blob:`). Não visto no WebView2 do app: no navegador de dev o painel funciona com imagem, markdown e texto | manual (PR): abrir um PDF no painel com `pnpm tauri dev` |
+| Subagentes em segundo plano e turnos do próprio Claude Code | 7.2 | **Testado com 2.1.284** (`-p`, `stream-json`, Haiku, dois subagentes no `Agent`): o `result` do turno chega enquanto os subagentes ainda rodam. Eles avisam com `system/background_tasks_changed` (`tasks: [{task_id, task_type: "local_agent", description}]`, a lista inteira de quem ainda roda; `[]` no fim), `task_started`, `task_progress`, `task_updated` e `task_notification` (`status`, `summary`). Ao terminarem, o Claude Code abre turnos por conta própria (`system/init` sem `user` com `isReplay` antes, `assistant` e `result`), sem message escrita. Um turno assim já apareceu num chat real: o bot ficou `idle` durante ele. Comandos `local_bash` de dentro de um subagente aparecem em `task_started` com `owned_by_subagent` | feito |
 | Regras `allow` do projeto em `-p` sem confiança | 7.4 | Confirmado (`permissions`): não são aplicadas numa pasta nunca confiada; `deny` vale sempre. Por isso `--allowedTools mcp__botloft` | M4.1 |
 | `--session-id`, `--resume` em `-p` | 7.3 | Confirmado (`cli-reference`, `sessions`): a sessão retoma histórico e modelo; flags como `--mcp-config` têm de ser passadas de novo. **Testado com 2.1.284**: depois de reiniciar o bot e depois de reiniciar o daemon, o bot lembrou arquivos, a imagem e a mensagem de outro bot | feito (M4.1) |
 | Tools MCP adiadas | 10 | **Visto com 2.1.284**: as tools do `botloft` chegam adiadas; antes da primeira `send_message` o bot chama `ToolSearch` com `select:mcp__botloft__send_message`. O chat mostra isso como "load send_message" | feito (M4.1) |

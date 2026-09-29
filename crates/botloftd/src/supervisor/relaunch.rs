@@ -21,7 +21,7 @@ impl Supervisor {
             // The next start reads the new settings anyway.
             return;
         }
-        if slot.turns == 0 && slot.approvals == 0 {
+        if !slot.has_work() {
             self.relaunch(bot, slot);
         } else {
             slot.restart_when_idle = true;
@@ -47,7 +47,7 @@ impl Supervisor {
 
     /// Called when a turn or an approval ends.
     pub(super) fn relaunch_if_idle(&self, bot: &BotId, slot: &mut Slot) {
-        if slot.restart_when_idle && slot.turns == 0 && slot.approvals == 0 && slot.stop.is_none() {
+        if slot.restart_when_idle && !slot.has_work() && slot.stop.is_none() {
             self.relaunch(bot, slot);
         }
     }
