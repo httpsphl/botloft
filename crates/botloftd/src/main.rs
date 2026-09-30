@@ -18,6 +18,7 @@ use botloftd::service::tasks::TaskSettings;
 use botloftd::settings::LiveSettings;
 use botloftd::state::{BotSettings, Daemon, DaemonOptions};
 use botloftd::supervisor::{self, SupervisorSettings};
+use botloftd::trash::RecycleBin;
 use botloftd::{approvals, autostart, keep_awake, logging, routines, secrets, server};
 use clap::{Parser, Subcommand};
 use tokio::net::TcpListener;
@@ -129,6 +130,7 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
         bots: BotSettings::from_config(&config),
         browser: BrowserSettings::from_config(&config),
         settings: LiveSettings::new(Some(config_path), &config),
+        trash: Arc::new(RecycleBin),
     });
     // No bot process survived the last run, so nobody waits for these.
     approvals::expire_all(&daemon);

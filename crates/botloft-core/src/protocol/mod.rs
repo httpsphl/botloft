@@ -90,6 +90,7 @@ pub mod method {
     pub const CREWS_SET_LEAD: &str = "crews.setLead";
     pub const CREWS_ARCHIVE: &str = "crews.archive";
     pub const CREWS_DELETE: &str = "crews.delete";
+    pub const ARCHIVE_LIST: &str = "archive.list";
     pub const BOTS_LIST: &str = "bots.list";
     pub const BOTS_CREATE: &str = "bots.create";
     pub const BOTS_UPDATE: &str = "bots.update";
@@ -138,6 +139,7 @@ pub mod notification {
     pub const CREW_DELETED: &str = "crew.deleted";
     pub const BOT_CHANGED: &str = "bot.changed";
     pub const BOT_DELETED: &str = "bot.deleted";
+    pub const FOLDER_RECYCLED: &str = "folder.recycled";
     pub const BOT_STATE: &str = "bot.state";
     pub const CHAT_ITEM: &str = "chat.item";
     pub const CHAT_DELTA: &str = "chat.delta";

@@ -1,6 +1,7 @@
 //! What the RPC methods do, independent of JSON-RPC. Each operation runs
 //! under the store lock, so checks and writes cannot interleave.
 
+pub mod archive;
 pub mod attachments;
 pub mod bots;
 pub mod chat;

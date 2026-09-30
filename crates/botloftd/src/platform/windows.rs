@@ -6,6 +6,7 @@ mod env;
 mod job;
 mod owner;
 mod power;
+mod recycle;
 mod sign_in;
 mod task;
 mod task_xml;
@@ -15,6 +16,7 @@ pub use env::user_environment;
 pub use job::ProcessJob;
 pub use owner::owner_name;
 pub use power::KeepAwake;
+pub use recycle::recycle;
 pub use sign_in::sign_in_id;
 pub use task::{delete_task, find_task, register_task, run_task, stop_task};
 

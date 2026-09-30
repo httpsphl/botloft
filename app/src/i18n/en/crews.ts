@@ -49,6 +49,7 @@ export const crews = {
       `The bots will work in ${path}. Each one restarts when it finishes what it's doing. Files already made stay where they are.`,
     move: "Move",
     archive: "Archive crew",
+    delete: "Delete crew",
     tabs: {
       label: "Crew views",
       bots: "Bots",
@@ -62,12 +63,26 @@ export const crews = {
       bots === 0
         ? "The crew leaves the app."
         : `The crew leaves the app. ${bots === 1 ? "Its bot stops" : `Its ${bots} bots stop`}, and messages still waiting for them are not delivered.`,
+    deleteTitle: (crew: string) => `Delete ${crew}?`,
+    /** `running` is false for an archived crew, which stopped long ago. */
+    deleteBody: (crew: string, bots: number, running: boolean) =>
+      bots === 0
+        ? `${crew} leaves Botloft for good. This can't be undone.`
+        : `${crew} and ${bots === 1 ? "its bot" : `its ${bots} bots`} ${running ? "stop now and leave" : "leave"} Botloft for good, with their conversations, routines and tasks. This can't be undone.`,
+    deleteKept:
+      "The folders stay on your computer, with everything in them: each bot's own folder and the crew's work folder:",
+    deleteRecycle: "Move the crew's folders to the Recycle Bin",
+    deleteRecycled:
+      "The crew's folder goes to the Recycle Bin, with each bot's folder and the work folder in it. You can still get it back from there:",
+    deleteRecycledChosen:
+      "Each bot's own folder goes to the Recycle Bin, where you can still get it back. The work folder you chose stays where it is:",
     failed: {
       pause: "Could not pause the crew",
       resume: "Could not resume the crew",
       changeFolder: "Could not change the folder",
       openFolder: "Could not open the folder",
       archive: "Could not archive the crew",
+      delete: "Could not delete the crew",
     },
   },
   bots: {

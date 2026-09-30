@@ -58,6 +58,10 @@ export class FakeBotloft implements BotloftApi {
   /** How many times the app asked for a new Claude Code check. */
   refreshes = 0;
   settings: Settings = { startWithWindows: true, keepAwake: true, approvalWaitMinutes: 60 };
+  /** Folders the owner sent to the Recycle Bin with a delete, in order. */
+  readonly recycled: string[] = [];
+  /** Why the next folder cannot go to the bin, if it cannot. */
+  recycleError: string | null = null;
   /** Every call, in order. */
   readonly calls: { method: Method; params: unknown }[] = [];
   readonly chat = new FakeChat(this);
@@ -183,6 +187,15 @@ export class FakeBotloft implements BotloftApi {
     );
   }
 
+  /** The Recycle Bin takes `path`, or the app hears why it did not. */
+  recycle(path: string): void {
+    const error = this.recycleError;
+    if (error === null) {
+      this.recycled.push(path);
+    }
+    this.emit({ name: "folder.recycled", params: { path, error } });
+  }
+
   changedCrew(crew: Crew): Crew {
     this.emit({ name: "crew.changed", params: crew });
     return crew;
@@ -221,6 +234,10 @@ export class FakeBotloft implements BotloftApi {
       };
       return this.settings;
     },
+    "archive.list": () => ({
+      crews: [...this.crews.values()].filter((crew) => crew.archivedAt !== null),
+      bots: [...this.bots.values()].filter((bot) => bot.archivedAt !== null),
+    }),
     ...crewHandlers(this),
     ...botHandlers(this),
     ...this.chat.handlers(),

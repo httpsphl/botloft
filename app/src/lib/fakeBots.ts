@@ -91,7 +91,7 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
       }
       return bot;
     },
-    "bots.delete": ({ botId }) => {
+    "bots.delete": ({ botId, recycleFolder }) => {
       const bot = fake.bot(botId, false);
       purgeBot(fake, bot);
       // A deleted chief leaves its crew without one.
@@ -102,6 +102,9 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
       }
       const deleted = { botId, crewId: bot.crewId };
       fake.emit({ name: "bot.deleted", params: deleted });
+      if (recycleFolder) {
+        fake.recycle(bot.workspace);
+      }
       return deleted;
     },
   };

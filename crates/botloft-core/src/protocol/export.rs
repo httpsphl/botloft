@@ -127,6 +127,10 @@ fn export_bindings() {
     out.decl::<BotStateChanged>();
     out.decl::<BotDeleted>();
     out.decl::<CrewDeleted>();
+    out.decl::<Archive>();
+    out.decl::<BotsDeleteParams>();
+    out.decl::<CrewsDeleteParams>();
+    out.decl::<FolderRecycled>();
     out.decl::<SenderKind>();
     out.decl::<MessageKind>();
     out.decl::<DeliveryState>();
@@ -229,9 +233,10 @@ fn export_bindings() {
     let bot_deleted = out.name::<BotDeleted>();
     out.method(
         method::CREWS_DELETE,
-        &out.name::<CrewIdParams>(),
+        &out.name::<CrewsDeleteParams>(),
         &crew_deleted,
     );
+    out.method(method::ARCHIVE_LIST, "undefined", &out.name::<Archive>());
     out.method(method::BOTS_LIST, &out.name::<BotsListParams>(), &bots);
     out.method(method::BOTS_CREATE, &out.name::<BotsCreateParams>(), &bot);
     out.method(method::BOTS_UPDATE, &out.name::<BotsUpdateParams>(), &bot);
@@ -253,7 +258,7 @@ fn export_bindings() {
     out.method(method::BOTS_ARCHIVE, &out.name::<BotIdParams>(), &bot);
     out.method(
         method::BOTS_DELETE,
-        &out.name::<BotIdParams>(),
+        &out.name::<BotsDeleteParams>(),
         &bot_deleted,
     );
     out.method(method::BOTS_RESTART, &out.name::<BotsRestartParams>(), &bot);
@@ -327,6 +332,12 @@ fn export_bindings() {
         out.text,
         "  \"{}\": {bot_deleted};",
         notification::BOT_DELETED
+    );
+    let _ = writeln!(
+        out.text,
+        "  \"{}\": {};",
+        notification::FOLDER_RECYCLED,
+        out.name::<FolderRecycled>()
     );
     let state = out.name::<BotStateChanged>();
     let item = out.name::<ChatItemChanged>();

@@ -1,4 +1,4 @@
-import { Archive, Crown, FolderOpen, Pencil, RefreshCcw } from "lucide-react";
+import { Archive, Crown, FolderOpen, Pencil, RefreshCcw, Trash2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
@@ -8,8 +8,9 @@ import type { MenuItem } from "../../ui/Menu";
 import { attempt } from "../../ui/toast";
 import { BotDialog } from "./BotDialog";
 import { isChief } from "./ChiefBadge";
+import { DeleteBot } from "./DeleteBot";
 
-type Open = "edit" | "archive" | "fresh" | null;
+type Open = "edit" | "archive" | "delete" | "fresh" | null;
 
 /**
  * What the owner can do with a bot from a menu, and the dialogs those
@@ -54,6 +55,7 @@ export function useBotActions(
       onSelect: () => attempt(words.failed.openFolder, () => host.openPath(bot.workspace)),
     },
     { label: words.archive, icon: Archive, danger: true, onSelect: () => setOpen("archive") },
+    { label: words.delete, icon: Trash2, danger: true, onSelect: () => setOpen("delete") },
   ];
 
   const dialogs =
@@ -85,6 +87,8 @@ export function useBotActions(
       >
         {words.archiveConfirm.body}
       </Confirm>
+    ) : open === "delete" ? (
+      <DeleteBot bot={bot} chiefOf={chief ? crew.name : undefined} onClose={close} />
     ) : null;
 
   return { items, dialogs };
