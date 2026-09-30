@@ -72,6 +72,8 @@ pub struct Tabs {
     pub notes: Vec<String>,
     pub(super) downloads: HashMap<String, String>,
     pub watching: bool,
+    /// Its window is minimized while nobody uses it (`rest.rs`).
+    pub(super) resting: bool,
     pub closed: bool,
     pub viewport: Viewport,
     /// The tab the bot was on when the owner took the browser, until the

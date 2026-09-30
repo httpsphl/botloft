@@ -13,6 +13,7 @@ mod launch;
 mod moves;
 mod page;
 mod read;
+mod rest;
 mod session;
 mod settle;
 pub mod sites;
@@ -41,7 +42,7 @@ pub use self::launch::find as find_program;
 pub use self::page::{Done, Scroll};
 pub use self::read::{READ_MAX, Reading};
 pub use self::session::Session;
-pub use self::sweep::run;
+pub use self::sweep::{Want, run};
 pub use self::viewport::Viewport;
 pub use self::watch::Watching;
 use crate::clock::Clock;
@@ -91,16 +92,6 @@ impl Default for BrowserSettings {
     fn default() -> Self {
         Self::from_config(&Config::default())
     }
-}
-
-/// What should happen to a bot's browser.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Want {
-    Keep,
-    /// The bot or its crew is paused.
-    Close,
-    /// The bot or its crew is archived: the profile goes too.
-    Forget,
 }
 
 type Frames = tokio::sync::watch::Sender<Option<Arc<BrowserFrame>>>;
@@ -174,7 +165,8 @@ impl Browsers {
         })
     }
 
-    /// Waits for the bot's browser to be free and holds it for one call.
+    /// Waits for the bot's browser to be free and holds it for one call,
+    /// awake.
     pub async fn begin(&self, bot: &BotId) -> Call<'_> {
         let calls = {
             let mut slots = lock(&self.slots);
@@ -182,6 +174,7 @@ impl Browsers {
         };
         let guard = calls.lock_owned().await;
         self.touch(bot);
+        self.wake(bot).await;
         Call {
             browsers: self,
             bot: bot.clone(),
@@ -189,7 +182,7 @@ impl Browsers {
         }
     }
 
-    fn touch(&self, bot: &BotId) {
+    pub(super) fn touch(&self, bot: &BotId) {
         if let Some(slot) = lock(&self.slots).get_mut(bot) {
             slot.used = Instant::now();
         }

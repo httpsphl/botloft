@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use botloft_core::ids::{ApprovalId, BotId};
 use botloft_core::protocol::{BrowserControl, BrowserInput};
@@ -13,6 +13,7 @@ use tracing::debug;
 
 use super::input::fits;
 use super::moves::{Move, feed};
+use super::rest::wake;
 use super::session::Session;
 use super::{Browsers, Slots, Viewport, lock, sites, update};
 use crate::clock::Clock;
@@ -74,7 +75,17 @@ impl Browsers {
         self.set_state(bot, |state| state.control = BrowserControl::Owner);
         debug!(bot = %bot, "browser: the owner took it");
         let (moves, queue) = mpsc::unbounded_channel();
-        tokio::spawn(feed(Arc::clone(&session), queue));
+        let (slots, events, clock) = (
+            Arc::clone(&self.slots),
+            self.events.clone(),
+            Arc::clone(&self.clock),
+        );
+        let (page, owner) = (Arc::clone(&session), bot.clone());
+        tokio::spawn(async move {
+            // A browser at rest wakes for the owner's hands.
+            wake(&page, &slots, &events, clock.as_ref(), &owner).await;
+            feed(page, queue).await;
+        });
         Ok(Hands {
             slots: Arc::clone(&self.slots),
             events: self.events.clone(),
@@ -156,12 +167,16 @@ impl Drop for Asking<'_> {
 }
 
 impl Hands {
-    /// The page's size, while the owner still has the browser.
+    /// The page's size, while the owner still has the browser. What they
+    /// do counts as using it.
     fn page(&self) -> Result<Viewport, InputError> {
         lock(&self.slots)
-            .get(&self.bot)
+            .get_mut(&self.bot)
             .filter(|slot| *slot.held.borrow() == Some(self.hold))
-            .map(|slot| slot.viewport)
+            .map(|slot| {
+                slot.used = Instant::now();
+                slot.viewport
+            })
             .ok_or(InputError::NotHeld)
     }
 

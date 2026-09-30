@@ -18,6 +18,9 @@ export const browser: Messages["browser"] = {
   openOutside: "Abrir no meu navegador",
   openFailed: "Não foi possível abrir a página",
   live: "Ao vivo",
+  resting: "Em descanso",
+  restingWhy: (bot) =>
+    `${bot} não está usando o navegador, então ele descansa e não gasta o seu computador. Volta na hora em que ${bot} ou você precisar.`,
   loading: "Carregando…",
   address: "Endereço",
   addressHint: "Digite um endereço e aperte Enter",

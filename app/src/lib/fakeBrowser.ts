@@ -50,6 +50,7 @@ export class FakeBrowser {
         tabs: [],
         error: null,
         control: "bot",
+        resting: false,
         ask: null,
         updatedAt: this.fake.now,
       }
@@ -79,7 +80,13 @@ export class FakeBrowser {
       tabs.length === 0
         ? [{ id: this.fake.id("tab"), url, title, active: true }]
         : tabs.map((tab) => (tab.active ? { ...tab, url, title } : tab));
-    return this.setTabs(botId, next, { status: "open", loading: false, error: null });
+    const awake = { status: "open", loading: false, error: null, resting: false } as const;
+    return this.setTabs(botId, next, awake);
+  }
+
+  /** The bot's turn ended: its browser rests until someone uses it. */
+  rest(botId: BotId): BrowserState {
+    return this.set(botId, { resting: true });
   }
 
   /** Another tab opened, and became the active one. */
@@ -92,7 +99,8 @@ export class FakeBrowser {
 
   close(botId: BotId): BrowserState {
     this.frames.delete(botId);
-    return this.setTabs(botId, [], { status: "closed", loading: false, control: "bot", ask: null });
+    const closed = { status: "closed", loading: false, control: "bot", resting: false } as const;
+    return this.setTabs(botId, [], { ...closed, ask: null });
   }
 
   /** The bot asks the owner for a hand: a request in the chat and in the panel. */
@@ -232,7 +240,7 @@ export class FakeBrowser {
         if (this.state(botId).status !== "open") {
           throw conflict("the browser is not open");
         }
-        return this.set(botId, { control: "owner" });
+        return this.set(botId, { control: "owner", resting: false });
       },
       "browser.release": ({ botId }) => {
         const approvalId = this.asks.get(botId);
@@ -255,6 +263,7 @@ export class FakeBrowser {
           throw conflict("the browser is not open");
         }
         this.reloads.push(botId);
+        this.set(botId, { resting: false });
         this.repaint(botId);
         return null;
       },

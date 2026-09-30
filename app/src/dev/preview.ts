@@ -15,6 +15,7 @@ import { seedChats } from "./seedChats";
 import { seedChief } from "./seedChief";
 import { seedContext } from "./seedContext";
 import { seedHands } from "./seedHands";
+import { activeTab, drawPage } from "./seedPage";
 import { seedRoutines } from "./seedRoutines";
 import { seedScreens } from "./seedScreens";
 
@@ -123,6 +124,10 @@ function seed(fake: FakeBotloft): void {
   });
   seedRoutines(fake, { scout: scout.id, analyst: analyst.id });
   seedBrowser(fake, scout.id);
+  // Analyst hit the limit in the middle of a search: its browser rests.
+  fake.browser.open(analyst.id, "https://stats.example/flour-prices", "Flour prices · Stats");
+  fake.browser.paint(analyst.id, (size) => drawPage(activeTab(fake, analyst.id), size));
+  fake.browser.rest(analyst.id);
   seedScreens(fake, research.id);
   seedHands(fake, research.id);
   const ops = fake.addCrew("Ops");

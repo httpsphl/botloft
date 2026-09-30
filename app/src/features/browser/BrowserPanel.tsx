@@ -3,7 +3,7 @@
 // just did. Watching starts when the panel opens and stops when it closes.
 // The owner can take it into their own hands and give it back (spec 21.10).
 
-import { Globe, LoaderCircle, Maximize2, Minimize2, X } from "lucide-react";
+import { Globe, LoaderCircle, Maximize2, Minimize2, Moon, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import type { Bot } from "../../lib/protocol.gen";
@@ -43,6 +43,8 @@ export function BrowserPanel({
   const [expanded, setExpanded] = useState(false);
   const caption = useCaption(bot, action);
   const live = status === "open" && frame !== null;
+  // Nobody uses it: its pages stand still until someone does (spec 21.2).
+  const resting = status === "open" && state?.resting === true;
   const hands = useHands(bot, state);
   const [focused, setFocused] = useState(false);
   const ask = state?.ask ?? null;
@@ -77,11 +79,21 @@ export function BrowserPanel({
       <header className="flex h-11 shrink-0 items-center justify-between border-line border-b pr-1.5 pl-4">
         <h2 className="flex items-center gap-2 font-semibold text-sm">
           {t.heading}
-          {live && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-danger/10 px-2 py-0.5 font-medium text-danger text-xs">
-              <span aria-hidden className="live-dot" />
-              {t.live}
+          {resting ? (
+            <span
+              title={t.restingWhy(bot.name)}
+              className="inline-flex items-center gap-1.5 rounded-full bg-sunken px-2 py-0.5 font-medium text-muted text-xs"
+            >
+              <Moon aria-hidden size={11} />
+              {t.resting}
             </span>
+          ) : (
+            live && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-danger/10 px-2 py-0.5 font-medium text-danger text-xs">
+                <span aria-hidden className="live-dot" />
+                {t.live}
+              </span>
+            )
           )}
         </h2>
         <div className="flex items-center gap-0.5">

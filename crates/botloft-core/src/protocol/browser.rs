@@ -50,6 +50,9 @@ pub struct BrowserState {
     pub error: Option<String>,
     /// Who uses it now (spec 21.10).
     pub control: BrowserControl,
+    /// Nobody uses it, so it rests: its pages stand still until the bot or
+    /// the owner needs them (spec 21.2).
+    pub resting: bool,
     /// What the bot asked the owner to do in it, while it waits.
     pub ask: Option<String>,
     /// Unix time in milliseconds.
@@ -67,6 +70,7 @@ impl BrowserState {
             tabs: Vec::new(),
             error: None,
             control: BrowserControl::Bot,
+            resting: false,
             ask: None,
             updated_at: now,
         }
