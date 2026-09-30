@@ -12,6 +12,7 @@ use tracing::debug;
 
 use super::cdp::CdpEvent;
 use super::session::{FRAME_GAP, Hooks, MAX_TABS, PageInfo, Session, Tab};
+use super::titles::retitles;
 
 impl Session {
     /// Sets up a new tab before it runs, and makes it the active one.
@@ -28,15 +29,19 @@ impl Session {
         let (previous, watching, extra, viewport) = {
             let mut tabs = self.lock();
             let previous = tabs.active().map(|tab| tab.session.clone());
+            let opened = tabs.opened;
+            tabs.opened += 1;
             tabs.list.push(Tab {
                 target: target.to_owned(),
                 session: session.to_owned(),
                 url: info["url"].as_str().unwrap_or_default().to_owned(),
-                title: info["title"].as_str().unwrap_or_default().to_owned(),
+                title: String::new(),
                 loading: false,
                 navigations: 0,
                 inflight: HashSet::new(),
                 network_at: Instant::now(),
+                opened,
+                ready: false,
             });
             let extra = (tabs.list.len() > MAX_TABS).then(|| tabs.list[0].target.clone());
             (previous, tabs.watching, extra, tabs.viewport)
@@ -71,6 +76,9 @@ impl Session {
                 debug!("browser: setting up a new tab: {err}");
             }
         }
+        if let Some(tab) = self.lock().by_session(session) {
+            tab.ready = true;
+        }
         if let Some(target) = extra {
             self.cdp
                 .send(None, "Target.closeTarget", json!({ "targetId": target }));
@@ -92,18 +100,22 @@ impl Session {
             let mut tabs = self.lock();
             let was_active = tabs.active().is_some_and(|tab| tab.session == session);
             tabs.list.retain(|tab| tab.session != session);
-            let now_active = tabs.active().map(|tab| tab.session.clone());
+            let now_active = tabs
+                .active()
+                .map(|tab| (tab.session.clone(), tab.target.clone()));
             (was_active, now_active, tabs.watching, tabs.list.is_empty())
         };
         if empty && !self.is_closed() {
             self.cdp
                 .send(None, "Target.createTarget", json!({ "url": "about:blank" }));
         }
-        if was_active
-            && watching
-            && let Some(active) = now_active
-        {
-            self.cast(&active, true).await;
+        if was_active && let Some((active, target)) = now_active {
+            // The browser may have picked another tab to show.
+            self.cdp
+                .send(None, "Target.activateTarget", json!({ "targetId": target }));
+            if watching {
+                self.cast(&active, true).await;
+            }
         }
     }
 
@@ -159,11 +171,10 @@ impl Session {
         };
         let mut tabs = self.lock();
         if let Some(tab) = tabs.list.iter_mut().find(|tab| tab.target == target) {
+            // The title here is the address again, never the page's
+            // (`titles.rs`).
             if let Some(url) = info["url"].as_str() {
                 url.clone_into(&mut tab.url);
-            }
-            if let Some(title) = info["title"].as_str() {
-                title.clone_into(&mut tab.title);
             }
         }
     }
@@ -229,6 +240,8 @@ impl Session {
                     let fragment = params["frame"]["urlFragment"].as_str().unwrap_or_default();
                     tab.url = format!("{url}{fragment}");
                 }
+                // The new page's title is read once it loads.
+                tab.title.clear();
                 tab.inflight.clear();
             }
             "Page.navigatedWithinDocument" if main => {
@@ -263,9 +276,20 @@ pub(super) async fn pump(
     hooks: Hooks,
 ) {
     let mut last = PageInfo::default();
-    while let Some(event) = events.recv().await {
-        session.handle(&event, &hooks).await;
-        session.changed.notify_waiters();
+    loop {
+        tokio::select! {
+            event = events.recv() => {
+                let Some(event) = event else { break };
+                session.handle(&event, &hooks).await;
+                session.changed.notify_waiters();
+                if let Some(page) = event.session.filter(|_| retitles(&event.method)) {
+                    let session = Arc::clone(&session);
+                    tokio::spawn(async move { session.retitle(&page).await });
+                }
+            }
+            // The owner moved between tabs: no event says so.
+            () = session.moved.notified() => {}
+        }
         let info = session.lock().info();
         if info != last {
             (hooks.changed)(info.clone());

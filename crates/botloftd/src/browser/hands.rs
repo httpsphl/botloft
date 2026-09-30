@@ -1,29 +1,25 @@
 //! The owner's hands in a bot's browser (spec 21.10): taking it and giving
-//! it back, the owner's events reaching the page in order, the bot's tools
-//! waiting meanwhile, and the bot asking the owner for help.
+//! it back, what the owner does reaching the browser in order, the bot's
+//! tools waiting meanwhile, and the bot asking the owner for help.
 
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use botloft_core::ids::{ApprovalId, BotId};
-use botloft_core::protocol::{BrowserControl, BrowserInput, MouseAction};
+use botloft_core::protocol::{BrowserControl, BrowserInput};
 use tokio::sync::{broadcast, mpsc};
 use tracing::debug;
 
+use super::input::fits;
+use super::moves::{Move, feed};
 use super::session::Session;
-use super::{Browsers, Slots, Viewport, lock, update};
+use super::{Browsers, Slots, Viewport, lock, sites, update};
 use crate::clock::Clock;
 use crate::state::Event;
 
 /// Longest a bot's tool waits for the owner to give the browser back.
 pub const OWNER_WAIT: Duration = Duration::from_secs(10 * 60);
-/// Longest text the owner sends at once, in characters.
-const TEXT_MAX: usize = 10_000;
-/// Longest key or code name.
-const KEY_MAX: usize = 32;
-/// Farthest one turn of the wheel scrolls, in pixels.
-const WHEEL_MAX: f64 = 10_000.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum TakeError {
@@ -33,11 +29,15 @@ pub enum TakeError {
     Taken,
 }
 
-/// Why an event of the owner's did not go to the page.
+/// Why something the owner did was not done in the browser.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum InputError {
     #[error("that event does not fit the page")]
     Invalid,
+    #[error("that is not a web address")]
+    Address,
+    #[error("that tab is not open anymore")]
+    NoTab,
     #[error("the browser is back with the bot; take it again")]
     NotHeld,
     #[error("the browser closed")]
@@ -52,7 +52,8 @@ pub struct Hands {
     clock: Arc<dyn Clock>,
     pub bot: BotId,
     hold: u64,
-    input: mpsc::UnboundedSender<BrowserInput>,
+    session: Arc<Session>,
+    moves: mpsc::UnboundedSender<Move>,
 }
 
 impl Browsers {
@@ -67,31 +68,43 @@ impl Browsers {
             if slot.held.borrow().is_some() {
                 return Err(TakeError::Taken);
             }
+            session.owner_took();
             slot.held.send_replace(Some(hold));
         }
         self.set_state(bot, |state| state.control = BrowserControl::Owner);
         debug!(bot = %bot, "browser: the owner took it");
-        let (input, queue) = mpsc::unbounded_channel();
-        tokio::spawn(feed(session, queue));
+        let (moves, queue) = mpsc::unbounded_channel();
+        tokio::spawn(feed(Arc::clone(&session), queue));
         Ok(Hands {
             slots: Arc::clone(&self.slots),
             events: self.events.clone(),
             clock: Arc::clone(&self.clock),
             bot: bot.clone(),
             hold,
-            input,
+            session,
+            moves,
         })
     }
 
-    /// Waits while the owner holds the bot's browser. `false` if they still
-    /// hold it after `limit`.
+    /// Waits while the owner holds the bot's browser, and for what they did
+    /// last to reach it. `false` if they still hold it after `limit`.
     pub async fn wait_for_owner(&self, bot: &BotId, limit: Duration) -> bool {
         let mut held = {
             let mut slots = lock(&self.slots);
             self.slot(&mut slots, bot).held.subscribe()
         };
-        let waited = tokio::time::timeout(limit, held.wait_for(Option::is_none)).await;
-        matches!(waited, Ok(Ok(_)))
+        let given_back = async {
+            if held.wait_for(Option::is_none).await.is_err() {
+                return false;
+            }
+            if let Some(session) = self.running(bot) {
+                session.owner_settled().await;
+            }
+            true
+        };
+        tokio::time::timeout(limit, given_back)
+            .await
+            .unwrap_or(false)
     }
 
     /// The bot asks the owner for help: the app shows `task` until the
@@ -143,19 +156,54 @@ impl Drop for Asking<'_> {
 }
 
 impl Hands {
-    /// Sends one of the owner's events to the page, after the ones before.
-    pub fn send(&self, input: BrowserInput) -> Result<(), InputError> {
-        let page = lock(&self.slots)
+    /// The page's size, while the owner still has the browser.
+    fn page(&self) -> Result<Viewport, InputError> {
+        lock(&self.slots)
             .get(&self.bot)
             .filter(|slot| *slot.held.borrow() == Some(self.hold))
-            .map(|slot| slot.viewport);
-        let Some(page) = page else {
-            return Err(InputError::NotHeld);
-        };
-        if !fits(&input, page) {
+            .map(|slot| slot.viewport)
+            .ok_or(InputError::NotHeld)
+    }
+
+    /// Queues one thing the owner did, after the ones before.
+    fn make(&self, step: Move) -> Result<(), InputError> {
+        self.session.owner_moves.send_modify(|left| *left += 1);
+        self.moves.send(step).map_err(|_| {
+            self.session
+                .owner_moves
+                .send_modify(|left| *left = left.saturating_sub(1));
+            InputError::Closed
+        })
+    }
+
+    /// Sends one of the owner's events to the page.
+    pub fn send(&self, input: BrowserInput) -> Result<(), InputError> {
+        if !fits(&input, self.page()?) {
             return Err(InputError::Invalid);
         }
-        self.input.send(input).map_err(|_| InputError::Closed)
+        self.make(Move::Input(input))
+    }
+
+    /// Opens a blank tab, which becomes the active one.
+    pub fn new_tab(&self) -> Result<(), InputError> {
+        self.page()?;
+        self.make(Move::NewTab)
+    }
+
+    /// Makes the tab `id` the active one.
+    pub fn switch_tab(&self, id: &str) -> Result<(), InputError> {
+        self.page()?;
+        if !self.session.has_tab(id) {
+            return Err(InputError::NoTab);
+        }
+        self.make(Move::SwitchTab(id.to_owned()))
+    }
+
+    /// Takes the active tab to the web address the owner typed.
+    pub fn open(&self, address: &str) -> Result<(), InputError> {
+        self.page()?;
+        let url = sites::typed(address).ok_or(InputError::Address)?;
+        self.make(Move::Open(url))
     }
 }
 
@@ -178,125 +226,5 @@ impl Drop for Hands {
             );
             debug!(bot = %self.bot, "browser: the owner gave it back");
         }
-    }
-}
-
-/// Whether an event makes sense on a page of that size.
-fn fits(input: &BrowserInput, page: Viewport) -> bool {
-    let on_page = |x: f64, y: f64| page.contains(x, y);
-    let modifiers_ok = |modifiers: u32| modifiers <= 15;
-    match input {
-        BrowserInput::Mouse {
-            x,
-            y,
-            buttons,
-            clicks,
-            modifiers,
-            ..
-        } => on_page(*x, *y) && *buttons <= 7 && *clicks <= 3 && modifiers_ok(*modifiers),
-        BrowserInput::Wheel {
-            x,
-            y,
-            dx,
-            dy,
-            modifiers,
-        } => {
-            on_page(*x, *y)
-                && dx.abs() <= WHEEL_MAX
-                && dy.abs() <= WHEEL_MAX
-                && modifiers_ok(*modifiers)
-        }
-        BrowserInput::Key {
-            key,
-            code,
-            modifiers,
-        } => {
-            !key.is_empty()
-                && key.chars().count() <= KEY_MAX
-                && code.len() <= KEY_MAX
-                && modifiers_ok(*modifiers)
-        }
-        BrowserInput::Text { text } => !text.is_empty() && text.chars().count() <= TEXT_MAX,
-    }
-}
-
-/// Sends the owner's events to the page one by one, in order. Of several
-/// mouse moves in a row only the newest matters.
-async fn feed(session: Arc<Session>, mut queue: mpsc::UnboundedReceiver<BrowserInput>) {
-    let mut next = queue.recv().await;
-    while let Some(mut input) = next.take() {
-        while let Ok(later) = queue.try_recv() {
-            if moves(&input) && moves(&later) {
-                input = later;
-            } else {
-                next = Some(later);
-                break;
-            }
-        }
-        if session.is_closed() {
-            return;
-        }
-        if let Err(err) = session.owner_input(&input).await {
-            debug!("browser: an event of the owner's did not reach the page: {err}");
-        }
-        if next.is_none() {
-            next = queue.recv().await;
-        }
-    }
-}
-
-fn moves(input: &BrowserInput) -> bool {
-    matches!(
-        input,
-        BrowserInput::Mouse {
-            action: MouseAction::Move,
-            ..
-        }
-    )
-}
-
-#[cfg(test)]
-mod tests {
-    use botloft_core::protocol::MouseButton;
-
-    use super::*;
-
-    fn mouse(x: f64, y: f64) -> BrowserInput {
-        BrowserInput::Mouse {
-            action: MouseAction::Down,
-            x,
-            y,
-            button: MouseButton::Left,
-            buttons: 1,
-            clicks: 1,
-            modifiers: 0,
-        }
-    }
-
-    #[test]
-    fn events_off_the_page_or_too_big_are_refused() {
-        let fits = |input: &BrowserInput| super::fits(input, Viewport::default());
-        assert!(fits(&mouse(640.0, 400.0)));
-        assert!(fits(&mouse(1280.0, 800.0)));
-        assert!(!fits(&mouse(-1.0, 10.0)));
-        assert!(!fits(&mouse(f64::NAN, 10.0)));
-        assert!(!fits(&mouse(10.0, 900.0)));
-        // A taller page takes points further down.
-        let tall = Viewport::fitting(640, 700);
-        assert!(super::fits(&mouse(10.0, 900.0), tall));
-        let long = BrowserInput::Text {
-            text: "x".repeat(TEXT_MAX + 1),
-        };
-        assert!(!fits(&long));
-        let empty = BrowserInput::Text {
-            text: String::new(),
-        };
-        assert!(!fits(&empty));
-        let key = BrowserInput::Key {
-            key: "a".to_owned(),
-            code: "KeyA".to_owned(),
-            modifiers: 16,
-        };
-        assert!(!fits(&key));
     }
 }

@@ -279,6 +279,11 @@ impl Client {
         }
     }
 
+    /// Drops the notifications named `method` that came so far.
+    pub fn forget(&mut self, method: &str) {
+        self.notifications.retain(|n| n["method"] != method);
+    }
+
     /// True when the server closes the connection without sending more.
     pub async fn closed(&mut self) -> bool {
         self.recv().await.is_none()

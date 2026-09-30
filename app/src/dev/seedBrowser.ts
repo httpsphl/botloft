@@ -1,11 +1,14 @@
 // Dev only: Scout searching in its browser in the fake preview, so the
-// browser panel has something live to show. The "page" is drawn on a
-// canvas, the size the panel asks for, and sent as JPEG frames, like the
-// daemon's screencast.
+// browser panel has something live to show: three tabs, the search in the
+// active one. The "page" is drawn on a canvas, the size the panel asks for,
+// and sent as JPEG frames, like the daemon's screencast.
 
 import type { FakeBotloft } from "../lib/fake";
-import type { PageSize } from "../lib/fakeBrowser";
+import type { PageSize } from "../lib/fakePages";
 import type { BotId } from "../lib/protocol.gen";
+import { activeTab, drawPage } from "./seedPage";
+
+const SITE = "https://recipes.example/";
 
 const RECIPES = ["Classic sourdough loaf", "Starter in 5 days", "No-knead rye", "Focaccia"];
 
@@ -58,10 +61,10 @@ function draw(scene: Scene, size: PageSize): string {
   return canvas.toDataURL("image/jpeg", 0.7).split(",")[1] ?? "";
 }
 
-/** Scout searches for a recipe, over and over. */
+/** Scout searches for a recipe, over and over, while the browser is its. */
 export function seedBrowser(fake: FakeBotloft, scout: BotId): void {
   const home: Scene = {
-    url: "https://recipes.example/",
+    url: SITE,
     title: "Recipes",
     query: "",
     results: false,
@@ -114,9 +117,19 @@ export function seedBrowser(fake: FakeBotloft, scout: BotId): void {
   );
   let scene = home;
   let step = 0;
-  fake.browser.open(scout, home.url, home.title);
-  fake.browser.paint(scout, (size) => draw(scene, size));
+  // Two pages it opened on the way, then the one it works in.
+  fake.browser.open(scout, "https://bakers.example/forum/hydration", "Hydration tips · Bakers");
+  fake.browser.openTab(scout, "https://mill.example/flour/rye", "Rye flour · The Mill");
+  fake.browser.openTab(scout, home.url, home.title);
+  fake.browser.paint(scout, (size) => {
+    const tab = activeTab(fake, scout);
+    return tab?.url.startsWith(SITE) ? draw(scene, size) : drawPage(tab, size);
+  });
   setInterval(() => {
+    // In the owner's hands, the bot waits.
+    if (fake.browser.state(scout).control === "owner") {
+      return;
+    }
     const next = steps[step % steps.length];
     step += 1;
     if (next) {

@@ -181,7 +181,12 @@ async fn new_tabs_and_dialogs_reach_the_bot_and_the_owner_watches() {
         .expect("new tab");
     assert!(tab.contains("Thanks, Tab"), "{tab}");
     let open = b.app.call("browser.list", Value::Null).await.expect("list");
-    assert_eq!(open[0]["tabs"], 2);
+    // The new tab is the active one, after the tab that opened it.
+    let tabs = open[0]["tabs"].as_array().expect("tabs");
+    assert_eq!(tabs.len(), 2);
+    assert_eq!(tabs[0]["active"], false);
+    assert_eq!(tabs[1]["active"], true);
+    assert!(tabs[1]["url"].as_str().expect("url").contains("/done"));
 
     let picture = b.mcp.tool_result("browser_screenshot", json!({})).await;
     assert_eq!(picture["content"][0]["type"], "image");
