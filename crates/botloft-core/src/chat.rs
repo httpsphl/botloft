@@ -14,6 +14,8 @@ pub const PLAN_INPUT_MAX: usize = 32 * 1024;
 pub const PLAN_TOOL: &str = "ExitPlanMode";
 /// The chief's tool to suggest a new bot (spec 10.2).
 pub const SUGGEST_TOOL: &str = "mcp__botloft__suggest_bot";
+/// A bot asking the owner for a routine (spec 20.12).
+pub const ROUTINE_TOOL: &str = "mcp__botloft__schedule_routine";
 /// A bot asking to use its browser on a site (spec 21.5). Not a tool the
 /// model calls: the daemon opens this request from inside the `browser_*`
 /// tools.
@@ -21,7 +23,8 @@ pub const BROWSER_SITE_TOOL: &str = "mcp__botloft__browser";
 /// A bot asking the owner to do something in its browser themselves (spec
 /// 21.10), opened from inside `browser_ask_owner`.
 pub const BROWSER_HELP_TOOL: &str = "mcp__botloft__browser_help";
-/// Longest suggestion kept, in bytes: the owner reads and edits all of it.
+/// Longest bot or routine suggestion kept, in bytes: the owner reads and
+/// edits all of it.
 pub const SUGGESTION_INPUT_MAX: usize = 64 * 1024;
 /// Longest tool output kept, in bytes.
 pub const TOOL_OUTPUT_MAX: usize = 8 * 1024;
@@ -57,7 +60,7 @@ pub fn one_line(text: &str, max: usize) -> String {
 pub fn tool_input_max(tool: &str) -> usize {
     match tool {
         PLAN_TOOL => PLAN_INPUT_MAX,
-        SUGGEST_TOOL => SUGGESTION_INPUT_MAX,
+        SUGGEST_TOOL | ROUTINE_TOOL => SUGGESTION_INPUT_MAX,
         tool if is_command(tool) => COMMAND_INPUT_MAX,
         _ => TOOL_INPUT_MAX,
     }
@@ -100,7 +103,7 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
         "mcp__botloft__send_message" => {
             field(input, "to").map(|to| format!("@{}", to.trim_start_matches('@')))
         }
-        SUGGEST_TOOL => field(input, "name").map(str::to_owned),
+        SUGGEST_TOOL | ROUTINE_TOOL => field(input, "name").map(str::to_owned),
         BROWSER_SITE_TOOL => field(input, "site").map(str::to_owned),
         BROWSER_HELP_TOOL | "mcp__botloft__browser_ask_owner" => {
             field(input, "task").map(str::to_owned)

@@ -210,6 +210,21 @@ export const chat = {
     declined: (name: string) => `You said no to ${name}`,
     expired: (name: string) => `${name} was not answered in time`,
   },
+  routineRequest: {
+    title: (bot: string) => `${bot} wants to set up a routine`,
+    titleFor: (bot: string, runner: string) => `${bot} wants to set up a routine for ${runner}`,
+    explain: (runner: string) =>
+      `A routine makes ${runner} work on its own at set times. It shows in the Routines tab, where you can pause or delete it.`,
+    noteLabel: (bot: string) => `What to tell ${bot} if you say no`,
+    notePlaceholder: (bot: string) => `If you say no, tell ${bot} why (optional)`,
+    create: "Create routine",
+    decline: "Not now",
+    createFailed: "Could not create the routine",
+    declineFailed: "Could not send the answer",
+    created: (name: string) => `You created the routine ${name}`,
+    declined: (name: string) => `You said no to the routine ${name}`,
+    expired: (name: string) => `The routine ${name} was not answered in time`,
+  },
   plan: {
     ready: (bot: string) => `${bot} made a plan and wants to go ahead`,
     noteLabel: (bot: string) => `What ${bot} should change in the plan`,

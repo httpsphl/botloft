@@ -54,6 +54,21 @@ pub fn create(daemon: &Daemon, params: RoutinesCreateParams) -> ApiResult<Routin
     Ok(changed(daemon, &store, routine))
 }
 
+/// Checks what `create` would, without making the routine: a bot's
+/// suggestion is checked before the owner sees it (spec 20.12).
+pub(crate) fn check(daemon: &Daemon, params: &RoutinesCreateParams) -> ApiResult<()> {
+    name(&params.name)?;
+    validate::message("prompt", &params.prompt)?;
+    plan(&params.schedule, &params.timezone, daemon.clock.now_ms())?;
+    Ok(())
+}
+
+/// When the routine runs next, as its zone shows it (`2026-10-01 09:00`).
+pub(crate) fn next_run_text(routine: &Routine) -> Option<String> {
+    let plan = Plan::new(&routine.schedule, &routine.timezone).ok()?;
+    Some(plan.local_time(routine.next_run_at?))
+}
+
 pub fn update(daemon: &Daemon, params: RoutinesUpdateParams) -> ApiResult<Routine> {
     let store = daemon.store();
     let mut routine = active(&store, &params.routine_id)?;

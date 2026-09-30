@@ -8,7 +8,7 @@ mod prompt;
 use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard};
 
-use botloft_core::chat::{SUGGEST_TOOL, clip, tool_input_max, tool_summary};
+use botloft_core::chat::{ROUTINE_TOOL, SUGGEST_TOOL, clip, tool_input_max, tool_summary};
 use botloft_core::command::tool_explanation;
 use botloft_core::ids::{ApprovalId, BotId, ChatItemId};
 use botloft_core::protocol::{
@@ -147,13 +147,17 @@ pub fn answer(daemon: &Daemon, params: ApprovalsAnswerParams) -> ApiResult<Appro
         .store()
         .approval(&params.approval_id)?
         .ok_or_else(|| ApiError::NotFound(format!("approval {}", params.approval_id)))?;
-    // Only a bot suggestion can be changed before it is allowed (spec 10.2).
+    // Only a bot or routine suggestion can be changed before it is allowed
+    // (spec 10.2, 20.12).
     let input = match params.input {
         Some(input) if params.allow && existing.approval.tool_name == SUGGEST_TOOL => {
             let value: Value = serde_json::from_str(&input)
                 .map_err(|_| ApiError::validation("the changed suggestion is not valid JSON"))?;
             Some(value.to_string())
         }
+        Some(input) if params.allow && existing.approval.tool_name == ROUTINE_TOOL => Some(
+            crate::tools::check_changed_routine(daemon, &existing.approval.input, &input)?,
+        ),
         _ => None,
     };
     let Some(record) = settle(daemon, &existing, status, note.as_deref(), input.as_deref()) else {

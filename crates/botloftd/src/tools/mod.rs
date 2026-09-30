@@ -15,6 +15,7 @@ mod browser_sites;
 mod calls;
 mod catalog;
 mod era;
+mod routine;
 mod suggest;
 
 use std::sync::Arc;
@@ -29,6 +30,7 @@ use serde_json::{Value, json};
 use tracing::debug;
 
 use self::era::{Era, LEGACY, era, supported};
+pub(crate) use self::routine::check_changed as check_changed_routine;
 use crate::approvals;
 use crate::rpc::jsonrpc::{self, Request};
 use crate::state::Daemon;
@@ -38,7 +40,7 @@ const CACHE_TTL_MS: u64 = 60 * 60 * 1000;
 
 const INSTRUCTIONS: &str = "Tools to work with your Botloft crew: see who is in it, send notes \
     or tasks to other bots, report the result of tasks assigned to you and, for the crew's chief, \
-    suggest new bots. The browser_ tools drive your own web browser, which the owner can watch \
+    suggest new bots. schedule_routine asks the owner for work at set times. The browser_ tools drive your own web browser, which the owner can watch \
     live and take over when you ask with browser_ask_owner. The owner writes to you directly; messages from other bots and from Botloft start with \
     [botloft].";
 
@@ -116,7 +118,7 @@ pub async fn handle(
         return StatusCode::ACCEPTED.into_response();
     };
     let answered = match era(&headers, &request) {
-        // Both hold the request until the owner answers (spec 10.1, 10.2).
+        // They hold the request until the owner answers (spec 10.1, 10.2, 20.12).
         Ok(era) if called(&request) == Some(catalog::PERMISSION_PROMPT) => {
             permission(&daemon, &bot, generation, &request)
                 .await
@@ -124,6 +126,10 @@ pub async fn handle(
         }
         Ok(era) if called(&request) == Some(catalog::SUGGEST_BOT) => {
             let result = suggest::suggest(&daemon, &bot, generation, arguments(&request)).await;
+            Ok(decorate(era, &request, result))
+        }
+        Ok(era) if called(&request) == Some(catalog::SCHEDULE_ROUTINE) => {
+            let result = routine::schedule(&daemon, &bot, generation, arguments(&request)).await;
             Ok(decorate(era, &request, result))
         }
         // They act in a browser and may wait for the owner (spec 21.5).

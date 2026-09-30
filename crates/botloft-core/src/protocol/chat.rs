@@ -241,8 +241,9 @@ pub struct ApprovalsAnswerParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub note: Option<String>,
-    /// A bot suggestion as the owner changed it before allowing it, in the
-    /// JSON of the tool's input (spec 10.2). Ignored for other requests.
+    /// A bot or routine suggestion as the owner changed it before allowing
+    /// it, in the JSON of the tool's input (spec 10.2, 20.12). Ignored for
+    /// other requests.
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub input: Option<String>,

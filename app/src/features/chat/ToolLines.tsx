@@ -3,6 +3,7 @@
 // and the output (spec 15.3).
 
 import {
+  AlarmClock,
   Check,
   ChevronRight,
   FilePen,
@@ -51,6 +52,7 @@ const ICONS: Record<string, LucideIcon> = {
   Agent: Users,
   send_message: Send,
   suggest_bot: UserPlus,
+  schedule_routine: AlarmClock,
   browser_ask_owner: Hand,
 };
 

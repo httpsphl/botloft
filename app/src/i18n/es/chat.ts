@@ -217,6 +217,21 @@ export const chat: Messages["chat"] = {
     declined: (name: string) => `Rechazaste ${name}`,
     expired: (name: string) => `${name} no se respondió a tiempo`,
   },
+  routineRequest: {
+    title: (bot: string) => `${bot} quiere crear una rutina`,
+    titleFor: (bot: string, runner: string) => `${bot} quiere crear una rutina para ${runner}`,
+    explain: (runner: string) =>
+      `Una rutina hace que ${runner} trabaje solo a horas fijas. Aparece en la pestaña Rutinas, donde puedes pausarla o borrarla.`,
+    noteLabel: (bot: string) => `Qué decirle a ${bot} si dices que no`,
+    notePlaceholder: (bot: string) => `Si dices que no, dile a ${bot} por qué (opcional)`,
+    create: "Crear rutina",
+    decline: "Ahora no",
+    createFailed: "No se pudo crear la rutina",
+    declineFailed: "No se pudo enviar la respuesta",
+    created: (name: string) => `Creaste la rutina ${name}`,
+    declined: (name: string) => `Rechazaste la rutina ${name}`,
+    expired: (name: string) => `La rutina ${name} no se respondió a tiempo`,
+  },
   plan: {
     ready: (bot: string) => `${bot} hizo un plan y quiere seguir con él`,
     noteLabel: (bot: string) => `Qué debe cambiar ${bot} en el plan`,
