@@ -336,7 +336,7 @@ Itens do chat são dado pessoal como o corpo das messages: nunca vão para o log
 4. Se o bot não está em `idle`/`busy`/`needs_approval`: volta para `pending` com `next_attempt_at` em 5 s, **sem** contar tentativa. Bot ou crew arquivados: a delivery vira `dead` na hora.
 5. Monta a mensagem (9.2) na hora do envio e escreve uma linha no stdin do processo, com timeout de 10 s.
 6. Escrita aceita: `sent`, com a generation do processo. Falha de escrita (processo saindo): volta para `pending` sem contar tentativa.
-7. Quando o Claude Code começa o turno daquela mensagem, ele a devolve no stdout com o mesmo `uuid` (`--replay-user-messages`), e a delivery ganha `read_at`. O app mostra isso como "lida".
+7. Quando o Claude Code começa o turno daquela mensagem, ele a devolve no stdout com o mesmo `uuid` (`--replay-user-messages`), e a delivery ganha `read_at`. O app mostra isso como "lida", com os dois tiques em azul-claro (15.3).
 8. **O processo morreu antes de ler:** a delivery ainda está `sent` sem `read_at` e com a generation que acabou. Ela volta para `pending` com `attempts += 1` e o backoff de `retry_backoff_initial_ms * 2^(attempts-1)`, limitado a `retry_backoff_max_ms`. Ao chegar em `max_attempts` vira `dead`: uma mensagem que derruba o processo toda vez não fica em laço.
 9. Lease vencido (daemon caiu no meio): volta a `pending` no boot e a cada ciclo.
 10. `deliveries.retry` devolve uma delivery `dead` para `pending`, com as tentativas zeradas.
@@ -693,6 +693,7 @@ No chat:
 
 - O chat ocupa toda a largura que sobra, alinhado à esquerda, com o compositor na mesma largura (sem coluna centralizada, que deixava vazio dos dois lados); o dia é uma pílula no meio.
 - O dono fala em balões à direita; o bot, à esquerda, com markdown.
+- Embaixo da mensagem do dono, e em cada linha da timeline da crew, fica onde ela está (9.1), com ícone e texto: esperando, entregando, "Entregue" com um tique e, quando o bot começou a trabalhar nela, "Lida" com dois tiques. Os dois tiques de "Lida" ficam em azul-claro, como nos apps de mensagem, para o dono ver de relance que o bot leu; a palavra continua na cor apagada das outras linhas, e é ela que diz o estado. A cor é o token `--read` (`#1787c9` no tema claro, `#5cc4f2` no escuro): mais clara que o `--work`, que é de bot trabalhando e de mensagem sendo entregue, e com contraste de ao menos 3:1 sobre `canvas`, `panel` e `sunken` nos dois temas, o que um teste confere. O azul dos apps de mensagem (`#53bdeb`) não passa de 2,2:1 no tema claro, por isso o claro usa um tom mais fechado.
 - Mensagens de outros bots aparecem à esquerda, com o avatar e o nome de quem mandou.
 - O que o bot faz com as ferramentas aparece em linhas compactas (ícone, ferramenta, resumo e estado), agrupadas por turno, que abrem para mostrar entrada e saída.
 - Pedido de aprovação é um cartão com o que o bot quer fazer e os botões Permitir e Negar.
