@@ -361,6 +361,18 @@ fresh?: boolean, };
 export type BotStateChanged = { botId: BotId, state: BotState, generation: number | null, };
 
 /**
+ * A bot that was deleted for good (spec 7.6): the result of `bots.delete`
+ * and the params of the `bot.deleted` notification.
+ */
+export type BotDeleted = { botId: BotId, crewId: CrewId, };
+
+/**
+ * A crew that was deleted with every bot in it (spec 7.6): the result of
+ * `crews.delete` and the params of the `crew.deleted` notification.
+ */
+export type CrewDeleted = { crewId: CrewId, };
+
+/**
  * Who wrote a message.
  */
 export type SenderKind = "owner" | "bot" | "system";
@@ -1031,6 +1043,7 @@ export interface RpcMethods {
   "crews.setWorkFolder": { params: CrewsSetWorkFolderParams; result: Crew };
   "crews.setLead": { params: CrewsSetLeadParams; result: Crew };
   "crews.archive": { params: CrewIdParams; result: Crew };
+  "crews.delete": { params: CrewIdParams; result: CrewDeleted };
   "bots.list": { params: BotsListParams; result: Array<Bot> };
   "bots.create": { params: BotsCreateParams; result: Bot };
   "bots.update": { params: BotsUpdateParams; result: Bot };
@@ -1038,6 +1051,7 @@ export interface RpcMethods {
   "bots.setPermissionMode": { params: BotsSetPermissionModeParams; result: Bot };
   "bots.setModel": { params: BotsSetModelParams; result: Bot };
   "bots.archive": { params: BotIdParams; result: Bot };
+  "bots.delete": { params: BotIdParams; result: BotDeleted };
   "bots.restart": { params: BotsRestartParams; result: Bot };
   "chat.history": { params: ChatHistoryParams; result: Array<ChatItem> };
   "approvals.answer": { params: ApprovalsAnswerParams; result: Approval };
@@ -1074,6 +1088,8 @@ export interface RpcMethods {
 export interface RpcNotifications {
   "crew.changed": Crew;
   "bot.changed": Bot;
+  "crew.deleted": CrewDeleted;
+  "bot.deleted": BotDeleted;
   "bot.state": BotStateChanged;
   "chat.item": ChatItemChanged;
   "chat.delta": ChatDelta;

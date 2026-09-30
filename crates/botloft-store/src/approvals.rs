@@ -95,6 +95,15 @@ impl Store {
             .optional()?)
     }
 
+    /// The bot's requests that still wait for the owner.
+    pub fn pending_approvals(&self, bot: &BotId) -> Result<Vec<ApprovalId>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT id FROM approvals WHERE bot_id = ?1 AND status = 'pending'")?;
+        let rows = stmt.query_map([bot.as_str()], |row| parse_column(row, 0))?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
     /// Expires every pending approval, of one bot or of all: their process
     /// is gone, so nobody waits for the answer.
     pub fn expire_approvals(&self, bot: Option<&BotId>, now: i64) -> Result<Vec<ApprovalRecord>> {
@@ -204,6 +213,10 @@ mod tests {
         let fx = Fixture::new();
         let first = pending(&fx, 0);
         let other = pending(&fx, 1);
+        assert_eq!(
+            fx.store.pending_approvals(&fx.bots[0].id).expect("pending"),
+            vec![first.approval.id.clone()]
+        );
         let expired = fx
             .store
             .expire_approvals(Some(&fx.bots[0].id), 40)

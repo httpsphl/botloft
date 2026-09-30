@@ -160,3 +160,22 @@ pub struct BotStateChanged {
     pub state: BotState,
     pub generation: Option<u64>,
 }
+
+/// A bot that was deleted for good (spec 7.6): the result of `bots.delete`
+/// and the params of the `bot.deleted` notification.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BotDeleted {
+    pub bot_id: BotId,
+    pub crew_id: CrewId,
+}
+
+/// A crew that was deleted with every bot in it (spec 7.6): the result of
+/// `crews.delete` and the params of the `crew.deleted` notification.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct CrewDeleted {
+    pub crew_id: CrewId,
+}

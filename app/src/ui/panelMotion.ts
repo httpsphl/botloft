@@ -1,7 +1,8 @@
 // How a side panel slides (spec 15.1): open from the window's right edge,
 // or from the width of the panel it replaces, and back to the edge before
-// it goes. The keyframes are in panels.css; reduced motion makes both
-// instant, and a timer stands in when the animation never reports its end.
+// it goes. One that comes back with its view does not slide. The keyframes
+// are in panels.css; reduced motion makes both instant, and a timer stands
+// in when the animation never reports its end.
 
 import {
   type AnimationEvent,
@@ -22,6 +23,12 @@ const SWITCH_MS = 120;
 /** Given to a panel while it slides closed; `closed` lets it go. */
 export const PanelClosing = createContext<{ closed(): void } | null>(null);
 
+/**
+ * True for a panel that comes back with its view, as the owner left it: it
+ * is there at once, without sliding open.
+ */
+export const PanelRestored = createContext(false);
+
 /** The panel that just went away without sliding: another replaces it. */
 let replaced: { width: number; at: number } | null = null;
 
@@ -30,7 +37,8 @@ export type Motion = "opening" | "open" | "closing";
 export function usePanelMotion(panel: RefObject<HTMLElement | null>, width: number) {
   const exit = useContext(PanelClosing);
   const closing = exit !== null;
-  const [motion, setMotion] = useState<Motion>("opening");
+  const restored = useContext(PanelRestored);
+  const [motion, setMotion] = useState<Motion>(restored ? "open" : "opening");
   const [from, setFrom] = useState(0);
   const now = useRef({ motion, width, exit });
   now.current = { motion, width, exit };

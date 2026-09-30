@@ -39,14 +39,14 @@ pub(super) fn render(message: &Message, context: &Context<'_>, now: i64) -> Rend
     let text = match message.from_kind {
         // The owner is the session's user: their words go as written.
         SenderKind::Owner => with_attachment_list(&message.body, &message.attachments),
-        SenderKind::Bot => envelope(
-            message,
-            context,
-            Sender::Bot {
-                handle: context.sender_handle.unwrap_or("unknown"),
-            },
-            now,
-        ),
+        SenderKind::Bot => {
+            let from = match context.sender_handle {
+                Some(handle) => Sender::Bot { handle },
+                // Deleted while the message waited (spec 7.6).
+                None => Sender::DeletedBot,
+            };
+            envelope(message, context, from, now)
+        }
         SenderKind::System => match context.routine {
             Some((name, scheduled, timezone)) => RoutineEnvelope {
                 name,
