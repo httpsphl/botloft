@@ -1,11 +1,15 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
+import flameFrames from "../../mascot-flame.css?raw";
 import { BotAvatar } from "./BotAvatar";
 import { BotStateBadge } from "./BotStateBadge";
-import { BODY, DRAWN_IN, SHADES } from "./mascotArt";
+import { BODY, DRAWN_IN, OUTLINE, SHADES } from "./mascotArt";
 import { retint, toHex, toHsl } from "./retint";
 
 afterEach(cleanup);
+
+/** The commands of a path, which must match for the browser to morph it. */
+const commands = (d: string) => d.replace(/[^MCZ]/g, "");
 
 const channels = (hex: string): [number, number, number] => {
   const at = (index: number) => Number.parseInt(hex.slice(index, index + 2), 16);
@@ -38,6 +42,30 @@ describe("retint", () => {
 describe("mascot", () => {
   test("every shading layer has its own color, which keys it", () => {
     expect(new Set(SHADES.map((shade) => shade.fill)).size).toBe(SHADES.length);
+  });
+
+  test("the outline is the body and the drop of fire above it", () => {
+    expect(commands(OUTLINE).match(/M/g)).toHaveLength(2);
+  });
+
+  test("every flame frame keeps the commands of the outline, so it morphs", () => {
+    const frames = [...flameFrames.matchAll(/d: path\(\s*"([^"]+)"/g)].map(
+      (match) => match[1] ?? "",
+    );
+    expect(frames.length).toBeGreaterThan(30);
+    for (const frame of frames) {
+      expect(commands(frame)).toBe(commands(OUTLINE));
+    }
+  });
+
+  test("the eyes glance together, and the shading keeps its holes", () => {
+    const { container } = render(<BotAvatar color="#ff7a59" mood="idle" />);
+    expect(container.querySelectorAll(".avatar-look .avatar-eye")).toHaveLength(2);
+    const shades = container.querySelectorAll("[filter] path");
+    expect(shades).toHaveLength(SHADES.length);
+    for (const shade of shades) {
+      expect(shade.getAttribute("fill-rule")).toBe("evenodd");
+    }
   });
 
   test("each avatar clips to its own outline", () => {

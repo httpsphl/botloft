@@ -9,7 +9,8 @@
 // the daemon), whose white mascot needs it.
 //
 // Given a `mood`, the mascot comes alive (mascot.css): its flame burns,
-// gently when idle and wildly, throwing embers, while it works; it hops
+// gently when idle, glancing around now and then, and wildly, throwing
+// embers, while it works; it hops
 // while it waits for the owner, burns low with heavy eyes when tired and
 // sleeps with its eyes shut while paused. Without one it stays still, as in
 // the chat history.
@@ -109,16 +110,16 @@ export function BotAvatar({
           <path className="avatar-fire" d={OUTLINE} />
         </clipPath>
         <filter id={id("soft")} x="-10%" y="-10%" width="120%" height="120%">
-          <feGaussianBlur stdDeviation="4" />
+          <feGaussianBlur stdDeviation="1.8" />
         </filter>
         <linearGradient id={id("ember")} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor={paint.emberLight} />
           <stop offset="1" stopColor={paint.emberBase} />
         </linearGradient>
-        <radialGradient id={id("eye")} cx="0.36" cy="0.95" r="0.75">
+        <radialGradient id={id("eye")} cx="0.42" cy="1" r="0.72">
           <stop offset="0" stopColor={paint.glow} />
-          <stop offset="0.3" stopColor="#3a0f05" />
-          <stop offset="1" stopColor="#120503" />
+          <stop offset="0.45" stopColor="#2a0805" />
+          <stop offset="1" stopColor="#0a0101" />
         </radialGradient>
       </defs>
       <g className="avatar-hop">
@@ -136,7 +137,7 @@ export function BotAvatar({
           <rect x={-200} y={0} width={1000} height={900} fill={paint.body} />
           <g filter={`url(#${id("soft")})`}>
             {SHADES.map((shade, index) => (
-              <path key={shade.fill} d={shade.d} fill={paint.shades[index]} />
+              <path key={shade.fill} d={shade.d} fill={paint.shades[index]} fillRule="evenodd" />
             ))}
           </g>
         </g>
@@ -157,9 +158,11 @@ export function BotAvatar({
               />
             </g>
           ))}
-        {EYES.map((eye, index) => (
-          <Eye key={eye.x} eye={eye} side={index === 0 ? "l" : "r"} fill={`url(#${id("eye")})`} />
-        ))}
+        <g className="avatar-look">
+          {EYES.map((eye, index) => (
+            <Eye key={eye.x} eye={eye} side={index === 0 ? "l" : "r"} fill={`url(#${id("eye")})`} />
+          ))}
+        </g>
       </g>
     </svg>
   );
