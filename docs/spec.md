@@ -154,7 +154,7 @@ restart_backoff_max_ms = 300000
 fresh_start_if_dies_within_s = 15
 
 [courier]
-poll_interval_ms = 500
+poll_interval_ms = 10000     # o maior intervalo entre ciclos do courier (9.1)
 lease_ms = 15000
 max_attempts = 8
 retry_backoff_initial_ms = 2000
@@ -422,9 +422,9 @@ O dono vê quantos tokens cada bot gasta: em cada turno, no chat, e somados por 
 ### 9.1 Fluxo
 
 1. `messages.send` (owner) ou tool `send_message` (bot) grava `message`, `delivery` (`pending`) e o item `inbound` no chat do destinatário, numa transação. Anexos são gravados antes (9.5).
-2. O **courier** acorda a cada `poll_interval_ms` (e na hora, via notify, quando entra delivery nova ou termina um envio).
+2. O **courier** dorme até a próxima coisa com hora marcada: a primeira delivery da fila de algum bot vencer, um lease acabar ou uma task aberta passar do prazo; no mínimo 250 ms e no máximo `poll_interval_ms`. Acorda na hora, via notify, quando entra delivery nova ou termina um envio, e quando um bot passa a aceitar mensagens (`bot.state` em `idle`, `busy` ou `needs_approval`). Antes, acordava a cada 500 ms, parado ou não.
 3. Entrega em ordem, uma por vez por bot: de cada bot, só a delivery `pending` mais antiga pode sair, quando `next_attempt_at <= agora` e o bot não tem outra em `sending`. Ela vira `sending` com `lease_until`.
-4. Se o bot não está em `idle`/`busy`/`needs_approval`: volta para `pending` com `next_attempt_at` em 5 s, **sem** contar tentativa. Bot ou crew arquivados: a delivery vira `dead` na hora.
+4. Se o bot não está em `idle`/`busy`/`needs_approval`: volta para `pending` com `next_attempt_at` em 5 s, **sem** contar tentativa. Quando o bot passa a aceitar mensagens, as deliveries dele que nunca falharam (`attempts = 0`) vencem na hora, sem esperar esses 5 s; as que falharam mantêm o backoff, para uma mensagem que derruba o bot não voltar em seguida. Bot ou crew arquivados: a delivery vira `dead` na hora.
 5. Monta a mensagem (9.2) na hora do envio e escreve uma linha no stdin do processo, com timeout de 10 s.
 6. Escrita aceita: `sent`, com a generation do processo. Falha de escrita (processo saindo): volta para `pending` sem contar tentativa.
 7. Quando o Claude Code pega a mensagem, num turno novo ou no turno que já roda, ele a devolve no stdout com o mesmo `uuid` (`--replay-user-messages`), e a delivery ganha `read_at`. O app mostra isso como "lida", com os dois tiques em azul-claro (15.3).

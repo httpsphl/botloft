@@ -293,5 +293,6 @@ impl Store {
     }
 }
 
+mod courier;
 #[cfg(test)]
 mod tests;
