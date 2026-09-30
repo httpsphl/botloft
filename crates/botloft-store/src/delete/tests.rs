@@ -88,6 +88,7 @@ fn fill(fx: &Fixture) -> Owned {
             approval_id: approval.id.clone(),
             tool_name: approval.tool_name.clone(),
             summary: approval.summary.clone(),
+            explanation: None,
             input: approval.input.clone(),
             status: ApprovalStatus::Pending,
             note: None,

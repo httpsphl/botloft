@@ -52,7 +52,7 @@ export function ModelPicker({ bot, onLater }: { bot: Bot; onLater(text: string):
     model === "default" ? m.hints.default(bot.name, inUse) : m.hints[model](bot.name);
 
   return (
-    <div ref={root} className="relative">
+    <div ref={root} className="relative min-w-0">
       {open && (
         <div
           role="menu"
@@ -81,15 +81,15 @@ export function ModelPicker({ bot, onLater }: { bot: Bot; onLater(text: string):
         aria-label={m.button(label)}
         title={hint(current)}
         onClick={() => setOpen(!open)}
-        className={`flex h-8 items-center gap-1 rounded-full px-2.5 text-sm text-ink-soft transition-colors hover:bg-sunken hover:text-ink ${
+        className={`flex h-8 max-w-full items-center gap-1 rounded-full px-2.5 text-sm text-ink-soft transition-colors hover:bg-sunken hover:text-ink ${
           open ? "bg-sunken text-ink" : ""
         }`}
       >
-        <span className="whitespace-nowrap">{label}</span>
+        <span className="truncate">{label}</span>
         <ChevronDown
           aria-hidden
           size={14}
-          className={`opacity-60 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          className={`shrink-0 opacity-60 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
         />
       </button>
     </div>

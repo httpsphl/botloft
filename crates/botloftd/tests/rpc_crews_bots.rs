@@ -63,6 +63,16 @@ async fn create_a_crew_and_a_bot_and_get_a_ready_workspace() {
         deny.starts_with("Read(//") && deny.ends_with("/secrets/**)"),
         "{deny}"
     );
+    // The owner's own Claude Code memory stays out of the bot (spec 7.5).
+    let crew_dir = daemon.paths.crew_dir("site-da-loja");
+    let crew_dir = crew_dir.to_string_lossy().replace('\\', "/");
+    let excludes = settings["claudeMdExcludes"].as_array().expect("excludes");
+    assert!(excludes.len() >= 6, "{excludes:?}");
+    assert!(excludes.iter().all(|pattern| {
+        let pattern = pattern.as_str().expect("pattern");
+        !pattern.contains('\\') && !pattern.starts_with(crew_dir.as_str())
+    }));
+    assert_eq!(settings["autoMemoryEnabled"], false);
     let mcp: Value = serde_json::from_str(&read(ws.join(".botloft/mcp.json"))).expect("json");
     assert_eq!(
         mcp["mcpServers"]["botloft"]["url"],

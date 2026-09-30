@@ -3,6 +3,7 @@
 //! and grows between Claude Code versions.
 
 use botloft_core::chat::{TOOL_OUTPUT_MAX, clip, tool_file, tool_input_max, tool_summary};
+use botloft_core::command::tool_explanation;
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{ChatBody, ChatDelta, ReplyItem, ToolItem, ToolStatus, TurnItem};
 use serde_json::Value;
@@ -125,6 +126,7 @@ fn assistant(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
                         tool_use_id: block["id"].as_str().unwrap_or_default().to_owned(),
                         name: name.to_owned(),
                         summary: tool_summary(name, input),
+                        explanation: tool_explanation(name, input),
                         input: clip(&input.to_string(), tool_input_max(name)),
                         status: ToolStatus::Running,
                         output: None,

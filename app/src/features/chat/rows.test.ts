@@ -18,6 +18,7 @@ const tool = (name: string) =>
     toolUseId: name,
     name,
     summary: "",
+    explanation: null,
     input: "{}",
     status: "done",
     output: null,

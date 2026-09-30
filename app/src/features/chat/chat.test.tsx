@@ -67,12 +67,16 @@ describe("chat", () => {
     let call = fake.chat.items[0];
     act(() => {
       call = fake.chat.tool(scout.id, "Bash", {
-        summary: "Run the tests",
-        input: '{"command":"npm test"}',
+        summary: "npm test",
+        explanation: "Run the tests",
+        input: '{"command":"npm test","description":"Run the tests"}',
       });
     });
     const line = within(chat()).getByRole("button", { name: /Run a command/ });
+    // The bot's words on the line; the command itself opens below.
     expect(within(line).getByText("Run the tests")).toBeDefined();
+    expect(within(chat()).queryByText("npm test")).toBeNull();
+    expect(within(sidebar()).getByText("Run a command · Run the tests")).toBeDefined();
     expect(within(line).getByLabelText("Running")).toBeDefined();
     act(() => {
       if (call) {
@@ -84,7 +88,8 @@ describe("chat", () => {
     expect(within(line).getByLabelText("Done")).toBeDefined();
     fireEvent.click(line);
     expect(within(chat()).getByText("12 passed")).toBeDefined();
-    expect(within(chat()).getByText(/"command": "npm test"/)).toBeDefined();
+    expect(within(chat()).getByText("Command")).toBeDefined();
+    expect(within(chat()).getByText("npm test")).toBeDefined();
     expect(within(chat()).getByText("Done in 4.2 s")).toBeDefined();
   });
 
@@ -95,7 +100,10 @@ describe("chat", () => {
       fake.chat.ask(scout.id, "Bash", "rm -rf build", '{"command":"rm -rf build"}');
     });
     const card = screen.getByRole("region", { name: "Scout asks to run a command" });
-    expect(within(card).getByText("rm -rf build")).toBeDefined();
+    // The bot said nothing about it: the card says so and shows the command.
+    expect(within(card).getByText(/^Scout did not say what this command is for\./)).toBeDefined();
+    const command = within(card).getByText("rm -rf build");
+    expect(command.closest("details")?.open).toBe(true);
     fireEvent.change(within(card).getByLabelText("Note for Scout if you deny"), {
       target: { value: "keep the cache" },
     });
@@ -112,6 +120,64 @@ describe("chat", () => {
     const next = screen.getByRole("region", { name: "Scout asks to write a file" });
     fireEvent.click(within(next).getByRole("button", { name: "Allow" }));
     expect(await within(chat()).findByText("Allowed: write a file")).toBeDefined();
+  });
+
+  test("a command request leads with the bot's explanation and keeps the command a click away", async () => {
+    const { fake, scout } = crew();
+    await openScout(fake);
+    const script = "cd C:/Work && python - <<'EOF'\nprint('hello')\nEOF";
+    const why = "Instala o pacote requests, para o script acessar páginas da internet";
+    act(() => {
+      fake.chat.ask(
+        scout.id,
+        "Bash",
+        "cd C:/Work && python - <<'EOF' print('hello') EOF",
+        JSON.stringify({ command: script, description: why }),
+        why,
+      );
+    });
+    const card = screen.getByRole("region", { name: "Scout asks to run a command" });
+    expect(within(card).getByText(why)).toBeDefined();
+    // The bot wrote it, so the card says whose words these are and where
+    // the real thing is; the command is whole, with its line breaks.
+    expect(
+      within(card).getByText("Scout wrote this. What actually runs is the command below."),
+    ).toBeDefined();
+    const folded = within(card).getByText("See the command").closest("details");
+    expect(folded?.open).toBe(false);
+    expect(folded?.querySelector("div div")?.textContent).toBe(script);
+    expect(within(card).queryByText(/too long to show/)).toBeNull();
+    fireEvent.click(within(card).getByRole("button", { name: "Allow" }));
+    const answered = await within(chat()).findByText("Allowed: run a command");
+    expect(within(answered.closest("p") as HTMLElement).getByText(why)).toBeDefined();
+  });
+
+  test("a command too long to keep says it is cut, and other tools keep their details", async () => {
+    const { fake, scout } = crew();
+    await openScout(fake);
+    act(() => {
+      fake.chat.ask(
+        scout.id,
+        "PowerShell",
+        "Get-Date",
+        '{"command":"Get-Date; Get-Da…',
+        "Shows today",
+      );
+    });
+    const card = screen.getByRole("region", { name: "Scout asks to run a command" });
+    expect(within(card).getByText("This command is too long to show in full.")).toBeDefined();
+    expect(within(card).getByText('{"command":"Get-Date; Get-Da…')).toBeDefined();
+    fireEvent.click(within(card).getByRole("button", { name: "Deny" }));
+    await within(chat()).findByText("Denied: run a command");
+
+    act(() => {
+      fake.chat.ask(scout.id, "WebFetch", "https://example.com", '{"url":"https://example.com"}');
+    });
+    const page = screen.getByRole("region", { name: "Scout asks to read a web page" });
+    expect(within(page).getByText("https://example.com")).toBeDefined();
+    const details = within(page).getByText("Details").closest("details");
+    expect(details?.open).toBe(false);
+    expect(details?.textContent).toContain('"url": "https://example.com"');
   });
 
   test("files are picked or dropped, shown before sending, and sent with the text", async () => {

@@ -38,15 +38,23 @@ export function activityLine(
       break;
     case "tool":
       kind = "tool";
-      text = body.summary;
+      text = body.explanation ?? body.summary;
       tool = body.name;
       break;
     case "approval":
       kind = "approval";
-      text = body.summary;
+      text = body.explanation ?? body.summary;
       tool = body.toolName;
       break;
     case "notice":
+      // A compaction is housekeeping, not news about the conversation.
+      if (
+        body.code === "compacted" ||
+        body.code === "auto_compacted" ||
+        body.code === "compact_failed"
+      ) {
+        return null;
+      }
       kind = "notice";
       text = body.text;
       break;
@@ -93,6 +101,7 @@ export class FakeChat {
       toolUseId: this.fake.id("toolu"),
       name,
       summary: "",
+      explanation: null,
       input: "{}",
       status: "running",
       output: null,
@@ -113,8 +122,14 @@ export class FakeChat {
     return this.add(botId, { kind: "turn", durationMs: 4200, costUsd: 0.0123, error });
   }
 
-  /** A permission request waiting for the owner. */
-  ask(botId: BotId, toolName: string, summary: string, input = "{}"): ChatItem {
+  /** A permission request waiting for the owner; `explanation` is what the bot says a command is for. */
+  ask(
+    botId: BotId,
+    toolName: string,
+    summary: string,
+    input = "{}",
+    explanation: string | null = null,
+  ): ChatItem {
     const approval: Approval = {
       id: this.fake.id("apr"),
       botId,
@@ -132,6 +147,7 @@ export class FakeChat {
       approvalId: approval.id,
       toolName,
       summary,
+      explanation,
       input,
       status: "pending",
       note: null,

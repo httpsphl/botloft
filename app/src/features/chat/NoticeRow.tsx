@@ -41,6 +41,12 @@ function noticeText(notice: NoticeItem, words: Messages["chat"]["notice"]): stri
       return words.turnFailed(notice.text);
     case "model_unavailable":
       return words.modelUnavailable;
+    case "compacted":
+      return words.compacted;
+    case "auto_compacted":
+      return words.autoCompacted;
+    case "compact_failed":
+      return words.compactFailed(notice.text);
     default:
       return notice.text;
   }

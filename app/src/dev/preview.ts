@@ -13,6 +13,7 @@ import { PROTOCOL_VERSION } from "../lib/protocol.gen";
 import { seedBrowser } from "./seedBrowser";
 import { seedChats } from "./seedChats";
 import { seedChief } from "./seedChief";
+import { seedContext } from "./seedContext";
 import { seedHands } from "./seedHands";
 import { seedRoutines } from "./seedRoutines";
 import { seedScreens } from "./seedScreens";
@@ -107,6 +108,13 @@ function seed(fake: FakeBotloft): void {
   fake.setBotState(analyst.id, "rate_limited", 1);
   fake.setBotState(planner.id, "needs_approval", 2);
   seedChats(fake, {
+    scout: scout.id,
+    writer: writer.id,
+    reviewer: reviewer.id,
+    analyst: analyst.id,
+    planner: planner.id,
+  });
+  seedContext(fake, {
     scout: scout.id,
     writer: writer.id,
     reviewer: reviewer.id,

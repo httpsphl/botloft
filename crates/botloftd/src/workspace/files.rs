@@ -7,6 +7,7 @@ use botloft_core::protocol::Crew;
 use botloft_store::BotRecord;
 use serde_json::{Value, json};
 
+use super::memory;
 use crate::paths::permission_rule_path;
 
 /// Longer than the approval timeout, so Claude Code never gives up on a
@@ -14,13 +15,19 @@ use crate::paths::permission_rule_path;
 const MCP_TIMEOUT_MARGIN: Duration = Duration::from_secs(120);
 
 /// `.claude/settings.json` (spec 7.5): keeps the bot out of the daemon's
-/// secrets. Deny rules apply even in a folder nobody trusted.
-pub fn settings_json(botloft_home: &Path) -> Value {
+/// secrets, and the owner's own Claude Code memory out of the bot. Deny
+/// rules apply even in a folder nobody trusted.
+pub fn settings_json(botloft_home: &Path, crew_dir: &Path) -> Value {
     let secrets = permission_rule_path(&botloft_home.join("secrets"));
     json!({
         "permissions": {
             "deny": [format!("Read({secrets}/**)")],
         },
+        // Instruction files above the crew's folder are the owner's.
+        "claudeMdExcludes": memory::excludes_above(crew_dir),
+        // The bot's memory is the `CLAUDE.md` in its folder. Claude Code's
+        // own notes live in the owner's profile, outside that folder.
+        "autoMemoryEnabled": false,
     })
 }
 
@@ -116,6 +123,11 @@ app; the other bots of your crew send you messages too.
   message lists them. Images also come inline.
 - When you need a permission, the owner gets a request in the chat with
   Allow and Deny. If they deny it, find another way or ask them.
+- The owner may not be technical. Every time you run a command, fill in its
+  `description` for them: one short sentence, in the language the owner
+  writes to you in, that says what the command does and why you need it,
+  in everyday words, with no code, file paths or jargon. They read it to
+  decide whether to allow the command.
 
 ## Working with your crew
 
@@ -175,10 +187,28 @@ mod tests {
     #[test]
     fn settings_deny_the_secrets_folder_and_nothing_else() {
         let home = Path::new(r"C:\Users\ana\AppData\Local\Botloft");
-        let settings = settings_json(home);
+        let settings = settings_json(home, Path::new("/ws/site"));
         assert_eq!(
-            settings,
-            json!({ "permissions": { "deny": ["Read(//c/Users/ana/AppData/Local/Botloft/secrets/**)"] } })
+            settings["permissions"],
+            json!({ "deny": ["Read(//c/Users/ana/AppData/Local/Botloft/secrets/**)"] })
+        );
+    }
+
+    #[test]
+    fn settings_keep_the_owners_memory_out_of_the_bot() {
+        let settings = settings_json(Path::new("/data"), Path::new("/ws/site"));
+        assert_eq!(
+            settings["claudeMdExcludes"],
+            json!(memory::excludes_above(Path::new("/ws/site")))
+        );
+        assert_eq!(settings["claudeMdExcludes"][0], "/ws/CLAUDE.md");
+        assert_eq!(settings["autoMemoryEnabled"], false);
+        let mut keys: Vec<&String> = settings.as_object().expect("object").keys().collect();
+        keys.sort();
+        assert_eq!(
+            keys,
+            ["autoMemoryEnabled", "claudeMdExcludes", "permissions"],
+            "a new setting needs a line in spec 7.5"
         );
     }
 
@@ -232,6 +262,7 @@ mod tests {
         assert!(rules.contains("Ask the owner"));
         assert!(rules.contains("/ws/site/shared"));
         assert!(rules.contains("attachments/"));
+        assert!(rules.contains("fill in its\n  `description` for them"));
         assert!(rules.contains("`browser_*` tools"));
         assert!(rules.contains(r#"<meta name="botloft-device" content="mobile">"#));
         assert!(!rules.contains("You lead this crew"));

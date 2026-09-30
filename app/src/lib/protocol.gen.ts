@@ -717,6 +717,11 @@ export type ToolItem = { toolUseId: string, name: string,
  */
 summary: string, 
 /**
+ * What the bot says a command is for, in its own words (spec 10.1);
+ * absent when it said nothing, for other tools and for older items.
+ */
+explanation: string | null, 
+/**
  * The call's input as JSON, cut at 4 KB.
  */
 input: string, status: ToolStatus, 
@@ -730,7 +735,13 @@ output: string | null,
  */
 file: string | null, };
 
-export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, input: string, status: ApprovalStatus, 
+export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
+/**
+ * What the bot says the command is for, as in `ToolItem`. The bot
+ * wrote it: it goes before the command, never in its place. Kept only
+ * here, not in the `Approval`.
+ */
+explanation: string | null, input: string, status: ApprovalStatus, 
 /**
  * What the owner wrote with a denial.
  */

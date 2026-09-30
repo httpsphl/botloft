@@ -8,6 +8,7 @@
 @import "./mascot.css";
 @import "./mascot-flame.css";
 @import "./panels.css";
+@import "./effort.css";
 @import "./motion-less.css";
 
 /* Colors are tokens so the light and dark themes swap in one place
