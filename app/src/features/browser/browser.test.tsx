@@ -1,9 +1,12 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { FakeBotloft } from "../../lib/fake";
 import { crewOpened, openBot, renderApp } from "../../test/app";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 /** A crew "Ops" with @scout, idle. */
 function crew() {
@@ -66,6 +69,37 @@ describe("browser panel", () => {
       fake.browser.act(other.id, "open", { label: "elsewhere.com" });
     });
     expect(within(panel()).queryByText("Opened elsewhere.com")).toBeNull();
+  });
+
+  test("gives the page the shape of the room the panel has, and shows it as large as fits", async () => {
+    const { fake, scout } = crew();
+    fake.browser.open(scout.id, "https://example.com/", "Example");
+    // The panel under its address row, as the app measures it: 536 by 700
+    // for the page, once what goes around and under it is set aside.
+    vi.spyOn(Element.prototype, "clientWidth", "get").mockReturnValue(560);
+    vi.spyOn(Element.prototype, "clientHeight", "get").mockReturnValue(804);
+    await openScout(fake);
+    fireEvent.click(toggle());
+    const resized = () =>
+      fake.calls.filter((call) => call.method === "browser.resize").map((call) => call.params);
+    await waitFor(() => expect(resized()).toEqual([{ botId: scout.id, width: 536, height: 700 }]));
+    // As wide as ever, and as tall as the room's shape asks.
+    expect(fake.browser.size(scout.id)).toEqual({ width: 1280, height: 1671 });
+
+    act(() => {
+      fake.browser.frame(scout.id, "AAAA");
+    });
+    // The bot's cursor lands where it acted on the taller page.
+    const screenshot = within(panel()).getByRole("figure", { name: "What Scout sees" });
+    act(() => {
+      fake.browser.act(scout.id, "click", { x: 640, y: 1671, label: "More" });
+    });
+    const cursor = screenshot.querySelector(".bot-cursor") as HTMLElement;
+    expect(cursor.style.top).toBe("100%");
+
+    // Nobody watches anymore: the page is back to its own size.
+    fireEvent.click(within(panel()).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(fake.browser.size(scout.id)).toEqual({ width: 1280, height: 800 }));
   });
 
   test("opens by itself when the bot starts browsing, and the button marks it once closed", async () => {

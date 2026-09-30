@@ -875,6 +875,23 @@ export type BrowserStatus = "closed" | "starting" | "open" | "failed";
  */
 export type BrowserControl = "bot" | "owner";
 
+/**
+ * One of the browser's open tabs.
+ */
+export type BrowserTab = { 
+/**
+ * Names the tab in `browser.switchTab`; means nothing else.
+ */
+id: string, 
+/**
+ * Empty until the page has one.
+ */
+title: string, url: string, 
+/**
+ * The tab the bot's tools and the owner's hands act on.
+ */
+active: boolean, };
+
 export type BrowserState = { botId: BotId, status: BrowserStatus, 
 /**
  * The active tab's address.
@@ -885,9 +902,9 @@ url: string | null, title: string | null,
  */
 loading: boolean, 
 /**
- * Open tabs.
+ * The open tabs, in the order they opened.
  */
-tabs: number, 
+tabs: Array<BrowserTab>, 
 /**
  * Why it could not start, when `failed`.
  */
@@ -945,6 +962,12 @@ export type BrowserView = { state: BrowserState, frame: BrowserFrame | null, };
 
 export type BrowserWatchParams = { botId: BotId, };
 
+/**
+ * `browser.resize`: the room the app's panel has for the page, in the
+ * app's pixels. The page takes its shape (spec 21.3).
+ */
+export type BrowserResizeParams = { botId: BotId, width: number, height: number, };
+
 export type MouseAction = "move" | "down" | "up";
 
 export type MouseButton = "none" | "left" | "middle" | "right";
@@ -964,11 +987,22 @@ buttons: number,
 clicks: number, modifiers: number, } | { "kind": "wheel", x: number, y: number, dx: number, dy: number, modifiers: number, } | { "kind": "key", key: string, code: string, modifiers: number, } | { "kind": "text", text: string, };
 
 /**
- * `browser.take` and `browser.release`.
+ * `browser.take`, `browser.release`, `browser.reload` and
+ * `browser.newTab`.
  */
 export type BrowserControlParams = { botId: BotId, };
 
 export type BrowserInputParams = { botId: BotId, input: BrowserInput, };
+
+/**
+ * `browser.switchTab`: the tab that becomes the active one.
+ */
+export type BrowserTabParams = { botId: BotId, tabId: string, };
+
+/**
+ * `browser.open`: the address the owner typed for the active tab.
+ */
+export type BrowserOpenParams = { botId: BotId, url: string, };
 
 /**
  * The device a screen is drawn for.
@@ -1076,9 +1110,14 @@ export interface RpcMethods {
   "browser.list": { params: undefined; result: Array<BrowserState> };
   "browser.watch": { params: BrowserWatchParams; result: BrowserView };
   "browser.unwatch": { params: undefined; result: null };
+  "browser.resize": { params: BrowserResizeParams; result: null };
   "browser.take": { params: BrowserControlParams; result: BrowserState };
   "browser.release": { params: BrowserControlParams; result: BrowserState };
   "browser.input": { params: BrowserInputParams; result: null };
+  "browser.reload": { params: BrowserControlParams; result: null };
+  "browser.newTab": { params: BrowserControlParams; result: null };
+  "browser.switchTab": { params: BrowserTabParams; result: null };
+  "browser.open": { params: BrowserOpenParams; result: null };
   "screens.list": { params: ScreensListParams; result: Array<Screen> };
 }
 

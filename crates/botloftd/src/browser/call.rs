@@ -11,7 +11,7 @@ use tokio::sync::OwnedMutexGuard;
 use tracing::debug;
 
 use super::session::{Hooks, PageInfo, Session};
-use super::{BrowserError, Browsers, launch, lock, update};
+use super::{BrowserError, Browsers, launch, lock, update, watch};
 
 pub struct Call<'a> {
     pub(super) browsers: &'a Browsers,
@@ -43,7 +43,11 @@ impl Call<'_> {
             None => Err(BrowserError::NotFound),
             Some(program) => {
                 let profile = browsers.profiles.join(bot.as_str());
-                Session::start(&program, &profile, downloads, self.hooks(start)).await
+                let viewport = {
+                    let mut slots = lock(&browsers.slots);
+                    browsers.slot(&mut slots, bot).viewport
+                };
+                Session::start(&program, &profile, downloads, viewport, self.hooks(start)).await
             }
         };
         let session = match started {
@@ -57,16 +61,14 @@ impl Call<'_> {
                 return Err(err);
             }
         };
-        let watched = {
+        {
             let mut slots = lock(&browsers.slots);
             let slot = browsers.slot(&mut slots, bot);
             slot.session = Some((start, Arc::clone(&session)));
-            slot.watchers > 0
-        };
-        browsers.set_state(bot, |state| state.status = BrowserStatus::Open);
-        if watched {
-            session.set_watching(true).await;
         }
+        browsers.set_state(bot, |state| state.status = BrowserStatus::Open);
+        // Whoever watches already gets frames, the size they asked for.
+        watch::sync(Arc::clone(&browsers.slots), bot.clone()).await;
         debug!(bot = %bot, "browser: open");
         Ok(session)
     }

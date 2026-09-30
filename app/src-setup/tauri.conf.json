@@ -13,6 +13,7 @@
     }
   },
   "bundle": {
+    "publisher": "Botloft",
     "copyright": "Copyright 2026 Phelipe Lorran",
     "icon": ["../src-tauri/icons/icon.ico"]
   }

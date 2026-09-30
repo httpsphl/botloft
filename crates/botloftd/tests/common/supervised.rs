@@ -13,7 +13,7 @@ use botloftd::state::Daemon;
 use botloftd::supervisor;
 use serde_json::json;
 
-use super::{new_daemon, test_settings};
+use super::{new_daemon, stream, test_settings};
 
 pub struct Setup {
     pub daemon: Arc<Daemon>,
@@ -86,6 +86,25 @@ impl Setup {
             .write_message(&self.bot, format!("{line}\n").into())
             .expect("running")
     }
+
+    /// One whole turn in the conversation `process` is in. Returns its
+    /// session id, which Claude Code now has on disk (spec 7.3).
+    pub async fn turn(&self, process: &FakeProcess) -> String {
+        let session = session_of(process);
+        self.message("hi");
+        process.emit(stream::init(&session)).await;
+        process.emit(stream::began(&session)).await;
+        process.emit(stream::result(false)).await;
+        self.until(BotState::Idle).await;
+        session
+    }
+}
+
+/// The conversation the process started or resumed.
+pub fn session_of(process: &FakeProcess) -> String {
+    arg_after(process, "--session-id")
+        .or_else(|| arg_after(process, "--resume"))
+        .expect("a session")
 }
 
 /// The value after `flag` on the process's command line.

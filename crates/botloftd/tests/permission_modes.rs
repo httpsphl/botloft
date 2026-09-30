@@ -9,7 +9,7 @@ use botloft_core::protocol::{BotState, BotsSetPermissionModeParams, PermissionMo
 use botloftd::runtime::fake::FakeProcess;
 use botloftd::service::modes;
 use common::stream;
-use common::supervised::{Setup, setup};
+use common::supervised::{Setup, session_of, setup};
 use serde_json::json;
 
 fn arg_after(process: &FakeProcess, flag: &str) -> Option<String> {
@@ -58,7 +58,7 @@ async fn an_idle_bot_restarts_into_its_new_mode_in_the_same_conversation() {
     let s = setup().await;
     let first = s.runtime.process(1).await;
     s.until(BotState::Idle).await;
-    let session = arg_after(&first, "--session-id").expect("session");
+    let session = s.turn(&first).await;
 
     set_mode(&s, PermissionMode::AcceptEdits);
     let second = s.runtime.process(2).await;
@@ -98,7 +98,7 @@ async fn approving_a_plan_moves_the_bot_out_of_plan_mode() {
     set_mode(&s, PermissionMode::Plan);
     let planning = s.runtime.process(2).await;
     s.until(BotState::Idle).await;
-    let session = arg_after(&planning, "--resume").expect("session");
+    let session = session_of(&planning);
 
     // Claude Code left plan mode when the plan was approved.
     planning.emit(init_with_mode(&session, "default")).await;
@@ -135,7 +135,7 @@ async fn a_plan_approved_while_a_new_model_waits_still_leaves_plan_mode() {
     set_mode(&s, PermissionMode::Plan);
     let planning = s.runtime.process(2).await;
     s.until(BotState::Idle).await;
-    let session = arg_after(&planning, "--resume").expect("session");
+    let session = session_of(&planning);
     s.message("plan it");
     botloftd::service::models::set_model(
         &s.daemon,

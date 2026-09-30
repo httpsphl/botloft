@@ -39,9 +39,10 @@ mod registry {
 
     const UNINSTALL_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\Botloft";
     /// Tauri's NSIS remembers the install folder under
-    /// `Software\<publisher>\<product>`; the publisher is "github", the second
-    /// part of the identifier (spec 15.4).
-    const FOLDER_KEY: &str = r"Software\github\Botloft";
+    /// `Software\<publisher>\<product>`. The publisher is "Botloft"; installs
+    /// made while it was "github", Tauri's default from the identifier, are
+    /// adopted by the installer's hooks (spec 15.4), which look in this order.
+    const FOLDER_KEYS: [&str; 2] = [r"Software\Botloft\Botloft", r"Software\github\Botloft"];
 
     pub fn entry(name: &str) -> Option<String> {
         RegKey::predef(HKEY_CURRENT_USER)
@@ -52,11 +53,14 @@ mod registry {
     }
 
     pub fn remembered_folder() -> Option<String> {
-        RegKey::predef(HKEY_CURRENT_USER)
-            .open_subkey(FOLDER_KEY)
-            .ok()?
-            .get_value::<String, _>("")
-            .ok()
+        let user = RegKey::predef(HKEY_CURRENT_USER);
+        FOLDER_KEYS.iter().find_map(|key| {
+            user.open_subkey(key)
+                .ok()?
+                .get_value::<String, _>("")
+                .ok()
+                .filter(|folder| !folder.trim().is_empty())
+        })
     }
 }
 

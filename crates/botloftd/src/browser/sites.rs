@@ -58,6 +58,37 @@ pub fn resolve(input: &str, base: &Path, folders: &[PathBuf]) -> Result<Place, S
     ))
 }
 
+/// Longest address the owner may type.
+const TYPED_MAX: usize = 2000;
+
+/// What the owner typed in the address bar, as the web address to open
+/// (spec 21.10): `https://` goes in front of one without a scheme, also of
+/// a host with a port. Anything that is not a web address is `None`.
+pub fn typed(input: &str) -> Option<String> {
+    let input = input.trim();
+    if input.is_empty() || input.len() > TYPED_MAX || input.contains(char::is_whitespace) {
+        return None;
+    }
+    let lower = input.to_ascii_lowercase();
+    let url = if lower.starts_with("http://") || lower.starts_with("https://") {
+        input.to_owned()
+    } else if has_scheme(input) && !has_port(input) {
+        return None;
+    } else {
+        format!("https://{input}")
+    };
+    site_of(&url).map(|_| url)
+}
+
+/// `localhost:3000/x`: what follows the colon is a port, not the rest of a
+/// `scheme:` address.
+fn has_port(input: &str) -> bool {
+    input.split_once(':').is_some_and(|(_, rest)| {
+        let port = rest.split(['/', '?', '#']).next().unwrap_or_default();
+        !port.is_empty() && port.chars().all(|c| c.is_ascii_digit())
+    })
+}
+
 /// The site of a web address, or `None` for anything else.
 pub fn site_of(url: &str) -> Option<String> {
     let lower = url.to_ascii_lowercase();

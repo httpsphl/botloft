@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { PanelClosing } from "./panelMotion";
+import { PanelClosing, PanelRestored } from "./panelMotion";
 import { SidePanel } from "./SidePanel";
 
 beforeEach(() => localStorage.clear());
@@ -71,6 +71,23 @@ describe("side panel motion", () => {
     expect(aside.className).toContain("panel-opening");
     ends(aside, "panel-open");
     expect(aside.className).not.toContain("panel-opening");
+  });
+
+  test("one that comes back with its view is open at once, and still slides closed", () => {
+    const closed = vi.fn();
+    const back = (closing: { closed(): void } | null) => (
+      <PanelRestored.Provider value>
+        <PanelClosing.Provider value={closing}>{panel()}</PanelClosing.Provider>
+      </PanelRestored.Provider>
+    );
+    const view = render(back(null));
+    const aside = view.container.querySelector("aside") as HTMLElement;
+    expect(aside.className).not.toContain("panel-opening");
+    expect(screen.getByRole("complementary", { name: "Details" })).toBeDefined();
+    view.rerender(back({ closed }));
+    expect(aside.className).toContain("panel-closing");
+    ends(aside, "panel-close");
+    expect(closed).toHaveBeenCalled();
   });
 
   test("while closing it leaves the page to the rest, and goes when the slide ends", () => {

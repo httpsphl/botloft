@@ -91,12 +91,31 @@ impl std::fmt::Debug for BrowserInput {
     }
 }
 
-/// `browser.take` and `browser.release`.
+/// `browser.take`, `browser.release`, `browser.reload` and
+/// `browser.newTab`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct BrowserControlParams {
     pub bot_id: BotId,
+}
+
+/// `browser.switchTab`: the tab that becomes the active one.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BrowserTabParams {
+    pub bot_id: BotId,
+    pub tab_id: String,
+}
+
+/// `browser.open`: the address the owner typed for the active tab.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BrowserOpenParams {
+    pub bot_id: BotId,
+    pub url: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

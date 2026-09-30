@@ -35,11 +35,14 @@ export function AskCallout({ bot, task, hands }: { bot: Bot; task: string; hands
 export function HeldBar({
   bot,
   task,
+  tabs,
   focused,
   hands,
 }: {
   bot: Bot;
   task: string | null;
+  /** How many tabs are open: with more than one, where the bot goes on. */
+  tabs: number;
   focused: boolean;
   hands: Hands;
 }) {
@@ -57,6 +60,7 @@ export function HeldBar({
           <p className="line-clamp-2 text-ink-soft text-xs" data-selectable>
             {task ? t.help.asks(bot.name, task) : t.hands.waits(bot.name)}
           </p>
+          {tabs > 1 && <p className="text-muted text-xs">{t.hands.leaves(bot.name)}</p>}
         </div>
       </div>
       <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2 pl-6.5">
