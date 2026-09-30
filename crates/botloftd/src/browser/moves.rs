@@ -12,6 +12,7 @@ use serde_json::json;
 use tokio::sync::mpsc;
 use tracing::debug;
 
+use super::rest::wake;
 use super::session::{Session, Tab};
 use super::{BrowserError, Browsers};
 
@@ -32,12 +33,20 @@ pub(super) enum Move {
 
 impl Browsers {
     /// Reloads the active tab of the bot's browser, in the owner's hands or
-    /// not. `false` when the browser is not open.
+    /// not, waking it if it rests. `false` when the browser is not open.
     pub fn reload(&self, bot: &BotId) -> bool {
         let Some(session) = self.running(bot) else {
             return false;
         };
+        self.touch(bot);
+        let (slots, events, clock) = (
+            Arc::clone(&self.slots),
+            self.events.clone(),
+            Arc::clone(&self.clock),
+        );
+        let bot = bot.clone();
         tokio::spawn(async move {
+            wake(&session, &slots, &events, clock.as_ref(), &bot).await;
             if let Err(err) = session.reload().await {
                 debug!("browser: the page did not reload: {err}");
             }

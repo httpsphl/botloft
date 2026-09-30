@@ -861,6 +861,11 @@ error: string | null,
  */
 control: BrowserControl, 
 /**
+ * Nobody uses it, so it rests: its pages stand still until the bot or
+ * the owner needs them (spec 21.2).
+ */
+resting: boolean, 
+/**
  * What the bot asked the owner to do in it, while it waits.
  */
 ask: string | null, 

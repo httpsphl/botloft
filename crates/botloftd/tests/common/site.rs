@@ -1,7 +1,8 @@
 //! A small web site on 127.0.0.1 for the browser tests: a form, the page
 //! it leads to, a link that opens a new tab, a button that shows a dialog,
 //! a sign-in page with its fields at fixed points, for the owner's hands,
-//! a page that says how big its window is, and one that counts its loads.
+//! a page that says how big its window is, one that counts its loads and
+//! one that counts the times it went out of sight.
 
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -36,6 +37,12 @@ const SIZE: &str = "<!doctype html><title>Size</title><p id=\"size\"></p><script
     const show = () => { document.getElementById('size').textContent = \
     'Window: ' + innerWidth + ' x ' + innerHeight; }; show(); \
     addEventListener('resize', show);</script>";
+
+/// Counts how many times it went out of sight.
+const SIGHT: &str = "<!doctype html><title>Sight</title><p id=\"hidden\">Hidden 0 times</p>\
+    <script>let hidden = 0; document.addEventListener('visibilitychange', () => { \
+    if (document.hidden) { hidden += 1; document.getElementById('hidden').textContent = \
+    'Hidden ' + hidden + ' times'; } });</script>";
 
 async fn account(Form(form): Form<HashMap<String, String>>) -> Html<String> {
     let user = form.get("user").cloned().unwrap_or_default();
@@ -78,6 +85,7 @@ pub async fn serve() -> SocketAddr {
         .route("/links", get(|| async { Html(POPUP) }))
         .route("/login", get(|| async { Html(LOGIN) }))
         .route("/size", get(|| async { Html(SIZE) }))
+        .route("/sight", get(|| async { Html(SIGHT) }))
         .route("/account", post(account));
     let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
     let addr = listener.local_addr().expect("addr");
