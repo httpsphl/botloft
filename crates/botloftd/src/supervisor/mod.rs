@@ -7,6 +7,7 @@
 
 mod reconcile;
 mod relaunch;
+mod session;
 mod settings;
 mod sign_in;
 mod slot;
@@ -61,11 +62,13 @@ struct Inner {
     slots: HashMap<BotId, Slot>,
     /// Token hash of each running generation -> its bot.
     tokens: HashMap<String, (BotId, u64)>,
-    /// The conversation each bot resumes, as far as this run knows; the
+    /// The conversation each bot resumes: one Claude Code has on disk. The
     /// database has it too (spec 7.3).
     sessions: HashMap<BotId, String>,
     claude: ClaudeStatus,
     sign_in: sign_in::SignIn,
+    /// Conversations a new one took the place of, still in the database.
+    replaced: Vec<(BotId, String)>,
 }
 
 #[derive(Default)]
