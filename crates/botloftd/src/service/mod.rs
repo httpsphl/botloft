@@ -5,6 +5,7 @@ pub mod attachments;
 pub mod bots;
 pub mod chat;
 pub mod crews;
+pub mod delete;
 pub mod deliveries;
 pub mod files;
 pub mod lead;

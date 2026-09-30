@@ -5,8 +5,8 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Instant;
 
 use botloft_core::protocol::{
-    AccountUsage, Bot, BotStateChanged, BrowserAction, BrowserState, ChatDelta, ChatItemChanged,
-    Crew, Delivery, Message, Routine, RoutineRun, ScreenDraft, Task,
+    AccountUsage, Bot, BotDeleted, BotStateChanged, BrowserAction, BrowserState, ChatDelta,
+    ChatItemChanged, Crew, CrewDeleted, Delivery, Message, Routine, RoutineRun, ScreenDraft, Task,
 };
 use botloft_store::Store;
 use tokio::sync::broadcast;
@@ -30,7 +30,9 @@ use crate::workspace::WorkspaceEnv;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Event {
     CrewChanged(Crew),
+    CrewDeleted(CrewDeleted),
     BotChanged(Bot),
+    BotDeleted(BotDeleted),
     BotState(BotStateChanged),
     ChatItem(ChatItemChanged),
     ChatDelta(ChatDelta),

@@ -199,7 +199,9 @@ fn handle(
 fn to_notification(event: &Event) -> String {
     let (name, params) = match event {
         Event::CrewChanged(crew) => (notification::CREW_CHANGED, serde_json::to_value(crew)),
+        Event::CrewDeleted(crew) => (notification::CREW_DELETED, serde_json::to_value(crew)),
         Event::BotChanged(bot) => (notification::BOT_CHANGED, serde_json::to_value(bot)),
+        Event::BotDeleted(bot) => (notification::BOT_DELETED, serde_json::to_value(bot)),
         Event::BotState(state) => (notification::BOT_STATE, serde_json::to_value(state)),
         Event::ChatItem(item) => (notification::CHAT_ITEM, serde_json::to_value(item)),
         Event::ChatDelta(delta) => (notification::CHAT_DELTA, serde_json::to_value(delta)),

@@ -70,6 +70,10 @@ impl Supervisor {
         bot: &BotRecord,
         now: Instant,
     ) {
+        // Deleted after this pass read the database.
+        if inner.gone.contains(&bot.id) {
+            return;
+        }
         let archived = bot.archived_at.is_some() || crew.archived_at.is_some();
         if archived && !inner.slots.contains_key(&bot.id) {
             return;

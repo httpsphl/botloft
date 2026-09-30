@@ -59,6 +59,9 @@ export interface AppState {
   /** Applies a record a call returned, before its notification arrives. */
   putCrew(crew: Crew): void;
   putBot(bot: Bot): void;
+  /** Applies a delete a call returned, before its notification arrives. */
+  dropCrew(crewId: CrewId): void;
+  dropBot(botId: BotId): void;
   putDelivery(delivery: Delivery): void;
   putRoutine(routine: Routine): void;
   putBrowser(browser: BrowserState): void;
@@ -127,6 +130,8 @@ export function createAppStore(api: BotloftApi): AppStore {
     setPanel: (botId, panel) => set((state) => ({ panels: { ...state.panels, [botId]: panel } })),
     putCrew: (crew) => set((state) => withCrew(state, crew)),
     putBot: (bot) => set((state) => withBot(state, bot)),
+    dropCrew: (crewId) => set((state) => withoutCrew(state, crewId)),
+    dropBot: (botId) => set((state) => withoutBots(state, [botId])),
     putRoutine: (routine) => set((state) => withRoutine(state, routine)),
     putBrowser: (browser) => set((state) => withBrowser(state, browser)),
     putSettings: (settings) => set({ settings }),
@@ -160,12 +165,55 @@ function withBot(state: AppState, bot: Bot): Partial<AppState> {
   return { bots, selectedBotId: state.selectedBotId === bot.id ? null : state.selectedBotId };
 }
 
+/** Without the entries of `record` that fail `keep`. */
+function kept<T>(record: Record<string, T>, keep: (value: T) => boolean): Record<string, T> {
+  return Object.fromEntries(Object.entries(record).filter(([, value]) => keep(value)));
+}
+
+/**
+ * Deleted bots leave with what was theirs (spec 7.6): the daemon sends no
+ * notification for each routine, task and delivery that went with them.
+ */
+function withoutBots(state: AppState, botIds: BotId[]): Partial<AppState> {
+  const gone = new Set(botIds);
+  return {
+    bots: kept(state.bots, (bot) => !gone.has(bot.id)),
+    routines: kept(state.routines, (routine) => !gone.has(routine.botId)),
+    browsers: kept(state.browsers, (browser) => !gone.has(browser.botId)),
+    deliveries: kept(state.deliveries, (delivery) => !gone.has(delivery.botId)),
+    tasks: kept(
+      state.tasks,
+      (task) => !gone.has(task.requesterBotId) && !gone.has(task.assigneeBotId),
+    ),
+    selectedBotId:
+      state.selectedBotId !== null && gone.has(state.selectedBotId) ? null : state.selectedBotId,
+  };
+}
+
+function withoutCrew(state: AppState, crewId: CrewId): Partial<AppState> {
+  const bots = Object.values(state.bots).filter((bot) => bot.crewId === crewId);
+  const selected = state.selectedCrewId === crewId;
+  return {
+    ...withoutBots(
+      state,
+      bots.map((bot) => bot.id),
+    ),
+    crews: kept(state.crews, (crew) => crew.id !== crewId),
+    selectedCrewId: selected ? null : state.selectedCrewId,
+    selectedBotId: selected ? null : state.selectedBotId,
+  };
+}
+
 export function applyEvent(state: AppState, event: ServerEvent): Partial<AppState> | null {
   switch (event.name) {
     case "crew.changed":
       return withCrew(state, event.params);
+    case "crew.deleted":
+      return withoutCrew(state, event.params.crewId);
     case "bot.changed":
       return withBot(state, event.params);
+    case "bot.deleted":
+      return withoutBots(state, [event.params.botId]);
     case "bot.state": {
       const bot = state.bots[event.params.botId];
       if (!bot) {

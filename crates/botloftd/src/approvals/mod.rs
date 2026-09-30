@@ -57,6 +57,14 @@ impl Approvals {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
+
+    /// Lets go of requests nobody will answer: their bot was deleted.
+    pub(crate) fn forget(&self, requests: &[ApprovalId]) {
+        let mut waiting = self.lock();
+        for request in requests {
+            waiting.remove(request);
+        }
+    }
 }
 
 /// Puts a request in the bot's chat and waits for the owner. `None` if it

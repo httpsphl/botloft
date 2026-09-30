@@ -117,6 +117,8 @@ Workspaces ficam num caminho curto e visível para o usuário abrir no Explorer 
 
 **Pasta de trabalho da crew.** É onde os bots põem o que fazem para o dono e para os outros bots. Por padrão é a `shared\` da crew; o dono pode escolher outra ao criar a crew ou depois (`crews.setWorkFolder`), como uma pasta de projeto que ele já usa. O workspace de cada bot continua onde está, com a memória, as regras e os anexos dele: o daemon nunca grava nada na pasta escolhida. Cada bot recebe a pasta com `--add-dir` (7.4), e o Claude Code a trata como a pasta do bot: lê e, em "Aceitar edições", edita sem perguntar, e carrega o `CLAUDE.md` dela junto com a memória do bot. A pasta escolhida precisa ser um caminho completo e não pode ser um disco inteiro, ficar dentro da pasta de dados do Botloft ou contê-la, nem conter `workspaces_root` (com os workspaces de todos os bots). Se não existe, é criada. Trocar a pasta regrava as regras e reinicia cada bot da crew quando nada estiver em andamento, como a troca de modo (7.4). Arquivar a crew não apaga pasta nenhuma.
 
+**Excluir não apaga pastas.** Excluir um bot ou uma crew (7.6) tira do Botloft e deixa no disco o workspace de cada bot (memória, regras, anexos e o que ele fez), a `shared\` e a pasta que o dono escolheu: o dono as apaga no Explorer se quiser. Do disco só sai o perfil do navegador do bot (21.2), que fica na pasta de dados e não tem nada que o dono tenha feito. Como a pasta fica, o slug dela continua ocupado, e um bot novo com o mesmo nome ganha sufixo (`revisor-2`). A conversa que o Claude Code guarda por conta própria (`%USERPROFILE%\.claude\projects\`) é dele e também fica.
+
 Nomes de pasta de crew e bot são slugs gerados na criação e **não mudam** quando o nome de exibição muda. Slug: ASCII minúsculo com hífens, acentos transliterados (`Revisão` -> `revisao`), no máximo 32 caracteres, nunca um nome de dispositivo do Windows (`con`, `lpt1`...) e nunca `shared` para bot. Colisão ganha sufixo (`docs-2`), inclusive com slug de item arquivado ou pasta que já exista no disco.
 
 O **handle** do bot (`@revisao`) é derivado do nome pela mesma regra, acompanha renomeações e é único entre os bots ativos da crew; um nome que gere handle já usado é recusado com erro de validação.
@@ -267,6 +269,20 @@ Eventos de uma generation antiga são ignorados. Todo processo novo emite `bot.s
 - Caminho absoluto em permission rule usa o prefixo `//` e a forma POSIX que o Claude Code aplica no Windows: `C:\Users\ana\...` vira `//c/Users/ana/...` (letra do drive em minúscula). Uma barra só (`/caminho`) é relativa à origem do settings, não à raiz, e não protegeria nada. O daemon converte `BOTLOFT_HOME` para essa forma ao gerar o arquivo.
 - Em `-p` o diálogo de confiança da pasta nunca aparece (documentado), então bot novo começa a trabalhar sem passo manual.
 
+### 7.6 Arquivar e excluir
+
+**Arquivar** (`bots.archive`, `crews.archive`) tira o bot ou a crew do app e guarda tudo no banco: o processo para, o token é revogado, as rotinas são arquivadas junto (20.3) e o perfil do navegador é apagado (21.2).
+
+**Excluir** (`bots.delete`, `crews.delete`) apaga do banco, de vez, e vale para ativos e arquivados. Não tem volta, e nenhuma pasta é apagada (5).
+
+- **O bot para na hora.** O processo é morto sem esperar o turno, o token deixa de valer, o navegador fecha e o perfil dele é apagado, e os pedidos de permissão abertos caem. O supervisor esquece o bot: o que o processo ainda imprimir é ignorado, e uma reconciliação que tinha lido o bot antes não o sobe de novo.
+- **Sai do banco** (12), numa transação: o bot, o chat dele, as aprovações, as messages que ele **recebeu** (com deliveries e o registro dos anexos), as rotinas com as execuções, os sites liberados no navegador e as tasks que ele pediu ou recebeu. Se era o chefe, a crew fica sem chefe (10.2).
+- **Fica com os outros bots:** as messages que o excluído **mandou** continuam no chat de quem recebeu e na timeline da crew, sem remetente (`fromBotId: null`) e sem task. Uma que ainda esperava na fila chega com `from a deleted bot` e sem instrução de resposta (9.3).
+- **Tasks em aberto** (`open` ou `expired`) somem com o bot, e o outro lado é avisado pelo daemon (`from Botloft`), se ainda está ativo: quem pediu uma task ao excluído lê que ela não vai ser feita; quem fazia uma task para o excluído lê que ninguém mais espera o resultado. Um `complete_task` dela responde que a task não existe.
+- **Excluir uma crew** exclui todos os bots dela, ativos e arquivados, com tudo acima, e a crew. Ninguém é avisado: não sobra ninguém.
+- **Avisos ao app:** `bot.deleted {botId, crewId}` e `crew.deleted {crewId}` (11.3). O app tira do store o bot (ou a crew com os bots) e o que era dele: rotinas, tasks, deliveries e o navegador. As outras coisas que mudam saem pelos avisos de sempre (`crew.changed` sem chefe, `message.created` dos avisos de task).
+- **Próximos passos:** Excluir nos menus do app, com uma confirmação que diz o que sai e o que fica; nela, uma caixa para mandar a pasta para a Lixeira; e uma lista dos arquivados, que hoje o app não mostra.
+
 ## 8. Chat
 
 O chat de um bot é a sequência de itens que o daemon monta a partir do que entra no stdin e do que sai no stdout. Ele fica no banco (`chat_items`), é paginado pelo app e é a única visão da conversa: não há terminal.
@@ -373,7 +389,8 @@ Reply with send_message(to: "revisor"). When the task is done, call complete_tas
 
 - Nota de outro bot: primeira linha `[botloft] from @revisor · crew Exemplo` e só a instrução de resposta.
 - Resultado de task: `· result of task tsk_... · done` (ou `failed`) e a instrução de resposta.
-- Aviso do daemon (task vencida): `from Botloft` e o texto do aviso, sem instrução.
+- Aviso do daemon (task vencida, task de um bot excluído): `from Botloft` e o texto do aviso, sem instrução.
+- Message de um bot que o dono excluiu enquanto ela esperava na fila (7.6): `from a deleted bot`, sem instrução de resposta, porque não há a quem responder.
 - Rotina: `routine "<nome>" · scheduled <data e hora> (<fuso>)` e o aviso de que ninguém está olhando (20.5).
 - O prazo é relativo (`due in 45 min`, `due in 2 h`, `overdue`) e calculado na hora do envio: o bot não sabe a hora atual, e o app mostra o horário absoluto a partir de `deadline_at`.
 
@@ -386,6 +403,7 @@ Reply with send_message(to: "revisor"). When the task is done, call complete_tas
 - `complete_task` só vale para quem recebeu a task, com status `open` ou `expired`. Grava o resultado e, na mesma transação, cria a message `result` para o solicitante.
 - Task vencida vira `expired` no ciclo do courier, e o solicitante recebe um aviso do daemon (`from Botloft`). Ela continua aceitando resultado atrasado.
 - `cancelled` fica reservado: nenhuma tool cancela task no MVP.
+- Excluir um bot apaga as tasks que ele pediu ou recebeu e avisa o outro lado das que estavam em aberto (7.6).
 
 ### 9.5 Anexos
 
@@ -451,7 +469,7 @@ A aprovação só abre se `tool_use_id` for de uma ferramenta em `running` no ch
 
 ### 10.2 Chefe e sugestões de bots
 
-Toda crew nova nasce com um **chefe**: `crews.create` com `lead` cria a crew e esse bot juntos, e `Crew.leadBotId` aponta para ele. O app escreve nome e papel no idioma do dono ("Chefe", "Lidera a equipe: planeja o trabalho, sugere bots novos e distribui as tarefas"); as instruções são o objetivo que o dono escreveu para a crew. O chefe é gravado antes de o supervisor poder subi-lo, então o primeiro start já lê que lidera. O dono troca o chefe (`crews.setLead`) ou deixa a crew sem nenhum; o chefe antigo e o novo têm as regras regravadas e reiniciam quando nada estiver em andamento (7.4). Arquivar o chefe deixa a crew sem chefe. Crews de antes não têm chefe até o dono escolher um.
+Toda crew nova nasce com um **chefe**: `crews.create` com `lead` cria a crew e esse bot juntos, e `Crew.leadBotId` aponta para ele. O app escreve nome e papel no idioma do dono ("Chefe", "Lidera a equipe: planeja o trabalho, sugere bots novos e distribui as tarefas"); as instruções são o objetivo que o dono escreveu para a crew. O chefe é gravado antes de o supervisor poder subi-lo, então o primeiro start já lê que lidera. O dono troca o chefe (`crews.setLead`) ou deixa a crew sem nenhum; o chefe antigo e o novo têm as regras regravadas e reiniciam quando nada estiver em andamento (7.4). Arquivar ou excluir o chefe deixa a crew sem chefe. Crews de antes não têm chefe até o dono escolher um.
 
 - **Regras do chefe:** além das de todo bot, uma seção "You lead this crew": planejar, dividir o trabalho em partes que rodam em paralelo e distribuí-las com `send_message` (`kind: "task"`); conferir os resultados antes de responder ao dono; quando faltar um especialista, sugerir um bot com `suggest_bot`; escolher o modelo pelo trabalho (`haiku` para o simples e repetitivo, `sonnet` para quase tudo, `opus` ou `fable` só para o raciocínio mais difícil, lembrando que gastam mais do plano); manter a crew pequena; e contar ao dono o que cada bot faz, para ele acompanhar e falar com cada um no chat dele. Os outros bots leem que, se a crew precisar de outro bot, devem pedir ao chefe, que o `crew_roster` marca com `chief`.
 - **`suggest_bot`:** aparece para todos os bots, mas só o chefe pode usar; os outros recebem um erro que manda pedir ao chefe. Antes de incomodar o dono, o daemon confere os campos (os de um bot, mais o limite de instruções e o porquê), que o nome está livre na crew e que a crew tem menos de `max_per_crew` bots ativos. Um pedido impossível volta como erro ao chefe.
@@ -485,6 +503,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `crews.setLead` | `crewId, botId` (ou `null`, sem chefe) | `Crew`; o chefe antigo e o novo reiniciam quando nada estiver em andamento (10.2) |
 | `crews.setWorkFolder` | `crewId, workFolder` (caminho, ou `null` para voltar à `shared\`) | `Crew`; os bots reiniciam na pasta nova quando nada estiver em andamento (5) |
 | `crews.archive` | `crewId` | `Crew` |
+| `crews.delete` | `crewId` | `{crewId}`; exclui a crew, ativa ou arquivada, com todos os bots dela (7.6) |
 | `bots.list` | `crewId?` | `Bot[]` |
 | `bots.create` | `crewId, name, role, instructions, color?, model?` | `Bot` |
 | `bots.update` | `botId, name?, role?, instructions?, color?` | `Bot` |
@@ -493,6 +512,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `bots.setModel` | `botId, model` (`default`, `fable`, `opus`, `sonnet`, `haiku`) | `Bot`; o bot reinicia no novo modelo quando nada estiver em andamento (7.4) |
 | `bots.restart` | `botId, fresh?` | `Bot` |
 | `bots.archive` | `botId` | `Bot` |
+| `bots.delete` | `botId` | `{botId, crewId}`; exclui o bot, ativo ou arquivado (7.6) |
 | `chat.history` | `botId, before?, limit?` | `ChatItem[]`, mais novo primeiro; `limit` de 1 a 200, 50 se ausente |
 | `approvals.answer` | `approvalId, allow, note?, input?` (`input`: a sugestão de bot como o dono a deixou, 10.2) | `Approval` |
 | `messages.send` | `botId, body, attachments?` (`[{name, mediaType, data}]`, data em base64) | `Message` |
@@ -512,7 +532,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 
 ### 11.3 Notificações do servidor
 
-`bot.state`, `bot.changed`, `crew.changed`, `chat.item`, `chat.delta`, `message.created`, `delivery.changed`, `task.changed`, das rotinas `routine.changed` e `routine.run` (20.8), e do navegador `browser.changed`, `browser.action` e, só para quem assiste, `browser.frame` (21.7), e das telas `screen.draft` (22.3).
+`bot.state`, `bot.changed`, `bot.deleted`, `crew.changed`, `crew.deleted` (7.6), `chat.item`, `chat.delta`, `message.created`, `delivery.changed`, `task.changed`, das rotinas `routine.changed` e `routine.run` (20.8), e do navegador `browser.changed`, `browser.action` e, só para quem assiste, `browser.frame` (21.7), e das telas `screen.draft` (22.3).
 
 ### 11.4 Erros
 
@@ -524,11 +544,11 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `-32004` | validação |
 | `-32005` | runtime indisponível (claude ausente ou versão antiga) |
 
-Além desses, os códigos padrão do JSON-RPC: `-32700` (JSON inválido), `-32600` (request inválido), `-32601` (método desconhecido), `-32602` (params inválidos) e `-32603` (erro interno; a mensagem não traz corpo de mensagem nem token). `crews.archive` e `bots.archive` são idempotentes.
+Além desses, os códigos padrão do JSON-RPC: `-32700` (JSON inválido), `-32600` (request inválido), `-32601` (método desconhecido), `-32602` (params inválidos) e `-32603` (erro interno; a mensagem não traz corpo de mensagem nem token). `crews.archive` e `bots.archive` são idempotentes. `crews.delete` e `bots.delete` não: o que já foi excluído não existe mais, e a segunda chamada dá `-32002`, como qualquer outro método com esse id.
 
 ## 12. Dados (SQLite)
 
-Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations numeradas em `botloft-store/migrations/NNNN_nome.sql`, versão em `PRAGMA user_version`. Tempo em milissegundos Unix (`INTEGER`). Arquivamento é lógico (`archived_at`).
+Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations numeradas em `botloft-store/migrations/NNNN_nome.sql`, versão em `PRAGMA user_version`. Tempo em milissegundos Unix (`INTEGER`). Arquivamento é lógico (`archived_at`). Exclusão (7.6) apaga as linhas: as chaves estrangeiras não têm `ON DELETE`, então o daemon apaga ou solta, na ordem e numa transação só, tudo que aponta para o bot (`approvals`, `chat_items`, `browser_sites`, `routine_runs`, `attachments`, `deliveries`, as `messages` recebidas, `routines`, `tasks`), e zera `messages.from_bot_id`, `messages.task_id`, `tasks.origin_task_id` e `crews.lead_bot_id` onde apontavam para o que saiu. Uma crew sai depois dos bots dela.
 
 | Tabela | Colunas principais |
 |---|---|
@@ -573,7 +593,7 @@ Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations 
 | Processos órfãos | Job Object por bot (seção 7.3) |
 | Encerramento | `ctrl_c`, `ctrl_close`, `ctrl_shutdown`, `ctrl_logoff` do Tokio: parar courier, sinalizar bots, flush do banco. Esses sinais são de console: iniciado pela tarefa, sem console, o daemon não tem garantia de recebê-los, e o Windows encerra o processo no logoff e no desligamento. Isso equivale a um crash, e o sistema já é feito para ele (mensagens gravadas antes de sair, bots mortos pelo Job Object, aprovações abertas expiram no próximo start). Um erro fatal na subida vai para o log, porque ninguém vê o stderr da tarefa |
 | Caminhos longos | manifesto `longPathAware` no daemon e no app; usar APIs com `\\?\` ao apagar árvores de workspace |
-| Arquivo em uso | arquivar bot só apaga workspace depois do processo encerrado; retentar exclusão se bloqueado |
+| Arquivo em uso | arquivar e excluir não apagam workspace (5). O perfil do navegador do bot é apagado depois que o navegador fecha, com novas tentativas por 5 s enquanto o Edge ainda segura os arquivos |
 | Instância única | lock exclusivo em `<BOTLOFT_HOME>\botloftd.lock` (`File::try_lock`), solto pelo sistema quando o processo termina, mesmo em crash; se já estiver preso, sair com erro claro. É um lock por pasta de dados, e não um mutex de nome fixo, para o daemon de dev (`BOTLOFT_HOME`) rodar ao lado do instalado |
 | Porta ocupada | se 45710 estiver em uso por outro processo, sair com erro (sem porta alternativa no MVP) |
 
@@ -914,7 +934,7 @@ Cada disparo vira uma `routine_run`, com o horário marcado (`scheduled_for`), u
 - **Sobreposição:** o horário chega com a execução anterior ainda `queued` (o bot está lento, parado por limite de uso, sem login ou fora do ar).
   - `skip` (padrão): registra `skipped` com `reason: overlap`. Um bot lento ou fora do ar não acumula pedidos repetidos.
   - `queue`: grava mesmo assim, mas só uma execução espera atrás da aberta; as outras viram `skipped`.
-- **Bot ou crew pausados:** o horário vira `skipped` (`bot_paused`); a rotina não guarda pedidos para quando voltar. Bot ou crew arquivados: a rotina é arquivada junto.
+- **Bot ou crew pausados:** o horário vira `skipped` (`bot_paused`); a rotina não guarda pedidos para quando voltar. Bot ou crew arquivados: a rotina é arquivada junto. Excluídos: a rotina e as execuções são apagadas (7.6).
 - **Rodar agora:** `routines.runNow` cria uma execução fora de hora (`scheduled_for` = agora), sem mexer no próximo horário, e vale a mesma regra de sobreposição.
 
 ### 20.4 Horários perdidos
@@ -1025,7 +1045,7 @@ Cada bot tem um navegador próprio para pesquisar e usar sites: um Microsoft Edg
 - Comando: `msedge.exe --headless=new --remote-debugging-port=0 --user-data-dir=<home>\browsers\<bot_id> --no-first-run --no-default-browser-check --mute-audio --disable-extensions --disable-sync about:blank`. Sem `--disable-extensions`, um perfil novo recebe as extensões instaladas para todo o computador, e elas abrem abas próprias no navegador do bot (visto com o Edge 154). Com a porta 0, o Edge escolhe uma porta livre em 127.0.0.1 e a escreve com o caminho do WebSocket em `DevToolsActivePort`, na pasta do perfil (visto com o Edge 154); o daemon apaga o arquivo antigo antes de subir e espera o novo por até 10 s.
 - Como o `claude.exe`: sem janela (`CREATE_NO_WINDOW`), num Job Object próprio com `KILL_ON_JOB_CLOSE` (morre junto com o daemon) e com o ambiente padrão do usuário (7.4).
 - Achar o Edge: `[browser] path`, senão `msedge.exe` em `%ProgramFiles(x86)%` e `%ProgramFiles%` (`Microsoft\Edge\Application`) e em `%LOCALAPPDATA%`. Sem navegador, a tool responde ao bot que ele não está disponível, e o painel diz o mesmo.
-- **Perfil:** `<home>\browsers\<bot_id>\`, fora da pasta do bot e em `%LOCALAPPDATA%` (5): cookies e sessões são do navegador, não dos arquivos que o bot faz. O perfil fica entre aberturas, então um login feito continua valendo. Arquivar o bot fecha o navegador e apaga o perfil.
+- **Perfil:** `<home>\browsers\<bot_id>\`, fora da pasta do bot e em `%LOCALAPPDATA%` (5): cookies e sessões são do navegador, não dos arquivos que o bot faz. O perfil fica entre aberturas, então um login feito continua valendo. Arquivar ou excluir o bot fecha o navegador e apaga o perfil.
 - **Fechar:** depois de `[browser] idle_minutes` sem tool do bot e sem ninguém assistindo; quando o bot ou a crew pausa; com `browser_close`. Se já há `[browser] max_open` navegadores abertos, abrir outro fecha o que está parado há mais tempo, mas nunca um que esteja no meio de uma tool.
 - Se o processo cai ou o WebSocket fecha, o estado vira `closed` e a próxima tool sobe de novo.
 
