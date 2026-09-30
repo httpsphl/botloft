@@ -179,3 +179,14 @@ pub struct BotDeleted {
 pub struct CrewDeleted {
     pub crew_id: CrewId,
 }
+
+/// What the owner archived (`archive.list`): out of the app, kept in the
+/// database, and still there to delete (spec 7.6). `bots` has every
+/// archived bot, those of archived crews too.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct Archive {
+    pub crews: Vec<Crew>,
+    pub bots: Vec<Bot>,
+}

@@ -127,6 +127,7 @@ fn export_bindings() {
     out.decl::<BotStateChanged>();
     out.decl::<BotDeleted>();
     out.decl::<CrewDeleted>();
+    out.decl::<Archive>();
     out.decl::<SenderKind>();
     out.decl::<MessageKind>();
     out.decl::<DeliveryState>();
@@ -232,6 +233,7 @@ fn export_bindings() {
         &out.name::<CrewIdParams>(),
         &crew_deleted,
     );
+    out.method(method::ARCHIVE_LIST, "undefined", &out.name::<Archive>());
     out.method(method::BOTS_LIST, &out.name::<BotsListParams>(), &bots);
     out.method(method::BOTS_CREATE, &out.name::<BotsCreateParams>(), &bot);
     out.method(method::BOTS_UPDATE, &out.name::<BotsUpdateParams>(), &bot);

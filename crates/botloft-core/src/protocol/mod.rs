@@ -90,6 +90,7 @@ pub mod method {
     pub const CREWS_SET_LEAD: &str = "crews.setLead";
     pub const CREWS_ARCHIVE: &str = "crews.archive";
     pub const CREWS_DELETE: &str = "crews.delete";
+    pub const ARCHIVE_LIST: &str = "archive.list";
     pub const BOTS_LIST: &str = "bots.list";
     pub const BOTS_CREATE: &str = "bots.create";
     pub const BOTS_UPDATE: &str = "bots.update";

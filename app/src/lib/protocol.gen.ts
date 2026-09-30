@@ -373,6 +373,13 @@ export type BotDeleted = { botId: BotId, crewId: CrewId, };
 export type CrewDeleted = { crewId: CrewId, };
 
 /**
+ * What the owner archived (`archive.list`): out of the app, kept in the
+ * database, and still there to delete (spec 7.6). `bots` has every
+ * archived bot, those of archived crews too.
+ */
+export type Archive = { crews: Array<Crew>, bots: Array<Bot>, };
+
+/**
  * Who wrote a message.
  */
 export type SenderKind = "owner" | "bot" | "system";
@@ -1005,6 +1012,7 @@ export interface RpcMethods {
   "crews.setLead": { params: CrewsSetLeadParams; result: Crew };
   "crews.archive": { params: CrewIdParams; result: Crew };
   "crews.delete": { params: CrewIdParams; result: CrewDeleted };
+  "archive.list": { params: undefined; result: Archive };
   "bots.list": { params: BotsListParams; result: Array<Bot> };
   "bots.create": { params: BotsCreateParams; result: Bot };
   "bots.update": { params: BotsUpdateParams; result: Bot };

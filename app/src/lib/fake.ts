@@ -221,6 +221,10 @@ export class FakeBotloft implements BotloftApi {
       };
       return this.settings;
     },
+    "archive.list": () => ({
+      crews: [...this.crews.values()].filter((crew) => crew.archivedAt !== null),
+      bots: [...this.bots.values()].filter((bot) => bot.archivedAt !== null),
+    }),
     ...crewHandlers(this),
     ...botHandlers(this),
     ...this.chat.handlers(),
