@@ -72,6 +72,7 @@ async fn create_a_crew_and_a_bot_and_get_a_ready_workspace() {
         let pattern = pattern.as_str().expect("pattern");
         !pattern.contains('\\') && !pattern.starts_with(crew_dir.as_str())
     }));
+    assert_eq!(settings["autoMemoryEnabled"], false);
     let mcp: Value = serde_json::from_str(&read(ws.join(".botloft/mcp.json"))).expect("json");
     assert_eq!(
         mcp["mcpServers"]["botloft"]["url"],

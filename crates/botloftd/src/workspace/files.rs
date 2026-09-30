@@ -25,6 +25,9 @@ pub fn settings_json(botloft_home: &Path, crew_dir: &Path) -> Value {
         },
         // Instruction files above the crew's folder are the owner's.
         "claudeMdExcludes": memory::excludes_above(crew_dir),
+        // The bot's memory is the `CLAUDE.md` in its folder. Claude Code's
+        // own notes live in the owner's profile, outside that folder.
+        "autoMemoryEnabled": false,
     })
 }
 
@@ -194,11 +197,12 @@ mod tests {
             json!(memory::excludes_above(Path::new("/ws/site")))
         );
         assert_eq!(settings["claudeMdExcludes"][0], "/ws/CLAUDE.md");
+        assert_eq!(settings["autoMemoryEnabled"], false);
         let mut keys: Vec<&String> = settings.as_object().expect("object").keys().collect();
         keys.sort();
         assert_eq!(
             keys,
-            ["claudeMdExcludes", "permissions"],
+            ["autoMemoryEnabled", "claudeMdExcludes", "permissions"],
             "a new setting needs a line in spec 7.5"
         );
     }
