@@ -22,8 +22,9 @@ export function DeliveryStatus({ delivery }: { delivery: Delivery }) {
           {text.delivered}
         </p>
       ) : (
+        // The two marks turn blue, as in chat apps; the word says it too.
         <p className={`${line} text-muted`} title={text.readTitle}>
-          <CheckCheck aria-hidden size={12} />
+          <CheckCheck aria-hidden size={12} className="text-read" />
           {text.read}
         </p>
       );

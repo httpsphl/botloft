@@ -21,6 +21,9 @@ import type {
 } from "../lib/protocol.gen";
 import { viewTransition } from "../ui/motion";
 
+/** A panel beside a bot's chat (spec 15.1). */
+export type BotPanel = "details" | "files" | "browser" | "screens";
+
 export interface AppState {
   connection: ConnectionState;
   /** True once crews and bots arrived from the current connection. */
@@ -43,10 +46,16 @@ export interface AppState {
   browsers: Record<BotId, BrowserState>;
   /** When the owner last had each bot open, for failed routine runs. */
   seenAt: Record<BotId, number>;
+  /**
+   * The panel the owner left beside each bot's chat (null: closed), so it is
+   * back when they come back to the bot. Kept until the app closes (spec 15.1).
+   */
+  panels: Record<BotId, BotPanel | null>;
   selectedCrewId: CrewId | null;
   selectedBotId: BotId | null;
   selectCrew(crewId: CrewId | null): void;
   selectBot(botId: BotId): void;
+  setPanel(botId: BotId, panel: BotPanel | null): void;
   /** Applies a record a call returned, before its notification arrives. */
   putCrew(crew: Crew): void;
   putBot(bot: Bot): void;
@@ -98,6 +107,7 @@ export function createAppStore(api: BotloftApi): AppStore {
     routines: {},
     browsers: {},
     seenAt: loadSeen(),
+    panels: {},
     selectedCrewId: null,
     selectedBotId: null,
     selectCrew: (crewId) => {
@@ -114,6 +124,7 @@ export function createAppStore(api: BotloftApi): AppStore {
         viewTransition(() => set({ selectedCrewId: bot.crewId, selectedBotId: botId, seenAt }));
       }
     },
+    setPanel: (botId, panel) => set((state) => ({ panels: { ...state.panels, [botId]: panel } })),
     putCrew: (crew) => set((state) => withCrew(state, crew)),
     putBot: (bot) => set((state) => withBot(state, bot)),
     putRoutine: (routine) => set((state) => withRoutine(state, routine)),

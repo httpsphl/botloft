@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
+import tokens from "../../index.css?raw";
 import { FakeBotloft } from "../../lib/fake";
 import { crewOpened, openTab, renderApp } from "../../test/app";
 
@@ -48,6 +49,34 @@ describe("messages", () => {
       fake.conversation.deliver(owner?.id ?? "", "sent");
     });
     expect(within(sentRow).getByText("Delivered")).toBeDefined();
+  });
+
+  test("a message the bot has read gets its two marks in blue, with the word beside them", async () => {
+    const { fake, lead, writer } = crew();
+    const { delivery } = fake.conversation.say({
+      from: lead.id,
+      to: writer.id,
+      body: "Draft the notes",
+    });
+    fake.conversation.deliver(delivery.id, "sent");
+    renderApp(fake);
+    await crewOpened("Ops");
+    openTab("Timeline");
+    const row = (await within(messages()).findByText("Draft the notes")).closest(
+      "li",
+    ) as HTMLElement;
+    // Delivered is the dim line it always was.
+    expect(within(row).getByText("Delivered").className).toContain("text-muted");
+    expect(row.querySelector(".text-read")).toBeNull();
+
+    act(() => {
+      fake.conversation.read(delivery.id);
+    });
+    const read = within(row).getByText("Read");
+    // Only the marks take the color (a token, spec 15.3); the word stays as readable as before.
+    expect(read.querySelector("svg")?.classList.contains("text-read")).toBe(true);
+    expect(read.className).toContain("text-muted");
+    expect(read.className).not.toContain("text-read");
   });
 
   test("older messages load on demand", async () => {
@@ -139,4 +168,46 @@ describe("tasks", () => {
     });
     expect(screen.getByText("Done: 3 pages")).toBeDefined();
   });
+});
+
+/** The color tokens of one theme in index.css, by name. */
+function theme(selector: string): Record<string, string> {
+  const block = tokens.slice(tokens.indexOf(`${selector} {`)).split("}")[0] ?? "";
+  return Object.fromEntries(
+    [...block.matchAll(/--([\w-]+):\s*(#[0-9a-f]{6})/g)].map((found) => [found[1], found[2]]),
+  );
+}
+
+/** WCAG contrast between two `#rrggbb` colors. */
+function contrast(one: string, other: string): number {
+  const [high = 0, low = 0] = [one, other]
+    .map((hex) => {
+      const [r = 0, g = 0, b = 0] = [1, 3, 5].map((at) => {
+        const value = Number.parseInt(hex.slice(at, at + 2), 16) / 255;
+        return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    })
+    .sort((a, b) => b - a);
+  return (high + 0.05) / (low + 0.05);
+}
+
+describe("the read color", () => {
+  test.each([
+    ["light", ":root"],
+    ["dark", `[data-theme="dark"]`],
+  ])(
+    "in the %s theme the marks stand out from every surface, in a blue of their own",
+    (_, selector) => {
+      const colors = theme(selector);
+      const read = colors.read ?? "";
+      expect(read).toMatch(/^#[0-9a-f]{6}$/);
+      // What an icon needs (3:1), on the chat, a card and a sunken row.
+      for (const surface of ["canvas", "panel", "sunken"]) {
+        expect(contrast(read, colors[surface] ?? "")).toBeGreaterThanOrEqual(3);
+      }
+      // Lighter than the blue of a bot at work, which says something else.
+      expect(contrast(read, "#000000")).toBeGreaterThan(contrast(colors.work ?? "", "#000000"));
+    },
+  );
 });
