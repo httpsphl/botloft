@@ -36,5 +36,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     include: ["src/**/*.test.{ts,tsx}"],
+    // The mascot test reads the flame frames as text; other CSS stays empty.
+    css: { include: [/mascot-flame\.css/] },
   },
 });

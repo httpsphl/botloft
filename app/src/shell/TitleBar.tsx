@@ -4,7 +4,7 @@
 
 import { Copy, Languages, Minus, Square, X } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
-import { BotAvatar } from "../features/bots/BotAvatar";
+import { BOTLOFT_COLOR, BotAvatar } from "../features/bots/BotAvatar";
 import { LOCALES, setLocaleChoice, systemLocale, useLocale, useT } from "../i18n";
 import { useHost } from "../store/context";
 import { Menu } from "../ui/Menu";
@@ -25,7 +25,7 @@ export function TitleBar({
       className="flex h-9 shrink-0 items-center border-line border-b bg-panel"
     >
       <div data-tauri-drag-region className="flex items-center gap-2 pr-4 pl-3">
-        <BotAvatar color="#ffffff" size={18} framed />
+        <BotAvatar color={BOTLOFT_COLOR} size={18} framed />
         <span data-tauri-drag-region className="font-semibold text-sm tracking-tight">
           Botloft
         </span>

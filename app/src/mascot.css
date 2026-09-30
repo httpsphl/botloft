@@ -1,7 +1,8 @@
 /* The mascot (features/bots/BotAvatar.tsx, spec 15.3). Its mood follows
    what the bot does, on top of the state's own icon and label: the flame
    burns (its outline morphs, and the clipped shading follows it), the eyes
-   blink by closing from top and bottom, embers float off the top while it
+   blink by closing from top and bottom and glance around now and then while
+   idle, as in the poses of the drawing, embers float off the top while it
    works, it hops while it waits for the owner, burns low with heavy eyes
    when tired, and sleeps as a small ember with its eyes shut. Less motion
    (motion.css) stops all of it on the plain outline. */
@@ -39,6 +40,11 @@
 
   [data-mood="idle"] .avatar-fire {
     animation: fire-idle 3.6s linear infinite;
+    animation-delay: var(--blink-delay, 0s);
+  }
+
+  [data-mood="idle"] .avatar-look {
+    animation: eye-look 11s ease-in-out infinite;
     animation-delay: var(--blink-delay, 0s);
   }
 
@@ -101,6 +107,26 @@
   }
   94% {
     clip-path: inset(50% 0);
+  }
+}
+
+/* A glance down to the left, back, then up to the right, resting between. */
+@keyframes eye-look {
+  0%,
+  30%,
+  56%,
+  64%,
+  92%,
+  100% {
+    transform: translate(0, 0);
+  }
+  36%,
+  50% {
+    transform: translate(-3px, 10px);
+  }
+  70%,
+  86% {
+    transform: translate(7px, -6px);
   }
 }
 
