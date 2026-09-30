@@ -17,8 +17,20 @@ import { BotAvatar } from "../bots/BotAvatar";
  * were given up on purpose (spec 9.1).
  */
 export function actionableDead(state: AppState): Delivery[] {
-  return deadDeliveries(state).filter((delivery) => state.bots[delivery.botId]);
+  // Asked on every change to the store; the answer changes only with these.
+  const { deliveries, bots } = state;
+  if (lastDead?.deliveries !== deliveries || lastDead.bots !== bots) {
+    const dead = deadDeliveries(state).filter((delivery) => bots[delivery.botId]);
+    lastDead = { deliveries, bots, dead };
+  }
+  return lastDead.dead;
 }
+
+let lastDead: {
+  deliveries: AppState["deliveries"];
+  bots: AppState["bots"];
+  dead: Delivery[];
+} | null = null;
 
 /** Title-bar button for messages that were not delivered, with a list to retry them. */
 export function FailedDeliveries() {

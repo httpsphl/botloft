@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { FakeBotloft } from "../lib/fake";
-import { botsOf, createAppStore, crewList } from "./app";
+import { activityOf, botsOf, createAppStore, crewList } from "./app";
 import { syncStore } from "./sync";
 
 async function synced(fake: FakeBotloft) {
@@ -26,6 +26,20 @@ describe("app store", () => {
     expect(crewList(state).map((crew) => crew.name)).toEqual(["Ops", "Research"]);
     expect(botsOf(state, research.id).map((bot) => bot.handle)).toEqual(["scout"]);
     expect(state.selectedCrewId).toBe(ops.id);
+  });
+
+  test("a chat item moves the bot's list line, not the bot", async () => {
+    const fake = new FakeBotloft();
+    const crew = fake.addCrew("Ops");
+    const scout = fake.addBot(crew.id, "Scout");
+    const { store } = await synced(fake);
+    const before = store.getState().bots[scout.id];
+
+    fake.chat.reply(scout.id, "Found three sources.");
+
+    const state = store.getState();
+    expect(state.bots[scout.id]).toBe(before);
+    expect(activityOf(state, scout.id)).toMatchObject({ text: "Found three sources." });
   });
 
   test("follows state changes and archiving", async () => {

@@ -5,6 +5,7 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
 import type { BotloftApi, ConnectionState, ServerEvent } from "../lib/api";
 import type {
+  Activity,
   Bot,
   BotId,
   BrowserState,
@@ -34,6 +35,12 @@ export interface AppState {
   settings: Settings | null;
   crews: Record<CrewId, Crew>;
   bots: Record<BotId, Bot>;
+  /**
+   * Each bot's conversation-list line (spec 8.3). Kept apart from the bot:
+   * it changes with every chat item, and a new bot object re-renders
+   * everything that shows the bot.
+   */
+  activity: Record<BotId, Activity | null>;
   /**
    * Deliveries by message (each message has one): the most recently
    * updated ones and every dead one, then every change.
@@ -77,6 +84,11 @@ export function crewList(state: AppState): Crew[] {
   return Object.values(state.crews).sort(byCreation);
 }
 
+/** The bot's conversation-list line; see [`AppState.activity`]. */
+export function activityOf(state: AppState, botId: BotId): Activity | null {
+  return state.activity[botId] ?? null;
+}
+
 export function botsOf(state: AppState, crewId: CrewId): Bot[] {
   return Object.values(state.bots)
     .filter((bot) => bot.crewId === crewId)
@@ -105,6 +117,7 @@ export function createAppStore(api: BotloftApi): AppStore {
     settings: null,
     crews: {},
     bots: {},
+    activity: {},
     deliveries: {},
     tasks: {},
     routines: {},
@@ -159,7 +172,10 @@ function withCrew(state: AppState, crew: Crew): Partial<AppState> {
 
 function withBot(state: AppState, bot: Bot): Partial<AppState> {
   if (bot.archivedAt === null) {
-    return { bots: { ...state.bots, [bot.id]: bot } };
+    return {
+      bots: { ...state.bots, [bot.id]: bot },
+      activity: { ...state.activity, [bot.id]: bot.lastActivity },
+    };
   }
   const { [bot.id]: _gone, ...bots } = state.bots;
   return { bots, selectedBotId: state.selectedBotId === bot.id ? null : state.selectedBotId };
@@ -178,6 +194,7 @@ function withoutBots(state: AppState, botIds: BotId[]): Partial<AppState> {
   const gone = new Set(botIds);
   return {
     bots: kept(state.bots, (bot) => !gone.has(bot.id)),
+    activity: Object.fromEntries(Object.entries(state.activity).filter(([id]) => !gone.has(id))),
     routines: kept(state.routines, (routine) => !gone.has(routine.botId)),
     browsers: kept(state.browsers, (browser) => !gone.has(browser.botId)),
     deliveries: kept(state.deliveries, (delivery) => !gone.has(delivery.botId)),
@@ -231,11 +248,10 @@ export function applyEvent(state: AppState, event: ServerEvent): Partial<AppStat
     }
     case "chat.item": {
       const { item, activity } = event.params;
-      const bot = state.bots[item.botId];
-      if (!bot || !activity) {
+      if (!state.bots[item.botId] || !activity) {
         return null;
       }
-      return { bots: { ...state.bots, [bot.id]: { ...bot, lastActivity: activity } } };
+      return { activity: { ...state.activity, [item.botId]: activity } };
     }
     case "delivery.changed":
       return { deliveries: { ...state.deliveries, [event.params.messageId]: event.params } };
