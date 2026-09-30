@@ -61,10 +61,10 @@ export const crews: Messages["crews"] = {
         ? "El equipo sale de la app."
         : `El equipo sale de la app. ${bots === 1 ? "Su bot se detiene" : `Sus ${bots} bots se detienen`}, y los mensajes que aún ${bots === 1 ? "lo" : "los"} esperan no se entregan.`,
     deleteTitle: (crew: string) => `¿Eliminar ${crew}?`,
-    deleteBody: (crew: string, bots: number) =>
+    deleteBody: (crew: string, bots: number, running: boolean) =>
       bots === 0
         ? `${crew} sale de Botloft para siempre. No se puede deshacer.`
-        : `${crew} y ${bots === 1 ? "su bot" : `sus ${bots} bots`} se detienen ahora y salen de Botloft para siempre, con sus conversaciones, rutinas y tareas. No se puede deshacer.`,
+        : `${crew} y ${bots === 1 ? "su bot" : `sus ${bots} bots`} ${running ? "se detienen ahora y salen" : "salen"} de Botloft para siempre, con sus conversaciones, rutinas y tareas. No se puede deshacer.`,
     deleteKept:
       "Las carpetas siguen en tu ordenador, con todo lo que contienen: la carpeta de cada bot y la carpeta de trabajo del equipo:",
     failed: {

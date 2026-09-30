@@ -64,10 +64,11 @@ export const crews = {
         ? "The crew leaves the app."
         : `The crew leaves the app. ${bots === 1 ? "Its bot stops" : `Its ${bots} bots stop`}, and messages still waiting for them are not delivered.`,
     deleteTitle: (crew: string) => `Delete ${crew}?`,
-    deleteBody: (crew: string, bots: number) =>
+    /** `running` is false for an archived crew, which stopped long ago. */
+    deleteBody: (crew: string, bots: number, running: boolean) =>
       bots === 0
         ? `${crew} leaves Botloft for good. This can't be undone.`
-        : `${crew} and ${bots === 1 ? "its bot" : `its ${bots} bots`} stop now and leave Botloft for good, with their conversations, routines and tasks. This can't be undone.`,
+        : `${crew} and ${bots === 1 ? "its bot" : `its ${bots} bots`} ${running ? "stop now and leave" : "leave"} Botloft for good, with their conversations, routines and tasks. This can't be undone.`,
     deleteKept:
       "The folders stay on your computer, with everything in them: each bot's own folder and the crew's work folder:",
     failed: {

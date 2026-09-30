@@ -72,8 +72,9 @@ export const bots = {
     deleteConfirm: {
       title: (name: string) => `Delete ${name}?`,
       confirm: "Delete bot",
-      removed: (name: string) =>
-        `${name} stops now and leaves Botloft for good, with its conversation, its routines and the tasks it was part of. This can't be undone.`,
+      /** `running` is false for an archived bot, which stopped long ago. */
+      removed: (name: string, running: boolean) =>
+        `${name} ${running ? "stops now and leaves" : "leaves"} Botloft for good, with its conversation, its routines and the tasks it was part of. This can't be undone.`,
       chief: (crew: string) => `${crew} will be left without a chief.`,
       kept: (name: string) => `${name}'s folder stays on your computer, with everything in it:`,
     },

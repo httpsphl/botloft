@@ -4,11 +4,11 @@ import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
 import { useApi, useApp, useHost } from "../../store/context";
 import { Confirm } from "../../ui/Confirm";
-import { KeptFolder } from "../../ui/KeptFolder";
 import type { MenuItem } from "../../ui/Menu";
 import { attempt } from "../../ui/toast";
 import { BotDialog } from "./BotDialog";
 import { isChief } from "./ChiefBadge";
+import { DeleteBot } from "./DeleteBot";
 
 type Open = "edit" | "archive" | "delete" | "fresh" | null;
 
@@ -27,7 +27,6 @@ export function useBotActions(
   const host = useHost();
   const putBot = useApp((state) => state.putBot);
   const putCrew = useApp((state) => state.putCrew);
-  const dropBot = useApp((state) => state.dropBot);
   const chief = isChief(bot, crew);
   const [open, setOpen] = useState<Open>(null);
   const close = () => setOpen(null);
@@ -89,22 +88,7 @@ export function useBotActions(
         {words.archiveConfirm.body}
       </Confirm>
     ) : open === "delete" ? (
-      <Confirm
-        title={words.deleteConfirm.title(bot.name)}
-        confirmLabel={words.deleteConfirm.confirm}
-        onClose={close}
-        onConfirm={() =>
-          attempt(words.failed.delete, async () =>
-            dropBot((await api.call("bots.delete", { botId: bot.id })).botId),
-          )
-        }
-      >
-        <p>
-          {words.deleteConfirm.removed(bot.name)}
-          {chief && ` ${words.deleteConfirm.chief(crew.name)}`}
-        </p>
-        <KeptFolder path={bot.workspace}>{words.deleteConfirm.kept(bot.name)}</KeptFolder>
-      </Confirm>
+      <DeleteBot bot={bot} chiefOf={chief ? crew.name : undefined} onClose={close} />
     ) : null;
 
   return { items, dialogs };

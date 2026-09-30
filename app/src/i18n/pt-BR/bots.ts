@@ -68,8 +68,8 @@ export const bots: Messages["bots"] = {
     deleteConfirm: {
       title: (name: string) => `Excluir ${name}?`,
       confirm: "Excluir bot",
-      removed: (name: string) =>
-        `${name} para agora e sai do Botloft de vez, com a conversa, as rotinas e as tarefas de que fazia parte. Não dá para desfazer.`,
+      removed: (name: string, running: boolean) =>
+        `${name} ${running ? "para agora e sai" : "sai"} do Botloft de vez, com a conversa, as rotinas e as tarefas de que fazia parte. Não dá para desfazer.`,
       chief: (crew: string) => `${crew} fica sem chefe.`,
       kept: (name: string) =>
         `A pasta de ${name} continua no seu computador, com tudo o que está nela:`,
