@@ -121,6 +121,9 @@ The full design, from the protocol to the states of a bot, lives in [`docs/spec.
   cooperative: a bot can read other bots' folders if it decides to. Give bots only the permissions
   you would give Claude Code directly.
 
+What Botloft sends over the network, what it changes on your computer and how to remove it are in
+the [code signing policy](docs/code-signing-policy.md).
+
 ## FAQ
 
 <details>
@@ -150,7 +153,8 @@ that you can point at a project of yours. Botloft's own data (SQLite, logs, secr
 
 The installer is not code-signed yet, so SmartScreen does not know its publisher. Each release is
 built by GitHub Actions from this repository, and updates are signed and checked by the app before
-they install.
+they install. The [code signing policy](docs/code-signing-policy.md) says how releases are made and
+how to check a download.
 </details>
 
 <details>
