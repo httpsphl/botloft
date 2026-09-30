@@ -716,7 +716,7 @@ Identidade: o mascote do Botloft é uma chama com olhos. O ícone do app (`app/a
 - Com versão nova, aparece "Update available" na barra de título. Um clique abre o diálogo: a versão, "What's new" (se o release tiver notas) e o aviso de que o Botloft fecha, instala e abre de novo, e de que os bots pausam por um instante e continuam de onde pararam. "Update now" baixa com progresso e roda o instalador; se falhar, o erro fica em "Details" e dá para tentar de novo.
 - O feed aponta para o instalador NSIS do release, `Botloft_<versão>_x64-update.exe`, e não para a tela de instalação (15.7). O instalador roda como `/P /UPDATE /R`: passivo, sem perguntas, e reabre o app. O hook de desinstalação não faz nada com `/UPDATE` (15.4), o daemon segue rodando, e o app reaberto o atualiza porque ele ficou `outdated` (15.2).
 - Os artefatos são assinados com a chave do updater do Tauri (`createUpdaterArtifacts`), e a chave pública fica no `tauri.conf.json`. `requireSignedVersion` exige que a assinatura traga a versão, para um feed adulterado não empurrar uma versão antiga de volta. O instalador não tem assinatura Authenticode, então o SmartScreen avisa na primeira execução.
-- Release: a versão fica só no `[workspace.package]` do `Cargo.toml` (o `tauri.conf.json` não repete a versão e usa a do crate). Um push de tag `vX.Y.Z` roda `.github/workflows/release.yml`, que confere tag e versão, roda `pnpm bundle` com `TAURI_SIGNING_PRIVATE_KEY` (segredo do repositório) e abre um release **rascunho** com o instalador, o `.sig` e o `latest.json` (`app/scripts/release.mjs`). O updater só enxerga o release depois que o dono o publica.
+- Release: a versão fica só no `[workspace.package]` do `Cargo.toml` (o `tauri.conf.json` não repete a versão e usa a do crate). Um push de tag `vX.Y.Z` roda `.github/workflows/release.yml`, que confere tag e versão, roda `pnpm bundle` com `TAURI_SIGNING_PRIVATE_KEY` (segredo do repositório), depois `pnpm bundle:setup` (15.7), e abre um release **rascunho** com a tela de instalação (`-setup.exe`), o instalador do atualizador (`-update.exe`) e o `.sig` dele, e o `latest.json` (`app/scripts/release.mjs`). O updater só enxerga o release depois que o dono o publica.
 
 ### 15.6 Idiomas
 
@@ -757,7 +757,8 @@ Identidade: o mascote do Botloft é uma chama com olhos. O ícone do app (`app/a
 **Build e release.**
 
 - `pnpm bundle:setup` (em `app/`, `scripts/setup.mjs`) roda `vite build --mode setup`, que gera só a `setup.html` em `app/dist-setup`, e `cargo build -p botloft-setup --release --features tauri/custom-protocol` com `BOTLOFT_SETUP_PAYLOAD` apontando para o instalador NSIS que o `pnpm bundle` acabou de gerar. O resultado vai para `target\release\bundle\setup\Botloft_<versão>_x64-setup.exe`. Com `-- --rehearse`, sai sem o instalador dentro. O setup não usa o CLI do Tauri, porque não precisa de bundle: basta o executável.
-- O release (15.5) passa a ter a tela de instalação como `Botloft_<versão>_x64-setup.exe`, o nome que o README já indica, e o instalador NSIS como `Botloft_<versão>_x64-update.exe` com o `.sig`, que é para onde o `latest.json` aponta. O `release.mjs` copia os dois com esses nomes antes de publicar.
+- O release (15.5) passa a ter a tela de instalação como `Botloft_<versão>_x64-setup.exe`, o nome que o README já indica, e o instalador NSIS como `Botloft_<versão>_x64-update.exe` com o `.sig`, que é para onde o `latest.json` aponta. O `release.mjs stage` copia os dois com esses nomes para `target\release\bundle\release\` e escreve o `latest.json`; o `publish` faz o `stage` e sobe o que ficou lá. O `stage` roda sozinho para conferir os arquivos sem criar release.
+- O CI do app também roda `vite build --mode setup`, para a página do setup não quebrar só na hora do release.
 - O setup não tem assinatura Authenticode, como o NSIS (15.5): o SmartScreen avisa ao abrir. O NSIS gravado na pasta temporária não tem a marca da internet e não passa de novo pelo SmartScreen.
 - O executável fica maior, com a janela mais o NSIS inteiro: 15,4 MB na 0.5.0, contra 6,8 MB do NSIS sozinho.
 
@@ -766,7 +767,7 @@ Identidade: o mascote do Botloft é uma chama com olhos. O ícone do app (`app/a
 - `/S` por cima de uma versão instalada: se desinstala a anterior (como o `/P` faz pela página de reinstalação) ou só sobrescreve, e se algum arquivo antigo fica. **Mesma versão** (0.5.0 sobre 0.5.0, 2026-09-29): nenhum processo de desinstalador apareceu (olhando a cada 100 ms); o NSIS só sobrescreveu os arquivos. Falta ver com uma versão mais antiga (I3).
 - `/S` com o app aberto: se o NSIS fecha o app sozinho, pergunta ou falha. O setup fecha o app antes (verificado: "Instalar de novo" com o app aberto fechou o app, instalou e abriu de novo), mas o comportamento do NSIS sozinho precisa ficar anotado.
 - `/S` com uma versão mais nova instalada: se sai com erro (`silentDowngrades`) e com qual código.
-- O atualizador aceita o instalador com o nome novo (`-update.exe`) e o roda como NSIS.
+- O atualizador aceita o instalador com o nome novo (`-update.exe`) e o roda como NSIS. **Na fonte** (`tauri-plugin-updater` 2.13, `extract_exe`): o tipo vem dos bytes baixados, e qualquer `.exe` é tratado como NSIS; o nome não conta. Falta ver a atualização de verdade da 0.5.0 para a 0.6.0.
 - Com o manifesto `asInvoker`, o Windows não pede administrador para o setup. **Verificado** (Windows 11 25H2, 2026-09-29): o `Botloft_0.5.0_x64-setup.exe` abriu a janela direto, sem pedido do UAC.
 - O identificador dos atalhos continua o mesmo, para os avisos saírem com o nome do Botloft.
 
@@ -779,7 +780,7 @@ Um teste que instala uma cópia em outra pasta e depois a desinstala apaga a ent
 | Marco | Entrega | Pronto quando |
 |---|---|---|
 | **I1** Tela | crate `botloft-setup`, telas com `FakeSetup` e a prévia `?setup`, instalação pelo NSIS em silêncio, abrir o app ao terminar, modo de ensaio sem o instalador dentro | instalar pela tela nova numa máquina sem o Botloft e o app abrir; testes das telas e do `SetupHost` |
-| **I2** Release | `pnpm bundle:setup`, `release.mjs` e `release.yml` com os dois arquivos, README | um release rascunho com a tela de instalação, o `-update.exe`, o `.sig` e o `latest.json` certo |
+| **I2** Release | `pnpm bundle:setup`, `release.mjs` e `release.yml` com os dois arquivos; o README vai num PR próprio, junto com a 0.6.0 | um release rascunho com a tela de instalação, o `-update.exe`, o `.sig` e o `latest.json` certo |
 | **I3** Acabamento | versão já instalada (mais antiga, igual, mais nova), app aberto, falha com o instalador clássico, sem WebView2 | cada caso testado à mão no Windows e anotado em "A verificar" |
 
 Esta seção entra no PR do I1, junto com o código.

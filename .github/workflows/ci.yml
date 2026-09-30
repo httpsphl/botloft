@@ -62,3 +62,5 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm build
+      - name: The setup window's page builds too (spec 15.7)
+        run: pnpm exec vite build --mode setup
