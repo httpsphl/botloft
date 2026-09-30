@@ -17,6 +17,13 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  # Code signing (spec 15.5). With the certificate's thumbprint in the
+  # repository variable BOTLOFT_SIGN_THUMBPRINT, scripts/sign.mjs signs every
+  # binary; without it the release goes out unsigned, as today. The step that
+  # puts the certificate in the runner's certificate store (signing in to the
+  # cloud key's client) goes before "Build the signed installer".
+  BOTLOFT_SIGN_THUMBPRINT: ${{ vars.BOTLOFT_SIGN_THUMBPRINT }}
+  BOTLOFT_SIGN_TIMESTAMP: ${{ vars.BOTLOFT_SIGN_TIMESTAMP }}
 
 jobs:
   installer:

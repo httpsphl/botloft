@@ -40,6 +40,12 @@ execFileSync(
   { cwd: root, stdio: "inherit", env },
 );
 
+execFileSync(
+  process.execPath,
+  [join(app, "scripts", "sign.mjs"), join(target, "release", "botloft-setup.exe")],
+  { stdio: "inherit" },
+);
+
 const out = join(target, "release", "bundle", "setup");
 mkdirSync(out, { recursive: true });
 const setup = join(out, `Botloft_${version}_x64-setup.exe`);
