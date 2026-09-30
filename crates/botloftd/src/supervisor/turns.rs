@@ -11,7 +11,12 @@ use super::{Inner, Supervisor};
 
 impl Supervisor {
     /// Runs `change` on the slot of `bot` if `generation` is still running.
-    fn with_current(&self, bot: &BotId, generation: u64, change: impl FnOnce(&Self, &mut Slot)) {
+    pub(super) fn with_current(
+        &self,
+        bot: &BotId,
+        generation: u64,
+        change: impl FnOnce(&Self, &mut Slot),
+    ) {
         let mut inner = self.lock();
         let Inner { slots, .. } = &mut *inner;
         if let Some(slot) = slots.get_mut(bot)
@@ -20,12 +25,6 @@ impl Supervisor {
         {
             change(self, slot);
         }
-    }
-
-    /// The conversation the bot is in, from `system/init`; the next start
-    /// resumes it (spec 7.3).
-    pub(crate) fn remember_session(&self, bot: &BotId, session: &str) {
-        self.lock().sessions.insert(bot.clone(), session.to_owned());
     }
 
     /// The process lived through its first moments: it is ready.

@@ -60,6 +60,8 @@ impl Supervisor {
                 self.reconcile_bot(&mut inner, &daemon, crew, bot, now);
             }
         }
+        drop(inner);
+        self.forget_replaced(&daemon);
     }
 
     fn reconcile_bot(
