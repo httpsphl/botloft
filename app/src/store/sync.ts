@@ -2,9 +2,13 @@
 
 import { type BotloftApi, type ConnectionState, errorText } from "../lib/api";
 import type { Delivery } from "../lib/protocol.gen";
+import { onVisibility, windowHidden } from "../shell/visibility";
 import { type AppStore, applyEvent, crewList } from "./app";
 
-/** How often `system.status` is refreshed; it has no notification. */
+/**
+ * How often `system.status` is refreshed; it has no notification. Not while
+ * the window is out of sight: it is read again when it comes back.
+ */
 const STATUS_POLL_MS = 15_000;
 
 /** Keeps `store` in sync with the daemon until the returned function runs. */
@@ -91,7 +95,7 @@ export function syncStore(store: AppStore, api: BotloftApi): () => void {
     clearInterval(poll);
     if (connection.kind === "open") {
       load();
-      poll = setInterval(refreshStatus, STATUS_POLL_MS);
+      poll = setInterval(() => !windowHidden() && refreshStatus(), STATUS_POLL_MS);
     }
   };
 
@@ -103,11 +107,17 @@ export function syncStore(store: AppStore, api: BotloftApi): () => void {
   });
   const unsubscribeConnection = api.onConnection(onConnection);
   onConnection(api.connection());
+  const unsubscribeVisibility = onVisibility(() => {
+    if (!windowHidden() && api.connection().kind === "open") {
+      refreshStatus();
+    }
+  });
 
   return () => {
     alive = false;
     clearInterval(poll);
     unsubscribeEvents();
     unsubscribeConnection();
+    unsubscribeVisibility();
   };
 }

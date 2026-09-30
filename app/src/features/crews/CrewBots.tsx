@@ -3,7 +3,7 @@ import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
-import { BotAvatar, moodOf } from "../bots/BotAvatar";
+import { ListAvatar } from "../bots/BotAvatar";
 import { BotStateBadge } from "../bots/BotStateBadge";
 import { ChiefBadge, isChief } from "../bots/ChiefBadge";
 
@@ -32,7 +32,7 @@ export function CrewBots({ crew, bots, onNewBot }: { crew: Crew; bots: Bot[]; on
             className="flex h-full w-full flex-col gap-2 rounded-xl border border-line bg-panel p-3.5 text-left transition-[border-color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-sm"
           >
             <div className="flex w-full items-center gap-2.5">
-              <BotAvatar color={bot.color} size={32} mood={moodOf(bot, crew.paused)} />
+              <ListAvatar bot={bot} crewPaused={crew.paused} size={32} />
               <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-1.5">
                   <span className="truncate font-semibold">{bot.name}</span>

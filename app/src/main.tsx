@@ -7,6 +7,7 @@ import { connect, rpcUrl } from "./lib/client";
 import type { Host } from "./lib/host";
 import { tauriHost } from "./lib/tauriHost";
 import { prefs } from "./shell/prefs";
+import { markHidden, watchVisibility } from "./shell/visibility";
 import { currentZoom } from "./shell/zoom";
 import "./index.css";
 
@@ -37,6 +38,12 @@ props().then(({ host, connect: open }) => {
   if (prefs.lessMotion.get()) {
     document.documentElement.dataset.motion = "less";
   }
+  watchVisibility();
+  // Opened at sign-in, the window stays hidden until the owner opens it.
+  host.launchedAtSignIn().then(
+    (hidden) => hidden && !document.hasFocus() && markHidden(true),
+    () => {},
+  );
   createRoot(root).render(
     <StrictMode>
       <App host={host} connect={open} />

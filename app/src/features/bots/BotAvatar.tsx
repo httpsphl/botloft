@@ -77,11 +77,14 @@ export function BotAvatar({
   size = 28,
   framed = false,
   mood,
+  still = false,
 }: {
   color: string;
   size?: number;
   framed?: boolean;
   mood?: Mood | undefined;
+  /** Shows the mood without moving. */
+  still?: boolean;
 }) {
   // Every avatar on the page needs its own clip, blur and gradients.
   const unique = useId().replace(/[^\w-]/g, "");
@@ -106,6 +109,7 @@ export function BotAvatar({
       viewBox={box.join(" ")}
       className={`shrink-0 overflow-visible ${framed ? "rounded-lg bg-[#0b0b0b]" : ""}`}
       data-mood={mood}
+      data-still={still || undefined}
       style={style}
     >
       <defs>
@@ -202,4 +206,23 @@ function Eye({ eye, side, fill }: { eye: Ellipse; side: "l" | "r"; fill: string 
       />
     </g>
   );
+}
+
+/**
+ * A bot's mascot in a list (the sidebar, a crew's cards): it moves only
+ * while the bot does something. One idle mascot per bot, all moving, cost
+ * a repaint every frame even with nothing going on.
+ */
+export function ListAvatar({
+  bot,
+  crewPaused,
+  size,
+}: {
+  bot: Pick<Bot, "color" | "state" | "paused">;
+  crewPaused: boolean;
+  size: number;
+}) {
+  const mood = moodOf(bot, crewPaused);
+  const still = mood === "idle" || mood === "sleeping";
+  return <BotAvatar color={bot.color} size={size} mood={mood} still={still} />;
 }

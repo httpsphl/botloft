@@ -1,7 +1,7 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 import flameFrames from "../../mascot-flame.css?raw";
-import { BOTLOFT_COLOR, BotAvatar } from "./BotAvatar";
+import { BOTLOFT_COLOR, BotAvatar, ListAvatar } from "./BotAvatar";
 import { BotStateBadge } from "./BotStateBadge";
 import { BODY, DRAWN_IN, OUTLINE, SHADES } from "./mascotArt";
 import { retint, toHex, toHsl } from "./retint";
@@ -114,5 +114,30 @@ describe("state badge", () => {
 
     rerender(<BotStateBadge bot={{ state: "busy", paused: false }} />);
     expect(container.querySelector(".state-trace")?.getAttribute("pathLength")).toBe("100");
+  });
+});
+
+describe("ListAvatar", () => {
+  const bot = (state: "idle" | "busy" | "offline") => ({
+    color: BOTLOFT_COLOR,
+    state,
+    paused: false,
+  });
+
+  test("a bot at rest keeps its look but does not move; a working one moves", () => {
+    const { container, rerender } = render(
+      <ListAvatar bot={bot("idle")} crewPaused={false} size={32} />,
+    );
+    const svg = () => container.querySelector("svg") as SVGElement;
+    expect(svg().dataset.mood).toBe("idle");
+    expect(svg().hasAttribute("data-still")).toBe(true);
+
+    rerender(<ListAvatar bot={bot("offline")} crewPaused={false} size={32} />);
+    expect(svg().dataset.mood).toBe("sleeping");
+    expect(svg().hasAttribute("data-still")).toBe(true);
+
+    rerender(<ListAvatar bot={bot("busy")} crewPaused={false} size={32} />);
+    expect(svg().dataset.mood).toBe("working");
+    expect(svg().hasAttribute("data-still")).toBe(false);
   });
 });

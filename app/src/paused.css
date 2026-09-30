@@ -1,0 +1,10 @@
+/* The window is out of sight (shell/visibility.ts): nothing animates for
+   nobody. Paused, not stopped, so each animation goes on where it was. */
+
+/* biome-ignore-start lint/complexity/noImportantStyles: a hidden window must pause every animation, inline ones included */
+:root[data-hidden] *,
+:root[data-hidden] *::before,
+:root[data-hidden] *::after {
+  animation-play-state: paused !important;
+}
+/* biome-ignore-end lint/complexity/noImportantStyles: a hidden window must pause every animation, inline ones included */
