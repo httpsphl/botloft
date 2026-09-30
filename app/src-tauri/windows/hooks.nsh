@@ -6,19 +6,64 @@
 ; next to the title, as the Botloft mascot on the page's white.
 !define MUI_HEADERIMAGE_RIGHT
 
+; The installer's own file properties name the publisher too; Tauri's
+; template leaves the company out.
+VIAddVersionKey "CompanyName" "Botloft"
+
+; Tauri keeps the install folder in the registry under
+; Software\<publisher>\<product>. The publisher used to be "github", Tauri's
+; default from the identifier; it is "Botloft" now (`bundle.publisher`).
+; An install made under the old name is adopted under the new one, so an
+; update goes to the folder Botloft is in, and "uninstall before installing"
+; still finds that folder.
+!ifndef BOTLOFT_FOLDER_KEY
+  !define BOTLOFT_FOLDER_KEY "Software\Botloft\Botloft"
+!endif
+!ifndef BOTLOFT_OLD_FOLDER_KEY
+  !define BOTLOFT_OLD_FOLDER_KEY "Software\github\Botloft"
+!endif
+!ifndef BOTLOFT_OLD_PUBLISHER_KEY
+  !define BOTLOFT_OLD_PUBLISHER_KEY "Software\github"
+!endif
+
+; Copies the folder of an install made under the old publisher to the new
+; key, and installs there unless /D chose another folder. It does nothing
+; once the new key exists.
+Function BotloftAdoptOldFolder
+  Push $0
+  ReadRegStr $0 SHCTX "${BOTLOFT_FOLDER_KEY}" ""
+  StrCmp $0 "" 0 botloft_adopt_done
+  ReadRegStr $0 SHCTX "${BOTLOFT_OLD_FOLDER_KEY}" ""
+  StrCmp $0 "" botloft_adopt_done 0
+  WriteRegStr SHCTX "${BOTLOFT_FOLDER_KEY}" "" $0
+  ; Only when the installer is still on its default folder: /D wins.
+  StrCmp $INSTDIR "$LOCALAPPDATA\Botloft" 0 botloft_adopt_done
+  StrCpy $INSTDIR $0
+  botloft_adopt_done:
+  Pop $0
+FunctionEnd
+
+; Before the first page, so the pages and "uninstall before installing" see
+; the adopted folder.
+!define MUI_CUSTOMFUNCTION_GUIINIT BotloftAdoptOldFolder
+
+!macro NSIS_HOOK_PREINSTALL
+  ; The quiet installer (/S) has no pages, so nothing adopted the folder yet.
+  ; The install section already set its output to the default folder.
+  Call BotloftAdoptOldFolder
+  SetOutPath $INSTDIR
+!macroend
+
 !macro NSIS_HOOK_POSTINSTALL
-  ; Installed apps shows Botloft as the publisher. `bundle.publisher` stays
-  ; unset on purpose: Tauri also names the key that keeps the install folder
-  ; after it (Software\<publisher>\Botloft), so a new name would make the
-  ; first update of an existing install run the old uninstaller without its
-  ; folder.
-  WriteRegStr SHCTX "${UNINSTKEY}" "Publisher" "Botloft"
+  ; The folder is under the new name now; the old key goes.
+  DeleteRegKey SHCTX "${BOTLOFT_OLD_FOLDER_KEY}"
+  DeleteRegKey /ifempty SHCTX "${BOTLOFT_OLD_PUBLISHER_KEY}"
 !macroend
 
 !macro NSIS_HOOK_PREUNINSTALL
   ; A real uninstall stops the daemon and removes its scheduled task and
-  ; binary. Bots and data stay in %LOCALAPPDATA%\Botloft. An update runs
-  ; this uninstaller too, with /UPDATE: then the daemon keeps running.
+  ; binary. Bots and data stay in %LOCALAPPDATA%\Botloft. An uninstaller run
+  ; with /UPDATE leaves the daemon running.
   ${If} $UpdateMode <> 1
     nsExec::Exec '"$INSTDIR\botloftd.exe" service uninstall'
     Pop $0
