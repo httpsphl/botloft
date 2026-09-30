@@ -60,11 +60,16 @@ export const chat = {
     input: "Input",
     output: "Output",
     error: "Error",
+    command: "Command",
+    commandCut: "This command is too long to show in full.",
   },
   approval: {
     asks: (bot: string, action: string) => `${bot} asks to ${action}`,
     wants: (bot: string, action: string) => `${bot} wants to ${action}`,
-    fullInput: "Full input",
+    explainedBy: (bot: string) => `${bot} wrote this. What actually runs is the command below.`,
+    unexplained: (bot: string) =>
+      `${bot} did not say what this command is for. If you are not sure, deny it and ask.`,
+    command: "See the command",
     noteLabel: (bot: string) => `Note for ${bot} if you deny`,
     notePlaceholder: "Why not? Sent to the bot if you deny (optional)",
     allow: "Allow",

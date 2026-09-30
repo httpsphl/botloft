@@ -6,13 +6,24 @@ import { useId } from "react";
 import { useT } from "../../i18n";
 import type { ApprovalItem, Bot } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
+import { Details } from "../../ui/Details";
 import { HELP_TOOL, HelpCard } from "../browser/HelpCard";
 import { SITE_TOOL, SiteCard } from "../browser/SiteCard";
+import { commandOf, isCommand } from "./command";
 import { PLAN_TOOL, PlanCard } from "./PlanCard";
 import { SUGGEST_TOOL, SuggestionCard } from "./SuggestionCard";
 import { pretty } from "./ToolLines";
 import { toolAction } from "./toolNames";
 import { useAnswer } from "./useAnswer";
+
+/** What an answered request was about: the bot's words, or the command or file. */
+function About({ approval }: { approval: ApprovalItem }) {
+  return approval.explanation ? (
+    <span className="truncate text-muted text-xs">{approval.explanation}</span>
+  ) : (
+    <span className="truncate font-mono text-muted text-xs">{approval.summary}</span>
+  );
+}
 
 function Answered({ approval }: { approval: ApprovalItem }) {
   const t = useT();
@@ -24,7 +35,7 @@ function Answered({ approval }: { approval: ApprovalItem }) {
         <p className={line}>
           <Check aria-hidden size={14} className="shrink-0 text-ok" />
           <span className="shrink-0 font-medium">{t.chat.approval.allowed(label)}</span>
-          <span className="truncate font-mono text-muted text-xs">{approval.summary}</span>
+          <About approval={approval} />
         </p>
       );
     case "denied":
@@ -32,9 +43,11 @@ function Answered({ approval }: { approval: ApprovalItem }) {
         <p className={line}>
           <Ban aria-hidden size={14} className="shrink-0 text-danger" />
           <span className="shrink-0 font-medium">{t.chat.approval.denied(label)}</span>
-          <span className="truncate text-muted text-xs">
-            {approval.note ? `“${approval.note}”` : approval.summary}
-          </span>
+          {approval.note ? (
+            <span className="truncate text-muted text-xs">{`“${approval.note}”`}</span>
+          ) : (
+            <About approval={approval} />
+          )}
         </p>
       );
     default:
@@ -62,6 +75,39 @@ export function ApprovalCard({ approval, bot }: { approval: ApprovalItem; bot: B
   }
 }
 
+const BOX =
+  "max-h-56 overflow-auto break-all rounded-lg border border-line bg-sunken px-2.5 py-1.5";
+
+/**
+ * A command the bot wants to run: first what the bot says it is for, in
+ * plain text, then the command itself, one click away. The bot wrote the
+ * explanation, so the card says so and never shows it in the command's
+ * place; with none, the command is open from the start (spec 10.1).
+ */
+function CommandAsked({ approval, bot }: { approval: ApprovalItem; bot: Bot }) {
+  const t = useT();
+  const said = approval.explanation;
+  const command = commandOf(approval.input);
+  return (
+    <>
+      {said ? (
+        <>
+          <p className="mt-2 break-words text-sm" data-selectable>
+            {said}
+          </p>
+          <p className="mt-1 text-muted text-xs">{t.chat.approval.explainedBy(bot.name)}</p>
+        </>
+      ) : (
+        <p className="mt-2 text-ink-soft text-sm">{t.chat.approval.unexplained(bot.name)}</p>
+      )}
+      <Details label={t.chat.approval.command} open={!said}>
+        <div className={BOX}>{command.text}</div>
+        {!command.whole && <p className="mt-1 font-sans text-warn">{t.chat.tools.commandCut}</p>}
+      </Details>
+    </>
+  );
+}
+
 function ToolApproval({ approval, bot }: { approval: ApprovalItem; bot: Bot }) {
   const t = useT();
   const { note, setNote, busy, answer } = useAnswer(approval, {
@@ -85,22 +131,20 @@ function ToolApproval({ approval, bot }: { approval: ApprovalItem; bot: Bot }) {
         </span>
         {t.chat.approval.wants(bot.name, label)}
       </p>
-      {approval.summary && (
-        <p className="mt-2 break-words font-mono text-ink-soft text-xs" data-selectable>
-          {approval.summary}
-        </p>
+      {isCommand(approval.toolName) ? (
+        <CommandAsked approval={approval} bot={bot} />
+      ) : (
+        <>
+          {approval.summary && (
+            <p className="mt-2 break-words font-mono text-ink-soft text-xs" data-selectable>
+              {approval.summary}
+            </p>
+          )}
+          <Details>
+            <div className={BOX}>{pretty(approval.input)}</div>
+          </Details>
+        </>
       )}
-      <details className="mt-2 text-xs">
-        <summary className="cursor-default text-muted hover:text-ink">
-          {t.chat.approval.fullInput}
-        </summary>
-        <pre
-          className="mt-1.5 max-h-56 overflow-auto whitespace-pre-wrap break-all rounded-lg border border-line bg-sunken px-2.5 py-1.5 font-mono"
-          data-selectable
-        >
-          {pretty(approval.input)}
-        </pre>
-      </details>
       <label htmlFor={noteId} className="sr-only">
         {t.chat.approval.noteLabel(bot.name)}
       </label>

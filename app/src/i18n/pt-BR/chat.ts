@@ -65,11 +65,16 @@ export const chat: Messages["chat"] = {
     input: "Entrada",
     output: "Saída",
     error: "Erro",
+    command: "Comando",
+    commandCut: "Este comando é longo demais para aparecer inteiro.",
   },
   approval: {
     asks: (bot: string, action: string) => `${bot} pede para ${action}`,
     wants: (bot: string, action: string) => `${bot} quer ${action}`,
-    fullInput: "Entrada completa",
+    explainedBy: (bot: string) => `${bot} escreveu isto. O que roda de verdade é o comando abaixo.`,
+    unexplained: (bot: string) =>
+      `${bot} não disse para que serve este comando. Na dúvida, negue e pergunte.`,
+    command: "Ver o comando",
     noteLabel: (bot: string) => `Observação para ${bot} se você negar`,
     notePlaceholder: "Por que não? Vai para o bot se você negar (opcional)",
     allow: "Permitir",

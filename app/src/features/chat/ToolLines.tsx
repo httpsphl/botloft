@@ -1,5 +1,6 @@
 // What the bot did with its tools: one compact line per call (icon, tool,
-// summary, state) that opens to show the input and the output (spec 15.3).
+// what it is about, state) that opens to show the input, or the command,
+// and the output (spec 15.3).
 
 import {
   Check,
@@ -29,6 +30,7 @@ import { useArrival } from "../../ui/motion";
 import { isBrowserTool, ShowBrowser } from "../browser/showBrowser";
 import { ShowFile } from "../files/showFile";
 import { isScreenFile, ShowScreen } from "../screens/showScreen";
+import { commandOf, isCommand } from "./command";
 import { toolDetail, toolKey, toolTitle } from "./toolNames";
 
 const ICONS: Record<string, LucideIcon> = {
@@ -92,7 +94,11 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
   const showScreen = useContext(ShowScreen);
   const arrival = useArrival(createdAt);
   const title = toolTitle(tool.name, t.tools);
-  const detail = toolDetail(tool, t.tools);
+  // A command reads in the bot's own words, when it gave them; the command
+  // itself is one click away, below.
+  const said = tool.explanation;
+  const detail = said || toolDetail(tool, t.tools);
+  const command = isCommand(tool.name) ? commandOf(tool.input) : null;
   const Icon = iconOf(toolKey(tool.name));
   const block =
     "max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-lg border border-line bg-sunken px-2.5 py-1.5 font-mono text-xs leading-relaxed";
@@ -107,7 +113,10 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
         >
           <Icon aria-hidden size={14} className="shrink-0 text-muted" />
           <span className="shrink-0 font-medium">{title}</span>
-          <span className="min-w-0 flex-1 truncate font-mono text-muted text-xs" title={detail}>
+          <span
+            className={`min-w-0 flex-1 truncate text-muted text-xs ${said ? "" : "font-mono"}`}
+            title={detail}
+          >
             {detail}
           </span>
           <Status status={tool.status} />
@@ -153,8 +162,13 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
       </div>
       {open && (
         <div className="mt-1 mb-2 ml-7 flex animate-rise flex-col gap-1.5" data-selectable>
-          <p className="text-muted text-xs">{t.chat.tools.input}</p>
-          <pre className={block}>{pretty(tool.input)}</pre>
+          <p className="text-muted text-xs">
+            {command ? t.chat.tools.command : t.chat.tools.input}
+          </p>
+          <pre className={block}>{command ? command.text : pretty(tool.input)}</pre>
+          {command && !command.whole && (
+            <p className="text-warn text-xs">{t.chat.tools.commandCut}</p>
+          )}
           {tool.output !== null && (
             <>
               <p className={`text-xs ${tool.status === "failed" ? "text-danger" : "text-muted"}`}>
