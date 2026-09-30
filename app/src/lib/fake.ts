@@ -12,6 +12,7 @@ import { FakeFiles } from "./fakeFiles";
 import { FakeRoutines } from "./fakeRoutines";
 import { conflict, invalid, notFound, slugify } from "./fakeRules";
 import { FakeScreens } from "./fakeScreens";
+import { usageHandlers } from "./fakeUsage";
 import {
   type Bot,
   type BotId,
@@ -253,5 +254,6 @@ export class FakeBotloft implements BotloftApi {
     ...this.browser.handlers(),
     ...this.screens.handlers(),
     ...this.routines.handlers(),
+    ...usageHandlers(this),
   };
 }

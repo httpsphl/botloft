@@ -2,6 +2,13 @@
 // files and the composer. Bot names, tool names and what the bots write
 // are data and never pass through here.
 
+/** A turn's tokens, already written as numbers. */
+export interface TurnTokens {
+  read: string;
+  wrote: string;
+  reread: string;
+}
+
 export const chat = {
   view: {
     label: (bot: string) => `Chat with ${bot}`,
@@ -47,9 +54,14 @@ export const chat = {
   },
   run: {
     working: "Working",
-    done: (time: string) => `Done in ${time}`,
-    took: (time: string, usd: number | null) =>
-      `Took ${time}${usd === null ? "" : ` · about $${usd.toFixed(2)} of usage`}`,
+    done: (time: string, tokens: string | null) =>
+      `Done in ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
+    took: (time: string, tokens: TurnTokens | null) =>
+      `Took ${time}${
+        tokens === null
+          ? ""
+          : `. Read ${tokens.read} new tokens and wrote ${tokens.wrote}; reread ${tokens.reread} of the conversation, which weighs much less.`
+      }`,
     stopped: (reason: string) => `The bot stopped working on this: ${reason}`,
   },
   tools: {

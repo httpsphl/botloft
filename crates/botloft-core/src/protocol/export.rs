@@ -20,6 +20,8 @@ mod browser;
 mod routines;
 #[path = "export_session.rs"]
 mod session;
+#[path = "export_usage.rs"]
+mod usage;
 use crate::validate;
 
 const HEADER: &str = "\
@@ -162,6 +164,7 @@ fn export_bindings() {
     out.decl::<ReplyItem>();
     out.decl::<ToolItem>();
     out.decl::<ApprovalItem>();
+    usage::decls(&mut out);
     out.decl::<TurnItem>();
     out.decl::<NoticeItem>();
     out.decl::<ChatBody>();
@@ -318,6 +321,7 @@ fn export_bindings() {
         &out.name::<Vec<Task>>(),
     );
     session::methods(&mut out);
+    usage::methods(&mut out);
     routines::methods(&mut out);
     browser::methods(&mut out);
     out.text.push_str("}\n\n");

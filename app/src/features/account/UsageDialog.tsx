@@ -1,5 +1,5 @@
 // How much of the Claude plan the bots have used (spec 8.1), from the
-// usage Claude Code reports while bots work.
+// usage Claude Code reports while bots work, and the tokens each bot used.
 
 import { useT } from "../../i18n";
 import { fromNow } from "../../lib/format";
@@ -7,6 +7,7 @@ import type { UsageWindow } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
 import { Callout } from "../../ui/Callout";
 import { Dialog } from "../../ui/Dialog";
+import { TokensByBot } from "./TokensByBot";
 
 export function UsageDialog({ onClose }: { onClose(): void }) {
   const u = useT().account.usage;
@@ -31,6 +32,7 @@ export function UsageDialog({ onClose }: { onClose(): void }) {
             <p className="text-muted text-xs">{u.updated(fromNow(usage.observedAt))}</p>
           </>
         )}
+        <TokensByBot />
       </div>
     </Dialog>
   );

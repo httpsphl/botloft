@@ -27,6 +27,19 @@ export const account: Messages["account"] = {
     resets: (relative: string) => `Se renueva ${relative}`,
     limited: "Límite alcanzado. Tus bots esperan hasta que se renueve.",
     updated: (relative: string) => `Actualizado ${relative}`,
+    tokens: {
+      title: "Tokens por bot",
+      intro:
+        "Los tokens son los trozos de texto que un bot lee y escribe. La cuenta suma el texto nuevo leído y las respuestas escritas; la conversación releída cada vez aparece aparte, porque pesa mucho menos.",
+      period: "Período",
+      periods: { today: "Hoy", week: "7 días", month: "30 días", all: "Todo" },
+      empty: "Ningún bot trabajó en este período.",
+      failed: "No se pudieron cargar los tokens",
+      archived: "archivado",
+      detail: (times: number, reread: string) =>
+        `Trabajó ${times === 1 ? "1 vez" : `${times} veces`} · ${reread} releídos`,
+      total: "Todos los bots",
+    },
   },
   settings: {
     title: "Configuración",

@@ -17,6 +17,7 @@ pub mod routines;
 pub mod screens;
 pub mod settings;
 pub mod tasks;
+pub mod usage;
 
 use botloft_core::protocol::{OwnerAccount, PROTOCOL_VERSION, SystemStatus, error_code};
 use botloft_core::slug;

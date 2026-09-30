@@ -119,7 +119,12 @@ export class FakeChat {
   }
 
   turn(botId: BotId, error: string | null = null): ChatItem {
-    return this.add(botId, { kind: "turn", durationMs: 4200, costUsd: 0.0123, error });
+    return this.add(botId, {
+      kind: "turn",
+      durationMs: 4200,
+      tokens: { input: 12, cacheWrite: 1800, cacheRead: 24_000, output: 640 },
+      error,
+    });
   }
 
   /** A permission request waiting for the owner; `explanation` is what the bot says a command is for. */

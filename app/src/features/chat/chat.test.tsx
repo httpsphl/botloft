@@ -90,7 +90,10 @@ describe("chat", () => {
     expect(within(chat()).getByText("12 passed")).toBeDefined();
     expect(within(chat()).getByText("Command")).toBeDefined();
     expect(within(chat()).getByText("npm test")).toBeDefined();
-    expect(within(chat()).getByText("Done in 4.2 s")).toBeDefined();
+    const done = within(chat()).getByText("Done in 4.2 s · 2.5k tokens");
+    expect(done.title).toBe(
+      "Took 4.2 s. Read 1.8k new tokens and wrote 640; reread 24k of the conversation, which weighs much less.",
+    );
   });
 
   test("an approval waits for the owner, and a denial carries a note", async () => {

@@ -2,6 +2,7 @@
 // 15.6): clock time, dates and short relative phrases ("in 5 min").
 
 import { currentLocale, type Locale } from "../i18n";
+import type { TokenUsage } from "./protocol.gen";
 
 interface Formats {
   clock: Intl.DateTimeFormat;
@@ -90,6 +91,15 @@ export function tokens(count: number): string {
   }
   const millions = count / 1_000_000;
   return `${decimal(millions, Math.abs(millions - Math.round(millions)) < 0.05 ? 0 : 1)}M`;
+}
+
+/**
+ * The tokens a turn counts for (spec 8.7): new input read, with what went
+ * into the prompt cache, and what the model wrote. The conversation reread
+ * from the cache weighs much less and is shown apart.
+ */
+export function usedTokens(usage: TokenUsage): number {
+  return usage.input + usage.cacheWrite + usage.output;
 }
 
 /** "0.8 s", "42 s", "3 min 5 s". */

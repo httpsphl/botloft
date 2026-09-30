@@ -5,7 +5,7 @@
 import { CircleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { useT } from "../../i18n";
-import { duration, when } from "../../lib/format";
+import { duration, tokens, usedTokens, when } from "../../lib/format";
 import type { Bot, ChatItem, TurnItem } from "../../lib/protocol.gen";
 import { useArrival } from "../../ui/motion";
 import { BotAvatar, moodOf } from "../bots/BotAvatar";
@@ -32,9 +32,15 @@ function TurnEnd({ turn }: { turn: TurnItem }) {
     );
   }
   const time = duration(turn.durationMs);
+  const used = turn.tokens;
+  const detail = used && {
+    read: tokens(used.input + used.cacheWrite),
+    wrote: tokens(used.output),
+    reread: tokens(used.cacheRead),
+  };
   return (
-    <p className="text-muted text-xs" title={t.chat.run.took(time, turn.costUsd)}>
-      {t.chat.run.done(time)}
+    <p className="text-muted text-xs" title={t.chat.run.took(time, detail)}>
+      {t.chat.run.done(time, used && tokens(usedTokens(used)))}
     </p>
   );
 }

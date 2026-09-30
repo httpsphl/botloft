@@ -27,6 +27,19 @@ export const account = {
     resets: (relative: string) => `Resets ${relative}`,
     limited: "Limit reached. Your bots wait until it resets.",
     updated: (relative: string) => `Updated ${relative}`,
+    tokens: {
+      title: "Tokens by bot",
+      intro:
+        "Tokens are the pieces of text a bot reads and writes. The count adds the new text read and the replies written; the conversation reread each time shows apart, as it weighs much less.",
+      period: "Period",
+      periods: { today: "Today", week: "7 days", month: "30 days", all: "All time" },
+      empty: "No bot worked in this period.",
+      failed: "Could not load the tokens",
+      archived: "archived",
+      detail: (times: number, reread: string) =>
+        `Worked ${times === 1 ? "once" : `${times} times`} · ${reread} reread`,
+      total: "All bots",
+    },
   },
   settings: {
     title: "Settings",
