@@ -1,10 +1,12 @@
 //! A connection watching one bot's browser (spec 21.7): `browser.watch`
-//! and `browser.unwatch`, and the frames that follow. The same connection
-//! takes the browser into the owner's hands and gives it back (spec 21.10).
+//! and `browser.unwatch`, the frames that follow, and the size its panel
+//! gives the page. The same connection takes the browser into the owner's
+//! hands and gives it back (spec 21.10).
 
+use botloft_core::ids::BotId;
 use botloft_core::protocol::{
-    ApprovalsAnswerParams, BrowserControlParams, BrowserInputParams, BrowserWatchParams,
-    error_code, method, notification,
+    ApprovalsAnswerParams, BrowserControlParams, BrowserInputParams, BrowserResizeParams,
+    BrowserWatchParams, error_code, method, notification,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -15,6 +17,9 @@ use crate::approvals;
 use crate::browser::{Hands, InputError, Watching};
 use crate::service::{ApiError, bots};
 use crate::state::Daemon;
+
+/// The most room a panel may say it has, in pixels each way.
+const ROOM_MAX: u32 = 10_000;
 
 #[derive(Default)]
 pub(super) struct Watch {
@@ -31,6 +36,7 @@ impl Watch {
         params: Option<Value>,
     ) -> Result<Value, RpcError> {
         match name {
+            method::BROWSER_RESIZE => return self.resize(daemon, &parse(params)?),
             method::BROWSER_TAKE => return self.take(daemon, parse(params)?),
             method::BROWSER_RELEASE => return self.release(daemon, &parse(params)?),
             method::BROWSER_INPUT => return self.input(parse(params)?),
@@ -49,13 +55,34 @@ impl Watch {
         to_value(&daemon.browsers.view(&params.bot_id))
     }
 
+    fn watches(&self, bot: &BotId) -> bool {
+        self.current
+            .as_ref()
+            .is_some_and(|watching| watching.bot == *bot)
+    }
+
+    /// The page takes the shape of the room this connection's panel has.
+    fn resize(&self, daemon: &Daemon, params: &BrowserResizeParams) -> Result<Value, RpcError> {
+        if !self.watches(&params.bot_id) {
+            return Err(
+                ApiError::Conflict("watch this browser before sizing it".to_owned()).into(),
+            );
+        }
+        let fits = |side: u32| (1..=ROOM_MAX).contains(&side);
+        if !fits(params.width) || !fits(params.height) {
+            return Err(
+                ApiError::validation(format!("width and height go from 1 to {ROOM_MAX}")).into(),
+            );
+        }
+        daemon
+            .browsers
+            .resize(&params.bot_id, params.width, params.height);
+        Ok(Value::Null)
+    }
+
     fn take(&mut self, daemon: &Daemon, params: BrowserControlParams) -> Result<Value, RpcError> {
         let bot = &params.bot_id;
-        if self
-            .current
-            .as_ref()
-            .is_none_or(|watching| watching.bot != *bot)
-        {
+        if !self.watches(bot) {
             return Err(
                 ApiError::Conflict("watch this browser before taking it".to_owned()).into(),
             );

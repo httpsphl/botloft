@@ -11,8 +11,8 @@ use botloft_core::protocol::{BrowserControl, BrowserInput, MouseAction};
 use tokio::sync::{broadcast, mpsc};
 use tracing::debug;
 
-use super::session::{HEIGHT, Session, WIDTH};
-use super::{Browsers, Slots, lock, update};
+use super::session::Session;
+use super::{Browsers, Slots, Viewport, lock, update};
 use crate::clock::Clock;
 use crate::state::Event;
 
@@ -145,14 +145,15 @@ impl Drop for Asking<'_> {
 impl Hands {
     /// Sends one of the owner's events to the page, after the ones before.
     pub fn send(&self, input: BrowserInput) -> Result<(), InputError> {
-        if !fits(&input) {
-            return Err(InputError::Invalid);
-        }
-        let holds = lock(&self.slots)
+        let page = lock(&self.slots)
             .get(&self.bot)
-            .is_some_and(|slot| *slot.held.borrow() == Some(self.hold));
-        if !holds {
+            .filter(|slot| *slot.held.borrow() == Some(self.hold))
+            .map(|slot| slot.viewport);
+        let Some(page) = page else {
             return Err(InputError::NotHeld);
+        };
+        if !fits(&input, page) {
+            return Err(InputError::Invalid);
         }
         self.input.send(input).map_err(|_| InputError::Closed)
     }
@@ -180,11 +181,9 @@ impl Drop for Hands {
     }
 }
 
-/// Whether an event makes sense on the page.
-fn fits(input: &BrowserInput) -> bool {
-    let on_page = |x: f64, y: f64| {
-        (0.0..=f64::from(WIDTH)).contains(&x) && (0.0..=f64::from(HEIGHT)).contains(&y)
-    };
+/// Whether an event makes sense on a page of that size.
+fn fits(input: &BrowserInput, page: Viewport) -> bool {
+    let on_page = |x: f64, y: f64| page.contains(x, y);
     let modifiers_ok = |modifiers: u32| modifiers <= 15;
     match input {
         BrowserInput::Mouse {
@@ -276,11 +275,15 @@ mod tests {
 
     #[test]
     fn events_off_the_page_or_too_big_are_refused() {
+        let fits = |input: &BrowserInput| super::fits(input, Viewport::default());
         assert!(fits(&mouse(640.0, 400.0)));
         assert!(fits(&mouse(1280.0, 800.0)));
         assert!(!fits(&mouse(-1.0, 10.0)));
         assert!(!fits(&mouse(f64::NAN, 10.0)));
         assert!(!fits(&mouse(10.0, 900.0)));
+        // A taller page takes points further down.
+        let tall = Viewport::fitting(640, 700);
+        assert!(super::fits(&mouse(10.0, 900.0), tall));
         let long = BrowserInput::Text {
             text: "x".repeat(TEXT_MAX + 1),
         };

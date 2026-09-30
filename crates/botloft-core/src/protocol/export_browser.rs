@@ -14,6 +14,7 @@ pub(super) fn decls(out: &mut Out) {
     out.decl::<BrowserAction>();
     out.decl::<BrowserView>();
     out.decl::<BrowserWatchParams>();
+    out.decl::<BrowserResizeParams>();
     out.decl::<MouseAction>();
     out.decl::<MouseButton>();
     out.decl::<BrowserInput>();
@@ -37,6 +38,11 @@ pub(super) fn methods(out: &mut Out) {
         &out.name::<BrowserView>(),
     );
     out.method(method::BROWSER_UNWATCH, "undefined", "null");
+    out.method(
+        method::BROWSER_RESIZE,
+        &out.name::<BrowserResizeParams>(),
+        "null",
+    );
     let control = out.name::<BrowserControlParams>();
     let state = out.name::<BrowserState>();
     out.method(method::BROWSER_TAKE, &control, &state);

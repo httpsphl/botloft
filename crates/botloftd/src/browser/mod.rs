@@ -16,6 +16,7 @@ mod session;
 mod settle;
 pub mod sites;
 mod sweep;
+mod viewport;
 mod watch;
 
 use std::collections::HashMap;
@@ -39,6 +40,7 @@ pub use self::page::{Done, Scroll};
 pub use self::read::{READ_MAX, Reading};
 pub use self::session::Session;
 pub use self::sweep::run;
+pub use self::viewport::Viewport;
 pub use self::watch::Watching;
 use crate::clock::Clock;
 use crate::config::Config;
@@ -111,6 +113,8 @@ struct Slot {
     state: BrowserState,
     frames: Frames,
     watchers: usize,
+    /// The page size the app watching asked for (spec 21.3).
+    viewport: Viewport,
     used: Instant,
     held: Held,
     /// The bot's open request for the owner's help.
@@ -161,6 +165,7 @@ impl Browsers {
             state: BrowserState::closed(bot.clone(), self.clock.now_ms()),
             frames: tokio::sync::watch::channel(None).0,
             watchers: 0,
+            viewport: Viewport::default(),
             used: Instant::now(),
             held: tokio::sync::watch::channel(None).0,
             asking: None,

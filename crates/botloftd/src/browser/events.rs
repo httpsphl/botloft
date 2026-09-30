@@ -11,7 +11,7 @@ use tokio::sync::mpsc;
 use tracing::debug;
 
 use super::cdp::CdpEvent;
-use super::session::{FRAME_GAP, HEIGHT, Hooks, MAX_TABS, PageInfo, Session, Tab, WIDTH};
+use super::session::{FRAME_GAP, Hooks, MAX_TABS, PageInfo, Session, Tab};
 
 impl Session {
     /// Sets up a new tab before it runs, and makes it the active one.
@@ -25,7 +25,7 @@ impl Session {
         else {
             return;
         };
-        let (previous, watching, extra) = {
+        let (previous, watching, extra, viewport) = {
             let mut tabs = self.lock();
             let previous = tabs.active().map(|tab| tab.session.clone());
             tabs.list.push(Tab {
@@ -39,7 +39,7 @@ impl Session {
                 network_at: Instant::now(),
             });
             let extra = (tabs.list.len() > MAX_TABS).then(|| tabs.list[0].target.clone());
-            (previous, tabs.watching, extra)
+            (previous, tabs.watching, extra, tabs.viewport)
         };
         let setup = [
             ("Page.enable", json!({})),
@@ -48,10 +48,7 @@ impl Session {
                 "Page.setInterceptFileChooserDialog",
                 json!({ "enabled": true }),
             ),
-            (
-                "Emulation.setDeviceMetricsOverride",
-                json!({ "width": WIDTH, "height": HEIGHT, "deviceScaleFactor": 1, "mobile": false }),
-            ),
+            ("Emulation.setDeviceMetricsOverride", viewport.metrics()),
             (
                 "Emulation.setUserAgentOverride",
                 json!({ "userAgent": self.user_agent }),
@@ -188,10 +185,11 @@ impl Session {
     }
 
     fn frame(&self, session: &str, params: &Value, hooks: &Hooks) {
-        let active = self
-            .lock()
-            .active()
-            .is_some_and(|tab| tab.session == session);
+        let (active, viewport) = {
+            let tabs = self.lock();
+            let active = tabs.active().is_some_and(|tab| tab.session == session);
+            (active, tabs.viewport)
+        };
         if active && let Some(data) = params["data"].as_str() {
             let size = |key: &str, fallback: u32| {
                 params["metadata"][key]
@@ -201,8 +199,8 @@ impl Session {
             hooks.frames.send_replace(Some(Arc::new(BrowserFrame {
                 bot_id: hooks.bot.clone(),
                 data: data.to_owned(),
-                width: size("deviceWidth", WIDTH),
-                height: size("deviceHeight", HEIGHT),
+                width: size("deviceWidth", viewport.width),
+                height: size("deviceHeight", viewport.height),
             })));
         }
         let cdp = self.cdp.clone();

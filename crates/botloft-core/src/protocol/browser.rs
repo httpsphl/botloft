@@ -128,3 +128,14 @@ pub struct BrowserView {
 pub struct BrowserWatchParams {
     pub bot_id: BotId,
 }
+
+/// `browser.resize`: the room the app's panel has for the page, in the
+/// app's pixels. The page takes its shape (spec 21.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BrowserResizeParams {
+    pub bot_id: BotId,
+    pub width: u32,
+    pub height: u32,
+}

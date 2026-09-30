@@ -17,10 +17,8 @@ use super::BrowserError;
 use super::cdp::Cdp;
 use super::events::pump;
 use super::launch::{self, BrowserProcess};
+use super::viewport::{MAX_HEIGHT, Viewport, WIDTH};
 
-/// The page size bots and the owner see, in CSS pixels (spec 21.3).
-pub const WIDTH: u32 = 1280;
-pub const HEIGHT: u32 = 800;
 /// Most tabs a browser keeps; the oldest inactive one closes past this.
 pub(super) const MAX_TABS: usize = 6;
 /// Frames are confirmed after this, so the browser sends ~15 a second.
@@ -68,6 +66,7 @@ pub struct Tabs {
     pub(super) downloads: HashMap<String, String>,
     pub watching: bool,
     pub closed: bool,
+    pub viewport: Viewport,
 }
 
 impl Tabs {
@@ -101,14 +100,18 @@ pub struct Session {
     pub next_ref: AtomicU64,
     process: Mutex<Option<BrowserProcess>>,
     pub(super) user_agent: String,
+    /// One change of what the app wants at a time (`watch.rs`).
+    pub(super) syncing: tokio::sync::Mutex<()>,
 }
 
 impl Session {
-    /// Starts the browser and waits for its first tab.
+    /// Starts the browser, its pages `viewport` in size, and waits for its
+    /// first tab.
     pub async fn start(
         program: &Path,
         profile: &Path,
         downloads: &Path,
+        viewport: Viewport,
         hooks: Hooks,
     ) -> Result<Arc<Self>, BrowserError> {
         let (process, url) = launch::launch(program, profile).await?;
@@ -120,11 +123,15 @@ impl Session {
             .replace("HeadlessChrome", "Chrome");
         let session = Arc::new(Self {
             cdp,
-            tabs: Mutex::new(Tabs::default()),
+            tabs: Mutex::new(Tabs {
+                viewport,
+                ..Tabs::default()
+            }),
             changed: Notify::new(),
             next_ref: AtomicU64::new(1),
             process: Mutex::new(Some(process)),
             user_agent,
+            syncing: tokio::sync::Mutex::new(()),
         });
         tokio::spawn(pump(Arc::clone(&session), events, hooks));
 
@@ -218,8 +225,9 @@ impl Session {
 
     pub(super) async fn cast(&self, session: &str, on: bool) {
         let result = if on {
+            // Frames come the size of the page, however tall it is.
             let params = json!({
-                "format": "jpeg", "quality": 60, "maxWidth": WIDTH, "maxHeight": HEIGHT,
+                "format": "jpeg", "quality": 60, "maxWidth": WIDTH, "maxHeight": MAX_HEIGHT,
             });
             self.cdp
                 .call(Some(session), "Page.startScreencast", params)
