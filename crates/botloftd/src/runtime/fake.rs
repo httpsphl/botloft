@@ -168,8 +168,46 @@ impl FakeProcess {
         lock(&self.input).clone()
     }
 
-    /// Every complete line written to stdin, parsed as JSON.
+    /// Every message written to stdin, parsed as JSON. What the daemon
+    /// asks the process itself (spec 9.2) is in [`Self::control_requests`].
     pub fn input_lines(&self) -> Vec<Value> {
+        self.stdin_lines()
+            .into_iter()
+            .filter(|line| line["type"] != "control_request")
+            .collect()
+    }
+
+    /// Every control request written to stdin, by its `subtype`.
+    pub fn control_requests(&self) -> Vec<String> {
+        self.stdin_lines()
+            .iter()
+            .filter(|line| line["type"] == "control_request")
+            .map(|line| {
+                line["request"]["subtype"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .to_owned()
+            })
+            .collect()
+    }
+
+    /// Answers the last control request of `subtype`, as Claude Code would.
+    pub async fn answer_control(&self, subtype: &str, response: Value) {
+        let id = self
+            .stdin_lines()
+            .iter()
+            .rev()
+            .find(|line| line["type"] == "control_request" && line["request"]["subtype"] == subtype)
+            .map(|line| line["request_id"].clone())
+            .unwrap_or_else(|| panic!("no {subtype} request on stdin"));
+        self.emit(serde_json::json!({
+            "type": "control_response",
+            "response": { "subtype": "success", "request_id": id, "response": response },
+        }))
+        .await;
+    }
+
+    fn stdin_lines(&self) -> Vec<Value> {
         self.input()
             .split(|byte| *byte == b'\n')
             .filter(|line| !line.is_empty())

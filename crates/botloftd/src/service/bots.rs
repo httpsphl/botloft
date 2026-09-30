@@ -2,8 +2,8 @@
 
 use botloft_core::ids::{BotId, CrewId};
 use botloft_core::protocol::{
-    Bot, BotIdParams, BotModel, BotState, BotsCreateParams, BotsListParams, BotsRestartParams,
-    BotsSetPausedParams, BotsUpdateParams, Crew, PermissionMode,
+    Bot, BotEffort, BotIdParams, BotModel, BotState, BotsCreateParams, BotsListParams,
+    BotsRestartParams, BotsSetPausedParams, BotsUpdateParams, Crew, PermissionMode,
 };
 use botloft_core::{avatar, now_ms, slug, validate};
 use botloft_store::{BotRecord, Store};
@@ -109,6 +109,8 @@ pub(crate) fn insert(
         permission_mode: PermissionMode::Default,
         model: new.model,
         model_in_use: None,
+        effort: BotEffort::Default,
+        effort_default: None,
         created_at: now_ms(),
         archived_at: None,
     };
@@ -209,6 +211,7 @@ pub(crate) fn to_protocol(daemon: &Daemon, store: &Store, crew: &Crew, record: B
         tracing::warn!(bot = %record.id, "could not read the last activity: {err}");
         None
     });
+    let context = daemon.contexts.get(&record.id);
     Bot {
         id: record.id,
         crew_id: record.crew_id,
@@ -222,6 +225,9 @@ pub(crate) fn to_protocol(daemon: &Daemon, store: &Store, crew: &Crew, record: B
         permission_mode: record.permission_mode,
         model: record.model,
         model_in_use: record.model_in_use,
+        effort: record.effort,
+        effort_default: record.effort_default,
+        context,
         state,
         generation,
         workspace: workspace.to_string_lossy().into_owned(),

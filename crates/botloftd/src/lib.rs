@@ -8,6 +8,7 @@ pub mod browser;
 pub mod chat;
 pub mod clock;
 pub mod config;
+pub mod context;
 pub mod courier;
 pub mod keep_awake;
 pub mod logging;

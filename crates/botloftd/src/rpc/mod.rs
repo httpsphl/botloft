@@ -212,6 +212,7 @@ fn to_notification(event: &Event) -> String {
             (notification::FOLDER_RECYCLED, serde_json::to_value(folder))
         }
         Event::BotState(state) => (notification::BOT_STATE, serde_json::to_value(state)),
+        Event::BotContext(context) => (notification::BOT_CONTEXT, serde_json::to_value(context)),
         Event::ChatItem(item) => (notification::CHAT_ITEM, serde_json::to_value(item)),
         Event::ChatDelta(delta) => (notification::CHAT_DELTA, serde_json::to_value(delta)),
         Event::MessageCreated(message) => {

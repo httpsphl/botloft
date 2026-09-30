@@ -176,6 +176,19 @@ impl Supervisor {
         Ok(generation)
     }
 
+    /// Writes a control request to the bot's stdin (spec 9.2): a question
+    /// to Claude Code itself, which starts no turn.
+    pub fn write_control(&self, bot: &BotId, line: Bytes) -> Result<(), NotRunning> {
+        let inner = self.lock();
+        let running = inner
+            .slots
+            .get(bot)
+            .filter(|slot| slot.stop.is_none())
+            .and_then(|slot| slot.running.as_ref())
+            .ok_or(NotRunning)?;
+        running.control.write(line).map_err(|_| NotRunning)
+    }
+
     /// Whether `generation` is the bot's running process.
     pub fn is_current(&self, bot: &BotId, generation: u64) -> bool {
         self.lock()

@@ -137,6 +137,57 @@ tool: string | null,
 at: number, };
 
 /**
+ * How much a bot thinks before it answers (spec 7.4): Claude Code's
+ * `--effort` levels, or the level its model uses by itself.
+ */
+export type BotEffort = "default" | "low" | "medium" | "high" | "xhigh" | "max";
+
+/**
+ * The effort a model runs at when the owner picks none, as Claude Code
+ * reports it (spec 7.4).
+ */
+export type ModelEffort = "none" | "low" | "medium" | "high" | "xhigh" | "max";
+
+/**
+ * How full a bot's conversation is, in tokens, as Claude Code counts it
+ * (spec 8.6).
+ */
+export type ContextUsage = { 
+/**
+ * What the conversation holds now.
+ */
+usedTokens: number, 
+/**
+ * The most it can hold.
+ */
+windowTokens: number, 
+/**
+ * Where Claude Code compacts the conversation by itself; `null` when it
+ * does not.
+ */
+autoCompactTokens: number | null, 
+/**
+ * The conversation is being compacted right now.
+ */
+compacting: boolean, 
+/**
+ * Unix time in milliseconds.
+ */
+updatedAt: number, };
+
+/**
+ * Params of the `bot.context` notification.
+ */
+export type BotContextChanged = { botId: BotId, 
+/**
+ * `null` when the bot began a new conversation and its size is not
+ * known yet.
+ */
+context: ContextUsage | null, };
+
+export type BotsSetEffortParams = { botId: BotId, effort: BotEffort, };
+
+/**
  * A persistent Claude Code session with a name, a role and instructions.
  */
 export type Bot = { id: BotId, crewId: CrewId, name: string, 
@@ -157,7 +208,16 @@ color: string, paused: boolean, permissionMode: PermissionMode, model: BotModel,
  * The model id Claude Code reported when the bot last started a turn
  * (`claude-opus-5-5`); `null` before its first turn.
  */
-modelInUse: string | null, state: BotState, 
+modelInUse: string | null, effort: BotEffort, 
+/**
+ * The effort the bot's model uses by itself, as Claude Code last
+ * reported it; `null` until it is known.
+ */
+effortDefault: ModelEffort | null, 
+/**
+ * How full the conversation is; `null` until Claude Code said so.
+ */
+context: ContextUsage | null, state: BotState, 
 /**
  * Current process generation; `null` if the bot has not started since
  * the daemon did. Changes on every (re)start.
@@ -645,7 +705,7 @@ export type NoticeLevel = "info" | "warning" | "error";
 /**
  * What a notice is about, so the app can say it in the owner's language.
  */
-export type NoticeCode = "signed_out" | "usage_limit" | "turn_failed" | "model_unavailable";
+export type NoticeCode = "signed_out" | "usage_limit" | "turn_failed" | "model_unavailable" | "compacted" | "auto_compacted" | "compact_failed";
 
 export type InboundItem = { message: Message, };
 
@@ -1100,6 +1160,8 @@ export interface RpcMethods {
   "deliveries.list": { params: DeliveriesListParams; result: Array<Delivery> };
   "deliveries.retry": { params: DeliveryIdParams; result: Delivery };
   "tasks.list": { params: TasksListParams; result: Array<Task> };
+  "bots.setEffort": { params: BotsSetEffortParams; result: Bot };
+  "bots.compact": { params: BotIdParams; result: Bot };
   "routines.list": { params: RoutinesListParams; result: Array<Routine> };
   "routines.create": { params: RoutinesCreateParams; result: Routine };
   "routines.update": { params: RoutinesUpdateParams; result: Routine };
@@ -1134,6 +1196,7 @@ export interface RpcNotifications {
   "message.created": Message;
   "delivery.changed": Delivery;
   "task.changed": Task;
+  "bot.context": BotContextChanged;
   "routine.changed": Routine;
   "routine.run": RoutineRun;
   "browser.changed": BrowserState;

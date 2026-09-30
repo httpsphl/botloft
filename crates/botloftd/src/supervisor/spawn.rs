@@ -13,13 +13,13 @@ use tracing::{debug, warn};
 
 use super::slot::{Running, StopIntent};
 use super::{ClaudeStatus, Inner, STABLE_AFTER, Supervisor};
-use crate::chat::StreamReader;
+use crate::chat::{StreamReader, control};
 use crate::platform;
 use crate::runtime::claude::Claude;
 use crate::runtime::{ProcessEvent, SpawnSpec};
 use crate::secrets::{self, TokenHash};
 use crate::state::Daemon;
-use crate::{approvals, courier, routines, workspace};
+use crate::{approvals, context, courier, routines, workspace};
 
 /// Tools the bot uses without asking: its crew tools (spec 7.4).
 const ALLOWED_TOOLS: &str = "mcp__botloft";
@@ -63,6 +63,12 @@ impl Supervisor {
             .and_then(|(spec, launch)| Ok((self.runtime.spawn(spec)?, launch)));
         match launched {
             Ok((process, launch)) => {
+                // What the session applies and how full it is (spec 9.2);
+                // Claude Code answers as soon as it is up.
+                for ask in [control::settings_request(), control::context_request()] {
+                    let _ = process.control.write(ask);
+                }
+                context::process_started(daemon, &bot.id, launch.resumed);
                 // A new conversation is on disk only once it has a turn
                 // (spec 7.3); the one it takes the place of is left behind.
                 if !launch.resumed
@@ -83,6 +89,7 @@ impl Supervisor {
                     resumed: launch.resumed,
                     token_hash: launch.token_hash,
                     permission_mode: bot.permission_mode,
+                    effort: bot.effort,
                 });
                 self.count_busy(slot.state, BotState::Launching);
                 slot.state = BotState::Launching;
@@ -159,6 +166,7 @@ impl Supervisor {
         approvals::expire_for_bot(daemon, bot);
         courier::requeue_unread(daemon, bot, generation);
         routines::process_ended(daemon, bot);
+        context::process_ended(daemon, bot);
         crate::screens::turn_ended(daemon, bot);
         self.wake();
     }
@@ -224,6 +232,11 @@ fn launch_spec(
     if let Some(model) = bot.model.cli_value() {
         args.push("--model".into());
         args.push(model.into());
+    }
+    // Without the flag, Claude Code uses the level it sets for the model.
+    if let Some(effort) = bot.effort.cli_value() {
+        args.push("--effort".into());
+        args.push(effort.into());
     }
 
     let mut env = platform::user_environment()?;

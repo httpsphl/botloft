@@ -18,6 +18,8 @@ use crate::ids::{
 mod browser;
 #[path = "export_routines.rs"]
 mod routines;
+#[path = "export_session.rs"]
+mod session;
 use crate::validate;
 
 const HEADER: &str = "\
@@ -99,6 +101,7 @@ fn export_bindings() {
     out.decl::<BotModel>();
     out.decl::<ActivityKind>();
     out.decl::<Activity>();
+    session::decls(&mut out);
     out.decl::<Bot>();
     out.decl::<ClientInfo>();
     out.decl::<HelloParams>();
@@ -314,6 +317,7 @@ fn export_bindings() {
         &out.name::<TasksListParams>(),
         &out.name::<Vec<Task>>(),
     );
+    session::methods(&mut out);
     routines::methods(&mut out);
     browser::methods(&mut out);
     out.text.push_str("}\n\n");
@@ -357,6 +361,7 @@ fn export_bindings() {
         notification::DELIVERY_CHANGED
     );
     let _ = writeln!(out.text, "  \"{}\": {task};", notification::TASK_CHANGED);
+    session::notifications(&mut out);
     routines::notifications(&mut out);
     browser::notifications(&mut out);
     out.text.push_str("}\n\n");

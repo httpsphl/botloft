@@ -150,6 +150,8 @@ pub(crate) mod tests {
                         permission_mode: botloft_core::protocol::PermissionMode::Default,
                         model: botloft_core::protocol::BotModel::Default,
                         model_in_use: None,
+                        effort: botloft_core::protocol::BotEffort::Default,
+                        effort_default: None,
                         created_at: 0,
                         archived_at: None,
                     };

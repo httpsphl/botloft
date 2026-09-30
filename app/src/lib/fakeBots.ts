@@ -4,7 +4,7 @@
 
 import type { FakeBotloft, Handlers } from "./fake";
 import { purgeBot } from "./fakeDelete";
-import { checkName } from "./fakeRules";
+import { checkName, conflict } from "./fakeRules";
 import { AVATAR_PALETTE, type Bot } from "./protocol.gen";
 
 type BotMethods = Extract<keyof Handlers, `bots.${string}`>;
@@ -35,6 +35,9 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
         permissionMode: "default",
         model: model ?? "default",
         modelInUse: null,
+        effort: "default",
+        effortDefault: null,
+        context: null,
         state: crew.paused ? "offline" : "launching",
         generation: crew.paused ? null : 1,
         workspace: `C:\\Users\\owner\\Botloft\\${crew.slug}\\${handle}`,
@@ -68,8 +71,28 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
     },
     "bots.setModel": ({ botId, model }) => {
       const bot = fake.bot(botId);
-      bot.model = model;
+      if (bot.model !== model) {
+        bot.model = model;
+        // What a model does by itself is asked again of the new one.
+        bot.effortDefault = null;
+      }
       return fake.changedBot(bot);
+    },
+    "bots.setEffort": ({ botId, effort }) => {
+      const bot = fake.bot(botId);
+      bot.effort = effort;
+      return fake.changedBot(bot);
+    },
+    "bots.compact": ({ botId }) => {
+      const bot = fake.bot(botId);
+      if (bot.state !== "idle" && bot.state !== "busy" && bot.state !== "needs_approval") {
+        throw conflict(`bot ${botId} is not running`);
+      }
+      // It waits behind the turn in progress; a test ends it with `setContext`.
+      if (bot.context && !bot.context.compacting) {
+        fake.setContext(botId, { ...bot.context, compacting: true });
+      }
+      return bot;
     },
     "bots.restart": ({ botId }) => {
       const bot = fake.bot(botId);
