@@ -6,6 +6,10 @@
     "windows": {
       "nsis": {
         "installMode": "currentUser",
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico",
+        "sidebarImage": "windows/installer-sidebar.bmp",
+        "headerImage": "windows/installer-header.bmp",
         "languages": ["English", "PortugueseBR", "Spanish"],
         "installerHooks": "./windows/hooks.nsh"
       }
