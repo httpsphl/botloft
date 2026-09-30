@@ -4,6 +4,7 @@
     "externalBin": ["binaries/botloftd"],
     "createUpdaterArtifacts": true,
     "windows": {
+      "signCommand": { "cmd": "node", "args": ["../scripts/sign.mjs", "%1"] },
       "nsis": {
         "installMode": "currentUser",
         "installerIcon": "icons/icon.ico",

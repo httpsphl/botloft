@@ -37,6 +37,7 @@ export const bots: Messages["bots"] = {
     showDetails: "Mostrar detalles",
     hideDetails: "Ocultar detalles",
     more: "Más acciones del bot",
+    menuOf: (name: string) => `Acciones de ${name}`,
     edit: "Editar",
     restartFresh: "Reiniciar con una conversación nueva",
     openFolder: "Abrir carpeta",
