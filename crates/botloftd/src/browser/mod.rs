@@ -10,12 +10,14 @@ mod hands;
 mod input;
 mod keys;
 mod launch;
+mod moves;
 mod page;
 mod read;
 mod session;
 mod settle;
 pub mod sites;
 mod sweep;
+mod titles;
 mod viewport;
 mod watch;
 

@@ -121,6 +121,10 @@ pub mod method {
     pub const BROWSER_TAKE: &str = "browser.take";
     pub const BROWSER_RELEASE: &str = "browser.release";
     pub const BROWSER_INPUT: &str = "browser.input";
+    pub const BROWSER_RELOAD: &str = "browser.reload";
+    pub const BROWSER_NEW_TAB: &str = "browser.newTab";
+    pub const BROWSER_SWITCH_TAB: &str = "browser.switchTab";
+    pub const BROWSER_OPEN: &str = "browser.open";
     pub const SCREENS_LIST: &str = "screens.list";
     pub const SETTINGS_GET: &str = "settings.get";
     pub const SETTINGS_UPDATE: &str = "settings.update";

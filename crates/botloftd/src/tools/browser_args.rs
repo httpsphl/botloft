@@ -42,6 +42,22 @@ pub(super) enum Tool {
     },
 }
 
+impl Tool {
+    /// Whether it does something to the page, beyond reading it or going
+    /// to an address.
+    pub(super) fn acts(&self) -> bool {
+        matches!(
+            self,
+            Self::Click { .. }
+                | Self::Type { .. }
+                | Self::Select { .. }
+                | Self::Press { .. }
+                | Self::Scroll { .. }
+                | Self::Back
+        )
+    }
+}
+
 /// Longest request for the owner's help, in characters.
 const TASK_MAX: usize = 500;
 

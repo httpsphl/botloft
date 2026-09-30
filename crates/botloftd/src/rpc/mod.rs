@@ -184,11 +184,16 @@ fn handle(
             frames.send_replace(None);
             watch.request(daemon, &request.method, request.params)
         }
-        // So are the size of its page and the owner's hold on it (spec 21.10).
+        // So are the size of its page and what the owner does in it (spec
+        // 21.10).
         method::BROWSER_RESIZE
         | method::BROWSER_TAKE
         | method::BROWSER_RELEASE
-        | method::BROWSER_INPUT => watch.request(daemon, &request.method, request.params),
+        | method::BROWSER_INPUT
+        | method::BROWSER_RELOAD
+        | method::BROWSER_NEW_TAB
+        | method::BROWSER_SWITCH_TAB
+        | method::BROWSER_OPEN => watch.request(daemon, &request.method, request.params),
         name => dispatch::dispatch(daemon, name, request.params),
     };
     Some(match result {

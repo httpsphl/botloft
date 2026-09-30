@@ -1,10 +1,12 @@
 //! A small web site on 127.0.0.1 for the browser tests: a form, the page
 //! it leads to, a link that opens a new tab, a button that shows a dialog,
 //! a sign-in page with its fields at fixed points, for the owner's hands,
-//! and a page that says how big its window is.
+//! a page that says how big its window is, and one that counts its loads.
 
 use std::collections::HashMap;
 use std::net::SocketAddr;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 use axum::Form;
 use axum::Router;
@@ -57,7 +59,20 @@ async fn done(Query(query): Query<HashMap<String, String>>) -> Html<String> {
 
 /// Serves the site until the test ends.
 pub async fn serve() -> SocketAddr {
+    // `/visits` counts how many times it was loaded.
+    let visits = Arc::new(AtomicU32::new(0));
     let app = Router::new()
+        .route(
+            "/visits",
+            get(move || {
+                let count = visits.fetch_add(1, Ordering::SeqCst) + 1;
+                async move {
+                    Html(format!(
+                        "<!doctype html><title>Visits</title><p>Loaded {count} times</p>"
+                    ))
+                }
+            }),
+        )
         .route("/", get(|| async { Html(FORM) }))
         .route("/done", get(done))
         .route("/links", get(|| async { Html(POPUP) }))

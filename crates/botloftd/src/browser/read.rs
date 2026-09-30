@@ -15,7 +15,7 @@ use super::session::Session;
 /// What reads the page (`reader.js`), and what acts on it (`actions.js`).
 const READER: &str = include_str!("reader.js");
 const ACTIONS: &str = include_str!("actions.js");
-const WORLD: &str = "botloft";
+pub(super) const WORLD: &str = "botloft";
 /// Longest page text in one answer, in characters.
 pub const READ_MAX: usize = 20_000;
 
