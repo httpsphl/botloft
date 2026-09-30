@@ -184,10 +184,16 @@ fn handle(
             frames.send_replace(None);
             watch.request(daemon, &request.method, request.params)
         }
-        // So is the owner's hold on it (spec 21.10).
-        method::BROWSER_TAKE | method::BROWSER_RELEASE | method::BROWSER_INPUT => {
-            watch.request(daemon, &request.method, request.params)
-        }
+        // So are the size of its page and what the owner does in it (spec
+        // 21.10).
+        method::BROWSER_RESIZE
+        | method::BROWSER_TAKE
+        | method::BROWSER_RELEASE
+        | method::BROWSER_INPUT
+        | method::BROWSER_RELOAD
+        | method::BROWSER_NEW_TAB
+        | method::BROWSER_SWITCH_TAB
+        | method::BROWSER_OPEN => watch.request(daemon, &request.method, request.params),
         name => dispatch::dispatch(daemon, name, request.params),
     };
     Some(match result {
@@ -199,8 +205,14 @@ fn handle(
 fn to_notification(event: &Event) -> String {
     let (name, params) = match event {
         Event::CrewChanged(crew) => (notification::CREW_CHANGED, serde_json::to_value(crew)),
+        Event::CrewDeleted(crew) => (notification::CREW_DELETED, serde_json::to_value(crew)),
         Event::BotChanged(bot) => (notification::BOT_CHANGED, serde_json::to_value(bot)),
+        Event::BotDeleted(bot) => (notification::BOT_DELETED, serde_json::to_value(bot)),
+        Event::FolderRecycled(folder) => {
+            (notification::FOLDER_RECYCLED, serde_json::to_value(folder))
+        }
         Event::BotState(state) => (notification::BOT_STATE, serde_json::to_value(state)),
+        Event::BotContext(context) => (notification::BOT_CONTEXT, serde_json::to_value(context)),
         Event::ChatItem(item) => (notification::CHAT_ITEM, serde_json::to_value(item)),
         Event::ChatDelta(delta) => (notification::CHAT_DELTA, serde_json::to_value(delta)),
         Event::MessageCreated(message) => {

@@ -60,6 +60,7 @@ mod methods;
 mod model;
 mod routines;
 mod screens;
+mod session;
 mod settings;
 
 pub use browser::*;
@@ -71,6 +72,7 @@ pub use methods::*;
 pub use model::*;
 pub use routines::*;
 pub use screens::*;
+pub use session::*;
 pub use settings::*;
 
 /// Version negotiated in `session.hello`. 2 replaced the terminal with the
@@ -89,13 +91,18 @@ pub mod method {
     pub const CREWS_SET_WORK_FOLDER: &str = "crews.setWorkFolder";
     pub const CREWS_SET_LEAD: &str = "crews.setLead";
     pub const CREWS_ARCHIVE: &str = "crews.archive";
+    pub const CREWS_DELETE: &str = "crews.delete";
+    pub const ARCHIVE_LIST: &str = "archive.list";
     pub const BOTS_LIST: &str = "bots.list";
     pub const BOTS_CREATE: &str = "bots.create";
     pub const BOTS_UPDATE: &str = "bots.update";
     pub const BOTS_SET_PAUSED: &str = "bots.setPaused";
     pub const BOTS_SET_PERMISSION_MODE: &str = "bots.setPermissionMode";
     pub const BOTS_SET_MODEL: &str = "bots.setModel";
+    pub const BOTS_SET_EFFORT: &str = "bots.setEffort";
+    pub const BOTS_COMPACT: &str = "bots.compact";
     pub const BOTS_ARCHIVE: &str = "bots.archive";
+    pub const BOTS_DELETE: &str = "bots.delete";
     pub const BOTS_RESTART: &str = "bots.restart";
     pub const CHAT_HISTORY: &str = "chat.history";
     pub const APPROVALS_ANSWER: &str = "approvals.answer";
@@ -117,9 +124,14 @@ pub mod method {
     pub const BROWSER_LIST: &str = "browser.list";
     pub const BROWSER_WATCH: &str = "browser.watch";
     pub const BROWSER_UNWATCH: &str = "browser.unwatch";
+    pub const BROWSER_RESIZE: &str = "browser.resize";
     pub const BROWSER_TAKE: &str = "browser.take";
     pub const BROWSER_RELEASE: &str = "browser.release";
     pub const BROWSER_INPUT: &str = "browser.input";
+    pub const BROWSER_RELOAD: &str = "browser.reload";
+    pub const BROWSER_NEW_TAB: &str = "browser.newTab";
+    pub const BROWSER_SWITCH_TAB: &str = "browser.switchTab";
+    pub const BROWSER_OPEN: &str = "browser.open";
     pub const SCREENS_LIST: &str = "screens.list";
     pub const SETTINGS_GET: &str = "settings.get";
     pub const SETTINGS_UPDATE: &str = "settings.update";
@@ -128,8 +140,12 @@ pub mod method {
 /// Server notification method names.
 pub mod notification {
     pub const CREW_CHANGED: &str = "crew.changed";
+    pub const CREW_DELETED: &str = "crew.deleted";
     pub const BOT_CHANGED: &str = "bot.changed";
+    pub const BOT_DELETED: &str = "bot.deleted";
+    pub const FOLDER_RECYCLED: &str = "folder.recycled";
     pub const BOT_STATE: &str = "bot.state";
+    pub const BOT_CONTEXT: &str = "bot.context";
     pub const CHAT_ITEM: &str = "chat.item";
     pub const CHAT_DELTA: &str = "chat.delta";
     pub const MESSAGE_CREATED: &str = "message.created";

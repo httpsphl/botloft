@@ -44,6 +44,12 @@ text_enum!(
         TurnFailed => "turn_failed",
         /// The bot's model does not exist or the account cannot use it.
         ModelUnavailable => "model_unavailable",
+        /// The conversation was compacted because the owner asked.
+        Compacted => "compacted",
+        /// Claude Code compacted the conversation by itself: it was full.
+        AutoCompacted => "auto_compacted",
+        /// The conversation could not be compacted; `text` holds the detail.
+        CompactFailed => "compact_failed",
     }
 );
 

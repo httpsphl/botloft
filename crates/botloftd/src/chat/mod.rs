@@ -2,8 +2,11 @@
 //! line, and turns each event into chat items, live text, read receipts and
 //! state changes.
 
+mod account;
+pub(crate) mod control;
 mod events;
 pub(crate) mod items;
+mod session;
 
 use botloft_core::ids::BotId;
 use tracing::debug;

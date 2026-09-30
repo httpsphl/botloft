@@ -137,6 +137,57 @@ tool: string | null,
 at: number, };
 
 /**
+ * How much a bot thinks before it answers (spec 7.4): Claude Code's
+ * `--effort` levels, or the level its model uses by itself.
+ */
+export type BotEffort = "default" | "low" | "medium" | "high" | "xhigh" | "max";
+
+/**
+ * The effort a model runs at when the owner picks none, as Claude Code
+ * reports it (spec 7.4).
+ */
+export type ModelEffort = "none" | "low" | "medium" | "high" | "xhigh" | "max";
+
+/**
+ * How full a bot's conversation is, in tokens, as Claude Code counts it
+ * (spec 8.6).
+ */
+export type ContextUsage = { 
+/**
+ * What the conversation holds now.
+ */
+usedTokens: number, 
+/**
+ * The most it can hold.
+ */
+windowTokens: number, 
+/**
+ * Where Claude Code compacts the conversation by itself; `null` when it
+ * does not.
+ */
+autoCompactTokens: number | null, 
+/**
+ * The conversation is being compacted right now.
+ */
+compacting: boolean, 
+/**
+ * Unix time in milliseconds.
+ */
+updatedAt: number, };
+
+/**
+ * Params of the `bot.context` notification.
+ */
+export type BotContextChanged = { botId: BotId, 
+/**
+ * `null` when the bot began a new conversation and its size is not
+ * known yet.
+ */
+context: ContextUsage | null, };
+
+export type BotsSetEffortParams = { botId: BotId, effort: BotEffort, };
+
+/**
  * A persistent Claude Code session with a name, a role and instructions.
  */
 export type Bot = { id: BotId, crewId: CrewId, name: string, 
@@ -157,7 +208,16 @@ color: string, paused: boolean, permissionMode: PermissionMode, model: BotModel,
  * The model id Claude Code reported when the bot last started a turn
  * (`claude-opus-5-5`); `null` before its first turn.
  */
-modelInUse: string | null, state: BotState, 
+modelInUse: string | null, effort: BotEffort, 
+/**
+ * The effort the bot's model uses by itself, as Claude Code last
+ * reported it; `null` until it is known.
+ */
+effortDefault: ModelEffort | null, 
+/**
+ * How full the conversation is; `null` until Claude Code said so.
+ */
+context: ContextUsage | null, state: BotState, 
 /**
  * Current process generation; `null` if the bot has not started since
  * the daemon did. Changes on every (re)start.
@@ -359,6 +419,59 @@ fresh?: boolean, };
  * Params of the `bot.state` notification.
  */
 export type BotStateChanged = { botId: BotId, state: BotState, generation: number | null, };
+
+/**
+ * A bot that was deleted for good (spec 7.6): the result of `bots.delete`
+ * and the params of the `bot.deleted` notification.
+ */
+export type BotDeleted = { botId: BotId, crewId: CrewId, };
+
+/**
+ * A crew that was deleted with every bot in it (spec 7.6): the result of
+ * `crews.delete` and the params of the `crew.deleted` notification.
+ */
+export type CrewDeleted = { crewId: CrewId, };
+
+/**
+ * What the owner archived (`archive.list`): out of the app, kept in the
+ * database, and still there to delete (spec 7.6). `bots` has every
+ * archived bot, those of archived crews too.
+ */
+export type Archive = { crews: Array<Crew>, bots: Array<Bot>, };
+
+/**
+ * Params of `bots.delete` (spec 7.6).
+ */
+export type BotsDeleteParams = { botId: BotId, 
+/**
+ * Also move the bot's folder to the Recycle Bin; it stays when absent.
+ */
+recycleFolder?: boolean, };
+
+/**
+ * Params of `crews.delete` (spec 7.6).
+ */
+export type CrewsDeleteParams = { crewId: CrewId, 
+/**
+ * Also move the crew's own folder, with each bot's folder and
+ * `shared`, to the Recycle Bin; it stays when absent. A work folder
+ * the owner chose is never moved.
+ */
+recycleFolder?: boolean, };
+
+/**
+ * Params of the `folder.recycled` notification: how the move of a deleted
+ * bot's or crew's folder to the Recycle Bin ended (spec 7.6).
+ */
+export type FolderRecycled = { 
+/**
+ * Absolute path the folder had.
+ */
+path: string, 
+/**
+ * Why the folder is still there; `null` when it is in the bin.
+ */
+error: string | null, };
 
 /**
  * Who wrote a message.
@@ -592,7 +705,7 @@ export type NoticeLevel = "info" | "warning" | "error";
 /**
  * What a notice is about, so the app can say it in the owner's language.
  */
-export type NoticeCode = "signed_out" | "usage_limit" | "turn_failed" | "model_unavailable";
+export type NoticeCode = "signed_out" | "usage_limit" | "turn_failed" | "model_unavailable" | "compacted" | "auto_compacted" | "compact_failed";
 
 export type InboundItem = { message: Message, };
 
@@ -833,6 +946,23 @@ export type BrowserStatus = "closed" | "starting" | "open" | "failed";
  */
 export type BrowserControl = "bot" | "owner";
 
+/**
+ * One of the browser's open tabs.
+ */
+export type BrowserTab = { 
+/**
+ * Names the tab in `browser.switchTab`; means nothing else.
+ */
+id: string, 
+/**
+ * Empty until the page has one.
+ */
+title: string, url: string, 
+/**
+ * The tab the bot's tools and the owner's hands act on.
+ */
+active: boolean, };
+
 export type BrowserState = { botId: BotId, status: BrowserStatus, 
 /**
  * The active tab's address.
@@ -843,9 +973,9 @@ url: string | null, title: string | null,
  */
 loading: boolean, 
 /**
- * Open tabs.
+ * The open tabs, in the order they opened.
  */
-tabs: number, 
+tabs: Array<BrowserTab>, 
 /**
  * Why it could not start, when `failed`.
  */
@@ -903,6 +1033,12 @@ export type BrowserView = { state: BrowserState, frame: BrowserFrame | null, };
 
 export type BrowserWatchParams = { botId: BotId, };
 
+/**
+ * `browser.resize`: the room the app's panel has for the page, in the
+ * app's pixels. The page takes its shape (spec 21.3).
+ */
+export type BrowserResizeParams = { botId: BotId, width: number, height: number, };
+
 export type MouseAction = "move" | "down" | "up";
 
 export type MouseButton = "none" | "left" | "middle" | "right";
@@ -922,11 +1058,22 @@ buttons: number,
 clicks: number, modifiers: number, } | { "kind": "wheel", x: number, y: number, dx: number, dy: number, modifiers: number, } | { "kind": "key", key: string, code: string, modifiers: number, } | { "kind": "text", text: string, };
 
 /**
- * `browser.take` and `browser.release`.
+ * `browser.take`, `browser.release`, `browser.reload` and
+ * `browser.newTab`.
  */
 export type BrowserControlParams = { botId: BotId, };
 
 export type BrowserInputParams = { botId: BotId, input: BrowserInput, };
+
+/**
+ * `browser.switchTab`: the tab that becomes the active one.
+ */
+export type BrowserTabParams = { botId: BotId, tabId: string, };
+
+/**
+ * `browser.open`: the address the owner typed for the active tab.
+ */
+export type BrowserOpenParams = { botId: BotId, url: string, };
 
 /**
  * The device a screen is drawn for.
@@ -1003,6 +1150,8 @@ export interface RpcMethods {
   "crews.setWorkFolder": { params: CrewsSetWorkFolderParams; result: Crew };
   "crews.setLead": { params: CrewsSetLeadParams; result: Crew };
   "crews.archive": { params: CrewIdParams; result: Crew };
+  "crews.delete": { params: CrewsDeleteParams; result: CrewDeleted };
+  "archive.list": { params: undefined; result: Archive };
   "bots.list": { params: BotsListParams; result: Array<Bot> };
   "bots.create": { params: BotsCreateParams; result: Bot };
   "bots.update": { params: BotsUpdateParams; result: Bot };
@@ -1010,6 +1159,7 @@ export interface RpcMethods {
   "bots.setPermissionMode": { params: BotsSetPermissionModeParams; result: Bot };
   "bots.setModel": { params: BotsSetModelParams; result: Bot };
   "bots.archive": { params: BotIdParams; result: Bot };
+  "bots.delete": { params: BotsDeleteParams; result: BotDeleted };
   "bots.restart": { params: BotsRestartParams; result: Bot };
   "chat.history": { params: ChatHistoryParams; result: Array<ChatItem> };
   "approvals.answer": { params: ApprovalsAnswerParams; result: Approval };
@@ -1021,6 +1171,8 @@ export interface RpcMethods {
   "deliveries.list": { params: DeliveriesListParams; result: Array<Delivery> };
   "deliveries.retry": { params: DeliveryIdParams; result: Delivery };
   "tasks.list": { params: TasksListParams; result: Array<Task> };
+  "bots.setEffort": { params: BotsSetEffortParams; result: Bot };
+  "bots.compact": { params: BotIdParams; result: Bot };
   "routines.list": { params: RoutinesListParams; result: Array<Routine> };
   "routines.create": { params: RoutinesCreateParams; result: Routine };
   "routines.update": { params: RoutinesUpdateParams; result: Routine };
@@ -1031,9 +1183,14 @@ export interface RpcMethods {
   "browser.list": { params: undefined; result: Array<BrowserState> };
   "browser.watch": { params: BrowserWatchParams; result: BrowserView };
   "browser.unwatch": { params: undefined; result: null };
+  "browser.resize": { params: BrowserResizeParams; result: null };
   "browser.take": { params: BrowserControlParams; result: BrowserState };
   "browser.release": { params: BrowserControlParams; result: BrowserState };
   "browser.input": { params: BrowserInputParams; result: null };
+  "browser.reload": { params: BrowserControlParams; result: null };
+  "browser.newTab": { params: BrowserControlParams; result: null };
+  "browser.switchTab": { params: BrowserTabParams; result: null };
+  "browser.open": { params: BrowserOpenParams; result: null };
   "screens.list": { params: ScreensListParams; result: Array<Screen> };
 }
 
@@ -1041,12 +1198,16 @@ export interface RpcMethods {
 export interface RpcNotifications {
   "crew.changed": Crew;
   "bot.changed": Bot;
+  "crew.deleted": CrewDeleted;
+  "bot.deleted": BotDeleted;
+  "folder.recycled": FolderRecycled;
   "bot.state": BotStateChanged;
   "chat.item": ChatItemChanged;
   "chat.delta": ChatDelta;
   "message.created": Message;
   "delivery.changed": Delivery;
   "task.changed": Task;
+  "bot.context": BotContextChanged;
   "routine.changed": Routine;
   "routine.run": RoutineRun;
   "browser.changed": BrowserState;

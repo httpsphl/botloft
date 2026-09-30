@@ -22,7 +22,7 @@ use crate::state::Daemon;
 /// Longest deadline a bot may set: a week.
 pub const MAX_DEADLINE_MINUTES: u32 = 7 * 24 * 60;
 /// Tasks that still expect a result.
-const UNFINISHED: [TaskStatus; 2] = [TaskStatus::Open, TaskStatus::Expired];
+pub(crate) const UNFINISHED: [TaskStatus; 2] = [TaskStatus::Open, TaskStatus::Expired];
 
 #[derive(Debug, Clone)]
 pub struct TaskSettings {

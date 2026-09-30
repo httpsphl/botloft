@@ -17,6 +17,7 @@ import { useApp } from "../store/context";
 import { Callout } from "../ui/Callout";
 import { useBotAlerts } from "./alerts";
 import { useAttentionMark } from "./attention";
+import { useFolderNotices } from "./folders";
 import { useOpenAtSignIn } from "./signIn";
 import { TitleBar } from "./TitleBar";
 import { useTray } from "./tray";
@@ -31,6 +32,7 @@ export function Workspace() {
   useAttentionMark();
   useTray();
   useBotAlerts();
+  useFolderNotices();
   useOpenAtSignIn();
 
   let main: ReactNode;

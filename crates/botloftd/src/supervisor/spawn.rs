@@ -13,13 +13,13 @@ use tracing::{debug, warn};
 
 use super::slot::{Running, StopIntent};
 use super::{ClaudeStatus, Inner, STABLE_AFTER, Supervisor};
-use crate::chat::StreamReader;
+use crate::chat::{StreamReader, control};
 use crate::platform;
 use crate::runtime::claude::Claude;
 use crate::runtime::{ProcessEvent, SpawnSpec};
 use crate::secrets::{self, TokenHash};
 use crate::state::Daemon;
-use crate::{approvals, courier, routines, workspace};
+use crate::{approvals, context, courier, routines, workspace};
 
 /// Tools the bot uses without asking: its crew tools (spec 7.4).
 const ALLOWED_TOOLS: &str = "mcp__botloft";
@@ -40,6 +40,7 @@ impl Supervisor {
             slots,
             tokens,
             sessions,
+            replaced,
             claude,
             ..
         } = inner;
@@ -62,7 +63,19 @@ impl Supervisor {
             .and_then(|(spec, launch)| Ok((self.runtime.spawn(spec)?, launch)));
         match launched {
             Ok((process, launch)) => {
-                sessions.insert(bot.id.clone(), launch.session.clone());
+                // What the session applies and how full it is (spec 9.2);
+                // Claude Code answers as soon as it is up.
+                for ask in [control::settings_request(), control::context_request()] {
+                    let _ = process.control.write(ask);
+                }
+                context::process_started(daemon, &bot.id, launch.resumed);
+                // A new conversation is on disk only once it has a turn
+                // (spec 7.3); the one it takes the place of is left behind.
+                if !launch.resumed
+                    && let Some(old) = sessions.remove(&bot.id)
+                {
+                    replaced.push((bot.id.clone(), old));
+                }
                 slot.generation = Some(generation);
                 slot.restart_at = None;
                 slot.fresh_next = false;
@@ -76,6 +89,7 @@ impl Supervisor {
                     resumed: launch.resumed,
                     token_hash: launch.token_hash,
                     permission_mode: bot.permission_mode,
+                    effort: bot.effort,
                 });
                 self.count_busy(slot.state, BotState::Launching);
                 slot.state = BotState::Launching;
@@ -130,7 +144,7 @@ impl Supervisor {
 
         match slot.stop.take() {
             Some(StopIntent::Restart { fresh }) => {
-                slot.fresh_next = fresh;
+                slot.fresh_next |= fresh;
                 slot.restart_at = Some(Instant::now());
             }
             Some(StopIntent::Halt(state)) => {
@@ -152,6 +166,7 @@ impl Supervisor {
         approvals::expire_for_bot(daemon, bot);
         courier::requeue_unread(daemon, bot, generation);
         routines::process_ended(daemon, bot);
+        context::process_ended(daemon, bot);
         crate::screens::turn_ended(daemon, bot);
         self.wake();
     }
@@ -160,7 +175,6 @@ impl Supervisor {
 struct Launch {
     token_hash: String,
     resumed: bool,
-    session: String,
 }
 
 /// Command line and environment of spec 7.4, with a fresh bot token.
@@ -195,7 +209,7 @@ fn launch_spec(
     .map(OsString::from)
     .collect();
     args.push(if resumed { "--resume" } else { "--session-id" }.into());
-    args.push(session.clone().into());
+    args.push(session.into());
     for arg in [
         "--setting-sources",
         "project,local",
@@ -218,6 +232,11 @@ fn launch_spec(
     if let Some(model) = bot.model.cli_value() {
         args.push("--model".into());
         args.push(model.into());
+    }
+    // Without the flag, Claude Code uses the level it sets for the model.
+    if let Some(effort) = bot.effort.cli_value() {
+        args.push("--effort".into());
+        args.push(effort.into());
     }
 
     let mut env = platform::user_environment()?;
@@ -248,7 +267,6 @@ fn launch_spec(
         Launch {
             token_hash: TokenHash::of(&token).to_hex(),
             resumed,
-            session,
         },
     ))
 }

@@ -33,7 +33,7 @@ export const messages = {
   row: {
     you: "You",
     system: "Botloft",
-    archivedBot: "an archived bot",
+    goneBot: "a bot no longer in the crew",
     to: "to",
     task: "Task",
     result: "Result",

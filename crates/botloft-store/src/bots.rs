@@ -1,7 +1,7 @@
 //! `bots` table.
 
 use botloft_core::ids::{BotId, CrewId};
-use botloft_core::protocol::{BotModel, PermissionMode};
+use botloft_core::protocol::{BotEffort, BotModel, ModelEffort, PermissionMode};
 use rusqlite::{OptionalExtension, Row, params};
 
 use crate::{Result, Store, parse_column, unique_as_duplicate};
@@ -24,12 +24,16 @@ pub struct BotRecord {
     /// What Claude Code last reported; written by [`Store::set_model_in_use`]
     /// and left alone by [`Store::update_bot`].
     pub model_in_use: Option<String>,
+    pub effort: BotEffort,
+    /// What Claude Code last reported; written by
+    /// [`Store::set_effort_default`] and left alone by [`Store::update_bot`].
+    pub effort_default: Option<ModelEffort>,
     pub created_at: i64,
     pub archived_at: Option<i64>,
 }
 
 const COLUMNS: &str = "id, crew_id, name, handle, slug, role, instructions, color, paused, created_at, archived_at, \
-     permission_mode, model, model_in_use";
+     permission_mode, model, model_in_use, effort, effort_default";
 
 fn from_row(row: &Row<'_>) -> rusqlite::Result<BotRecord> {
     Ok(BotRecord {
@@ -47,6 +51,11 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<BotRecord> {
         permission_mode: parse_column(row, 11)?,
         model: parse_column(row, 12)?,
         model_in_use: row.get(13)?,
+        effort: parse_column(row, 14)?,
+        // A level this build does not know reads as not known.
+        effort_default: row
+            .get::<_, Option<String>>(15)?
+            .and_then(|level| level.parse().ok()),
     })
 }
 
@@ -56,7 +65,7 @@ impl Store {
             .execute(
                 &format!(
                     "INSERT INTO bots ({COLUMNS}) \
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)"
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)"
                 ),
                 params![
                     bot.id.as_str(),
@@ -72,7 +81,9 @@ impl Store {
                     bot.archived_at,
                     bot.permission_mode.as_str(),
                     bot.model.as_str(),
-                    bot.model_in_use
+                    bot.model_in_use,
+                    bot.effort.as_str(),
+                    bot.effort_default.map(ModelEffort::as_str)
                 ],
             )
             .map_err(|err| unique_as_duplicate(err, "bot handle or slug"))?;
@@ -140,7 +151,8 @@ impl Store {
         self.conn
             .execute(
                 "UPDATE bots SET name = ?2, handle = ?3, role = ?4, instructions = ?5, \
-                 color = ?6, paused = ?7, archived_at = ?8, permission_mode = ?9, model = ?10                  WHERE id = ?1",
+                 color = ?6, paused = ?7, archived_at = ?8, permission_mode = ?9, model = ?10, \
+                 effort = ?11 WHERE id = ?1",
                 params![
                     bot.id.as_str(),
                     bot.name,
@@ -151,18 +163,29 @@ impl Store {
                     bot.paused,
                     bot.archived_at,
                     bot.permission_mode.as_str(),
-                    bot.model.as_str()
+                    bot.model.as_str(),
+                    bot.effort.as_str()
                 ],
             )
             .map_err(|err| unique_as_duplicate(err, "bot handle"))?;
         Ok(())
     }
 
-    /// The model Claude Code reported at the start of a turn (spec 7.4).
+    /// The model Claude Code reported (spec 7.4).
     pub fn set_model_in_use(&self, id: &BotId, model: &str) -> Result<()> {
         self.conn.execute(
             "UPDATE bots SET model_in_use = ?2 WHERE id = ?1",
             params![id.as_str(), model],
+        )?;
+        Ok(())
+    }
+
+    /// The effort the bot's model uses by itself, as Claude Code reported it
+    /// (spec 7.4); `None` when it is not known.
+    pub fn set_effort_default(&self, id: &BotId, effort: Option<ModelEffort>) -> Result<()> {
+        self.conn.execute(
+            "UPDATE bots SET effort_default = ?2 WHERE id = ?1",
+            params![id.as_str(), effort.map(ModelEffort::as_str)],
         )?;
         Ok(())
     }
@@ -191,123 +214,4 @@ impl Store {
 }
 
 #[cfg(test)]
-mod tests {
-    use botloft_core::protocol::Crew;
-
-    use super::*;
-    use crate::StoreError;
-
-    fn setup() -> (Store, CrewId) {
-        let store = Store::open_in_memory().expect("store");
-        let crew = Crew {
-            id: CrewId::generate(),
-            name: "Docs".to_owned(),
-            slug: "docs".to_owned(),
-            work_folder: String::new(),
-            work_folder_chosen: false,
-            lead_bot_id: None,
-            paused: false,
-            created_at: 1,
-            archived_at: None,
-        };
-        store.insert_crew(&crew).expect("crew");
-        (store, crew.id)
-    }
-
-    fn bot(crew: &CrewId, handle: &str, created_at: i64) -> BotRecord {
-        BotRecord {
-            id: BotId::generate(),
-            crew_id: crew.clone(),
-            name: handle.to_owned(),
-            handle: handle.to_owned(),
-            slug: handle.to_owned(),
-            role: "writes docs".to_owned(),
-            instructions: "Be brief.\nCite sources.".to_owned(),
-            color: "#FF7A59".to_owned(),
-            paused: false,
-            permission_mode: PermissionMode::Default,
-            model: BotModel::Default,
-            model_in_use: None,
-            created_at,
-            archived_at: None,
-        }
-    }
-
-    #[test]
-    fn insert_get_and_list_by_crew() {
-        let (store, crew) = setup();
-        let writer = bot(&crew, "writer", 10);
-        let editor = bot(&crew, "editor", 20);
-        store.insert_bot(&writer).expect("insert");
-        store.insert_bot(&editor).expect("insert");
-
-        assert_eq!(store.bot(&writer.id).expect("get"), Some(writer.clone()));
-        let expected = vec![writer, editor];
-        assert_eq!(store.bots(Some(&crew), false).expect("list"), expected);
-        assert_eq!(store.bots(None, false).expect("list"), expected);
-        assert!(
-            store
-                .bots(Some(&CrewId::generate()), false)
-                .expect("list")
-                .is_empty()
-        );
-    }
-
-    #[test]
-    fn bot_needs_an_existing_crew() {
-        let (store, _) = setup();
-        let orphan = store.insert_bot(&bot(&CrewId::generate(), "orphan", 1));
-        assert!(matches!(orphan, Err(StoreError::Sqlite(_))), "{orphan:?}");
-    }
-
-    #[test]
-    fn handles_are_unique_among_active_bots_only() {
-        let (store, crew) = setup();
-        let mut first = bot(&crew, "writer", 1);
-        store.insert_bot(&first).expect("insert");
-        assert_eq!(
-            store.active_bot_by_handle(&crew, "writer").expect("lookup"),
-            Some(first.id.clone())
-        );
-
-        let mut clash = bot(&crew, "writer", 2);
-        clash.slug = "writer-2".to_owned();
-        assert!(matches!(
-            store.insert_bot(&clash),
-            Err(StoreError::Duplicate(_))
-        ));
-
-        first.archived_at = Some(3);
-        store.update_bot(&first).expect("archive");
-        assert_eq!(
-            store.active_bot_by_handle(&crew, "writer").expect("lookup"),
-            None
-        );
-        store.insert_bot(&clash).expect("handle is free again");
-        assert!(store.bot_slug_exists(&crew, "writer").expect("slug"));
-        assert_eq!(store.count_bots(&crew).expect("count"), 2);
-    }
-
-    #[test]
-    fn update_saves_mutable_fields() {
-        let (store, crew) = setup();
-        let mut writer = bot(&crew, "writer", 1);
-        store.insert_bot(&writer).expect("insert");
-        writer.name = "Lead Writer".to_owned();
-        writer.handle = "lead-writer".to_owned();
-        writer.color = "#5EC8FF".to_owned();
-        writer.paused = true;
-        store.update_bot(&writer).expect("update");
-        assert_eq!(store.bot(&writer.id).expect("get"), Some(writer));
-    }
-
-    #[test]
-    fn archiving_the_crew_archives_its_bots() {
-        let (store, crew) = setup();
-        store.insert_bot(&bot(&crew, "writer", 1)).expect("insert");
-        store.archive_crew(&crew, 9).expect("archive");
-        assert!(store.bots(Some(&crew), false).expect("list").is_empty());
-        let all = store.bots(Some(&crew), true).expect("list all");
-        assert_eq!(all[0].archived_at, Some(9));
-    }
-}
+mod tests;

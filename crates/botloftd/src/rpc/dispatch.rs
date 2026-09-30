@@ -8,8 +8,8 @@ use serde_json::Value;
 use super::jsonrpc::{RpcError, empty_params};
 use crate::approvals;
 use crate::service::{
-    self, ApiResult, attachments, bots, chat, crews, deliveries, files, lead, messages, models,
-    modes, routines, screens, settings, tasks,
+    self, ApiResult, archive, attachments, bots, chat, crews, delete, deliveries, files, lead,
+    messages, models, modes, routines, screens, settings, tasks,
 };
 use crate::state::Daemon;
 
@@ -28,6 +28,8 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::CREWS_SET_WORK_FOLDER => reply(crews::set_work_folder(daemon, parse(params)?)),
         method::CREWS_SET_LEAD => reply(lead::set_lead(daemon, parse(params)?)),
         method::CREWS_ARCHIVE => reply(crews::archive(daemon, parse(params)?)),
+        method::CREWS_DELETE => reply(delete::crew(daemon, parse(params)?)),
+        method::ARCHIVE_LIST => reply(archive::list(daemon)),
         method::BOTS_LIST => reply(bots::list(daemon, parse(params)?)),
         method::BOTS_CREATE => reply(bots::create(daemon, parse(params)?)),
         method::BOTS_UPDATE => reply(bots::update(daemon, parse(params)?)),
@@ -36,7 +38,10 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
             reply(modes::set_permission_mode(daemon, parse(params)?))
         }
         method::BOTS_SET_MODEL => reply(models::set_model(daemon, parse(params)?)),
+        method::BOTS_SET_EFFORT => reply(models::set_effort(daemon, parse(params)?)),
+        method::BOTS_COMPACT => reply(crate::context::compact(daemon, parse(params)?)),
         method::BOTS_ARCHIVE => reply(bots::archive(daemon, parse(params)?)),
+        method::BOTS_DELETE => reply(delete::bot(daemon, parse(params)?)),
         method::BOTS_RESTART => reply(bots::restart(daemon, parse(params)?)),
         method::CHAT_HISTORY => reply(chat::history(daemon, parse(params)?)),
         method::APPROVALS_ANSWER => reply(approvals::answer(daemon, parse(params)?)),

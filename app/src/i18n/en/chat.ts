@@ -43,7 +43,7 @@ export const chat = {
   inbound: {
     task: "Task",
     result: "Result",
-    archivedBot: "An archived bot",
+    goneBot: "A bot no longer in the crew",
   },
   run: {
     working: "Working",

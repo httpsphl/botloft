@@ -5,15 +5,17 @@
 //! Lock order: the store lock may be held while taking the supervisor lock
 //! (service calls read states), never the other way around.
 
+mod forget;
 mod reconcile;
 mod relaunch;
+mod session;
 mod settings;
 mod sign_in;
 mod slot;
 mod spawn;
 mod turns;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
 use std::time::Duration;
@@ -61,11 +63,15 @@ struct Inner {
     slots: HashMap<BotId, Slot>,
     /// Token hash of each running generation -> its bot.
     tokens: HashMap<String, (BotId, u64)>,
-    /// The conversation each bot resumes, as far as this run knows; the
+    /// The conversation each bot resumes: one Claude Code has on disk. The
     /// database has it too (spec 7.3).
     sessions: HashMap<BotId, String>,
+    /// Bots that were deleted while this daemon ran (spec 7.6).
+    gone: HashSet<BotId>,
     claude: ClaudeStatus,
     sign_in: sign_in::SignIn,
+    /// Conversations a new one took the place of, still in the database.
+    replaced: Vec<(BotId, String)>,
 }
 
 #[derive(Default)]
@@ -168,6 +174,19 @@ impl Supervisor {
             self.set_state(bot, slot, slot.working_state());
         }
         Ok(generation)
+    }
+
+    /// Writes a control request to the bot's stdin (spec 9.2): a question
+    /// to Claude Code itself, which starts no turn.
+    pub fn write_control(&self, bot: &BotId, line: Bytes) -> Result<(), NotRunning> {
+        let inner = self.lock();
+        let running = inner
+            .slots
+            .get(bot)
+            .filter(|slot| slot.stop.is_none())
+            .and_then(|slot| slot.running.as_ref())
+            .ok_or(NotRunning)?;
+        running.control.write(line).map_err(|_| NotRunning)
     }
 
     /// Whether `generation` is the bot's running process.

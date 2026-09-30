@@ -43,6 +43,11 @@ impl Routines {
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
+
+    /// The bot was deleted, and its runs with it.
+    pub(crate) fn forget(&self, bot: &BotId) {
+        self.turns().remove(bot);
+    }
 }
 
 /// Runs the scheduler until the daemon stops. The first pass also ends the
