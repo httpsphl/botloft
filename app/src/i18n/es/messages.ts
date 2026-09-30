@@ -31,7 +31,7 @@ export const messages: Messages["messages"] = {
   row: {
     you: "Tú",
     system: "Botloft",
-    archivedBot: "un bot archivado",
+    goneBot: "un bot que ya no está en el equipo",
     to: "para",
     task: "Tarea",
     result: "Resultado",

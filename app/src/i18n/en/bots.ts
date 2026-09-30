@@ -41,12 +41,14 @@ export const bots = {
     showDetails: "Show details",
     hideDetails: "Hide details",
     more: "More bot actions",
+    menuOf: (name: string) => `Actions for ${name}`,
     edit: "Edit",
     restartFresh: "Restart with a new conversation",
     openFolder: "Open folder",
     makeChief: "Make crew chief",
     stopChief: "Stop being chief",
     archive: "Archive bot",
+    delete: "Delete bot",
     failed: {
       pause: "Could not pause the bot",
       resume: "Could not resume the bot",
@@ -54,6 +56,7 @@ export const bots = {
       openFolder: "Could not open the folder",
       chief: "Could not change the chief",
       archive: "Could not archive the bot",
+      delete: "Could not delete the bot",
     },
     fresh: {
       title: "Start a new conversation?",
@@ -65,6 +68,18 @@ export const bots = {
       title: (name: string) => `Archive ${name}?`,
       confirm: "Archive bot",
       body: "The bot stops and leaves the crew. Messages still waiting for it are not delivered.",
+    },
+    deleteConfirm: {
+      title: (name: string) => `Delete ${name}?`,
+      confirm: "Delete bot",
+      /** `running` is false for an archived bot, which stopped long ago. */
+      removed: (name: string, running: boolean) =>
+        `${name} ${running ? "stops now and leaves" : "leaves"} Botloft for good, with its conversation, its routines and the tasks it was part of. This can't be undone.`,
+      chief: (crew: string) => `${crew} will be left without a chief.`,
+      kept: (name: string) => `${name}'s folder stays on your computer, with everything in it:`,
+      recycle: "Move this folder to the Recycle Bin",
+      recycled: (name: string) =>
+        `${name}'s folder goes to the Recycle Bin, where you can still get it back:`,
     },
   },
   dialog: {

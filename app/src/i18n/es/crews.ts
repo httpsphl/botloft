@@ -46,6 +46,7 @@ export const crews: Messages["crews"] = {
       `Los bots trabajarán en ${path}. Cada uno se reinicia cuando termine lo que está haciendo. Lo que ya hicieron se queda donde está.`,
     move: "Mover",
     archive: "Archivar equipo",
+    delete: "Eliminar equipo",
     tabs: {
       label: "Vistas del equipo",
       bots: "Bots",
@@ -59,12 +60,25 @@ export const crews: Messages["crews"] = {
       bots === 0
         ? "El equipo sale de la app."
         : `El equipo sale de la app. ${bots === 1 ? "Su bot se detiene" : `Sus ${bots} bots se detienen`}, y los mensajes que aún ${bots === 1 ? "lo" : "los"} esperan no se entregan.`,
+    deleteTitle: (crew: string) => `¿Eliminar ${crew}?`,
+    deleteBody: (crew: string, bots: number, running: boolean) =>
+      bots === 0
+        ? `${crew} sale de Botloft para siempre. No se puede deshacer.`
+        : `${crew} y ${bots === 1 ? "su bot" : `sus ${bots} bots`} ${running ? "se detienen ahora y salen" : "salen"} de Botloft para siempre, con sus conversaciones, rutinas y tareas. No se puede deshacer.`,
+    deleteKept:
+      "Las carpetas siguen en tu ordenador, con todo lo que contienen: la carpeta de cada bot y la carpeta de trabajo del equipo:",
+    deleteRecycle: "Enviar las carpetas del equipo a la Papelera",
+    deleteRecycled:
+      "La carpeta del equipo va a la Papelera, con la carpeta de cada bot y la carpeta de trabajo dentro. Todavía puedes recuperarla de allí:",
+    deleteRecycledChosen:
+      "La carpeta de cada bot va a la Papelera, de donde todavía puedes recuperarla. La carpeta de trabajo que elegiste se queda donde está:",
     failed: {
       pause: "No se pudo pausar el equipo",
       resume: "No se pudo reanudar el equipo",
       changeFolder: "No se pudo cambiar la carpeta",
       openFolder: "No se pudo abrir la carpeta",
       archive: "No se pudo archivar el equipo",
+      delete: "No se pudo eliminar el equipo",
     },
   },
   bots: {

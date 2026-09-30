@@ -18,6 +18,34 @@ pub fn replay(line: &Value) -> Value {
     })
 }
 
+/// The replay that opens a turn in `session`. From here on Claude Code has
+/// the conversation on disk and it can be resumed (spec 7.3).
+pub fn began(session: &str) -> Value {
+    json!({
+        "type": "user",
+        "isReplay": true,
+        "uuid": "u",
+        "session_id": session,
+        "message": { "role": "user", "content": "hi" },
+        "parent_tool_use_id": null,
+    })
+}
+
+/// What Claude Code 2.1.284 prints, before it exits, when the conversation
+/// it was told to resume is not on disk (spec 19).
+pub fn no_conversation(session: &str) -> Value {
+    json!({
+        "type": "result",
+        "subtype": "error_during_execution",
+        "is_error": true,
+        "duration_ms": 0,
+        "num_turns": 0,
+        "session_id": session,
+        "total_cost_usd": 0,
+        "errors": [format!("No conversation found with session ID: {session}")],
+    })
+}
+
 pub fn text(text: &str) -> Value {
     json!({
         "type": "assistant",

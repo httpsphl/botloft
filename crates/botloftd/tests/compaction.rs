@@ -213,6 +213,7 @@ async fn a_process_that_ends_takes_its_compaction_and_a_new_conversation_its_siz
     let s = setup().await;
     let first = s.runtime.process(1).await;
     s.until(BotState::Idle).await;
+    s.turn(&first).await;
     holds(&first, 556_000, 1_000_000).await;
     compact(&s).expect("compact");
     first.exit(1).await;

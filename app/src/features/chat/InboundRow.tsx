@@ -71,7 +71,7 @@ function OtherMessage({ message }: { message: Message }) {
   const sender = useApp((state) => (message.fromBotId ? state.bots[message.fromBotId] : undefined));
   const delivery = useApp((state) => state.deliveries[message.id]);
   const system = message.fromKind === "system";
-  const name = system ? "Botloft" : (sender?.name ?? t.chat.inbound.archivedBot);
+  const name = system ? "Botloft" : (sender?.name ?? t.chat.inbound.goneBot);
   const arrival = useArrival(message.createdAt);
   return (
     <li className={`flex gap-3 pr-12 ${arrival}`}>

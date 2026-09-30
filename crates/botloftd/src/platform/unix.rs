@@ -103,6 +103,14 @@ pub fn delete_task(_name: &str) -> io::Result<bool> {
     Err(no_tasks())
 }
 
+/// There is no Recycle Bin off Windows: the folder stays.
+pub fn recycle(_path: &Path) -> io::Result<()> {
+    Err(io::Error::new(
+        io::ErrorKind::Unsupported,
+        "the Recycle Bin is only supported on Windows",
+    ))
+}
+
 /// Unix has no Windows sign-in to tell apart.
 pub fn sign_in_id() -> Option<String> {
     None

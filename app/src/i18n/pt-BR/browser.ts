@@ -1,6 +1,7 @@
 // O navegador de cada bot (spec 21.8): o painel ao lado do chat onde o dono
-// assiste ao vivo, o cartão em que o bot pede para usar um site novo, e o
-// dono assumindo o navegador com as próprias mãos (spec 21.10).
+// assiste ao vivo, as abas e o endereço, o cartão em que o bot pede para
+// usar um site novo, e o dono assumindo o navegador com as próprias mãos
+// (spec 21.10).
 
 import type { Messages } from "../en";
 
@@ -19,6 +20,10 @@ export const browser: Messages["browser"] = {
   live: "Ao vivo",
   loading: "Carregando…",
   address: "Endereço",
+  addressHint: "Digite um endereço e aperte Enter",
+  goFailed: "Não foi possível abrir esse endereço",
+  reload: "Recarregar",
+  reloadFailed: "Não foi possível recarregar a página",
   screen: (bot) => `O que ${bot} vê`,
   emptyTitle: (bot) => `${bot} ainda não abriu o navegador`,
   emptyBody:
@@ -30,7 +35,14 @@ export const browser: Messages["browser"] = {
   failedBody:
     "O Botloft usa o Microsoft Edge, que vem com o Windows. Confira se ele está instalado e peça ao bot para tentar de novo.",
   details: "Detalhes",
-  tabs: (count) => (count === 1 ? "1 aba" : `${count} abas`),
+  tabs: {
+    label: "Abas",
+    blank: "Nova aba",
+    add: "Nova aba",
+    addFailed: "Não foi possível abrir uma nova aba",
+    switchFailed: "Não foi possível trocar de aba",
+    takeFirst: "Assuma o controle para trocar de aba ou abrir uma nova",
+  },
   did: {
     open: (site) => `Abriu ${site}`,
     click: (what) => `Clicou em ${what}`,
@@ -57,6 +69,7 @@ export const browser: Messages["browser"] = {
     takeFailed: "Não foi possível assumir o navegador",
     holding: "Você está no controle",
     waits: (bot) => `As ações de ${bot} no navegador esperam você devolver.`,
+    leaves: (bot) => `${bot} continua na aba que você deixar aberta.`,
     giveBack: (bot) => `Pronto, devolver para ${bot}`,
     giveBackFailed: "Não foi possível devolver o navegador",
     clickToType: "Clique na tela para digitar",

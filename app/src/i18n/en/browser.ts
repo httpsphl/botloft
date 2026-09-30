@@ -1,6 +1,7 @@
 // Each bot's own browser (spec 21.8): the panel beside its chat where the
-// owner watches it live, the card where it asks to use a new site, and the
-// owner taking the browser into their own hands (spec 21.10).
+// owner watches it live, its tabs and address, the card where it asks to
+// use a new site, and the owner taking the browser into their own hands
+// (spec 21.10).
 
 export const browser = {
   heading: "Browser",
@@ -17,6 +18,10 @@ export const browser = {
   live: "Live",
   loading: "Loading…",
   address: "Address",
+  addressHint: "Type an address and press Enter",
+  goFailed: "Could not open that address",
+  reload: "Reload",
+  reloadFailed: "Could not reload the page",
   screen: (bot: string) => `What ${bot} sees`,
   emptyTitle: (bot: string) => `${bot} hasn't opened the browser yet`,
   emptyBody:
@@ -28,7 +33,14 @@ export const browser = {
   failedBody:
     "Botloft uses Microsoft Edge, which comes with Windows. Check that it's installed, then ask the bot to try again.",
   details: "Details",
-  tabs: (count: number) => (count === 1 ? "1 tab" : `${count} tabs`),
+  tabs: {
+    label: "Tabs",
+    blank: "New tab",
+    add: "New tab",
+    addFailed: "Could not open a new tab",
+    switchFailed: "Could not switch tabs",
+    takeFirst: "Take control to switch tabs or open a new one",
+  },
   did: {
     open: (site: string) => `Opened ${site}`,
     click: (what: string) => `Clicked ${what}`,
@@ -55,6 +67,7 @@ export const browser = {
     takeFailed: "Could not take the browser",
     holding: "You are in control",
     waits: (bot: string) => `${bot}'s actions in the browser wait until you give it back.`,
+    leaves: (bot: string) => `${bot} goes on in the tab you leave open.`,
     giveBack: (bot: string) => `Done, give it back to ${bot}`,
     giveBackFailed: "Could not give the browser back",
     clickToType: "Click the screen to type",

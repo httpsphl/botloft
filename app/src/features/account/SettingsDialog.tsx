@@ -1,8 +1,10 @@
 // Settings (spec 15.1), in parts listed on the left: general (what
 // Botloft does in the background, the language), the chat, notifications,
-// the look, and the versions for when something needs reporting.
+// the look, what was archived, and the versions for when something needs
+// reporting.
 
 import {
+  Archive,
   Bell,
   Info,
   type LucideIcon,
@@ -16,16 +18,18 @@ import { Dialog } from "../../ui/Dialog";
 import { AboutSettings } from "./AboutSettings";
 import { AlertsSettings } from "./AlertsSettings";
 import { AppearanceSettings } from "./AppearanceSettings";
+import { ArchivedSettings } from "./ArchivedSettings";
 import { ChatSettings } from "./ChatSettings";
 import { GeneralSettings } from "./GeneralSettings";
 
-type Page = "general" | "chat" | "alerts" | "appearance" | "about";
+type Page = "general" | "chat" | "alerts" | "appearance" | "archived" | "about";
 
 const PAGES: { id: Page; icon: LucideIcon }[] = [
   { id: "general", icon: SlidersHorizontal },
   { id: "chat", icon: MessageSquare },
   { id: "alerts", icon: Bell },
   { id: "appearance", icon: Palette },
+  { id: "archived", icon: Archive },
   { id: "about", icon: Info },
 ];
 
@@ -74,6 +78,7 @@ export function SettingsDialog({ onClose }: { onClose(): void }) {
           {page === "chat" && <ChatSettings />}
           {page === "alerts" && <AlertsSettings />}
           {page === "appearance" && <AppearanceSettings />}
+          {page === "archived" && <ArchivedSettings />}
           {page === "about" && <AboutSettings />}
         </div>
       </div>
