@@ -201,10 +201,11 @@ Os estados saem do próprio fluxo de eventos (8.1); não há hooks.
 |---|---|
 | spawn do processo | `launching` |
 | processo vivo há 1,5 s | `idle` (o Claude Code fica calado até a primeira mensagem) |
-| delivery escrita no stdin | `busy` (conta um turno pendente) |
-| `system/init` sem turno pendente | `busy`: o Claude Code começou um turno por conta própria (um subagente terminou e ele seguiu sozinho), sem message por trás. O `result` dele fecha esse turno sem descontar um turno pendente |
+| delivery escrita no stdin | `busy`; o `uuid` da linha fica esperando o replay |
+| `user` com `isReplay` | o `uuid` escrito sai da espera e há um turno aberto. O replay pode vir no meio de um turno que já roda: uma message escrita entre duas chamadas de ferramenta entra nesse turno, e um só `result` fecha as duas (19). Um replay com `uuid` que ninguém escreveu (a saída do `/compact`, 8.6) só abre o turno |
+| `system/init` | `busy`: há um turno aberto. Sem message por trás, é um turno do próprio Claude Code (um subagente terminou e ele seguiu sozinho) |
 | `system/background_tasks_changed` | `busy` enquanto a lista trouxer tarefas `local_agent` (subagentes em segundo plano); a lista vem inteira a cada mudança. Comandos e monitores em segundo plano não contam: podem durar tanto quanto o bot |
-| `result` | `idle` se não sobrou turno pendente nem subagente, senão continua `busy` |
+| `result` | fecha o turno aberto; `idle` se nenhum `uuid` escrito espera o replay e não há subagente, senão continua `busy` |
 | a tool de aprovação é chamada | `needs_approval` |
 | aprovação respondida ou vencida | `busy` |
 | erro `rate_limit` num turno, ou `rate_limit_event` com status diferente de `allowed` | `rate_limited` até `resetsAt` (5 min se não vier), depois `idle` |
@@ -319,7 +320,7 @@ Uma linha JSON por evento, em UTF-8. Linha que não é JSON, ou maior que 8 MiB,
 |---|---|
 | `system/init` | vem no começo de cada turno: segue `permissionMode` e guarda `model` (7.4); um turno sem message por trás deixa o bot `busy` (7.2) |
 | `system/background_tasks_changed` | quantos subagentes (`task_type: local_agent`) rodam em segundo plano (7.2) |
-| `user` com `isReplay: true` | a message com aquele `uuid` começou a ser processada: a delivery ganha `read_at` (9.1). A conversa existe em disco a partir daqui: guarda `session_id` em `bots.session_id` (7.3) |
+| `user` com `isReplay: true` | a message com aquele `uuid` começou a ser processada: a delivery ganha `read_at` (9.1) e o `uuid` sai da espera do supervisor (7.2). A conversa existe em disco a partir daqui: guarda `session_id` em `bots.session_id` (7.3) |
 | `result` com `No conversation found` em `errors` | o Claude Code não achou a conversa a retomar e vai sair: não é um turno, não vira item nem fecha turno pendente; o próximo start começa conversa nova (7.3) |
 | `stream_event` com `text_delta` | texto ao vivo da resposta (`chat.delta`, 8.3); não é gravado |
 | `assistant`, bloco `text` | item `reply` com o texto (markdown) |
@@ -327,7 +328,7 @@ Uma linha JSON por evento, em UTF-8. Linha que não é JSON, ou maior que 8 MiB,
 | `user`, bloco `tool_result` | atualiza o item `tool` do mesmo `tool_use_id`: `done` ou `failed` e um trecho da saída |
 | `assistant` com `error` | item `notice` e, conforme o erro, estado `rate_limited` ou `auth_error` (7.2); `model_not_found` vira o aviso `model_unavailable` |
 | `rate_limit_event` | uso da conta (janelas de 5 h e 7 dias) em `system.status.usage`; status diferente de `allowed` leva a `rate_limited` |
-| `result` | item `turn` com duração, custo e erro (se houve); fecha um turno pendente. O daemon pergunta de novo o tamanho da conversa (8.6). O `result` de uma compactação (`local_command: "compact"`) fecha o turno sem item `turn` |
+| `result` | item `turn` com duração, custo e erro (se houve); fecha o turno aberto, com todas as messages que entraram nele (7.2). O daemon pergunta de novo o tamanho da conversa (8.6). O `result` de uma compactação (`local_command: "compact"`) fecha o turno sem item `turn` |
 | `assistant` com `usage` | quanto a conversa ocupa naquele pedido ao modelo (8.6) |
 | `system/status` | `status: "compacting"`: o Claude Code começou a compactar a conversa; com `compact_result`, terminou (8.6) |
 | `system/compact_boundary` | a conversa foi compactada: aviso `compacted` ou `auto_compacted` no chat (8.6) |
@@ -416,7 +417,7 @@ A compactação custa um pedido ao modelo com a conversa inteira (barato com o c
 4. Se o bot não está em `idle`/`busy`/`needs_approval`: volta para `pending` com `next_attempt_at` em 5 s, **sem** contar tentativa. Bot ou crew arquivados: a delivery vira `dead` na hora.
 5. Monta a mensagem (9.2) na hora do envio e escreve uma linha no stdin do processo, com timeout de 10 s.
 6. Escrita aceita: `sent`, com a generation do processo. Falha de escrita (processo saindo): volta para `pending` sem contar tentativa.
-7. Quando o Claude Code começa o turno daquela mensagem, ele a devolve no stdout com o mesmo `uuid` (`--replay-user-messages`), e a delivery ganha `read_at`. O app mostra isso como "lida", com os dois tiques em azul-claro (15.3).
+7. Quando o Claude Code pega a mensagem, num turno novo ou no turno que já roda, ele a devolve no stdout com o mesmo `uuid` (`--replay-user-messages`), e a delivery ganha `read_at`. O app mostra isso como "lida", com os dois tiques em azul-claro (15.3).
 8. **O processo morreu antes de ler:** a delivery ainda está `sent` sem `read_at` e com a generation que acabou. Ela volta para `pending` com `attempts += 1` e o backoff de `retry_backoff_initial_ms * 2^(attempts-1)`, limitado a `retry_backoff_max_ms`. Ao chegar em `max_attempts` vira `dead`: uma mensagem que derruba o processo toda vez não fica em laço.
 9. Lease vencido (daemon caiu no meio): volta a `pending` no boot e a cada ciclo.
 10. `deliveries.retry` devolve uma delivery `dead` para `pending`, com as tentativas zeradas.
@@ -943,9 +944,9 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28; esf
 | Item | Seção | Resultado | Teste real |
 |---|---|---|---|
 | Formato de entrada `--input-format stream-json` | 9.2 | **Não documentado**. **Testado com 2.1.284**: `{"type":"user","uuid":...,"message":{"role":"user","content":[blocos]}}` abre um turno; bloco `image` em base64 é aceito | feito (M4.1) |
-| Vários turnos num processo; mensagem durante um turno | 9.2 | **Testado com 2.1.284**: dois turnos seguidos no mesmo processo; a mensagem escrita durante um turno virou o turno seguinte. Cada turno começa com `system/init` e termina com `result` | feito (M4.1) |
+| Vários turnos num processo; mensagem durante um turno | 9.2 | **Testado com 2.1.284**: dois turnos seguidos no mesmo processo; a mensagem escrita durante um turno virou o turno seguinte. Cada turno começa com `system/init` e termina com `result`. **Testado de novo com 2.1.284** (Haiku, as flags do daemon): escrita enquanto o modelo escrevia uma resposta só de texto, a mensagem ganhou turno próprio (`system/init`, replay, `result`); escrita entre duas chamadas de ferramenta, voltou como replay logo depois do resultado de uma ferramenta, **dentro do mesmo turno**, sem `system/init` novo, e um só `result` (`num_turns: 5`) fechou as duas. Contar um turno por message escrita deixou um chefe `busy` para sempre num chat real; o supervisor conta pelos replays (7.2) | feito |
 | Processo sem entrada | 7.2 | **Testado com 2.1.284**: fica calado e vivo até a primeira mensagem; sai com 0 quando o stdin fecha | feito (M4.1) |
-| `--replay-user-messages` | 9.1 | Flag no `--help` sem detalhes na documentação. **Testado com 2.1.284**: devolve a mensagem com `isReplay: true` e o mesmo `uuid` quando o turno dela começa, não quando é lida | feito (M4.1) |
+| `--replay-user-messages` | 9.1 | Flag no `--help` sem detalhes na documentação. **Testado com 2.1.284**: devolve a mensagem com `isReplay: true` e o mesmo `uuid` quando o Claude Code a pega (no começo do turno dela ou no meio do turno em andamento, veja acima), não quando é lida. O `system/init` do turno vem antes do replay. Um `/compact` sem nada a compactar também devolve o comando com o `uuid` enviado | feito (M4.1) |
 | Eventos do `--output-format stream-json` | 8.1 | Parcialmente documentado (`headless`): `system/init`, `stream_event` com `text_delta` (exige `--verbose` e `--include-partial-messages`), `system/api_retry` com `error` (`rate_limit`, `authentication_failed`...), `result`. **Visto com 2.1.284**: também `rate_limit_event` (status, `resetsAt`, uso das janelas de 5 h e 7 dias), `system/post_turn_summary`, `system/task_summary`, `system/thinking_tokens`; erro de API vem em `assistant.error` e `result.terminal_reason` | feito (M4.1) |
 | `--permission-prompt-tool` | 10.1 | Confirmado (`cli-reference`, `headless`). **Testado com 2.1.284**: chama a tool com `{tool_name, input, tool_use_id}` e segue `{"behavior":"allow","updatedInput":...}`. Pelo daemon e pelo app: permitir depois de 95 s funcionou; negar com nota fez o bot citar a nota e não usar a ferramenta | feito (M4.1) |
 | `description` na entrada do `Bash` e do `PowerShell` | 10.1 | Confirmado (`hooks`, entrada do `PreToolUse`): nas duas ferramentas, `description` é "Optional description of what the command does", ao lado de `command`, `timeout` e `run_in_background`. **Testado com 2.1.284** em 2026-09-30 (`-p` com uma tool de aprovação que só grava a entrada e nega; depois com a linha de comando de 7.4; Haiku 4.5, Sonnet 5.5 e o padrão do plano, Opus 5.5): a tool de aprovação recebe a mesma entrada do bloco `tool_use`, e os 32 pedidos de `Bash` e `PowerShell` vistos traziam `description`. Sem regra, o texto é curto e técnico ("Install requests package"); com o dono escrevendo em português, Haiku e Opus descreveram em português e o Sonnet em inglês, também pelo daemon. Com a regra de 10.1, os três escreveram em português, em palavras simples e com o porquê ("Instala o pacote requests, que ajuda o Python a acessar sites"). Pelo daemon e pelo app de dev (Sonnet, modo Manual): o cartão mostrou a explicação, "Ver o comando" abriu o script em heredoc inteiro, e permitir rodou esse comando; o log de `debug` não teve o texto. **O campo não é garantido**: em uso real com 2.1.284, dois bots em Sonnet fizeram 28 comandos sem `description` (o `tool_use` já vinha só com `command`), e os outros bots, quase todos em Opus, mandaram nos 15 que fizeram. A falta não se repetiu em teste, então não foi visto se a regra a evita: o cartão tem o caso sem explicação | feito; manual (PR): ver se bots antigos em Sonnet passam a explicar depois de reiniciar |
@@ -1030,7 +1031,7 @@ Cada disparo vira uma `routine_run`, com o horário marcado (`scheduled_for`), u
 | `failed` | a delivery morreu (`dead`) ou o turno terminou com erro |
 | `skipped` | não disparou; `reason`: `overlap`, `bot_paused` ou `missed` |
 
-- **Fim de uma execução:** o daemon já sabe quando o turno de uma message começa (o replay com o mesmo `uuid`, 9.1 passo 7). O `result` seguinte fecha esse turno: a execução vira `done`, ou `failed` se o `result` trouxer erro. Se o processo morrer antes de ler a message, a delivery volta para a fila (9.1 passo 8) e a execução continua `queued`; se morrer no meio do turno, a execução vira `failed`, porque ninguém mais vai fechar aquele turno. Pelo mesmo motivo, ao subir, o daemon marca `failed` as execuções cujo turno começou sob o daemon anterior. Uma delivery `dead` também leva a execução a `failed`.
+- **Fim de uma execução:** o daemon já sabe quando o bot pega uma message (o replay com o mesmo `uuid`, 9.1 passo 7). O `result` seguinte fecha o turno em que ela entrou, também quando outra message entrou no mesmo turno: a execução vira `done`, ou `failed` se o `result` trouxer erro. Se o processo morrer antes de ler a message, a delivery volta para a fila (9.1 passo 8) e a execução continua `queued`; se morrer no meio do turno, a execução vira `failed`, porque ninguém mais vai fechar aquele turno. Pelo mesmo motivo, ao subir, o daemon marca `failed` as execuções cujo turno começou sob o daemon anterior. Uma delivery `dead` também leva a execução a `failed`.
 - **Sobreposição:** o horário chega com a execução anterior ainda `queued` (o bot está lento, parado por limite de uso, sem login ou fora do ar).
   - `skip` (padrão): registra `skipped` com `reason: overlap`. Um bot lento ou fora do ar não acumula pedidos repetidos.
   - `queue`: grava mesmo assim, mas só uma execução espera atrás da aberta; as outras viram `skipped`.

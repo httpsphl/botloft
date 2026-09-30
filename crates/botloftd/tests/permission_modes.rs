@@ -81,6 +81,7 @@ async fn a_busy_bot_finishes_its_turn_before_changing_mode() {
     assert_eq!(s.runtime.processes().len(), 1, "the turn is not cut short");
     assert!(s.daemon.supervisor.relaunch_pending(&s.bot));
 
+    first.emit(stream::began("session-1")).await;
     first.emit(stream::result(false)).await;
     let second = s.runtime.process(2).await;
     assert_eq!(
@@ -149,6 +150,7 @@ async fn a_plan_approved_while_a_new_model_waits_still_leaves_plan_mode() {
     planning.emit(init_with_mode(&session, "default")).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
     assert_eq!(stored_mode(&s), PermissionMode::Default);
+    planning.emit(stream::began("session-1")).await;
     planning.emit(stream::result(false)).await;
     let next = s.runtime.process(3).await;
     assert_eq!(

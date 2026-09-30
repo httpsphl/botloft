@@ -40,7 +40,11 @@ pub(super) fn apply(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value
             crate::screens::stream(daemon, bot, event);
         }
         "assistant" if !from_subagent => assistant(daemon, bot, generation, event),
-        "user" if event["isReplay"].as_bool() == Some(true) => replay(daemon, bot, event),
+        "user" if event["isReplay"].as_bool() == Some(true) => {
+            let uuid = event["uuid"].as_str();
+            daemon.supervisor.message_began(bot, generation, uuid);
+            replay(daemon, bot, event);
+        }
         "user" if !from_subagent => tool_results(daemon, bot, event),
         "rate_limit_event" => account::rate_limit(daemon, bot, generation, event),
         "result" => result(daemon, bot, generation, event),

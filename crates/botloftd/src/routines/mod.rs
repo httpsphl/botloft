@@ -27,8 +27,9 @@ const MAX_SLEEP: Duration = Duration::from_secs(60);
 #[derive(Default)]
 pub struct Routines {
     wake: Notify,
-    /// The run whose message began each bot's current turn.
-    turns: Mutex<HashMap<BotId, RoutineRunId>>,
+    /// The runs whose messages each bot's current turn took up. Messages
+    /// that arrive during a turn may join it (spec 9.1).
+    turns: Mutex<HashMap<BotId, Vec<RoutineRunId>>>,
 }
 
 impl Routines {
@@ -38,7 +39,7 @@ impl Routines {
         self.wake.notify_one();
     }
 
-    fn turns(&self) -> MutexGuard<'_, HashMap<BotId, RoutineRunId>> {
+    fn turns(&self) -> MutexGuard<'_, HashMap<BotId, Vec<RoutineRunId>>> {
         self.turns
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
@@ -90,36 +91,39 @@ fn until_next(daemon: &Daemon) -> Duration {
     Duration::from_millis(left).min(MAX_SLEEP)
 }
 
-/// The bot began the turn for `message`: remember the run it belongs to.
+/// The bot took up `message`: remember the run it belongs to.
 pub fn turn_began(daemon: &Daemon, bot: &BotId, message: &MessageId) {
     let run = daemon.store().run_of_message(message).ok().flatten();
-    let mut turns = daemon.routines.turns();
-    match run {
-        Some(run) if run.status == RunStatus::Queued => {
-            turns.insert(bot.clone(), run.id);
-        }
-        _ => {
-            turns.remove(bot);
-        }
+    if let Some(run) = run
+        && run.status == RunStatus::Queued
+    {
+        daemon
+            .routines
+            .turns()
+            .entry(bot.clone())
+            .or_default()
+            .push(run.id);
     }
 }
 
-/// The bot's turn ended (`result`): its run is done, or failed on an error.
+/// The bot's turn ended (`result`): its runs are done, or failed on an
+/// error.
 pub fn turn_ended(daemon: &Daemon, bot: &BotId, failed: bool) {
-    let Some(run) = daemon.routines.turns().remove(bot) else {
-        return;
-    };
     let status = if failed {
         RunStatus::Failed
     } else {
         RunStatus::Done
     };
-    finish(daemon, &run, status);
+    let runs = daemon.routines.turns().remove(bot).unwrap_or_default();
+    for run in runs {
+        finish(daemon, &run, status);
+    }
 }
 
-/// The bot's process ended mid-turn: that run will not finish.
+/// The bot's process ended mid-turn: those runs will not finish.
 pub fn process_ended(daemon: &Daemon, bot: &BotId) {
-    if let Some(run) = daemon.routines.turns().remove(bot) {
+    let runs = daemon.routines.turns().remove(bot).unwrap_or_default();
+    for run in runs {
         finish(daemon, &run, RunStatus::Failed);
     }
 }
