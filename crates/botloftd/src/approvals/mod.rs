@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard};
 
 use botloft_core::chat::{SUGGEST_TOOL, clip, tool_input_max, tool_summary};
+use botloft_core::command::tool_explanation;
 use botloft_core::ids::{ApprovalId, BotId, ChatItemId};
 use botloft_core::protocol::{
     Approval, ApprovalItem, ApprovalStatus, ApprovalsAnswerParams, ChatBody,
@@ -218,7 +219,8 @@ fn open(
         created_at: now,
         answered_at: None,
     };
-    let item = items::add(daemon, bot, ChatBody::Approval(item_of(&approval)))?;
+    let shown = item_of(&approval, tool_explanation(tool_name, input));
+    let item = items::add(daemon, bot, ChatBody::Approval(shown))?;
     let record = ApprovalRecord {
         approval,
         chat_item_id: item.id,
@@ -231,11 +233,12 @@ fn open(
     Some(Pending { record })
 }
 
-fn item_of(approval: &Approval) -> ApprovalItem {
+fn item_of(approval: &Approval, explanation: Option<String>) -> ApprovalItem {
     ApprovalItem {
         approval_id: approval.id.clone(),
         tool_name: approval.tool_name.clone(),
         summary: approval.summary.clone(),
+        explanation,
         input: approval.input.clone(),
         status: approval.status,
         note: approval.note.clone(),
@@ -270,7 +273,14 @@ fn settle(
 
 fn show(daemon: &Daemon, record: &ApprovalRecord) {
     let item: &ChatItemId = &record.chat_item_id;
-    items::update(daemon, item, ChatBody::Approval(item_of(&record.approval)));
+    // The bot's explanation is kept only in the chat item.
+    let shown = daemon.store().chat_item(item).ok().flatten();
+    let explanation = match shown.map(|shown| shown.body) {
+        Some(ChatBody::Approval(shown)) => shown.explanation,
+        _ => None,
+    };
+    let shown = item_of(&record.approval, explanation);
+    items::update(daemon, item, ChatBody::Approval(shown));
 }
 
 /// Expires the request if the MCP call goes away before it is settled,

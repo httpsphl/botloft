@@ -116,6 +116,10 @@ pub struct ToolItem {
     pub name: String,
     /// One line about what the call does, e.g. the command or the file.
     pub summary: String,
+    /// What the bot says a command is for, in its own words (spec 10.1);
+    /// absent when it said nothing, for other tools and for older items.
+    #[serde(default)]
+    pub explanation: Option<String>,
     /// The call's input as JSON, cut at 4 KB.
     pub input: String,
     pub status: ToolStatus,
@@ -134,6 +138,11 @@ pub struct ApprovalItem {
     pub approval_id: ApprovalId,
     pub tool_name: String,
     pub summary: String,
+    /// What the bot says the command is for, as in `ToolItem`. The bot
+    /// wrote it: it goes before the command, never in its place. Kept only
+    /// here, not in the `Approval`.
+    #[serde(default)]
+    pub explanation: Option<String>,
     pub input: String,
     pub status: ApprovalStatus,
     /// What the owner wrote with a denial.
@@ -264,14 +273,17 @@ mod tests {
             tool_use_id: "toolu_1".into(),
             name: "Bash".into(),
             summary: "npm test".into(),
+            explanation: None,
             input: "{}".into(),
             status: ToolStatus::Running,
             output: None,
             file: None,
         });
-        let json = serde_json::to_value(&tool).expect("serialize");
+        let mut json = serde_json::to_value(&tool).expect("serialize");
         assert_eq!(json["kind"], "tool");
         assert_eq!(json["toolUseId"], "toolu_1");
+        // Items stored before a field existed still read.
+        json.as_object_mut().expect("object").remove("explanation");
         assert_eq!(serde_json::from_value::<ChatBody>(json).ok(), Some(tool));
     }
 }

@@ -116,6 +116,11 @@ app; the other bots of your crew send you messages too.
   message lists them. Images also come inline.
 - When you need a permission, the owner gets a request in the chat with
   Allow and Deny. If they deny it, find another way or ask them.
+- The owner may not be technical. Every time you run a command, fill in its
+  `description` for them: one short sentence, in the language the owner
+  writes to you in, that says what the command does and why you need it,
+  in everyday words, with no code, file paths or jargon. They read it to
+  decide whether to allow the command.
 
 ## Working with your crew
 
@@ -230,6 +235,7 @@ mod tests {
         assert!(rules.contains("Ask the owner"));
         assert!(rules.contains("/ws/site/shared"));
         assert!(rules.contains("attachments/"));
+        assert!(rules.contains("fill in its\n  `description` for them"));
         assert!(rules.contains("`browser_*` tools"));
         assert!(rules.contains(r#"<meta name="botloft-device" content="mobile">"#));
         assert!(!rules.contains("You lead this crew"));
