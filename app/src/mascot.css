@@ -97,6 +97,13 @@
     animation: spark 1.5s ease-out infinite;
     animation-delay: var(--spark-delay, 0s);
   }
+
+  /* In a list, a bot at rest keeps its look (shut eyes, low flame) but
+     does not move: a morphing clip path repaints every frame, one per
+     mascot on screen. */
+  [data-mood][data-still] * {
+    animation: none;
+  }
 }
 
 @keyframes eye-blink {

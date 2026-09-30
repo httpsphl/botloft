@@ -61,7 +61,7 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
     [side, leaving],
   );
   const [pane, setPane] = useState<Pane>("chat");
-  const files = useBotFiles(bot);
+  const files = useBotFiles(bot, side === "files");
   // What the owner has seen: files newer than this are new to them.
   const [seenAt, setSeenAt] = useState(() => Date.now());
   const [since, setSince] = useState(seenAt);

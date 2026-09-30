@@ -1,13 +1,16 @@
 // The files a bot made, kept current (spec 8.5, 15.1): read when the bot is
-// opened, and again while it works and when it stops, since a scan of its
-// folders is the only way to see what a script or a command made.
+// opened, again while it works with the files panel in sight, and when it
+// stops, since a scan of its folders is the only way to see what a script
+// or a command made. Each read walks the folders, so nobody pays for it
+// while the list is out of sight.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { errorText } from "../../lib/api";
 import type { Bot, BotFile } from "../../lib/protocol.gen";
+import { useWindowVisible } from "../../shell/visibility";
 import { useApi, useApp } from "../../store/context";
 
-/** How often the list is read while the bot works. */
+/** How often the list is read while the bot works and the panel is in sight. */
 const WHILE_WORKING_MS = 4000;
 
 export interface BotFiles {
@@ -18,7 +21,8 @@ export interface BotFiles {
   refresh(): Promise<void>;
 }
 
-export function useBotFiles(bot: Pick<Bot, "id" | "state">): BotFiles {
+/** `watching`: the files panel is open. */
+export function useBotFiles(bot: Pick<Bot, "id" | "state">, watching: boolean): BotFiles {
   const api = useApi();
   const open = useApp((state) => state.connection.kind === "open");
   const [files, setFiles] = useState<BotFile[]>([]);
@@ -60,6 +64,7 @@ export function useBotFiles(bot: Pick<Bot, "id" | "state">): BotFiles {
 
   const working = bot.state === "busy" || bot.state === "needs_approval";
   const wasWorking = useRef(working);
+  const inSight = useWindowVisible() && watching;
   useEffect(() => {
     if (!open) {
       return;
@@ -69,12 +74,14 @@ export function useBotFiles(bot: Pick<Bot, "id" | "state">): BotFiles {
       void refresh();
     }
     wasWorking.current = working;
-    if (!working) {
+    if (!working || !inSight) {
       return;
     }
+    // Coming into sight mid-turn shows what was made meanwhile.
+    void refresh();
     const timer = setInterval(() => void refresh(), WHILE_WORKING_MS);
     return () => clearInterval(timer);
-  }, [open, working, refresh]);
+  }, [open, working, inSight, refresh]);
 
   return { files, loading, error, refresh };
 }

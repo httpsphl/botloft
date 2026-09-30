@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import type { Host } from "../lib/host";
 import { prefs } from "./prefs";
 import { trayShown } from "./tray";
+import { markHidden } from "./visibility";
 
 /**
  * Stops the bots as the window closes, when the owner chose so. The window
@@ -26,6 +27,7 @@ export function useCloseBehavior(host: Host): void {
         }
         if (trayShown()) {
           await host.window.hide().catch(() => {});
+          markHidden(true);
           return "stay";
         }
         return "close";
