@@ -48,6 +48,7 @@ export const bots = {
     makeChief: "Make crew chief",
     stopChief: "Stop being chief",
     archive: "Archive bot",
+    delete: "Delete bot",
     failed: {
       pause: "Could not pause the bot",
       resume: "Could not resume the bot",
@@ -55,6 +56,7 @@ export const bots = {
       openFolder: "Could not open the folder",
       chief: "Could not change the chief",
       archive: "Could not archive the bot",
+      delete: "Could not delete the bot",
     },
     fresh: {
       title: "Start a new conversation?",
@@ -66,6 +68,14 @@ export const bots = {
       title: (name: string) => `Archive ${name}?`,
       confirm: "Archive bot",
       body: "The bot stops and leaves the crew. Messages still waiting for it are not delivered.",
+    },
+    deleteConfirm: {
+      title: (name: string) => `Delete ${name}?`,
+      confirm: "Delete bot",
+      removed: (name: string) =>
+        `${name} stops now and leaves Botloft for good, with its conversation, its routines and the tasks it was part of. This can't be undone.`,
+      chief: (crew: string) => `${crew} will be left without a chief.`,
+      kept: (name: string) => `${name}'s folder stays on your computer, with everything in it:`,
     },
   },
   dialog: {

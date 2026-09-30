@@ -40,6 +40,7 @@ describe("a bot's right-click menu", () => {
       "Restart with a new conversation",
       "Open folder",
       "Archive bot",
+      "Delete bot",
     ]);
     // The crew's page is still the one open.
     expect(screen.getByRole("heading", { level: 1, name: "Ops" })).toBeDefined();

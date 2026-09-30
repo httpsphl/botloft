@@ -49,6 +49,7 @@ export const crews = {
       `The bots will work in ${path}. Each one restarts when it finishes what it's doing. Files already made stay where they are.`,
     move: "Move",
     archive: "Archive crew",
+    delete: "Delete crew",
     tabs: {
       label: "Crew views",
       bots: "Bots",
@@ -62,12 +63,20 @@ export const crews = {
       bots === 0
         ? "The crew leaves the app."
         : `The crew leaves the app. ${bots === 1 ? "Its bot stops" : `Its ${bots} bots stop`}, and messages still waiting for them are not delivered.`,
+    deleteTitle: (crew: string) => `Delete ${crew}?`,
+    deleteBody: (crew: string, bots: number) =>
+      bots === 0
+        ? `${crew} leaves Botloft for good. This can't be undone.`
+        : `${crew} and ${bots === 1 ? "its bot" : `its ${bots} bots`} stop now and leave Botloft for good, with their conversations, routines and tasks. This can't be undone.`,
+    deleteKept:
+      "The folders stay on your computer, with everything in them: each bot's own folder and the crew's work folder:",
     failed: {
       pause: "Could not pause the crew",
       resume: "Could not resume the crew",
       changeFolder: "Could not change the folder",
       openFolder: "Could not open the folder",
       archive: "Could not archive the crew",
+      delete: "Could not delete the crew",
     },
   },
   bots: {

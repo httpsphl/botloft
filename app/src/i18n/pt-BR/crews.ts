@@ -47,6 +47,7 @@ export const crews: Messages["crews"] = {
       `Os bots vão trabalhar em ${path}. Cada um reinicia quando terminar o que está fazendo. O que já foi feito fica onde está.`,
     move: "Mudar",
     archive: "Arquivar equipe",
+    delete: "Excluir equipe",
     tabs: {
       label: "Visões da equipe",
       bots: "Bots",
@@ -60,12 +61,20 @@ export const crews: Messages["crews"] = {
       bots === 0
         ? "A equipe sai do app."
         : `A equipe sai do app. ${bots === 1 ? "O bot dela para" : `Os ${bots} bots dela param`}, e as mensagens que ainda esperam por ${bots === 1 ? "ele" : "eles"} não são entregues.`,
+    deleteTitle: (crew: string) => `Excluir ${crew}?`,
+    deleteBody: (crew: string, bots: number) =>
+      bots === 0
+        ? `${crew} sai do Botloft de vez. Não dá para desfazer.`
+        : `${crew} e ${bots === 1 ? "o bot dela" : `os ${bots} bots dela`} param agora e saem do Botloft de vez, com as conversas, as rotinas e as tarefas. Não dá para desfazer.`,
+    deleteKept:
+      "As pastas continuam no seu computador, com tudo o que está nelas: a pasta de cada bot e a pasta de trabalho da equipe:",
     failed: {
       pause: "Não foi possível pausar a equipe",
       resume: "Não foi possível retomar a equipe",
       changeFolder: "Não foi possível mudar a pasta",
       openFolder: "Não foi possível abrir a pasta",
       archive: "Não foi possível arquivar a equipe",
+      delete: "Não foi possível excluir a equipe",
     },
   },
   bots: {

@@ -44,6 +44,7 @@ export const bots: Messages["bots"] = {
     makeChief: "Tornar chefe da equipe",
     stopChief: "Deixar de ser chefe",
     archive: "Arquivar bot",
+    delete: "Excluir bot",
     failed: {
       pause: "Não foi possível pausar o bot",
       resume: "Não foi possível retomar o bot",
@@ -51,6 +52,7 @@ export const bots: Messages["bots"] = {
       openFolder: "Não foi possível abrir a pasta",
       chief: "Não foi possível trocar o chefe",
       archive: "Não foi possível arquivar o bot",
+      delete: "Não foi possível excluir o bot",
     },
     fresh: {
       title: "Começar uma nova conversa?",
@@ -62,6 +64,15 @@ export const bots: Messages["bots"] = {
       title: (name: string) => `Arquivar ${name}?`,
       confirm: "Arquivar bot",
       body: "O bot para e sai da equipe. As mensagens que ainda esperam por ele não são entregues.",
+    },
+    deleteConfirm: {
+      title: (name: string) => `Excluir ${name}?`,
+      confirm: "Excluir bot",
+      removed: (name: string) =>
+        `${name} para agora e sai do Botloft de vez, com a conversa, as rotinas e as tarefas de que fazia parte. Não dá para desfazer.`,
+      chief: (crew: string) => `${crew} fica sem chefe.`,
+      kept: (name: string) =>
+        `A pasta de ${name} continua no seu computador, com tudo o que está nela:`,
     },
   },
   dialog: {

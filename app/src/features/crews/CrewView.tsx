@@ -8,6 +8,7 @@ import {
   Pencil,
   Play,
   Plus,
+  Trash2,
 } from "lucide-react";
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
@@ -17,6 +18,7 @@ import { botsOf } from "../../store/app";
 import { useApi, useApp, useHost } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Confirm } from "../../ui/Confirm";
+import { KeptFolder } from "../../ui/KeptFolder";
 import { Menu } from "../../ui/Menu";
 import { type Tab, Tabs, tabId } from "../../ui/Tabs";
 import { attempt } from "../../ui/toast";
@@ -28,7 +30,7 @@ import { TaskList } from "../tasks/TaskList";
 import { CrewBots } from "./CrewBots";
 import { CrewDialog } from "./CrewDialog";
 
-type Open = "bot" | "rename" | "archive" | { move: string } | null;
+type Open = "bot" | "rename" | "archive" | "delete" | { move: string } | null;
 type Pane = "bots" | "timeline" | "tasks" | "routines";
 
 export function CrewView({ crew }: { crew: Crew }) {
@@ -37,6 +39,7 @@ export function CrewView({ crew }: { crew: Crew }) {
   const api = useApi();
   const host = useHost();
   const putCrew = useApp((state) => state.putCrew);
+  const dropCrew = useApp((state) => state.dropCrew);
   const bots = useApp(useShallow((state) => botsOf(state, crew.id)));
   const [open, setOpen] = useState<Open>(null);
   const [pane, setPane] = useState<Pane>("bots");
@@ -109,6 +112,7 @@ export function CrewView({ crew }: { crew: Crew }) {
               danger: true,
               onSelect: () => setOpen("archive"),
             },
+            { label: words.delete, icon: Trash2, danger: true, onSelect: () => setOpen("delete") },
           ]}
         />
       </header>
@@ -186,6 +190,21 @@ export function CrewView({ crew }: { crew: Crew }) {
           }
         >
           {words.archiveBody(bots.length)}
+        </Confirm>
+      )}
+      {open === "delete" && (
+        <Confirm
+          title={words.deleteTitle(crew.name)}
+          confirmLabel={words.delete}
+          onClose={close}
+          onConfirm={() =>
+            attempt(words.failed.delete, async () =>
+              dropCrew((await api.call("crews.delete", { crewId: crew.id })).crewId),
+            )
+          }
+        >
+          <p>{words.deleteBody(crew.name, bots.length)}</p>
+          <KeptFolder path={crew.workFolder}>{words.deleteKept}</KeptFolder>
         </Confirm>
       )}
     </section>

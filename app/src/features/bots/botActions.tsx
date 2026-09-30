@@ -1,15 +1,16 @@
-import { Archive, Crown, FolderOpen, Pencil, RefreshCcw } from "lucide-react";
+import { Archive, Crown, FolderOpen, Pencil, RefreshCcw, Trash2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
 import { useApi, useApp, useHost } from "../../store/context";
 import { Confirm } from "../../ui/Confirm";
+import { KeptFolder } from "../../ui/KeptFolder";
 import type { MenuItem } from "../../ui/Menu";
 import { attempt } from "../../ui/toast";
 import { BotDialog } from "./BotDialog";
 import { isChief } from "./ChiefBadge";
 
-type Open = "edit" | "archive" | "fresh" | null;
+type Open = "edit" | "archive" | "delete" | "fresh" | null;
 
 /**
  * What the owner can do with a bot from a menu, and the dialogs those
@@ -26,6 +27,7 @@ export function useBotActions(
   const host = useHost();
   const putBot = useApp((state) => state.putBot);
   const putCrew = useApp((state) => state.putCrew);
+  const dropBot = useApp((state) => state.dropBot);
   const chief = isChief(bot, crew);
   const [open, setOpen] = useState<Open>(null);
   const close = () => setOpen(null);
@@ -54,6 +56,7 @@ export function useBotActions(
       onSelect: () => attempt(words.failed.openFolder, () => host.openPath(bot.workspace)),
     },
     { label: words.archive, icon: Archive, danger: true, onSelect: () => setOpen("archive") },
+    { label: words.delete, icon: Trash2, danger: true, onSelect: () => setOpen("delete") },
   ];
 
   const dialogs =
@@ -84,6 +87,23 @@ export function useBotActions(
         }
       >
         {words.archiveConfirm.body}
+      </Confirm>
+    ) : open === "delete" ? (
+      <Confirm
+        title={words.deleteConfirm.title(bot.name)}
+        confirmLabel={words.deleteConfirm.confirm}
+        onClose={close}
+        onConfirm={() =>
+          attempt(words.failed.delete, async () =>
+            dropBot((await api.call("bots.delete", { botId: bot.id })).botId),
+          )
+        }
+      >
+        <p>
+          {words.deleteConfirm.removed(bot.name)}
+          {chief && ` ${words.deleteConfirm.chief(crew.name)}`}
+        </p>
+        <KeptFolder path={bot.workspace}>{words.deleteConfirm.kept(bot.name)}</KeptFolder>
       </Confirm>
     ) : null;
 

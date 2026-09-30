@@ -44,7 +44,7 @@ export const chat: Messages["chat"] = {
   inbound: {
     task: "Tarefa",
     result: "Resultado",
-    archivedBot: "Um bot arquivado",
+    goneBot: "Um bot que não está mais na equipe",
   },
   run: {
     working: "Trabalhando",
