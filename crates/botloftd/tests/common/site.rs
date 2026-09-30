@@ -1,7 +1,7 @@
 //! A small web site on 127.0.0.1 for the browser tests: a form, the page
 //! it leads to, a link that opens a new tab, a button that shows a dialog,
-//! and a sign-in page with its fields at fixed points, for the owner's
-//! hands.
+//! a sign-in page with its fields at fixed points, for the owner's hands,
+//! and a page that says how big its window is.
 
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -30,6 +30,11 @@ const LOGIN: &str = "<!doctype html><title>Sign in</title><style>body{margin:0}\
     <input name=\"password\" type=\"password\" aria-label=\"Password\" style=\"top:200px\">\
     <button style=\"position:absolute;top:300px;left:100px\">Sign in</button></form>";
 
+const SIZE: &str = "<!doctype html><title>Size</title><p id=\"size\"></p><script>\
+    const show = () => { document.getElementById('size').textContent = \
+    'Window: ' + innerWidth + ' x ' + innerHeight; }; show(); \
+    addEventListener('resize', show);</script>";
+
 async fn account(Form(form): Form<HashMap<String, String>>) -> Html<String> {
     let user = form.get("user").cloned().unwrap_or_default();
     let length = form
@@ -57,6 +62,7 @@ pub async fn serve() -> SocketAddr {
         .route("/done", get(done))
         .route("/links", get(|| async { Html(POPUP) }))
         .route("/login", get(|| async { Html(LOGIN) }))
+        .route("/size", get(|| async { Html(SIZE) }))
         .route("/account", post(account));
     let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
     let addr = listener.local_addr().expect("addr");

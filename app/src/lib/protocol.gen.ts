@@ -904,6 +904,12 @@ export type BrowserView = { state: BrowserState, frame: BrowserFrame | null, };
 
 export type BrowserWatchParams = { botId: BotId, };
 
+/**
+ * `browser.resize`: the room the app's panel has for the page, in the
+ * app's pixels. The page takes its shape (spec 21.3).
+ */
+export type BrowserResizeParams = { botId: BotId, width: number, height: number, };
+
 export type MouseAction = "move" | "down" | "up";
 
 export type MouseButton = "none" | "left" | "middle" | "right";
@@ -1034,6 +1040,7 @@ export interface RpcMethods {
   "browser.list": { params: undefined; result: Array<BrowserState> };
   "browser.watch": { params: BrowserWatchParams; result: BrowserView };
   "browser.unwatch": { params: undefined; result: null };
+  "browser.resize": { params: BrowserResizeParams; result: null };
   "browser.take": { params: BrowserControlParams; result: BrowserState };
   "browser.release": { params: BrowserControlParams; result: BrowserState };
   "browser.input": { params: BrowserInputParams; result: null };

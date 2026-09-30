@@ -1,5 +1,6 @@
 //! An app connection watching a bot's browser (spec 21.7). While anyone
-//! watches, the active tab sends frames; when the last one stops, it stops.
+//! watches, the active tab sends frames and the page is the size their
+//! panel asks for (spec 21.3); when the last one stops, both stop.
 
 use std::sync::Arc;
 
@@ -7,7 +8,7 @@ use botloft_core::ids::BotId;
 use botloft_core::protocol::BrowserFrame;
 use tokio::sync::watch;
 
-use super::{Browsers, Slots, lock};
+use super::{Browsers, Slots, Viewport, lock};
 
 /// Held by the connection; dropping it stops watching.
 pub struct Watching {
@@ -25,12 +26,22 @@ impl Browsers {
             slot.watchers += 1;
             slot.frames.subscribe()
         };
-        sync(Arc::clone(&self.slots), bot.clone());
+        sync_soon(&self.slots, bot);
         Watching {
             slots: Arc::clone(&self.slots),
             bot: bot.clone(),
             frames,
         }
+    }
+
+    /// The room a watching app has for the page, `width` by `height`: the
+    /// page takes its shape, now or when the browser opens (spec 21.3).
+    pub fn resize(&self, bot: &BotId, width: u32, height: u32) {
+        {
+            let mut slots = lock(&self.slots);
+            self.slot(&mut slots, bot).viewport = Viewport::fitting(width, height);
+        }
+        sync_soon(&self.slots, bot);
     }
 }
 
@@ -38,25 +49,40 @@ impl Drop for Watching {
     fn drop(&mut self) {
         if let Some(slot) = lock(&self.slots).get_mut(&self.bot) {
             slot.watchers = slot.watchers.saturating_sub(1);
+            if slot.watchers == 0 {
+                // No panel to fit anymore.
+                slot.viewport = Viewport::default();
+            }
         }
-        sync(Arc::clone(&self.slots), self.bot.clone());
+        sync_soon(&self.slots, &self.bot);
     }
 }
 
-/// Turns the frames on or off to match whether anyone watches. It reads
-/// the count when it runs, so calls that finish out of order still end on
-/// the right answer.
-fn sync(slots: Slots, bot: BotId) {
-    let Ok(runtime) = tokio::runtime::Handle::try_current() else {
+/// Makes the running browser match what the apps want: frames while anyone
+/// watches, and the page the size they asked for. One at a time, each
+/// reading what is wanted when its turn comes, so changes that finish out
+/// of order still end on the right answer.
+pub(super) async fn sync(slots: Slots, bot: BotId) {
+    let running = lock(&slots).get(&bot).and_then(|slot| {
+        slot.session
+            .as_ref()
+            .map(|(_, session)| Arc::clone(session))
+    });
+    let Some(session) = running else {
         return;
     };
-    runtime.spawn(async move {
-        let found = lock(&slots).get(&bot).and_then(|slot| {
-            let session = slot.session.as_ref()?.1.clone();
-            Some((session, slot.watchers > 0))
-        });
-        if let Some((session, on)) = found {
-            session.set_watching(on).await;
-        }
-    });
+    let _turn = session.syncing.lock().await;
+    let wanted = lock(&slots)
+        .get(&bot)
+        .map(|slot| (slot.watchers > 0, slot.viewport));
+    if let Some((on, viewport)) = wanted {
+        session.set_watching(on).await;
+        session.set_viewport(viewport).await;
+    }
+}
+
+fn sync_soon(slots: &Slots, bot: &BotId) {
+    if let Ok(runtime) = tokio::runtime::Handle::try_current() {
+        runtime.spawn(sync(Arc::clone(slots), bot.clone()));
+    }
 }

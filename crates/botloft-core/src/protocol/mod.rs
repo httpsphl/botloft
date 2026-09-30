@@ -119,6 +119,7 @@ pub mod method {
     pub const BROWSER_LIST: &str = "browser.list";
     pub const BROWSER_WATCH: &str = "browser.watch";
     pub const BROWSER_UNWATCH: &str = "browser.unwatch";
+    pub const BROWSER_RESIZE: &str = "browser.resize";
     pub const BROWSER_TAKE: &str = "browser.take";
     pub const BROWSER_RELEASE: &str = "browser.release";
     pub const BROWSER_INPUT: &str = "browser.input";

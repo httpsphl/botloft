@@ -1,12 +1,13 @@
 // The bot's screen, live (spec 21.8): the newest picture of its active
-// tab, with its cursor gliding to each point it acts on, a ring where it
-// clicks, and a line about what it just did.
+// tab, as large as fits the panel, with its cursor gliding to each point it
+// acts on, a ring where it clicks, and a line about what it just did.
 
 import { type ReactNode, useEffect, useState } from "react";
 import { useT } from "../../i18n";
 import type { Bot, BrowserAction, BrowserFrame } from "../../lib/protocol.gen";
 import { BotCursor } from "../bots/BotCursor";
 
+/** The page until a picture says its size. */
 const PAGE = { width: 1280, height: 800 };
 
 /** Where on the screen, in percent, an action happened. */
@@ -81,10 +82,14 @@ export function LiveView({
   return (
     <figure
       aria-label={t.browser.screen(bot.name)}
-      className={`relative m-0 w-full overflow-hidden rounded-xl border bg-canvas shadow-sm transition-[border-color,box-shadow] duration-200 ${
+      className={`relative mx-auto my-0 overflow-hidden rounded-xl border bg-canvas shadow-sm transition-[border-color,box-shadow] duration-200 ${
         held ? "border-accent ring-2 ring-accent/35" : "border-line"
       }`}
-      style={{ aspectRatio: `${width} / ${height}` }}
+      // As large as fits its place (a size container), in the page's shape.
+      style={{
+        aspectRatio: `${width} / ${height}`,
+        width: `min(100cqw, 100cqh * ${width} / ${height})`,
+      }}
     >
       {frame && (
         <img

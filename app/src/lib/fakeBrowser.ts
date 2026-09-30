@@ -1,6 +1,7 @@
 // The fake daemon's browsers (spec 21.7): each bot's state, the live frames
 // of the one being watched and what the bot does, for the browser panel,
-// and the owner's hands in it (spec 21.10).
+// the size the panel gives the page (spec 21.3), and the owner's hands in
+// it (spec 21.10).
 
 import type { FakeBotloft, Handlers } from "./fake";
 import { conflict } from "./fakeRules";
@@ -14,6 +15,20 @@ import type {
   BrowserState,
 } from "./protocol.gen";
 
+/** The page's size: as wide as ever, as tall as the panel's room asks. */
+export interface PageSize {
+  width: number;
+  height: number;
+}
+
+const PAGE: PageSize = { width: 1280, height: 800 };
+
+/** The daemon's rule for the page in a room of the panel (spec 21.3). */
+function fitting(width: number, height: number): PageSize {
+  const tall = Math.floor((PAGE.width * height) / width);
+  return { width: PAGE.width, height: Math.min(2000, Math.max(600, tall)) };
+}
+
 export class FakeBrowser {
   private readonly states = new Map<BotId, BrowserState>();
   private readonly frames = new Map<BotId, BrowserFrame>();
@@ -23,6 +38,10 @@ export class FakeBrowser {
   readonly watches: (BotId | null)[] = [];
   /** What the owner sent to the page, in order. */
   readonly inputs: BrowserInput[] = [];
+  /** Each bot's page size, while the panel asks for one. */
+  private readonly sizes = new Map<BotId, PageSize>();
+  /** What draws each bot's page, for the preview. */
+  private readonly painters = new Map<BotId, (size: PageSize) => string>();
   /** Each bot's open request for help. */
   private readonly asks = new Map<BotId, ApprovalId>();
   /** Pages that answer the owner's hands, for the preview. */
@@ -96,9 +115,28 @@ export class FakeBrowser {
     this.set(botId, { ask: null, control: "bot" });
   }
 
+  /** The size of the bot's page now. */
+  size(botId: BotId): PageSize {
+    return this.sizes.get(botId) ?? PAGE;
+  }
+
+  /** Draws the bot's page with `draw`, now and whenever its size changes. */
+  paint(botId: BotId, draw: (size: PageSize) => string): void {
+    this.painters.set(botId, draw);
+    this.repaint(botId);
+  }
+
+  /** The page changed: a new picture of it, if something draws it. */
+  repaint(botId: BotId): void {
+    const draw = this.painters.get(botId);
+    if (draw) {
+      this.frame(botId, draw(this.size(botId)));
+    }
+  }
+
   /** A new picture of the page; sent only while the app watches that bot. */
-  frame(botId: BotId, data: string, width = 1280, height = 800): void {
-    const frame: BrowserFrame = { botId, data, width, height };
+  frame(botId: BotId, data: string, size: PageSize = this.size(botId)): void {
+    const frame: BrowserFrame = { botId, data, ...size };
     this.frames.set(botId, frame);
     if (this.watching === botId) {
       this.fake.emit({ name: "browser.frame", params: frame });
@@ -132,11 +170,22 @@ export class FakeBrowser {
     return this.set(botId, { control: "bot" });
   }
 
+  /** Nobody watches: the page goes back to the size bots work in alone. */
+  private unwatch(): void {
+    const botId = this.watching;
+    this.release();
+    this.watching = null;
+    if (botId !== null && this.sizes.delete(botId)) {
+      this.repaint(botId);
+    }
+  }
+
   handlers(): Pick<
     Handlers,
     | "browser.list"
     | "browser.watch"
     | "browser.unwatch"
+    | "browser.resize"
     | "browser.take"
     | "browser.release"
     | "browser.input"
@@ -145,15 +194,22 @@ export class FakeBrowser {
       "browser.list": () => [...this.states.values()].filter((state) => state.status !== "closed"),
       "browser.watch": ({ botId }) => {
         this.fake.bot(botId, false);
-        this.release();
+        this.unwatch();
         this.watching = botId;
         this.watches.push(botId);
         return { state: this.state(botId), frame: this.frames.get(botId) ?? null };
       },
       "browser.unwatch": () => {
-        this.release();
-        this.watching = null;
+        this.unwatch();
         this.watches.push(null);
+        return null;
+      },
+      "browser.resize": ({ botId, width, height }) => {
+        if (this.watching !== botId) {
+          throw conflict("watch this browser before sizing it");
+        }
+        this.sizes.set(botId, fitting(width, height));
+        this.repaint(botId);
         return null;
       },
       "browser.take": ({ botId }) => {
