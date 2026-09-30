@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { ChatBody, ChatItem } from "../../lib/protocol.gen";
-import { chatRows, runParts } from "./rows";
+import { chatRows, runParts, splitDraft } from "./rows";
 
 const DAY = 24 * 60 * 60 * 1000;
 const start = new Date(2026, 8, 28, 9, 0).getTime();
@@ -61,5 +61,28 @@ describe("chat rows", () => {
   test("a new day starts a new run under its date", () => {
     const rows = chatRows([reply("late", start), reply("early", start + DAY)]);
     expect(rows.map((row) => row.kind)).toEqual(["day", "run", "day", "run"]);
+  });
+});
+
+describe("splitDraft", () => {
+  test("cuts after the last finished block", () => {
+    expect(splitDraft("One.\n\nTwo is still")).toEqual(["One.\n\n", "Two is still"]);
+    expect(splitDraft("# Title\n\nFirst.\n\nSecond")).toEqual(["# Title\n\nFirst.\n\n", "Second"]);
+  });
+
+  test("keeps everything together until a block ends", () => {
+    expect(splitDraft("Only one paragraph so far")).toEqual(["", "Only one paragraph so far"]);
+    expect(splitDraft("One.\n\n")).toEqual(["", "One.\n\n"]);
+  });
+
+  test("does not cut inside a code fence", () => {
+    const open = "Look:\n\n```ts\nconst a = 1;\n\nconst b = 2;";
+    expect(splitDraft(open)).toEqual(["Look:\n\n", "```ts\nconst a = 1;\n\nconst b = 2;"]);
+    const closed = `${open}\n\`\`\`\n\nAfter.`;
+    expect(splitDraft(closed)[1]).toBe("After.");
+  });
+
+  test("does not cut before an indented line, which may belong to a list item", () => {
+    expect(splitDraft("- item\n\n  more of it")).toEqual(["", "- item\n\n  more of it"]);
   });
 });

@@ -2,6 +2,7 @@
 // another bot's or Botloft's on the left under its name (spec 15.3).
 
 import { AlarmClock, ListTodo, Reply } from "lucide-react";
+import { memo } from "react";
 import { useT } from "../../i18n";
 import { when } from "../../lib/format";
 import type { Bot, Message } from "../../lib/protocol.gen";
@@ -103,10 +104,16 @@ function OtherMessage({ message }: { message: Message }) {
   );
 }
 
-export function InboundRow({ message, bot }: { message: Message; bot: Bot }) {
+export const InboundRow = memo(function InboundRow({
+  message,
+  bot,
+}: {
+  message: Message;
+  bot: Bot;
+}) {
   return message.fromKind === "owner" ? (
     <OwnerMessage message={message} bot={bot} />
   ) : (
     <OtherMessage message={message} />
   );
-}
+});
