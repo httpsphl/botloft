@@ -1,33 +1,24 @@
 import {
-  Archive,
-  Crown,
   Ellipsis,
   Files,
-  FolderOpen,
   Globe,
   LayoutTemplate,
   PanelRight,
   Pause,
-  Pencil,
   Play,
-  RefreshCcw,
   RotateCw,
   ShieldOff,
 } from "lucide-react";
-import { useState } from "react";
 import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
-import { useApi, useApp, useHost } from "../../store/context";
+import { useApi, useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
-import { Confirm } from "../../ui/Confirm";
 import { Menu } from "../../ui/Menu";
 import { attempt } from "../../ui/toast";
 import { BotAvatar, moodOf } from "./BotAvatar";
-import { BotDialog } from "./BotDialog";
 import { BotStateBadge } from "./BotStateBadge";
+import { useBotActions } from "./botActions";
 import { ChiefBadge, isChief } from "./ChiefBadge";
-
-type Open = "edit" | "archive" | "fresh" | null;
 
 /** The bot's name, state and actions. */
 export function BotHeader({
@@ -68,25 +59,18 @@ export function BotHeader({
   const t = useT();
   const words = t.bots.header;
   const api = useApi();
-  const host = useHost();
   const putBot = useApp((state) => state.putBot);
-  const putCrew = useApp((state) => state.putCrew);
   const chief = isChief(bot, crew);
-  const [open, setOpen] = useState<Open>(null);
-  const close = () => setOpen(null);
+  const actions = useBotActions(bot, crew);
   const stopped = bot.paused || crew.paused;
 
   const setPaused = (paused: boolean) =>
     attempt(paused ? words.failed.pause : words.failed.resume, async () =>
       putBot(await api.call("bots.setPaused", { botId: bot.id, paused })),
     );
-  const setChief = (on: boolean) =>
-    attempt(words.failed.chief, async () =>
-      putCrew(await api.call("crews.setLead", { crewId: crew.id, botId: on ? bot.id : null })),
-    );
-  const restart = (fresh: boolean) =>
+  const restart = () =>
     attempt(words.failed.restart, async () =>
-      putBot(await api.call("bots.restart", { botId: bot.id, fresh })),
+      putBot(await api.call("bots.restart", { botId: bot.id, fresh: false })),
     );
 
   return (
@@ -123,7 +107,7 @@ export function BotHeader({
           {words.pause}
         </Button>
       )}
-      <Button icon={RotateCw} disabled={stopped} onClick={() => restart(false)}>
+      <Button icon={RotateCw} disabled={stopped} onClick={restart}>
         {words.restart}
       </Button>
       <span className="relative">
@@ -202,56 +186,8 @@ export function BotHeader({
         aria-pressed={detailsOpen}
         onClick={onToggleDetails}
       />
-      <Menu
-        label={words.more}
-        icon={Ellipsis}
-        items={[
-          { label: words.edit, icon: Pencil, onSelect: () => setOpen("edit") },
-          {
-            label: chief ? words.stopChief : words.makeChief,
-            icon: Crown,
-            onSelect: () => setChief(!chief),
-          },
-          {
-            label: words.restartFresh,
-            icon: RefreshCcw,
-            disabled: stopped,
-            onSelect: () => setOpen("fresh"),
-          },
-          {
-            label: words.openFolder,
-            icon: FolderOpen,
-            onSelect: () => attempt(words.failed.openFolder, () => host.openPath(bot.workspace)),
-          },
-          { label: words.archive, icon: Archive, danger: true, onSelect: () => setOpen("archive") },
-        ]}
-      />
-
-      {open === "edit" && <BotDialog bot={bot} onClose={close} />}
-      {open === "fresh" && (
-        <Confirm
-          title={words.fresh.title}
-          confirmLabel={words.fresh.confirm}
-          onClose={close}
-          onConfirm={() => restart(true)}
-        >
-          {words.fresh.body(bot.name)}
-        </Confirm>
-      )}
-      {open === "archive" && (
-        <Confirm
-          title={words.archiveConfirm.title(bot.name)}
-          confirmLabel={words.archiveConfirm.confirm}
-          onClose={close}
-          onConfirm={() =>
-            attempt(words.failed.archive, async () =>
-              putBot(await api.call("bots.archive", { botId: bot.id })),
-            )
-          }
-        >
-          {words.archiveConfirm.body}
-        </Confirm>
-      )}
+      <Menu label={words.more} icon={Ellipsis} items={actions.items} />
+      {actions.dialogs}
     </header>
   );
 }
