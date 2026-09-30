@@ -9,6 +9,7 @@ mod bots;
 mod browser_sites;
 mod chat;
 mod crews;
+mod delete;
 mod deliveries;
 mod messages;
 mod migrate;
