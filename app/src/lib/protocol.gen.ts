@@ -747,11 +747,54 @@ explanation: string | null, input: string, status: ApprovalStatus,
  */
 note: string | null, };
 
+/**
+ * Tokens of one turn, as the `usage` of Claude Code's `result` event: the
+ * sum of every request to the model in the turn.
+ */
+export type TokenUsage = { 
+/**
+ * New input the model read (`input_tokens`).
+ */
+input: number, 
+/**
+ * New input also written to the prompt cache (`cache_creation_input_tokens`).
+ */
+cacheWrite: number, 
+/**
+ * Input read back from the prompt cache (`cache_read_input_tokens`):
+ * mostly the conversation so far, and much cheaper than new input.
+ */
+cacheRead: number, 
+/**
+ * What the model wrote, thinking included (`output_tokens`).
+ */
+output: number, };
+
+export type UsageTokensParams = { 
+/**
+ * Counts turns that ended at or after this Unix time in ms.
+ */
+since: number, };
+
+/**
+ * One bot's tokens since the time asked for.
+ */
+export type BotTokens = { botId: BotId, name: string, color: string, 
+/**
+ * The bot is archived.
+ */
+archived: boolean, 
+/**
+ * Turns that reported tokens.
+ */
+turns: number, tokens: TokenUsage, };
+
 export type TurnItem = { durationMs: number, 
 /**
- * As Claude Code reports it; `null` when it did not.
+ * Tokens the turn used (spec 8.7); `null` when Claude Code did not say
+ * and on turns stored before it was kept.
  */
-costUsd: number | null, 
+tokens: TokenUsage | null, 
 /**
  * Why the turn failed, e.g. `rate_limit`; `null` when it worked.
  */
@@ -1179,6 +1222,7 @@ export interface RpcMethods {
   "tasks.list": { params: TasksListParams; result: Array<Task> };
   "bots.setEffort": { params: BotsSetEffortParams; result: Bot };
   "bots.compact": { params: BotIdParams; result: Bot };
+  "usage.tokens": { params: UsageTokensParams; result: Array<BotTokens> };
   "routines.list": { params: RoutinesListParams; result: Array<Routine> };
   "routines.create": { params: RoutinesCreateParams; result: Routine };
   "routines.update": { params: RoutinesUpdateParams; result: Routine };

@@ -294,7 +294,7 @@ mod tests {
             .expect("insert");
         let turn = ChatBody::Turn(TurnItem {
             duration_ms: 1000,
-            cost_usd: Some(0.01),
+            tokens: None,
             error: None,
         });
         fx.store

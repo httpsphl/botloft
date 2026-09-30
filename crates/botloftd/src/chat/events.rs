@@ -5,7 +5,9 @@
 use botloft_core::chat::{TOOL_OUTPUT_MAX, clip, tool_file, tool_input_max, tool_summary};
 use botloft_core::command::tool_explanation;
 use botloft_core::ids::BotId;
-use botloft_core::protocol::{ChatBody, ChatDelta, ReplyItem, ToolItem, ToolStatus, TurnItem};
+use botloft_core::protocol::{
+    ChatBody, ChatDelta, ReplyItem, TokenUsage, ToolItem, ToolStatus, TurnItem,
+};
 use serde_json::Value;
 use tracing::{debug, warn};
 
@@ -227,7 +229,7 @@ fn result(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
             bot,
             ChatBody::Turn(TurnItem {
                 duration_ms: event["duration_ms"].as_u64().unwrap_or_default(),
-                cost_usd: event["total_cost_usd"].as_f64(),
+                tokens: tokens(&event["usage"]),
                 error,
             }),
         );
@@ -235,4 +237,19 @@ fn result(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
     routines::turn_ended(daemon, bot, failed);
     crate::screens::turn_ended(daemon, bot);
     daemon.supervisor.turn_ended(bot, generation);
+}
+
+/// The turn's tokens from the `usage` of a `result`: the sum of the turn's
+/// requests, not of the whole session like `modelUsage` (spec 8.7, 19).
+fn tokens(usage: &Value) -> Option<TokenUsage> {
+    if !usage.is_object() {
+        return None;
+    }
+    let count = |key: &str| usage[key].as_u64().unwrap_or_default();
+    Some(TokenUsage {
+        input: count("input_tokens"),
+        cache_write: count("cache_creation_input_tokens"),
+        cache_read: count("cache_read_input_tokens"),
+        output: count("output_tokens"),
+    })
 }

@@ -1,0 +1,55 @@
+//! Tokens the bots use (spec 8.7): per turn in the chat, and summed per bot
+//! for the usage dialog.
+
+use serde::{Deserialize, Serialize};
+
+use crate::ids::BotId;
+
+/// Tokens of one turn, as the `usage` of Claude Code's `result` event: the
+/// sum of every request to the model in the turn.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct TokenUsage {
+    /// New input the model read (`input_tokens`).
+    pub input: u64,
+    /// New input also written to the prompt cache (`cache_creation_input_tokens`).
+    pub cache_write: u64,
+    /// Input read back from the prompt cache (`cache_read_input_tokens`):
+    /// mostly the conversation so far, and much cheaper than new input.
+    pub cache_read: u64,
+    /// What the model wrote, thinking included (`output_tokens`).
+    pub output: u64,
+}
+
+impl TokenUsage {
+    pub fn add(&mut self, other: &Self) {
+        self.input += other.input;
+        self.cache_write += other.cache_write;
+        self.cache_read += other.cache_read;
+        self.output += other.output;
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct UsageTokensParams {
+    /// Counts turns that ended at or after this Unix time in ms.
+    pub since: i64,
+}
+
+/// One bot's tokens since the time asked for.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BotTokens {
+    pub bot_id: BotId,
+    pub name: String,
+    pub color: String,
+    /// The bot is archived.
+    pub archived: bool,
+    /// Turns that reported tokens.
+    pub turns: u32,
+    pub tokens: TokenUsage,
+}

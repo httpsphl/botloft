@@ -1,4 +1,5 @@
 import type { Messages } from "../en";
+import type { TurnTokens } from "../en/chat";
 
 export const chat: Messages["chat"] = {
   view: {
@@ -48,12 +49,13 @@ export const chat: Messages["chat"] = {
   },
   run: {
     working: "Trabajando",
-    done: (time: string) => `Terminado en ${time}`,
-    took: (time: string, usd: number | null) =>
+    done: (time: string, tokens: string | null) =>
+      `Terminado en ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
+    took: (time: string, tokens: TurnTokens | null) =>
       `Tardó ${time}${
-        usd === null
+        tokens === null
           ? ""
-          : ` · unos ${usd.toLocaleString("es", { style: "currency", currency: "USD" })} de uso`
+          : `. Leyó ${tokens.read} tokens nuevos y escribió ${tokens.wrote}; releyó ${tokens.reread} de la conversación, que pesa mucho menos.`
       }`,
     stopped: (reason: string) => `El bot dejó de trabajar en esto: ${reason}`,
   },

@@ -16,6 +16,7 @@ mod migrate;
 mod routine_runs;
 mod routines;
 mod tasks;
+mod usage;
 
 use std::path::Path;
 use std::str::FromStr;

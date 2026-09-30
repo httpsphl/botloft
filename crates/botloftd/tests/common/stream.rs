@@ -99,6 +99,12 @@ pub fn result(is_error: bool) -> Value {
         "is_error": is_error,
         "duration_ms": 1234,
         "total_cost_usd": 0.0125,
+        "usage": {
+            "input_tokens": 12,
+            "cache_creation_input_tokens": 300,
+            "cache_read_input_tokens": 4000,
+            "output_tokens": 45,
+        },
         "terminal_reason": if is_error { "api_error" } else { "completed" },
     })
 }

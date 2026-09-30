@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::Message;
+use super::{Message, TokenUsage};
 use crate::ids::{ApprovalId, BotId, ChatItemId};
 
 text_enum!(
@@ -160,8 +160,10 @@ pub struct ApprovalItem {
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct TurnItem {
     pub duration_ms: u64,
-    /// As Claude Code reports it; `null` when it did not.
-    pub cost_usd: Option<f64>,
+    /// Tokens the turn used (spec 8.7); `null` when Claude Code did not say
+    /// and on turns stored before it was kept.
+    #[serde(default)]
+    pub tokens: Option<TokenUsage>,
     /// Why the turn failed, e.g. `rate_limit`; `null` when it worked.
     pub error: Option<String>,
 }
