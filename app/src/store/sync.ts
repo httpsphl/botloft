@@ -37,7 +37,10 @@ export function syncStore(store: AppStore, api: BotloftApi): () => void {
     });
     const bots = api.call("bots.list", {}).then((list) => {
       if (alive) {
-        store.setState({ bots: Object.fromEntries(list.map((bot) => [bot.id, bot])) });
+        store.setState({
+          bots: Object.fromEntries(list.map((bot) => [bot.id, bot])),
+          activity: Object.fromEntries(list.map((bot) => [bot.id, bot.lastActivity])),
+        });
       }
     });
     // Recent deliveries plus every dead one: the dead need the owner.

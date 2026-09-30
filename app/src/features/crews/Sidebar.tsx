@@ -1,11 +1,11 @@
 import { Pause, Plus } from "lucide-react";
-import { useCallback, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import { useShallow } from "zustand/react/shallow";
 import { type Messages, useT } from "../../i18n";
 import { when } from "../../lib/format";
 import type { Activity, Bot, Crew } from "../../lib/protocol.gen";
-import { botsOf, crewList } from "../../store/app";
+import { activityOf, botsOf, crewList } from "../../store/app";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { ContextMenu, menuPoint, type Point } from "../../ui/ContextMenu";
@@ -84,7 +84,8 @@ function CrewEntry({ crew }: { crew: Crew }) {
   );
 }
 
-function Conversation({ bot, crew }: { bot: Bot; crew: Crew }) {
+/** Memoized: a change to one bot re-renders only its own line. */
+const Conversation = memo(function Conversation({ bot, crew }: { bot: Bot; crew: Crew }) {
   const t = useT();
   const selected = useApp((state) => state.selectedBotId === bot.id);
   const selectBot = useApp((state) => state.selectBot);
@@ -92,7 +93,7 @@ function Conversation({ bot, crew }: { bot: Bot; crew: Crew }) {
   const actions = useBotActions(bot, crew);
   const [menuAt, setMenuAt] = useState<Point | null>(null);
   const closeMenu = useCallback(() => setMenuAt(null), []);
-  const activity = bot.lastActivity;
+  const activity = useApp((state) => activityOf(state, bot.id));
   return (
     <li className={bot.createdAt > APP_OPENED ? "animate-rise" : undefined}>
       <button
@@ -142,7 +143,7 @@ function Conversation({ bot, crew }: { bot: Bot; crew: Crew }) {
       {actions.dialogs && createPortal(actions.dialogs, document.body)}
     </li>
   );
-}
+});
 
 /** The conversation-list line, worded here from what the daemon sends. */
 /** The line in the owner's language: the daemon sends no wording. */

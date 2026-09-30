@@ -11,11 +11,26 @@ import { useApp, useHost } from "../store/context";
  * routine runs that failed since the owner last opened their bot.
  */
 export function attentionCount(state: AppState): number {
+  // Asked on every change to the store; the answer changes only with these.
+  const inputs = [
+    state.bots,
+    state.deliveries,
+    state.routines,
+    state.seenAt,
+    state.selectedBotId,
+  ] as const;
+  if (last?.inputs.every((input, index) => input === inputs[index])) {
+    return last.count;
+  }
   const bots = Object.values(state.bots).filter(
     (bot) => bot.state === "needs_approval" || bot.state === "auth_error",
   ).length;
-  return bots + actionableDead(state).length + unseenFailures(state).length;
+  const count = bots + actionableDead(state).length + unseenFailures(state).length;
+  last = { inputs, count };
+  return count;
 }
+
+let last: { inputs: readonly unknown[]; count: number } | null = null;
 
 export function useAttentionMark(): void {
   const host = useHost();

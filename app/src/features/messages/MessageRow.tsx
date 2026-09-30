@@ -1,7 +1,8 @@
 import { ArrowRight, ListTodo, Reply, User } from "lucide-react";
+import { memo } from "react";
 import { useT } from "../../i18n";
 import { fromNow, when } from "../../lib/format";
-import type { Bot, BotId, Message, Task } from "../../lib/protocol.gen";
+import type { Bot, Message, Task } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
 import { BOTLOFT_COLOR, BotAvatar } from "../bots/BotAvatar";
 import { DeliveryStatus } from "./DeliveryStatus";
@@ -19,7 +20,7 @@ function BotName({ bot }: { bot: Bot | undefined }) {
   );
 }
 
-function Sender({ message, bots }: { message: Message; bots: Record<BotId, Bot> }) {
+function Sender({ message, from }: { message: Message; from: Bot | undefined }) {
   const t = useT();
   switch (message.fromKind) {
     case "owner":
@@ -37,7 +38,7 @@ function Sender({ message, bots }: { message: Message; bots: Record<BotId, Bot> 
         </span>
       );
     case "bot":
-      return <BotName bot={message.fromBotId ? bots[message.fromBotId] : undefined} />;
+      return <BotName bot={from} />;
   }
 }
 
@@ -64,17 +65,19 @@ function TaskTag({ message, task }: { message: Message; task: Task | undefined }
   );
 }
 
-export function MessageRow({ message }: { message: Message }) {
+/** Memoized, and reads only its two bots: a crew's timeline can be long. */
+export const MessageRow = memo(function MessageRow({ message }: { message: Message }) {
   const t = useT();
-  const bots = useApp((state) => state.bots);
+  const from = useApp((state) => (message.fromBotId ? state.bots[message.fromBotId] : undefined));
+  const to = useApp((state) => state.bots[message.toBotId]);
   const task = useApp((state) => (message.taskId ? state.tasks[message.taskId] : undefined));
   const delivery = useApp((state) => state.deliveries[message.id]);
   return (
     <li className="border-line border-b px-5 py-3 last:border-b-0">
       <div className="flex items-center gap-2 text-sm">
-        <Sender message={message} bots={bots} />
+        <Sender message={message} from={from} />
         <ArrowRight aria-label={t.messages.row.to} size={12} className="text-muted" />
-        <BotName bot={bots[message.toBotId]} />
+        <BotName bot={to} />
         <TaskTag message={message} task={task} />
         <time
           className="ml-auto shrink-0 text-muted text-xs"
@@ -96,4 +99,4 @@ export function MessageRow({ message }: { message: Message }) {
       )}
     </li>
   );
-}
+});

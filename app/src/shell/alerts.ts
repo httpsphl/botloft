@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import { toolTitle } from "../features/chat/toolNames";
 import { t } from "../i18n";
 import type { Bot, BotId, BotState } from "../lib/protocol.gen";
-import type { AppState } from "../store/app";
+import { type AppState, activityOf } from "../store/app";
 import { useAppStore, useHost } from "../store/context";
 import { chime } from "./chime";
 import { prefs } from "./prefs";
@@ -35,7 +35,8 @@ function notice(state: AppState, bot: Bot, kind: Kind): { title: string; body: s
   const crew = state.crews[bot.crewId]?.name ?? "";
   switch (kind) {
     case "approval": {
-      const tool = bot.lastActivity?.kind === "approval" ? bot.lastActivity.tool : null;
+      const activity = activityOf(state, bot.id);
+      const tool = activity?.kind === "approval" ? activity.tool : null;
       return {
         title: words.alerts.approval(bot.name),
         body: tool ? toolTitle(tool, words.tools) : words.alerts.crew(crew),
