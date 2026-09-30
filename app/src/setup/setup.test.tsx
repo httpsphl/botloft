@@ -20,7 +20,8 @@ describe("setup window", () => {
     const host = await open();
     expect(screen.getByRole("heading", { name: "Botloft" })).toBeDefined();
     expect(screen.getByText(/without asking for an administrator/)).toBeDefined();
-    expect(host.calls).toContain("show");
+    // The window is shown in an effect, which may run after the page is found.
+    await waitFor(() => expect(host.calls).toContain("show"));
 
     fireEvent.click(screen.getByRole("button", { name: "Install" }));
     expect(screen.getByRole("progressbar")).toBeDefined();

@@ -9,7 +9,7 @@ import { DeliveryStatus } from "./DeliveryStatus";
 function BotName({ bot }: { bot: Bot | undefined }) {
   const t = useT();
   if (!bot) {
-    return <span className="text-muted">{t.messages.row.archivedBot}</span>;
+    return <span className="text-muted">{t.messages.row.goneBot}</span>;
   }
   return (
     <span className="inline-flex items-center gap-1.5 font-medium">

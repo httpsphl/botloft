@@ -44,7 +44,7 @@ export const chat: Messages["chat"] = {
   inbound: {
     task: "Tarea",
     result: "Resultado",
-    archivedBot: "Un bot archivado",
+    goneBot: "Un bot que ya no está en el equipo",
   },
   run: {
     working: "Trabajando",
@@ -65,11 +65,17 @@ export const chat: Messages["chat"] = {
     input: "Entrada",
     output: "Salida",
     error: "Error",
+    command: "Comando",
+    commandCut: "Este comando es demasiado largo para mostrarse entero.",
   },
   approval: {
     asks: (bot: string, action: string) => `${bot} pide ${action}`,
     wants: (bot: string, action: string) => `${bot} quiere ${action}`,
-    fullInput: "Entrada completa",
+    explainedBy: (bot: string) =>
+      `${bot} escribió esto. Lo que de verdad se ejecuta es el comando de abajo.`,
+    unexplained: (bot: string) =>
+      `${bot} no dijo para qué sirve este comando. Si tienes dudas, deniégalo y pregunta.`,
+    command: "Ver el comando",
     noteLabel: (bot: string) => `Nota para ${bot} si deniegas`,
     notePlaceholder: "¿Por qué no? Se envía al bot si deniegas (opcional)",
     allow: "Permitir",

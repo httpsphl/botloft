@@ -10,6 +10,9 @@ pub enum Sender<'a> {
     Bot {
         handle: &'a str,
     },
+    /// A bot the owner deleted after it sent the message (spec 7.6): there
+    /// is nobody to reply to.
+    DeletedBot,
     /// The daemon, e.g. to say a task expired.
     Botloft,
 }
@@ -62,6 +65,7 @@ impl Envelope<'_> {
             // No `@`: a bot may well be called "Owner".
             Sender::Owner => "the owner".to_owned(),
             Sender::Bot { handle } => format!("@{handle}"),
+            Sender::DeletedBot => "a deleted bot".to_owned(),
             Sender::Botloft => "Botloft".to_owned(),
         }
     }
@@ -165,6 +169,15 @@ mod tests {
         assert_eq!(
             text,
             "[botloft] from the owner · crew Site\n\nCheck the build.\nThanks!"
+        );
+    }
+
+    #[test]
+    fn a_deleted_sender_cannot_be_answered() {
+        let text = envelope(Sender::DeletedBot, MessageKind::Note, None).render(0);
+        assert_eq!(
+            text,
+            "[botloft] from a deleted bot · crew Site\n\nCheck the build.\nThanks!"
         );
     }
 

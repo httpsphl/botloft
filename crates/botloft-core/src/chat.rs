@@ -3,6 +3,7 @@
 
 use serde_json::Value;
 
+use crate::command::{COMMAND_INPUT_MAX, is_command};
 use crate::protocol::{Activity, ActivityKind, ChatBody, NoticeCode, SenderKind};
 
 /// Longest tool input kept, in bytes.
@@ -57,6 +58,7 @@ pub fn tool_input_max(tool: &str) -> usize {
     match tool {
         PLAN_TOOL => PLAN_INPUT_MAX,
         SUGGEST_TOOL => SUGGESTION_INPUT_MAX,
+        tool if is_command(tool) => COMMAND_INPUT_MAX,
         _ => TOOL_INPUT_MAX,
     }
 }
@@ -74,9 +76,8 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
             .map(file_name)
     };
     let summary = match name {
-        "Bash" | "PowerShell" => field(input, "description")
-            .map(str::to_owned)
-            .or_else(|| field(input, "command").map(str::to_owned)),
+        // The command itself; what the bot says about it is the explanation.
+        "Bash" | "PowerShell" => field(input, "command").map(str::to_owned),
         "Read" | "Edit" | "MultiEdit" | "Write" | "NotebookEdit" => path(),
         "Grep" | "Glob" => field(input, "pattern").map(str::to_owned),
         "WebFetch" => field(input, "url").map(str::to_owned),
@@ -147,8 +148,15 @@ pub fn activity(body: &ChatBody, at: i64) -> Option<Activity> {
             _ => (ActivityKind::Message, item.message.body.clone()),
         },
         ChatBody::Reply(item) => (ActivityKind::Reply, item.text.clone()),
-        ChatBody::Tool(item) => (ActivityKind::Tool, item.summary.clone()),
-        ChatBody::Approval(item) => (ActivityKind::Approval, item.summary.clone()),
+        // A command reads better in the bot's words, when it gave them.
+        ChatBody::Tool(item) => (
+            ActivityKind::Tool,
+            item.explanation.as_ref().unwrap_or(&item.summary).clone(),
+        ),
+        ChatBody::Approval(item) => (
+            ActivityKind::Approval,
+            item.explanation.as_ref().unwrap_or(&item.summary).clone(),
+        ),
         // A compaction is housekeeping, not news about the conversation.
         ChatBody::Notice(item)
             if matches!(
@@ -197,10 +205,10 @@ mod tests {
                 "Bash",
                 &json!({ "command": "npm test", "description": "Run the tests" })
             ),
-            "Run the tests"
+            "npm test"
         );
         assert_eq!(
-            tool_summary("Bash", &json!({ "command": "ls\n-la" })),
+            tool_summary("PowerShell", &json!({ "command": "ls\n-la" })),
             "ls -la"
         );
         assert_eq!(
@@ -263,6 +271,8 @@ mod tests {
             ),
             "Move the cache"
         );
+        assert_eq!(tool_input_max("Bash"), COMMAND_INPUT_MAX);
+        assert_eq!(tool_input_max("Read"), TOOL_INPUT_MAX);
         assert_eq!(tool_label("mcp__botloft__send_message"), "send_message");
         assert_eq!(tool_label("Bash"), "Bash");
     }

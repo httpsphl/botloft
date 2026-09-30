@@ -12,13 +12,13 @@ use std::path::{Path, PathBuf};
 
 #[cfg(unix)]
 pub use unix::{
-    KeepAwake, ProcessJob, delete_task, find_task, leave_own_console, owner_name, register_task,
-    restrict_to_current_user, run_task, sign_in_id, stop_task, user_environment,
+    KeepAwake, ProcessJob, delete_task, find_task, leave_own_console, owner_name, recycle,
+    register_task, restrict_to_current_user, run_task, sign_in_id, stop_task, user_environment,
 };
 #[cfg(windows)]
 pub use windows::{
-    KeepAwake, ProcessJob, delete_task, find_task, leave_own_console, owner_name, register_task,
-    restrict_to_current_user, run_task, sign_in_id, stop_task, user_environment,
+    KeepAwake, ProcessJob, delete_task, find_task, leave_own_console, owner_name, recycle,
+    register_task, restrict_to_current_user, run_task, sign_in_id, stop_task, user_environment,
 };
 
 /// A program the system starts for the owner (spec 14).

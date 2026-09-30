@@ -79,6 +79,12 @@ impl Screens {
             .clone()
     }
 
+    /// The bot was deleted: its key stops working and its drafts go.
+    pub(crate) fn forget(&self, bot: &BotId) {
+        self.lock_keys().remove(bot);
+        self.drafts().remove(bot);
+    }
+
     /// The bot a key belongs to.
     pub fn bot_of(&self, key: &str) -> Option<BotId> {
         if key.is_empty() {

@@ -1,10 +1,13 @@
 //! A connection watching one bot's browser (spec 21.7): `browser.watch`
-//! and `browser.unwatch`, and the frames that follow. The same connection
-//! takes the browser into the owner's hands and gives it back (spec 21.10).
+//! and `browser.unwatch`, the frames that follow, and the size its panel
+//! gives the page. The same connection reloads the page, takes the browser
+//! into the owner's hands, moves between its tabs and gives it back (spec
+//! 21.10).
 
+use botloft_core::ids::BotId;
 use botloft_core::protocol::{
-    ApprovalsAnswerParams, BrowserControlParams, BrowserInputParams, BrowserWatchParams,
-    error_code, method, notification,
+    ApprovalsAnswerParams, BrowserControlParams, BrowserInputParams, BrowserOpenParams,
+    BrowserResizeParams, BrowserTabParams, BrowserWatchParams, error_code, method, notification,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -15,6 +18,9 @@ use crate::approvals;
 use crate::browser::{Hands, InputError, Watching};
 use crate::service::{ApiError, bots};
 use crate::state::Daemon;
+
+/// The most room a panel may say it has, in pixels each way.
+const ROOM_MAX: u32 = 10_000;
 
 #[derive(Default)]
 pub(super) struct Watch {
@@ -31,9 +37,14 @@ impl Watch {
         params: Option<Value>,
     ) -> Result<Value, RpcError> {
         match name {
+            method::BROWSER_RESIZE => return self.resize(daemon, &parse(params)?),
             method::BROWSER_TAKE => return self.take(daemon, parse(params)?),
             method::BROWSER_RELEASE => return self.release(daemon, &parse(params)?),
             method::BROWSER_INPUT => return self.input(parse(params)?),
+            method::BROWSER_RELOAD => return self.reload(daemon, &parse(params)?),
+            method::BROWSER_NEW_TAB => return self.new_tab(&parse(params)?),
+            method::BROWSER_SWITCH_TAB => return self.switch_tab(&parse(params)?),
+            method::BROWSER_OPEN => return self.open(&parse(params)?),
             _ => {}
         }
         // Stop the one before, even if the new one is refused; the hands
@@ -49,13 +60,34 @@ impl Watch {
         to_value(&daemon.browsers.view(&params.bot_id))
     }
 
+    fn watches(&self, bot: &BotId) -> bool {
+        self.current
+            .as_ref()
+            .is_some_and(|watching| watching.bot == *bot)
+    }
+
+    /// The page takes the shape of the room this connection's panel has.
+    fn resize(&self, daemon: &Daemon, params: &BrowserResizeParams) -> Result<Value, RpcError> {
+        if !self.watches(&params.bot_id) {
+            return Err(
+                ApiError::Conflict("watch this browser before sizing it".to_owned()).into(),
+            );
+        }
+        let fits = |side: u32| (1..=ROOM_MAX).contains(&side);
+        if !fits(params.width) || !fits(params.height) {
+            return Err(
+                ApiError::validation(format!("width and height go from 1 to {ROOM_MAX}")).into(),
+            );
+        }
+        daemon
+            .browsers
+            .resize(&params.bot_id, params.width, params.height);
+        Ok(Value::Null)
+    }
+
     fn take(&mut self, daemon: &Daemon, params: BrowserControlParams) -> Result<Value, RpcError> {
         let bot = &params.bot_id;
-        if self
-            .current
-            .as_ref()
-            .is_none_or(|watching| watching.bot != *bot)
-        {
+        if !self.watches(bot) {
             return Err(
                 ApiError::Conflict("watch this browser before taking it".to_owned()).into(),
             );
@@ -93,17 +125,42 @@ impl Watch {
         to_value(&daemon.browsers.view(bot).state)
     }
 
-    fn input(&self, params: BrowserInputParams) -> Result<Value, RpcError> {
-        let hands = self
-            .hands
+    /// The owner's hold on the bot's browser, if this connection has it.
+    fn hands(&self, bot: &BotId) -> Result<&Hands, RpcError> {
+        self.hands
             .as_ref()
-            .filter(|hands| hands.bot == params.bot_id)
-            .ok_or_else(|| ApiError::Conflict("take the browser before using it".to_owned()))?;
-        hands.send(params.input).map_err(|err| match err {
-            InputError::Invalid => ApiError::validation(err.to_string()),
-            InputError::NotHeld | InputError::Closed => ApiError::Conflict(err.to_string()),
-        })?;
+            .filter(|hands| hands.bot == *bot)
+            .ok_or_else(|| ApiError::Conflict("take the browser before using it".to_owned()).into())
+    }
+
+    fn input(&self, params: BrowserInputParams) -> Result<Value, RpcError> {
+        made(self.hands(&params.bot_id)?.send(params.input))
+    }
+
+    /// Reloads the page of the watched browser; it needs no hold.
+    fn reload(&self, daemon: &Daemon, params: &BrowserControlParams) -> Result<Value, RpcError> {
+        let bot = &params.bot_id;
+        if !self.watches(bot) {
+            return Err(
+                ApiError::Conflict("watch this browser before reloading it".to_owned()).into(),
+            );
+        }
+        if !daemon.browsers.reload(bot) {
+            return Err(ApiError::Conflict("the browser is not open".to_owned()).into());
+        }
         Ok(Value::Null)
+    }
+
+    fn new_tab(&self, params: &BrowserControlParams) -> Result<Value, RpcError> {
+        made(self.hands(&params.bot_id)?.new_tab())
+    }
+
+    fn switch_tab(&self, params: &BrowserTabParams) -> Result<Value, RpcError> {
+        made(self.hands(&params.bot_id)?.switch_tab(&params.tab_id))
+    }
+
+    fn open(&self, params: &BrowserOpenParams) -> Result<Value, RpcError> {
+        made(self.hands(&params.bot_id)?.open(&params.url))
     }
 
     /// The watched browser's next frame, as a notification. Never resolves
@@ -120,6 +177,16 @@ impl Watch {
         let params = serde_json::to_value(&*frame).unwrap_or(Value::Null);
         Some(jsonrpc::notification(notification::BROWSER_FRAME, params))
     }
+}
+
+/// What the owner did is on its way to the browser, or why it is not.
+fn made(queued: Result<(), InputError>) -> Result<Value, RpcError> {
+    queued.map_err(|err| match err {
+        InputError::Invalid | InputError::Address => ApiError::validation(err.to_string()),
+        InputError::NoTab => ApiError::NotFound(err.to_string()),
+        InputError::NotHeld | InputError::Closed => ApiError::Conflict(err.to_string()),
+    })?;
+    Ok(Value::Null)
 }
 
 fn to_value(value: &impl Serialize) -> Result<Value, RpcError> {

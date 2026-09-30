@@ -1,7 +1,7 @@
 //! The browser tools (spec 21.4): each acts in the bot's own browser, asks
 //! the owner before a new site when the bot's mode asks first (spec 21.5),
-//! waits while the owner has it (spec 21.10), and answers with the page as
-//! it is after the action.
+//! waits while the owner has it and reads first if they left another tab
+//! open (spec 21.10), and answers with the page as it is after the action.
 
 use std::path::PathBuf;
 
@@ -18,6 +18,14 @@ use super::calls::explain;
 use crate::browser::{Done, OWNER_WAIT, Scroll, sites};
 use crate::service::bots;
 use crate::state::Daemon;
+
+/// What the bot reads when the owner gave its browser back on another tab
+/// than the one it was on (spec 21.10).
+const SWITCHED: &str =
+    "The owner switched tabs while they had your browser. This is the tab that is open now.";
+const NOT_DONE: &str = "The owner switched tabs while they had your browser, so this was not \
+    done: the page you were on is not the one open now. Call browser_look to read the tab that \
+    is open, then decide what to do.";
 
 /// What a browser tool answers.
 pub(super) enum Reply {
@@ -76,12 +84,16 @@ async fn run(
              first.",
         )?;
         ask_owner(daemon, id, generation, &session, task).await?;
+        // What they did last reaches the browser before the bot reads it.
+        daemon.browsers.wait_for_owner(id, OWNER_WAIT).await;
         let session = call.running().ok_or(
             "The owner is done, but your browser closed meanwhile. Open the page again with \
              browser_open.",
         )?;
         let done = "The owner is done and gave your browser back. This is the page now.";
-        return answer(&session, &bot, 0, Some(vec![done.to_owned()])).await;
+        let mut notes = vec![done.to_owned()];
+        notes.extend(switched(session.take_switched()).into_iter().flatten());
+        return answer(&session, &bot, 0, Some(notes)).await;
     }
     // The owner has the browser: wait until they give it back.
     if !daemon.browsers.wait_for_owner(id, OWNER_WAIT).await {
@@ -116,6 +128,7 @@ async fn run(
             .session(&downloads)
             .await
             .map_err(|err| unavailable(&err))?;
+        let moved = session.take_switched();
         let result = session.open(&url).await;
         report(
             daemon,
@@ -127,12 +140,17 @@ async fn run(
             },
         );
         result.map_err(|err| describe(&err))?;
-        return answer(&session, &bot, 0, None).await;
+        return answer(&session, &bot, 0, switched(moved)).await;
     }
 
     let session = call
         .running()
         .ok_or("Your browser is not open. Open a page with browser_open first.")?;
+    // On a tab the owner left open, the bot reads before it acts.
+    let moved = session.take_switched();
+    if moved && tool.acts() {
+        return Err(NOT_DONE.to_owned());
+    }
     let url = session
         .lock()
         .active()
@@ -140,11 +158,14 @@ async fn run(
         .unwrap_or_default();
     page_allowed(daemon, id, generation, &bot, &session, &url).await?;
     let (kind, done) = match tool {
-        Tool::Look { from } => return answer(&session, &bot, from, None).await,
+        Tool::Look { from } => return answer(&session, &bot, from, switched(moved)).await,
         Tool::Screenshot => {
             let data = session.screenshot().await.map_err(|err| describe(&err))?;
             let reading = session.read(0).await.map_err(|err| describe(&err))?;
-            let line = format!("Page: {}\nURL: {}", reading.title, reading.url);
+            let mut line = format!("Page: {}\nURL: {}", reading.title, reading.url);
+            if moved {
+                line = format!("{line}\n{SWITCHED}");
+            }
             return Ok(Reply::Picture(data, line));
         }
         Tool::Click { reference } => (BrowserActionKind::Click, session.click(&reference).await),
@@ -196,6 +217,11 @@ async fn run(
         notes.push(format!("Chose \"{chosen}\"."));
     }
     answer(&session, &bot, 0, Some(notes)).await
+}
+
+/// The note for the bot when the owner left it on another tab.
+fn switched(moved: bool) -> Option<Vec<String>> {
+    moved.then(|| vec![SWITCHED.to_owned()])
 }
 
 fn about(daemon: &Daemon, id: &BotId) -> Result<Bot, String> {

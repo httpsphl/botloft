@@ -56,7 +56,7 @@ async fn an_idle_bot_restarts_on_its_new_effort_in_the_same_conversation() {
     let s = setup().await;
     let first = s.runtime.process(1).await;
     s.until(BotState::Idle).await;
-    let session = arg_after(&first, "--session-id").expect("session");
+    let session = s.turn(&first).await;
 
     set_effort(&s, BotEffort::Low);
     let second = s.runtime.process(2).await;

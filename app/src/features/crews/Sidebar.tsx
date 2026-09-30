@@ -1,5 +1,6 @@
 import { Pause, Plus } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { createPortal } from "react-dom";
 import { useShallow } from "zustand/react/shallow";
 import { type Messages, useT } from "../../i18n";
 import { when } from "../../lib/format";
@@ -7,10 +8,12 @@ import type { Activity, Bot, Crew } from "../../lib/protocol.gen";
 import { botsOf, crewList } from "../../store/app";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
+import { ContextMenu, menuPoint, type Point } from "../../ui/ContextMenu";
 import { APP_OPENED } from "../../ui/motion";
 import { AccountArea } from "../account/AccountArea";
 import { BotAvatar, moodOf } from "../bots/BotAvatar";
 import { BotStateBadge, stateView } from "../bots/BotStateBadge";
+import { useBotActions } from "../bots/botActions";
 import { ChiefBadge, isChief } from "../bots/ChiefBadge";
 import { toolAction, toolTitle } from "../chat/toolNames";
 import { CrewDialog } from "./CrewDialog";
@@ -85,6 +88,10 @@ function Conversation({ bot, crew }: { bot: Bot; crew: Crew }) {
   const t = useT();
   const selected = useApp((state) => state.selectedBotId === bot.id);
   const selectBot = useApp((state) => state.selectBot);
+  // A right-click opens the bot's menu, the same as in its header.
+  const actions = useBotActions(bot, crew);
+  const [menuAt, setMenuAt] = useState<Point | null>(null);
+  const closeMenu = useCallback(() => setMenuAt(null), []);
   const activity = bot.lastActivity;
   return (
     <li className={bot.createdAt > APP_OPENED ? "animate-rise" : undefined}>
@@ -93,7 +100,11 @@ function Conversation({ bot, crew }: { bot: Bot; crew: Crew }) {
         aria-current={selected ? "page" : undefined}
         aria-label={`${bot.name}, ${stateView(bot, crew.paused).label}`}
         onClick={() => selectBot(bot.id)}
-        className={`${row} gap-2.5 px-2.5 py-2 ${selected ? "bg-sunken" : ""}`}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          setMenuAt(menuPoint(event));
+        }}
+        className={`${row} gap-2.5 px-2.5 py-2 ${selected || menuAt ? "bg-sunken" : ""}`}
       >
         <BotAvatar color={bot.color} size={32} mood={moodOf(bot, crew.paused)} />
         <span className="min-w-0 flex-1">
@@ -119,6 +130,16 @@ function Conversation({ bot, crew }: { bot: Bot; crew: Crew }) {
           </span>
         </span>
       </button>
+      {menuAt && (
+        <ContextMenu
+          label={t.bots.header.menuOf(bot.name)}
+          items={actions.items}
+          at={menuAt}
+          onClose={closeMenu}
+        />
+      )}
+      {/* Outside the list: a dialog is not part of the navigation. */}
+      {actions.dialogs && createPortal(actions.dialogs, document.body)}
     </li>
   );
 }
