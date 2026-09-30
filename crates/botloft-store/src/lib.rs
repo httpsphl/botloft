@@ -13,6 +13,8 @@ mod delete;
 mod deliveries;
 mod messages;
 mod migrate;
+#[cfg(test)]
+mod plans;
 mod routine_runs;
 mod routines;
 mod tasks;
@@ -61,9 +63,18 @@ impl Store {
 
     fn init(mut conn: Connection) -> Result<Self> {
         conn.pragma_update(None, "journal_mode", "WAL")?;
+        // In WAL mode NORMAL still never corrupts the database; a power cut
+        // can lose the last commits, but no commit waits for the disk.
+        conn.pragma_update(None, "synchronous", "NORMAL")?;
         conn.pragma_update(None, "foreign_keys", "ON")?;
+        conn.pragma_update(None, "temp_store", "MEMORY")?;
+        conn.pragma_update(None, "cache_size", -16_000)?;
+        conn.pragma_update(None, "journal_size_limit", 64 << 20)?;
         conn.busy_timeout(Duration::from_millis(5000))?;
+        conn.set_prepared_statement_cache_capacity(128);
         migrate::run(&mut conn)?;
+        // Statistics for the planner, bounded so opening stays fast.
+        conn.execute_batch("PRAGMA optimize = 0x10002")?;
         Ok(Self { conn })
     }
 
@@ -84,6 +95,25 @@ where
     let raw: String = row.get(idx)?;
     raw.parse()
         .map_err(|err| rusqlite::Error::FromSqlConversionFailure(idx, Type::Text, Box::new(err)))
+}
+
+/// `query_row` through the statement cache, for statements that run on every
+/// chat item, delivery or message.
+fn cached_row<T, P, F>(conn: &Connection, sql: &str, params: P, f: F) -> rusqlite::Result<T>
+where
+    P: rusqlite::Params,
+    F: FnOnce(&Row<'_>) -> rusqlite::Result<T>,
+{
+    conn.prepare_cached(sql)?.query_row(params, f)
+}
+
+/// `execute` through the statement cache; see [`cached_row`].
+fn cached_execute<P: rusqlite::Params>(
+    conn: &Connection,
+    sql: &str,
+    params: P,
+) -> rusqlite::Result<usize> {
+    conn.prepare_cached(sql)?.execute(params)
 }
 
 /// Generations and sizes are `u64` in the protocol; SQLite stores `i64`.
@@ -205,8 +235,13 @@ pub(crate) mod tests {
             .conn
             .pragma_query_value(None, "foreign_keys", |row| row.get(0))
             .expect("foreign_keys");
+        let synchronous: i64 = store
+            .conn
+            .pragma_query_value(None, "synchronous", |row| row.get(0))
+            .expect("synchronous");
         assert_eq!(mode, "wal");
         assert_eq!(fk, 1);
+        assert_eq!(synchronous, 1, "NORMAL");
         assert_eq!(store.schema_version().expect("version"), LATEST_VERSION);
     }
 

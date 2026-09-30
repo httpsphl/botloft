@@ -58,7 +58,7 @@ impl Store {
     pub fn delete_crew(&self, id: &CrewId) -> Result<bool> {
         let tx = self.conn.unchecked_transaction()?;
         let bots: Vec<String> = {
-            let mut stmt = tx.prepare("SELECT id FROM bots WHERE crew_id = ?1")?;
+            let mut stmt = tx.prepare_cached("SELECT id FROM bots WHERE crew_id = ?1")?;
             let rows = stmt.query_map([id.as_str()], |row| row.get(0))?;
             rows.collect::<rusqlite::Result<_>>()?
         };

@@ -4,7 +4,7 @@ use botloft_core::ids::{BotId, CrewId};
 use botloft_core::protocol::{BotEffort, BotModel, ModelEffort, PermissionMode};
 use rusqlite::{OptionalExtension, Row, params};
 
-use crate::{Result, Store, parse_column, unique_as_duplicate};
+use crate::{Result, Store, cached_execute, cached_row, parse_column, unique_as_duplicate};
 
 /// A bot as stored. The protocol `Bot` adds runtime state and the workspace
 /// path, which the daemon derives.
@@ -103,7 +103,7 @@ impl Store {
 
     /// Bots in creation order, optionally limited to one crew.
     pub fn bots(&self, crew: Option<&CrewId>, include_archived: bool) -> Result<Vec<BotRecord>> {
-        let mut stmt = self.conn.prepare(&format!(
+        let mut stmt = self.conn.prepare_cached(&format!(
             "SELECT {COLUMNS} FROM bots \
              WHERE (?1 IS NULL OR crew_id = ?1) AND (?2 OR archived_at IS NULL) \
              ORDER BY created_at, id"
@@ -192,20 +192,20 @@ impl Store {
 
     /// The Claude Code conversation the bot resumes (spec 7.3).
     pub fn session_id(&self, id: &BotId) -> Result<Option<String>> {
-        Ok(self
-            .conn
-            .query_row(
-                "SELECT session_id FROM bots WHERE id = ?1",
-                [id.as_str()],
-                |row| row.get(0),
-            )
-            .optional()?
-            .flatten())
+        Ok(cached_row(
+            &self.conn,
+            "SELECT session_id FROM bots WHERE id = ?1",
+            [id.as_str()],
+            |row| row.get(0),
+        )
+        .optional()?
+        .flatten())
     }
 
     /// `None` makes the next start a new conversation.
     pub fn set_session_id(&self, id: &BotId, session: Option<&str>) -> Result<()> {
-        self.conn.execute(
+        cached_execute(
+            &self.conn,
             "UPDATE bots SET session_id = ?2 WHERE id = ?1",
             params![id.as_str(), session],
         )?;

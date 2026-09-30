@@ -14,7 +14,7 @@ impl Store {
     /// Each bot's tokens in turns that ended at or after `since`, the bot
     /// that used the most first. Bots with no such turn are left out.
     pub fn turn_tokens(&self, since: i64) -> Result<Vec<BotTokens>> {
-        let mut stmt = self.conn.prepare(
+        let mut stmt = self.conn.prepare_cached(
             "SELECT b.id, b.name, b.color, b.archived_at IS NOT NULL, COUNT(*), \
                     SUM(json_extract(c.data, '$.tokens.input')), \
                     SUM(json_extract(c.data, '$.tokens.cacheWrite')), \

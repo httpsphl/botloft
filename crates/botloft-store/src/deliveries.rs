@@ -6,7 +6,7 @@ use botloft_core::ids::{BotId, DeliveryId};
 use botloft_core::protocol::{Delivery, DeliveryBacklog, DeliveryState};
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
-use crate::{Result, Store, parse_column, to_sql_int};
+use crate::{Result, Store, cached_execute, cached_row, parse_column, to_sql_int};
 
 const COLUMNS: &str =
     "id, message_id, bot_id, state, attempts, next_attempt_at, last_error, read_at, updated_at";
@@ -46,7 +46,8 @@ pub enum DeliveryOutcome<'a> {
 
 impl Store {
     pub(crate) fn insert_delivery_in(conn: &Connection, delivery: &Delivery) -> Result<()> {
-        conn.execute(
+        cached_execute(
+            conn,
             &format!(
                 "INSERT INTO deliveries ({COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
             ),
@@ -82,7 +83,7 @@ impl Store {
         state: Option<DeliveryState>,
         bot: Option<&BotId>,
     ) -> Result<Vec<Delivery>> {
-        let mut stmt = self.conn.prepare(&format!(
+        let mut stmt = self.conn.prepare_cached(&format!(
             "SELECT {COLUMNS} FROM deliveries \
              WHERE (?1 IS NULL OR state = ?1) AND (?2 IS NULL OR bot_id = ?2) \
              ORDER BY updated_at DESC, rowid DESC LIMIT ?3"
@@ -102,7 +103,7 @@ impl Store {
     /// due and nothing else of that bot is being sent. Keeps each bot's
     /// messages in order, one at a time.
     pub fn due_deliveries(&self, now: i64) -> Result<Vec<Delivery>> {
-        let mut stmt = self.conn.prepare(&format!(
+        let mut stmt = self.conn.prepare_cached(&format!(
             "SELECT {COLUMNS} FROM deliveries AS d \
              WHERE d.state = 'pending' AND d.next_attempt_at <= ?1 \
                AND d.rowid = (SELECT MIN(rowid) FROM deliveries \
@@ -123,17 +124,16 @@ impl Store {
         now: i64,
         lease_until: i64,
     ) -> Result<Option<Delivery>> {
-        Ok(self
-            .conn
-            .query_row(
-                &format!(
-                    "UPDATE deliveries SET state = 'sending', lease_until = ?2, updated_at = ?3 \
+        Ok(cached_row(
+            &self.conn,
+            &format!(
+                "UPDATE deliveries SET state = 'sending', lease_until = ?2, updated_at = ?3 \
                      WHERE id = ?1 AND state = 'pending' RETURNING {COLUMNS}"
-                ),
-                params![id.as_str(), lease_until, now],
-                from_row,
-            )
-            .optional()?)
+            ),
+            params![id.as_str(), lease_until, now],
+            from_row,
+        )
+        .optional()?)
     }
 
     /// Records how a pending or sending delivery ended. `None` if it was in
@@ -145,16 +145,16 @@ impl Store {
         now: i64,
     ) -> Result<Option<Delivery>> {
         let update = |set: &str, values: &[&dyn rusqlite::ToSql]| {
-            self.conn
-                .query_row(
-                    &format!(
-                        "UPDATE deliveries SET {set}, lease_until = NULL \
+            cached_row(
+                &self.conn,
+                &format!(
+                    "UPDATE deliveries SET {set}, lease_until = NULL \
                          WHERE id = ?1 AND state IN ('pending', 'sending') RETURNING {COLUMNS}"
-                    ),
-                    values,
-                    from_row,
-                )
-                .optional()
+                ),
+                values,
+                from_row,
+            )
+            .optional()
         };
         let id = id.as_str();
         let row = match outcome {
@@ -197,24 +197,23 @@ impl Store {
     /// The bot began the turn for the delivery sent with `turn_uuid`
     /// (spec 9.1). `None` if no unread delivery went with that uuid.
     pub fn mark_read(&self, turn_uuid: &str, now: i64) -> Result<Option<Delivery>> {
-        Ok(self
-            .conn
-            .query_row(
-                &format!(
-                    "UPDATE deliveries SET read_at = ?2, updated_at = ?2 \
+        Ok(cached_row(
+            &self.conn,
+            &format!(
+                "UPDATE deliveries SET read_at = ?2, updated_at = ?2 \
                      WHERE turn_uuid = ?1 AND state = 'sent' AND read_at IS NULL \
                      RETURNING {COLUMNS}"
-                ),
-                params![turn_uuid, now],
-                from_row,
-            )
-            .optional()?)
+            ),
+            params![turn_uuid, now],
+            from_row,
+        )
+        .optional()?)
     }
 
     /// Deliveries written to the process of `generation` that it never
     /// began, oldest first.
     pub fn unread_deliveries(&self, bot: &BotId, generation: u64) -> Result<Vec<Delivery>> {
-        let mut stmt = self.conn.prepare(&format!(
+        let mut stmt = self.conn.prepare_cached(&format!(
             "SELECT {COLUMNS} FROM deliveries \
              WHERE bot_id = ?1 AND sent_generation = ?2 AND state = 'sent' AND read_at IS NULL \
              ORDER BY rowid"
@@ -253,7 +252,7 @@ impl Store {
 
     /// Returns deliveries whose sender died mid-send to `pending`.
     pub fn recover_leases(&self, now: i64) -> Result<Vec<Delivery>> {
-        let mut stmt = self.conn.prepare(&format!(
+        let mut stmt = self.conn.prepare_cached(&format!(
             "UPDATE deliveries SET state = 'pending', lease_until = NULL, updated_at = ?1 \
              WHERE state = 'sending' AND lease_until <= ?1 RETURNING {COLUMNS}"
         ))?;
@@ -280,8 +279,9 @@ impl Store {
 
     pub fn delivery_backlog(&self) -> Result<DeliveryBacklog> {
         Ok(self.conn.query_row(
-            "SELECT COALESCE(SUM(state IN ('pending', 'sending')), 0), \
-                    COALESCE(SUM(state = 'dead'), 0) FROM deliveries",
+            // Counted through the state index, not by reading every row.
+            "SELECT (SELECT COUNT(*) FROM deliveries WHERE state IN ('pending', 'sending')), \
+                    (SELECT COUNT(*) FROM deliveries WHERE state = 'dead')",
             [],
             |row| {
                 Ok(DeliveryBacklog {
