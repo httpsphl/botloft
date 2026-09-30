@@ -33,6 +33,7 @@ export const tools: Messages["tools"] = {
     complete_task: "Terminar una tarea",
     my_tasks: "Ver sus tareas",
     suggest_bot: "Sugerir un bot",
+    schedule_routine: "Crear una rutina",
     browser: "Usar un sitio",
     browser_help: "Pedir tu ayuda",
     browser_open: "Abrir una página",

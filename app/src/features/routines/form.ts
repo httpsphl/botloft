@@ -45,8 +45,14 @@ export function blankForm(): RoutineForm {
   };
 }
 
+/** What the form is filled from: a routine, or one a bot asks for. */
+export type RoutineFields = Pick<
+  Routine,
+  "name" | "prompt" | "schedule" | "timezone" | "overlap" | "missed"
+>;
+
 /** The form as it opens for an existing routine. */
-export function formOf(routine: Routine): RoutineForm {
+export function formOf(routine: RoutineFields): RoutineForm {
   const form: RoutineForm = {
     ...blankForm(),
     name: routine.name,

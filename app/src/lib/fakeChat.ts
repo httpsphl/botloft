@@ -12,11 +12,14 @@ import type {
   BotModel,
   ChatBody,
   ChatItem,
+  RoutinesCreateParams,
   ToolItem,
 } from "./protocol.gen";
 
 /** The chief's tool to suggest a bot (spec 10.2). */
 export const SUGGEST_TOOL = "mcp__botloft__suggest_bot";
+/** Any bot's tool to ask for a routine (spec 20.12). */
+export const ROUTINE_TOOL = "mcp__botloft__schedule_routine";
 /** A bot asking the owner for a hand in its browser (spec 21.10). */
 const HELP_TOOL = "mcp__botloft__browser_help";
 
@@ -199,6 +202,28 @@ export class FakeChat {
             instructions,
             ...(model && { model }),
           });
+        }
+        // An allowed routine request becomes a routine, as the owner left it,
+        // for the bot it names or the one that asked.
+        if (allow && approval.toolName === ROUTINE_TOOL && bot) {
+          if (input !== undefined) {
+            approval.input = JSON.stringify({
+              ...JSON.parse(approval.input),
+              ...JSON.parse(input),
+            });
+          }
+          const { bot: handle, ...routine } = JSON.parse(approval.input) as Omit<
+            RoutinesCreateParams,
+            "botId"
+          > & { bot?: string };
+          const runner = handle
+            ? [...this.fake.bots.values()].find(
+                (other) => other.crewId === bot.crewId && other.handle === handle,
+              )
+            : bot;
+          if (runner) {
+            this.fake.routines.handlers()["routines.create"]({ botId: runner.id, ...routine });
+          }
         }
         // Any answer to a request for help gives the browser back (spec 21.10).
         if (approval.toolName === HELP_TOOL) {

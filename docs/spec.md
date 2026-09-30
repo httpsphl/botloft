@@ -513,6 +513,7 @@ Transporte: Streamable HTTP, só POST e resposta `application/json`, sem sessão
 | `complete_task` | `task_id`, `result`, `status?` (`done` padrão, `failed`) | `task_id`, `status` e quem recebe o resultado |
 | `my_tasks` | `role?` (`assigned`, `requested`) | tasks `open` e `expired`: id, de, para, status, prazo relativo, hops e o pedido original |
 | `suggest_bot` | `name`, `role`, `instructions` (até 8 000 caracteres), `model?`, `reason` (até 1 000) | `created` e, criado, `handle`, `name`, `role`, `model` e um lembrete para mandar a primeira task; recusado ou sem resposta, o porquê (10.2). Só o chefe |
+| `schedule_routine` | `name`, `prompt` (até 8 000 caracteres), `schedule` (como em 20.2), `bot?` (handle de outro bot da crew) | `created` e, criada, `routine_id`, nome, pedido, horário, fuso e a próxima vez; recusada ou sem resposta, o aviso de que nada foi agendado (20.12) |
 | `permission_prompt` | `tool_name`, `input`, `tool_use_id` | decisão do dono (10.1). Chamada pelo Claude Code, não pelo modelo |
 | `browser_*` | seção 21.4 | o navegador do bot: abrir, ler, clicar, digitar, rolar, ver a tela, pedir a mão do dono |
 
@@ -541,7 +542,7 @@ Com `--permission-prompt-tool mcp__botloft__permission_prompt`, toda ferramenta 
 - **Quem escreve é o bot.** A explicação vem antes do comando, nunca no lugar dele. O cartão (15.1) a mostra como texto puro, sem markdown nem links, diz que foi o bot que escreveu e que o que roda é o comando, e deixa o comando a um clique, inteiro e com as quebras de linha. Para isso a entrada de um comando é guardada até 32 KB; um comando maior aparece cortado, com o aviso de que não coube. O que o daemon devolve ao Claude Code é a entrada original, a mesma que o dono pôde abrir.
 - **Sem explicação**, o cartão diz que o bot não disse para que serve o comando, sugere negar e perguntar, e já vem com o comando aberto. O campo é opcional e o modelo às vezes o deixa de fora (19), então esse caso continua existindo.
 - **Regras do bot** (5.1): todo comando leva uma `description` para o dono, que pode não ser técnico: uma frase curta, na língua em que o dono escreve para o bot, dizendo o que o comando faz e por quê, em palavras do dia a dia, sem código, caminhos nem jargão. Sem a regra a descrição vinha curta e técnica, e às vezes em inglês (19). O daemon não conhece o idioma do app; quem acerta a língua é o bot, pela conversa.
-- **Outras ferramentas** não têm explicação: a entrada delas não traz um texto escrito para quem lê. O pedido mostra a ação no idioma do dono (15.6) e o `summary` (o arquivo, a URL), com a entrada inteira em "Detalhes". Um pedido para escrever ou editar um arquivo mostra o nome do arquivo, e uma tela HTML aparece em rascunho na área de design antes do OK (22.3); plano, sugestão de bot e navegador têm cartões próprios. A `description` do `Agent` é o título do trabalho do ajudante e continua sendo o `summary`.
+- **Outras ferramentas** não têm explicação: a entrada delas não traz um texto escrito para quem lê. O pedido mostra a ação no idioma do dono (15.6) e o `summary` (o arquivo, a URL), com a entrada inteira em "Detalhes". Um pedido para escrever ou editar um arquivo mostra o nome do arquivo, e uma tela HTML aparece em rascunho na área de design antes do OK (22.3); plano, sugestão de bot, pedido de rotina (20.12) e navegador têm cartões próprios. A `description` do `Agent` é o título do trabalho do ajudante e continua sendo o `summary`.
 
 **Plano.** No modo `plan`, o bot pede para seguir com a ferramenta `ExitPlanMode`, cuja entrada traz o plano em markdown (`{plan}`). O pedido passa pela mesma tool e vira no chat um cartão com o plano inteiro: a entrada dessa ferramenta é guardada até 32 KB (as outras, até 4 KB) e o resumo é a primeira linha do plano. "Aprovar plano" permite; "Pedir mudanças" nega com a nota do dono, e o bot continua planejando. Depois de aprovado, o Claude Code troca de modo sozinho (7.4). Que o pedido passa pela tool em `-p` e para qual modo o bot vai ainda precisam de teste real (19).
 
@@ -554,7 +555,7 @@ Toda crew nova nasce com um **chefe**: `crews.create` com `lead` cria a crew e e
 - **Regras do chefe:** além das de todo bot, uma seção "You lead this crew": planejar, dividir o trabalho em partes que rodam em paralelo e distribuí-las com `send_message` (`kind: "task"`); conferir os resultados antes de responder ao dono; quando faltar um especialista, sugerir um bot com `suggest_bot`; escolher o modelo pelo trabalho (`haiku` para o simples e repetitivo, `sonnet` para quase tudo, `opus` ou `fable` só para o raciocínio mais difícil, lembrando que gastam mais do plano); manter a crew pequena; e contar ao dono o que cada bot faz, para ele acompanhar e falar com cada um no chat dele. Os outros bots leem que, se a crew precisar de outro bot, devem pedir ao chefe, que o `crew_roster` marca com `chief`.
 - **`suggest_bot`:** aparece para todos os bots, mas só o chefe pode usar; os outros recebem um erro que manda pedir ao chefe. Antes de incomodar o dono, o daemon confere os campos (os de um bot, mais o limite de instruções e o porquê), que o nome está livre na crew e que a crew tem menos de `max_per_crew` bots ativos. Um pedido impossível volta como erro ao chefe.
 - **Aprovação:** a sugestão vira um pedido no chat do chefe, pelo mesmo caminho das aprovações (10.1): `approval` com `toolName: "mcp__botloft__suggest_bot"`, entrada até 64 KB e resumo com o nome sugerido. O chefe fica `needs_approval`, e a chamada MCP espera a resposta até `approval_timeout_minutes`. A tool vem liberada por `--allowedTools mcp__botloft`, então o Claude Code não pede permissão antes: quem decide é o dono, pelo cartão.
-- **Resposta:** permitir cria o bot na crew do chefe, com modo Manual e o modelo sugerido. O dono pode mudar nome, papel, modelo e instruções antes: `approvals.answer` leva `input`, o JSON da sugestão como ele deixou, que substitui a entrada gravada (o cartão mostra o que foi criado); `input` só vale para sugestões. Negar volta ao chefe com a nota do dono, e nada é criado. Sem resposta no prazo, o chefe lê que pode sugerir de novo depois. O bot novo sobe na hora e aparece na barra lateral, com o próprio chat; o resultado da tool lembra o chefe de mandar a primeira task.
+- **Resposta:** permitir cria o bot na crew do chefe, com modo Manual e o modelo sugerido. O dono pode mudar nome, papel, modelo e instruções antes: `approvals.answer` leva `input`, o JSON da sugestão como ele deixou, que substitui a entrada gravada (o cartão mostra o que foi criado); `input` só vale para sugestões de bot e pedidos de rotina (20.12). Negar volta ao chefe com a nota do dono, e nada é criado. Sem resposta no prazo, o chefe lê que pode sugerir de novo depois. O bot novo sobe na hora e aparece na barra lateral, com o próprio chat; o resultado da tool lembra o chefe de mandar a primeira task.
 - **Chefe em `bypass_permissions`:** a sugestão cria o bot na hora, sem cartão, como tudo o que esse modo faz sem perguntar (13). O resultado diz ao chefe que foi criado sem pedir.
 - Bots criados assim são bots comuns: o dono conversa, muda, pausa e arquiva cada um como qualquer outro.
 
@@ -1114,7 +1115,6 @@ Sem jargão (15.2): o dono não vê "cron", "overlap" nem "timezone" no caminho 
 
 ### 20.10 Fora desta etapa
 
-- Bots criando rotinas por uma tool MCP: depois, com aprovação do dono.
 - Sinais entre bots disparando rotinas (seção 18, item 7).
 - Notificação do Windows quando uma rotina termina ou falha.
 - Acordar o PC para uma rotina.
@@ -1125,6 +1125,19 @@ Sem jargão (15.2): o dono não vê "cron", "overlap" nem "timezone" no caminho 
 |---|---|---|
 | **R1** Agendador | migration, `routines/`, courier com `kind: routine`, fim de execução pelo `result`, RPC e notificações, testes com relógio manual | com `FakeRuntime`, rotinas `weekly` e `interval` disparam no horário, pulam por sobreposição e rodam uma vez depois de horário perdido |
 | **R2** App | aba Rotinas no bot e na crew, editor, etiqueta no chat, marca na barra de tarefas, textos nos três idiomas | criar pelo app uma rotina "a cada 5 minutos", ver duas execuções com o Claude Code real, desligá-la e ver que para |
+
+### 20.12 Rotinas pedidas pelos bots
+
+Pedido para fazer algo em horário marcado ("confere o e-mail todo dia às 8"), um bot usava o agendador do próprio Claude Code (`CronCreate`), que morre com o processo e não aparece no app (7.4, 19). Agora esses agendadores ficam desligados, e o bot pede uma rotina de verdade pela tool `schedule_routine`, que o dono aprova no chat, como a sugestão de bot (10.2).
+
+- **Entrada:** `name`, `prompt` (o pedido de cada vez, escrito para o bot que vai rodar, até 8 000 caracteres para caber no cartão), `schedule` (o mesmo JSON de 20.2) e, opcionais, `bot` (handle de outro bot da crew, para quem a rotina é) e `timezone`. Sem `timezone`, vale o fuso do computador, como no app: o daemon o lê do Windows pelo `jiff` (`UTC` se o Windows não der um nome IANA). O daemon grava na entrada o fuso usado e o handle normalizado.
+- **Antes do dono:** o daemon confere tudo o que `routines.create` confere (20.8), mais o limite do pedido e que o `bot` existe na crew. Um pedido impossível (espaçamento menor que 5 minutos, fuso desconhecido, campo a mais) volta como erro ao bot, sem cartão.
+- **Aprovação:** `approval` com `toolName: "mcp__botloft__schedule_routine"`, entrada até 64 KB e resumo com o nome da rotina, no chat do bot que pediu, mesmo quando a rotina é de outro bot. O bot fica `needs_approval`, e a chamada espera até `approval_timeout_minutes`. Qualquer bot pode pedir, não só o chefe.
+- **Cartão:** nome, "O que <bot> deve fazer?", "Quando" e "Mais opções", os mesmos campos do editor (20.9), já preenchidos. Para outro bot, o título diz para quem é. "Criar rotina" permite; "Agora não" nega com a nota do dono. Mudado algum campo, `approvals.answer` leva `input` com a rotina como o dono deixou. O daemon confere esse `input` antes de fechar o pedido, e um problema de horário volta com o `data.reason` de 20.8: o cartão o escreve no idioma do dono e continua aberto. O bot e o fuso do pedido valem se o `input` não trouxer outros.
+- **Resposta ao bot:** criada, o id, o que ficou gravado (o dono pode ter mudado), o fuso e a próxima vez na hora local, e o lembrete de que ela está na aba Rotinas. Negada ou sem resposta, que nada foi agendado e que não deve dizer que foi.
+- **Bot em `bypass_permissions`:** cria na hora, sem cartão (13).
+- **Regras do bot** (5.1): trabalho em horário marcado é `schedule_routine`; é a única forma de agendar, e o bot só diz que agendou depois que a tool diz que criou.
+- Mudar, pausar e apagar rotinas continua sendo só do dono, pelo app.
 
 ## 21. Navegador
 
