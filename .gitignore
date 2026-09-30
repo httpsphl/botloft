@@ -20,3 +20,6 @@ node_modules/
 !.vscode/extensions.json
 .DS_Store
 Thumbs.db
+
+# Setup window build (spec 15.7)
+/app/dist-setup/

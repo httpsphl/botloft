@@ -67,8 +67,9 @@ botloft/
     botloft-store/   SQLite: conexão, migrations, repositórios
     botloftd/        binário do daemon (rpc, supervisor, runtime, chat, courier, tools, platform)
   app/
-    src/             React
+    src/             React (o app e, em src/setup/, a tela de instalação)
     src-tauri/       shell nativa
+    src-setup/       tela de instalação: crate botloft-setup, com o instalador NSIS dentro (15.7)
   docs/
     spec.md
     adr/
@@ -606,6 +607,7 @@ app/src/
   store/          stores Zustand alimentados por notificações
   ui/             componentes base
   dev/            prévia: `pnpm dev` num navegador comum usa FakeBotloft, ou um daemon de dev real com `?live=<porta>` (só em dev)
+  setup/          a tela de instalação (setup.html, 15.7): SetupHost, FakeSetupHost
 ```
 
 Componentes dependem só de `BotloftApi` e `Host`, nunca do cliente concreto nem do Tauri.
@@ -702,6 +704,7 @@ Identidade: o mascote do Botloft é uma chama com olhos. O ícone do app (`app/a
 ### 15.4 Instalador e sidecar
 
 - `pnpm bundle` (em `app/`) roda `scripts/sidecar.mjs`, que compila o `botloftd` em release e o copia para `src-tauri/binaries/botloftd-<target triple>.exe`, e depois `tauri build --config src-tauri/tauri.bundle.conf.json`. Esse arquivo liga o `externalBin` e o NSIS; ele fica fora do `tauri.conf.json` porque o `tauri-build` copia o `externalBin` também em dev e no `cargo clippy`, o que exigiria o sidecar em todo build e sobrescreveria o `target\debug\botloftd.exe` com a cópia de release.
+- Quem baixa o Botloft instala pela tela de instalação (15.7), que roda este instalador NSIS em silêncio. O NSIS com as próprias telas só aparece na atualização (15.5), na desinstalação e quando a tela de instalação não pode abrir.
 - NSIS por usuário (`installMode = currentUser`), sem pedir administrador, em `%LOCALAPPDATA%\Botloft` (seção 5). O instalador não mexe no daemon: ele roda da própria cópia em `<home>\bin`, então o arquivo do sidecar nunca está em uso.
 - Hook `NSIS_HOOK_PREUNINSTALL` (`src-tauri/windows/hooks.nsh`): numa desinstalação de verdade, `botloftd service uninstall` para o daemon e apaga a tarefa e o binário, e o valor `Botloft` da chave Run sai (15.2); bots e dados ficam. Uma atualização também roda o desinstalador antigo, com `/UPDATE`: aí o hook não faz nada e o daemon continua rodando até o app novo abrir e atualizá-lo (15.2).
 - Marca do instalador, sem nome de terceiros à vista: o instalador e o desinstalador usam o ícone do app (`icons/icon.ico`); as telas de boas-vindas e de conclusão têm a imagem lateral `windows/installer-sidebar.bmp` (164×314, o mascote e "Botloft" sobre o preto) e as outras telas o cabeçalho `windows/installer-header.bmp` (150×57, à direita, com `MUI_HEADERIMAGE_RIGHT` no arquivo de hooks). As duas imagens saem do `app-icon.svg` sem o quadrado preto. O rodapé mostra o `bundle.copyright` no lugar de "Nullsoft Install System", e o `NSIS_HOOK_POSTINSTALL` grava "Botloft" como editor em Aplicativos instalados. O `bundle.publisher` fica vazio de propósito: o Tauri dá o nome dele à chave que guarda a pasta de instalação (`Software\<publisher>\Botloft`, hoje `github`, a segunda parte do identificador), e trocá-lo faria a primeira atualização de uma instalação existente rodar o desinstalador antigo sem a pasta. Por isso a empresa nas propriedades do `Botloft.exe` continua `github`.
@@ -711,19 +714,75 @@ Identidade: o mascote do Botloft é uma chama com olhos. O ícone do app (`app/a
 
 - O app usa o `tauri-plugin-updater`. O feed é `latest.json` do último release publicado no GitHub (`releases/latest/download/latest.json`). O app o consulta ao abrir e a cada 6 h; sem rede ou sem release, fica quieto. Build de dev não consulta, para não se trocar pelo app publicado.
 - Com versão nova, aparece "Update available" na barra de título. Um clique abre o diálogo: a versão, "What's new" (se o release tiver notas) e o aviso de que o Botloft fecha, instala e abre de novo, e de que os bots pausam por um instante e continuam de onde pararam. "Update now" baixa com progresso e roda o instalador; se falhar, o erro fica em "Details" e dá para tentar de novo.
-- O instalador roda como `/P /UPDATE /R`: passivo, sem perguntas, e reabre o app. O hook de desinstalação não faz nada com `/UPDATE` (15.4), o daemon segue rodando, e o app reaberto o atualiza porque ele ficou `outdated` (15.2).
+- O feed aponta para o instalador NSIS do release, `Botloft_<versão>_x64-update.exe`, e não para a tela de instalação (15.7). O instalador roda como `/P /UPDATE /R`: passivo, sem perguntas, e reabre o app. O hook de desinstalação não faz nada com `/UPDATE` (15.4), o daemon segue rodando, e o app reaberto o atualiza porque ele ficou `outdated` (15.2).
 - Os artefatos são assinados com a chave do updater do Tauri (`createUpdaterArtifacts`), e a chave pública fica no `tauri.conf.json`. `requireSignedVersion` exige que a assinatura traga a versão, para um feed adulterado não empurrar uma versão antiga de volta. O instalador não tem assinatura Authenticode, então o SmartScreen avisa na primeira execução.
 - Release: a versão fica só no `[workspace.package]` do `Cargo.toml` (o `tauri.conf.json` não repete a versão e usa a do crate). Um push de tag `vX.Y.Z` roda `.github/workflows/release.yml`, que confere tag e versão, roda `pnpm bundle` com `TAURI_SIGNING_PRIVATE_KEY` (segredo do repositório) e abre um release **rascunho** com o instalador, o `.sig` e o `latest.json` (`app/scripts/release.mjs`). O updater só enxerga o release depois que o dono o publica.
 
 ### 15.6 Idiomas
 
-- O app fala **inglês, português (Brasil) e espanhol**. Todo texto que o dono lê fica em `app/src/i18n/<idioma>/`, um arquivo por área (`common`, `shell`, `onboarding`, `updates`, `bots`, `chat`, `crews`, `messages`). O inglês é a referência: o formato dele é o tipo `Messages`, e um texto que falte ou sobre em outro idioma não compila. Texto com valores é função (`ready(version)`), com o plural escrito para cada idioma.
+- O app fala **inglês, português (Brasil) e espanhol**. Todo texto que o dono lê fica em `app/src/i18n/<idioma>/`, um arquivo por área (`common`, `shell`, `onboarding`, `updates`, `bots`, `chat`, `crews`, `messages`, `setup`). O inglês é a referência: o formato dele é o tipo `Messages`, e um texto que falte ou sobre em outro idioma não compila. Texto com valores é função (`ready(version)`), com o plural escrito para cada idioma.
 - Componentes leem com `useT()`; código fora do React (toasts, formatação, erros da conexão) com `t()` na hora do uso.
 - Escolha na área da conta (Idioma, ou Configurações), e no botão de idioma da barra de título só nas telas de preparo: "Idioma do sistema" segue o Windows (o primeiro idioma suportado entre os preferidos; `pt-PT` vira `pt-BR`; nenhum, inglês) ou um idioma fixo. A escolha fica no `localStorage` do app (`botloft.locale`) e marca `<html lang>`.
 - Datas e horas (`lib/format.ts`) usam o idioma escolhido.
 - O daemon não escreve texto para o dono: avisos vêm com `code` e a linha da conversa com `kind` (8.2, 11.2), e o app escreve. Continuam como vêm: nomes, mensagens, respostas e saídas de ferramenta; o resumo de ferramenta que o daemon tira da entrada (o comando, o arquivo), sem o nome da ferramenta, que o app escreve; e as mensagens de erro do daemon (validação, falhas), mostradas como texto técnico.
-- O instalador NSIS também traz os três idiomas e escolhe pelo idioma do Windows.
+- O instalador NSIS e a tela de instalação (15.7) também trazem os três idiomas e escolhem pelo idioma do Windows.
 - Tom: palavras simples, sem jargão; "você" em português, "tú" em espanhol. Glossário: crew = equipe / equipo; task = tarefa / tarea; Allow / Deny = Permitir / Negar / Denegar; role = função / rol.
+
+### 15.7 Tela de instalação
+
+**O que é.** O arquivo que o dono baixa, `Botloft_<versão>_x64-setup.exe`, abre uma janela do próprio Botloft: o mascote, o nome, um botão e mais nada. Por baixo, ela roda o instalador NSIS (15.4) em modo silencioso (`/S`), que continua fazendo o trabalho pesado: arquivos, atalhos com a identidade que os avisos do Windows usam (15.1), a entrada em Aplicativos instalados, o desinstalador, o WebView2 e o hook do serviço. Assim o dono só vê a marca do Botloft, e a atualização, a desinstalação e o serviço não mudam.
+
+**Processo.**
+
+- É um app Tauri pequeno, o crate `botloft-setup` em `app/src-setup/`, com a interface em React em `app/src/setup/` (entrada `app/setup.html`). Ela usa os mesmos tokens, componentes (`ui/`), mascote (`BotAvatar`) e textos (`i18n/<idioma>/setup.ts`) do app. A interface depende só de `SetupHost` (`src/setup/host.ts`), com o `FakeSetupHost` para os testes e para a prévia: com `pnpm dev`, `/setup.html` num navegador comum mostra a tela, e `?relation=older&installed=0.5.0&running&fail` experimenta cada caso.
+- O instalador NSIS vai dentro do executável (`include_bytes!`, pelo caminho em `BOTLOFT_SETUP_PAYLOAD` na compilação). Sem ele (build de dev, `cargo clippy`), o setup fica em modo de ensaio: mostra as telas e finge instalar em 3 s, sem tocar na máquina.
+- Janela de 480×380, fixa, centrada e sem a moldura do Windows, com uma faixa de título própria (arrastável, só com o botão de fechar), no tema do Windows, claro ou escuro. Ela abre escondida e aparece quando a primeira tela está pronta. O WebView2 da janela guarda os arquivos dele em `%TEMP%\Botloft-setup-webview`, a mesma pasta a cada vez, e não numa pasta do setup em `%LOCALAPPDATA%`.
+- O manifesto do setup declara `requestedExecutionLevel` `asInvoker`: o Windows trata programas com "setup" no nome como instaladores e pediria administrador sem isso. Nada no setup precisa de administrador.
+- Antes de abrir a janela, o setup confere se o WebView2 existe. Sem ele, grava o instalador NSIS numa pasta temporária, roda-o com as telas dele (que já têm a marca, 15.4, e baixam o WebView2) e sai.
+
+**Telas.**
+
+- **Pronto para instalar:** o mascote parado, "Botloft", uma linha sobre o que ele é e o botão **Instalar**. Embaixo, "Instala só para você, sem pedir administrador." Em "Details", a pasta (`%LOCALAPPDATA%\Botloft`, ou a da instalação anterior) e a versão. O dono não escolhe pasta.
+- **Já instalado**, lido da entrada em Aplicativos instalados (`HKCU\...\Uninstall\Botloft`: `DisplayVersion` e `InstallLocation`):
+  - versão mais antiga: o botão vira **Atualizar**, com "Você tem a <versão>. Esta é a <versão>.";
+  - a mesma versão: "O Botloft já está instalado.", com **Abrir o Botloft** e **Instalar de novo**;
+  - versão mais nova: "Você já tem uma versão mais nova (<versão>).", só com **Abrir o Botloft**.
+- **App aberto:** uma linha avisa que o Botloft fecha para instalar e que os bots continuam trabalhando, porque eles rodam no serviço (14). O setup fecha o `Botloft.exe` da pasta instalada antes de rodar o NSIS.
+- **Instalando:** o mascote trabalhando, "Instalando o Botloft…" e uma barra sem porcentagem (o NSIS em silêncio não diz o progresso, e leva poucos segundos). O botão de fechar some até terminar, para a instalação não ficar pela metade.
+- **Pronto:** "Tudo pronto." e, um instante depois, o setup abre o `Botloft.exe` da pasta em Aplicativos instalados e fecha. Se não conseguir abrir, diz para abrir o Botloft pelo menu Iniciar. Na primeira instalação, o app segue para o preparo de sempre (15.1).
+- **Falhou:** o mascote cansado, "Não deu para instalar o Botloft.", **Tentar de novo** e **Usar o instalador clássico**, que roda o NSIS com as telas dele. Em "Details", o código de saída do NSIS.
+
+**Arquivos.** O setup grava o instalador NSIS em `%TEMP%\Botloft-setup-<aleatório>\`, roda `/S`, espera e apaga a pasta, também quando falha. O instalador clássico também espera: a janela se esconde, o setup aguarda o NSIS terminar, apaga a pasta e sai. Fora a pasta do WebView2, o setup não escreve log, não usa a rede e não guarda nada. A instalação em si, a pasta e o registro são os do NSIS (5, 15.4).
+
+**Build e release.**
+
+- `pnpm bundle:setup` (em `app/`, `scripts/setup.mjs`) roda `vite build --mode setup`, que gera só a `setup.html` em `app/dist-setup`, e `cargo build -p botloft-setup --release --features tauri/custom-protocol` com `BOTLOFT_SETUP_PAYLOAD` apontando para o instalador NSIS que o `pnpm bundle` acabou de gerar. O resultado vai para `target\release\bundle\setup\Botloft_<versão>_x64-setup.exe`. Com `-- --rehearse`, sai sem o instalador dentro. O setup não usa o CLI do Tauri, porque não precisa de bundle: basta o executável.
+- O release (15.5) passa a ter a tela de instalação como `Botloft_<versão>_x64-setup.exe`, o nome que o README já indica, e o instalador NSIS como `Botloft_<versão>_x64-update.exe` com o `.sig`, que é para onde o `latest.json` aponta. O `release.mjs` copia os dois com esses nomes antes de publicar.
+- O setup não tem assinatura Authenticode, como o NSIS (15.5): o SmartScreen avisa ao abrir. O NSIS gravado na pasta temporária não tem a marca da internet e não passa de novo pelo SmartScreen.
+- O executável fica maior, com a janela mais o NSIS inteiro: 15,4 MB na 0.5.0, contra 6,8 MB do NSIS sozinho.
+
+**A verificar** (com o NSIS do Tauri 2.12; anotar aqui o resultado):
+
+- `/S` por cima de uma versão instalada: se desinstala a anterior (como o `/P` faz pela página de reinstalação) ou só sobrescreve, e se algum arquivo antigo fica. **Mesma versão** (0.5.0 sobre 0.5.0, 2026-09-29): nenhum processo de desinstalador apareceu (olhando a cada 100 ms); o NSIS só sobrescreveu os arquivos. Falta ver com uma versão mais antiga (I3).
+- `/S` com o app aberto: se o NSIS fecha o app sozinho, pergunta ou falha. O setup fecha o app antes (verificado: "Instalar de novo" com o app aberto fechou o app, instalou e abriu de novo), mas o comportamento do NSIS sozinho precisa ficar anotado.
+- `/S` com uma versão mais nova instalada: se sai com erro (`silentDowngrades`) e com qual código.
+- O atualizador aceita o instalador com o nome novo (`-update.exe`) e o roda como NSIS.
+- Com o manifesto `asInvoker`, o Windows não pede administrador para o setup. **Verificado** (Windows 11 25H2, 2026-09-29): o `Botloft_0.5.0_x64-setup.exe` abriu a janela direto, sem pedido do UAC.
+- O identificador dos atalhos continua o mesmo, para os avisos saírem com o nome do Botloft.
+
+**Instalação real** (I1, Windows 11 25H2, 2026-09-29, 0.5.0): numa máquina com os arquivos do Botloft mas sem a entrada em Aplicativos instalados, a tela nova instalou em cerca de 3 s, criou a entrada (editor "Botloft", pasta `%LOCALAPPDATA%\Botloft`), abriu o app dessa pasta e apagou a pasta temporária. O daemon seguiu rodando, porque o instalador não mexe nele (15.4).
+
+Um teste que instala uma cópia em outra pasta e depois a desinstala apaga a entrada da instalação de verdade, porque a entrada tem o nome do produto e não o da pasta; e deixa a pasta de teste como a lembrada (`Software\github\Botloft`). Foi o que aconteceu nesta máquina. Para testar numa pasta separada, use outra conta do Windows.
+
+**Marcos.**
+
+| Marco | Entrega | Pronto quando |
+|---|---|---|
+| **I1** Tela | crate `botloft-setup`, telas com `FakeSetup` e a prévia `?setup`, instalação pelo NSIS em silêncio, abrir o app ao terminar, modo de ensaio sem o instalador dentro | instalar pela tela nova numa máquina sem o Botloft e o app abrir; testes das telas e do `SetupHost` |
+| **I2** Release | `pnpm bundle:setup`, `release.mjs` e `release.yml` com os dois arquivos, README | um release rascunho com a tela de instalação, o `-update.exe`, o `.sig` e o `latest.json` certo |
+| **I3** Acabamento | versão já instalada (mais antiga, igual, mais nova), app aberto, falha com o instalador clássico, sem WebView2 | cada caso testado à mão no Windows e anotado em "A verificar" |
+
+Esta seção entra no PR do I1, junto com o código.
 
 ## 16. Qualidade
 

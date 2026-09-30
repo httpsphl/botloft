@@ -8,7 +8,9 @@ import { defineConfig } from "vitest/config";
 // Set by `tauri dev` when targeting a remote device; unused on desktop.
 const host = process.env.TAURI_DEV_HOST;
 
-export default defineConfig({
+// `vite build --mode setup` builds the setup window alone (setup.html,
+// spec 15.7) into dist-setup, which the botloft-setup crate embeds.
+export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss()],
   // Keep Rust compiler errors visible in the terminal.
   clearScreen: false,
@@ -32,6 +34,7 @@ export default defineConfig({
   build: {
     // WebView2 on Windows is evergreen Chromium.
     target: "chrome120",
+    ...(mode === "setup" && { outDir: "dist-setup", rollupOptions: { input: "setup.html" } }),
   },
   test: {
     environment: "jsdom",
@@ -39,4 +42,4 @@ export default defineConfig({
     // The mascot test reads the flame frames as text; other CSS stays empty.
     css: { include: [/mascot-flame\.css/] },
   },
-});
+}));

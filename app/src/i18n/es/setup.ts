@@ -1,0 +1,27 @@
+import type { Messages } from "../en";
+
+export const setup: Messages["setup"] = {
+  tagline: "Bots siempre encendidos que trabajan juntos para ti.",
+  install: "Instalar",
+  update: "Actualizar",
+  forYou: "Se instala solo para ti, sin pedir un administrador.",
+  older: (installed: string, version: string) => `Tienes la ${installed}. Esta es la ${version}.`,
+  same: "Botloft ya está instalado.",
+  newer: (installed: string) => `Ya tienes una versión más nueva (${installed}).`,
+  open: "Abrir Botloft",
+  reinstall: "Instalar de nuevo",
+  appOpen: "Botloft está abierto y se cierra para instalar. Tus bots siguen trabajando.",
+  installing: "Instalando Botloft…",
+  installingLine: "Solo tarda unos segundos.",
+  progress: "Instalando",
+  done: "Todo listo.",
+  opening: "Abriendo Botloft…",
+  openFailed: "Botloft está instalado. Ábrelo desde el menú Inicio.",
+  failed: "No se pudo instalar Botloft.",
+  failedLine: "Inténtalo de nuevo o usa el instalador clásico.",
+  retry: "Intentar de nuevo",
+  classic: "Usar el instalador clásico",
+  folder: (path: string) => `Carpeta: ${path}`,
+  version: (version: string) => `Versión: ${version}`,
+  exitCode: (code: number) => `Código de salida: ${code}`,
+};

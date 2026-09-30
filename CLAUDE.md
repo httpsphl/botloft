@@ -43,6 +43,7 @@ pnpm tauri dev    # o app acha o daemon pelo BOTLOFT_HOME; "Start the daemon" in
 pnpm dev          # só a UI num navegador comum, com o FakeBotloft (src/dev/preview.ts)
 pnpm check        # tsc --noEmit + biome check + vitest run
 pnpm bundle       # instalador NSIS com o sidecar (spec 15.4), em target\release\bundle\nsis
+pnpm bundle:setup # tela de instalação com esse NSIS dentro (spec 15.7), em target\release\bundle\setup
 ```
 
 Release (spec 15.5): suba a versão em `[workspace.package]` do `Cargo.toml` (e no `app/package.json`), faça merge, crie a tag `vX.Y.Z` e dê push. O workflow `release.yml` abre um release rascunho com instalador, `.sig` e `latest.json`; o updater só o vê depois de publicado. A chave privada do updater fica no segredo `TAURI_SIGNING_PRIVATE_KEY`; perdê-la impede atualizar quem já instalou.

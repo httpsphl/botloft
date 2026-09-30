@@ -1,0 +1,27 @@
+// The window people install Botloft with (spec 15.7).
+
+export const setup = {
+  tagline: "Always-on bots that work together for you.",
+  install: "Install",
+  update: "Update",
+  forYou: "Installs just for you, without asking for an administrator.",
+  older: (installed: string, version: string) => `You have ${installed}. This is ${version}.`,
+  same: "Botloft is already installed.",
+  newer: (installed: string) => `You already have a newer version (${installed}).`,
+  open: "Open Botloft",
+  reinstall: "Install again",
+  appOpen: "Botloft is open and closes to install. Your bots keep working.",
+  installing: "Installing Botloft…",
+  installingLine: "This takes a few seconds.",
+  progress: "Installing",
+  done: "All set.",
+  opening: "Opening Botloft…",
+  openFailed: "Botloft is installed. Open it from the Start menu.",
+  failed: "Botloft didn't install.",
+  failedLine: "Try again, or use the classic installer.",
+  retry: "Try again",
+  classic: "Use the classic installer",
+  folder: (path: string) => `Folder: ${path}`,
+  version: (version: string) => `Version: ${version}`,
+  exitCode: (code: number) => `Exit code: ${code}`,
+};

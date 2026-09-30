@@ -445,6 +445,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "botloft-setup"
+version = "0.5.0"
+dependencies = [
+ "serde",
+ "tauri",
+ "tauri-build",
+ "windows",
+ "winreg",
+]
+
+[[package]]
 name = "botloft-store"
 version = "0.5.0"
 dependencies = [
