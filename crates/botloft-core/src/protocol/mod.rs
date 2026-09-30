@@ -60,6 +60,7 @@ mod methods;
 mod model;
 mod routines;
 mod screens;
+mod session;
 mod settings;
 
 pub use browser::*;
@@ -71,6 +72,7 @@ pub use methods::*;
 pub use model::*;
 pub use routines::*;
 pub use screens::*;
+pub use session::*;
 pub use settings::*;
 
 /// Version negotiated in `session.hello`. 2 replaced the terminal with the
@@ -95,6 +97,8 @@ pub mod method {
     pub const BOTS_SET_PAUSED: &str = "bots.setPaused";
     pub const BOTS_SET_PERMISSION_MODE: &str = "bots.setPermissionMode";
     pub const BOTS_SET_MODEL: &str = "bots.setModel";
+    pub const BOTS_SET_EFFORT: &str = "bots.setEffort";
+    pub const BOTS_COMPACT: &str = "bots.compact";
     pub const BOTS_ARCHIVE: &str = "bots.archive";
     pub const BOTS_RESTART: &str = "bots.restart";
     pub const CHAT_HISTORY: &str = "chat.history";
@@ -130,6 +134,7 @@ pub mod notification {
     pub const CREW_CHANGED: &str = "crew.changed";
     pub const BOT_CHANGED: &str = "bot.changed";
     pub const BOT_STATE: &str = "bot.state";
+    pub const BOT_CONTEXT: &str = "bot.context";
     pub const CHAT_ITEM: &str = "chat.item";
     pub const CHAT_DELTA: &str = "chat.delta";
     pub const MESSAGE_CREATED: &str = "message.created";

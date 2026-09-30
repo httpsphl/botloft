@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::Activity;
+use super::{Activity, BotEffort, ContextUsage, ModelEffort};
 use crate::ids::{BotId, CrewId};
 
 /// A group of bots that can message each other and share a folder.
@@ -137,6 +137,12 @@ pub struct Bot {
     /// The model id Claude Code reported when the bot last started a turn
     /// (`claude-opus-5-5`); `null` before its first turn.
     pub model_in_use: Option<String>,
+    pub effort: BotEffort,
+    /// The effort the bot's model uses by itself, as Claude Code last
+    /// reported it; `null` until it is known.
+    pub effort_default: Option<ModelEffort>,
+    /// How full the conversation is; `null` until Claude Code said so.
+    pub context: Option<ContextUsage>,
     pub state: BotState,
     /// Current process generation; `null` if the bot has not started since
     /// the daemon did. Changes on every (re)start.

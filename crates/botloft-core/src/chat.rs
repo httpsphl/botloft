@@ -3,7 +3,7 @@
 
 use serde_json::Value;
 
-use crate::protocol::{Activity, ActivityKind, ChatBody, SenderKind};
+use crate::protocol::{Activity, ActivityKind, ChatBody, NoticeCode, SenderKind};
 
 /// Longest tool input kept, in bytes.
 pub const TOOL_INPUT_MAX: usize = 4 * 1024;
@@ -149,6 +149,15 @@ pub fn activity(body: &ChatBody, at: i64) -> Option<Activity> {
         ChatBody::Reply(item) => (ActivityKind::Reply, item.text.clone()),
         ChatBody::Tool(item) => (ActivityKind::Tool, item.summary.clone()),
         ChatBody::Approval(item) => (ActivityKind::Approval, item.summary.clone()),
+        // A compaction is housekeeping, not news about the conversation.
+        ChatBody::Notice(item)
+            if matches!(
+                item.code,
+                Some(NoticeCode::Compacted | NoticeCode::AutoCompacted | NoticeCode::CompactFailed)
+            ) =>
+        {
+            return None;
+        }
         ChatBody::Notice(item) => (ActivityKind::Notice, item.text.clone()),
         ChatBody::Turn(_) => return None,
     };
@@ -256,6 +265,23 @@ mod tests {
         );
         assert_eq!(tool_label("mcp__botloft__send_message"), "send_message");
         assert_eq!(tool_label("Bash"), "Bash");
+    }
+
+    #[test]
+    fn a_compaction_does_not_change_the_conversation_list_line() {
+        use crate::protocol::{NoticeItem, NoticeLevel};
+        let notice = |code| {
+            ChatBody::Notice(NoticeItem {
+                level: NoticeLevel::Info,
+                code: Some(code),
+                text: "The conversation was compacted.".into(),
+            })
+        };
+        assert_eq!(activity(&notice(NoticeCode::Compacted), 1), None);
+        assert_eq!(activity(&notice(NoticeCode::AutoCompacted), 1), None);
+        assert_eq!(activity(&notice(NoticeCode::CompactFailed), 1), None);
+        let limit = activity(&notice(NoticeCode::UsageLimit), 1).expect("a line");
+        assert_eq!(limit.kind, ActivityKind::Notice);
     }
 
     #[test]

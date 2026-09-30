@@ -238,6 +238,7 @@ Eventos de uma generation antiga são ignorados. Todo processo novo emite `bot.s
      --add-dir <pasta de trabalho da crew>
      --permission-mode <modo do bot>
      [--model <modelo do bot>]
+     [--effort <esforço do bot>]
      --permission-prompt-tool mcp__botloft__permission_prompt
      --allowedTools mcp__botloft
    ```
@@ -249,6 +250,8 @@ Eventos de uma generation antiga são ignorados. Todo processo novo emite `bot.s
    - `--permission-mode` vem do modo do bot (`Bot.permissionMode`), que o dono escolhe no chat (15.1): `default` (Manual: pergunta antes de editar, rodar comandos e usar a rede), `accept_edits` (`acceptEdits`: edita arquivos sem perguntar), `plan` (planeja e pede para seguir, 10.1), `auto` (um classificador libera o que é seguro e o resto vira pedido) e `bypass_permissions` (`bypassPermissions`: faz tudo sem perguntar, ver 13). Bot novo começa em `default`. `dontAsk` não é oferecido: nega o que não estiver liberado, e o bot não teria como pedir. Regras `deny` valem em todos os modos.
    - O Claude Code só lê a flag ao iniciar e não entra em `bypassPermissions` no meio da sessão. Por isso mudar o modo reinicia o processo com `--resume`, e a conversa continua: na hora se o bot está parado, ou quando o turno em andamento e as aprovações dele terminam, sem cortar o trabalho.
    - `--model` vem do modelo do bot (`Bot.model`), que o dono escolhe no chat ou ao criar o bot (15.1): `fable`, `opus`, `sonnet` ou `haiku`, os apelidos do Claude Code, que apontam sempre para a versão mais nova de cada família. `default` deixa a flag de fora, e o Claude Code usa o padrão da conta, que depende do plano (19). Bot novo começa em `default`. O Claude Code não troca de modelo sozinho conforme a tarefa. Mudar o modelo reinicia o processo como a troca de modo, e `--resume` com `--model` passa a usar o modelo novo. O `system/init` de cada turno traz o modelo em uso (`claude-opus-5-5`); o daemon o guarda em `Bot.modelInUse` para o app dizer qual é o padrão do plano. Um modelo que a conta não pode usar falha o turno com o erro `model_not_found` (8.1), e o processo continua vivo.
+   - `--effort` vem do esforço do bot (`Bot.effort`), que o dono escolhe no chat (15.1): `low`, `medium`, `high`, `xhigh` ou `max`, os níveis do Claude Code, do mais rápido ao que mais pensa. Quanto mais alto, mais o bot pensa antes de responder e mais gasta do plano. `default` deixa a flag de fora, e o Claude Code usa o nível que ele mesmo define para o modelo (19); é o recomendado. Bot novo começa em `default`. A flag vale só para a sessão e não é guardada pelo Claude Code: o daemon a passa de novo a cada start. Mudar o esforço reinicia o processo como a troca de modo e de modelo, com `--resume`, quando nada estiver em andamento. O Claude Code também aceita a troca no meio da sessão (`/effort <nível>` como mensagem, ou um pedido de controle), mas o daemon reinicia, como faz com o modelo: a linha de comando continua sendo a única fonte do que o bot roda (19).
+   - **O que a sessão aplica.** Assim que o processo sobe, o daemon pergunta ao Claude Code, por um pedido de controle (9.2), qual modelo e qual esforço a sessão aplica. A resposta traz o modelo antes do primeiro turno (`Bot.modelInUse`, que antes só vinha no `system/init`) e o nível de esforço. Num processo que subiu sem `--effort`, esse nível é o do próprio modelo: o daemon o guarda em `Bot.effortDefault` (`low` a `max`), e o app marca esse ponto como o recomendado. Um modelo que não tem níveis de esforço (Haiku 4.5) responde sem nível, mesmo com a flag: `effortDefault` vira `none`, e o app desliga o controle. Num processo com `--effort`, a resposta só repete a escolha do dono, e o que já se sabia do modelo fica. Trocar o modelo apaga `effortDefault` até o processo novo responder. Sem resposta (um Claude Code que não conheça o pedido), fica `null` e o app só não marca o recomendado.
    - O Claude Code sai do modo `plan` sozinho quando o dono aprova o plano. Cada turno começa com um `system/init` que traz `permissionMode` (19); se o processo começou em `plan`, o modo gravado ainda é `plan` e o init diz outro, o daemon grava o novo, sem reiniciar, para o app mostrar o que o bot faz e um reinício manter. Qualquer outra diferença vem de um processo que está para reiniciar no modo que o dono acabou de escolher, e é ignorada.
 5. Ambiente: o bloco padrão do usuário (`CreateEnvironmentBlock`, o mesmo de um logon novo), **não** o ambiente do daemon. Um daemon iniciado de dentro de uma sessão do Claude Code herda `CLAUDECODE`, `CLAUDE_CODE_MESSAGING_SOCKET`, `ANTHROPIC_BASE_URL` e outras variáveis da sessão, que fariam o bot se achar filho dela. Por cima vão `BOTLOFT_BOT_ID`, `BOTLOFT_BOT_TOKEN`, `BOTLOFT_PORT` e `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1`, que faz o Claude Code carregar o `CLAUDE.md` da pasta de trabalho (5).
 6. stdin, stdout e stderr em pipes, sem console (`CREATE_NO_WINDOW`). O stdin fica aberto enquanto o processo vive; fechá-lo encerra o Claude Code com código 0. O stderr vai para o log em nível `debug`, sem conteúdo de mensagem.
@@ -286,7 +289,11 @@ Uma linha JSON por evento, em UTF-8. Linha que não é JSON, ou maior que 8 MiB,
 | `user`, bloco `tool_result` | atualiza o item `tool` do mesmo `tool_use_id`: `done` ou `failed` e um trecho da saída |
 | `assistant` com `error` | item `notice` e, conforme o erro, estado `rate_limited` ou `auth_error` (7.2); `model_not_found` vira o aviso `model_unavailable` |
 | `rate_limit_event` | uso da conta (janelas de 5 h e 7 dias) em `system.status.usage`; status diferente de `allowed` leva a `rate_limited` |
-| `result` | item `turn` com duração, custo e erro (se houve); fecha um turno pendente |
+| `result` | item `turn` com duração, custo e erro (se houve); fecha um turno pendente. O daemon pergunta de novo o tamanho da conversa (8.6). O `result` de uma compactação (`local_command: "compact"`) fecha o turno sem item `turn` |
+| `assistant` com `usage` | quanto a conversa ocupa naquele pedido ao modelo (8.6) |
+| `system/status` | `status: "compacting"`: o Claude Code começou a compactar a conversa; com `compact_result`, terminou (8.6) |
+| `system/compact_boundary` | a conversa foi compactada: aviso `compacted` ou `auto_compacted` no chat (8.6) |
+| `control_response` | resposta a um pedido de controle do daemon (9.2): o que a sessão aplica (7.4) ou o tamanho da conversa (8.6) |
 
 Blocos `thinking` não são gravados nem mostrados.
 
@@ -301,7 +308,7 @@ Todo item tem `id` (`cht_`), `botId`, `kind`, `createdAt` e `updatedAt`.
 | `tool` | `toolUseId`, `name`, `summary`, `input`, `status` (`running`, `done`, `failed`), `output`, `file` | ferramenta usada pelo bot; `file` é o caminho completo que uma chamada de `Write`, `Edit`, `MultiEdit` ou `NotebookEdit` altera (ausente nas outras e nos itens antigos) |
 | `approval` | `approvalId`, `toolName`, `summary`, `input`, `status` (`pending`, `allowed`, `denied`, `expired`), `note` | pedido de permissão (10.1) |
 | `turn` | `durationMs`, `costUsd`, `error` | fim de um turno |
-| `notice` | `level` (`info`, `warning`, `error`), `code` (`signed_out`, `usage_limit`, `turn_failed`, `model_unavailable`; ausente em avisos antigos), `text` | avisos do daemon: limite de uso, login, turno com erro. O app escreve os avisos com `code` no idioma do dono; `text` fica em inglês para quem não conhece o código e, em `turn_failed`, traz o detalhe do erro |
+| `notice` | `level` (`info`, `warning`, `error`), `code` (`signed_out`, `usage_limit`, `turn_failed`, `model_unavailable`, `compacted`, `auto_compacted`, `compact_failed`; ausente em avisos antigos), `text` | avisos do daemon: limite de uso, login, turno com erro, conversa compactada (8.6). O app escreve os avisos com `code` no idioma do dono; `text` fica em inglês para quem não conhece o código e, em `turn_failed` e `compact_failed`, traz o detalhe do erro |
 
 - `summary` é um trecho curto tirado da entrada, sem palavras do daemon: o comando do `Bash`, o arquivo do `Read`/`Edit`/`Write`, o padrão do `Grep`/`Glob`, a URL do `WebFetch`, a busca do `WebSearch`, o destinatário do `send_message` (`@writer`), a tecla do `browser_press`. Fica vazio onde só palavras diriam algo (`TodoWrite`, `complete_task`, `ToolSearch` que carrega ferramentas, a direção do `browser_scroll`) e onde o trecho não diz nada ao dono (a `ref` de um elemento do navegador). O app escreve o nome da ferramenta como uma ação no idioma do dono ("Mandar uma mensagem", "Abrir uma página"; uma ferramenta que ele não conhece aparece pelo nome) e, nas que ficam vazias, o que der para dizer a partir da entrada (as ferramentas carregadas, a direção da rolagem).
 - `input` guarda o JSON da entrada até 4 KB; `output`, até 8 KB de texto. O resto fica só no transcript do próprio Claude Code.
@@ -325,6 +332,41 @@ O app mostra os arquivos que o bot fez num painel ao lado do chat (15.1). O daem
 ### 8.5 Privacidade
 
 Itens do chat são dado pessoal como o corpo das messages: nunca vão para o log em nível `info` ou acima. O log de `debug` registra só tipos de evento e ids.
+
+### 8.6 Contexto da conversa
+
+A conversa de um bot tem um tamanho máximo, a janela de contexto do modelo (1 milhão de tokens em Fable, Opus e Sonnet; 200 mil em Haiku). Tudo o que o bot leu e escreveu conta, e cada pedido ao modelo manda a conversa inteira: uma conversa cheia gasta mais do plano a cada turno. Perto do fim da janela, o Claude Code **compacta** a conversa sozinho: troca o que veio antes por um resumo e segue. O dono vê quanto da janela está em uso e pode compactar antes.
+
+**Quem conta é o Claude Code.** O daemon pergunta, por um pedido de controle (9.2, `get_context_usage`), e guarda a resposta em memória, por bot:
+
+| Campo de `ContextUsage` | De onde vem |
+|---|---|
+| `usedTokens` | `totalTokens`: o que a conversa ocupa agora, com as instruções e as ferramentas do Claude Code (uns 20 mil tokens numa conversa vazia) |
+| `windowTokens` | `maxTokens`: o máximo que cabe |
+| `autoCompactTokens` | `autoCompactThreshold`: onde o Claude Code compacta sozinho (967 mil numa janela de 1 milhão, 167 mil numa de 200 mil); `null` se `isAutoCompactEnabled` vier `false` |
+| `compacting` | há uma compactação em andamento, ou pedida e esperando o turno atual terminar |
+| `updatedAt` | quando o daemon soube |
+
+- **Quando pergunta:** assim que o processo sobe (uma conversa retomada já responde com o tamanho dela, antes de qualquer turno), a cada `result` e depois de uma compactação. A resposta chega em um ou dois segundos, também no meio de um turno, e não abre turno nem entra na conversa.
+- **Durante o turno:** cada `assistant` da conversa principal traz o `usage` do pedido ao modelo; `input_tokens + cache_creation_input_tokens + cache_read_input_tokens` é o que a conversa ocupava naquele pedido, e o daemon atualiza `usedTokens` com isso. Só vale com a janela já conhecida por uma resposta. Subagentes (`parent_tool_use_id`) e respostas de comando (`model: "<synthetic>"`) não contam.
+- **Nada é gravado.** Um daemon novo pergunta de novo quando os bots sobem. Um bot parado mostra o último valor que o daemon viu, ou nada. Conversa nova (`bots.restart {fresh: true}`) apaga o valor até o processo responder.
+- Um Claude Code que não conheça o pedido responde com erro, e `Bot.context` fica `null`: o app não mostra o contexto.
+- O app recebe `Bot.context` na lista e `bot.context {botId, context}` a cada mudança (11.3).
+
+**Compactar agora.** `bots.compact {botId}` escreve `/compact` no stdin do processo, como uma mensagem (9.2). O Claude Code trata a linha como o comando e compacta; nada vai para o modelo como pedido do dono. Como toda mensagem, ela espera o turno em andamento terminar e conta como um turno: o bot fica `busy` até o `result`. O bot precisa estar `idle`, `busy` ou `needs_approval`; senão, `conflict`. Com uma compactação já a caminho, o pedido não escreve de novo.
+
+O que o Claude Code imprime (19), e o que o daemon faz:
+
+1. `system/status` com `status: "compacting"`: `compacting` passa a `true` (também quando é o próprio Claude Code que decide compactar, no meio de um turno).
+2. `system/status` com `compact_result` e `system/compact_boundary` (`compact_metadata.trigger`: `manual` ou `auto`): `compacting` volta a `false`, o chat ganha um aviso `info` (`compacted` para `manual`, `auto_compacted` para `auto`) e o daemon pergunta o novo tamanho.
+3. Um `user` com `isSynthetic` traz o resumo. Não é resposta do bot nem vai para o chat.
+4. No `/compact`, um `result` com `local_command: "compact"` fecha o turno. Não vira item `turn`: o aviso já diz o que houve. Na compactação automática não há `result` próprio; o turno segue.
+5. Se não havia o que compactar, em vez de 1 a 3 vem um `assistant` com `local_command_run.command: "compact"` e `local_command_outcome.kind: "failed"`. Vira um aviso `warning` com `compact_failed` e o motivo, não uma resposta.
+6. Se o processo morrer no meio, `compacting` volta a `false`.
+
+Os três avisos não mudam a linha da conversa na barra lateral (`lastActivity`): compactar é manutenção, não novidade da conversa.
+
+A compactação custa um pedido ao modelo com a conversa inteira (barato com o cache quente, 19) e depois cada turno manda só o resumo. O dono também pode escrever `/compact` no chat: a linha segue como qualquer mensagem dele (9.3), e o efeito é o mesmo.
 
 ## 9. Mensagens e entrega
 
@@ -357,6 +399,15 @@ Uma linha JSON por mensagem, terminada em `\n`, em UTF-8:
 - Blocos: um `text` com o texto (9.3) e, para imagens anexadas, blocos `image` com `source: {type: "base64", media_type, data}`.
 - Mensagem escrita durante um turno entra na fila do Claude Code e vira o turno seguinte (visto com 2.1.284). O courier não precisa esperar o bot ficar parado.
 - O formato de entrada do `stream-json` **não é documentado**; foi verificado com teste real (seção 19).
+- Um texto que começa com `/` e o nome de um comando do Claude Code é executado como comando, não enviado ao modelo. O daemon usa isso para compactar (`/compact`, 8.6).
+
+**Pedidos de controle.** Pelo mesmo stdin, o daemon pergunta ao próprio Claude Code sobre a sessão, fora da conversa:
+
+```json
+{"type":"control_request","request_id":"botloft-context-7","request":{"subtype":"get_context_usage"}}
+```
+
+A resposta sai no stdout como `{"type":"control_response","response":{"subtype":"success","request_id":"...","response":{...}}}`, ou com `subtype: "error"` para um pedido desconhecido. Não abre turno, não muda o estado do bot, não fica no transcript e é respondido também durante um turno. É o protocolo que o Agent SDK usa por baixo: `get_context_usage` é o método `getContextUsage()` (documentado, com os campos da resposta); `get_settings` e o formato no fio não são documentados e foram vistos com teste real (19). O daemon só **pergunta** por esse caminho, e o que ele não conseguir saber fica vazio no app, sem mudar o que o bot faz: `get_settings` (7.4) e `get_context_usage` (8.6). O `request_id` começa pelo que foi perguntado e termina num contador, e é por ele que o daemon sabe de que é a resposta.
 
 ### 9.3 Texto que o bot recebe
 
@@ -491,6 +542,8 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `bots.setPaused` | `botId, paused` | `Bot` |
 | `bots.setPermissionMode` | `botId, mode` (`default`, `accept_edits`, `plan`, `auto`, `bypass_permissions`) | `Bot`; o bot reinicia no novo modo quando nada estiver em andamento (7.4) |
 | `bots.setModel` | `botId, model` (`default`, `fable`, `opus`, `sonnet`, `haiku`) | `Bot`; o bot reinicia no novo modelo quando nada estiver em andamento (7.4) |
+| `bots.setEffort` | `botId, effort` (`default`, `low`, `medium`, `high`, `xhigh`, `max`) | `Bot`; o bot reinicia no novo esforço quando nada estiver em andamento (7.4) |
+| `bots.compact` | `botId` | `Bot`, com `context.compacting`; compacta a conversa depois do turno em andamento (8.6). `conflict` se o bot não está rodando |
 | `bots.restart` | `botId, fresh?` | `Bot` |
 | `bots.archive` | `botId` | `Bot` |
 | `chat.history` | `botId, before?, limit?` | `ChatItem[]`, mais novo primeiro; `limit` de 1 a 200, 50 se ausente |
@@ -508,11 +561,11 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `settings.get` | | `Settings`: `startWithWindows`, `keepAwake` e `approvalWaitMinutes`, como estão no `config.toml` (6) |
 | `settings.update` | `startWithWindows?, keepAwake?, approvalWaitMinutes?` (1 a 1440) | `Settings`; grava o que veio e aplica na hora (6, 14). Se a tarefa não pode mudar, nada é gravado e volta um erro |
 
-`Crew` traz `workFolder`, o caminho da pasta de trabalho (a escolhida ou a `shared\`), `workFolderChosen` e `leadBotId`, o chefe (10.2). `Bot` traz também `permissionMode`, `model` e `modelInUse` (7.4) e `lastActivity`: o último item do chat resumido em uma linha, para a lista de conversas: `kind` (`owner`, `message`, `reply`, `tool`, `approval`, `notice`), `text`, `tool` e `at`. O `text` não tem palavras do daemon: a mensagem do dono vem sem "You:", e uma ferramenta ou um pedido vêm só com o resumo, com a ferramenta à parte em `tool`; o app completa no idioma do dono ("Mandar uma mensagem · @writer", "Aguardando aprovação: rodar um comando").
+`Crew` traz `workFolder`, o caminho da pasta de trabalho (a escolhida ou a `shared\`), `workFolderChosen` e `leadBotId`, o chefe (10.2). `Bot` traz também `permissionMode`, `model`, `modelInUse`, `effort` e `effortDefault` (7.4), `context` (8.6; `null` enquanto o Claude Code não disse o tamanho da conversa) e `lastActivity`: o último item do chat resumido em uma linha, para a lista de conversas: `kind` (`owner`, `message`, `reply`, `tool`, `approval`, `notice`), `text`, `tool` e `at`. O `text` não tem palavras do daemon: a mensagem do dono vem sem "You:", e uma ferramenta ou um pedido vêm só com o resumo, com a ferramenta à parte em `tool`; o app completa no idioma do dono ("Mandar uma mensagem · @writer", "Aguardando aprovação: rodar um comando").
 
 ### 11.3 Notificações do servidor
 
-`bot.state`, `bot.changed`, `crew.changed`, `chat.item`, `chat.delta`, `message.created`, `delivery.changed`, `task.changed`, das rotinas `routine.changed` e `routine.run` (20.8), e do navegador `browser.changed`, `browser.action` e, só para quem assiste, `browser.frame` (21.7), e das telas `screen.draft` (22.3).
+`bot.state`, `bot.changed`, `bot.context` (8.6), `crew.changed`, `chat.item`, `chat.delta`, `message.created`, `delivery.changed`, `task.changed`, das rotinas `routine.changed` e `routine.run` (20.8), e do navegador `browser.changed`, `browser.action` e, só para quem assiste, `browser.frame` (21.7), e das telas `screen.draft` (22.3).
 
 ### 11.4 Erros
 
@@ -533,7 +586,7 @@ Pragmas: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. Migrations 
 | Tabela | Colunas principais |
 |---|---|
 | `crews` | `id, name, slug, paused, work_dir, lead_bot_id, created_at, archived_at` (`work_dir` é a pasta escolhida; `NULL` usa a `shared`. `lead_bot_id` é o chefe, sem chave estrangeira: ele é gravado junto com a crew) |
-| `bots` | `id, crew_id, name, handle, slug, role, instructions, color, paused, permission_mode, model, model_in_use, token_hash, session_id, created_at, archived_at` |
+| `bots` | `id, crew_id, name, handle, slug, role, instructions, color, paused, permission_mode, model, model_in_use, effort, effort_default, token_hash, session_id, created_at, archived_at` (`effort_default` é o nível do próprio modelo, como o Claude Code disse: `low` a `max`, `none` ou `NULL`, 7.4) |
 | `messages` | `id, crew_id, from_kind (owner/bot/system), from_bot_id, to_bot_id, kind (note/task/result/system), body, task_id, created_at` |
 | `attachments` | `id, message_id, name, media_type, size, path, created_at` |
 | `deliveries` | `id, message_id, bot_id, state, attempts, next_attempt_at, lease_until, last_error, sent_generation, turn_uuid, read_at, updated_at` |
@@ -827,7 +880,7 @@ M2 a M4 foram entregues com ConPTY, terminal com replay, inbox por named pipe e 
 
 ## 19. Pontos a verificar na versão alvo do Claude Code
 
-Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28. "Confirmado" quer dizer documentado; o teste real na versão alvo continua no checklist do marco indicado.
+Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28; esforço, pedidos de controle, uso de contexto e compactação, em 2026-09-30. "Confirmado" quer dizer documentado; o teste real na versão alvo continua no checklist do marco indicado.
 
 | Item | Seção | Resultado | Teste real |
 |---|---|---|---|
@@ -867,6 +920,11 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28. "Co
 | Rascunho de tela a partir do `Write` | 22.3 | **Visto com 2.1.284**: com `--include-partial-messages`, o `Write` chega em `stream_event` (`content_block_start` com `tool_use` e `name: "Write"`, depois `input_json_delta`; 379 pedaços para um arquivo de 3 KB). **Testado com 2.1.284** (daemon e app de dev, Haiku, modo Manual): pedida uma landing page, a área de design abriu sozinha e a página se montou versão a versão (umas 70 de 8 KB) antes do OK para gravar; permitido, a tela passou a vir do disco. Numa segunda página, negar o `Write` tirou a tela da área de design. O log de `debug` só teve status e ids. O painel do navegador do app de desktop do Claude bloqueia `iframe` para 127.0.0.1 (`ERR_BLOCKED_BY_CLIENT`), então a prévia foi vista num Edge sem janela | feito |
 | Dono no controle com o Claude Code real | 21.10 | **Testado com 2.1.284** (daemon e app de dev, Haiku, modo Manual): pedido para abrir uma página de login local e chamar o dono, o bot carregou `browser_ask_owner` pelo `ToolSearch` sozinho, com a tarefa na língua do dono. Pelo cartão, o painel abriu já nas mãos do dono; clique, digitação, troca de campo e Enter chegaram ao Edge, e a página de login entrou na conta. Devolvido, a tool respondeu com a página nova e o bot listou os pedidos. A senha digitada não apareceu no log, no banco nem na conversa do Claude Code (o bot leu só o que a página mostrava). Numa página comprida, a roda do mouse sobre a tela ao vivo rolou a página do bot e não o painel | feito |
 | Cursor do bot nas telas | 22.3 | **Testado com 2.1.284** (daemon e app de dev, Haiku, modo Manual), com o app num Edge sem janela: pedidas quatro páginas (floricultura, cafeteria, livraria, academia), o cursor seguiu o título, cada cartão, cada item de plano e cada linha de tabela enquanto o bot escrevia, e a prancheta rolou junto. Visto aqui: num `iframe` de outra origem, o script às vezes lê a página com `innerHeight` 0 e só depois recebe o tamanho (por isso a espera do `resize`); a versão escondida fala antes de ir para a frente (por isso vale a marca do quadro à mostra). O conteúdo das páginas não foi para o log | feito |
+| Esforço em `-p` | 7.4 | Confirmado (`cli-reference`, `model-config`, `headless`): `--effort` aceita `low`, `medium`, `high`, `xhigh`, `max` (e `ultracode`, não usado), vale só para a sessão e não é guardado; os níveis dependem do modelo (Fable, Opus e Sonnet atuais têm os cinco; Opus 4.6 e Sonnet 4.6 não têm `xhigh`); sem escolha, o padrão é `high`, menos em Opus 5.5 e Sonnet 5.5 (`medium`) e Opus 4.7 (`xhigh`); `/effort <nível>` funciona em `-p` e vale só para a sessão; as chaves `effortLevel` e `modelSettings` das settings não aceitam `max`; trocar o esforço no meio da sessão mantém o cache em Opus 5.5, Sonnet 5.5 e Fable 5.1 e o invalida nos outros (`prompt-caching`). **Testado com 2.1.284** (`--setting-sources project,local`, plano Max): `--effort max` e `xhigh` com `--model sonnet` são aplicados; um valor desconhecido só avisa no stderr e usa o padrão; `--resume` sem a flag volta ao padrão do modelo; sem a flag, Sonnet 5.5 e Opus 5.5 aplicam `medium` e Fable 5.1 `high`; Haiku 4.5 não tem níveis (o `initialize` do SDK lista `supportedEffortLevels` para os outros e nada para ele) e ignora a flag sem erro. `/effort low` mandado como mensagem troca na hora, com uma resposta sintética e sem custo, e o pedido de controle `apply_flag_settings {effortLevel}` também; o daemon reinicia o processo em vez disso. O que acontece com um nível que o modelo não tem (`xhigh` num modelo antigo) não foi visto: os apelidos do Botloft apontam para modelos com os cinco | feito |
+| Pedidos de controle no stdin | 9.2 | `getContextUsage()` é documentado no Agent SDK (`agent-sdk/typescript`), com `totalTokens`, `maxTokens`, `rawMaxTokens`, `percentage`, `autoCompactThreshold` e `isAutoCompactEnabled`; o formato no fio e `get_settings` **não são documentados**. **Testado com 2.1.284**: `{"type":"control_request","request_id","request":{"subtype":"get_context_usage"}}` é respondido com `control_response` (`subtype: "success"`, o mesmo `request_id`, `response`) em até 2,5 s, antes do primeiro turno, entre turnos e durante um turno, sem `system/init` nem `result`; `get_settings` responde `{effective, sources, applied: {model, effort, ...}}`, com `effort: null` em Haiku; um `subtype` desconhecido responde `subtype: "error"`. Numa sessão retomada, a primeira resposta levou uma vez mais de 15 s. **Pelo daemon de dev** (Haiku e Sonnet): o modelo e o esforço do modelo chegaram ao app antes do primeiro turno, e `--model sonnet --effort low` apareceu na linha de comando do bot depois de `bots.setEffort` | feito |
+| Uso de contexto no `stream-json` | 8.6 | Parcialmente documentado: `usage` e `modelUsage` no `result` (`agent-sdk/typescript`), janela de 1 milhão em Fable, Sonnet 5+ e Opus 4.7+ e compactação automática em cerca de 967 mil (`model-config`). **Visto com 2.1.284**: cada `assistant` traz `message.usage` (`input_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`, `output_tokens`), e a soma dos três primeiros bate com o `totalTokens` do `get_context_usage` a menos de 1%; `result.modelUsage[modelo]` traz `contextWindow` (200000 em Haiku 4.5, 1000000 em Sonnet 5.5) e `maxOutputTokens`; `result.usage.iterations[]` traz cada pedido do turno; `autoCompactThreshold` é a janela menos 33 mil (167000, 967000; 67000 com `--autocompact 100k`, que também encolhe `maxTokens`); `/context` como mensagem devolve um `assistant` sintético com `context_usage` e abre um turno, por isso o daemon usa o pedido de controle. `total_cost_usd` é o total do processo, não do turno. **Pelo daemon de dev**: o app recebeu o tamanho ao subir o bot, a cada pedido ao modelo e no fim do turno | feito |
+| Compactar em `-p` | 8.6 | `/compact [instruções]` é documentado (`commands`) sem dizer se vale em `-p`; o custo com cache quente e frio está em `prompt-caching`. **Testado com 2.1.284** (Haiku): `/compact` como mensagem imprime `system/status` (`status: "compacting"`), outro com `status: null` e `compact_result: "success"`, `system/init`, `system/compact_boundary` (`compact_metadata: {trigger: "manual", pre_tokens, post_tokens, duration_ms, ...}`), um `user` com `isSynthetic` e o resumo, dois `user` com `isReplay` (a saída `Compacted` e o comando, com o `uuid` enviado) e um `result` com `local_command: "compact"`, `num_turns: 0` e custo; levou de 12 a 16 s numa conversa pequena, e o bot lembrou depois o que tinha sido dito antes. Escrito durante um turno, roda quando o turno termina. Numa conversa vazia responde um `assistant` sintético "Error: No messages to compact" com `local_command_outcome: {kind: "failed"}` e um `result` sem erro. **Compactação automática** (Haiku, `--autocompact 100k`, quatro arquivos lidos): no meio do turno, os dois `system/status`, o `compact_boundary` com `trigger: "auto"` e o `user` sintético, sem `system/init` nem `result` próprios; o turno seguiu e terminou certo. **Pelo daemon de dev**: `bots.compact` deixou o bot `busy`, o aviso `compacted` entrou no chat, o tamanho caiu e o bot respondeu depois a palavra que tinha guardado; o log de `debug` só teve ids e números. Uma compactação que falha por erro da API não foi vista | feito |
+| CLAUDE.md do dono nos bots | 5.1 | **Visto com 2.1.284** (`/context` e `get_context_usage` com `--setting-sources project,local`): o `%USERPROFILE%\.claude\CLAUDE.md` do dono aparece como memória de projeto numa sessão cujo cwd fica dentro de `%USERPROFILE%`. É o documentado (`memory`): o Claude Code carrega `CLAUDE.md` e `.claude/CLAUDE.md` do cwd e de toda pasta acima dele, e a pasta do usuário é uma delas. Os workspaces dos bots ficam dentro dela por padrão, então as instruções pessoais do dono chegam aos bots, ao contrário do que 7.4 pretende. A setting `claudeMdExcludes` existe para pular arquivos assim. Não tratado aqui | a decidir |
 | Telas no WebView2 do app | 22.5 | Não visto: a CSP do Tauri com `frame-src http://127.0.0.1:*` e as telas carregando no `iframe` | manual (PR): `pnpm tauri dev`, pedir uma página HTML a um bot e ver a área de design |
 
 Itens do runtime anterior (ConPTY, hooks em exec form, `crossSessionInbound`, linha de auth do inbox, diálogo de confiança, `ESC[6n` do ConPTY, consultas do terminal no replay) foram verificados no M2–M4 e deixaram de se aplicar com a ADR 0001; o histórico está no git e na ADR.

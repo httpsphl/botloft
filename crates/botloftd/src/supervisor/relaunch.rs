@@ -1,11 +1,11 @@
-//! A new launch setting reaches the bot (spec 7.4): its permission mode or
-//! its model. Claude Code only reads `--permission-mode` and `--model` when
-//! it starts, so the process restarts, resuming the conversation, as soon
-//! as nothing is in progress: at once when idle, or when the turn that is
-//! running (and its approvals) ends.
+//! A new launch setting reaches the bot (spec 7.4): its permission mode,
+//! its model or its effort. Claude Code only reads `--permission-mode`,
+//! `--model` and `--effort` when it starts, so the process restarts,
+//! resuming the conversation, as soon as nothing is in progress: at once
+//! when idle, or when the turn that is running (and its approvals) ends.
 
 use botloft_core::ids::BotId;
-use botloft_core::protocol::PermissionMode;
+use botloft_core::protocol::{BotEffort, PermissionMode};
 use tracing::warn;
 
 use super::Supervisor;
@@ -53,6 +53,15 @@ impl Supervisor {
             .get(bot)
             .and_then(|slot| slot.running.as_ref())
             .map(|running| running.permission_mode)
+    }
+
+    /// The effort the running process started with.
+    pub fn launched_effort(&self, bot: &BotId) -> Option<BotEffort> {
+        self.lock()
+            .slots
+            .get(bot)
+            .and_then(|slot| slot.running.as_ref())
+            .map(|running| running.effort)
     }
 
     /// Called when a turn or an approval ends.

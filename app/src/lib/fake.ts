@@ -16,6 +16,7 @@ import {
   type Bot,
   type BotId,
   type BotState,
+  type ContextUsage,
   type Crew,
   type CrewId,
   PROTOCOL_VERSION,
@@ -145,6 +146,12 @@ export class FakeBotloft implements BotloftApi {
     bot.state = state;
     bot.generation = generation ?? bot.generation ?? 1;
     this.emit({ name: "bot.state", params: { botId, state, generation: bot.generation } });
+  }
+
+  /** What Claude Code tells about the bot's conversation (spec 8.6). */
+  setContext(botId: BotId, context: ContextUsage | null): void {
+    this.bot(botId).context = context;
+    this.emit({ name: "bot.context", params: { botId, context } });
   }
 
   /** A new id with `prefix`, like the daemon's. */

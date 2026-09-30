@@ -5,8 +5,8 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Instant;
 
 use botloft_core::protocol::{
-    AccountUsage, Bot, BotStateChanged, BrowserAction, BrowserState, ChatDelta, ChatItemChanged,
-    Crew, Delivery, Message, Routine, RoutineRun, ScreenDraft, Task,
+    AccountUsage, Bot, BotContextChanged, BotStateChanged, BrowserAction, BrowserState, ChatDelta,
+    ChatItemChanged, Crew, Delivery, Message, Routine, RoutineRun, ScreenDraft, Task,
 };
 use botloft_store::Store;
 use tokio::sync::broadcast;
@@ -15,6 +15,7 @@ use crate::approvals::Approvals;
 use crate::browser::{BrowserSettings, Browsers};
 use crate::clock::Clock;
 use crate::config::Config;
+use crate::context::Contexts;
 use crate::courier::{Courier, CourierSettings};
 use crate::paths::Paths;
 use crate::routines::Routines;
@@ -32,6 +33,7 @@ pub enum Event {
     CrewChanged(Crew),
     BotChanged(Bot),
     BotState(BotStateChanged),
+    BotContext(BotContextChanged),
     ChatItem(ChatItemChanged),
     ChatDelta(ChatDelta),
     MessageCreated(Message),
@@ -95,6 +97,7 @@ pub struct Daemon {
     pub routines: Routines,
     pub browsers: Browsers,
     pub screens: Screens,
+    pub contexts: Contexts,
     /// Time for everything stored or compared with stored times.
     pub clock: Arc<dyn Clock>,
     store: Mutex<Store>,
@@ -130,6 +133,7 @@ impl Daemon {
                 Arc::clone(&options.clock),
             ),
             screens: Screens::default(),
+            contexts: Contexts::default(),
             clock: options.clock,
             paths: options.paths,
             port: options.port,

@@ -201,6 +201,7 @@ fn to_notification(event: &Event) -> String {
         Event::CrewChanged(crew) => (notification::CREW_CHANGED, serde_json::to_value(crew)),
         Event::BotChanged(bot) => (notification::BOT_CHANGED, serde_json::to_value(bot)),
         Event::BotState(state) => (notification::BOT_STATE, serde_json::to_value(state)),
+        Event::BotContext(context) => (notification::BOT_CONTEXT, serde_json::to_value(context)),
         Event::ChatItem(item) => (notification::CHAT_ITEM, serde_json::to_value(item)),
         Event::ChatDelta(delta) => (notification::CHAT_DELTA, serde_json::to_value(delta)),
         Event::MessageCreated(message) => {

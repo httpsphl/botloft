@@ -5,6 +5,7 @@
 
 pub mod bots;
 pub mod browsing;
+pub mod context;
 pub mod mcp;
 pub mod routines;
 pub mod site;
