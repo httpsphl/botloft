@@ -1,8 +1,8 @@
 name: Release
 
 # Pushing a tag vX.Y.Z (matching the workspace version) builds the signed
-# installer and opens a draft release; publishing it makes the in-app
-# updater offer it (spec 15.5).
+# installer and the setup window around it, and opens a draft release;
+# publishing it makes the in-app updater offer it (spec 15.5, 15.7).
 on:
   push:
     tags: ["v*"]
@@ -38,6 +38,9 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      - name: Build the setup window around it
+        run: pnpm bundle:setup
+        working-directory: app
       - name: Open a draft release
         run: node app/scripts/release.mjs publish
         env:
