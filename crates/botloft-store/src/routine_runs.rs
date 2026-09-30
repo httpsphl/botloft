@@ -114,10 +114,10 @@ impl Store {
             .map(|column| format!("r.{column}"))
             .collect::<Vec<_>>()
             .join(", ");
-        let mut stmt = self.conn.prepare(&format!(
+        let mut stmt = self.conn.prepare_cached(&format!(
             "SELECT {columns} FROM routine_runs r \
-             JOIN deliveries d ON d.message_id = r.message_id \
-             WHERE r.status = 'queued' AND d.state = 'dead'"
+             WHERE r.status = 'queued' AND EXISTS (SELECT 1 FROM deliveries d \
+               WHERE d.message_id = r.message_id AND d.state = 'dead')"
         ))?;
         let rows = stmt.query_map([], run_from_row)?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
@@ -131,10 +131,10 @@ impl Store {
             .map(|column| format!("r.{column}"))
             .collect::<Vec<_>>()
             .join(", ");
-        let mut stmt = self.conn.prepare(&format!(
+        let mut stmt = self.conn.prepare_cached(&format!(
             "SELECT {columns} FROM routine_runs r \
-             JOIN deliveries d ON d.message_id = r.message_id \
-             WHERE r.status = 'queued' AND d.read_at IS NOT NULL"
+             WHERE r.status = 'queued' AND EXISTS (SELECT 1 FROM deliveries d \
+               WHERE d.message_id = r.message_id AND d.read_at IS NOT NULL)"
         ))?;
         let rows = stmt.query_map([], run_from_row)?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
@@ -147,7 +147,7 @@ impl Store {
         before: Option<&RoutineRunId>,
         limit: u32,
     ) -> Result<Vec<RoutineRun>> {
-        let mut stmt = self.conn.prepare(&format!(
+        let mut stmt = self.conn.prepare_cached(&format!(
             "SELECT {RUN_COLUMNS} FROM routine_runs \
              WHERE routine_id = ?1 \
                AND (?2 IS NULL OR rowid < (SELECT rowid FROM routine_runs WHERE id = ?2)) \

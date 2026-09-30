@@ -64,7 +64,7 @@ impl Store {
 
     /// Crews in creation order.
     pub fn crews(&self, include_archived: bool) -> Result<Vec<Crew>> {
-        let mut stmt = self.conn.prepare(&format!(
+        let mut stmt = self.conn.prepare_cached(&format!(
             "SELECT {COLUMNS} FROM crews WHERE ?1 OR archived_at IS NULL ORDER BY created_at, id"
         ))?;
         let rows = stmt.query_map([include_archived], from_row)?;

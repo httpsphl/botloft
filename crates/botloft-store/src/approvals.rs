@@ -99,7 +99,7 @@ impl Store {
     pub fn pending_approvals(&self, bot: &BotId) -> Result<Vec<ApprovalId>> {
         let mut stmt = self
             .conn
-            .prepare("SELECT id FROM approvals WHERE bot_id = ?1 AND status = 'pending'")?;
+            .prepare_cached("SELECT id FROM approvals WHERE bot_id = ?1 AND status = 'pending'")?;
         let rows = stmt.query_map([bot.as_str()], |row| parse_column(row, 0))?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
@@ -107,7 +107,7 @@ impl Store {
     /// Expires every pending approval, of one bot or of all: their process
     /// is gone, so nobody waits for the answer.
     pub fn expire_approvals(&self, bot: Option<&BotId>, now: i64) -> Result<Vec<ApprovalRecord>> {
-        let mut stmt = self.conn.prepare(&format!(
+        let mut stmt = self.conn.prepare_cached(&format!(
             "UPDATE approvals SET status = 'expired', answered_at = ?2 \
              WHERE status = 'pending' AND (?1 IS NULL OR bot_id = ?1) \
              RETURNING {COLUMNS}, tool_use_id"

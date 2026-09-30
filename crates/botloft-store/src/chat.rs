@@ -7,7 +7,7 @@ use botloft_core::protocol::{Activity, ChatBody, ChatItem};
 use rusqlite::types::Type;
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
-use crate::{Result, Store, parse_column};
+use crate::{Result, Store, cached_execute, cached_row, parse_column};
 
 const COLUMNS: &str = "id, bot_id, data, created_at, updated_at";
 
@@ -47,7 +47,8 @@ impl Store {
     }
 
     pub(crate) fn insert_chat_item_in(conn: &Connection, item: &ChatItem) -> Result<()> {
-        conn.execute(
+        cached_execute(
+            conn,
             "INSERT INTO chat_items (id, bot_id, kind, data, created_at, updated_at) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
             params![
@@ -69,17 +70,16 @@ impl Store {
         body: &ChatBody,
         now: i64,
     ) -> Result<Option<ChatItem>> {
-        Ok(self
-            .conn
-            .query_row(
-                &format!(
-                    "UPDATE chat_items SET kind = ?2, data = ?3, updated_at = ?4 \
+        Ok(cached_row(
+            &self.conn,
+            &format!(
+                "UPDATE chat_items SET kind = ?2, data = ?3, updated_at = ?4 \
                      WHERE id = ?1 RETURNING {COLUMNS}"
-                ),
-                params![id.as_str(), kind(body), json(body)?, now],
-                from_row,
-            )
-            .optional()?)
+            ),
+            params![id.as_str(), kind(body), json(body)?, now],
+            from_row,
+        )
+        .optional()?)
     }
 
     pub fn chat_item(&self, id: &ChatItemId) -> Result<Option<ChatItem>> {
@@ -100,7 +100,7 @@ impl Store {
         before: Option<&ChatItemId>,
         limit: u32,
     ) -> Result<Vec<ChatItem>> {
-        let mut stmt = self.conn.prepare(&format!(
+        let mut stmt = self.conn.prepare_cached(&format!(
             "SELECT {COLUMNS} FROM chat_items \
              WHERE bot_id = ?1 \
                AND (?2 IS NULL OR rowid < (SELECT rowid FROM chat_items WHERE id = ?2)) \
@@ -116,25 +116,24 @@ impl Store {
     /// The bot's newest tool item for `tool_use_id`, to update it when the
     /// tool returns.
     pub fn tool_item(&self, bot: &BotId, tool_use_id: &str) -> Result<Option<ChatItem>> {
-        Ok(self
-            .conn
-            .query_row(
-                &format!(
-                    "SELECT {COLUMNS} FROM chat_items \
+        Ok(cached_row(
+            &self.conn,
+            &format!(
+                "SELECT {COLUMNS} FROM chat_items \
                      WHERE bot_id = ?1 AND kind = 'tool' \
                        AND json_extract(data, '$.toolUseId') = ?2 \
                      ORDER BY rowid DESC LIMIT 1"
-                ),
-                params![bot.as_str(), tool_use_id],
-                from_row,
-            )
-            .optional()?)
+            ),
+            params![bot.as_str(), tool_use_id],
+            from_row,
+        )
+        .optional()?)
     }
 
     /// Paths of the files the bot's `Write`/`Edit` calls changed, newest
     /// first and without repeats; failed calls do not count.
     pub fn written_files(&self, bot: &BotId, limit: u32) -> Result<Vec<String>> {
-        let mut stmt = self.conn.prepare(
+        let mut stmt = self.conn.prepare_cached(
             "SELECT json_extract(data, '$.file') FROM chat_items \
              WHERE bot_id = ?1 AND kind = 'tool' \
                AND json_extract(data, '$.file') IS NOT NULL \
@@ -148,7 +147,7 @@ impl Store {
 
     /// The conversation-list line: the newest item that has one.
     pub fn last_activity(&self, bot: &BotId) -> Result<Option<Activity>> {
-        let mut stmt = self.conn.prepare(&format!(
+        let mut stmt = self.conn.prepare_cached(&format!(
             "SELECT {COLUMNS} FROM chat_items WHERE bot_id = ?1 AND kind != 'turn' \
              ORDER BY rowid DESC LIMIT 1"
         ))?;

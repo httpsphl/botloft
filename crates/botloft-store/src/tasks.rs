@@ -86,7 +86,7 @@ impl Store {
 
     /// Newest first, at most 500.
     pub fn tasks(&self, filter: TaskFilter<'_>) -> Result<Vec<Task>> {
-        let mut stmt = self.conn.prepare(&format!(
+        let mut stmt = self.conn.prepare_cached(&format!(
             "SELECT {COLUMNS} FROM tasks \
              WHERE (?1 IS NULL OR crew_id = ?1) \
                AND (?2 IS NULL OR assignee_bot_id = ?2) \
@@ -109,7 +109,7 @@ impl Store {
 
     /// Open tasks whose deadline has passed, oldest deadline first.
     pub fn overdue_tasks(&self, now: i64) -> Result<Vec<Task>> {
-        let mut stmt = self.conn.prepare(&format!(
+        let mut stmt = self.conn.prepare_cached(&format!(
             "SELECT {COLUMNS} FROM tasks WHERE status = 'open' AND deadline_at <= ?1 \
              ORDER BY deadline_at, rowid"
         ))?;

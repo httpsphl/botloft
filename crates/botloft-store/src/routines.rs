@@ -99,7 +99,7 @@ impl Store {
 
     /// Routines in creation order, optionally of one bot, with their latest run.
     pub fn routines(&self, bot: Option<&BotId>, include_archived: bool) -> Result<Vec<Routine>> {
-        let mut stmt = self.conn.prepare(&format!(
+        let mut stmt = self.conn.prepare_cached(&format!(
             "SELECT {COLUMNS} FROM routines \
              WHERE (?1 IS NULL OR bot_id = ?1) AND (?2 OR archived_at IS NULL) \
              ORDER BY created_at, id"
@@ -114,7 +114,7 @@ impl Store {
 
     /// Enabled routines whose time came, soonest first.
     pub fn due_routines(&self, now: i64) -> Result<Vec<Routine>> {
-        let mut stmt = self.conn.prepare(&format!(
+        let mut stmt = self.conn.prepare_cached(&format!(
             "SELECT {COLUMNS} FROM routines \
              WHERE enabled AND archived_at IS NULL AND next_run_at <= ?1 \
              ORDER BY next_run_at, id"
@@ -134,7 +134,7 @@ impl Store {
 
     /// Archives the routines of a bot that was archived. Returns their ids.
     pub fn archive_routines_of(&self, bot: &BotId, at: i64) -> Result<Vec<RoutineId>> {
-        let mut stmt = self.conn.prepare(
+        let mut stmt = self.conn.prepare_cached(
             "UPDATE routines SET archived_at = ?2, updated_at = ?2, next_run_at = NULL \
              WHERE bot_id = ?1 AND archived_at IS NULL RETURNING id",
         )?;

@@ -8,7 +8,7 @@ use botloft_core::protocol::{
 };
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
-use crate::{Result, Store, parse_column, to_sql_int};
+use crate::{Result, Store, cached_execute, cached_row, parse_column, to_sql_int};
 
 const COLUMNS: &str =
     "id, crew_id, from_kind, from_bot_id, to_bot_id, kind, body, task_id, created_at, routine_id";
@@ -41,7 +41,7 @@ fn attachment_from_row(row: &Row<'_>) -> rusqlite::Result<Attachment> {
 
 /// Fills in each message's attachments.
 fn with_attachments(conn: &Connection, mut messages: Vec<Message>) -> Result<Vec<Message>> {
-    let mut stmt = conn.prepare(
+    let mut stmt = conn.prepare_cached(
         "SELECT id, name, media_type, size, path FROM attachments \
          WHERE message_id = ?1 ORDER BY rowid",
     )?;
@@ -100,7 +100,8 @@ impl Store {
         message: &Message,
         delivery: &Delivery,
     ) -> Result<ChatItem> {
-        conn.execute(
+        cached_execute(
+            conn,
             &format!(
                 "INSERT INTO messages ({COLUMNS})                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)"
             ),
@@ -118,7 +119,8 @@ impl Store {
             ],
         )?;
         for attachment in &message.attachments {
-            conn.execute(
+            cached_execute(
+                conn,
                 "INSERT INTO attachments (id, message_id, name, media_type, size, path, created_at) \
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
                 params![
@@ -148,17 +150,16 @@ impl Store {
 
     /// The message that asked for `task`.
     pub fn task_request(&self, task: &TaskId) -> Result<Option<Message>> {
-        Ok(self
-            .conn
-            .query_row(
-                &format!(
-                    "SELECT {COLUMNS} FROM messages WHERE task_id = ?1 AND kind = 'task' \
+        Ok(cached_row(
+            &self.conn,
+            &format!(
+                "SELECT {COLUMNS} FROM messages WHERE task_id = ?1 AND kind = 'task' \
                      ORDER BY rowid LIMIT 1"
-                ),
-                [task.as_str()],
-                from_row,
-            )
-            .optional()?)
+            ),
+            [task.as_str()],
+            from_row,
+        )
+        .optional()?)
     }
 
     pub fn message(&self, id: &MessageId) -> Result<Option<Message>> {
@@ -189,7 +190,7 @@ impl Store {
 
     /// Newest first, in the order they were stored.
     pub fn messages(&self, filter: MessageFilter<'_>) -> Result<Vec<Message>> {
-        let mut stmt = self.conn.prepare(&format!(
+        let mut stmt = self.conn.prepare_cached(&format!(
             "SELECT {COLUMNS} FROM messages \
              WHERE (?1 IS NULL OR crew_id = ?1) \
                AND (?2 IS NULL OR to_bot_id = ?2 OR from_bot_id = ?2) \
