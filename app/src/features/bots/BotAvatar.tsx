@@ -6,7 +6,7 @@
 // has no background: just the mascot, with a thin edge so light colors keep
 // their shape on the light theme. `framed` puts the mascot on the black
 // square of the app icon, for Botloft itself (the title bar, messages from
-// the daemon), whose white mascot needs it.
+// the daemon), in the icon's own color.
 //
 // Given a `mood`, the mascot comes alive (mascot.css): its flame burns,
 // gently when idle, glancing around now and then, and wildly, throwing
@@ -33,6 +33,9 @@ import {
 import { retint } from "./retint";
 
 export type Mood = "idle" | "working" | "waiting" | "tired" | "sleeping";
+
+/** Botloft's own mascot, as on the app icon: the color that shows the drawing as drawn. */
+export const BOTLOFT_COLOR = "#FF7A59";
 
 /** How the mascot of `bot` moves, from what the bot is doing. */
 export function moodOf(bot: Pick<Bot, "state" | "paused">, crewPaused = false): Mood {

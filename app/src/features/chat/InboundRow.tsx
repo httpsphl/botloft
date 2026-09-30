@@ -7,7 +7,7 @@ import { when } from "../../lib/format";
 import type { Bot, Message } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
 import { useArrival } from "../../ui/motion";
-import { BotAvatar } from "../bots/BotAvatar";
+import { BOTLOFT_COLOR, BotAvatar } from "../bots/BotAvatar";
 import { DeliveryStatus } from "../messages/DeliveryStatus";
 import { AttachmentList } from "./AttachmentList";
 
@@ -76,7 +76,7 @@ function OtherMessage({ message }: { message: Message }) {
   return (
     <li className={`flex gap-3 pr-12 ${arrival}`}>
       <BotAvatar
-        color={system ? "#ffffff" : (sender?.color ?? "#6f6f69")}
+        color={system ? BOTLOFT_COLOR : (sender?.color ?? "#6f6f69")}
         size={28}
         framed={system}
       />

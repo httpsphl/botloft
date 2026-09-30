@@ -1,7 +1,7 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 import flameFrames from "../../mascot-flame.css?raw";
-import { BotAvatar } from "./BotAvatar";
+import { BOTLOFT_COLOR, BotAvatar } from "./BotAvatar";
 import { BotStateBadge } from "./BotStateBadge";
 import { BODY, DRAWN_IN, OUTLINE, SHADES } from "./mascotArt";
 import { retint, toHex, toHsl } from "./retint";
@@ -23,16 +23,18 @@ describe("retint", () => {
     }
   });
 
-  test("the color it was drawn in keeps the artwork as drawn", () => {
+  test("the color it was drawn in, Botloft's own, keeps the artwork as drawn", () => {
     const drawnIn = toHex(DRAWN_IN.h, DRAWN_IN.s, DRAWN_IN.l);
-    for (const { fill } of SHADES) {
-      const [r, g, b] = channels(retint(fill, drawnIn));
-      const [r0, g0, b0] = channels(fill.toLowerCase());
-      expect(Math.abs(r - r0) + Math.abs(g - g0) + Math.abs(b - b0)).toBeLessThanOrEqual(6);
+    for (const color of [drawnIn, BOTLOFT_COLOR]) {
+      for (const { fill } of SHADES) {
+        const [r, g, b] = channels(retint(fill, color));
+        const [r0, g0, b0] = channels(fill.toLowerCase());
+        expect(Math.abs(r - r0) + Math.abs(g - g0) + Math.abs(b - b0)).toBeLessThanOrEqual(6);
+      }
     }
   });
 
-  test("white leaves no hue, for Botloft's own white mascot", () => {
+  test("white leaves no hue", () => {
     const [r, g, b] = channels(retint(BODY, "#ffffff"));
     expect(r).toBe(g);
     expect(g).toBe(b);
@@ -97,7 +99,7 @@ describe("mascot", () => {
   });
 
   test("framed sits on the icon square without the thin edge", () => {
-    const { container } = render(<BotAvatar color="#ffffff" framed />);
+    const { container } = render(<BotAvatar color={BOTLOFT_COLOR} framed />);
     expect(container.querySelector("svg")?.getAttribute("class")).toContain("bg-[#0b0b0b]");
     expect(container.querySelector('[stroke="var(--avatar-edge)"]')).toBeNull();
   });

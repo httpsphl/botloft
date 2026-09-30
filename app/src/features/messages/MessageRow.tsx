@@ -3,7 +3,7 @@ import { useT } from "../../i18n";
 import { fromNow, when } from "../../lib/format";
 import type { Bot, BotId, Message, Task } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
-import { BotAvatar } from "../bots/BotAvatar";
+import { BOTLOFT_COLOR, BotAvatar } from "../bots/BotAvatar";
 import { DeliveryStatus } from "./DeliveryStatus";
 
 function BotName({ bot }: { bot: Bot | undefined }) {
@@ -32,7 +32,7 @@ function Sender({ message, bots }: { message: Message; bots: Record<BotId, Bot> 
     case "system":
       return (
         <span className="inline-flex items-center gap-1.5 font-medium">
-          <BotAvatar color="#ffffff" size={14} framed />
+          <BotAvatar color={BOTLOFT_COLOR} size={14} framed />
           {t.messages.row.system}
         </span>
       );
