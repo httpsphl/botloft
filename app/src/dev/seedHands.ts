@@ -3,10 +3,9 @@
 // the owner's clicks and keys, so taking the browser can be tried end to end.
 
 import type { FakeBotloft } from "../lib/fake";
+import type { PageSize } from "../lib/fakeBrowser";
 import type { BrowserInput, CrewId } from "../lib/protocol.gen";
 
-const W = 1280;
-const H = 800;
 const FIELDS = { user: 300, password: 390 } as const;
 type Field = keyof typeof FIELDS;
 
@@ -17,16 +16,16 @@ interface Form {
   signedIn: boolean;
 }
 
-function draw(form: Form): string {
+function draw(form: Form, size: PageSize): string {
   const canvas = document.createElement("canvas");
-  canvas.width = W;
-  canvas.height = H;
+  canvas.width = size.width;
+  canvas.height = size.height;
   const g = canvas.getContext("2d");
   if (!g) {
     return "";
   }
   g.fillStyle = "#f7f4ee";
-  g.fillRect(0, 0, W, H);
+  g.fillRect(0, 0, size.width, size.height);
   g.fillStyle = "#3b2a1a";
   g.font = "600 36px Georgia, serif";
   if (form.signedIn) {
@@ -92,7 +91,7 @@ export function seedHands(fake: FakeBotloft, crewId: CrewId): void {
   const form: Form = { user: "", password: "", field: null, signedIn: false };
   const login = "https://flour.example/login";
   fake.browser.open(clerk.id, login, "Sign in · Flour Co.");
-  fake.browser.frame(clerk.id, draw(form));
+  fake.browser.paint(clerk.id, (size) => draw(form, size));
   fake.chat.tool(clerk.id, "mcp__botloft__browser_open", { summary: login, status: "done" });
   const task = "Sign in to Flour Co. with the bakery's account";
   fake.chat.tool(clerk.id, "mcp__botloft__browser_ask_owner", { summary: task, status: "running" });
@@ -105,6 +104,6 @@ export function seedHands(fake: FakeBotloft, crewId: CrewId): void {
       form.signedIn = true;
       fake.browser.open(clerk.id, "https://flour.example/orders", "Orders · Flour Co.");
     }
-    fake.browser.frame(clerk.id, draw(form));
+    fake.browser.repaint(clerk.id);
   });
 }

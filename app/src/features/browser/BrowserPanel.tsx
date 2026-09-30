@@ -18,6 +18,12 @@ import { HandsLayer } from "./HandsLayer";
 import { LiveView, useCaption } from "./LiveView";
 import { useBrowserView } from "./useBrowserView";
 import { useHands } from "./useHands";
+import { useFitPage, useRoom } from "./useRoom";
+
+/** Around the page in the panel, in px. */
+const PAD = 12;
+/** Kept under the page, for what the bot just did and the button to take it. */
+const UNDER = 80;
 
 export function BrowserPanel({
   bot,
@@ -39,6 +45,14 @@ export function BrowserPanel({
   const hands = useHands(bot, state);
   const [focused, setFocused] = useState(false);
   const ask = state?.ask ?? null;
+  // The page takes the shape of the room the panel has for it (spec 21.3).
+  // Notices that come and go are not counted: they never resize the page.
+  const [inside, body] = useRoom();
+  const room = inside && {
+    width: inside.width - 2 * PAD,
+    height: inside.height - 2 * PAD - UNDER,
+  };
+  useFitPage(bot, room, watched);
   // Taking needs the watch first: the daemon ties the hands to it.
   const taken = useRef(0);
   useEffect(() => {
@@ -75,7 +89,11 @@ export function BrowserPanel({
         </div>
       </header>
       {state && (status === "open" || status === "starting") && <AddressBar state={state} />}
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
+      <div
+        ref={body}
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto"
+        style={{ padding: PAD }}
+      >
         {status === "failed" ? (
           <Callout tone="danger" title={t.failedTitle}>
             {t.failedBody}
@@ -94,41 +112,44 @@ export function BrowserPanel({
           <>
             {live && ask && !hands.held && <AskCallout bot={bot} task={ask} hands={hands} />}
             {hands.held && <HeldBar bot={bot} task={ask} focused={focused} hands={hands} />}
-            <div className="relative">
-              <LiveView
-                bot={bot}
-                frame={frame}
-                action={action}
-                dim={status === "closed"}
-                held={hands.held}
-              >
-                {hands.held && frame && (
-                  <HandsLayer
-                    label={t.hands.screen(bot.name)}
-                    keysLabel={t.hands.typing}
-                    width={frame.width}
-                    height={frame.height}
-                    send={hands.send}
-                    onFocus={setFocused}
+            <div className="min-h-40 flex-1" style={{ containerType: "size" }}>
+              <div className="relative">
+                <LiveView
+                  bot={bot}
+                  frame={frame}
+                  action={action}
+                  dim={status === "closed"}
+                  held={hands.held}
+                >
+                  {hands.held && frame && (
+                    <HandsLayer
+                      label={t.hands.screen(bot.name)}
+                      keysLabel={t.hands.typing}
+                      width={frame.width}
+                      height={frame.height}
+                      send={hands.send}
+                      onFocus={setFocused}
+                    />
+                  )}
+                </LiveView>
+                {(status !== "open" || !frame) && (
+                  <Overlay
+                    busy={status === "starting" || status === "open"}
+                    title={status === "closed" ? t.closed : t.starting}
+                    body={status === "closed" ? t.closedBody : null}
                   />
                 )}
-              </LiveView>
-              {(status !== "open" || !frame) && (
-                <Overlay
-                  busy={status === "starting" || status === "open"}
-                  title={status === "closed" ? t.closed : t.starting}
-                  body={status === "closed" ? t.closedBody : null}
-                />
-              )}
+              </div>
             </div>
-            {status === "open" && caption && !hands.held && (
-              <p
-                key={action?.at}
-                aria-live="polite"
-                className="mt-3 flex animate-rise items-center gap-2 text-ink-soft text-sm"
-              >
-                <BotAvatar color={bot.color} size={18} mood="working" />
-                <span className="truncate">{caption}</span>
+            {status === "open" && !hands.held && (
+              // Its place is kept while empty, so the page never moves for it.
+              <p aria-live="polite" className="mt-3 h-5 text-ink-soft text-sm">
+                {caption && (
+                  <span key={action?.at} className="flex animate-rise items-center gap-2">
+                    <BotAvatar color={bot.color} size={18} mood="working" />
+                    <span className="truncate">{caption}</span>
+                  </span>
+                )}
               </p>
             )}
             {live && !hands.held && !ask && <TakeBar bot={bot} hands={hands} />}

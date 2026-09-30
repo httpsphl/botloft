@@ -1,12 +1,13 @@
 // Dev only: Scout searching in its browser in the fake preview, so the
 // browser panel has something live to show. The "page" is drawn on a
-// canvas and sent as JPEG frames, like the daemon's screencast.
+// canvas, the size the panel asks for, and sent as JPEG frames, like the
+// daemon's screencast.
 
 import type { FakeBotloft } from "../lib/fake";
+import type { PageSize } from "../lib/fakeBrowser";
 import type { BotId } from "../lib/protocol.gen";
 
-const W = 1280;
-const H = 800;
+const RECIPES = ["Classic sourdough loaf", "Starter in 5 days", "No-knead rye", "Focaccia"];
 
 interface Scene {
   url: string;
@@ -15,16 +16,16 @@ interface Scene {
   results: boolean;
 }
 
-function draw(scene: Scene): string {
+function draw(scene: Scene, size: PageSize): string {
   const canvas = document.createElement("canvas");
-  canvas.width = W;
-  canvas.height = H;
+  canvas.width = size.width;
+  canvas.height = size.height;
   const g = canvas.getContext("2d");
   if (!g) {
     return "";
   }
   g.fillStyle = "#ffffff";
-  g.fillRect(0, 0, W, H);
+  g.fillRect(0, 0, size.width, size.height);
   g.fillStyle = "#1f2937";
   g.font = "600 34px system-ui, sans-serif";
   g.fillText(scene.results ? "Results" : "Find a recipe", 120, 150);
@@ -43,15 +44,12 @@ function draw(scene: Scene): string {
   g.fillStyle = "#ffffff";
   g.fillText("Search", 938, 226);
   if (scene.results) {
-    for (let row = 0; row < 4; row++) {
+    // A taller page shows more of the list.
+    for (let row = 0; 300 + row * 110 < size.height - 60; row++) {
       const y = 300 + row * 110;
       g.fillStyle = "#1d4ed8";
       g.font = "600 24px system-ui, sans-serif";
-      g.fillText(
-        ["Classic sourdough loaf", "Starter in 5 days", "No-knead rye", "Focaccia"][row] ?? "",
-        120,
-        y,
-      );
+      g.fillText(RECIPES[row % RECIPES.length] ?? "", 120, y);
       g.fillStyle = "#e5e7eb";
       g.fillRect(120, y + 18, 820, 14);
       g.fillRect(120, y + 42, 560, 14);
@@ -117,14 +115,14 @@ export function seedBrowser(fake: FakeBotloft, scout: BotId): void {
   let scene = home;
   let step = 0;
   fake.browser.open(scout, home.url, home.title);
-  fake.browser.frame(scout, draw(scene));
+  fake.browser.paint(scout, (size) => draw(scene, size));
   setInterval(() => {
     const next = steps[step % steps.length];
     step += 1;
     if (next) {
       scene = next(scene);
       fake.browser.open(scout, scene.url, scene.title);
-      fake.browser.frame(scout, draw(scene));
+      fake.browser.repaint(scout);
     }
   }, 2200);
 }
