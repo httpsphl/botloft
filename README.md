@@ -76,7 +76,9 @@ installed and signed in once with your Claude account. Bots run on your own Clau
 1. Download `Botloft_<version>_x64-setup.exe` from the
    [latest release](https://github.com/httpsphl/botloft/releases/latest) and run it. It installs for
    your Windows user only, with no administrator prompt. The installer is not code-signed yet, so
-   Windows SmartScreen may ask you to confirm ("More info", then "Run anyway").
+   Windows SmartScreen may ask you to confirm ("More info", then "Run anyway"). The
+   [code signing policy](docs/code-signing-policy.md) says how releases are made and how to check
+   your download.
 2. Open Botloft. It sets itself up; there is nothing to configure.
 3. Create your first crew and tell it what it is for.
 

@@ -91,6 +91,8 @@ Both installers were built by GitHub Actions from this repository, which atteste
 \`\`\`
 gh attestation verify ${setup} --repo ${repo}
 \`\`\`
+
+How releases are made, and what Botloft changes on your computer: [Code signing policy](https://github.com/${repo}/blob/main/docs/code-signing-policy.md).
 `;
 }
 
