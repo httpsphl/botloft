@@ -161,3 +161,82 @@ describe("deleting a crew", () => {
     expect(fake.crews.size).toBe(0);
   });
 });
+
+describe("sending the folder to the Recycle Bin", () => {
+  const box = (dialog: HTMLElement, name: string) =>
+    within(dialog).getByRole("checkbox", { name }) as HTMLInputElement;
+
+  test("is off until the owner asks, then the bot's folder goes with it", async () => {
+    const { fake, scout } = await twoBots();
+    openBot("Scout");
+    await screen.findByRole("heading", { level: 1, name: "Scout" });
+    const dialog = askToDelete("Scout");
+    const recycle = box(dialog, "Move this folder to the Recycle Bin");
+    expect(recycle.checked).toBe(false);
+
+    fireEvent.click(recycle);
+    expect(dialog.textContent).toContain(
+      "Scout's folder goes to the Recycle Bin, where you can still get it back:",
+    );
+    expect(dialog.textContent).not.toContain("stays on your computer");
+    expect(within(dialog).getByText(scout.workspace)).toBeDefined();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete bot" }));
+    await waitFor(() => expect(inSidebar("Scout")).toBeNull());
+    expect(fake.calls.at(-1)).toEqual({
+      method: "bots.delete",
+      params: { botId: scout.id, recycleFolder: true },
+    });
+    expect(fake.recycled).toEqual([scout.workspace]);
+  });
+
+  test("says so when the folder could not go, and where it still is", async () => {
+    const { fake, scout } = await twoBots();
+    fake.recycleError = "Windows cannot put this folder in the Recycle Bin";
+    openBot("Scout");
+    await screen.findByRole("heading", { level: 1, name: "Scout" });
+    const dialog = askToDelete("Scout");
+    fireEvent.click(box(dialog, "Move this folder to the Recycle Bin"));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete bot" }));
+
+    const notice = await screen.findByText(/did not go to the Recycle Bin/);
+    expect(notice.textContent).toBe(
+      `The folder ${scout.workspace} did not go to the Recycle Bin and is still there: Windows cannot put this folder in the Recycle Bin`,
+    );
+    // The bot is deleted all the same.
+    expect(fake.bots.has(scout.id)).toBe(false);
+    expect(fake.recycled).toEqual([]);
+  });
+
+  test("a crew's own folder goes whole, and a work folder the owner chose never does", async () => {
+    const fake = new FakeBotloft();
+    const ops = fake.addCrew("Ops");
+    const site = await fake.call("crews.create", {
+      name: "Site",
+      workFolder: "C:\\Projects\\Site",
+    });
+    fake.addBot(ops.id, "Scout");
+    renderApp(fake);
+    await crewOpened("Ops");
+
+    fireEvent.click(screen.getByRole("button", { name: "More crew actions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete crew" }));
+    const dialog = screen.getByRole("dialog", { name: "Delete Ops?" });
+    fireEvent.click(box(dialog, "Move the crew's folders to the Recycle Bin"));
+    expect(dialog.textContent).toContain("The crew's folder goes to the Recycle Bin");
+    // The crew's folder itself, not only `shared` inside it.
+    expect(within(dialog).getByText("C:\\Users\\owner\\Botloft\\ops")).toBeDefined();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete crew" }));
+    await waitFor(() => expect(fake.recycled).toEqual(["C:\\Users\\owner\\Botloft\\ops"]));
+    expect(fake.calls.at(-1)?.params).toEqual({ crewId: ops.id, recycleFolder: true });
+
+    fireEvent.click(within(sidebar()).getByRole("button", { name: /Site/ }));
+    await crewOpened("Site");
+    fireEvent.click(screen.getByRole("button", { name: "More crew actions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete crew" }));
+    const chosen = screen.getByRole("dialog", { name: "Delete Site?" });
+    fireEvent.click(box(chosen, "Move the crew's folders to the Recycle Bin"));
+    expect(chosen.textContent).toContain("The work folder you chose stays where it is:");
+    expect(within(chosen).getByText(site.workFolder)).toBeDefined();
+  });
+});

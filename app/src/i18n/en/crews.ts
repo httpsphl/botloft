@@ -71,6 +71,11 @@ export const crews = {
         : `${crew} and ${bots === 1 ? "its bot" : `its ${bots} bots`} ${running ? "stop now and leave" : "leave"} Botloft for good, with their conversations, routines and tasks. This can't be undone.`,
     deleteKept:
       "The folders stay on your computer, with everything in them: each bot's own folder and the crew's work folder:",
+    deleteRecycle: "Move the crew's folders to the Recycle Bin",
+    deleteRecycled:
+      "The crew's folder goes to the Recycle Bin, with each bot's folder and the work folder in it. You can still get it back from there:",
+    deleteRecycledChosen:
+      "Each bot's own folder goes to the Recycle Bin, where you can still get it back. The work folder you chose stays where it is:",
     failed: {
       pause: "Could not pause the crew",
       resume: "Could not resume the crew",

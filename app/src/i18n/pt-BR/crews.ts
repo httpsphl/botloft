@@ -68,6 +68,11 @@ export const crews: Messages["crews"] = {
         : `${crew} e ${bots === 1 ? "o bot dela" : `os ${bots} bots dela`} ${running ? "param agora e saem" : "saem"} do Botloft de vez, com as conversas, as rotinas e as tarefas. Não dá para desfazer.`,
     deleteKept:
       "As pastas continuam no seu computador, com tudo o que está nelas: a pasta de cada bot e a pasta de trabalho da equipe:",
+    deleteRecycle: "Mandar as pastas da equipe para a Lixeira",
+    deleteRecycled:
+      "A pasta da equipe vai para a Lixeira, com a pasta de cada bot e a pasta de trabalho dentro. Ainda dá para recuperar de lá:",
+    deleteRecycledChosen:
+      "A pasta de cada bot vai para a Lixeira, de onde ainda dá para recuperar. A pasta de trabalho que você escolheu fica onde está:",
     failed: {
       pause: "Não foi possível pausar a equipe",
       resume: "Não foi possível retomar a equipe",

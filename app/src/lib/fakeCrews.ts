@@ -82,8 +82,8 @@ export function crewHandlers(fake: FakeBotloft): Pick<Handlers, CrewMethods> {
       }
       return crew;
     },
-    "crews.delete": ({ crewId }) => {
-      fake.crew(crewId, false);
+    "crews.delete": ({ crewId, recycleFolder }) => {
+      const crew = fake.crew(crewId, false);
       for (const bot of [...fake.bots.values()]) {
         if (bot.crewId === crewId) {
           purgeBot(fake, bot);
@@ -91,6 +91,9 @@ export function crewHandlers(fake: FakeBotloft): Pick<Handlers, CrewMethods> {
       }
       fake.crews.delete(crewId);
       fake.emit({ name: "crew.deleted", params: { crewId } });
+      if (recycleFolder) {
+        fake.recycle(`C:\\Users\\owner\\Botloft\\${crew.slug}`);
+      }
       return { crewId };
     },
   };

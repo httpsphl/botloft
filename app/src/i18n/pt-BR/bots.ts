@@ -73,6 +73,9 @@ export const bots: Messages["bots"] = {
       chief: (crew: string) => `${crew} fica sem chefe.`,
       kept: (name: string) =>
         `A pasta de ${name} continua no seu computador, com tudo o que está nela:`,
+      recycle: "Mandar esta pasta para a Lixeira",
+      recycled: (name: string) =>
+        `A pasta de ${name} vai para a Lixeira, de onde ainda dá para recuperar:`,
     },
   },
   dialog: {

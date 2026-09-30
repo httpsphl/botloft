@@ -67,6 +67,11 @@ export const crews: Messages["crews"] = {
         : `${crew} y ${bots === 1 ? "su bot" : `sus ${bots} bots`} ${running ? "se detienen ahora y salen" : "salen"} de Botloft para siempre, con sus conversaciones, rutinas y tareas. No se puede deshacer.`,
     deleteKept:
       "Las carpetas siguen en tu ordenador, con todo lo que contienen: la carpeta de cada bot y la carpeta de trabajo del equipo:",
+    deleteRecycle: "Enviar las carpetas del equipo a la Papelera",
+    deleteRecycled:
+      "La carpeta del equipo va a la Papelera, con la carpeta de cada bot y la carpeta de trabajo dentro. Todavía puedes recuperarla de allí:",
+    deleteRecycledChosen:
+      "La carpeta de cada bot va a la Papelera, de donde todavía puedes recuperarla. La carpeta de trabajo que elegiste se queda donde está:",
     failed: {
       pause: "No se pudo pausar el equipo",
       resume: "No se pudo reanudar el equipo",

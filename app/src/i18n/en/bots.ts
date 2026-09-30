@@ -77,6 +77,9 @@ export const bots = {
         `${name} ${running ? "stops now and leaves" : "leaves"} Botloft for good, with its conversation, its routines and the tasks it was part of. This can't be undone.`,
       chief: (crew: string) => `${crew} will be left without a chief.`,
       kept: (name: string) => `${name}'s folder stays on your computer, with everything in it:`,
+      recycle: "Move this folder to the Recycle Bin",
+      recycled: (name: string) =>
+        `${name}'s folder goes to the Recycle Bin, where you can still get it back:`,
     },
   },
   dialog: {
