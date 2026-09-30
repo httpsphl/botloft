@@ -47,6 +47,14 @@ export function activityLine(
       tool = body.toolName;
       break;
     case "notice":
+      // A compaction is housekeeping, not news about the conversation.
+      if (
+        body.code === "compacted" ||
+        body.code === "auto_compacted" ||
+        body.code === "compact_failed"
+      ) {
+        return null;
+      }
       kind = "notice";
       text = body.text;
       break;

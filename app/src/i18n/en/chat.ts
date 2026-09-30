@@ -135,6 +135,58 @@ export const chat = {
     later: (bot: string, model: string) =>
       `${bot} switches to ${model} when it finishes what it's doing.`,
   },
+  effort: {
+    title: "Effort",
+    button: (level: string) => `Effort: ${level}`,
+    short: "Effort",
+    faster: "Faster",
+    smarter: "Smarter",
+    names: {
+      low: "Low",
+      medium: "Medium",
+      high: "High",
+      xhigh: "Extra high",
+      max: "Max",
+    },
+    hints: {
+      low: (bot: string) => `${bot} answers fastest and thinks the least, for simple tasks`,
+      medium: (bot: string) => `${bot} balances speed and thinking, good for most work`,
+      high: (bot: string) => `${bot} thinks more before answering, for harder tasks`,
+      xhigh: (bot: string) => `${bot} thinks a lot more, for long and complex work`,
+      max: (bot: string) =>
+        `${bot} thinks as much as it can: slowest, and uses the most of your plan`,
+    },
+    recommended: "Recommended",
+    recommendedFor: (model: string) => `Recommended for ${model}`,
+    useRecommended: "Use recommended",
+    unknown: (bot: string) => `${bot} uses the level recommended for its model`,
+    unavailable: "Not available",
+    none: (bot: string, model: string) =>
+      `${model} has no effort levels: ${bot} always answers at the same pace.`,
+    thisModel: "This model",
+    cost: "More effort uses up your plan's limit faster.",
+    failed: "Could not change the effort",
+    later: (bot: string, level: string) =>
+      `${bot} switches to ${level} effort when it finishes what it's doing.`,
+  },
+  context: {
+    title: "Conversation space",
+    button: (used: string, total: string, percent: number) =>
+      `Conversation space: ${used} of ${total} used (${percent}%)`,
+    used: (used: string, total: string, percent: number) => `${used} / ${total} (${percent}%)`,
+    about: (bot: string) =>
+      `Everything ${bot} read and wrote in this conversation takes up space. The fuller it is, the more of your plan each message uses.`,
+    autoLeft: (left: string, at: string) => `${left} left before it compacts by itself, at ${at}.`,
+    autoNow: "It is full enough to compact by itself on the next message.",
+    noAuto: "It does not compact by itself.",
+    compact: "Compact now",
+    compactHint: (bot: string) =>
+      `Replaces what came before with a summary, so ${bot} has room again and each message uses less.`,
+    compacting: "Compacting…",
+    later: (bot: string) => `${bot} compacts the conversation when it finishes what it's doing.`,
+    notRunning: (bot: string) => `${bot} is not running, so it cannot compact now.`,
+    failed: "Could not compact the conversation",
+  },
   suggestion: {
     title: (bot: string) => `${bot} suggests a new bot`,
     why: "Why",
@@ -176,5 +228,10 @@ export const chat = {
     modelUnavailable:
       "This bot's model isn't available: it may not be on your Claude plan. Pick another model below the chat.",
     turnFailed: (detail: string) => `The bot couldn't finish this: ${detail}`,
+    compacted:
+      "The conversation was compacted: what came before is now a summary, and there is room again.",
+    autoCompacted:
+      "The conversation was full, so it was compacted: what came before is now a summary.",
+    compactFailed: (detail: string) => `The conversation could not be compacted: ${detail}`,
   },
 };
