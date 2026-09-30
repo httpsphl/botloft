@@ -1,7 +1,7 @@
 // Files the owner is about to send (spec 9.5), read as base64 when they are
 // picked, pasted or dropped. Images keep a data URL for their thumbnail.
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { t } from "../../i18n";
 import { fileSize } from "../../lib/format";
 import { FIELD_LIMITS } from "../../lib/protocol.gen";
@@ -85,7 +85,11 @@ export function useFiles() {
     setError(null);
   }, []);
 
-  return { files, error, setError, add, remove, clear };
+  // One object while nothing changes, so the composer can skip renders.
+  return useMemo(
+    () => ({ files, error, setError, add, remove, clear }),
+    [files, error, add, remove, clear],
+  );
 }
 
 export type Files = ReturnType<typeof useFiles>;

@@ -3,7 +3,7 @@
 // also shows the reply being written.
 
 import { CircleAlert } from "lucide-react";
-import type { ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 import { useT } from "../../i18n";
 import { duration, tokens, usedTokens, when } from "../../lib/format";
 import type { Bot, ChatItem, TurnItem } from "../../lib/protocol.gen";
@@ -11,7 +11,7 @@ import { useArrival } from "../../ui/motion";
 import { BotAvatar, moodOf } from "../bots/BotAvatar";
 import { ApprovalCard } from "./ApprovalCard";
 import { Markdown } from "./Markdown";
-import { runParts } from "./rows";
+import { runParts, splitDraft } from "./rows";
 import { ToolLines } from "./ToolLines";
 
 export interface Live {
@@ -70,7 +70,33 @@ function Working() {
   );
 }
 
-export function BotRun({
+function Draft({ text }: { text: string }) {
+  const [done, writing] = splitDraft(text);
+  return (
+    <div aria-live="off" className="flex animate-fade flex-col gap-[0.6em] opacity-90">
+      {done && <Markdown text={done} />}
+      <Markdown text={writing} streaming />
+    </div>
+  );
+}
+
+const sameItems = (a: ChatItem[], b: ChatItem[]) =>
+  a.length === b.length && a.every((item, index) => item === b[index]);
+
+/**
+ * Re-renders only when something it shows changed: finished runs stay put
+ * while the last one streams.
+ */
+export const BotRun = memo(
+  BotRunView,
+  (before, after) =>
+    before.bot === after.bot &&
+    before.live?.draft === after.live?.draft &&
+    before.live?.working === after.live?.working &&
+    sameItems(before.items, after.items),
+);
+
+function BotRunView({
   items,
   bot,
   live,
@@ -119,11 +145,7 @@ export function BotRun({
               return null;
           }
         })}
-        {live?.draft && (
-          <div aria-live="off" className="animate-fade opacity-90">
-            <Markdown text={live.draft} streaming />
-          </div>
-        )}
+        {live?.draft && <Draft text={live.draft} />}
         {live && !live.draft && live.working && <Working />}
       </div>
     </li>

@@ -8,6 +8,10 @@ interface Formats {
   clock: Intl.DateTimeFormat;
   dated: Intl.DateTimeFormat;
   relative: Intl.RelativeTimeFormat;
+  day: Intl.DateTimeFormat;
+  dayOfYear: Intl.DateTimeFormat;
+  /** By number of decimals. */
+  decimals: [Intl.NumberFormat, Intl.NumberFormat];
 }
 
 const cache = new Map<Locale, Formats>();
@@ -26,6 +30,20 @@ function formats(): Formats {
         minute: "2-digit",
       }),
       relative: new Intl.RelativeTimeFormat(locale, { numeric: "auto", style: "short" }),
+      day: new Intl.DateTimeFormat(locale, { weekday: "long", month: "long", day: "numeric" }),
+      dayOfYear: new Intl.DateTimeFormat(locale, {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      }),
+      decimals: [0, 1].map(
+        (digits) =>
+          new Intl.NumberFormat(locale, {
+            minimumFractionDigits: digits,
+            maximumFractionDigits: digits,
+          }),
+      ) as Formats["decimals"],
     };
     cache.set(locale, found);
   }
@@ -57,11 +75,8 @@ export function fromNow(ms: number, now = Date.now()): string {
 }
 
 /** `value` with `digits` decimals, written the language's way ("3.4", "3,4"). */
-function decimal(value: number, digits: number): string {
-  return new Intl.NumberFormat(currentLocale(), {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  }).format(value);
+function decimal(value: number, digits: 0 | 1): string {
+  return formats().decimals[digits].format(value);
 }
 
 /** "912 B", "48 KB", "3.4 MB". */
@@ -119,10 +134,6 @@ export function duration(ms: number): string {
 /** "Monday, September 28" for today's year, with the year otherwise. */
 export function day(ms: number, now = Date.now()): string {
   const sameYear = new Date(ms).getFullYear() === new Date(now).getFullYear();
-  return new Intl.DateTimeFormat(currentLocale(), {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: sameYear ? undefined : "numeric",
-  }).format(ms);
+  const { day, dayOfYear } = formats();
+  return (sameYear ? day : dayOfYear).format(ms);
 }

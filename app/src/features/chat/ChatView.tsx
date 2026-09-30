@@ -2,7 +2,16 @@
 // written, and the composer. Files dropped anywhere on it are attached.
 
 import { LoaderCircle, Paperclip } from "lucide-react";
-import { type DragEvent, type ReactNode, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  type DragEvent,
+  memo,
+  type ReactNode,
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useT } from "../../i18n";
 import { day } from "../../lib/format";
 import type { Bot } from "../../lib/protocol.gen";
@@ -23,7 +32,8 @@ const STICKY_PX = 80;
 
 const hasFiles = (event: DragEvent) => event.dataTransfer.types.includes("Files");
 
-export function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
+/** Skips the renders of the view around it; the text being written re-renders only the last run. */
+export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
   const t = useT();
   const chat = useChat(bot.id);
   const files = useFiles();
@@ -55,6 +65,10 @@ export function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
     }
   }, [end]);
 
+  const onSent = useCallback(() => {
+    atEnd.current = true;
+  }, []);
+
   const loadOlder = () => {
     const element = scroller.current;
     if (element) {
@@ -65,7 +79,7 @@ export function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
 
   const working = bot.state === "busy";
   const live: Live | undefined = chat.draft || working ? { draft: chat.draft, working } : undefined;
-  const rows = chatRows(chat.items);
+  const rows = useMemo(() => chatRows(chat.items), [chat.items]);
   const tail = rows.at(-1);
   const openRun = tail?.kind === "run" && tail.items.at(-1)?.body.kind !== "turn";
 
@@ -168,14 +182,7 @@ export function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
         </div>
       </div>
       <div className="w-full">
-        <ChatComposer
-          bot={bot}
-          files={files}
-          stopped={stopped}
-          onSent={() => {
-            atEnd.current = true;
-          }}
-        />
+        <ChatComposer bot={bot} files={files} stopped={stopped} onSent={onSent} />
       </div>
       {dragging && (
         <div className="pointer-events-none absolute inset-3 grid place-items-center rounded-2xl border-2 border-accent border-dashed bg-canvas/85">
@@ -187,4 +194,4 @@ export function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
       )}
     </section>
   );
-}
+});

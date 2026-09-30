@@ -2,6 +2,7 @@
 // sign-in problem, a session that started over (spec 8.2).
 
 import { CircleAlert, Info, TriangleAlert } from "lucide-react";
+import { memo } from "react";
 import { type Messages, useT } from "../../i18n";
 import type { NoticeItem } from "../../lib/protocol.gen";
 import { useArrival } from "../../ui/motion";
@@ -13,7 +14,13 @@ const LOOK = {
 } as const;
 
 /** `at` is when the notice came, so a new one animates in. */
-export function NoticeRow({ notice, at = 0 }: { notice: NoticeItem; at?: number }) {
+export const NoticeRow = memo(function NoticeRow({
+  notice,
+  at = 0,
+}: {
+  notice: NoticeItem;
+  at?: number;
+}) {
   const t = useT();
   const { icon: Icon, tone, frame } = LOOK[notice.level];
   const arrival = useArrival(at);
@@ -28,7 +35,7 @@ export function NoticeRow({ notice, at = 0 }: { notice: NoticeItem; at?: number 
       </p>
     </li>
   );
-}
+});
 
 /** The app's own words for notices it knows; the daemon's text otherwise. */
 function noticeText(notice: NoticeItem, words: Messages["chat"]["notice"]): string {

@@ -8,6 +8,7 @@ import {
   type ClipboardEvent,
   type FormEvent,
   type KeyboardEvent,
+  memo,
   useEffect,
   useId,
   useLayoutEffect,
@@ -56,7 +57,7 @@ function Chip({ file, onRemove }: { file: PendingFile; onRemove(): void }) {
   );
 }
 
-export function ChatComposer({
+export const ChatComposer = memo(function ChatComposer({
   bot,
   files,
   stopped,
@@ -241,4 +242,4 @@ export function ChatComposer({
       )}
     </form>
   );
-}
+});

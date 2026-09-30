@@ -10,6 +10,7 @@ import { Callout } from "../../ui/Callout";
 import { PanelClosing, PanelRestored } from "../../ui/panelMotion";
 import { SidePanel } from "../../ui/SidePanel";
 import { type Tab, Tabs, tabId } from "../../ui/Tabs";
+import { useStable } from "../../ui/useStable";
 import { BrowserPanel } from "../browser/BrowserPanel";
 import { ShowBrowser } from "../browser/showBrowser";
 import { ChatView } from "../chat/ChatView";
@@ -86,14 +87,15 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
   };
   // A tool line in the chat points to its file: read the list first, so the
   // file is in it when the panel goes to it.
-  const showFile = async (path: string) => {
+  // Stable, so the chat does not re-render when this view does.
+  const showFile = useStable(async (path: string) => {
     if (!filesOpen) {
       seen();
     }
     setSide("files");
     await files.refresh();
     setShown(path);
-  };
+  });
   const fresh = filesOpen ? 0 : files.files.filter((file) => file.modifiedAt > seenAt).length;
   const routines = useApp(useShallow((state) => routinesOf(state, bot.id)));
   // A browser at rest is open, but the bot is not using it (spec 21.2).
@@ -108,17 +110,17 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
   const screens = useScreens(bot);
   const screensOpen = side === "screens";
   const [screenPath, setScreenPath] = useState<string | null>(null);
-  const showScreen = (path: string | null) => {
+  const showScreen = useStable((path: string | null) => {
     if (filesOpen) {
       seen();
     }
     setSide("screens");
     setScreenPath(path);
     void screens.refresh();
-  };
+  });
   // biome-ignore lint/correctness/useExhaustiveDependencies: another bot's screen is not this bot's
   useEffect(() => setScreenPath(null), [bot.id]);
-  const showBrowser = (options?: { take?: boolean }) => {
+  const showBrowser = useStable((options?: { take?: boolean }) => {
     if (filesOpen) {
       seen();
     }
@@ -126,7 +128,7 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
     if (options?.take) {
       setTakeBrowser((count) => count + 1);
     }
-  };
+  });
   // The panel follows what the bot starts doing (spec 15.1), over the one
   // that came back too.
   useFollowBot({

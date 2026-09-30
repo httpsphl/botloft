@@ -61,3 +61,34 @@ export function runParts(items: ChatItem[]): ChatItem[][] {
   }
   return parts;
 }
+
+/**
+ * Splits the reply being written where its last finished block ends: the
+ * part before no longer changes, so only the rest is parsed again as text
+ * arrives. A blank line inside a code fence does not end a block.
+ */
+export function splitDraft(text: string): [string, string] {
+  let fence: string | null = null;
+  let blank = false;
+  let cut = 0;
+  let offset = 0;
+  for (const line of text.split("\n")) {
+    if (fence === null && blank && /^\S/.test(line)) {
+      cut = offset;
+    }
+    const marker = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1];
+    if (marker && fence === null) {
+      fence = marker;
+    } else if (
+      marker &&
+      fence !== null &&
+      marker[0] === fence[0] &&
+      marker.length >= fence.length
+    ) {
+      fence = null;
+    }
+    blank = line.trim() === "";
+    offset += line.length + 1;
+  }
+  return [text.slice(0, cut), text.slice(cut)];
+}
