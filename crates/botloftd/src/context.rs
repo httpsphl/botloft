@@ -254,14 +254,15 @@ pub fn compact(daemon: &Daemon, params: BotIdParams) -> ApiResult<Bot> {
         if !ready {
             return Err(not_running());
         }
+        let uuid = random_uuid();
         let line = json!({
             "type": "user",
-            "uuid": random_uuid(),
+            "uuid": uuid,
             "message": { "role": "user", "content": [{ "type": "text", "text": COMPACT }] },
         });
         daemon
             .supervisor
-            .write_message(&record.id, Bytes::from(format!("{line}\n")))
+            .write_message(&record.id, &uuid, Bytes::from(format!("{line}\n")))
             .map_err(|_| not_running())?;
         update(daemon, &record.id, |entry| entry.compacting = true);
     }

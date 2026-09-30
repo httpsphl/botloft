@@ -38,6 +38,16 @@ async fn compacted(process: &FakeProcess) {
     process.emit(status(Value::Null, json!("success"))).await;
     process.emit(stream::init("session-1")).await;
     process.emit(boundary("manual")).await;
+    // It gives back what it printed, then the command with its uuid.
+    let command = process
+        .input_lines()
+        .into_iter()
+        .rfind(|line| line["message"]["content"][0]["text"] == "/compact")
+        .expect("/compact written");
+    process
+        .emit(stream::replay(&json!({ "uuid": "output" })))
+        .await;
+    process.emit(stream::replay(&command)).await;
     process
         .emit(json!({
             "type": "result", "subtype": "success", "is_error": false, "num_turns": 0,
@@ -113,6 +123,7 @@ async fn a_compaction_waits_behind_the_turn_in_progress() {
     compact(&s).expect("compact");
     assert_eq!(process.input_lines().len(), 2);
 
+    process.emit(stream::began("session-1")).await;
     process.emit(stream::result(false)).await;
     settle().await;
     assert_eq!(
@@ -133,6 +144,7 @@ async fn claude_code_compacting_by_itself_is_told_in_the_chat() {
     s.until(BotState::Idle).await;
     holds(&process, 160_000, 200_000).await;
     s.message("read more");
+    process.emit(stream::began("session-1")).await;
 
     process.emit(status(json!("requesting"), Value::Null)).await;
     settle().await;
@@ -175,6 +187,8 @@ async fn nothing_to_compact_is_a_notice_not_a_reply() {
             "local_command_outcome": { "kind": "failed" },
         }))
         .await;
+    let command = process.input_lines().remove(0);
+    process.emit(stream::replay(&command)).await;
     process
         .emit(
             json!({ "type": "result", "subtype": "success", "is_error": false,

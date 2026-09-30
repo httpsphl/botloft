@@ -871,8 +871,9 @@ export type ApprovalsAnswerParams = { approvalId: ApprovalId, allow: boolean,
  */
 note?: string, 
 /**
- * A bot suggestion as the owner changed it before allowing it, in the
- * JSON of the tool's input (spec 10.2). Ignored for other requests.
+ * A bot or routine suggestion as the owner changed it before allowing
+ * it, in the JSON of the tool's input (spec 10.2, 20.12). Ignored for
+ * other requests.
  */
 input?: string, };
 

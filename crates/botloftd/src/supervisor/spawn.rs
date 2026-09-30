@@ -23,6 +23,9 @@ use crate::{approvals, context, courier, routines, workspace};
 
 /// Tools the bot uses without asking: its crew tools (spec 7.4).
 const ALLOWED_TOOLS: &str = "mcp__botloft";
+/// Claude Code's own schedulers: they die with the process and Botloft never
+/// sees them. Work at set times is a routine (spec 7.4, 20).
+const DISALLOWED_TOOLS: &str = "CronCreate,CronDelete,CronList,ScheduleWakeup,RemoteTrigger";
 /// Makes Claude Code load `CLAUDE.md` from `--add-dir` folders (spec 5).
 const ADDITIONAL_MEMORY: &str = "CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD";
 /// Where permission requests go (spec 10.1).
@@ -220,6 +223,8 @@ fn launch_spec(
         PERMISSION_TOOL,
         "--allowedTools",
         ALLOWED_TOOLS,
+        "--disallowedTools",
+        DISALLOWED_TOOLS,
         "--mcp-config",
     ] {
         args.push(arg.into());

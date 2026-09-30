@@ -83,7 +83,7 @@ impl Setup {
             json!({ "type": "user", "uuid": "u", "message": { "role": "user", "content": text } });
         self.daemon
             .supervisor
-            .write_message(&self.bot, format!("{line}\n").into())
+            .write_message(&self.bot, "u", format!("{line}\n").into())
             .expect("running")
     }
 

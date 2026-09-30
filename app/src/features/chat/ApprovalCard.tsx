@@ -9,6 +9,7 @@ import { Button } from "../../ui/Button";
 import { Details } from "../../ui/Details";
 import { HELP_TOOL, HelpCard } from "../browser/HelpCard";
 import { SITE_TOOL, SiteCard } from "../browser/SiteCard";
+import { ROUTINE_TOOL, RoutineRequestCard } from "../routines/RoutineRequestCard";
 import { commandOf, isCommand } from "./command";
 import { PLAN_TOOL, PlanCard } from "./PlanCard";
 import { SUGGEST_TOOL, SuggestionCard } from "./SuggestionCard";
@@ -66,6 +67,8 @@ export function ApprovalCard({ approval, bot }: { approval: ApprovalItem; bot: B
       return <PlanCard approval={approval} bot={bot} />;
     case SUGGEST_TOOL:
       return <SuggestionCard approval={approval} bot={bot} />;
+    case ROUTINE_TOOL:
+      return <RoutineRequestCard approval={approval} bot={bot} />;
     case SITE_TOOL:
       return <SiteCard approval={approval} bot={bot} />;
     case HELP_TOOL:

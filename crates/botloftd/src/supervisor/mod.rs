@@ -157,9 +157,10 @@ impl Supervisor {
         slot_entry(&mut inner.slots, bot, &self.settings)
     }
 
-    /// Writes one stream-json line to the bot's stdin (spec 9.2). A message
-    /// is one turn more for the bot. Returns the generation it went to.
-    pub fn write_message(&self, bot: &BotId, line: Bytes) -> Result<u64, NotRunning> {
+    /// Writes one stream-json line, the message with `uuid`, to the bot's
+    /// stdin (spec 9.2). The bot has work until Claude Code takes the
+    /// message up and ends that turn. Returns the generation it went to.
+    pub fn write_message(&self, bot: &BotId, uuid: &str, line: Bytes) -> Result<u64, NotRunning> {
         let mut inner = self.lock();
         let slot = self.slot(&mut inner, bot);
         let (Some(running), Some(generation)) = (&slot.running, slot.generation) else {
@@ -169,7 +170,7 @@ impl Supervisor {
             return Err(NotRunning);
         }
         running.control.write(line).map_err(|_| NotRunning)?;
-        slot.turns += 1;
+        slot.waiting.push(uuid.to_owned());
         if slot.is_working() {
             self.set_state(bot, slot, slot.working_state());
         }

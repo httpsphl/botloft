@@ -83,6 +83,7 @@ async fn a_busy_bot_finishes_its_turn_before_changing_effort() {
     assert_eq!(s.runtime.processes().len(), 1, "the turn is not cut short");
     assert!(s.daemon.supervisor.relaunch_pending(&s.bot));
 
+    first.emit(stream::began("session-1")).await;
     first.emit(stream::result(false)).await;
     let second = s.runtime.process(2).await;
     assert_eq!(arg_after(&second, "--effort").as_deref(), Some("max"));
