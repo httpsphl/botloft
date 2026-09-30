@@ -9,6 +9,11 @@ on:
 
 permissions:
   contents: write
+  # A build provenance attestation for each installer (spec 15.5): anyone can
+  # check with `gh attestation verify` that it came from this workflow.
+  id-token: write
+  attestations: write
+  artifact-metadata: write
 
 env:
   CARGO_TERM_COLOR: always
@@ -41,6 +46,12 @@ jobs:
       - name: Build the setup window around it
         run: pnpm bundle:setup
         working-directory: app
+      - name: Stage the release files
+        run: node app/scripts/release.mjs stage
+      - name: Attest where the installers come from
+        uses: actions/attest@v4
+        with:
+          subject-path: target/release/bundle/release/*.exe
       - name: Open a draft release
         run: node app/scripts/release.mjs publish
         env:
