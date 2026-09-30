@@ -72,7 +72,8 @@ describe("messages", () => {
     act(() => {
       fake.conversation.read(delivery.id);
     });
-    const read = within(row).getByText("Read");
+    // Looked up again: the timeline may have drawn the row anew meanwhile.
+    const read = await within(messages()).findByText("Read");
     // Only the marks take the color (a token, spec 15.3); the word stays as readable as before.
     expect(read.querySelector("svg")?.classList.contains("text-read")).toBe(true);
     expect(read.className).toContain("text-muted");
