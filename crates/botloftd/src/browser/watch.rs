@@ -76,8 +76,8 @@ pub(super) async fn sync(slots: Slots, bot: BotId) {
         .get(&bot)
         .map(|slot| (slot.watchers > 0, slot.viewport));
     if let Some((on, viewport)) = wanted {
-        session.set_viewport(viewport).await;
         session.set_watching(on).await;
+        session.set_viewport(viewport).await;
     }
 }
 

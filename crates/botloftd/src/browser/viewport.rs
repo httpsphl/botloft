@@ -4,7 +4,7 @@
 use serde_json::{Value, json};
 use tracing::debug;
 
-use super::session::Session;
+use super::session::{FRAME_GAP, Session};
 
 /// The page size bots and the owner see, in CSS pixels. The height is the
 /// one nobody asked to change.
@@ -61,7 +61,8 @@ impl Session {
         self.lock().viewport
     }
 
-    /// Makes the page `viewport` in size, in every tab.
+    /// Makes the page `viewport` in size, in every tab, and sends whoever
+    /// watches a frame of that size.
     pub async fn set_viewport(&self, viewport: Viewport) {
         let pages: Vec<String> = {
             let mut tabs = self.lock();
@@ -83,6 +84,20 @@ impl Session {
             if let Err(err) = sized {
                 debug!("browser: sizing a tab: {err}");
             }
+        }
+        // The browser drops the frame of the new size while older ones wait
+        // to be confirmed, and a page that stands still sends no other
+        // (spec 19): once those are confirmed, the frames start over.
+        tokio::time::sleep(FRAME_GAP * 2).await;
+        let watched = {
+            let tabs = self.lock();
+            tabs.active()
+                .filter(|_| tabs.watching)
+                .map(|tab| tab.session.clone())
+        };
+        if let Some(page) = watched {
+            self.cast(&page, false).await;
+            self.cast(&page, true).await;
         }
     }
 }

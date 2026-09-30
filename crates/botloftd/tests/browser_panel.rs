@@ -88,6 +88,7 @@ async fn the_page_takes_the_shape_of_the_panel_while_the_owner_watches() {
         .await
         .expect("resize");
     until_window(&mut b, "1280 x 1400").await;
+    frame_of(&mut b.app, 1400).await;
     b.app
         .call("browser.take", json!({ "botId": id }))
         .await
