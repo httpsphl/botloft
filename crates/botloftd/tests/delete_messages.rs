@@ -3,9 +3,6 @@
 
 mod common;
 
-use std::time::Duration;
-
-use botloft_core::protocol::BotState;
 use common::Client;
 use common::bots::{text_of, two_bots};
 use serde_json::{Value, json};
@@ -133,8 +130,6 @@ async fn a_message_still_waiting_arrives_from_a_deleted_bot() {
         .expect("resume");
     // The lead's, the writer's first and the one the writer resumes in.
     let process = c.t.runtime.process(3).await;
-    c.t.until_state(&writer, BotState::Idle).await;
-    c.t.clock.advance(Duration::from_secs(5));
     let lines = process.wait_lines(1).await;
     assert_eq!(
         text_of(&lines[0]),

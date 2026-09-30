@@ -75,7 +75,7 @@ pub struct CourierConfig {
 impl Default for CourierConfig {
     fn default() -> Self {
         Self {
-            poll_interval_ms: 500,
+            poll_interval_ms: 10_000,
             lease_ms: 15_000,
             max_attempts: 8,
             retry_backoff_initial_ms: 2_000,

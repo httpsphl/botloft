@@ -75,8 +75,7 @@ async fn an_owner_message_reaches_the_bot_as_its_user_and_is_read() {
         (&json!("owner"), &json!("Olá! Tudo bem?"))
     );
 
-    t.until_state(&bot, BotState::Idle).await;
-    t.clock.advance(Duration::from_secs(5));
+    // It waited for the bot to be ready, and went as soon as it was.
     let line = process.wait_lines(1).await.remove(0);
     assert_eq!(line["type"], "user");
     assert_eq!(
@@ -115,8 +114,6 @@ async fn messages_to_one_bot_arrive_in_order() {
     for body in ["one", "two", "three"] {
         send(&mut app, &bot, body).await;
     }
-    t.until_state(&bot, BotState::Idle).await;
-    t.clock.advance(Duration::from_secs(5));
     let lines = process.wait_lines(3).await;
     let texts: Vec<_> = lines.iter().map(text_of).collect();
     assert_eq!(texts, ["one", "two", "three"]);
@@ -162,9 +159,7 @@ async fn what_a_dead_process_never_read_goes_back_until_it_gives_up() {
         (&retried["state"], &retried["attempts"]),
         (&json!("pending"), &json!(0))
     );
-    // The bot was still restarting at the retry: the courier waits 5 s.
-    t.until_state(&bot, BotState::Idle).await;
-    t.clock.advance(Duration::from_secs(5));
+    // The bot was still restarting at the retry: it goes once it is ready.
     let fresh = t.process_of(&bot).await;
     assert_eq!(text_of(&fresh.wait_lines(1).await[0]), "hello");
     let again = app
@@ -259,4 +254,26 @@ async fn invalid_messages_are_refused() {
         .await
         .expect_err("missing");
     assert_eq!(err.code, NOT_FOUND);
+}
+
+#[tokio::test]
+async fn a_message_that_waited_for_the_bot_goes_as_soon_as_it_is_ready() {
+    let t = TestDaemon::start_supervised().await;
+    let mut app = t.session().await;
+    let bot = crew_and_bot(&mut app).await;
+    t.until_state(&bot, BotState::Idle).await;
+    let paused = |paused: bool| json!({ "botId": bot["id"], "paused": paused });
+    app.call("bots.setPaused", paused(true))
+        .await
+        .expect("pause");
+    send(&mut app, &bot, "hello").await;
+    // The courier sees it and puts it off while the bot is paused.
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    app.call("bots.setPaused", paused(false))
+        .await
+        .expect("resume");
+    // The manual clock never moves: the bot being ready is what it waited for.
+    let process = t.runtime.process(2).await;
+    assert_eq!(text_of(&process.wait_lines(1).await[0]), "hello");
 }

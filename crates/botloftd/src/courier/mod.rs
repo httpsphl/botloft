@@ -4,6 +4,7 @@
 
 mod render;
 mod settings;
+mod sleep;
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -16,6 +17,7 @@ use tracing::{debug, warn};
 
 use self::render::{Context, Rendered, render};
 pub use self::settings::CourierSettings;
+use self::sleep::{became_ready, hasten, next_wait};
 use crate::service::tasks;
 use crate::state::{Daemon, Event};
 use crate::{clock, routines};
@@ -45,13 +47,22 @@ impl Courier {
 }
 
 /// Delivers until the daemon stops. Leases left by a previous run are
-/// recovered on the first cycle.
+/// recovered on the first cycle. Between cycles it sleeps until the next
+/// thing comes due, at most `poll_interval`; a new message, a finished
+/// send or a bot becoming ready wakes it sooner.
 pub async fn run(daemon: Arc<Daemon>) {
+    let mut states = daemon.subscribe();
     loop {
         cycle(&daemon);
+        let wait = next_wait(&daemon);
         tokio::select! {
-            () = tokio::time::sleep(daemon.courier.settings.poll_interval) => {}
+            () = tokio::time::sleep(wait) => {}
             () = daemon.courier.wake.notified() => {}
+            ready = became_ready(&mut states) => {
+                if let Some(bot) = ready {
+                    hasten(&daemon, &bot);
+                }
+            }
         }
     }
 }
