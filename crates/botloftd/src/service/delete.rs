@@ -1,10 +1,15 @@
 //! `bots.delete` and `crews.delete` (spec 7.6): removing a bot or a crew
 //! for good, active or archived. Archiving keeps everything in the
-//! database; deleting keeps only the folders on disk (spec 5).
+//! database; deleting keeps only the folders on disk (spec 5), or sends
+//! them to the Recycle Bin when the owner asks.
 
 use botloft_core::ids::{BotId, MessageId};
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+
 use botloft_core::protocol::{
-    BotDeleted, BotIdParams, Crew, CrewDeleted, CrewIdParams, Message, MessageKind, SenderKind,
+    BotDeleted, BotsDeleteParams, Crew, CrewDeleted, CrewsDeleteParams, FolderRecycled, Message,
+    MessageKind, SenderKind,
 };
 use botloft_store::{BotRecord, Store, TaskFilter};
 use tracing::{info, warn};
@@ -13,15 +18,18 @@ use super::messages::post;
 use super::tasks::UNFINISHED;
 use super::{ApiResult, bots, crews, lead};
 use crate::state::{Daemon, Event};
+use crate::{trash, workspace};
 
 /// Deletes the bot: its process stops at once and its conversation,
-/// routines and tasks leave the database. Its folder stays.
-pub fn bot(daemon: &Daemon, params: BotIdParams) -> ApiResult<BotDeleted> {
+/// routines and tasks leave the database. Its folder stays, unless the
+/// owner asked for it to go to the Recycle Bin.
+pub fn bot(daemon: &Daemon, params: BotsDeleteParams) -> ApiResult<BotDeleted> {
     let store = daemon.store();
     let record = bots::find(&store, &params.bot_id)?;
     let crew = crews::find(&store, &record.crew_id)?;
     let notices = task_notices(&store, &crew, &record)?;
     let waiting = store.pending_approvals(&record.id)?;
+    let folder = daemon.paths.bot_workspace(&crew.slug, &record.slug);
     store.delete_bot(&record.id)?;
     stop(daemon, &record.id);
 
@@ -41,12 +49,16 @@ pub fn bot(daemon: &Daemon, params: BotIdParams) -> ApiResult<BotDeleted> {
     daemon.approvals.forget(&waiting);
     release(daemon, &deleted.bot_id);
     info!(bot = %deleted.bot_id, "bot deleted");
+    if params.recycle_folder == Some(true) {
+        recycle(daemon, &crew, folder);
+    }
     Ok(deleted)
 }
 
 /// Deletes the crew with every bot in it, archived ones too. Its folders
-/// stay.
-pub fn crew(daemon: &Daemon, params: CrewIdParams) -> ApiResult<CrewDeleted> {
+/// stay, unless the owner asked for the crew's own folder to go to the
+/// Recycle Bin.
+pub fn crew(daemon: &Daemon, params: CrewsDeleteParams) -> ApiResult<CrewDeleted> {
     let store = daemon.store();
     let crew = crews::find(&store, &params.crew_id)?;
     let bots = store.bots(Some(&crew.id), true)?;
@@ -58,7 +70,9 @@ pub fn crew(daemon: &Daemon, params: CrewIdParams) -> ApiResult<CrewDeleted> {
     for bot in &bots {
         stop(daemon, &bot.id);
     }
-    let deleted = CrewDeleted { crew_id: crew.id };
+    let deleted = CrewDeleted {
+        crew_id: crew.id.clone(),
+    };
     daemon.emit(Event::CrewDeleted(deleted.clone()));
     drop(store);
     daemon.approvals.forget(&waiting);
@@ -66,7 +80,37 @@ pub fn crew(daemon: &Daemon, params: CrewIdParams) -> ApiResult<CrewDeleted> {
         release(daemon, &bot.id);
     }
     info!(crew = %deleted.crew_id, bots = bots.len(), "crew deleted");
+    if params.recycle_folder == Some(true) {
+        recycle(daemon, &crew, daemon.paths.crew_dir(&crew.slug));
+    }
     Ok(deleted)
+}
+
+/// Sends `folder`, which Botloft made for a deleted bot or crew, to the
+/// Recycle Bin, and tells the apps how it went (spec 7.6). A work folder
+/// the owner chose is theirs: a folder that holds it stays.
+fn recycle(daemon: &Daemon, crew: &Crew, folder: PathBuf) {
+    let chosen = crew
+        .work_folder_chosen
+        .then(|| Path::new(&crew.work_folder));
+    // Only ever a folder under the workspaces, never the root of them.
+    let refused = if !workspace::folder::contains(&daemon.paths.workspaces_root, &folder)
+        || workspace::folder::contains(&folder, &daemon.paths.workspaces_root)
+    {
+        Some("it is not one of Botloft's folders")
+    } else if chosen.is_some_and(|chosen| workspace::folder::contains(&folder, chosen)) {
+        Some("the work folder you chose for the crew is inside it")
+    } else {
+        None
+    };
+    if let Some(reason) = refused {
+        daemon.emit(Event::FolderRecycled(FolderRecycled {
+            path: folder.to_string_lossy().into_owned(),
+            error: Some(reason.to_owned()),
+        }));
+        return;
+    }
+    trash::move_away(Arc::clone(&daemon.trash), daemon.events(), folder);
 }
 
 /// Kills the bot's process and closes its browser, profile included.

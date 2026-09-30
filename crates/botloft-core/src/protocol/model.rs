@@ -190,3 +190,41 @@ pub struct Archive {
     pub crews: Vec<Crew>,
     pub bots: Vec<Bot>,
 }
+
+/// Params of `bots.delete` (spec 7.6).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BotsDeleteParams {
+    pub bot_id: BotId,
+    /// Also move the bot's folder to the Recycle Bin; it stays when absent.
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub recycle_folder: Option<bool>,
+}
+
+/// Params of `crews.delete` (spec 7.6).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct CrewsDeleteParams {
+    pub crew_id: CrewId,
+    /// Also move the crew's own folder, with each bot's folder and
+    /// `shared`, to the Recycle Bin; it stays when absent. A work folder
+    /// the owner chose is never moved.
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub recycle_folder: Option<bool>,
+}
+
+/// Params of the `folder.recycled` notification: how the move of a deleted
+/// bot's or crew's folder to the Recycle Bin ended (spec 7.6).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct FolderRecycled {
+    /// Absolute path the folder had.
+    pub path: String,
+    /// Why the folder is still there; `null` when it is in the bin.
+    pub error: Option<String>,
+}

@@ -380,6 +380,40 @@ export type CrewDeleted = { crewId: CrewId, };
 export type Archive = { crews: Array<Crew>, bots: Array<Bot>, };
 
 /**
+ * Params of `bots.delete` (spec 7.6).
+ */
+export type BotsDeleteParams = { botId: BotId, 
+/**
+ * Also move the bot's folder to the Recycle Bin; it stays when absent.
+ */
+recycleFolder?: boolean, };
+
+/**
+ * Params of `crews.delete` (spec 7.6).
+ */
+export type CrewsDeleteParams = { crewId: CrewId, 
+/**
+ * Also move the crew's own folder, with each bot's folder and
+ * `shared`, to the Recycle Bin; it stays when absent. A work folder
+ * the owner chose is never moved.
+ */
+recycleFolder?: boolean, };
+
+/**
+ * Params of the `folder.recycled` notification: how the move of a deleted
+ * bot's or crew's folder to the Recycle Bin ended (spec 7.6).
+ */
+export type FolderRecycled = { 
+/**
+ * Absolute path the folder had.
+ */
+path: string, 
+/**
+ * Why the folder is still there; `null` when it is in the bin.
+ */
+error: string | null, };
+
+/**
  * Who wrote a message.
  */
 export type SenderKind = "owner" | "bot" | "system";
@@ -1011,7 +1045,7 @@ export interface RpcMethods {
   "crews.setWorkFolder": { params: CrewsSetWorkFolderParams; result: Crew };
   "crews.setLead": { params: CrewsSetLeadParams; result: Crew };
   "crews.archive": { params: CrewIdParams; result: Crew };
-  "crews.delete": { params: CrewIdParams; result: CrewDeleted };
+  "crews.delete": { params: CrewsDeleteParams; result: CrewDeleted };
   "archive.list": { params: undefined; result: Archive };
   "bots.list": { params: BotsListParams; result: Array<Bot> };
   "bots.create": { params: BotsCreateParams; result: Bot };
@@ -1020,7 +1054,7 @@ export interface RpcMethods {
   "bots.setPermissionMode": { params: BotsSetPermissionModeParams; result: Bot };
   "bots.setModel": { params: BotsSetModelParams; result: Bot };
   "bots.archive": { params: BotIdParams; result: Bot };
-  "bots.delete": { params: BotIdParams; result: BotDeleted };
+  "bots.delete": { params: BotsDeleteParams; result: BotDeleted };
   "bots.restart": { params: BotsRestartParams; result: Bot };
   "chat.history": { params: ChatHistoryParams; result: Array<ChatItem> };
   "approvals.answer": { params: ApprovalsAnswerParams; result: Approval };
@@ -1054,6 +1088,7 @@ export interface RpcNotifications {
   "bot.changed": Bot;
   "crew.deleted": CrewDeleted;
   "bot.deleted": BotDeleted;
+  "folder.recycled": FolderRecycled;
   "bot.state": BotStateChanged;
   "chat.item": ChatItemChanged;
   "chat.delta": ChatDelta;

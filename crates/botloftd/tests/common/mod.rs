@@ -31,6 +31,7 @@ use botloftd::service::tasks::TaskSettings;
 use botloftd::settings::LiveSettings;
 use botloftd::state::{BotSettings, Daemon, DaemonOptions};
 use botloftd::supervisor::{self, ClaudeSource, SupervisorSettings};
+use botloftd::trash::FakeTrash;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{Value, json};
 use tempfile::TempDir;
@@ -48,6 +49,8 @@ pub struct TestDaemon {
     pub daemon: Arc<Daemon>,
     pub runtime: FakeRuntime,
     pub clock: Arc<ManualClock>,
+    /// Where folders go instead of the Recycle Bin.
+    pub trash: FakeTrash,
     _dir: TempDir,
 }
 
@@ -89,6 +92,7 @@ pub struct Parts {
     pub runtime: FakeRuntime,
     pub clock: Arc<ManualClock>,
     pub paths: Paths,
+    pub trash: FakeTrash,
     pub dir: TempDir,
 }
 
@@ -97,6 +101,7 @@ pub fn new_daemon(settings: SupervisorSettings) -> Parts {
     let paths = Paths::new(dir.path().join("home"), dir.path().join("workspaces"));
     let runtime = FakeRuntime::new();
     let clock = Arc::new(ManualClock::new());
+    let trash = FakeTrash::new(dir.path().join("bin"));
     let daemon = Daemon::new(DaemonOptions {
         paths: paths.clone(),
         port: 45710,
@@ -115,12 +120,14 @@ pub fn new_daemon(settings: SupervisorSettings) -> Parts {
         // Approvals time out fast enough for a test to wait for it.
         settings: LiveSettings::new(None, &Config::default())
             .with_approval_wait(Duration::from_secs(3)),
+        trash: Arc::new(trash.clone()),
     });
     Parts {
         daemon,
         runtime,
         clock,
         paths,
+        trash,
         dir,
     }
 }
@@ -156,6 +163,7 @@ impl TestDaemon {
             daemon: parts.daemon,
             runtime: parts.runtime,
             clock: parts.clock,
+            trash: parts.trash,
             _dir: parts.dir,
         }
     }

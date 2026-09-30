@@ -134,6 +134,7 @@ pub mod notification {
     pub const CREW_DELETED: &str = "crew.deleted";
     pub const BOT_CHANGED: &str = "bot.changed";
     pub const BOT_DELETED: &str = "bot.deleted";
+    pub const FOLDER_RECYCLED: &str = "folder.recycled";
     pub const BOT_STATE: &str = "bot.state";
     pub const CHAT_ITEM: &str = "chat.item";
     pub const CHAT_DELTA: &str = "chat.delta";
