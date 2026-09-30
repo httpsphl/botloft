@@ -125,6 +125,8 @@ fn export_bindings() {
     out.decl::<BotIdParams>();
     out.decl::<BotsRestartParams>();
     out.decl::<BotStateChanged>();
+    out.decl::<BotDeleted>();
+    out.decl::<CrewDeleted>();
     out.decl::<SenderKind>();
     out.decl::<MessageKind>();
     out.decl::<DeliveryState>();
@@ -223,6 +225,13 @@ fn export_bindings() {
         &crew,
     );
     out.method(method::CREWS_ARCHIVE, &out.name::<CrewIdParams>(), &crew);
+    let crew_deleted = out.name::<CrewDeleted>();
+    let bot_deleted = out.name::<BotDeleted>();
+    out.method(
+        method::CREWS_DELETE,
+        &out.name::<CrewIdParams>(),
+        &crew_deleted,
+    );
     out.method(method::BOTS_LIST, &out.name::<BotsListParams>(), &bots);
     out.method(method::BOTS_CREATE, &out.name::<BotsCreateParams>(), &bot);
     out.method(method::BOTS_UPDATE, &out.name::<BotsUpdateParams>(), &bot);
@@ -242,6 +251,11 @@ fn export_bindings() {
         &bot,
     );
     out.method(method::BOTS_ARCHIVE, &out.name::<BotIdParams>(), &bot);
+    out.method(
+        method::BOTS_DELETE,
+        &out.name::<BotIdParams>(),
+        &bot_deleted,
+    );
     out.method(method::BOTS_RESTART, &out.name::<BotsRestartParams>(), &bot);
     out.method(
         method::CHAT_HISTORY,
@@ -304,6 +318,16 @@ fn export_bindings() {
     out.text.push_str("export interface RpcNotifications {\n");
     let _ = writeln!(out.text, "  \"{}\": {crew};", notification::CREW_CHANGED);
     let _ = writeln!(out.text, "  \"{}\": {bot};", notification::BOT_CHANGED);
+    let _ = writeln!(
+        out.text,
+        "  \"{}\": {crew_deleted};",
+        notification::CREW_DELETED
+    );
+    let _ = writeln!(
+        out.text,
+        "  \"{}\": {bot_deleted};",
+        notification::BOT_DELETED
+    );
     let state = out.name::<BotStateChanged>();
     let item = out.name::<ChatItemChanged>();
     let delta = out.name::<ChatDelta>();
