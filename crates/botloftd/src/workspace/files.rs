@@ -7,6 +7,7 @@ use botloft_core::protocol::Crew;
 use botloft_store::BotRecord;
 use serde_json::{Value, json};
 
+use super::memory;
 use crate::paths::permission_rule_path;
 
 /// Longer than the approval timeout, so Claude Code never gives up on a
@@ -14,13 +15,16 @@ use crate::paths::permission_rule_path;
 const MCP_TIMEOUT_MARGIN: Duration = Duration::from_secs(120);
 
 /// `.claude/settings.json` (spec 7.5): keeps the bot out of the daemon's
-/// secrets. Deny rules apply even in a folder nobody trusted.
-pub fn settings_json(botloft_home: &Path) -> Value {
+/// secrets, and the owner's own Claude Code memory out of the bot. Deny
+/// rules apply even in a folder nobody trusted.
+pub fn settings_json(botloft_home: &Path, crew_dir: &Path) -> Value {
     let secrets = permission_rule_path(&botloft_home.join("secrets"));
     json!({
         "permissions": {
             "deny": [format!("Read({secrets}/**)")],
         },
+        // Instruction files above the crew's folder are the owner's.
+        "claudeMdExcludes": memory::excludes_above(crew_dir),
     })
 }
 
@@ -175,10 +179,27 @@ mod tests {
     #[test]
     fn settings_deny_the_secrets_folder_and_nothing_else() {
         let home = Path::new(r"C:\Users\ana\AppData\Local\Botloft");
-        let settings = settings_json(home);
+        let settings = settings_json(home, Path::new("/ws/site"));
         assert_eq!(
-            settings,
-            json!({ "permissions": { "deny": ["Read(//c/Users/ana/AppData/Local/Botloft/secrets/**)"] } })
+            settings["permissions"],
+            json!({ "deny": ["Read(//c/Users/ana/AppData/Local/Botloft/secrets/**)"] })
+        );
+    }
+
+    #[test]
+    fn settings_keep_the_owners_memory_out_of_the_bot() {
+        let settings = settings_json(Path::new("/data"), Path::new("/ws/site"));
+        assert_eq!(
+            settings["claudeMdExcludes"],
+            json!(memory::excludes_above(Path::new("/ws/site")))
+        );
+        assert_eq!(settings["claudeMdExcludes"][0], "/ws/CLAUDE.md");
+        let mut keys: Vec<&String> = settings.as_object().expect("object").keys().collect();
+        keys.sort();
+        assert_eq!(
+            keys,
+            ["claudeMdExcludes", "permissions"],
+            "a new setting needs a line in spec 7.5"
         );
     }
 

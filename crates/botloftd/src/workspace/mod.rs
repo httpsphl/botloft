@@ -4,6 +4,7 @@
 
 mod files;
 pub mod folder;
+mod memory;
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -43,7 +44,7 @@ pub fn prepare_bot(env: WorkspaceEnv<'_>, crew: &Crew, bot: &BotRecord) -> io::R
     }
     write_json(
         &dir.join(".claude").join("settings.json"),
-        &files::settings_json(&env.paths.home),
+        &files::settings_json(&env.paths.home, &env.paths.crew_dir(&crew.slug)),
     )?;
     write_json(
         &dir.join(".botloft").join("mcp.json"),
@@ -143,6 +144,17 @@ mod tests {
             serde_json::from_slice(&std::fs::read(ws.join(".claude/settings.json")).expect("read"))
                 .expect("valid json");
         assert!(settings["permissions"]["deny"].is_array());
+        // Instruction files are skipped from the folder of every crew up,
+        // never in the crew's own folder.
+        assert_eq!(
+            settings["claudeMdExcludes"],
+            serde_json::json!(memory::excludes_above(&paths.crew_dir("site")))
+        );
+        let root = paths.workspaces_root.to_string_lossy().replace('\\', "/");
+        assert_eq!(
+            settings["claudeMdExcludes"][0],
+            format!("{root}/CLAUDE.md").as_str()
+        );
     }
 
     #[test]

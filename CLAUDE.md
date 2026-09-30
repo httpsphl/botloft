@@ -66,6 +66,7 @@ Em dev, use `$env:BOTLOFT_HOME = "$PWD\.dev\home"` (caminho absoluto) no daemon 
 
 - Cada bot é `claude -p` com `stream-json` no stdin e no stdout (spec 7.4, 8, 9.2). O processo fica calado até a primeira mensagem; fechar o stdin o encerra. O formato de entrada não é documentado: qualquer mudança passa por teste real e vai para a seção 19.
 - Bots rodam com `--setting-sources project,local` e `--strict-mcp-config`: nada de hooks, skills, modo de permissão ou MCP pessoais do dono. Aprovações passam pela tool `permission_prompt` do nosso MCP.
+- Essa flag não tira os `CLAUDE.md` das pastas acima do workspace, e `%USERPROFILE%\.claude\CLAUDE.md` é um deles: quem os tira é `claudeMdExcludes` no `settings.json` gerado (spec 7.5). Os padrões usam `C:/Users/...` com as maiúsculas do cwd; a forma `//c/...` das permission rules não casa ali.
 - Servidor MCP por HTTP: o Claude Code aborta a request em 60 s e a chamada em 5 min sem resposta, a menos que o `mcp.json` tenha `timeout` no servidor. A aprovação depende disso.
 - Só o `claude.exe` nativo roda. O `claude.cmd` do npm é recusado: passar por `cmd.exe` estraga o quoting dos argumentos.
 - O bot recebe o ambiente padrão do usuário (`CreateEnvironmentBlock`), nunca o do daemon: em dev o daemon herda variáveis da sessão do Claude Code (`CLAUDE_CODE_MESSAGING_SOCKET`, `ANTHROPIC_BASE_URL`...).
