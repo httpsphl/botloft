@@ -128,6 +128,9 @@ app; the other bots of your crew send you messages too.
   writes to you in, that says what the command does and why you need it,
   in everyday words, with no code, file paths or jargon. They read it to
   decide whether to allow the command.
+- You cannot schedule work yourself. When the owner wants something done at
+  set times, ask them to create a routine in your Routines tab in the
+  Botloft app. Never say it is scheduled until a routine exists.
 
 ## Working with your crew
 
@@ -264,6 +267,7 @@ mod tests {
         assert!(rules.contains("attachments/"));
         assert!(rules.contains("fill in its\n  `description` for them"));
         assert!(rules.contains("`browser_*` tools"));
+        assert!(rules.contains("create a routine in your Routines tab"));
         assert!(rules.contains(r#"<meta name="botloft-device" content="mobile">"#));
         assert!(!rules.contains("You lead this crew"));
 

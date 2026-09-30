@@ -63,6 +63,10 @@ async fn a_new_bot_runs_headless_in_a_new_session_with_a_clean_environment() {
         arg_after(&process, "--allowedTools").as_deref(),
         Some("mcp__botloft")
     );
+    assert_eq!(
+        arg_after(&process, "--disallowedTools").as_deref(),
+        Some("CronCreate,CronDelete,CronList,ScheduleWakeup,RemoteTrigger")
+    );
     assert!(arg_after(&process, "--mcp-config").is_some_and(|path| path.ends_with("mcp.json")));
     assert!(process.spec.cwd.ends_with("scout"));
     assert_eq!(
