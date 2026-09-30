@@ -5,9 +5,7 @@
 use botloft_core::chat::{TOOL_OUTPUT_MAX, clip, tool_file, tool_input_max, tool_summary};
 use botloft_core::command::tool_explanation;
 use botloft_core::ids::BotId;
-use botloft_core::protocol::{
-    ChatBody, ChatDelta, ReplyItem, TokenUsage, ToolItem, ToolStatus, TurnItem,
-};
+use botloft_core::protocol::{ChatBody, ReplyItem, TokenUsage, ToolItem, ToolStatus, TurnItem};
 use serde_json::Value;
 use tracing::{debug, warn};
 
@@ -37,10 +35,7 @@ pub(super) fn apply(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value
         "system" if subtype == Some("status") => context::status(daemon, bot, event),
         "system" if subtype == Some("compact_boundary") => context::compacted(daemon, bot, event),
         "control_response" => control::answered(daemon, bot, event),
-        "stream_event" if !from_subagent => {
-            delta(daemon, bot, event);
-            crate::screens::stream(daemon, bot, event);
-        }
+        "stream_event" if !from_subagent => crate::screens::stream(daemon, bot, event),
         "assistant" if !from_subagent => assistant(daemon, bot, generation, event),
         "user" if event["isReplay"].as_bool() == Some(true) => {
             let uuid = event["uuid"].as_str();
@@ -77,19 +72,19 @@ fn init(daemon: &Daemon, bot: &BotId, event: &Value) {
     }
 }
 
-fn delta(daemon: &Daemon, bot: &BotId, event: &Value) {
+/// The piece of reply text a `stream_event` carries, if that is what it is
+/// (spec 8.3). A subagent's text stays out of the chat.
+pub(super) fn live_text(event: &Value) -> Option<&str> {
+    if event["type"] != "stream_event" || !event["parent_tool_use_id"].is_null() {
+        return None;
+    }
     let inner = &event["event"];
     if inner["type"] != "content_block_delta" || inner["delta"]["type"] != "text_delta" {
-        return;
+        return None;
     }
-    if let Some(text) = inner["delta"]["text"].as_str()
-        && !text.is_empty()
-    {
-        daemon.emit(Event::ChatDelta(ChatDelta {
-            bot_id: bot.clone(),
-            text: text.to_owned(),
-        }));
-    }
+    inner["delta"]["text"]
+        .as_str()
+        .filter(|text| !text.is_empty())
 }
 
 pub(super) fn blocks(event: &Value) -> &[Value] {

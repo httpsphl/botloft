@@ -13,7 +13,7 @@ use tracing::{debug, warn};
 
 use super::slot::{Running, StopIntent};
 use super::{ClaudeStatus, Inner, STABLE_AFTER, Supervisor};
-use crate::chat::{StreamReader, control};
+use crate::chat::{LIVE_TEXT_EVERY, StreamReader, control};
 use crate::platform;
 use crate::runtime::claude::Claude;
 use crate::runtime::{ProcessEvent, SpawnSpec};
@@ -291,19 +291,39 @@ async fn pump(
     mut reader: StreamReader,
     mut events: mpsc::Receiver<ProcessEvent>,
 ) {
+    // When the live text gathered so far goes out (spec 8.3).
+    let mut flush_at: Option<Instant> = None;
     let code = loop {
-        match events.recv().await {
+        let event = tokio::select! {
+            event = events.recv() => event,
+            () = tokio::time::sleep_until(flush_at.unwrap_or_else(Instant::now)),
+                if flush_at.is_some() =>
+            {
+                flush_at = None;
+                if let Some(daemon) = daemon.upgrade() {
+                    reader.flush(&daemon);
+                }
+                continue;
+            }
+        };
+        match event {
             Some(ProcessEvent::Output(data)) => {
                 let Some(daemon) = daemon.upgrade() else {
                     return;
                 };
                 reader.feed(&daemon, &data);
+                if !reader.holds_live_text() {
+                    flush_at = None;
+                } else if flush_at.is_none() {
+                    flush_at = Some(Instant::now() + LIVE_TEXT_EVERY);
+                }
             }
             Some(ProcessEvent::Exited(code)) => break code,
             None => break None,
         }
     };
     if let Some(daemon) = daemon.upgrade() {
+        reader.flush(&daemon);
         daemon
             .supervisor
             .on_exit(&daemon, reader.bot(), reader.generation(), code);

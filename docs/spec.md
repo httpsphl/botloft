@@ -357,7 +357,7 @@ Todo item tem `id` (`cht_`), `botId`, `kind`, `createdAt` e `updatedAt`.
 ### 8.3 Ao vivo
 
 - `chat.item {item, activity}`: item novo ou atualizado (tool que terminou, aprovação respondida). `activity` é a nova linha da conversa na barra lateral, quando mudou.
-- `chat.delta {botId, text}`: pedaço do texto que o bot está escrevendo, na ordem. O app junta os pedaços num balão provisório, trocado pelo `reply` quando ele chega. Um app que conecta no meio de um turno não vê o texto parcial já passado, só o que vier depois e o `reply` final.
+- `chat.delta {botId, text}`: pedaço do texto que o bot está escrevendo, na ordem. O daemon junta os pedaços que chegam em até 40 ms (ou até 4 KB) num só `chat.delta`, e manda o que juntou antes de qualquer outro evento do mesmo bot: um evento por token custava a cada app uma renderização. O app junta os pedaços num balão provisório, trocado pelo `reply` quando ele chega. Um app que conecta no meio de um turno não vê o texto parcial já passado, só o que vier depois e o `reply` final.
 
 ### 8.4 Arquivos do bot
 

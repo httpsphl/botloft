@@ -73,8 +73,12 @@ async fn what_the_bot_prints_becomes_the_chat() {
     p.emit(stream::text("All 12 tests pass.")).await;
     p.emit(stream::result(false)).await;
 
-    assert_eq!(c.app.notification("chat.delta").await["text"], "Run");
-    assert_eq!(c.app.notification("chat.delta").await["text"], "ning.");
+    // Pieces written close together may arrive as one (spec 8.3).
+    let mut live = String::new();
+    while live != "Running." {
+        let delta = c.app.notification("chat.delta").await;
+        live.push_str(delta["text"].as_str().expect("text"));
+    }
     let reply = kind(&mut c.app, "reply").await;
     assert_eq!(reply["item"]["body"]["text"], "Running.");
     assert_eq!(reply["activity"]["text"], "Running.");
