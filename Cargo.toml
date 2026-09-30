@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/botloft-core", "crates/botloft-store", "crates/botloftd", "app/src-tauri"]
+members = ["crates/botloft-core", "crates/botloft-store", "crates/botloftd", "app/src-tauri", "app/src-setup"]
 default-members = ["crates/botloft-core", "crates/botloft-store", "crates/botloftd"]
 
 [workspace.package]

@@ -9,21 +9,11 @@
 
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { root, workspaceVersion } from "./workspace.mjs";
 
-const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const tag = process.env.GITHUB_REF_NAME ?? "";
 const repo = process.env.GITHUB_REPOSITORY ?? "";
-
-function workspaceVersion() {
-  const cargo = readFileSync(join(root, "Cargo.toml"), "utf8");
-  const version = cargo.match(/\[workspace\.package\][^[]*?\nversion = "([^"]+)"/)?.[1];
-  if (!version) {
-    throw new Error("Cargo.toml has no [workspace.package] version");
-  }
-  return version;
-}
 
 function check() {
   const version = workspaceVersion();

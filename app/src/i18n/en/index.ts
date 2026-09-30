@@ -12,6 +12,7 @@ import { messages } from "./messages";
 import { onboarding } from "./onboarding";
 import { routines } from "./routines";
 import { screens } from "./screens";
+import { setup } from "./setup";
 import { shell } from "./shell";
 import { tools } from "./tools";
 import { updates } from "./updates";
@@ -31,6 +32,7 @@ export const en = {
   messages,
   routines,
   screens,
+  setup,
   tools,
 };
 

@@ -1,0 +1,38 @@
+/* The setup window's install bar (spec 15.7): the quiet installer reports
+   no percentage, so a stretch of the accent sweeps across. With less
+   motion the bar stays full and still. */
+
+.setup-progress {
+  position: relative;
+  height: 4px;
+  width: 12rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--sunken);
+}
+
+.setup-progress::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  border-radius: inherit;
+  background: var(--accent);
+  animation: setup-sweep 1.4s ease-in-out infinite;
+}
+
+@keyframes setup-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .setup-progress::after {
+    width: 100%;
+    animation: none;
+  }
+}
