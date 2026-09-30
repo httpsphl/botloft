@@ -86,9 +86,10 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
   };
   const fresh = filesOpen ? 0 : files.files.filter((file) => file.modifiedAt > seenAt).length;
   const routines = useApp(useShallow((state) => routinesOf(state, bot.id)));
+  // A browser at rest is open, but the bot is not using it (spec 21.2).
   const browsing = useApp((state) => {
-    const status = state.browsers[bot.id]?.status;
-    return status === "open" || status === "starting";
+    const browser = state.browsers[bot.id];
+    return browser?.status === "starting" || (browser?.status === "open" && !browser.resting);
   });
   const browserOpen = side === "browser";
   const asking = useApp((state) => Boolean(state.browsers[bot.id]?.ask));

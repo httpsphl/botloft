@@ -16,6 +16,9 @@ export const browser = {
   openOutside: "Open in my browser",
   openFailed: "Could not open the page",
   live: "Live",
+  resting: "Resting",
+  restingWhy: (bot: string) =>
+    `${bot} isn't using the browser, so it rests and costs your computer nothing. It wakes the moment ${bot} or you need it.`,
   loading: "Loading…",
   address: "Address",
   addressHint: "Type an address and press Enter",

@@ -102,6 +102,37 @@ describe("browser panel", () => {
     await waitFor(() => expect(fake.browser.size(scout.id)).toEqual({ width: 1280, height: 800 }));
   });
 
+  test("says when the browser rests, and it is live again once someone uses it", async () => {
+    const { fake, scout } = crew();
+    fake.browser.open(scout.id, "https://example.com/", "Example");
+    await openScout(fake);
+    fireEvent.click(toggle());
+    await waitFor(() => expect(fake.browser.watching).toBe(scout.id));
+    act(() => {
+      fake.browser.frame(scout.id, "AAAA");
+    });
+    expect(within(panel()).getByText("Live")).toBeDefined();
+
+    // The bot's turn ended: the page stays, and the panel says it rests.
+    act(() => {
+      fake.browser.rest(scout.id);
+    });
+    const resting = within(panel()).getByText("Resting");
+    expect(resting.title).toContain("Scout isn't using the browser");
+    expect(within(panel()).queryByText("Live")).toBeNull();
+    expect(within(panel()).getByRole("figure").querySelector("img")).not.toBeNull();
+    // Closed, its button does not say the bot is using it.
+    fireEvent.click(toggle());
+    expect(toggle().getAttribute("aria-label")).toBe("Show browser");
+
+    // The owner's hands wake it.
+    fireEvent.click(toggle());
+    fireEvent.click(await within(panel()).findByRole("button", { name: "Take control" }));
+    expect(await within(panel()).findByText("You are in control")).toBeDefined();
+    expect(within(panel()).queryByText("Resting")).toBeNull();
+    expect(fake.browser.state(scout.id).resting).toBe(false);
+  });
+
   test("opens by itself when the bot starts browsing, and the button marks it once closed", async () => {
     const { fake, scout } = crew();
     await openScout(fake);
