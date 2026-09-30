@@ -6,6 +6,10 @@ use std::path::PathBuf;
 use super::*;
 use crate::platform::windows::CurrentUser;
 
+/// What `canonicalize` puts before a path, which may then pass 260
+/// characters.
+const VERBATIM: &str = r"\\?\";
+
 /// Where the bin keeps what came from `original`: its `$I` record and
 /// the `$R` item itself. `None` if the bin has no such thing.
 fn in_bin(original: &Path) -> Option<(PathBuf, PathBuf)> {
@@ -42,6 +46,15 @@ fn in_bin(original: &Path) -> Option<(PathBuf, PathBuf)> {
     None
 }
 
+/// Where a test's folder `name` goes, under `dir`, in its long form: the
+/// bin records the long path, and the temporary folder may be given in
+/// the short one (`RUNNER~1`).
+fn place(dir: &tempfile::TempDir, name: &str) -> PathBuf {
+    let long = std::fs::canonicalize(dir.path()).expect("long path");
+    let plain = long.to_string_lossy();
+    PathBuf::from(plain.strip_prefix(VERBATIM).unwrap_or(&plain)).join(name)
+}
+
 /// Takes the test's own folder out of the bin, so a test run leaves
 /// nothing behind.
 fn purge(record: &Path, item: &Path) {
@@ -52,7 +65,7 @@ fn purge(record: &Path, item: &Path) {
 #[test]
 fn a_folder_goes_to_the_bin_whole_and_can_be_found_there() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let folder = dir.path().join("botloft-recycle-test");
+    let folder = place(&dir, "botloft-recycle-test");
     std::fs::create_dir_all(folder.join("attachments")).expect("folders");
     std::fs::write(folder.join("CLAUDE.md"), "what the bot learned").expect("file");
     std::fs::write(folder.join("attachments").join("plan.txt"), "plan").expect("file");
@@ -72,7 +85,7 @@ fn a_folder_goes_to_the_bin_whole_and_can_be_found_there() {
 #[test]
 fn a_folder_with_a_file_in_use_stays_until_the_file_is_let_go() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let folder = dir.path().join("botloft-recycle-busy");
+    let folder = place(&dir, "botloft-recycle-busy");
     std::fs::create_dir(&folder).expect("folder");
     let log = folder.join("session.log");
     std::fs::write(&log, "still writing").expect("file");
@@ -105,10 +118,9 @@ fn a_folder_with_very_long_paths_is_moved_whole_or_not_at_all() {
     // 11 moves the folder whole; whatever a Windows does, nothing of it
     // may be lost.
     let dir = tempfile::tempdir().expect("tempdir");
-    let folder = dir.path().join("botloft-recycle-long");
+    let folder = place(&dir, "botloft-recycle-long");
     std::fs::create_dir(&folder).expect("folder");
-    // The verbatim form of the path, which may pass 260 characters.
-    let top = std::fs::canonicalize(&folder).expect("verbatim path");
+    let top = PathBuf::from(format!("{VERBATIM}{}", folder.display()));
     let mut deep = top.clone();
     for _ in 0..8 {
         deep.push("a-folder-name-that-is-forty-characters--");
