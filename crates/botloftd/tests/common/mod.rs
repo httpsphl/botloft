@@ -288,6 +288,13 @@ impl Client {
         }
     }
 
+    /// The notifications named `method` that came before the last one
+    /// waited for, without waiting for more.
+    pub fn queued(&self, method: &str) -> Vec<Value> {
+        let named = self.notifications.iter().filter(|n| n["method"] == method);
+        named.map(|n| n["params"].clone()).collect()
+    }
+
     /// Drops the notifications named `method` that came so far.
     pub fn forget(&mut self, method: &str) {
         self.notifications.retain(|n| n["method"] != method);

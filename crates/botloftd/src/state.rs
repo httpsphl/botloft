@@ -52,7 +52,7 @@ pub enum Event {
 }
 
 /// Events buffered per connection before a slow client is dropped.
-const EVENT_BUFFER: usize = 1024;
+const EVENT_BUFFER: usize = 4096;
 
 /// Settings for what bots may ask of the owner (spec 6, `[bots]`). How
 /// long a request waits for the owner is live: `LiveSettings`.
