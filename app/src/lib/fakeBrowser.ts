@@ -1,10 +1,11 @@
-// The fake daemon's browsers (spec 21.7): each bot's state, the live frames
-// of the one being watched and what the bot does, for the browser panel,
-// the size the panel gives the page (spec 21.3), and the owner's hands in
-// it (spec 21.10).
+// The fake daemon's browsers (spec 21.7): each bot's state and tabs, the
+// live frames of the one being watched and what the bot does, for the
+// browser panel, the size the panel gives the page (spec 21.3), and the
+// owner's hands in it (spec 21.10).
 
 import type { FakeBotloft, Handlers } from "./fake";
-import { conflict } from "./fakeRules";
+import { fitting, PAGE, type PageSize, typed } from "./fakePages";
+import { conflict, invalid, notFound } from "./fakeRules";
 import type {
   ApprovalId,
   BotId,
@@ -13,21 +14,8 @@ import type {
   BrowserFrame,
   BrowserInput,
   BrowserState,
+  BrowserTab,
 } from "./protocol.gen";
-
-/** The page's size: as wide as ever, as tall as the panel's room asks. */
-export interface PageSize {
-  width: number;
-  height: number;
-}
-
-const PAGE: PageSize = { width: 1280, height: 800 };
-
-/** The daemon's rule for the page in a room of the panel (spec 21.3). */
-function fitting(width: number, height: number): PageSize {
-  const tall = Math.floor((PAGE.width * height) / width);
-  return { width: PAGE.width, height: Math.min(2000, Math.max(600, tall)) };
-}
 
 export class FakeBrowser {
   private readonly states = new Map<BotId, BrowserState>();
@@ -38,6 +26,8 @@ export class FakeBrowser {
   readonly watches: (BotId | null)[] = [];
   /** What the owner sent to the page, in order. */
   readonly inputs: BrowserInput[] = [];
+  /** Each time the owner reloaded a bot's page. */
+  readonly reloads: BotId[] = [];
   /** Each bot's page size, while the panel asks for one. */
   private readonly sizes = new Map<BotId, PageSize>();
   /** What draws each bot's page, for the preview. */
@@ -57,7 +47,7 @@ export class FakeBrowser {
         url: null,
         title: null,
         loading: false,
-        tabs: 0,
+        tabs: [],
         error: null,
         control: "bot",
         ask: null,
@@ -75,22 +65,34 @@ export class FakeBrowser {
     return next;
   }
 
-  /** The bot opened a page. */
+  /** Puts `tabs` in the bot's browser, the active one's page on top. */
+  private setTabs(botId: BotId, tabs: BrowserTab[], more: Partial<BrowserState> = {}) {
+    const active = tabs.find((tab) => tab.active);
+    const page = { url: active?.url ?? null, title: active?.title || null };
+    return this.set(botId, { tabs, ...page, ...more });
+  }
+
+  /** A page opened in the active tab; the first tab, if there is none. */
   open(botId: BotId, url: string, title: string): BrowserState {
-    return this.set(botId, { status: "open", url, title, loading: false, tabs: 1, error: null });
+    const tabs = this.state(botId).tabs;
+    const next =
+      tabs.length === 0
+        ? [{ id: this.fake.id("tab"), url, title, active: true }]
+        : tabs.map((tab) => (tab.active ? { ...tab, url, title } : tab));
+    return this.setTabs(botId, next, { status: "open", loading: false, error: null });
+  }
+
+  /** Another tab opened, and became the active one. */
+  openTab(botId: BotId, url: string, title: string): BrowserTab {
+    const tab = { id: this.fake.id("tab"), url, title, active: true };
+    const others = this.state(botId).tabs.map((other) => ({ ...other, active: false }));
+    this.setTabs(botId, [...others, tab]);
+    return tab;
   }
 
   close(botId: BotId): BrowserState {
     this.frames.delete(botId);
-    return this.set(botId, {
-      status: "closed",
-      url: null,
-      title: null,
-      loading: false,
-      tabs: 0,
-      control: "bot",
-      ask: null,
-    });
+    return this.setTabs(botId, [], { status: "closed", loading: false, control: "bot", ask: null });
   }
 
   /** The bot asks the owner for a hand: a request in the chat and in the panel. */
@@ -170,6 +172,13 @@ export class FakeBrowser {
     return this.set(botId, { control: "bot" });
   }
 
+  /** The owner has the watched browser, or the call is refused. */
+  private held(botId: BotId): void {
+    if (this.watching !== botId || this.state(botId).control !== "owner") {
+      throw conflict("take the browser before using it");
+    }
+  }
+
   /** Nobody watches: the page goes back to the size bots work in alone. */
   private unwatch(): void {
     const botId = this.watching;
@@ -189,6 +198,10 @@ export class FakeBrowser {
     | "browser.take"
     | "browser.release"
     | "browser.input"
+    | "browser.reload"
+    | "browser.newTab"
+    | "browser.switchTab"
+    | "browser.open"
   > {
     return {
       "browser.list": () => [...this.states.values()].filter((state) => state.status !== "closed"),
@@ -229,11 +242,49 @@ export class FakeBrowser {
         return this.release() ?? this.state(botId);
       },
       "browser.input": ({ botId, input }) => {
-        if (this.watching !== botId || this.state(botId).control !== "owner") {
-          throw conflict("take the browser before using it");
-        }
+        this.held(botId);
         this.inputs.push(input);
         this.pages.get(botId)?.(input);
+        return null;
+      },
+      "browser.reload": ({ botId }) => {
+        if (this.watching !== botId) {
+          throw conflict("watch this browser before reloading it");
+        }
+        if (this.state(botId).status !== "open") {
+          throw conflict("the browser is not open");
+        }
+        this.reloads.push(botId);
+        this.repaint(botId);
+        return null;
+      },
+      "browser.newTab": ({ botId }) => {
+        this.held(botId);
+        this.openTab(botId, "about:blank", "");
+        this.repaint(botId);
+        return null;
+      },
+      "browser.switchTab": ({ botId, tabId }) => {
+        this.held(botId);
+        const tabs = this.state(botId).tabs;
+        if (!tabs.some((tab) => tab.id === tabId)) {
+          throw notFound("that tab");
+        }
+        this.setTabs(
+          botId,
+          tabs.map((tab) => ({ ...tab, active: tab.id === tabId })),
+        );
+        this.repaint(botId);
+        return null;
+      },
+      "browser.open": ({ botId, url }) => {
+        this.held(botId);
+        const address = typed(url);
+        if (!address) {
+          throw invalid("that is not a web address");
+        }
+        this.open(botId, address, new URL(address).hostname);
+        this.repaint(botId);
         return null;
       },
     };

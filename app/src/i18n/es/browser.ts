@@ -1,5 +1,6 @@
 // El navegador de cada bot (spec 21.8): el panel junto al chat donde el
-// dueño lo mira en vivo, y la tarjeta en la que pide usar un sitio nuevo.
+// dueño lo mira en vivo, sus pestañas y la dirección, y la tarjeta en la
+// que pide usar un sitio nuevo.
 
 import type { Messages } from "../en";
 
@@ -18,6 +19,10 @@ export const browser: Messages["browser"] = {
   live: "En vivo",
   loading: "Cargando…",
   address: "Dirección",
+  addressHint: "Escribe una dirección y pulsa Enter",
+  goFailed: "No se pudo abrir esa dirección",
+  reload: "Recargar",
+  reloadFailed: "No se pudo recargar la página",
   screen: (bot) => `Lo que ve ${bot}`,
   emptyTitle: (bot) => `${bot} todavía no abrió el navegador`,
   emptyBody:
@@ -29,7 +34,14 @@ export const browser: Messages["browser"] = {
   failedBody:
     "Botloft usa Microsoft Edge, que viene con Windows. Comprueba que esté instalado y pide al bot que lo intente de nuevo.",
   details: "Detalles",
-  tabs: (count) => (count === 1 ? "1 pestaña" : `${count} pestañas`),
+  tabs: {
+    label: "Pestañas",
+    blank: "Nueva pestaña",
+    add: "Nueva pestaña",
+    addFailed: "No se pudo abrir una pestaña nueva",
+    switchFailed: "No se pudo cambiar de pestaña",
+    takeFirst: "Toma el control para cambiar de pestaña o abrir una nueva",
+  },
   did: {
     open: (site) => `Abrió ${site}`,
     click: (what) => `Hizo clic en ${what}`,
@@ -55,6 +67,7 @@ export const browser: Messages["browser"] = {
     takeFailed: "No se pudo tomar el navegador",
     holding: "Tienes el control",
     waits: (bot) => `Las acciones de ${bot} en el navegador esperan a que lo devuelvas.`,
+    leaves: (bot) => `${bot} sigue en la pestaña que dejes abierta.`,
     giveBack: (bot) => `Listo, devolver a ${bot}`,
     giveBackFailed: "No se pudo devolver el navegador",
     clickToType: "Haz clic en la pantalla para escribir",

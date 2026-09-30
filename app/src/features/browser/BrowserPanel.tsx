@@ -1,21 +1,22 @@
-// The bot's own browser beside its chat (spec 21.8): the page it is on,
-// live, with its cursor and a line about what it just did. Watching starts
-// when the panel opens and stops when it closes. The owner can take it into
-// their own hands and give it back (spec 21.10).
+// The bot's own browser beside its chat (spec 21.8): its tabs, the address
+// and the page it is on, live, with its cursor and a line about what it
+// just did. Watching starts when the panel opens and stops when it closes.
+// The owner can take it into their own hands and give it back (spec 21.10).
 
-import { ExternalLink, Globe, LoaderCircle, Lock, Maximize2, Minimize2, X } from "lucide-react";
+import { Globe, LoaderCircle, Maximize2, Minimize2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../../i18n";
-import type { Bot, BrowserState } from "../../lib/protocol.gen";
-import { useApp, useHost } from "../../store/context";
+import type { Bot } from "../../lib/protocol.gen";
+import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { SidePanel } from "../../ui/SidePanel";
-import { attempt } from "../../ui/toast";
 import { BotAvatar } from "../bots/BotAvatar";
+import { AddressBar } from "./AddressBar";
 import { AskCallout, HeldBar, TakeBar } from "./HandsBars";
 import { HandsLayer } from "./HandsLayer";
 import { LiveView, useCaption } from "./LiveView";
+import { TabStrip } from "./TabStrip";
 import { useBrowserView } from "./useBrowserView";
 import { useHands } from "./useHands";
 import { useFitPage, useRoom } from "./useRoom";
@@ -53,6 +54,13 @@ export function BrowserPanel({
     height: inside.height - 2 * PAD - UNDER,
   };
   useFitPage(bot, room, watched);
+  // A new tab is blank: the owner says where it goes.
+  const address = useRef<HTMLInputElement>(null);
+  const addTab = async () => {
+    if (await hands.newTab()) {
+      address.current?.focus();
+    }
+  };
   // Taking needs the watch first: the daemon ties the hands to it.
   const taken = useRef(0);
   useEffect(() => {
@@ -88,7 +96,12 @@ export function BrowserPanel({
           <Button variant="ghost" size="sm" icon={X} label={t.close} onClick={onClose} />
         </div>
       </header>
-      {state && (status === "open" || status === "starting") && <AddressBar state={state} />}
+      {state && (status === "open" || status === "starting") && (
+        <>
+          {state.tabs.length > 0 && <TabStrip state={state} hands={hands} onAdd={addTab} />}
+          <AddressBar bot={bot} state={state} hands={hands} field={address} />
+        </>
+      )}
       <div
         ref={body}
         className="flex min-h-0 flex-1 flex-col overflow-y-auto"
@@ -111,7 +124,15 @@ export function BrowserPanel({
         ) : (
           <>
             {live && ask && !hands.held && <AskCallout bot={bot} task={ask} hands={hands} />}
-            {hands.held && <HeldBar bot={bot} task={ask} focused={focused} hands={hands} />}
+            {hands.held && (
+              <HeldBar
+                bot={bot}
+                task={ask}
+                tabs={state?.tabs.length ?? 0}
+                focused={focused}
+                hands={hands}
+              />
+            )}
             <div className="min-h-40 flex-1" style={{ containerType: "size" }}>
               <div className="relative">
                 <LiveView
@@ -157,44 +178,6 @@ export function BrowserPanel({
         )}
       </div>
     </SidePanel>
-  );
-}
-
-function AddressBar({ state }: { state: BrowserState }) {
-  const t = useT().browser;
-  const host = useHost();
-  const url = state.url && state.url !== "about:blank" ? state.url : null;
-  const web = url !== null && /^https?:\/\//i.test(url);
-  const Icon = state.loading ? LoaderCircle : url?.startsWith("https://") ? Lock : Globe;
-  return (
-    <div className="flex h-11 shrink-0 items-center gap-2 border-line border-b px-3">
-      <div className="flex min-w-0 flex-1 items-center gap-2 rounded-full bg-sunken px-3 py-1.5">
-        <Icon
-          aria-label={state.loading ? t.loading : undefined}
-          aria-hidden={!state.loading}
-          size={13}
-          className={`shrink-0 ${state.loading ? "animate-spin text-work" : "text-muted"}`}
-        />
-        <input
-          readOnly
-          type="text"
-          aria-label={t.address}
-          title={url ?? undefined}
-          value={url ?? state.title ?? ""}
-          className="min-w-0 flex-1 truncate bg-transparent font-mono text-ink-soft text-xs outline-none"
-        />
-      </div>
-      {state.tabs > 1 && <span className="shrink-0 text-muted text-xs">{t.tabs(state.tabs)}</span>}
-      {web && url && (
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={ExternalLink}
-          label={t.openOutside}
-          onClick={() => attempt(t.openFailed, () => host.openUrl(url))}
-        />
-      )}
-    </div>
   );
 }
 
