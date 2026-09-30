@@ -1,13 +1,59 @@
-//! The owner's events on the page (spec 21.10), as the DevTools protocol
-//! takes them: mouse and wheel, keys with or without text, and text pasted
-//! or composed.
+//! The owner's events on the page (spec 21.10): which ones make sense, and
+//! each as the DevTools protocol takes it: mouse and wheel, keys with or
+//! without text, and text pasted or composed.
 
 use botloft_core::protocol::{BrowserInput, MouseAction, MouseButton, modifier};
 use serde_json::{Value, json};
 
-use super::BrowserError;
 use super::keys;
 use super::session::Session;
+use super::{BrowserError, Viewport};
+
+/// Longest text the owner sends at once, in characters.
+const TEXT_MAX: usize = 10_000;
+/// Longest key or code name.
+const KEY_MAX: usize = 32;
+/// Farthest one turn of the wheel scrolls, in pixels.
+const WHEEL_MAX: f64 = 10_000.0;
+
+/// Whether an event makes sense on a page of that size.
+pub(super) fn fits(input: &BrowserInput, page: Viewport) -> bool {
+    let on_page = |x: f64, y: f64| page.contains(x, y);
+    let modifiers_ok = |modifiers: u32| modifiers <= 15;
+    match input {
+        BrowserInput::Mouse {
+            x,
+            y,
+            buttons,
+            clicks,
+            modifiers,
+            ..
+        } => on_page(*x, *y) && *buttons <= 7 && *clicks <= 3 && modifiers_ok(*modifiers),
+        BrowserInput::Wheel {
+            x,
+            y,
+            dx,
+            dy,
+            modifiers,
+        } => {
+            on_page(*x, *y)
+                && dx.abs() <= WHEEL_MAX
+                && dy.abs() <= WHEEL_MAX
+                && modifiers_ok(*modifiers)
+        }
+        BrowserInput::Key {
+            key,
+            code,
+            modifiers,
+        } => {
+            !key.is_empty()
+                && key.chars().count() <= KEY_MAX
+                && code.len() <= KEY_MAX
+                && modifiers_ok(*modifiers)
+        }
+        BrowserInput::Text { text } => !text.is_empty() && text.chars().count() <= TEXT_MAX,
+    }
+}
 
 impl Session {
     /// Sends one of the owner's events to the active tab.
@@ -177,6 +223,42 @@ mod tests {
         assert_eq!(back_tab[0]["modifiers"], 8);
         let word = key("Backspace", "Backspace", modifier::CTRL);
         assert_eq!(word[0]["windowsVirtualKeyCode"], 8);
+    }
+
+    #[test]
+    fn events_off_the_page_or_too_big_are_refused() {
+        let mouse = |x: f64, y: f64| BrowserInput::Mouse {
+            action: MouseAction::Down,
+            x,
+            y,
+            button: MouseButton::Left,
+            buttons: 1,
+            clicks: 1,
+            modifiers: 0,
+        };
+        let fits = |input: &BrowserInput| super::fits(input, Viewport::default());
+        assert!(fits(&mouse(640.0, 400.0)));
+        assert!(fits(&mouse(1280.0, 800.0)));
+        assert!(!fits(&mouse(-1.0, 10.0)));
+        assert!(!fits(&mouse(f64::NAN, 10.0)));
+        assert!(!fits(&mouse(10.0, 900.0)));
+        // A taller page takes points further down.
+        let tall = Viewport::fitting(640, 700);
+        assert!(super::fits(&mouse(10.0, 900.0), tall));
+        let long = BrowserInput::Text {
+            text: "x".repeat(TEXT_MAX + 1),
+        };
+        assert!(!fits(&long));
+        let empty = BrowserInput::Text {
+            text: String::new(),
+        };
+        assert!(!fits(&empty));
+        let key = BrowserInput::Key {
+            key: "a".to_owned(),
+            code: "KeyA".to_owned(),
+            modifiers: 16,
+        };
+        assert!(!fits(&key));
     }
 
     #[test]

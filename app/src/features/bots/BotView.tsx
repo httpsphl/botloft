@@ -3,11 +3,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
-import { routinesOf } from "../../store/app";
+import { type BotPanel, routinesOf } from "../../store/app";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
-import { PanelClosing } from "../../ui/panelMotion";
+import { PanelClosing, PanelRestored } from "../../ui/panelMotion";
 import { SidePanel } from "../../ui/SidePanel";
 import { type Tab, Tabs, tabId } from "../../ui/Tabs";
 import { BrowserPanel } from "../browser/BrowserPanel";
@@ -27,7 +27,7 @@ import { useFollowBot } from "./useFollowBot";
 
 type Pane = "chat" | "routines";
 /** What the panel beside the chat shows. */
-type Side = "details" | "files" | "browser" | "screens" | null;
+type Side = BotPanel | null;
 
 /**
  * A bot's conversation and its routines, with its details in a side panel
@@ -35,7 +35,17 @@ type Side = "details" | "files" | "browser" | "screens" | null;
  */
 export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
   const t = useT();
-  const [side, setSide] = useState<Side>(null);
+  // Kept per bot in the store, not here: the panel the owner left open is
+  // back when they come back to the bot, and one they closed stays closed
+  // (spec 15.1).
+  const side = useApp((state) => state.panels[bot.id] ?? null);
+  const keepPanel = useApp((state) => state.setPanel);
+  // The panel that came back is there at once; one opened after it slides.
+  const [restored, setRestored] = useState(side !== null);
+  const setSide = (panel: Side) => {
+    setRestored(false);
+    keepPanel(bot.id, panel);
+  };
   // The panel on screen: the one open, or the last one while it slides
   // closed (spec 15.1).
   const [leaving, setLeaving] = useState<Side>(null);
@@ -116,7 +126,8 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
       setTakeBrowser((count) => count + 1);
     }
   };
-  // The panel follows what the bot starts doing (spec 15.1).
+  // The panel follows what the bot starts doing (spec 15.1), over the one
+  // that came back too.
   useFollowBot({
     bot,
     side,
@@ -166,31 +177,33 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
             <BotRoutines bot={bot} />
           )}
         </div>
-        <PanelClosing.Provider value={closing}>
-          {beside === "details" && <Details bot={bot} onClose={() => setSide(null)} />}
-          {beside === "browser" && (
-            <BrowserPanel bot={bot} take={takeBrowser} onClose={() => setSide(null)} />
-          )}
-          {beside === "screens" && (
-            <ScreensPanel
-              bot={bot}
-              data={screens}
-              path={screenPath}
-              onPath={setScreenPath}
-              onClose={() => setSide(null)}
-            />
-          )}
-          {beside === "files" && (
-            <FilesPanel
-              bot={bot}
-              data={files}
-              since={since}
-              path={shown}
-              onPath={setShown}
-              onClose={toggleFiles}
-            />
-          )}
-        </PanelClosing.Provider>
+        <PanelRestored.Provider value={restored}>
+          <PanelClosing.Provider value={closing}>
+            {beside === "details" && <Details bot={bot} onClose={() => setSide(null)} />}
+            {beside === "browser" && (
+              <BrowserPanel bot={bot} take={takeBrowser} onClose={() => setSide(null)} />
+            )}
+            {beside === "screens" && (
+              <ScreensPanel
+                bot={bot}
+                data={screens}
+                path={screenPath}
+                onPath={setScreenPath}
+                onClose={() => setSide(null)}
+              />
+            )}
+            {beside === "files" && (
+              <FilesPanel
+                bot={bot}
+                data={files}
+                since={since}
+                path={shown}
+                onPath={setShown}
+                onClose={toggleFiles}
+              />
+            )}
+          </PanelClosing.Provider>
+        </PanelRestored.Provider>
       </div>
     </section>
   );

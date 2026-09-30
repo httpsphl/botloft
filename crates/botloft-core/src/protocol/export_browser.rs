@@ -8,17 +8,21 @@ use super::Out;
 pub(super) fn decls(out: &mut Out) {
     out.decl::<BrowserStatus>();
     out.decl::<BrowserControl>();
+    out.decl::<BrowserTab>();
     out.decl::<BrowserState>();
     out.decl::<BrowserFrame>();
     out.decl::<BrowserActionKind>();
     out.decl::<BrowserAction>();
     out.decl::<BrowserView>();
     out.decl::<BrowserWatchParams>();
+    out.decl::<BrowserResizeParams>();
     out.decl::<MouseAction>();
     out.decl::<MouseButton>();
     out.decl::<BrowserInput>();
     out.decl::<BrowserControlParams>();
     out.decl::<BrowserInputParams>();
+    out.decl::<BrowserTabParams>();
+    out.decl::<BrowserOpenParams>();
     out.decl::<ScreenDevice>();
     out.decl::<Screen>();
     out.decl::<ScreensListParams>();
@@ -37,6 +41,11 @@ pub(super) fn methods(out: &mut Out) {
         &out.name::<BrowserView>(),
     );
     out.method(method::BROWSER_UNWATCH, "undefined", "null");
+    out.method(
+        method::BROWSER_RESIZE,
+        &out.name::<BrowserResizeParams>(),
+        "null",
+    );
     let control = out.name::<BrowserControlParams>();
     let state = out.name::<BrowserState>();
     out.method(method::BROWSER_TAKE, &control, &state);
@@ -44,6 +53,18 @@ pub(super) fn methods(out: &mut Out) {
     out.method(
         method::BROWSER_INPUT,
         &out.name::<BrowserInputParams>(),
+        "null",
+    );
+    out.method(method::BROWSER_RELOAD, &control, "null");
+    out.method(method::BROWSER_NEW_TAB, &control, "null");
+    out.method(
+        method::BROWSER_SWITCH_TAB,
+        &out.name::<BrowserTabParams>(),
+        "null",
+    );
+    out.method(
+        method::BROWSER_OPEN,
+        &out.name::<BrowserOpenParams>(),
         "null",
     );
     out.method(

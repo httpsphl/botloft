@@ -40,6 +40,7 @@ impl Supervisor {
             slots,
             tokens,
             sessions,
+            replaced,
             claude,
             ..
         } = inner;
@@ -62,7 +63,13 @@ impl Supervisor {
             .and_then(|(spec, launch)| Ok((self.runtime.spawn(spec)?, launch)));
         match launched {
             Ok((process, launch)) => {
-                sessions.insert(bot.id.clone(), launch.session.clone());
+                // A new conversation is on disk only once it has a turn
+                // (spec 7.3); the one it takes the place of is left behind.
+                if !launch.resumed
+                    && let Some(old) = sessions.remove(&bot.id)
+                {
+                    replaced.push((bot.id.clone(), old));
+                }
                 slot.generation = Some(generation);
                 slot.restart_at = None;
                 slot.fresh_next = false;
@@ -130,7 +137,7 @@ impl Supervisor {
 
         match slot.stop.take() {
             Some(StopIntent::Restart { fresh }) => {
-                slot.fresh_next = fresh;
+                slot.fresh_next |= fresh;
                 slot.restart_at = Some(Instant::now());
             }
             Some(StopIntent::Halt(state)) => {
@@ -160,7 +167,6 @@ impl Supervisor {
 struct Launch {
     token_hash: String,
     resumed: bool,
-    session: String,
 }
 
 /// Command line and environment of spec 7.4, with a fresh bot token.
@@ -195,7 +201,7 @@ fn launch_spec(
     .map(OsString::from)
     .collect();
     args.push(if resumed { "--resume" } else { "--session-id" }.into());
-    args.push(session.clone().into());
+    args.push(session.into());
     for arg in [
         "--setting-sources",
         "project,local",
@@ -248,7 +254,6 @@ fn launch_spec(
         Launch {
             token_hash: TokenHash::of(&token).to_hex(),
             resumed,
-            session,
         },
     ))
 }

@@ -115,3 +115,28 @@ fn files_open_only_inside_the_bot_folders() {
     ));
     assert!(resolve("missing.html", &bot, &folders).is_err());
 }
+
+#[test]
+fn what_the_owner_types_opens_only_as_a_web_address() {
+    let open = |input: &str| typed(input);
+    assert_eq!(
+        open(" example.com "),
+        Some("https://example.com".to_owned())
+    );
+    assert_eq!(
+        open("HTTP://Example.com/a?b=c"),
+        Some("HTTP://Example.com/a?b=c".to_owned())
+    );
+    // A host with a port is not a `scheme:` address.
+    assert_eq!(
+        open("localhost:3000/orders"),
+        Some("https://localhost:3000/orders".to_owned())
+    );
+    assert_eq!(open("javascript:alert(1)"), None);
+    assert_eq!(open("file:///C:/Users/owner/x.html"), None);
+    assert_eq!(open("edge://settings"), None);
+    assert_eq!(open("about:blank"), None);
+    assert_eq!(open("how to bake bread"), None);
+    assert_eq!(open("https://"), None);
+    assert_eq!(open(""), None);
+}

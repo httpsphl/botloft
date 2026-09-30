@@ -38,7 +38,7 @@ pub(super) fn apply(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value
     let from_subagent = !event["parent_tool_use_id"].is_null();
     match kind {
         "system" if subtype == Some("init") => {
-            session(daemon, bot, event);
+            init(daemon, bot, event);
             daemon.supervisor.turn_began(bot, generation);
         }
         "system" if subtype == Some("background_tasks_changed") => {
@@ -72,20 +72,8 @@ fn agent_count(event: &Value) -> u32 {
     u32::try_from(agents).unwrap_or(u32::MAX)
 }
 
-/// Every turn starts with the session id; the next start resumes it.
-fn session(daemon: &Daemon, bot: &BotId, event: &Value) {
-    let Some(session) = event["session_id"].as_str() else {
-        return;
-    };
-    let store = daemon.store();
-    let known = store.session_id(bot).ok().flatten();
-    if known.as_deref() != Some(session)
-        && let Err(err) = store.set_session_id(bot, Some(session))
-    {
-        warn!(bot = %bot, "could not save the session id: {err}");
-    }
-    drop(store);
-    daemon.supervisor.remember_session(bot, session);
+/// Every turn starts with the mode and the model in use (spec 7.4).
+fn init(daemon: &Daemon, bot: &BotId, event: &Value) {
     if let Some(mode) = event["permissionMode"].as_str() {
         service::modes::reported(daemon, bot, mode);
     }
@@ -211,6 +199,7 @@ fn failed_turn(daemon: &Daemon, bot: &BotId, generation: u64, error: &str, event
 
 /// The bot began the turn for a message the courier wrote (spec 9.1).
 fn replay(daemon: &Daemon, bot: &BotId, event: &Value) {
+    super::session::began(daemon, bot, event);
     let Some(uuid) = event["uuid"].as_str() else {
         return;
     };
@@ -303,6 +292,12 @@ fn rate_limit(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
 }
 
 fn result(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
+    // No turn began, so none ended: nothing of this is for the chat.
+    if super::session::missing(event) {
+        debug!(bot = %bot, "Claude Code does not have the conversation to resume");
+        daemon.supervisor.session_missing(bot, generation);
+        return;
+    }
     let failed = event["is_error"].as_bool() == Some(true);
     let error = failed.then(|| {
         event["terminal_reason"]
