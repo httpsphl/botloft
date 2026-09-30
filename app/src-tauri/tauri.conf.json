@@ -37,6 +37,7 @@
   },
   "bundle": {
     "active": true,
+    "publisher": "Botloft",
     "copyright": "Copyright 2026 Phelipe Lorran",
     "targets": [
       "nsis"
