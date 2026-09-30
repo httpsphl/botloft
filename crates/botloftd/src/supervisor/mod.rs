@@ -5,6 +5,7 @@
 //! Lock order: the store lock may be held while taking the supervisor lock
 //! (service calls read states), never the other way around.
 
+mod forget;
 mod reconcile;
 mod relaunch;
 mod settings;
@@ -13,7 +14,7 @@ mod slot;
 mod spawn;
 mod turns;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
 use std::time::Duration;
@@ -64,6 +65,8 @@ struct Inner {
     /// The conversation each bot resumes, as far as this run knows; the
     /// database has it too (spec 7.3).
     sessions: HashMap<BotId, String>,
+    /// Bots that were deleted while this daemon ran (spec 7.6).
+    gone: HashSet<BotId>,
     claude: ClaudeStatus,
     sign_in: sign_in::SignIn,
 }
