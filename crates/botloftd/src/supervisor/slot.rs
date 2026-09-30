@@ -18,11 +18,13 @@ pub(super) struct Slot {
     pub fresh_next: bool,
     /// Why the running process is being killed, if the daemon asked.
     pub stop: Option<StopIntent>,
-    /// Messages written to the process whose turn has not ended yet.
-    pub turns: u32,
-    /// Claude Code is in a turn nobody asked for: a subagent it had running
-    /// finished, and it went on by itself. No message is behind it.
-    pub own_turn: bool,
+    /// The uuids of messages written to the process that Claude Code has
+    /// not taken up yet (no replay with that uuid).
+    pub waiting: Vec<String>,
+    /// Claude Code is in a turn: for a message, or on its own after a
+    /// subagent finished. Messages that arrive meanwhile may join it, so
+    /// one `result` can close the turn of several messages.
+    pub in_turn: bool,
     /// Subagents Claude Code runs in the background, between turns too.
     pub agents: u32,
     /// Permission requests waiting for the owner.
@@ -44,8 +46,8 @@ impl Slot {
             restart_at: None,
             fresh_next: false,
             stop: None,
-            turns: 0,
-            own_turn: false,
+            waiting: Vec::new(),
+            in_turn: false,
             agents: 0,
             approvals: 0,
             limited_until: None,
@@ -55,15 +57,15 @@ impl Slot {
 
     /// Forgets the work of a process that is gone or replaced.
     pub fn clear_work(&mut self) {
-        self.turns = 0;
-        self.own_turn = false;
+        self.waiting.clear();
+        self.in_turn = false;
         self.agents = 0;
         self.approvals = 0;
     }
 
     /// A turn, a subagent or an approval is in progress.
     pub fn has_work(&self) -> bool {
-        self.turns > 0 || self.own_turn || self.agents > 0 || self.approvals > 0
+        !self.waiting.is_empty() || self.in_turn || self.agents > 0 || self.approvals > 0
     }
 
     /// The state that follows from the counters once nothing blocks the bot.
@@ -156,15 +158,15 @@ mod tests {
     fn counters_decide_the_working_state() {
         let mut slot = Slot::new(Backoff::new(Duration::ZERO, Duration::ZERO));
         assert_eq!(slot.working_state(), BotState::Idle);
-        slot.turns = 2;
+        slot.waiting = vec!["a".into(), "b".into()];
         assert_eq!(slot.working_state(), BotState::Busy);
         slot.approvals = 1;
         assert_eq!(slot.working_state(), BotState::NeedsApproval);
 
         let mut slot = Slot::new(Backoff::new(Duration::ZERO, Duration::ZERO));
-        slot.own_turn = true;
+        slot.in_turn = true;
         assert_eq!(slot.working_state(), BotState::Busy);
-        slot.own_turn = false;
+        slot.in_turn = false;
         slot.agents = 1;
         assert_eq!(slot.working_state(), BotState::Busy);
         slot.clear_work();

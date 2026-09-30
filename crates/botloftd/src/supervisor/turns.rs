@@ -41,9 +41,23 @@ impl Supervisor {
     /// by itself. The bot is working all the same.
     pub(crate) fn turn_began(&self, bot: &BotId, generation: u64) {
         self.with_current(bot, generation, |supervisor, slot| {
-            if slot.turns == 0 {
-                slot.own_turn = true;
+            slot.in_turn = true;
+            if slot.is_working() {
+                supervisor.set_state(bot, slot, slot.working_state());
             }
+        });
+    }
+
+    /// Claude Code gave back a user message (`isReplay`, spec 9.1): the
+    /// one written with `uuid`, now in a turn of its own or inside the turn
+    /// already running, which then ends with a single `result` for both.
+    /// `/compact` also gives back its output, with a uuid nobody wrote.
+    pub(crate) fn message_began(&self, bot: &BotId, generation: u64, uuid: Option<&str>) {
+        self.with_current(bot, generation, |supervisor, slot| {
+            if let Some(at) = slot.waiting.iter().position(|w| Some(w.as_str()) == uuid) {
+                slot.waiting.remove(at);
+            }
+            slot.in_turn = true;
             if slot.is_working() {
                 supervisor.set_state(bot, slot, slot.working_state());
             }
@@ -63,14 +77,10 @@ impl Supervisor {
         });
     }
 
-    /// A `result` closed one turn.
+    /// A `result` closed the turn, with every message taken up in it.
     pub(crate) fn turn_ended(&self, bot: &BotId, generation: u64) {
         self.with_current(bot, generation, |supervisor, slot| {
-            if slot.own_turn {
-                slot.own_turn = false;
-            } else {
-                slot.turns = slot.turns.saturating_sub(1);
-            }
+            slot.in_turn = false;
             if slot.is_working() {
                 supervisor.set_state(bot, slot, slot.working_state());
             }

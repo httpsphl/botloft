@@ -30,9 +30,11 @@ async fn turns_and_approvals_drive_the_state() {
     s.daemon.supervisor.approval_closed(&s.bot, generation);
     assert_eq!(s.state(), BotState::Busy);
 
+    process.emit(stream::began("session-1")).await;
     process.emit(stream::result(false)).await;
     tokio::time::sleep(Duration::from_millis(20)).await;
-    assert_eq!(s.state(), BotState::Busy, "one turn is still queued");
+    assert_eq!(s.state(), BotState::Busy, "one message is still waiting");
+    process.emit(stream::began("session-1")).await;
     process.emit(stream::result(false)).await;
     s.until(BotState::Idle).await;
     // News about a process that is gone changes nothing.
@@ -61,6 +63,26 @@ async fn a_turn_claude_code_starts_on_its_own_is_busy() {
     tokio::time::sleep(Duration::from_millis(20)).await;
     assert_eq!(s.state(), BotState::Busy, "the message still has its turn");
     process.emit(stream::init("session-1")).await;
+    process.emit(stream::began("session-1")).await;
+    process.emit(stream::result(false)).await;
+    s.until(BotState::Idle).await;
+}
+
+/// A message written during a turn can join it: Claude Code takes it up
+/// in the running turn, and one `result` ends the work of both.
+#[tokio::test(start_paused = true)]
+async fn a_message_that_joins_the_running_turn_ends_with_it() {
+    let s = setup().await;
+    let process = s.runtime.process(1).await;
+    s.until(BotState::Idle).await;
+
+    s.message("check the inbox");
+    process.emit(stream::began("session-1")).await;
+    process.emit(stream::init("session-1")).await;
+    s.message("a note from another bot");
+    process.emit(stream::began("session-1")).await;
+    tokio::time::sleep(Duration::from_millis(20)).await;
+    assert_eq!(s.state(), BotState::Busy);
     process.emit(stream::result(false)).await;
     s.until(BotState::Idle).await;
 }
@@ -71,6 +93,7 @@ async fn subagents_in_the_background_keep_the_bot_busy() {
     let process = s.runtime.process(1).await;
     s.until(BotState::Idle).await;
     s.message("research this");
+    process.emit(stream::began("session-1")).await;
 
     let tasks = |kinds: &[&str]| {
         let tasks: Vec<_> = kinds
@@ -108,6 +131,7 @@ async fn the_busy_count_follows_turns_approvals_and_crashes() {
     assert_eq!(*busy.borrow(), 0, "waiting for the owner is not working");
     s.daemon.supervisor.approval_closed(&s.bot, generation);
     assert_eq!(*busy.borrow(), 1);
+    process.emit(stream::began("session-1")).await;
     process.emit(stream::result(false)).await;
     s.until(BotState::Idle).await;
     assert_eq!(*busy.borrow(), 0);
@@ -166,6 +190,7 @@ async fn a_rate_limit_holds_the_bot_until_it_resets() {
         }))
         .await;
     s.until(BotState::RateLimited).await;
+    process.emit(stream::began("session-1")).await;
     process.emit(stream::result(true)).await;
     tokio::time::sleep(Duration::from_secs(10)).await;
     assert_eq!(s.state(), BotState::RateLimited);

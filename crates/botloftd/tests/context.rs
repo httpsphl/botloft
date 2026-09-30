@@ -35,6 +35,7 @@ async fn the_size_follows_each_model_request_and_is_asked_again_when_a_turn_ends
     s.until(BotState::Idle).await;
     holds(&process, 22_000, 200_000).await;
     s.message("read the files");
+    process.emit(stream::began("session-1")).await;
 
     let request = |cached: u64| {
         json!({

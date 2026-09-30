@@ -8,11 +8,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use botloft_core::protocol::{
-    BotIdParams, Missed, Overlap, RoutinesCreateParams, RunStatus, Schedule,
+    BotIdParams, MessagesSendParams, Missed, Overlap, RoutinesCreateParams, RunStatus, Schedule,
 };
 use botloft_store::DeliveryOutcome;
 use botloftd::routines;
-use botloftd::service::{ApiError, bots, routines as service};
+use botloftd::service::{ApiError, bots, messages, routines as service};
 use common::routines::*;
 use common::stream;
 
@@ -57,6 +57,34 @@ async fn a_process_that_ends_mid_turn_fails_the_run() {
     process.exit(1).await;
     s.runtime.process(2).await;
     assert_eq!(runs(&s, &routine.id)[0].status, RunStatus::Failed);
+}
+
+/// A message that joins the run's turn ends with it (spec 9.1): the run
+/// is still the turn's, and is done at its `result`.
+#[tokio::test(start_paused = true)]
+async fn a_message_that_joins_the_runs_turn_leaves_the_run_to_it() {
+    let s = routines_setup().await;
+    let routine = create(&s, every(5), Overlap::Skip, Missed::RunOnce);
+    tick_after(&s, 5 * MINUTE);
+    let lines = written(&s, 1).await;
+    let process = s.runtime.process(1).await;
+    process.emit(stream::replay(&lines[0])).await;
+
+    messages::send(
+        &s.daemon,
+        MessagesSendParams {
+            bot_id: s.bot.clone(),
+            body: "one more thing".into(),
+            attachments: None,
+        },
+    )
+    .expect("send");
+    s.clock.advance(Duration::from_secs(5));
+    let lines = written(&s, 2).await;
+    process.emit(stream::replay(&lines[1])).await;
+    process.emit(stream::result(false)).await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    assert_eq!(runs(&s, &routine.id)[0].status, RunStatus::Done);
 }
 
 #[tokio::test(start_paused = true)]

@@ -138,10 +138,11 @@ fn send(
             return None;
         }
     }
-    let outcome = match daemon
-        .supervisor
-        .write_message(&delivery.bot_id, rendered.line.clone())
-    {
+    let outcome = match daemon.supervisor.write_message(
+        &delivery.bot_id,
+        &rendered.uuid,
+        rendered.line.clone(),
+    ) {
         Ok(generation) => {
             debug!(delivery = %delivery.id, bot = %delivery.bot_id, generation, "delivery written");
             DeliveryOutcome::Sent {

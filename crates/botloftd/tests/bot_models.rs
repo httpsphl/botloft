@@ -71,6 +71,7 @@ async fn a_busy_bot_finishes_its_turn_before_changing_model() {
     assert_eq!(s.runtime.processes().len(), 1, "the turn is not cut short");
     assert!(s.daemon.supervisor.relaunch_pending(&s.bot));
 
+    first.emit(stream::began("session-1")).await;
     first.emit(stream::result(false)).await;
     let second = s.runtime.process(2).await;
     assert_eq!(arg_after(&second, "--model").as_deref(), Some("opus"));
@@ -109,6 +110,7 @@ async fn a_model_the_account_cannot_use_is_told_in_the_chat() {
             "There's an issue with the selected model (fable).",
         ))
         .await;
+    process.emit(stream::began("session-1")).await;
     process.emit(stream::result(true)).await;
     s.until(BotState::Idle).await;
 
