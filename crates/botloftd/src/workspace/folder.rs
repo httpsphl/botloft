@@ -62,7 +62,7 @@ fn parts(path: &Path) -> Vec<String> {
 }
 
 /// Whether `outer` is `inner` or one of its parents.
-fn contains(outer: &Path, inner: &Path) -> bool {
+pub(crate) fn contains(outer: &Path, inner: &Path) -> bool {
     let (outer, inner) = (parts(outer), parts(inner));
     inner.len() >= outer.len() && inner[..outer.len()] == outer[..]
 }

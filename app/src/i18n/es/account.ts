@@ -86,6 +86,16 @@ export const account: Messages["account"] = {
     size: "Tamaño",
     sizeHint: "Ctrl+= y Ctrl+- también cambian el tamaño, y Ctrl+0 vuelve al predeterminado.",
     language: "Idioma",
+    archived: "Archivados",
+    archivedIntro:
+      "Los bots y los equipos que archivaste están detenidos y fuera de la vista, y Botloft todavía guarda sus conversaciones. Elimina uno para quitarlo para siempre.",
+    archivedEmpty: "No hay nada archivado.",
+    archivedLoadFailed: "No se pudo cargar lo archivado",
+    archivedCrew: (bots: number, when: string) =>
+      `Equipo · ${bots === 1 ? "1 bot" : `${bots} bots`} · archivado ${when}`,
+    archivedBot: (crew: string, when: string) => `Bot de ${crew} · archivado ${when}`,
+    deleteArchived: "Eliminar",
+    deleteArchivedOne: (name: string) => `Eliminar ${name}`,
     about: "Acerca de",
     claudeCode: (version: string) => `Claude Code ${version}`,
     botloft: (version: string) => `Botloft ${version}`,

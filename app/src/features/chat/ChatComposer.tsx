@@ -20,6 +20,8 @@ import { fileSize } from "../../lib/format";
 import { type Bot, FIELD_LIMITS } from "../../lib/protocol.gen";
 import { prefs, usePref } from "../../shell/prefs";
 import { useApi } from "../../store/context";
+import { ContextMeter } from "./ContextMeter";
+import { EffortPicker } from "./EffortPicker";
 import { rememberImage } from "./images";
 import { ModelPicker } from "./ModelPicker";
 import { ModePicker } from "./ModePicker";
@@ -70,7 +72,7 @@ export function ChatComposer({
   const t = useT();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
-  /** A new mode or model that waits for the bot to finish what it is doing. */
+  /** A new mode, model or effort, or a compaction, that waits for the bot to finish what it is doing. */
   const [later, setLater] = useState<string | null>(null);
   const field = useRef<HTMLTextAreaElement>(null);
   const picker = useRef<HTMLInputElement>(null);
@@ -159,7 +161,7 @@ export function ChatComposer({
           {later}
         </p>
       )}
-      <div className="rounded-2xl border border-line-strong bg-panel shadow-sm transition-colors focus-within:border-muted">
+      <div className="@container rounded-2xl border border-line-strong bg-panel shadow-sm transition-colors focus-within:border-muted">
         {files.files.length > 0 && (
           <ul aria-label={t.chat.composer.filesToSend} className="flex flex-wrap gap-2 px-3 pt-3">
             {files.files.map((file) => (
@@ -181,7 +183,9 @@ export function ChatComposer({
           placeholder={t.chat.composer.placeholder(bot.name)}
           className="block max-h-60 w-full resize-none bg-transparent px-4 pt-3.5 pb-1.5 leading-relaxed outline-none placeholder:text-muted"
         />
-        <div className="flex items-center gap-1 px-2.5 pb-2.5">
+        {/* The meter and the effort open over the row's right edge. In a
+            narrow chat, what is on the right moves to a line of its own. */}
+        <div className="relative flex flex-wrap items-center gap-x-1 gap-y-1 px-2.5 pb-2.5">
           <button
             type="button"
             aria-label={t.chat.composer.attach}
@@ -210,20 +214,24 @@ export function ChatComposer({
               ? t.chat.composer.tooLong(text.length, FIELD_LIMITS.message)
               : text && (enterSends ? t.chat.composer.keys : t.chat.composer.keysWithCtrl)}
           </span>
-          <ModelPicker bot={bot} onLater={setLater} />
-          <button
-            type="submit"
-            aria-label={t.chat.composer.send}
-            disabled={empty || tooLong || busy}
-            className="group/send grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent text-canvas transition-[opacity,transform,background-color] duration-150 hover:opacity-90 active:scale-90 disabled:bg-line-strong disabled:opacity-60"
-          >
-            <ArrowUp
-              aria-hidden
-              size={16}
-              strokeWidth={2.25}
-              className="transition-transform duration-200 group-hover/send:-translate-y-0.5"
-            />
-          </button>
+          <div className="ml-auto flex min-w-0 max-w-full items-center gap-1">
+            <ContextMeter bot={bot} onLater={setLater} />
+            <EffortPicker bot={bot} onLater={setLater} />
+            <ModelPicker bot={bot} onLater={setLater} />
+            <button
+              type="submit"
+              aria-label={t.chat.composer.send}
+              disabled={empty || tooLong || busy}
+              className="group/send grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent text-canvas transition-[opacity,transform,background-color] duration-150 hover:opacity-90 active:scale-90 disabled:bg-line-strong disabled:opacity-60"
+            >
+              <ArrowUp
+                aria-hidden
+                size={16}
+                strokeWidth={2.25}
+                className="transition-transform duration-200 group-hover/send:-translate-y-0.5"
+              />
+            </button>
+          </div>
         </div>
       </div>
       {files.error && (

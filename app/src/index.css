@@ -8,6 +8,7 @@
 @import "./mascot.css";
 @import "./mascot-flame.css";
 @import "./panels.css";
+@import "./effort.css";
 @import "./motion-less.css";
 
 /* Colors are tokens so the light and dark themes swap in one place
@@ -28,6 +29,9 @@
   --warn: #a35f00;
   --danger: #c2372a;
   --idle-state: #6f6f69;
+  /* The check marks of a message the bot has read: a lighter blue than
+     --work, still 3:1 or more on canvas, panel and sunken in both themes. */
+  --read: #1787c9;
   /* The thin edge around a bot's avatar, so light colors hold their shape. */
   --avatar-edge: rgb(0 0 0 / 0.2);
   /* Under menus, pickers and dialogs. */
@@ -50,6 +54,7 @@
   --warn: #f0b24a;
   --danger: #ff6d60;
   --idle-state: #8c8c86;
+  --read: #5cc4f2;
   --avatar-edge: rgb(255 255 255 / 0.14);
   --lift: rgb(0 0 0 / 0.5);
 }
@@ -69,6 +74,7 @@
   --color-warn: var(--warn);
   --color-danger: var(--danger);
   --color-quiet: var(--idle-state);
+  --color-read: var(--read);
   --shadow-lift: 0 12px 32px -8px var(--lift), 0 2px 8px -2px var(--lift);
 }
 

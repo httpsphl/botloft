@@ -87,6 +87,17 @@ export const account = {
     size: "Size",
     sizeHint: "Ctrl+= and Ctrl+- change the size too, and Ctrl+0 goes back to the default.",
     language: "Language",
+    archived: "Archived",
+    archivedIntro:
+      "Bots and crews you archived are stopped and out of sight, and Botloft still keeps their conversations. Delete one to remove it for good.",
+    archivedEmpty: "Nothing is archived.",
+    archivedLoadFailed: "Could not load what is archived",
+    /** `when` is relative, like "2 days ago". */
+    archivedCrew: (bots: number, when: string) =>
+      `Crew · ${bots === 1 ? "1 bot" : `${bots} bots`} · archived ${when}`,
+    archivedBot: (crew: string, when: string) => `Bot in ${crew} · archived ${when}`,
+    deleteArchived: "Delete",
+    deleteArchivedOne: (name: string) => `Delete ${name}`,
     about: "About",
     claudeCode: (version: string) => `Claude Code ${version}`,
     botloft: (version: string) => `Botloft ${version}`,

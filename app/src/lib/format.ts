@@ -76,6 +76,22 @@ export function fileSize(bytes: number): string {
   return `${mb < 10 ? decimal(mb, 1) : Math.round(mb)} MB`;
 }
 
+/** Tokens as the owner reads them: "850", "24.3k", "556k", "1M", "1.2M". */
+export function tokens(count: number): string {
+  if (count < 1000) {
+    return String(count);
+  }
+  const thousands = count / 1000;
+  if (thousands < 100) {
+    return `${decimal(thousands, thousands % 1 < 0.05 ? 0 : 1)}k`;
+  }
+  if (thousands < 999.5) {
+    return `${Math.round(thousands)}k`;
+  }
+  const millions = count / 1_000_000;
+  return `${decimal(millions, Math.abs(millions - Math.round(millions)) < 0.05 ? 0 : 1)}M`;
+}
+
 /** "0.8 s", "42 s", "3 min 5 s". */
 export function duration(ms: number): string {
   const seconds = ms / 1000;

@@ -1,0 +1,44 @@
+/* The effort slider below the chat (spec 15.1): five stops from faster to
+   smarter on a thin track, with a round thumb. */
+
+.effort-slider {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 1.25rem;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.effort-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--line-strong);
+}
+
+.effort-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border: 2px solid var(--panel);
+  border-radius: 999px;
+  background: var(--ink);
+  box-shadow: 0 1px 3px var(--lift);
+  transition: transform 120ms ease-out;
+}
+
+.effort-slider:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+
+/* No level picked and the model's own not known yet: the thumb only waits. */
+.effort-slider[data-unset]::-webkit-slider-thumb {
+  background: var(--muted);
+}
+
+.effort-slider:disabled {
+  cursor: default;
+  opacity: 0.45;
+}

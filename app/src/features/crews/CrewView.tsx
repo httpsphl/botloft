@@ -8,6 +8,7 @@ import {
   Pencil,
   Play,
   Plus,
+  Trash2,
 } from "lucide-react";
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
@@ -27,8 +28,9 @@ import { CrewRoutines } from "../routines/RoutineList";
 import { TaskList } from "../tasks/TaskList";
 import { CrewBots } from "./CrewBots";
 import { CrewDialog } from "./CrewDialog";
+import { DeleteCrew } from "./DeleteCrew";
 
-type Open = "bot" | "rename" | "archive" | { move: string } | null;
+type Open = "bot" | "rename" | "archive" | "delete" | { move: string } | null;
 type Pane = "bots" | "timeline" | "tasks" | "routines";
 
 export function CrewView({ crew }: { crew: Crew }) {
@@ -109,6 +111,7 @@ export function CrewView({ crew }: { crew: Crew }) {
               danger: true,
               onSelect: () => setOpen("archive"),
             },
+            { label: words.delete, icon: Trash2, danger: true, onSelect: () => setOpen("delete") },
           ]}
         />
       </header>
@@ -188,6 +191,7 @@ export function CrewView({ crew }: { crew: Crew }) {
           {words.archiveBody(bots.length)}
         </Confirm>
       )}
+      {open === "delete" && <DeleteCrew crew={crew} bots={bots.length} onClose={close} />}
     </section>
   );
 }

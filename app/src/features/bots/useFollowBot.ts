@@ -4,7 +4,9 @@
 // the design area (spec 22.5), whatever panel was open. Each opens once per
 // start; closing it leaves the button's dot. The browser in the owner's
 // hands is never taken away. The owner can turn this off in Settings
-// (`prefs.followBot`): then only the buttons' dots say so.
+// (`prefs.followBot`): then only the buttons' dots say so. Coming back to a
+// bot is opening it again: the panel the owner left is the one open (the
+// store keeps it), and what opens by itself here takes its place.
 
 import { useEffect, useRef } from "react";
 import type { Bot } from "../../lib/protocol.gen";

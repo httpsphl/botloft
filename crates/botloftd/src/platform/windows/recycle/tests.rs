@@ -1,0 +1,148 @@
+//! The real Recycle Bin: each test checks its folder is in it, then takes
+//! it out again, so a run leaves nothing behind.
+
+use std::path::PathBuf;
+
+use super::*;
+use crate::platform::windows::CurrentUser;
+
+/// What `canonicalize` puts before a path, which may then pass 260
+/// characters.
+const VERBATIM: &str = r"\\?\";
+
+/// Where the bin keeps what came from `original`: its `$I` record and
+/// the `$R` item itself. `None` if the bin has no such thing.
+fn in_bin(original: &Path) -> Option<(PathBuf, PathBuf)> {
+    let sid = CurrentUser::query().ok()?.sid_string().ok()?;
+    let drive = original.components().next()?.as_os_str().to_string_lossy();
+    let bin = PathBuf::from(format!(r"{drive}\$Recycle.Bin\{sid}"));
+    let wanted = original.to_string_lossy().to_lowercase();
+    for entry in std::fs::read_dir(bin).ok()?.flatten() {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let Some(rest) = name.strip_prefix("$I") else {
+            continue;
+        };
+        // Version, size, time, then the length of the path and the
+        // path itself in UTF-16 (the record of Windows 10 and later).
+        let Ok(record) = std::fs::read(entry.path()) else {
+            continue;
+        };
+        let units: Vec<u16> = record
+            .get(28..)
+            .unwrap_or_default()
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|pair| u16::from_le_bytes(*pair))
+            .take_while(|unit| *unit != 0)
+            .collect();
+        if String::from_utf16_lossy(&units).to_lowercase() == wanted {
+            return Some((
+                entry.path(),
+                entry.path().with_file_name(format!("$R{rest}")),
+            ));
+        }
+    }
+    None
+}
+
+/// Where a test's folder `name` goes, under `dir`, in its long form: the
+/// bin records the long path, and the temporary folder may be given in
+/// the short one (`RUNNER~1`).
+fn place(dir: &tempfile::TempDir, name: &str) -> PathBuf {
+    let long = std::fs::canonicalize(dir.path()).expect("long path");
+    let plain = long.to_string_lossy();
+    PathBuf::from(plain.strip_prefix(VERBATIM).unwrap_or(&plain)).join(name)
+}
+
+/// Takes the test's own folder out of the bin, so a test run leaves
+/// nothing behind.
+fn purge(record: &Path, item: &Path) {
+    let _ = std::fs::remove_dir_all(item);
+    let _ = std::fs::remove_file(record);
+}
+
+#[test]
+fn a_folder_goes_to_the_bin_whole_and_can_be_found_there() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let folder = place(&dir, "botloft-recycle-test");
+    std::fs::create_dir_all(folder.join("attachments")).expect("folders");
+    std::fs::write(folder.join("CLAUDE.md"), "what the bot learned").expect("file");
+    std::fs::write(folder.join("attachments").join("plan.txt"), "plan").expect("file");
+
+    recycle(&folder).expect("recycle");
+
+    assert!(!folder.exists(), "the folder left its place");
+    let (record, item) = in_bin(&folder).expect("the folder is in the Recycle Bin");
+    assert_eq!(
+        std::fs::read_to_string(item.join("CLAUDE.md")).expect("kept"),
+        "what the bot learned"
+    );
+    assert!(item.join("attachments").join("plan.txt").is_file());
+    purge(&record, &item);
+}
+
+#[test]
+fn a_folder_with_a_file_in_use_stays_until_the_file_is_let_go() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let folder = place(&dir, "botloft-recycle-busy");
+    std::fs::create_dir(&folder).expect("folder");
+    let log = folder.join("session.log");
+    std::fs::write(&log, "still writing").expect("file");
+    // As a process that has not ended yet holds its files.
+    let held = std::fs::File::open(&log).expect("open");
+
+    let err = recycle(&folder).expect_err("a file is in use");
+    assert_ne!(err.kind(), io::ErrorKind::Unsupported, "worth trying again");
+    assert_eq!(
+        std::fs::read_to_string(&log).expect("kept"),
+        "still writing"
+    );
+
+    drop(held);
+    recycle(&folder).expect("recycle");
+    let (record, item) = in_bin(&folder).expect("the folder is in the Recycle Bin");
+    purge(&record, &item);
+}
+
+#[test]
+fn a_missing_folder_is_an_error() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let err = recycle(&dir.path().join("nothing-here")).expect_err("nothing to move");
+    assert_eq!(err.kind(), io::ErrorKind::NotFound);
+}
+
+#[test]
+fn a_folder_with_very_long_paths_is_moved_whole_or_not_at_all() {
+    // Paths past 260 characters, as a bot's `node_modules` has. Windows
+    // 11 moves the folder whole; whatever a Windows does, nothing of it
+    // may be lost.
+    let dir = tempfile::tempdir().expect("tempdir");
+    let folder = place(&dir, "botloft-recycle-long");
+    std::fs::create_dir(&folder).expect("folder");
+    let top = PathBuf::from(format!("{VERBATIM}{}", folder.display()));
+    let mut deep = top.clone();
+    for _ in 0..8 {
+        deep.push("a-folder-name-that-is-forty-characters--");
+    }
+    std::fs::create_dir_all(&deep).expect("deep folders");
+    let file = deep.join("notes.txt");
+    std::fs::write(&file, "deep").expect("deep file");
+
+    match recycle(&folder) {
+        // Moved whole: it must be in the bin, with the deep file.
+        Ok(()) => {
+            assert!(!folder.exists());
+            let (record, item) = in_bin(&folder).expect("the folder is in the Recycle Bin");
+            let mut kept = std::fs::canonicalize(&item).expect("verbatim path");
+            kept.extend(deep.strip_prefix(&top).expect("under the folder"));
+            let kept = std::fs::read_to_string(kept.join("notes.txt")).expect("deep file");
+            assert_eq!(kept, "deep");
+            purge(&record, &item);
+        }
+        // Refused: nothing was touched.
+        Err(_) => {
+            assert_eq!(std::fs::read_to_string(&file).expect("kept"), "deep");
+        }
+    }
+}

@@ -19,6 +19,20 @@ pub enum BrowserStatus {
     Failed,
 }
 
+/// One of the browser's open tabs.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BrowserTab {
+    /// Names the tab in `browser.switchTab`; means nothing else.
+    pub id: String,
+    /// Empty until the page has one.
+    pub title: String,
+    pub url: String,
+    /// The tab the bot's tools and the owner's hands act on.
+    pub active: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
@@ -30,8 +44,8 @@ pub struct BrowserState {
     pub title: Option<String>,
     /// The active tab is loading a page.
     pub loading: bool,
-    /// Open tabs.
-    pub tabs: u32,
+    /// The open tabs, in the order they opened.
+    pub tabs: Vec<BrowserTab>,
     /// Why it could not start, when `failed`.
     pub error: Option<String>,
     /// Who uses it now (spec 21.10).
@@ -50,7 +64,7 @@ impl BrowserState {
             url: None,
             title: None,
             loading: false,
-            tabs: 0,
+            tabs: Vec::new(),
             error: None,
             control: BrowserControl::Bot,
             ask: None,
@@ -127,4 +141,15 @@ pub struct BrowserView {
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct BrowserWatchParams {
     pub bot_id: BotId,
+}
+
+/// `browser.resize`: the room the app's panel has for the page, in the
+/// app's pixels. The page takes its shape (spec 21.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BrowserResizeParams {
+    pub bot_id: BotId,
+    pub width: u32,
+    pub height: u32,
 }

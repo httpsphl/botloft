@@ -1,7 +1,9 @@
 // The fake daemon's `bots.*` methods, following the daemon's rules for
-// handles, colors, archiving and the notifications each change sends.
+// handles, colors, archiving, deleting and the notifications each change
+// sends.
 
 import type { FakeBotloft, Handlers } from "./fake";
+import { purgeBot } from "./fakeDelete";
 import { checkName, conflict } from "./fakeRules";
 import { AVATAR_PALETTE, type Bot } from "./protocol.gen";
 
@@ -111,6 +113,22 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
         }
       }
       return bot;
+    },
+    "bots.delete": ({ botId, recycleFolder }) => {
+      const bot = fake.bot(botId, false);
+      purgeBot(fake, bot);
+      // A deleted chief leaves its crew without one.
+      const crew = fake.crews.get(bot.crewId);
+      if (crew?.leadBotId === botId) {
+        crew.leadBotId = null;
+        fake.changedCrew(crew);
+      }
+      const deleted = { botId, crewId: bot.crewId };
+      fake.emit({ name: "bot.deleted", params: deleted });
+      if (recycleFolder) {
+        fake.recycle(bot.workspace);
+      }
+      return deleted;
     },
   };
 }

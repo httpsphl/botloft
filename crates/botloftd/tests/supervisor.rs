@@ -86,6 +86,7 @@ async fn a_crash_restarts_with_backoff_in_the_same_session_and_a_new_token() {
     let session = arg_after(&first, "--session-id").expect("session");
     s.message("hi");
     first.emit(stream::init(&session)).await;
+    first.emit(stream::began(&session)).await;
     let old_token = first.env("BOTLOFT_BOT_TOKEN").expect("token");
     let (_, first_generation) = s.daemon.supervisor.status(&s.bot).expect("slot");
 
@@ -116,7 +117,7 @@ async fn a_resumed_session_that_dies_at_once_comes_back_fresh() {
     let s = setup().await;
     let first = s.runtime.process(1).await;
     s.until(BotState::Idle).await;
-    let session = arg_after(&first, "--session-id").expect("session");
+    let session = s.turn(&first).await;
     first.exit(0).await;
 
     let resumed = s.runtime.process(2).await;

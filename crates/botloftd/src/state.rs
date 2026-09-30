@@ -5,8 +5,9 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Instant;
 
 use botloft_core::protocol::{
-    AccountUsage, Bot, BotContextChanged, BotStateChanged, BrowserAction, BrowserState, ChatDelta,
-    ChatItemChanged, Crew, Delivery, Message, Routine, RoutineRun, ScreenDraft, Task,
+    AccountUsage, Bot, BotContextChanged, BotDeleted, BotStateChanged, BrowserAction, BrowserState,
+    ChatDelta, ChatItemChanged, Crew, CrewDeleted, Delivery, FolderRecycled, Message, Routine,
+    RoutineRun, ScreenDraft, Task,
 };
 use botloft_store::Store;
 use tokio::sync::broadcast;
@@ -25,13 +26,17 @@ use crate::secrets::TokenHash;
 use crate::service::tasks::TaskSettings;
 use crate::settings::LiveSettings;
 use crate::supervisor::{Supervisor, SupervisorSettings};
+use crate::trash::Trash;
 use crate::workspace::WorkspaceEnv;
 
 /// Something that changed and every connected app should hear about.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Event {
     CrewChanged(Crew),
+    CrewDeleted(CrewDeleted),
     BotChanged(Bot),
+    BotDeleted(BotDeleted),
+    FolderRecycled(FolderRecycled),
     BotState(BotStateChanged),
     BotContext(BotContextChanged),
     ChatItem(ChatItemChanged),
@@ -83,6 +88,8 @@ pub struct DaemonOptions {
     pub browser: BrowserSettings,
     /// What the owner changes in the app's Settings.
     pub settings: LiveSettings,
+    /// Where a deleted bot's folder goes when the owner asks (spec 7.6).
+    pub trash: Arc<dyn Trash>,
 }
 
 pub struct Daemon {
@@ -97,6 +104,7 @@ pub struct Daemon {
     pub routines: Routines,
     pub browsers: Browsers,
     pub screens: Screens,
+    pub trash: Arc<dyn Trash>,
     pub contexts: Contexts,
     /// Time for everything stored or compared with stored times.
     pub clock: Arc<dyn Clock>,
@@ -133,6 +141,7 @@ impl Daemon {
                 Arc::clone(&options.clock),
             ),
             screens: Screens::default(),
+            trash: options.trash,
             contexts: Contexts::default(),
             clock: options.clock,
             paths: options.paths,
@@ -169,6 +178,11 @@ impl Daemon {
 
     pub fn subscribe(&self) -> broadcast::Receiver<Event> {
         self.events.subscribe()
+    }
+
+    /// A sender for work that outlives the call that started it.
+    pub(crate) fn events(&self) -> broadcast::Sender<Event> {
+        self.events.clone()
     }
 
     pub(crate) fn emit(&self, event: Event) {

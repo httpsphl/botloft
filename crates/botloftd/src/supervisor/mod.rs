@@ -5,15 +5,17 @@
 //! Lock order: the store lock may be held while taking the supervisor lock
 //! (service calls read states), never the other way around.
 
+mod forget;
 mod reconcile;
 mod relaunch;
+mod session;
 mod settings;
 mod sign_in;
 mod slot;
 mod spawn;
 mod turns;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
 use std::time::Duration;
@@ -61,11 +63,15 @@ struct Inner {
     slots: HashMap<BotId, Slot>,
     /// Token hash of each running generation -> its bot.
     tokens: HashMap<String, (BotId, u64)>,
-    /// The conversation each bot resumes, as far as this run knows; the
+    /// The conversation each bot resumes: one Claude Code has on disk. The
     /// database has it too (spec 7.3).
     sessions: HashMap<BotId, String>,
+    /// Bots that were deleted while this daemon ran (spec 7.6).
+    gone: HashSet<BotId>,
     claude: ClaudeStatus,
     sign_in: sign_in::SignIn,
+    /// Conversations a new one took the place of, still in the database.
+    replaced: Vec<(BotId, String)>,
 }
 
 #[derive(Default)]

@@ -6,7 +6,7 @@ use serde_json::{Value, json};
 
 use super::BrowserError;
 use super::keys::{self, Key};
-use super::session::{HEIGHT, Session, WIDTH};
+use super::session::Session;
 
 /// Where an action happened, for the owner's view, and what the bot should
 /// know about it.
@@ -204,10 +204,15 @@ impl Session {
     pub async fn scroll(&self, to: Scroll) -> Result<Done, BrowserError> {
         let (session, _) = self.page()?;
         let marks = self.marks();
-        let center = (f64::from(WIDTH) / 2.0, f64::from(HEIGHT) / 2.0);
+        let screen = self.viewport();
+        let center = (
+            f64::from(screen.width) / 2.0,
+            f64::from(screen.height) / 2.0,
+        );
         let done = match to {
             Scroll::Down | Scroll::Up => {
-                let delta = f64::from(HEIGHT) * 0.8 * if to == Scroll::Down { 1.0 } else { -1.0 };
+                let delta =
+                    f64::from(screen.height) * 0.8 * if to == Scroll::Down { 1.0 } else { -1.0 };
                 let params = json!({
                     "type": "mouseWheel", "x": center.0, "y": center.1, "deltaX": 0, "deltaY": delta,
                 });

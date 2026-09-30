@@ -80,7 +80,8 @@ async fn what_the_bot_prints_becomes_the_chat() {
     assert_eq!(reply["activity"]["text"], "Running.");
     let running = kind(&mut c.app, "tool").await;
     assert_eq!(running["item"]["body"]["status"], "running");
-    assert_eq!(running["item"]["body"]["summary"], "Run the tests");
+    assert_eq!(running["item"]["body"]["summary"], "npm test");
+    assert_eq!(running["item"]["body"]["explanation"], "Run the tests");
     // The app names the tool in the owner's language.
     assert_eq!(running["activity"]["text"], "Run the tests");
     assert_eq!(running["activity"]["tool"], "Bash");

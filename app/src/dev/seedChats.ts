@@ -33,6 +33,18 @@ The report is rebuilt on every visit, and Monday is when everyone opens it.
 
 **Not changing:** the report's layout or its sources.`;
 
+/** The kind of command an owner cannot read at a glance. */
+const CHECK_LINKS = `cd "C:/Work/Research" && python - <<'EOF'
+import re, urllib.request
+
+text = open("week-39-report.md", encoding="utf-8").read()
+for url in sorted(set(re.findall(r"https?://[^\\s)]+", text))):
+    try:
+        urllib.request.urlopen(url, timeout=10)
+    except Exception as error:
+        print("broken:", url, error)
+EOF`;
+
 interface Crew {
   scout: BotId;
   writer: BotId;
@@ -126,12 +138,18 @@ export function seedChats(fake: FakeBotloft, crew: Crew): void {
   talk.read(check.delivery.id);
   at(39);
   chat.reply(crew.reviewer, "I'll run the link checker first, then compare each figure.");
-  const command = JSON.stringify({
-    command: "npm run check-links",
-    description: "Check the links",
+  // A command with what the bot says it is for, and one without (spec 10.1).
+  const why = "Opens every link in the report draft and lists the ones that no longer work";
+  const links = JSON.stringify({ command: CHECK_LINKS, description: why });
+  const flat = CHECK_LINKS.split(/\s+/).join(" ").slice(0, 160);
+  chat.tool(crew.reviewer, "Bash", { summary: flat, explanation: why, input: links });
+  chat.ask(crew.reviewer, "Bash", flat, links, why);
+  const figures = JSON.stringify({ command: "npm run compare-figures -- --section 2" });
+  chat.tool(crew.reviewer, "Bash", {
+    summary: "npm run compare-figures -- --section 2",
+    input: figures,
   });
-  chat.tool(crew.reviewer, "Bash", { summary: "Check the links", input: command });
-  chat.ask(crew.reviewer, "Bash", "npm run check-links", command);
+  chat.ask(crew.reviewer, "Bash", "npm run compare-figures -- --section 2", figures);
   at(12);
   const late = talk.say({
     from: crew.scout,
