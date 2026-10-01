@@ -126,11 +126,17 @@ pub fn file_allowed(url: &str, folders: &[PathBuf]) -> bool {
     is_file(url) && inside(&file_path(url), folders).is_some()
 }
 
-/// The path of a `file:` URL: `file:///C:/a%20b/x.html?q` is `C:/a b/x.html`.
+/// The path of a `file:` URL: `file:///C:/a%20b/x.html?q` is `C:/a b/x.html`
+/// on Windows, and `file:///home/ana/x.html` is `/home/ana/x.html` elsewhere.
 fn file_path(url: &str) -> PathBuf {
     let rest = url.get(5..).unwrap_or_default();
     let rest = rest.split(['?', '#']).next().unwrap_or_default();
-    PathBuf::from(decode(rest.trim_start_matches('/')))
+    let path = decode(rest.trim_start_matches('/'));
+    if cfg!(windows) {
+        PathBuf::from(path)
+    } else {
+        PathBuf::from(format!("/{path}"))
+    }
 }
 
 fn file(path: &Path, base: &Path, folders: &[PathBuf]) -> Result<Place, String> {
@@ -164,13 +170,17 @@ fn inside(path: &Path, folders: &[PathBuf]) -> Option<PathBuf> {
         .then_some(real)
 }
 
-/// `C:\a b\x.html` as `file:///C:/a%20b/x.html`.
+/// `C:\a b\x.html` as `file:///C:/a%20b/x.html`, and `/home/ana/x.html` as
+/// `file:///home/ana/x.html`.
 fn file_url(path: &Path) -> String {
     let text = path.to_string_lossy();
-    let text = text
-        .strip_prefix(r"\\?\")
-        .unwrap_or(&text)
-        .replace('\\', "/");
+    let text = if cfg!(windows) {
+        text.strip_prefix(r"\\?\")
+            .unwrap_or(&text)
+            .replace('\\', "/")
+    } else {
+        text.trim_start_matches('/').to_owned()
+    };
     let mut url = String::from("file:///");
     for byte in text.bytes() {
         match byte {
