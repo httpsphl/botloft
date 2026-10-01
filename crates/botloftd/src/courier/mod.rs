@@ -6,11 +6,12 @@ mod render;
 mod settings;
 mod sleep;
 
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
 use botloft_core::ids::BotId;
-use botloft_core::protocol::{BotState, Delivery, Message, SenderKind};
+use botloft_core::protocol::{BotState, Delivery, Message, SenderKind, Task};
 use botloft_store::{DeliveryOutcome, Store, StoreError};
 use tokio::sync::Notify;
 use tracing::{debug, warn};
@@ -69,36 +70,47 @@ pub async fn run(daemon: Arc<Daemon>) {
 
 /// What to do with a due delivery.
 enum Step {
-    Send(Rendered),
+    Send(Box<Draft>),
     /// The bot cannot take messages yet.
     Wait,
     /// It can never be delivered.
     Drop(&'static str),
 }
 
+/// One pass over the queue. The store is locked step by step, never
+/// while an attachment is read from disk.
 fn cycle(daemon: &Arc<Daemon>) {
     let now = daemon.clock.now_ms();
-    let store = daemon.store();
-    match store.recover_leases(now) {
-        Ok(recovered) => {
-            for delivery in recovered {
-                debug!(delivery = %delivery.id, "a send was cut off; delivering again");
-                daemon.emit(Event::DeliveryChanged(delivery));
+    let due = {
+        let store = daemon.store();
+        match store.recover_leases(now) {
+            Ok(recovered) => {
+                for delivery in recovered {
+                    debug!(delivery = %delivery.id, "a send was cut off; delivering again");
+                    daemon.emit(Event::DeliveryChanged(delivery));
+                }
             }
+            Err(err) => warn!("courier could not recover leases: {err}"),
         }
-        Err(err) => warn!("courier could not recover leases: {err}"),
-    }
-    tasks::expire_overdue(daemon, &store, now);
-    let due = match store.due_deliveries(now) {
-        Ok(due) => due,
-        Err(err) => {
-            warn!("courier could not read the queue: {err}");
-            return;
+        tasks::expire_overdue(daemon, &store, now);
+        match store.due_deliveries(now) {
+            Ok(due) => due,
+            Err(err) => {
+                warn!("courier could not read the queue: {err}");
+                return;
+            }
         }
     };
     for delivery in due {
-        let changed = match prepare(daemon, &store, &delivery, now) {
-            Ok(Step::Send(rendered)) => send(daemon, &store, &delivery, &rendered, now),
+        let store = daemon.store();
+        let changed = match prepare(daemon, &store, &delivery) {
+            Ok(Step::Send(draft)) => {
+                drop(store);
+                // Inline images are read here, with the store free.
+                let rendered = draft.render(now);
+                // Claiming checks the delivery is still waiting.
+                send(daemon, &daemon.store(), &delivery, &rendered, now)
+            }
             Ok(Step::Wait) => {
                 let until = clock::after(now, WAIT_FOR_BOT);
                 finish(&store, &delivery, DeliveryOutcome::Defer { until }, now)
@@ -170,13 +182,8 @@ fn send(
     finish(store, delivery, outcome, now)
 }
 
-/// Decides whether the delivery can go now and renders it.
-fn prepare(
-    daemon: &Daemon,
-    store: &Store,
-    delivery: &Delivery,
-    now: i64,
-) -> Result<Step, StoreError> {
+/// Decides whether the delivery can go now and gathers what it needs.
+fn prepare(daemon: &Daemon, store: &Store, delivery: &Delivery) -> Result<Step, StoreError> {
     let Some(message) = store.message(&delivery.message_id)? else {
         return Ok(Step::Drop("the message no longer exists"));
     };
@@ -204,18 +211,42 @@ fn prepare(
         (SenderKind::Bot, Some(id)) => store.bot(id)?.map(|sender| sender.handle),
         _ => None,
     };
-    let workspace = daemon.paths.bot_workspace(&crew.slug, &bot.slug);
     let routine = routine_context(store, &message)?;
-    let context = Context {
-        crew_name: &crew.name,
-        sender_handle: sender.as_deref(),
-        task: task.as_ref(),
-        workspace: &workspace,
-        routine: routine
-            .as_ref()
-            .map(|(name, scheduled, zone)| (name.as_str(), scheduled.as_str(), zone.as_str())),
-    };
-    Ok(Step::Send(render(&message, &context, now)))
+    Ok(Step::Send(Box::new(Draft {
+        workspace: daemon.paths.bot_workspace(&crew.slug, &bot.slug),
+        message,
+        crew_name: crew.name,
+        sender_handle: sender,
+        task,
+        routine,
+    })))
+}
+
+/// A delivery about to go, read from the store.
+struct Draft {
+    message: Message,
+    crew_name: String,
+    sender_handle: Option<String>,
+    task: Option<Task>,
+    workspace: PathBuf,
+    routine: Option<(String, String, String)>,
+}
+
+impl Draft {
+    /// The line for the bot's stdin; reads the images it inlines.
+    fn render(&self, now: i64) -> Rendered {
+        let context = Context {
+            crew_name: &self.crew_name,
+            sender_handle: self.sender_handle.as_deref(),
+            task: self.task.as_ref(),
+            workspace: &self.workspace,
+            routine: self
+                .routine
+                .as_ref()
+                .map(|(name, scheduled, zone)| (name.as_str(), scheduled.as_str(), zone.as_str())),
+        };
+        render(&self.message, &context, now)
+    }
 }
 
 /// A routine's name, the local time the run is for and the zone.
