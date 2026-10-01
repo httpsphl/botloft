@@ -13,6 +13,7 @@ mod settings;
 mod sign_in;
 mod slot;
 mod spawn;
+mod start;
 mod turns;
 
 use std::collections::{HashMap, HashSet};

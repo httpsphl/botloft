@@ -12,6 +12,8 @@ pub(super) struct Slot {
     /// Generation of the current or last process.
     pub generation: Option<u64>,
     pub running: Option<Running>,
+    /// Its files and process are being made, without the supervisor lock.
+    pub launching: bool,
     pub backoff: Backoff,
     pub restart_at: Option<Instant>,
     /// Start the next process with a new conversation.
@@ -42,6 +44,7 @@ impl Slot {
             state: BotState::Offline,
             generation: None,
             running: None,
+            launching: false,
             backoff,
             restart_at: None,
             fresh_next: false,

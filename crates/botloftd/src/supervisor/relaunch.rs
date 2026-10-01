@@ -17,6 +17,11 @@ impl Supervisor {
         let Some(slot) = inner.slots.get_mut(bot) else {
             return;
         };
+        if slot.launching {
+            // It may have read the settings before they changed.
+            slot.restart_when_idle = true;
+            return;
+        }
         if slot.running.is_none() || slot.stop.is_some() {
             // The next start reads the new settings anyway.
             return;

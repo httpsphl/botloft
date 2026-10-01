@@ -1,7 +1,6 @@
 //! Comparing what runs with what the database says should run.
 
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{BotState, Crew};
@@ -10,10 +9,10 @@ use tokio::time::Instant;
 use tracing::warn;
 
 use super::slot::{Backoff, Slot, StopIntent};
+use super::start::Start;
 use super::{ClaudeSource, ClaudeStatus, Inner, REPROBE_AFTER, Supervisor, SupervisorSettings};
 use crate::platform;
 use crate::runtime::claude::{self, Claude, ClaudeError};
-use crate::state::Daemon;
 
 impl Supervisor {
     /// Starts bots that should run and stops those that should not.
@@ -55,30 +54,36 @@ impl Supervisor {
         for (bot, session) in sessions {
             inner.sessions.entry(bot).or_insert(session);
         }
-        for bot in &bots {
-            if let Some(crew) = crews.get(&bot.crew_id) {
-                self.reconcile_bot(&mut inner, &daemon, crew, bot, now);
-            }
-        }
+        let starts: Vec<Start> = bots
+            .iter()
+            .filter_map(|bot| {
+                let crew = crews.get(&bot.crew_id)?;
+                self.reconcile_bot(&mut inner, crew, bot, now)
+            })
+            .collect();
         drop(inner);
+        // One after another, but nothing else waits for them.
+        for start in starts {
+            self.launch(&daemon, start);
+        }
         self.forget_replaced(&daemon);
     }
 
+    /// Stops what should not run; returns the start of a bot that should.
     fn reconcile_bot(
         &self,
         inner: &mut Inner,
-        daemon: &Arc<Daemon>,
         crew: &Crew,
         bot: &BotRecord,
         now: Instant,
-    ) {
+    ) -> Option<Start> {
         // Deleted after this pass read the database.
         if inner.gone.contains(&bot.id) {
-            return;
+            return None;
         }
         let archived = bot.archived_at.is_some() || crew.archived_at.is_some();
         if archived && !inner.slots.contains_key(&bot.id) {
-            return;
+            return None;
         }
         let wanted = !archived && !bot.paused && !crew.paused;
         let slot = slot_entry(&mut inner.slots, &bot.id, &self.settings);
@@ -99,17 +104,17 @@ impl Supervisor {
                 Some(_) => {}
                 None => self.set_state(&bot.id, slot, target),
             }
-            return;
+            return None;
         }
         // A process on its way out settles first; its exit wakes the loop.
         let waiting = slot.restart_at.is_some_and(|at| at > now);
-        if slot.running.is_some() || slot.stop.is_some() || waiting {
-            return;
+        if slot.running.is_some() || slot.launching || slot.stop.is_some() || waiting {
+            return None;
         }
         if slot.state == BotState::AuthError {
-            return;
+            return None;
         }
-        self.start(inner, daemon, crew, bot);
+        self.plan_start(inner, crew, bot)
     }
 
     /// Earliest scheduled restart, so the run loop can wake for it.

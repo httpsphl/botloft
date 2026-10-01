@@ -9,11 +9,11 @@ use botloft_core::protocol::{BotState, Crew};
 use botloft_store::BotRecord;
 use tokio::sync::mpsc;
 use tokio::time::Instant;
-use tracing::{debug, warn};
+use tracing::debug;
 
-use super::slot::{Running, StopIntent};
-use super::{ClaudeStatus, Inner, STABLE_AFTER, Supervisor};
-use crate::chat::{LIVE_TEXT_EVERY, StreamReader, control};
+use super::slot::StopIntent;
+use super::{Inner, STABLE_AFTER, Supervisor};
+use crate::chat::{LIVE_TEXT_EVERY, StreamReader};
 use crate::platform;
 use crate::runtime::claude::Claude;
 use crate::runtime::{ProcessEvent, SpawnSpec};
@@ -32,89 +32,6 @@ const ADDITIONAL_MEMORY: &str = "CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD";
 const PERMISSION_TOOL: &str = "mcp__botloft__permission_prompt";
 
 impl Supervisor {
-    pub(super) fn start(
-        &self,
-        inner: &mut Inner,
-        daemon: &Arc<Daemon>,
-        crew: &Crew,
-        bot: &BotRecord,
-    ) {
-        let Inner {
-            slots,
-            tokens,
-            sessions,
-            replaced,
-            claude,
-            ..
-        } = inner;
-        let Some(slot) = slots.get_mut(&bot.id) else {
-            return;
-        };
-        let ClaudeStatus::Ready(claude) = claude else {
-            self.set_state(&bot.id, slot, BotState::Offline);
-            return;
-        };
-        let generation = self
-            .next_generation
-            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        let session = if slot.fresh_next {
-            None
-        } else {
-            sessions.get(&bot.id).cloned()
-        };
-        let launched = launch_spec(daemon, crew, bot, claude, session.as_deref())
-            .and_then(|(spec, launch)| Ok((self.runtime.spawn(spec)?, launch)));
-        match launched {
-            Ok((process, launch)) => {
-                // What the session applies and how full it is (spec 9.2);
-                // Claude Code answers as soon as it is up.
-                for ask in [control::settings_request(), control::context_request()] {
-                    let _ = process.control.write(ask);
-                }
-                context::process_started(daemon, &bot.id, launch.resumed);
-                // A new conversation is on disk only once it has a turn
-                // (spec 7.3); the one it takes the place of is left behind.
-                if !launch.resumed
-                    && let Some(old) = sessions.remove(&bot.id)
-                {
-                    replaced.push((bot.id.clone(), old));
-                }
-                slot.generation = Some(generation);
-                slot.restart_at = None;
-                slot.fresh_next = false;
-                slot.clear_work();
-                slot.limited_until = None;
-                slot.restart_when_idle = false;
-                tokens.insert(launch.token_hash.clone(), (bot.id.clone(), generation));
-                slot.running = Some(Running {
-                    control: process.control,
-                    started: Instant::now(),
-                    resumed: launch.resumed,
-                    token_hash: launch.token_hash,
-                    permission_mode: bot.permission_mode,
-                    effort: bot.effort,
-                });
-                self.count_busy(slot.state, BotState::Launching);
-                slot.state = BotState::Launching;
-                self.announce(&bot.id, slot);
-                debug!(bot = %bot.id, generation, pid = ?process.pid, resumed = launch.resumed, "bot started");
-                let reader = StreamReader::new(bot.id.clone(), generation);
-                tokio::spawn(pump(self.daemon.clone(), reader, process.events));
-                tokio::spawn(settle(
-                    self.daemon.clone(),
-                    bot.id.clone(),
-                    generation,
-                    self.settings.ready_after,
-                ));
-            }
-            Err(err) => {
-                warn!(bot = %bot.id, "could not start the bot: {err}");
-                slot.restart_at = Some(Instant::now() + slot.backoff.next_delay());
-                self.set_state(&bot.id, slot, BotState::Backoff);
-            }
-        }
-    }
-
     /// The process of `generation` ended: restart it, or settle if the
     /// daemon stopped it on purpose (spec 7.3). What it had not begun goes
     /// back in the queue, and open approvals expire.
@@ -175,14 +92,14 @@ impl Supervisor {
     }
 }
 
-struct Launch {
-    token_hash: String,
-    resumed: bool,
+pub(super) struct Launch {
+    pub token_hash: String,
+    pub resumed: bool,
 }
 
 /// Command line and environment of spec 7.4, with a fresh bot token.
 /// `session` is the conversation to resume; `None` starts a new one.
-fn launch_spec(
+pub(super) fn launch_spec(
     daemon: &Daemon,
     crew: &Crew,
     bot: &BotRecord,
@@ -278,7 +195,12 @@ fn launch_spec(
 
 /// Claude Code says nothing until the first message, so a process that
 /// is still alive after a moment counts as ready (spec 7.2).
-async fn settle(daemon: Weak<Daemon>, bot: BotId, generation: u64, after: std::time::Duration) {
+pub(super) async fn settle(
+    daemon: Weak<Daemon>,
+    bot: BotId,
+    generation: u64,
+    after: std::time::Duration,
+) {
     tokio::time::sleep(after).await;
     if let Some(daemon) = daemon.upgrade() {
         daemon.supervisor.ready(&bot, generation);
@@ -286,7 +208,7 @@ async fn settle(daemon: Weak<Daemon>, bot: BotId, generation: u64, after: std::t
 }
 
 /// Feeds stdout to the chat until the process exits, then reports it.
-async fn pump(
+pub(super) async fn pump(
     daemon: Weak<Daemon>,
     mut reader: StreamReader,
     mut events: mpsc::Receiver<ProcessEvent>,
