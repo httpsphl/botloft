@@ -20,6 +20,7 @@ struct Installed {
 
 impl Installed {
     fn service(&self, command: &str) -> Output {
+        eprintln!("service {command}");
         Command::new(env!("CARGO_BIN_EXE_botloftd"))
             .arg("--home")
             .arg(&self.home)
@@ -35,8 +36,28 @@ impl Installed {
             String::from_utf8_lossy(&output.stdout),
             String::from_utf8_lossy(&output.stderr)
         );
-        assert!(output.status.success(), "service {command}: {said}");
+        self.check(
+            output.status.success(),
+            &format!("service {command}: {said}"),
+        );
         said
+    }
+
+    /// Fails with the daemon's own log, which says why it did not run.
+    fn check(&self, holds: bool, what: &str) {
+        if holds {
+            return;
+        }
+        let mut logs = String::new();
+        for entry in std::fs::read_dir(self.home.join("logs"))
+            .into_iter()
+            .flatten()
+            .flatten()
+        {
+            logs += &format!("--- {}\n", entry.path().display());
+            logs += &std::fs::read_to_string(entry.path()).unwrap_or_default();
+        }
+        panic!("{what}\n{logs}");
     }
 }
 
@@ -83,42 +104,43 @@ fn the_service_brings_the_daemon_back_until_it_is_stopped() {
     .expect("config");
     let installed = Installed { home: home.clone() };
 
+    let up = |installed: &Installed, what: &str| {
+        installed.check(health::probe(port).is_some(), what);
+    };
     installed.ok("install");
-    assert!(
-        health::probe(port).is_some(),
-        "install waits for the daemon"
-    );
+    up(&installed, "install waits for the daemon");
     let status = installed.ok("status");
-    assert!(status.contains("is installed, running"), "{status}");
+    installed.check(status.contains("is installed, running"), &status);
 
-    // A crash: the service manager starts it again.
-    let pid = daemon_pid(&home).expect("the daemon's pid");
+    eprintln!("a crash");
+    let pid = daemon_pid(&home);
+    installed.check(pid.is_some(), "the daemon's pid");
     Command::new("kill")
-        .args(["-9", &pid])
+        .args(["-9", &pid.unwrap_or_default()])
         .status()
         .expect("kill");
-    assert!(
+    installed.check(
         health::wait(port, STOP_WITHIN, |health| health.is_none()),
-        "the daemon died"
+        "the daemon died",
     );
-    assert!(
+    installed.check(
         health::wait(port, BACK_WITHIN, |health| health.is_some()),
-        "the daemon came back after the crash"
+        "the daemon came back after the crash",
     );
 
     // A stop asked for: it stays stopped.
     installed.ok("stop");
-    assert!(health::probe(port).is_none());
+    installed.check(health::probe(port).is_none(), "stopped");
     std::thread::sleep(Duration::from_secs(15));
-    assert!(health::probe(port).is_none(), "nothing brought it back");
+    installed.check(health::probe(port).is_none(), "nothing brought it back");
 
     // Starting again works from the stopped state.
     installed.ok("restart");
-    assert!(health::probe(port).is_some());
+    up(&installed, "restarted");
 
     let said = installed.ok("uninstall");
-    assert!(said.contains("Deleted the"), "{said}");
-    assert!(health::probe(port).is_none());
+    installed.check(said.contains("Deleted the"), &said);
+    installed.check(health::probe(port).is_none(), "gone after uninstall");
     let status = installed.ok("status");
-    assert!(status.contains("is not installed"), "{status}");
+    installed.check(status.contains("is not installed"), &status);
 }
