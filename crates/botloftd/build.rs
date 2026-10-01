@@ -36,7 +36,18 @@ fn main() {
     let out =
         PathBuf::from(env::var_os("OUT_DIR").expect("cargo sets OUT_DIR")).join("botloftd.rc");
     fs::write(&out, script).expect("cannot write the resource script");
-    if let Err(err) = embed_resource::compile(&out, embed_resource::NONE).manifest_required() {
+    embed(&out);
+}
+
+/// `embed-resource` is a build dependency on Windows hosts only.
+#[cfg(windows)]
+fn embed(script: &std::path::Path) {
+    if let Err(err) = embed_resource::compile(script, embed_resource::NONE).manifest_required() {
         panic!("cannot embed the resources: {err}");
     }
+}
+
+#[cfg(not(windows))]
+fn embed(_script: &std::path::Path) {
+    panic!("the Windows daemon is built on Windows, where its resources can be embedded");
 }

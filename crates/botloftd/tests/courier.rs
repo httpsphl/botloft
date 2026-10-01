@@ -188,15 +188,19 @@ async fn a_message_the_bot_began_is_not_sent_again() {
     assert!(second.input_lines().is_empty());
 }
 
-#[tokio::test]
+// Two workers: the held spawn blocks the supervisor's.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn archiving_a_bot_drops_what_is_still_queued_for_it() {
     let t = TestDaemon::start_supervised().await;
+    // The bot is still starting, so nothing can take the message yet.
+    let (_began, release) = t.runtime.hold_next_spawn();
     let mut app = t.session().await;
     let bot = crew_and_bot(&mut app).await;
     send(&mut app, &bot, "never read").await;
     app.call("bots.archive", json!({ "botId": bot["id"] }))
         .await
         .expect("archive");
+    release.send(()).expect("release");
     t.clock.advance(Duration::from_secs(5));
     let dead = delivery(&mut app, "dead").await;
     assert_eq!(dead["lastError"], "the bot was archived");

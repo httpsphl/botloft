@@ -68,9 +68,17 @@ pub fn user_environment() -> io::Result<Vec<(OsString, OsString)>> {
         .collect())
 }
 
-/// The login name; Unix has no display name to ask for.
+/// The login name; Unix has no display name to ask for. `USER` is missing
+/// in some service and container environments, and the home folder is
+/// named after the login there too.
 pub fn owner_name() -> String {
-    std::env::var("USER").unwrap_or_default()
+    ["USER", "LOGNAME"]
+        .iter()
+        .filter_map(std::env::var_os)
+        .chain(dirs::home_dir().and_then(|home| home.file_name().map(ToOwned::to_owned)))
+        .map(|name| name.to_string_lossy().trim().to_owned())
+        .find(|name| !name.is_empty())
+        .unwrap_or_default()
 }
 
 /// Nothing to leave: Unix never opens a console for the daemon.
@@ -87,8 +95,9 @@ pub fn register_task(_name: &str, _task: &TaskDefinition) -> io::Result<()> {
     Err(no_tasks())
 }
 
+/// Nothing can be installed here yet, so there is never a task to find.
 pub fn find_task(_name: &str) -> io::Result<Option<TaskInfo>> {
-    Err(no_tasks())
+    Ok(None)
 }
 
 pub fn run_task(_name: &str) -> io::Result<()> {
@@ -100,7 +109,7 @@ pub fn stop_task(_name: &str) -> io::Result<()> {
 }
 
 pub fn delete_task(_name: &str) -> io::Result<bool> {
-    Err(no_tasks())
+    Ok(false)
 }
 
 /// There is no Recycle Bin off Windows: the folder stays.

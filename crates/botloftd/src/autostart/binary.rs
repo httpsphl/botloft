@@ -109,6 +109,13 @@ mod tests {
         names
     }
 
+    /// The old copy and the installed binary, in the order `names` gives.
+    fn old_and_installed() -> Vec<String> {
+        let mut names = vec!["botloftd.1.old".to_owned(), EXE_NAME.to_owned()];
+        names.sort();
+        names
+    }
+
     #[test]
     fn copies_once_and_replaces_only_a_different_binary() {
         let dir = tempfile::tempdir().expect("tempdir");
@@ -129,13 +136,13 @@ mod tests {
         let second = install(&source, &bin).expect("update");
         assert!(second.changed);
         assert_eq!(fs::read(&second.path).expect("read"), b"v2");
-        assert_eq!(names(&bin), ["botloftd.1.old".to_owned(), EXE_NAME.into()]);
+        assert_eq!(names(&bin), old_and_installed());
 
         fs::write(&source, b"v3").expect("write");
         install(&source, &bin).expect("update");
         assert_eq!(
             names(&bin),
-            ["botloftd.1.old".to_owned(), EXE_NAME.into()],
+            old_and_installed(),
             "the v1 copy went away and v2 moved aside"
         );
 
