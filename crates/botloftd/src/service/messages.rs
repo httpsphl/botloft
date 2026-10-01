@@ -26,12 +26,16 @@ pub fn send(daemon: &Daemon, params: MessagesSendParams) -> ApiResult<Message> {
         // Files alone are a message too.
         String::new()
     };
-    let store = daemon.store();
-    let (crew, bot) = bots::active(&store, &params.bot_id)?;
+    let (crew, bot) = bots::active(&daemon.store(), &params.bot_id)?;
     let now = daemon.clock.now_ms();
+    // Decoding and writing the files takes a while: the store waits for
+    // nobody meanwhile.
     let workspace = daemon.paths.bot_workspace(&crew.slug, &bot.slug);
     let attachments =
         attachments::save(&workspace, uploads, daemon.bots.attachment_max_bytes, now)?;
+    let store = daemon.store();
+    // Archived or deleted while the files were saved.
+    let (crew, bot) = bots::active(&store, &params.bot_id)?;
     let message = Message {
         id: MessageId::generate(),
         crew_id: crew.id,
