@@ -44,7 +44,10 @@ pnpm dev          # só a UI num navegador comum, com o FakeBotloft (src/dev/pre
 pnpm check        # tsc --noEmit + biome check + vitest run
 pnpm bundle       # instalador NSIS com o sidecar (spec 15.4), em target\release\bundle\nsis
 pnpm bundle:setup # tela de instalação com esse NSIS dentro (spec 15.7), em target\release\bundle\setup
+pnpm local        # compila em release e troca o app e o botloftd do Botloft instalado, sem instalador; `pnpm local --restore` volta o anterior
 ```
+
+O `pnpm local` usa os dados reais (`%LOCALAPPDATA%\Botloft`), não os de dev. As migrations novas rodam no banco real, e um daemon mais antigo deixa de abrir esse banco. O atualizador continua oferecendo releases de versão maior.
 
 Release (spec 15.5): suba a versão em `[workspace.package]` do `Cargo.toml` (e no `app/package.json`), faça merge, crie a tag `vX.Y.Z` e dê push. O workflow `release.yml` abre um release rascunho com a tela de instalação (`-setup.exe`), o instalador do atualizador (`-update.exe`) com o `.sig` e o `latest.json`; o updater só o vê depois de publicado. Os dois `.exe` ganham um atestado de origem (`gh attestation verify`), e as notas do rascunho começam com os SHA-256. `node app/scripts/release.mjs stage` monta esses arquivos localmente para conferir. A assinatura de código passa por `app/scripts/sign.mjs` e só liga com a variável `BOTLOFT_SIGN_THUMBPRINT` (spec 15.5); a política pública fica em `docs/code-signing-policy.md`. A chave privada do updater fica no segredo `TAURI_SIGNING_PRIVATE_KEY`; perdê-la impede atualizar quem já instalou.
 
