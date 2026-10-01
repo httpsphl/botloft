@@ -222,13 +222,16 @@
   animation: caret 0.9s steps(2, jump-none) infinite;
 }
 
-.live-dot {
-  position: relative;
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 9999px;
-  background: var(--danger);
+/* In the components layer, so `absolute` and the like can place it. */
+@layer components {
+  .live-dot {
+    position: relative;
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 9999px;
+    background: var(--danger);
+  }
 }
 
 .live-dot::after {
