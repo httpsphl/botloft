@@ -761,6 +761,11 @@ input: number,
  */
 cacheWrite: number, 
 /**
+ * Of the cache write, the conversation from before written again because
+ * the cache had expired: the daemon's estimate, 0 in older turns.
+ */
+reloaded: number, 
+/**
  * Input read back from the prompt cache (`cache_read_input_tokens`):
  * mostly the conversation so far, and much cheaper than new input.
  */

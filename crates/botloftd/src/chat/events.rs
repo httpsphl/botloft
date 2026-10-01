@@ -209,6 +209,7 @@ fn result(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
         daemon.supervisor.session_missing(bot, generation);
         return;
     }
+    let reloaded = context::reloaded(daemon, bot);
     let failed = event["is_error"].as_bool() == Some(true);
     let error = failed.then(|| {
         event["terminal_reason"]
@@ -224,7 +225,7 @@ fn result(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
             bot,
             ChatBody::Turn(TurnItem {
                 duration_ms: event["duration_ms"].as_u64().unwrap_or_default(),
-                tokens: tokens(&event["usage"]),
+                tokens: tokens(&event["usage"], reloaded),
                 error,
             }),
         );
@@ -236,7 +237,8 @@ fn result(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
 
 /// The turn's tokens from the `usage` of a `result`: the sum of the turn's
 /// requests, not of the whole session like `modelUsage` (spec 8.7, 19).
-fn tokens(usage: &Value) -> Option<TokenUsage> {
+/// `reloaded` is the daemon's own count, part of the cache write.
+fn tokens(usage: &Value, reloaded: u64) -> Option<TokenUsage> {
     if !usage.is_object() {
         return None;
     }
@@ -244,6 +246,7 @@ fn tokens(usage: &Value) -> Option<TokenUsage> {
     Some(TokenUsage {
         input: count("input_tokens"),
         cache_write: count("cache_creation_input_tokens"),
+        reloaded: reloaded.min(count("cache_creation_input_tokens")),
         cache_read: count("cache_read_input_tokens"),
         output: count("output_tokens"),
     })

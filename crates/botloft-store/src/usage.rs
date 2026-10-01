@@ -19,13 +19,15 @@ impl Store {
                     SUM(json_extract(c.data, '$.tokens.input')), \
                     SUM(json_extract(c.data, '$.tokens.cacheWrite')), \
                     SUM(json_extract(c.data, '$.tokens.cacheRead')), \
-                    SUM(json_extract(c.data, '$.tokens.output')) AS output \
+                    SUM(json_extract(c.data, '$.tokens.output')) AS output, \
+                    COALESCE(SUM(json_extract(c.data, '$.tokens.reloaded')), 0) AS reloaded \
              FROM chat_items c JOIN bots b ON b.id = c.bot_id \
              WHERE c.kind = 'turn' AND c.created_at >= ?1 \
                AND json_type(c.data, '$.tokens') = 'object' \
              GROUP BY b.id \
              ORDER BY SUM(json_extract(c.data, '$.tokens.input')) \
-                    + SUM(json_extract(c.data, '$.tokens.cacheWrite')) + output DESC, b.name",
+                    + SUM(json_extract(c.data, '$.tokens.cacheWrite')) - reloaded + output DESC, \
+                    b.name",
         )?;
         let rows = stmt.query_map(params![since], |row| {
             Ok(BotTokens {
@@ -37,6 +39,7 @@ impl Store {
                 tokens: TokenUsage {
                     input: count(row, 5)?,
                     cache_write: count(row, 6)?,
+                    reloaded: count(row, 9)?,
                     cache_read: count(row, 7)?,
                     output: count(row, 8)?,
                 },
@@ -77,6 +80,7 @@ mod tests {
         TokenUsage {
             input,
             cache_write: 100,
+            reloaded: 40,
             cache_read: 5000,
             output,
         }
@@ -107,6 +111,7 @@ mod tests {
             TokenUsage {
                 input: 4,
                 cache_write: 200,
+                reloaded: 80,
                 cache_read: 10_000,
                 output: 6,
             }

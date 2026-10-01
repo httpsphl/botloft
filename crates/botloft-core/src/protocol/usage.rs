@@ -15,6 +15,10 @@ pub struct TokenUsage {
     pub input: u64,
     /// New input also written to the prompt cache (`cache_creation_input_tokens`).
     pub cache_write: u64,
+    /// Of the cache write, the conversation from before written again because
+    /// the cache had expired: the daemon's estimate, 0 in older turns.
+    #[serde(default)]
+    pub reloaded: u64,
     /// Input read back from the prompt cache (`cache_read_input_tokens`):
     /// mostly the conversation so far, and much cheaper than new input.
     pub cache_read: u64,
@@ -26,6 +30,7 @@ impl TokenUsage {
     pub fn add(&mut self, other: &Self) {
         self.input += other.input;
         self.cache_write += other.cache_write;
+        self.reloaded += other.reloaded;
         self.cache_read += other.cache_read;
         self.output += other.output;
     }
