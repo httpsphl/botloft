@@ -50,7 +50,10 @@ pub fn locate(configured: &str, env: &[(OsString, OsString)]) -> Result<PathBuf,
         .find(|(name, _)| name.to_string_lossy().eq_ignore_ascii_case("PATH"))
         .map(|(_, value)| value.clone())
         .unwrap_or_default();
-    for dir in path_entries(&path_var.to_string_lossy()) {
+    let dirs: Vec<PathBuf> = path_entries(&path_var.to_string_lossy())
+        .chain(usual_places(env))
+        .collect();
+    for dir in dirs {
         for name in CANDIDATES {
             let candidate = dir.join(name);
             if candidate.is_file() {
@@ -70,6 +73,25 @@ fn path_entries(path: &str) -> impl Iterator<Item = PathBuf> + '_ {
         .map(|entry| entry.trim().trim_matches('"'))
         .filter(|entry| !entry.is_empty())
         .map(PathBuf::from)
+}
+
+/// Where installers put Claude Code off Windows, for a profile that never
+/// added it to `PATH`: the native installer, the older local install and
+/// Homebrew.
+fn usual_places(env: &[(OsString, OsString)]) -> Vec<PathBuf> {
+    if cfg!(windows) {
+        return Vec::new();
+    }
+    let home = env
+        .iter()
+        .find(|(name, _)| name == "HOME")
+        .map(|(_, value)| PathBuf::from(value));
+    let mut places: Vec<PathBuf> = home
+        .iter()
+        .flat_map(|home| [home.join(".local/bin"), home.join(".claude/local")])
+        .collect();
+    places.extend(["/opt/homebrew/bin", "/usr/local/bin"].map(PathBuf::from));
+    places
 }
 
 #[cfg(windows)]
@@ -259,5 +281,19 @@ mod tests {
         let env = vec![(OsString::from("Path"), dir.path().as_os_str().to_owned())];
         assert_eq!(locate("", &env).expect("found"), exe);
         assert!(matches!(locate("", &[]), Err(ClaudeError::NotFound)));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn finds_the_native_install_off_path() {
+        let home = tempfile::tempdir().expect("tempdir");
+        let bin = home.path().join(".local/bin");
+        std::fs::create_dir_all(&bin).expect("bin");
+        std::fs::write(bin.join("claude"), b"").expect("fake claude");
+        let env = vec![
+            (OsString::from("PATH"), OsString::from("/nowhere")),
+            (OsString::from("HOME"), home.path().as_os_str().to_owned()),
+        ];
+        assert_eq!(locate("", &env).expect("found"), bin.join("claude"));
     }
 }

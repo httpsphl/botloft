@@ -11,7 +11,7 @@ use tokio::sync::OwnedMutexGuard;
 use tracing::debug;
 
 use super::session::{Hooks, PageInfo, Session};
-use super::{BrowserError, Browsers, launch, lock, update, watch};
+use super::{BrowserError, Browsers, lock, program, update, watch};
 
 pub struct Call<'a> {
     pub(super) browsers: &'a Browsers,
@@ -39,7 +39,7 @@ impl Call<'_> {
             state.error = None;
         });
         let start = browsers.starts.fetch_add(1, Ordering::Relaxed);
-        let started = match launch::find(&browsers.settings.path) {
+        let started = match program::find(&browsers.settings.path) {
             None => Err(BrowserError::NotFound),
             Some(program) => {
                 let profile = browsers.profiles.join(bot.as_str());

@@ -1,9 +1,10 @@
-//! Starting a bot's browser (spec 21.2): find Edge, run it without a window
-//! in a job of its own, and read where its DevTools listen.
+//! Starting a bot's browser (spec 21.2): run it without a window in a job
+//! of its own, and read where its DevTools listen.
 
-use std::io;
-use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
+use std::io::{self, BufRead as _, BufReader};
+use std::path::Path;
+use std::process::{Child, ChildStderr, Command, Stdio};
+use std::sync::{Arc, Mutex, mpsc};
 use std::time::{Duration, Instant};
 
 use tracing::debug;
@@ -11,9 +12,12 @@ use tracing::debug;
 use super::BrowserError;
 use crate::platform::{self, ProcessJob};
 
-/// How long Edge may take to write `DevToolsActivePort`.
-const START_TIMEOUT: Duration = Duration::from_secs(10);
+/// How long the browser may take to write `DevToolsActivePort`. Usually
+/// under a second; Edge's first start on a new Linux machine took over 20.
+const START_TIMEOUT: Duration = Duration::from_secs(30);
 const PORT_FILE: &str = "DevToolsActivePort";
+/// Longest stderr line passed on as the reason a browser stopped.
+const REASON_MAX: usize = 300;
 
 /// The browser's process tree. Dropping it kills every process in it.
 pub struct BrowserProcess {
@@ -33,26 +37,6 @@ impl Drop for BrowserProcess {
     fn drop(&mut self) {
         self.kill();
     }
-}
-
-/// The browser to run: `configured`, or the Edge that comes with Windows.
-pub fn find(configured: &str) -> Option<PathBuf> {
-    let configured = configured.trim();
-    if !configured.is_empty() {
-        let path = PathBuf::from(configured);
-        return path.is_file().then_some(path);
-    }
-    ["ProgramFiles(x86)", "ProgramFiles", "LOCALAPPDATA"]
-        .iter()
-        .filter_map(std::env::var_os)
-        .map(|base| {
-            PathBuf::from(base)
-                .join("Microsoft")
-                .join("Edge")
-                .join("Application")
-                .join("msedge.exe")
-        })
-        .find(|path| path.is_file())
 }
 
 /// Starts `program` with the profile in `profile` and returns it with the
@@ -88,20 +72,16 @@ pub async fn launch(
         .envs(env.iter().map(|(name, value)| (name, value)))
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::null());
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt as _;
-        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-        command.creation_flags(CREATE_NO_WINDOW);
-    }
+        .stderr(Stdio::piped());
+    ProcessJob::prepare(&mut command);
     let job = ProcessJob::new()?;
-    let child = command.spawn()?;
-    #[cfg(windows)]
-    {
-        use std::os::windows::io::AsRawHandle as _;
-        job.assign(child.as_raw_handle())?;
+    let mut child = command.spawn()?;
+    if let Err(err) = job.assign(&child) {
+        let _ = child.kill();
+        let _ = child.wait();
+        return Err(err.into());
     }
+    let said = child.stderr.take().map(StartLog::read);
     let mut process = BrowserProcess { child, job };
     debug!(pid = process.child.id(), "browser: started");
 
@@ -114,17 +94,92 @@ pub async fn launch(
             return Ok((process, url));
         }
         if process.child.try_wait()?.is_some() {
-            return Err(BrowserError::Start(
-                "the browser closed right after starting".to_owned(),
-            ));
+            // Its helpers may still hold stderr open until the group dies.
+            process.kill();
+            if let Some(said) = &said {
+                let _ = said.ended.recv_timeout(Duration::from_secs(1));
+            }
+            return Err(BrowserError::Start(format!(
+                "the browser closed right after starting{}",
+                StartLog::reason(said.as_ref())
+            )));
         }
         if started.elapsed() > START_TIMEOUT {
-            return Err(BrowserError::Start(
-                "the browser did not start in time".to_owned(),
-            ));
+            return Err(BrowserError::Start(format!(
+                "the browser did not start in time{}",
+                StartLog::reason(said.as_ref())
+            )));
         }
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
+}
+
+/// What the browser writes to stderr, kept as the line that best says why
+/// it failed to start (a missing sandbox on Linux, say). Nothing of it goes
+/// to the log.
+struct StartLog {
+    lines: Arc<Mutex<Said>>,
+    /// Hears when stderr ends.
+    ended: mpsc::Receiver<()>,
+}
+
+#[derive(Default)]
+struct Said {
+    best: Option<String>,
+    last: Option<String>,
+}
+
+impl StartLog {
+    fn read(stderr: ChildStderr) -> Self {
+        let lines = Arc::new(Mutex::new(Said::default()));
+        let (end, ended) = mpsc::channel();
+        let shared = Arc::clone(&lines);
+        let spawned = std::thread::Builder::new()
+            .name("browser-stderr".into())
+            .spawn(move || {
+                for line in BufReader::new(stderr).lines() {
+                    let Ok(line) = line else { break };
+                    let text: String = log_text(&line).chars().take(REASON_MAX).collect();
+                    if text.is_empty() {
+                        continue;
+                    }
+                    let lower = line.to_ascii_lowercase();
+                    let mut said = shared.lock().unwrap_or_else(|p| p.into_inner());
+                    let sandbox = lower.contains("sandbox") || lower.contains("namespace");
+                    if sandbox || (said.best.is_none() && lower.contains(":fatal:")) {
+                        said.best = Some(text.clone());
+                    }
+                    said.last = Some(text);
+                }
+                let _ = end.send(());
+            });
+        if spawned.is_err() {
+            debug!("browser: cannot read its stderr");
+        }
+        Self { lines, ended }
+    }
+
+    /// ` (the line)`, or nothing when the browser said nothing.
+    fn reason(log: Option<&Self>) -> String {
+        let Some(log) = log else {
+            return String::new();
+        };
+        let said = log.lines.lock().unwrap_or_else(|p| p.into_inner());
+        said.best
+            .as_ref()
+            .or(said.last.as_ref())
+            .map(|line| format!(" ({line})"))
+            .unwrap_or_default()
+    }
+}
+
+/// A Chromium log line without its `[pid:tid:time:LEVEL:file.cc:123]` prefix.
+fn log_text(line: &str) -> String {
+    let text = match line.strip_prefix('[') {
+        Some(rest) => rest.split_once("] ").map_or(line, |(_, text)| text),
+        None => line,
+    };
+    text.trim().to_owned()
 }
 
 /// `DevToolsActivePort` holds the port and the browser's WebSocket path, one
@@ -153,7 +208,13 @@ mod tests {
     }
 
     #[test]
-    fn a_configured_browser_must_exist() {
-        assert_eq!(find(r"C:\nowhere\msedge.exe"), None);
+    fn a_log_line_loses_its_prefix() {
+        assert_eq!(
+            log_text(
+                "[11:11:1001/173604.487235:ERROR:zygote_host_impl_linux.cc:129] No usable sandbox!"
+            ),
+            "No usable sandbox!"
+        );
+        assert_eq!(log_text("  plain words "), "plain words");
     }
 }

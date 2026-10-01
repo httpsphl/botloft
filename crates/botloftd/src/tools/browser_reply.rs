@@ -99,8 +99,8 @@ pub(super) fn describe(err: &BrowserError) -> String {
 
 pub(super) fn unavailable(err: &BrowserError) -> String {
     format!(
-        "Your browser could not start: {err}. Tell the owner; Botloft uses Microsoft Edge, or \
-         another Chromium browser set in its config."
+        "Your browser could not start: {err}. Tell the owner; Botloft uses Microsoft Edge \
+         (Google Chrome or Chromium off Windows), or another Chromium browser set in its config."
     )
 }
 

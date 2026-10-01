@@ -483,6 +483,7 @@ dependencies = [
  "getrandom 0.4.3",
  "hex",
  "jiff",
+ "libc",
  "serde",
  "serde_json",
  "sha2 0.11.0",

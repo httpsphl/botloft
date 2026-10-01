@@ -40,6 +40,9 @@ windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_Security"
 # Named by the code that `windows::core::implement` writes.
 windows-core = "0.62.2"
 
+[target."cfg(unix)".dependencies]
+libc = "0.2.189"
+
 [target."cfg(windows)".build-dependencies]
 embed-resource = "3.0.11"
 

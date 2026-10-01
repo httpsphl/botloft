@@ -12,6 +12,7 @@ mod keys;
 mod launch;
 mod moves;
 mod page;
+mod program;
 mod read;
 mod rest;
 mod session;
@@ -38,8 +39,8 @@ use tracing::{debug, warn};
 pub use self::call::Call;
 pub use self::hands::{Asking, Hands, InputError, OWNER_WAIT, TakeError};
 pub use self::keys::{Key, find as find_key, names as key_names};
-pub use self::launch::find as find_program;
 pub use self::page::{Aim, Done, Scroll};
+pub use self::program::find as find_program;
 pub use self::read::{READ_MAX, Reading};
 pub use self::session::Session;
 pub use self::sweep::{Want, run};
@@ -51,7 +52,7 @@ use crate::state::Event;
 
 #[derive(Debug, thiserror::Error)]
 pub enum BrowserError {
-    #[error("Microsoft Edge was not found on this computer")]
+    #[error("{}", program::NOT_FOUND)]
     NotFound,
     #[error("the browser could not start: {0}")]
     Start(String),

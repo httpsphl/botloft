@@ -1,7 +1,8 @@
 //! Processes with stdin, stdout and stderr in pipes (spec 7.4). Each one
 //! gets a thread to read stdout, one to write stdin (writing never blocks
-//! the caller), one to drain stderr and one to wait for the exit. On
-//! Windows the process joins its own Job Object and has no console.
+//! the caller), one to drain stderr and one to wait for the exit. The
+//! process joins a job of its own: a Job Object with no console on Windows,
+//! a process group elsewhere (spec 14.1).
 
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::process::{Child, ChildStdin, Command, Stdio};
@@ -45,22 +46,13 @@ impl Runtime for PipeRuntime {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
-        #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt as _;
-            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-            command.creation_flags(CREATE_NO_WINDOW);
-        }
+        ProcessJob::prepare(&mut command);
 
         let job = Arc::new(ProcessJob::new()?);
         let mut child = command.spawn()?;
-        #[cfg(windows)]
-        {
-            use std::os::windows::io::AsRawHandle as _;
-            if let Err(err) = job.assign(child.as_raw_handle()) {
-                let _ = child.kill();
-                return Err(err);
-            }
+        if let Err(err) = job.assign(&child) {
+            let _ = child.kill();
+            return Err(err);
         }
         let pid = Some(child.id());
         let stdout = child

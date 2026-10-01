@@ -170,15 +170,51 @@ fn press(key: &str, code: &str, modifiers: u32) -> Vec<(&'static str, Value)> {
         down["text"] = json!(text);
         down["unmodifiedText"] = json!(text);
     }
+    if let Some(command) = editing_command(key, modifiers, cfg!(target_os = "macos")) {
+        down["commands"] = json!([command]);
+    }
     vec![
         ("Input.dispatchKeyEvent", down),
         ("Input.dispatchKeyEvent", event("keyUp")),
     ]
 }
 
+/// On macOS the page runs no Cmd shortcut from the virtual key, so the
+/// editing command goes with the key; elsewhere Ctrl ones run by themselves.
+fn editing_command(key: &str, modifiers: u32, mac: bool) -> Option<&'static str> {
+    let others = modifier::CTRL | modifier::ALT;
+    if !mac || modifiers & modifier::META == 0 || modifiers & others != 0 {
+        return None;
+    }
+    let shift = modifiers & modifier::SHIFT != 0;
+    match (key.to_ascii_lowercase().as_str(), shift) {
+        ("a", false) => Some("selectAll"),
+        ("c", false) => Some("copy"),
+        ("x", false) => Some("cut"),
+        ("v", false) => Some("paste"),
+        ("z", false) => Some("undo"),
+        ("z", true) => Some("redo"),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cmd_shortcuts_carry_their_command_on_macos_only() {
+        let cmd = modifier::META;
+        assert_eq!(editing_command("a", cmd, true), Some("selectAll"));
+        assert_eq!(
+            editing_command("Z", cmd | modifier::SHIFT, true),
+            Some("redo")
+        );
+        assert_eq!(editing_command("a", cmd, false), None);
+        assert_eq!(editing_command("a", modifier::CTRL, true), None);
+        assert_eq!(editing_command("a", cmd | modifier::ALT, true), None);
+        assert_eq!(editing_command("b", cmd, true), None);
+    }
 
     fn key(key: &str, code: &str, modifiers: u32) -> Vec<Value> {
         calls(&BrowserInput::Key {
