@@ -2,8 +2,9 @@
 // so the owner sees it happen: its browser starting or a request for a
 // hand opens the browser (spec 21.8), and a screen it starts writing opens
 // the design area (spec 22.5), whatever panel was open. Each opens once per
-// start; closing it leaves the button's dot. The browser in the owner's
-// hands is never taken away. The owner can turn this off in Settings
+// start; closing it leaves the button's dot. When the browser goes to rest
+// (spec 21.2) its panel closes, and it opens again once the bot wakes it.
+// The browser in the owner's hands is never taken away. The owner can turn this off in Settings
 // (`prefs.followBot`): then only the buttons' dots say so. Coming back to a
 // bot is opening it again: the panel the owner left is the one open (the
 // store keeps it), and what opens by itself here takes its place.
@@ -20,6 +21,7 @@ export function useFollowBot({
   side,
   writing,
   open,
+  close,
 }: {
   bot: Pick<Bot, "id">;
   /** The panel open now, if any. */
@@ -27,9 +29,12 @@ export function useFollowBot({
   /** The screen the bot is writing now, if any. */
   writing: string | null;
   open(panel: Followed): void;
+  close(panel: Followed): void;
 }): void {
   const browser = useApp((state) => state.browsers[bot.id]);
-  const browsing = browser?.status === "open" || browser?.status === "starting";
+  // A browser at rest is open, but the bot is not using it.
+  const resting = browser?.status === "open" && browser.resting;
+  const browsing = browser?.status === "starting" || (browser?.status === "open" && !resting);
   const asking = Boolean(browser?.ask);
   const held = browser?.control === "owner";
   // What was going on when the bot was opened: a browser left open stays
@@ -50,6 +55,10 @@ export function useFollowBot({
     if ((asking && !was.asking) || (browsing && !was.browsing)) {
       if (side !== "browser" && prefs.followBot.get()) {
         open("browser");
+      }
+    } else if (resting && was.browsing && !asking && !held) {
+      if (side === "browser" && prefs.followBot.get()) {
+        close("browser");
       }
     }
   }, [bot.id, browsing, asking]);

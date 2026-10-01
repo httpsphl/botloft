@@ -136,6 +136,7 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
     side,
     writing: screens.writing,
     open: (panel) => (panel === "browser" ? showBrowser() : showScreen(null)),
+    close: (panel) => side === panel && setSide(null),
   });
   const view = stateView(bot, crew.paused, t);
   const tabs: Tab<Pane>[] = [
