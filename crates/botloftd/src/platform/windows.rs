@@ -23,6 +23,9 @@ pub use task::{delete_task, find_task, register_task, run_task, stop_task};
 /// What starts the daemon for the owner here, for messages (spec 14).
 pub const TASK_KIND: &str = "scheduled task";
 
+/// Nothing to track: every Job Object dies with the daemon (spec 7.3).
+pub fn track_groups(_dir: &Path) {}
+
 use std::io;
 use std::os::windows::ffi::OsStrExt;
 use std::path::Path;

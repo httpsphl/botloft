@@ -55,6 +55,9 @@ impl ProcessJob {
         Ok(())
     }
 
+    /// Nothing to write down: the job dies with the daemon.
+    pub fn track(&self, _command: &Command) {}
+
     /// Kills every process in the job.
     pub fn terminate(&self) -> io::Result<()> {
         // SAFETY: the handle is valid until drop.

@@ -7,6 +7,7 @@ mod job;
 // Both build everywhere, so each one's tests run on either system.
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 mod launchd;
+mod orphans;
 #[cfg_attr(target_os = "macos", allow(dead_code))]
 mod systemd;
 
@@ -21,6 +22,7 @@ pub use self::env::user_environment;
 pub use self::job::ProcessJob;
 #[cfg(target_os = "macos")]
 pub use self::launchd::{TASK_KIND, delete_task, find_task, register_task, run_task, stop_task};
+pub use self::orphans::track_groups;
 #[cfg(not(target_os = "macos"))]
 pub use self::systemd::{TASK_KIND, delete_task, find_task, register_task, run_task, stop_task};
 

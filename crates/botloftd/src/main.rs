@@ -105,6 +105,8 @@ fn serve(home: PathBuf, config_path: Option<PathBuf>, scheduled: bool) -> anyhow
 
 fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> anyhow::Result<()> {
     let _lock = InstanceLock::acquire(&paths.lock_file())?;
+    // Before any bot starts: ends what a crashed run left behind (14.1).
+    platform::track_groups(&paths.home.join("run"));
     if scheduled && !autostart::scheduled_start(&paths.home, config.start_with_windows) {
         info!("a new sign-in, and Botloft does not start with Windows: waiting to be opened");
         return Ok(());
