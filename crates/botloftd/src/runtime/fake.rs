@@ -29,6 +29,13 @@ struct State {
     failures: usize,
     signed_in: bool,
     sign_in_checks: usize,
+    hold: Option<SpawnHold>,
+}
+
+/// Holds the next spawn until the test lets it go.
+struct SpawnHold {
+    entered: std::sync::mpsc::Sender<()>,
+    release: std::sync::mpsc::Receiver<()>,
 }
 
 impl Default for State {
@@ -38,6 +45,7 @@ impl Default for State {
             failures: 0,
             signed_in: true,
             sign_in_checks: 0,
+            hold: None,
         }
     }
 }
@@ -90,6 +98,18 @@ impl FakeRuntime {
             .unwrap_or_else(|_| panic!("process {n} was never spawned"))
     }
 
+    /// Makes the next spawn block, as a slow `CreateProcess` would. The
+    /// first receiver hears when it begins; sending on the second ends it.
+    pub fn hold_next_spawn(&self) -> (std::sync::mpsc::Receiver<()>, std::sync::mpsc::Sender<()>) {
+        let (entered, began) = std::sync::mpsc::channel();
+        let (release, held) = std::sync::mpsc::channel();
+        lock(&self.state).hold = Some(SpawnHold {
+            entered,
+            release: held,
+        });
+        (began, release)
+    }
+
     /// Makes the next spawn fail, as a missing executable would.
     pub fn fail_next_spawn(&self) {
         lock(&self.state).failures += 1;
@@ -112,6 +132,11 @@ impl Runtime for FakeRuntime {
     }
 
     fn spawn(&self, spec: SpawnSpec) -> io::Result<Process> {
+        let hold = lock(&self.state).hold.take();
+        if let Some(hold) = hold {
+            let _ = hold.entered.send(());
+            let _ = hold.release.recv();
+        }
         let mut state = lock(&self.state);
         if state.failures > 0 {
             state.failures -= 1;
