@@ -1,9 +1,14 @@
-//! Linux and macOS (spec 14.1). Starting with the system comes later; the
-//! rest gives bots what they get on Windows.
+//! Linux and macOS (spec 14.1): what bots get on Windows, and the daemon
+//! started for the owner by systemd or launchd.
 
 mod account;
 mod env;
 mod job;
+// Both build everywhere, so each one's tests run on either system.
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+mod launchd;
+#[cfg_attr(target_os = "macos", allow(dead_code))]
+mod systemd;
 
 use std::io;
 use std::os::unix::fs::PermissionsExt;
@@ -12,7 +17,21 @@ use std::path::Path;
 pub use self::account::owner_name;
 pub use self::env::user_environment;
 pub use self::job::ProcessJob;
-use super::{TaskDefinition, TaskInfo};
+#[cfg(target_os = "macos")]
+pub use self::launchd::{TASK_KIND, delete_task, find_task, register_task, run_task, stop_task};
+#[cfg(not(target_os = "macos"))]
+pub use self::systemd::{TASK_KIND, delete_task, find_task, register_task, run_task, stop_task};
+
+/// Writes `path` whole or not at all, creating its folder.
+fn write_atomically(path: &Path, contents: &[u8]) -> io::Result<()> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let mut staged = path.as_os_str().to_owned();
+    staged.push(".new");
+    std::fs::write(&staged, contents)?;
+    std::fs::rename(&staged, path)
+}
 
 /// `0700` for folders, `0600` for files.
 pub fn restrict_to_current_user(path: &Path) -> io::Result<()> {
@@ -54,34 +73,6 @@ impl KeepAwake {
 /// Nothing to leave: Unix never opens a console for the daemon.
 pub fn leave_own_console() {}
 
-fn no_tasks() -> io::Error {
-    io::Error::new(
-        io::ErrorKind::Unsupported,
-        "starting at logon is only supported on Windows",
-    )
-}
-
-pub fn register_task(_name: &str, _task: &TaskDefinition) -> io::Result<()> {
-    Err(no_tasks())
-}
-
-/// Nothing can be installed here yet, so there is never a task to find.
-pub fn find_task(_name: &str) -> io::Result<Option<TaskInfo>> {
-    Ok(None)
-}
-
-pub fn run_task(_name: &str) -> io::Result<()> {
-    Err(no_tasks())
-}
-
-pub fn stop_task(_name: &str) -> io::Result<()> {
-    Err(no_tasks())
-}
-
-pub fn delete_task(_name: &str) -> io::Result<bool> {
-    Ok(false)
-}
-
 /// There is no Recycle Bin off Windows: the folder stays.
 pub fn recycle(_path: &Path) -> io::Result<()> {
     Err(io::Error::new(
@@ -90,7 +81,8 @@ pub fn recycle(_path: &Path) -> io::Result<()> {
     ))
 }
 
-/// Unix has no Windows sign-in to tell apart.
+/// No sign-in to tell apart: systemd and launchd start the daemon at
+/// sign-in only when the owner wants it, so a new sign-in needs no check.
 pub fn sign_in_id() -> Option<String> {
     None
 }

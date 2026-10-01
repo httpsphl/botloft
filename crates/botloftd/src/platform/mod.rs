@@ -12,13 +12,15 @@ use std::path::{Path, PathBuf};
 
 #[cfg(unix)]
 pub use unix::{
-    KeepAwake, ProcessJob, delete_task, find_task, leave_own_console, owner_name, recycle,
-    register_task, restrict_to_current_user, run_task, sign_in_id, stop_task, user_environment,
+    KeepAwake, ProcessJob, TASK_KIND, delete_task, find_task, leave_own_console, owner_name,
+    recycle, register_task, restrict_to_current_user, run_task, sign_in_id, stop_task,
+    user_environment,
 };
 #[cfg(windows)]
 pub use windows::{
-    KeepAwake, ProcessJob, delete_task, find_task, leave_own_console, owner_name, recycle,
-    register_task, restrict_to_current_user, run_task, sign_in_id, stop_task, user_environment,
+    KeepAwake, ProcessJob, TASK_KIND, delete_task, find_task, leave_own_console, owner_name,
+    recycle, register_task, restrict_to_current_user, run_task, sign_in_id, stop_task,
+    user_environment,
 };
 
 /// A program the system starts for the owner (spec 14).
@@ -26,18 +28,22 @@ pub use windows::{
 pub struct TaskDefinition {
     pub description: String,
     pub program: PathBuf,
-    /// Already quoted for the command line.
-    pub arguments: String,
+    pub arguments: Vec<String>,
     pub working_dir: PathBuf,
+    /// On macOS, launchd keeps the program running while this file exists
+    /// (spec 14.1). The program deletes it when it stops cleanly.
+    pub keep_alive: PathBuf,
     pub triggers: Triggers,
 }
 
 /// When the system starts the task (spec 14).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Triggers {
-    /// When the owner signs in to Windows.
+    /// When the owner signs in.
     pub logon: bool,
-    /// Every minute, which brings the program back soon after it stops.
+    /// Brings the program back soon after it stops: a trigger every minute
+    /// on Windows. On Linux and macOS the service manager restarts it while
+    /// it runs, so this is always on there (14.1).
     pub watchdog: bool,
 }
 

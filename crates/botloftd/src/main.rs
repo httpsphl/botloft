@@ -158,6 +158,9 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
         ));
         server::serve(Arc::clone(&daemon), listener, platform::shutdown_signal()).await?;
         daemon.supervisor.shutdown();
+        // A stop asked for (logout, `service stop`): launchd must not
+        // bring the daemon back (spec 14.1).
+        autostart::stopped_cleanly(&daemon.paths.home);
         info!("stopped");
         anyhow::Ok(())
     })

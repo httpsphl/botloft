@@ -18,6 +18,7 @@ use anyhow::{Context, bail};
 use tracing::{info, warn};
 
 use super::{config, register, stop_task, task_name};
+use crate::platform::TASK_KIND;
 use crate::platform::{self, Triggers};
 
 const SIGN_IN_FILE: &str = "signin";
@@ -63,11 +64,12 @@ fn is_new_sign_in(home: &Path) -> bool {
 pub fn scheduled_start(home: &Path, start_with_windows: bool) -> bool {
     if !start_with_windows && is_new_sign_in(home) {
         if let Err(err) = register(home, stopped(false)) {
-            warn!("cannot take the triggers off the scheduled task: {err:#}");
+            warn!("cannot take the triggers off the {TASK_KIND}: {err:#}");
         }
         return false;
     }
     mark_sign_in(home);
+    super::keep_running(home);
     // Started at sign-in after the owner stopped it: the minute trigger
     // comes back.
     let wanted = running(start_with_windows);
@@ -75,7 +77,7 @@ pub fn scheduled_start(home: &Path, start_with_windows: bool) -> bool {
     if task.is_ok_and(|task| task.is_some_and(|task| task.triggers != wanted))
         && let Err(err) = register(home, wanted)
     {
-        warn!("cannot update the scheduled task: {err:#}");
+        warn!("cannot update the {TASK_KIND}: {err:#}");
     }
     true
 }
@@ -85,12 +87,12 @@ pub fn scheduled_start(home: &Path, start_with_windows: bool) -> bool {
 pub fn stop(home: &Path) -> anyhow::Result<()> {
     let name = task_name(home);
     if platform::find_task(&name)?.is_none() {
-        bail!("the scheduled task {name} is not installed; run `botloftd service install`");
+        bail!("the {TASK_KIND} {name} is not installed; run `botloftd service install`");
     }
     let config = config(home)?;
     register(home, stopped(config.start_with_windows))?;
     stop_task(&name, config.port)?;
-    println!("Stopped the daemon of the scheduled task {name}.");
+    println!("Stopped the daemon of the {TASK_KIND} {name}.");
     Ok(())
 }
 
@@ -99,7 +101,7 @@ pub fn stop(home: &Path) -> anyhow::Result<()> {
 pub fn set_start_with_windows(home: &Path, start: bool) -> anyhow::Result<()> {
     let name = task_name(home);
     let task = platform::find_task(&name)
-        .with_context(|| format!("cannot read the scheduled task {name}"))?;
+        .with_context(|| format!("cannot read the {TASK_KIND} {name}"))?;
     if let Some(task) = task {
         register(
             home,
