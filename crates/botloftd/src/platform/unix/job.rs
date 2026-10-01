@@ -31,6 +31,14 @@ impl ProcessJob {
         Ok(())
     }
 
+    /// Writes the group down with `command`'s arguments, so the next daemon
+    /// ends it if this one crashes (spec 14.1).
+    pub fn track(&self, command: &Command) {
+        if let Some(group) = *self.lock() {
+            super::orphans::remember(group, command);
+        }
+    }
+
     /// Kills every process in the group.
     pub fn terminate(&self) -> io::Result<()> {
         let mut group = self.lock();
