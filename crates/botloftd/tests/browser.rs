@@ -182,13 +182,29 @@ async fn new_tabs_and_dialogs_reach_the_bot_and_the_owner_watches() {
         .await
         .expect("new tab");
     assert!(tab.contains("Thanks, Tab"), "{tab}");
-    let open = b.app.call("browser.list", Value::Null).await.expect("list");
-    // The new tab is the active one, after the tab that opened it.
-    let tabs = open[0]["tabs"].as_array().expect("tabs");
+    // The new tab is the active one, after the tab that opened it. The app
+    // may hear of its address a moment after the bot read the page: the
+    // events that bring it wait while the new tab is set up.
+    let deadline = Instant::now() + Duration::from_secs(5);
+    let tabs = loop {
+        let open = b.app.call("browser.list", Value::Null).await.expect("list");
+        let tabs = open[0]["tabs"].as_array().expect("tabs").clone();
+        let shown = tabs.len() == 2
+            && tabs[1]["url"]
+                .as_str()
+                .is_some_and(|url| url.contains("/done"));
+        if shown || Instant::now() > deadline {
+            break tabs;
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    };
     assert_eq!(tabs.len(), 2, "{tabs:?}");
     assert_eq!(tabs[0]["active"], false);
     assert_eq!(tabs[1]["active"], true);
-    assert!(tabs[1]["url"].as_str().expect("url").contains("/done"));
+    assert!(
+        tabs[1]["url"].as_str().expect("url").contains("/done"),
+        "{tabs:?}"
+    );
 
     let picture = b.mcp.tool_result("browser_screenshot", json!({})).await;
     assert_eq!(picture["content"][0]["type"], "image");
