@@ -34,9 +34,9 @@ describe("tokens by bot", () => {
     const rows = within(list).getAllByRole("listitem");
     // Each turn: 12 new, 1,800 into the cache and 640 written count; 24,000 reread do not.
     expect(rows.map((row) => row.textContent)).toEqual([
-      "Scout4.9kOps · Worked 2 times · 48k reread",
-      "Writer2.5kOps · Worked once · 24k reread",
-      "All bots7.4kWorked 3 times · 72k reread",
+      "Scout4.9kOps · Worked 2 times",
+      "Writer2.5kOps · Worked once",
+      "All bots7.4kWorked 3 times",
     ]);
 
     fireEvent.click(within(dialog).getByRole("radio", { name: "7 days" }));
@@ -64,7 +64,7 @@ describe("tokens by bot", () => {
       within(list)
         .getAllByRole("listitem")
         .map((row) => row.textContent),
-    ).toEqual(["Scout4.1kOps · Worked 2 times · 24k reread · 72k reloaded"]);
+    ).toEqual(["Scout4.1kOps · Worked 2 times · 72k reloaded"]);
   });
 
   test("bots with the same name in two crews show their crew", async () => {
@@ -81,9 +81,9 @@ describe("tokens by bot", () => {
         .getAllByRole("listitem")
         .map((row) => row.textContent),
     ).toEqual([
-      "Scout2.5kNewsroom · Worked once · 24k reread",
-      "Scout2.5kOps · Worked once · 24k reread",
-      "All bots4.9kWorked 2 times · 48k reread",
+      "Scout2.5kNewsroom · Worked once",
+      "Scout2.5kOps · Worked once",
+      "All bots4.9kWorked 2 times",
     ]);
   });
 

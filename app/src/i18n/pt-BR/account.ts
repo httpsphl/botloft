@@ -30,15 +30,15 @@ export const account: Messages["account"] = {
     tokens: {
       title: "Tokens por bot",
       intro:
-        "Tokens são os pedaços de texto que um bot lê e escreve. A conta soma o texto novo lido e as respostas escritas. A conversa relida a cada vez aparece à parte, porque pesa bem menos, e a conversa mandada de novo depois de uma pausa também.",
+        "Tokens são os pedaços de texto que um bot lê e escreve. A conta soma o texto novo lido e as respostas escritas. A conversa mandada de novo depois de uma pausa aparece à parte.",
       period: "Período",
       periods: { today: "Hoje", week: "7 dias", month: "30 dias", all: "Tudo" },
       empty: "Nenhum bot trabalhou nesse período.",
       failed: "Não deu para carregar os tokens",
       archived: "arquivado",
       /** `crew` is null on the total of all bots. */
-      detail: (crew: string | null, times: number, reread: string, reloaded: string | null) =>
-        `${crew === null ? "" : `${crew} · `}Trabalhou ${times === 1 ? "1 vez" : `${times} vezes`} · ${reread} relidos${
+      detail: (crew: string | null, times: number, reloaded: string | null) =>
+        `${crew === null ? "" : `${crew} · `}Trabalhou ${times === 1 ? "1 vez" : `${times} vezes`}${
           reloaded === null ? "" : ` · ${reloaded} recarregados`
         }`,
       total: "Todos os bots",

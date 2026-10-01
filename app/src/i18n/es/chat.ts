@@ -57,7 +57,7 @@ export const chat: Messages["chat"] = {
       `Tardó ${time}${
         tokens === null
           ? ""
-          : `. Leyó ${tokens.read} tokens nuevos y escribió ${tokens.wrote}; releyó ${tokens.reread} de la conversación, que pesa mucho menos.${
+          : `. Leyó ${tokens.read} tokens nuevos y escribió ${tokens.wrote}.${
               tokens.reloaded === null
                 ? ""
                 : ` También volvió a enviar ${tokens.reloaded} de la conversación, que el modelo ya no tenía tras una pausa.`

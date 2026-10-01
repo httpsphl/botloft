@@ -1,6 +1,6 @@
 // Tokens each bot used over a period (spec 8.7), in the usage dialog: the
-// new text read plus the replies written, with the conversation reread
-// each time shown apart. Each bot shows its crew, as two crews can have
+// new text read plus the replies written, with the conversation sent
+// again after a pause shown apart. Each bot shows its crew, as two crews can have
 // bots with the same name.
 
 import { useEffect, useState } from "react";
@@ -100,12 +100,7 @@ function Row({ bot, most }: { bot: BotTokens; most: number }) {
           />
         </div>
         <span className="text-muted text-xs">
-          {u.detail(
-            bot.crew,
-            bot.turns,
-            tokens(bot.tokens.cacheRead),
-            reloadedTokens(bot.tokens.reloaded),
-          )}
+          {u.detail(bot.crew, bot.turns, reloadedTokens(bot.tokens.reloaded))}
         </span>
       </div>
     </li>
@@ -116,7 +111,6 @@ function Total({ bots }: { bots: BotTokens[] }) {
   const u = useT().account.usage.tokens;
   const used = bots.reduce((sum, bot) => sum + usedTokens(bot.tokens), 0);
   const turns = bots.reduce((sum, bot) => sum + bot.turns, 0);
-  const reread = bots.reduce((sum, bot) => sum + bot.tokens.cacheRead, 0);
   const reloaded = bots.reduce((sum, bot) => sum + bot.tokens.reloaded, 0);
   return (
     <li className="flex flex-col gap-1 border-line border-t pt-3">
@@ -124,9 +118,7 @@ function Total({ bots }: { bots: BotTokens[] }) {
         <span>{u.total}</span>
         <span className="tabular-nums">{tokens(used)}</span>
       </div>
-      <span className="text-muted text-xs">
-        {u.detail(null, turns, tokens(reread), reloadedTokens(reloaded))}
-      </span>
+      <span className="text-muted text-xs">{u.detail(null, turns, reloadedTokens(reloaded))}</span>
     </li>
   );
 }

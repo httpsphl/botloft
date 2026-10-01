@@ -37,7 +37,6 @@ function TurnEnd({ turn }: { turn: TurnItem }) {
   const detail = used && {
     read: tokens(used.input + used.cacheWrite - used.reloaded),
     wrote: tokens(used.output),
-    reread: tokens(used.cacheRead),
     reloaded,
   };
   return (

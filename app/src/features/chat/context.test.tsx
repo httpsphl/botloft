@@ -53,7 +53,7 @@ describe("conversation space", () => {
     });
     const done = screen.getByText("Done in 4.2 s · 1.6k tokens · reloaded the conversation (72k)");
     expect(done.title).toBe(
-      "Took 4.2 s. Read 638 new tokens and wrote 983; reread 0 of the conversation, which weighs much less. It also sent 72k of the conversation again, as the model no longer had it after a pause.",
+      "Took 4.2 s. Read 638 new tokens and wrote 983. It also sent 72k of the conversation again, as the model no longer had it after a pause.",
     );
   });
 
