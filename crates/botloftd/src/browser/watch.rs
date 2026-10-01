@@ -34,6 +34,13 @@ impl Browsers {
         }
     }
 
+    /// Someone has the bot's browser open in the app.
+    pub fn watched(&self, bot: &BotId) -> bool {
+        lock(&self.slots)
+            .get(bot)
+            .is_some_and(|slot| slot.watchers > 0)
+    }
+
     /// The room a watching app has for the page, `width` by `height`: the
     /// page takes its shape, now or when the browser opens (spec 21.3).
     pub fn resize(&self, bot: &BotId, width: u32, height: u32) {

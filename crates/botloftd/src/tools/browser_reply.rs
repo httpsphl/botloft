@@ -2,12 +2,14 @@
 //! the action for the owner's cursor, and errors in words the bot can act
 //! on.
 
+use std::time::Duration;
+
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{BrowserAction, BrowserActionKind};
 
 use super::browser::{Bot, Reply};
 use super::browser_sites::outside_file;
-use crate::browser::{BrowserError, Done, Session, sites};
+use crate::browser::{Aim, BrowserError, Done, Session, sites};
 use crate::state::Daemon;
 
 /// The page as the bot reads it, with what happened on the way.
@@ -52,6 +54,20 @@ pub(super) async fn answer(
         ));
     }
     Ok(Reply::Text(out))
+}
+
+/// How long the owner's cursor takes to glide to a point (`.bot-cursor` in
+/// the app's `motion.css`, 520 ms), with a little to spare.
+const GLIDE: Duration = Duration::from_millis(560);
+
+/// Shows the owner where the bot is about to act and, while someone
+/// watches, waits for the cursor to get there, so the page changes after
+/// the cursor arrives and not before (spec 21.7).
+pub(super) async fn point(daemon: &Daemon, bot: &BotId, kind: BrowserActionKind, aim: &Aim) {
+    report(daemon, bot, kind, &aim.done);
+    if daemon.browsers.watched(bot) {
+        tokio::time::sleep(GLIDE).await;
+    }
 }
 
 pub(super) fn report(daemon: &Daemon, bot: &BotId, kind: BrowserActionKind, done: &Done) {
