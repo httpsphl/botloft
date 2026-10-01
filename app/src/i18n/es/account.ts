@@ -36,8 +36,9 @@ export const account: Messages["account"] = {
       empty: "Ningún bot trabajó en este período.",
       failed: "No se pudieron cargar los tokens",
       archived: "archivado",
-      detail: (times: number, reread: string, reloaded: string | null) =>
-        `Trabajó ${times === 1 ? "1 vez" : `${times} veces`} · ${reread} releídos${
+      /** `crew` is null on the total of all bots. */
+      detail: (crew: string | null, times: number, reread: string, reloaded: string | null) =>
+        `${crew === null ? "" : `${crew} · `}Trabajó ${times === 1 ? "1 vez" : `${times} veces`} · ${reread} releídos${
           reloaded === null ? "" : ` · ${reloaded} recargados`
         }`,
       total: "Todos los bots",

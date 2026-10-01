@@ -20,20 +20,22 @@ impl Store {
                     SUM(json_extract(c.data, '$.tokens.cacheWrite')), \
                     SUM(json_extract(c.data, '$.tokens.cacheRead')), \
                     SUM(json_extract(c.data, '$.tokens.output')) AS output, \
-                    COALESCE(SUM(json_extract(c.data, '$.tokens.reloaded')), 0) AS reloaded \
-             FROM chat_items c JOIN bots b ON b.id = c.bot_id \
+                    COALESCE(SUM(json_extract(c.data, '$.tokens.reloaded')), 0) AS reloaded, \
+                    w.name \
+             FROM chat_items c JOIN bots b ON b.id = c.bot_id JOIN crews w ON w.id = b.crew_id \
              WHERE c.kind = 'turn' AND c.created_at >= ?1 \
                AND json_type(c.data, '$.tokens') = 'object' \
              GROUP BY b.id \
              ORDER BY SUM(json_extract(c.data, '$.tokens.input')) \
                     + SUM(json_extract(c.data, '$.tokens.cacheWrite')) - reloaded + output DESC, \
-                    b.name",
+                    b.name, w.name",
         )?;
         let rows = stmt.query_map(params![since], |row| {
             Ok(BotTokens {
                 bot_id: parse_column(row, 0)?,
                 name: row.get(1)?,
                 color: row.get(2)?,
+                crew: row.get(10)?,
                 archived: row.get(3)?,
                 turns: row.get(4)?,
                 tokens: TokenUsage {
@@ -104,6 +106,7 @@ mod tests {
         assert_eq!(order, [writer, scout], "the bot that used the most first");
         let scout_tokens = &all[1];
         assert_eq!(scout_tokens.name, "scout");
+        assert_eq!(scout_tokens.crew, "Ops");
         assert!(!scout_tokens.archived);
         assert_eq!(scout_tokens.turns, 2);
         assert_eq!(

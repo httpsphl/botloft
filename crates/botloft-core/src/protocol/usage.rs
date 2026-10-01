@@ -52,6 +52,8 @@ pub struct BotTokens {
     pub bot_id: BotId,
     pub name: String,
     pub color: String,
+    /// The name of the bot's crew, so two bots with one name stay apart.
+    pub crew: String,
     /// The bot is archived.
     pub archived: bool,
     /// Turns that reported tokens.

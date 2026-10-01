@@ -20,6 +20,7 @@ export function usageHandlers(fake: FakeBotloft): Pick<Handlers, "usage.tokens">
             botId: bot.id,
             name: bot.name,
             color: bot.color,
+            crew: fake.crew(bot.crewId, false).name,
             archived: bot.archivedAt !== null,
             turns: 0,
             tokens: { input: 0, cacheWrite: 0, reloaded: 0, cacheRead: 0, output: 0 },
@@ -37,7 +38,10 @@ export function usageHandlers(fake: FakeBotloft): Pick<Handlers, "usage.tokens">
         };
       }
       return [...byBot.values()].sort(
-        (a, b) => usedTokens(b.tokens) - usedTokens(a.tokens) || a.name.localeCompare(b.name),
+        (a, b) =>
+          usedTokens(b.tokens) - usedTokens(a.tokens) ||
+          a.name.localeCompare(b.name) ||
+          a.crew.localeCompare(b.crew),
       );
     },
   };
