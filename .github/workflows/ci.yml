@@ -64,6 +64,22 @@ jobs:
               sudo chmod 4755 "$helper"
             fi
           done
+      - name: Browser start (diagnostic)
+        if: runner.os == 'Linux'
+        continue-on-error: true
+        run: |
+          ls -l /usr/bin/microsoft-edge* /usr/bin/google-chrome* /opt/microsoft/msedge/msedge-sandbox /opt/google/chrome/chrome-sandbox || true
+          sysctl kernel.apparmor_restrict_unprivileged_userns kernel.unprivileged_userns_clone || true
+          for browser in microsoft-edge-stable google-chrome-stable; do
+            echo "== $browser"
+            dir=$(mktemp -d)
+            start=$(date +%s)
+            timeout 20 "$browser" --headless=new --remote-debugging-port=0 --no-first-run --no-default-browser-check --disable-extensions --user-data-dir="$dir" about:blank > "$dir.out" 2>&1 &
+            for i in $(seq 1 40); do [ -f "$dir/DevToolsActivePort" ] && break; sleep 0.5; done
+            echo "after $(( $(date +%s) - start )) s:"; cat "$dir/DevToolsActivePort" 2>/dev/null || echo "no port file"
+            wait
+            head -20 "$dir.out"
+          done
       - run: cargo test
 
   app:
