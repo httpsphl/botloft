@@ -1,9 +1,10 @@
 //! Starting a bot's browser (spec 21.2): run it without a window in a job
 //! of its own, and read where its DevTools listen.
 
-use std::io;
+use std::io::{self, BufRead as _, BufReader};
 use std::path::Path;
-use std::process::{Child, Command, Stdio};
+use std::process::{Child, ChildStderr, Command, Stdio};
+use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use tracing::debug;
@@ -14,6 +15,8 @@ use crate::platform::{self, ProcessJob};
 /// How long Edge may take to write `DevToolsActivePort`.
 const START_TIMEOUT: Duration = Duration::from_secs(10);
 const PORT_FILE: &str = "DevToolsActivePort";
+/// Longest stderr line passed on as the reason a browser stopped.
+const REASON_MAX: usize = 300;
 
 /// The browser's process tree. Dropping it kills every process in it.
 pub struct BrowserProcess {
@@ -68,7 +71,7 @@ pub async fn launch(
         .envs(env.iter().map(|(name, value)| (name, value)))
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::null());
+        .stderr(Stdio::piped());
     ProcessJob::prepare(&mut command);
     let job = ProcessJob::new()?;
     let mut child = command.spawn()?;
@@ -77,6 +80,7 @@ pub async fn launch(
         let _ = child.wait();
         return Err(err.into());
     }
+    let why = child.stderr.take().map(why_it_stopped);
     let mut process = BrowserProcess { child, job };
     debug!(pid = process.child.id(), "browser: started");
 
@@ -89,9 +93,15 @@ pub async fn launch(
             return Ok((process, url));
         }
         if process.child.try_wait()?.is_some() {
-            return Err(BrowserError::Start(
-                "the browser closed right after starting".to_owned(),
-            ));
+            // Its helpers may still hold stderr open until the group dies.
+            process.kill();
+            let reason = why
+                .and_then(|why| why.recv_timeout(Duration::from_secs(1)).ok())
+                .map(|line| format!(" ({line})"))
+                .unwrap_or_default();
+            return Err(BrowserError::Start(format!(
+                "the browser closed right after starting{reason}"
+            )));
         }
         if started.elapsed() > START_TIMEOUT {
             return Err(BrowserError::Start(
@@ -100,6 +110,48 @@ pub async fn launch(
         }
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
+}
+
+/// Reads the browser's stderr to its end and sends the line that best says
+/// why it stopped, for a browser that closes right after starting (a
+/// missing sandbox on Linux, say). Nothing of it goes to the log.
+fn why_it_stopped(stderr: ChildStderr) -> mpsc::Receiver<String> {
+    let (send, receive) = mpsc::channel();
+    let spawned = std::thread::Builder::new()
+        .name("browser-stderr".into())
+        .spawn(move || {
+            let mut best: Option<String> = None;
+            let mut last: Option<String> = None;
+            for line in BufReader::new(stderr).lines() {
+                let Ok(line) = line else { break };
+                let text = log_text(&line);
+                if text.is_empty() {
+                    continue;
+                }
+                let lower = line.to_ascii_lowercase();
+                let sandbox = lower.contains("sandbox") || lower.contains("namespace");
+                if sandbox || (best.is_none() && lower.contains(":fatal:")) {
+                    best = Some(text.clone());
+                }
+                last = Some(text);
+            }
+            if let Some(line) = best.or(last) {
+                let _ = send.send(line.chars().take(REASON_MAX).collect());
+            }
+        });
+    if spawned.is_err() {
+        debug!("browser: cannot read its stderr");
+    }
+    receive
+}
+
+/// A Chromium log line without its `[pid:tid:time:LEVEL:file.cc:123]` prefix.
+fn log_text(line: &str) -> String {
+    let text = match line.strip_prefix('[') {
+        Some(rest) => rest.split_once("] ").map_or(line, |(_, text)| text),
+        None => line,
+    };
+    text.trim().to_owned()
 }
 
 /// `DevToolsActivePort` holds the port and the browser's WebSocket path, one
@@ -125,5 +177,16 @@ mod tests {
         assert_eq!(devtools_url("62475\n"), None);
         assert_eq!(devtools_url("0\n/devtools/browser/x"), None);
         assert_eq!(devtools_url(""), None);
+    }
+
+    #[test]
+    fn a_log_line_loses_its_prefix() {
+        assert_eq!(
+            log_text(
+                "[11:11:1001/173604.487235:ERROR:zygote_host_impl_linux.cc:129] No usable sandbox!"
+            ),
+            "No usable sandbox!"
+        );
+        assert_eq!(log_text("  plain words "), "plain words");
     }
 }
