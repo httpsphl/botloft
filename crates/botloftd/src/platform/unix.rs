@@ -1,10 +1,17 @@
-//! Unix fallbacks, so the daemon builds and its tests run off Windows.
+//! Linux and macOS (spec 14.1). Starting with the system comes later; the
+//! rest gives bots what they get on Windows.
 
-use std::ffi::OsString;
+mod account;
+mod env;
+mod job;
+
 use std::io;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
+pub use self::account::owner_name;
+pub use self::env::user_environment;
+pub use self::job::ProcessJob;
 use super::{TaskDefinition, TaskInfo};
 
 /// `0700` for folders, `0600` for files.
@@ -30,20 +37,6 @@ pub async fn shutdown_signal() {
     }
 }
 
-/// No job objects here; the runtime kills the child directly.
-#[derive(Debug)]
-pub struct ProcessJob;
-
-impl ProcessJob {
-    pub fn new() -> io::Result<Self> {
-        Ok(Self)
-    }
-
-    pub fn terminate(&self) -> io::Result<()> {
-        Ok(())
-    }
-}
-
 /// Nothing keeps a Unix machine awake yet.
 #[derive(Debug)]
 pub struct KeepAwake;
@@ -56,29 +49,6 @@ impl KeepAwake {
     pub fn set(&mut self, _on: bool) -> io::Result<()> {
         Ok(())
     }
-}
-
-/// The daemon's environment without Claude Code session variables.
-pub fn user_environment() -> io::Result<Vec<(OsString, OsString)>> {
-    Ok(std::env::vars_os()
-        .filter(|(name, _)| {
-            let name = name.to_string_lossy();
-            name != "CLAUDECODE" && !name.starts_with("CLAUDE_CODE_")
-        })
-        .collect())
-}
-
-/// The login name; Unix has no display name to ask for. `USER` is missing
-/// in some service and container environments, and the home folder is
-/// named after the login there too.
-pub fn owner_name() -> String {
-    ["USER", "LOGNAME"]
-        .iter()
-        .filter_map(std::env::var_os)
-        .chain(dirs::home_dir().and_then(|home| home.file_name().map(ToOwned::to_owned)))
-        .map(|name| name.to_string_lossy().trim().to_owned())
-        .find(|name| !name.is_empty())
-        .unwrap_or_default()
 }
 
 /// Nothing to leave: Unix never opens a console for the daemon.

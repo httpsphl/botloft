@@ -3,7 +3,9 @@
 //! the daemon stops the bot, and also when the daemon itself dies.
 
 use std::io;
-use std::os::windows::io::RawHandle;
+use std::os::windows::io::AsRawHandle as _;
+use std::os::windows::process::CommandExt as _;
+use std::process::{Child, Command};
 
 use windows::Win32::Foundation::{CloseHandle, HANDLE};
 use windows::Win32::System::JobObjects::{
@@ -40,10 +42,16 @@ impl ProcessJob {
         Ok(job)
     }
 
+    /// Makes `command` start without a console window (spec 7.3).
+    pub fn prepare(command: &mut Command) {
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+
     /// Puts a process (and whatever it starts from now on) in the job.
-    pub fn assign(&self, process: RawHandle) -> io::Result<()> {
-        // SAFETY: `process` is a live process handle owned by the caller.
-        unsafe { AssignProcessToJobObject(self.0, HANDLE(process)) }?;
+    pub fn assign(&self, child: &Child) -> io::Result<()> {
+        // SAFETY: `child` owns a live process handle.
+        unsafe { AssignProcessToJobObject(self.0, HANDLE(child.as_raw_handle())) }?;
         Ok(())
     }
 

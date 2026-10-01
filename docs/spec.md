@@ -224,7 +224,7 @@ Eventos de uma generation antiga são ignorados. Todo processo novo emite `bot.s
 - Mudanças em nome, papel ou instruções regravam as regras na hora, mas o bot só as lê no próximo start; o daemon não reinicia o bot sozinho.
 - `auth_error` não entra em loop de restart: fica parado até o owner pedir `bots.restart` ou até o daemon ver o Claude Code conectado de novo.
 - **Login do Claude Code:** o daemon roda `claude auth status` (JSON com `loggedIn` e, conectado, `email`, `subscriptionType` e `orgName`; sai com 0 conectado e 1 desconectado, seção 19) no ambiente do usuário, sem janela: quando acha o Claude Code, a cada 30 s enquanto desconectado ou desconhecido, na hora quando um bot cai em `auth_error` e quando o app pede (`system.refresh`). Conectado, não confere de novo sozinho. Quando o resultado passa de desconectado para conectado, os bots em `auth_error` sobem de novo sem o dono pedir. Um erro de conta com o login válido (`billing_error`, `account_on_hold`, organização bloqueada) não muda o resultado e por isso não vira loop. O resultado sai em `system.status.claudeSignedIn`, e a conta (e-mail, plano, organização) em `system.status.account.claude`. O login em si é feito pelo app (15.2).
-- Cada processo de bot entra num **Job Object** com `KILL_ON_JOB_CLOSE`. Se o daemon morrer, a árvore de processos dos bots morre junto e não sobra `claude.exe` órfão.
+- Cada processo de bot entra num **Job Object** com `KILL_ON_JOB_CLOSE`. Se o daemon morrer, a árvore de processos dos bots morre junto e não sobra `claude.exe` órfão. Fora do Windows, um grupo de processos (14.1).
 
 ### 7.4 Spawn
 
@@ -697,6 +697,19 @@ Pragmas: `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON`, `busy_time
 | Instância única | lock exclusivo em `<BOTLOFT_HOME>\botloftd.lock` (`File::try_lock`), solto pelo sistema quando o processo termina, mesmo em crash; se já estiver preso, sair com erro claro. É um lock por pasta de dados, e não um mutex de nome fixo, para o daemon de dev (`BOTLOFT_HOME`) rodar ao lado do instalado |
 | Porta ocupada | se 45710 estiver em uso por outro processo, sair com erro (sem porta alternativa no MVP) |
 
+### 14.1 Linux e macOS
+
+Em fatias (18, item 8). O que já vale fora do Windows:
+
+| Tema | Solução |
+|---|---|
+| Processos dos bots | Cada processo de bot e de navegador lidera um **grupo de processos** próprio (`process_group(0)`), e tudo o que ele inicia entra no grupo. Parar o bot manda `SIGKILL` ao grupo inteiro (`kill(-pgid)`), como `TerminateJobObject`. Um grupo que já sumiu (`ESRCH`) é esquecido, para um número reaproveitado não atingir outro grupo. Um processo que cria sessão própria (`setsid`) sai do grupo. **Falta:** quando o daemon morre, o grupo não morre junto como com `KILL_ON_JOB_CLOSE`. O `claude` sai sozinho quando o stdin fecha (7.4), mas um navegador continua; a fatia 3 resolve isso (o `systemd --user` mata o cgroup da unit; no macOS, uma varredura ao subir) |
+| Ambiente do bot | O que o **shell de login** do dono monta: `$SHELL` (senão o shell da conta, `getpwuid_r`, senão `/bin/sh`) com `-l -c`, sem terminal, imprime uma marca e `env -0`. Assim o bot acha o que o terminal do dono acha (`~/.local/bin`, Homebrew), mesmo com o daemon iniciado pelo sistema com um `PATH` mínimo. A marca separa o que o perfil imprime; `_`, `SHLVL`, `PWD` e `OLDPWD` ficam de fora. Mais de 10 s, saída sem `PATH` ou erro: vale o ambiente do daemon. A leitura vale por 20 s, menos que os 30 s em que o Botloft percebe o Claude Code instalado (15.1). As variáveis de sessão do Claude Code saem nos dois casos |
+| Claude Code | O `claude` no `PATH` desse ambiente, senão em `~/.local/bin` (instalador nativo), `~/.claude/local`, `/opt/homebrew/bin` e `/usr/local/bin` |
+| Nome do dono | O nome completo da conta (primeiro campo do GECOS), senão o login; `USER`, `LOGNAME` e o nome da pasta pessoal cobrem um uid sem entrada (contêineres) |
+| Navegador | 21.2 |
+| Iniciar com o sistema, não suspender, Lixeira | Ainda não: procurar a tarefa responde "não instalada", e o resto avisa que só existe no Windows |
+
 ## 15. App desktop
 
 ### 15.1 Estrutura
@@ -950,7 +963,7 @@ M2 a M4 foram entregues com ConPTY, terminal com replay, inbox por named pipe e 
 5. Histórico de versões das instruções do bot.
 6. Acesso remoto com token por dispositivo (Tailscale).
 7. Sinais entre bots disparando rotinas.
-8. Suporte Linux/macOS. Em fatias: (1) CI com Ubuntu e macOS para o daemon; (2) runtime do bot (grupo de processos, ambiente, `claude`, navegador); (3) iniciar com o sistema (`systemd --user`, LaunchAgent); (4) app; (5) empacotamento e release. Feita: 1.
+8. Suporte Linux/macOS. Em fatias: (1) CI com Ubuntu e macOS para o daemon; (2) runtime do bot (grupo de processos, ambiente, `claude`, navegador); (3) iniciar com o sistema (`systemd --user`, LaunchAgent); (4) app; (5) empacotamento e release. Feitas: 1 e 2 (14.1).
 9. Navegador dos bots, com o dono assistindo ao vivo. Desenho na seção 21.
 
 ## 19. Pontos a verificar na versão alvo do Claude Code
@@ -1174,7 +1187,7 @@ Cada bot tem um navegador próprio para pesquisar e usar sites: um Microsoft Edg
 - Sobe na primeira tool `browser_*` do bot e fica aberto enquanto ele o usa. Um processo por bot.
 - Comando: `msedge.exe --headless=new --remote-debugging-port=0 --user-data-dir=<home>\browsers\<bot_id> --no-first-run --no-default-browser-check --mute-audio --disable-extensions --disable-sync about:blank`. Sem `--disable-extensions`, um perfil novo recebe as extensões instaladas para todo o computador, e elas abrem abas próprias no navegador do bot (visto com o Edge 154). Com a porta 0, o Edge escolhe uma porta livre em 127.0.0.1 e a escreve com o caminho do WebSocket em `DevToolsActivePort`, na pasta do perfil (visto com o Edge 154); o daemon apaga o arquivo antigo antes de subir e espera o novo por até 10 s.
 - Como o `claude.exe`: sem janela (`CREATE_NO_WINDOW`), num Job Object próprio com `KILL_ON_JOB_CLOSE` (morre junto com o daemon) e com o ambiente padrão do usuário (7.4).
-- Achar o Edge: `[browser] path`, senão `msedge.exe` em `%ProgramFiles(x86)%` e `%ProgramFiles%` (`Microsoft\Edge\Application`) e em `%LOCALAPPDATA%`. Sem navegador, a tool responde ao bot que ele não está disponível, e o painel diz o mesmo.
+- Achar o Edge: `[browser] path`, senão `msedge.exe` em `%ProgramFiles(x86)%` e `%ProgramFiles%` (`Microsoft\Edge\Application`) e em `%LOCALAPPDATA%`. No macOS, Edge, Chrome ou Chromium em `/Applications` e em `~/Applications`; no Linux, o primeiro de `microsoft-edge-stable`, `microsoft-edge`, `google-chrome-stable`, `google-chrome`, `chromium` e `chromium-browser` no `PATH` do ambiente do dono (14.1). Fora do Windows, o grupo de processos faz o papel do Job Object (14.1). Sem navegador, a tool responde ao bot que ele não está disponível, e o painel diz o mesmo.
 - **Perfil:** `<home>\browsers\<bot_id>\`, fora da pasta do bot e em `%LOCALAPPDATA%` (5): cookies e sessões são do navegador, não dos arquivos que o bot faz. O perfil fica entre aberturas, então um login feito continua valendo. Arquivar ou excluir o bot fecha o navegador e apaga o perfil.
 - **Descansar:** um navegador aberto que ninguém usa não deve gastar o computador. Assim que o turno do bot termina (o estado dele deixa de ser `busy` ou `needs_approval`, 7.1), o daemon põe o navegador para descansar: tira um quadro da aba ativa, para o painel ter o que mostrar, e minimiza a janela do Edge (`Browser.setWindowBounds` com `windowState: "minimized"`; a janela já não aparecia, mas para o Edge ela existe). As páginas passam a valer como as de uma janela minimizada: `visibilityState` vira `hidden`, os timers caem para um por segundo ou menos, animações e quadros param. Medido com o Edge 154, uma página que gastava 90% de um núcleo fica abaixo de 1% (19). Nada se perde: abas, formulários e sessões continuam como estavam. Não descansa no meio de uma tool nem nas mãos do dono (21.10).
 - **Acordar:** na hora, com a janela de volta a `normal`, na próxima tool `browser_*` do bot, quando o dono assume o controle e quando ele recarrega a página. Depois de algo que o dono fez com o bot fora de um turno, o navegador volta a descansar sozinho: 20 s sem uso, conferido a cada 30 s.

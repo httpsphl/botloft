@@ -1,8 +1,8 @@
-//! Starting a bot's browser (spec 21.2): find Edge, run it without a window
-//! in a job of its own, and read where its DevTools listen.
+//! Starting a bot's browser (spec 21.2): run it without a window in a job
+//! of its own, and read where its DevTools listen.
 
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
@@ -33,26 +33,6 @@ impl Drop for BrowserProcess {
     fn drop(&mut self) {
         self.kill();
     }
-}
-
-/// The browser to run: `configured`, or the Edge that comes with Windows.
-pub fn find(configured: &str) -> Option<PathBuf> {
-    let configured = configured.trim();
-    if !configured.is_empty() {
-        let path = PathBuf::from(configured);
-        return path.is_file().then_some(path);
-    }
-    ["ProgramFiles(x86)", "ProgramFiles", "LOCALAPPDATA"]
-        .iter()
-        .filter_map(std::env::var_os)
-        .map(|base| {
-            PathBuf::from(base)
-                .join("Microsoft")
-                .join("Edge")
-                .join("Application")
-                .join("msedge.exe")
-        })
-        .find(|path| path.is_file())
 }
 
 /// Starts `program` with the profile in `profile` and returns it with the
@@ -89,18 +69,13 @@ pub async fn launch(
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt as _;
-        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-        command.creation_flags(CREATE_NO_WINDOW);
-    }
+    ProcessJob::prepare(&mut command);
     let job = ProcessJob::new()?;
-    let child = command.spawn()?;
-    #[cfg(windows)]
-    {
-        use std::os::windows::io::AsRawHandle as _;
-        job.assign(child.as_raw_handle())?;
+    let mut child = command.spawn()?;
+    if let Err(err) = job.assign(&child) {
+        let _ = child.kill();
+        let _ = child.wait();
+        return Err(err.into());
     }
     let mut process = BrowserProcess { child, job };
     debug!(pid = process.child.id(), "browser: started");
@@ -150,10 +125,5 @@ mod tests {
         assert_eq!(devtools_url("62475\n"), None);
         assert_eq!(devtools_url("0\n/devtools/browser/x"), None);
         assert_eq!(devtools_url(""), None);
-    }
-
-    #[test]
-    fn a_configured_browser_must_exist() {
-        assert_eq!(find(r"C:\nowhere\msedge.exe"), None);
     }
 }
