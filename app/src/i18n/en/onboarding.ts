@@ -12,8 +12,8 @@ export const onboarding = {
     restart: "Restarting Botloft…",
     start: "Starting your bots…",
   },
-  installNote:
-    "Botloft runs your bots in the background. In Settings you choose whether they keep working after you close this window and whether Botloft starts with Windows.",
+  installNote: (system: string) =>
+    `Botloft runs your bots in the background. In Settings you choose whether they keep working after you close this window and whether Botloft starts with ${system}.`,
   stopped: {
     title: "Botloft couldn't start",
     body: "Botloft runs your bots in the background, and that part didn't start.",
@@ -48,8 +48,8 @@ export const onboarding = {
     intro:
       "A crew is a group of Claude Code bots that keep running, message each other and share a folder. Each crew starts with a chief: tell it what the crew is for, and it plans the work and suggests the bots it needs.",
     botloft: "Botloft",
-    running:
-      "Running in the background. It starts with Windows, so your bots keep working after you close this window.",
+    running: (system: string) =>
+      `Running in the background. It starts with ${system}, so your bots keep working after you close this window.`,
     runningNotAtStart:
       "Running in the background, so your bots keep working after you close this window.",
     runningWhileOpen: "Running while this window is open. Closing it stops your bots.",

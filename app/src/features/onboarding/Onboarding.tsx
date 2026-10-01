@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { type StoreApi, useStore } from "zustand";
 import { useT } from "../../i18n";
 import { PROTOCOL_VERSION } from "../../lib/protocol.gen";
+import { SYSTEM } from "../../lib/system";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { Details } from "../../ui/Details";
@@ -33,7 +34,7 @@ export function Onboarding({ link }: { link: StoreApi<Link> }) {
         <div className="flex flex-col gap-3">
           <Waiting text={o.installing[current.action]} />
           {current.action === "install" && (
-            <p className="text-ink-soft text-sm leading-relaxed">{o.installNote}</p>
+            <p className="text-ink-soft text-sm leading-relaxed">{o.installNote(SYSTEM)}</p>
           )}
         </div>
       );

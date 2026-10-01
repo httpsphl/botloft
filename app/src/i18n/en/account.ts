@@ -54,18 +54,18 @@ export const account = {
       "With the window closed, its icon stays near the clock: a click opens Botloft, and it tells you when a bot needs you.",
     trayOff:
       "Closing the window closes Botloft. The bots keep working, with no icon or notifications.",
-    startWithWindows: "Start with Windows",
-    startWithWindowsOn:
-      "When you sign in to Windows, your bots get back to work on their own, without opening this window.",
-    startWithWindowsOff: "After you restart the computer, the bots wait until you open Botloft.",
-    openAtSignIn: "Open the window when you sign in to Windows",
-    openAtSignInOn: "Botloft's window opens when you sign in to Windows.",
+    startWithSystem: (system: string) => `Start with ${system}`,
+    startWithSystemOn: (system: string) =>
+      `When you sign in to ${system}, your bots get back to work on their own, without opening this window.`,
+    startWithSystemOff: "After you restart the computer, the bots wait until you open Botloft.",
+    openAtSignIn: (system: string) => `Open the window when you sign in to ${system}`,
+    openAtSignInOn: (system: string) => `Botloft's window opens when you sign in to ${system}.`,
     openAtSignInNearClock: "Botloft starts near the clock, without opening the window.",
     openAtSignInOff: "The window opens only when you open Botloft.",
     alerts: "Notifications",
     notifyNeeds: "When a bot needs you",
-    notifyNeedsHint:
-      "A Windows notification when a bot asks for permission or needs you to sign in, if Botloft is not in front.",
+    notifyNeedsHint: (system: string) =>
+      `A ${system} notification when a bot asks for permission or needs you to sign in, if Botloft is not in front.`,
     notifyDone: "When a bot finishes",
     notifyDoneHint: "A notification when a bot finishes what it was doing.",
     sound: "Play a sound",
@@ -94,7 +94,8 @@ export const account = {
           ? "1 hour"
           : `${minutes / 60} hours`,
     lessMotion: "Less motion",
-    lessMotionHint: "A still window, as when the Windows animation effects are off.",
+    lessMotionHint: (system: string) =>
+      `A still window, as when the ${system} animation effects are off.`,
     appearance: "Appearance",
     theme: "Theme",
     themes: { system: "System", light: "Light", dark: "Dark" },

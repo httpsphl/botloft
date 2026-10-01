@@ -5,6 +5,7 @@ import type { Client } from "../../lib/client";
 import { FakeBotloft } from "../../lib/fake";
 import { FakeHost, FakeUpdate } from "../../lib/fakeHost";
 import { RpcError } from "../../lib/rpc";
+import { SYSTEM } from "../../lib/system";
 import { prefs, resetPrefs } from "../../shell/prefs";
 
 afterEach(() => {
@@ -30,7 +31,7 @@ describe("settings", () => {
     const keep = within(dialog).getByRole("switch", {
       name: "Keep working after you close Botloft",
     });
-    const start = within(dialog).getByRole("switch", { name: "Start with Windows" });
+    const start = within(dialog).getByRole("switch", { name: `Start with ${SYSTEM}` });
     const awake = within(dialog).getByRole("switch", {
       name: "Keep the computer awake while bots work",
     });
@@ -70,7 +71,7 @@ describe("settings", () => {
       within(dialog).queryByRole("switch", { name: "Show Botloft near the clock" });
     const atSignIn = () =>
       within(dialog).queryByRole("switch", {
-        name: "Open the window when you sign in to Windows",
+        name: `Open the window when you sign in to ${SYSTEM}`,
       });
     await waitFor(() => expect(atSignIn()).not.toBeNull());
     expect(dialog.textContent).toContain(
@@ -83,7 +84,7 @@ describe("settings", () => {
       within(dialog).getByRole("switch", { name: "Keep working after you close Botloft" }),
     );
     expect(icon()).toBeNull();
-    fireEvent.click(within(dialog).getByRole("switch", { name: "Start with Windows" }));
+    fireEvent.click(within(dialog).getByRole("switch", { name: `Start with ${SYSTEM}` }));
     await waitFor(() => expect(atSignIn()).toBeNull());
   });
 
@@ -110,7 +111,7 @@ describe("settings", () => {
   test("a setting that cannot be saved goes back", async () => {
     const { fake } = renderApp();
     const dialog = await openSettings();
-    const start = within(dialog).getByRole("switch", { name: "Start with Windows" });
+    const start = within(dialog).getByRole("switch", { name: `Start with ${SYSTEM}` });
     await waitFor(() => expect(start.hasAttribute("disabled")).toBe(false));
     fake.failNext("settings.update", new RpcError(-32603, "could not save the settings"));
     fireEvent.click(start);

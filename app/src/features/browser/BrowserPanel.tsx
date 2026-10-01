@@ -7,6 +7,7 @@ import { Globe, LoaderCircle, Maximize2, Minimize2, Moon, X } from "lucide-react
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import type { Bot } from "../../lib/protocol.gen";
+import { SYSTEM } from "../../lib/system";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
@@ -121,7 +122,7 @@ export function BrowserPanel({
       >
         {status === "failed" ? (
           <Callout tone="danger" title={t.failedTitle}>
-            {t.failedBody}
+            {t.failedBody(SYSTEM)}
             {state?.error && (
               <details className="mt-2 text-xs">
                 <summary>{t.details}</summary>
