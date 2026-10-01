@@ -925,7 +925,7 @@ Esta seção entra no PR do I1, junto com o código.
 - TS: `tsc --noEmit`, `biome check`, `vitest run`.
 - Limite **flexível de 300 linhas** por arquivo; passou disso, dividir por responsabilidade.
 - Toda lógica de supervisor, courier e chat testada com `FakeRuntime` (sem Claude real). O `FakeRuntime` fala `stream-json` de verdade: recebe as linhas do stdin e o teste escreve os eventos do stdout.
-- CI: GitHub Actions em `windows-latest` (principal) e `ubuntu-latest` para `botloft-core` e `botloft-store`.
+- CI: GitHub Actions em `windows-latest` (principal, workspace inteiro e app) e em `ubuntu-latest` e `macos-latest` para os membros padrão (`botloft-core`, `botloft-store`, `botloftd`), com clippy e testes. Os crates do app entram nesses runners quando o app rodar neles (18, item 8).
 
 ## 17. Marcos do MVP
 
@@ -950,7 +950,7 @@ M2 a M4 foram entregues com ConPTY, terminal com replay, inbox por named pipe e 
 5. Histórico de versões das instruções do bot.
 6. Acesso remoto com token por dispositivo (Tailscale).
 7. Sinais entre bots disparando rotinas.
-8. Suporte Linux/macOS.
+8. Suporte Linux/macOS. Em fatias: (1) CI com Ubuntu e macOS para o daemon; (2) runtime do bot (grupo de processos, ambiente, `claude`, navegador); (3) iniciar com o sistema (`systemd --user`, LaunchAgent); (4) app; (5) empacotamento e release. Feita: 1.
 9. Navegador dos bots, com o dono assistindo ao vivo. Desenho na seção 21.
 
 ## 19. Pontos a verificar na versão alvo do Claude Code

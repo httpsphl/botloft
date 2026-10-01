@@ -31,17 +31,28 @@ jobs:
       - name: Generated TypeScript bindings are up to date
         run: git diff --exit-code -- app/src/lib/protocol.gen.ts
 
-  rust-ubuntu:
-    name: Rust core + store (Ubuntu)
-    runs-on: ubuntu-latest
+  # The daemon and its crates off Windows (spec 18, item 8). Plain `cargo`
+  # builds the default members only: the app crates need the desktop
+  # libraries of each system and join later.
+  rust-unix:
+    name: Rust (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu
+            os: ubuntu-latest
+          - name: macOS
+            os: macos-latest
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - run: cargo clippy -p botloft-core -p botloft-store --all-targets -- -D warnings
-      - run: cargo test -p botloft-core -p botloft-store
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
 
   app:
     name: App (Windows)
