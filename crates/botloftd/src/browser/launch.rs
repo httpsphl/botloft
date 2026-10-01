@@ -12,8 +12,9 @@ use tracing::debug;
 use super::BrowserError;
 use crate::platform::{self, ProcessJob};
 
-/// How long Edge may take to write `DevToolsActivePort`.
-const START_TIMEOUT: Duration = Duration::from_secs(10);
+/// How long the browser may take to write `DevToolsActivePort`. Usually
+/// under a second; Edge's first start on a new Linux machine took over 20.
+const START_TIMEOUT: Duration = Duration::from_secs(30);
 const PORT_FILE: &str = "DevToolsActivePort";
 /// Longest stderr line passed on as the reason a browser stopped.
 const REASON_MAX: usize = 300;
