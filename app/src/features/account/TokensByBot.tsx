@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import { useT } from "../../i18n";
 import { errorText } from "../../lib/api";
-import { tokens, usedTokens } from "../../lib/format";
+import { reloadedTokens, tokens, usedTokens } from "../../lib/format";
 import type { BotTokens } from "../../lib/protocol.gen";
 import { useApi } from "../../store/context";
 import { Callout } from "../../ui/Callout";
@@ -99,7 +99,7 @@ function Row({ bot, most }: { bot: BotTokens; most: number }) {
           />
         </div>
         <span className="text-muted text-xs">
-          {u.detail(bot.turns, tokens(bot.tokens.cacheRead))}
+          {u.detail(bot.turns, tokens(bot.tokens.cacheRead), reloadedTokens(bot.tokens.reloaded))}
         </span>
       </div>
     </li>
@@ -111,13 +111,16 @@ function Total({ bots }: { bots: BotTokens[] }) {
   const used = bots.reduce((sum, bot) => sum + usedTokens(bot.tokens), 0);
   const turns = bots.reduce((sum, bot) => sum + bot.turns, 0);
   const reread = bots.reduce((sum, bot) => sum + bot.tokens.cacheRead, 0);
+  const reloaded = bots.reduce((sum, bot) => sum + bot.tokens.reloaded, 0);
   return (
     <li className="flex flex-col gap-1 border-line border-t pt-3">
       <div className="flex items-baseline justify-between gap-3 font-semibold">
         <span>{u.total}</span>
         <span className="tabular-nums">{tokens(used)}</span>
       </div>
-      <span className="text-muted text-xs">{u.detail(turns, tokens(reread))}</span>
+      <span className="text-muted text-xs">
+        {u.detail(turns, tokens(reread), reloadedTokens(reloaded))}
+      </span>
     </li>
   );
 }

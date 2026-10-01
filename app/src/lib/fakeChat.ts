@@ -13,8 +13,18 @@ import type {
   ChatBody,
   ChatItem,
   RoutinesCreateParams,
+  TokenUsage,
   ToolItem,
 } from "./protocol.gen";
+
+/** A turn's tokens unless a test says otherwise: a warm cache. */
+const TURN_TOKENS: TokenUsage = {
+  input: 12,
+  cacheWrite: 1800,
+  reloaded: 0,
+  cacheRead: 24_000,
+  output: 640,
+};
 
 /** The chief's tool to suggest a bot (spec 10.2). */
 export const SUGGEST_TOOL = "mcp__botloft__suggest_bot";
@@ -121,11 +131,11 @@ export class FakeChat {
     return this.update(item.id, { ...item.body, status: failed ? "failed" : "done", output });
   }
 
-  turn(botId: BotId, error: string | null = null): ChatItem {
+  turn(botId: BotId, error: string | null = null, tokens: TokenUsage = TURN_TOKENS): ChatItem {
     return this.add(botId, {
       kind: "turn",
       durationMs: 4200,
-      tokens: { input: 12, cacheWrite: 1800, cacheRead: 24_000, output: 640 },
+      tokens,
       error,
     });
   }

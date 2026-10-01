@@ -22,15 +22,16 @@ export function usageHandlers(fake: FakeBotloft): Pick<Handlers, "usage.tokens">
             color: bot.color,
             archived: bot.archivedAt !== null,
             turns: 0,
-            tokens: { input: 0, cacheWrite: 0, cacheRead: 0, output: 0 },
+            tokens: { input: 0, cacheWrite: 0, reloaded: 0, cacheRead: 0, output: 0 },
           };
           byBot.set(bot.id, entry);
         }
-        const { input, cacheWrite, cacheRead, output } = item.body.tokens;
+        const { input, cacheWrite, reloaded, cacheRead, output } = item.body.tokens;
         entry.turns += 1;
         entry.tokens = {
           input: entry.tokens.input + input,
           cacheWrite: entry.tokens.cacheWrite + cacheWrite,
+          reloaded: entry.tokens.reloaded + reloaded,
           cacheRead: entry.tokens.cacheRead + cacheRead,
           output: entry.tokens.output + output,
         };
