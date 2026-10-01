@@ -174,8 +174,7 @@ impl Watch {
             return None;
         }
         let frame = watching.frames.borrow_and_update().clone()?;
-        let params = serde_json::to_value(&*frame).unwrap_or(Value::Null);
-        Some(jsonrpc::notification(notification::BROWSER_FRAME, params))
+        Some(jsonrpc::notification(notification::BROWSER_FRAME, &*frame))
     }
 }
 

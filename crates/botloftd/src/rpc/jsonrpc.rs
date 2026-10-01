@@ -2,6 +2,7 @@
 //! notifications.
 
 use botloft_core::protocol::error_code;
+use serde::Serialize;
 use serde_json::{Map, Value, json};
 
 use crate::service::ApiError;
@@ -104,8 +105,23 @@ pub fn failure(id: &Value, err: &RpcError) -> String {
     json!({ "jsonrpc": "2.0", "id": id, "error": error }).to_string()
 }
 
-pub fn notification(method: &str, params: Value) -> String {
-    json!({ "jsonrpc": "2.0", "method": method, "params": params }).to_string()
+/// A notification, written straight to text without building a `Value`.
+pub fn notification(method: &str, params: &impl Serialize) -> String {
+    #[derive(Serialize)]
+    struct Notification<'a, P> {
+        jsonrpc: &'static str,
+        method: &'a str,
+        params: &'a P,
+    }
+    let note = Notification {
+        jsonrpc: "2.0",
+        method,
+        params,
+    };
+    serde_json::to_string(&note).unwrap_or_else(|err| {
+        tracing::warn!(method, "could not write a notification: {err}");
+        json!({ "jsonrpc": "2.0", "method": method, "params": null }).to_string()
+    })
 }
 
 /// Params for methods that take none.
@@ -182,7 +198,7 @@ mod tests {
         let failed: Value = serde_json::from_str(&failure(&json!(1), &err)).expect("json");
         assert_eq!(failed["error"], json!({"code":-32002,"message":"missing"}));
         let note: Value =
-            serde_json::from_str(&notification("crew.changed", json!({}))).expect("json");
+            serde_json::from_str(&notification("crew.changed", &json!({}))).expect("json");
         assert_eq!(
             note,
             json!({"jsonrpc":"2.0","method":"crew.changed","params":{}})

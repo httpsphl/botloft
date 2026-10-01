@@ -579,7 +579,8 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 - Primeiro request obrigatório: `session.hello {token, client: {name, version}, protocol: 2}` -> `{daemonVersion, protocol}`.
 - Qualquer outro método antes do hello: erro `-32001` e a conexão fecha. Token errado também dá `-32001`; `protocol` diferente dá `-32004`; nos dois casos a conexão fecha. O hello tem que chegar em até 10 s.
 - `Origin` aceito: `http://tauri.localhost`, `tauri://localhost` e `http://localhost:1420` (dev). Qualquer outro `Origin` recebe HTTP 403 antes do upgrade. Sem `Origin` (cliente nativo, testes) é aceito: navegadores sempre mandam o header, e o token continua obrigatório.
-- Um cliente lento que deixa acumular mais de 1024 notificações é desconectado e recarrega o estado ao reconectar.
+- Um cliente lento que deixa acumular mais de 4096 notificações é desconectado e recarrega o estado ao reconectar.
+- Os requests rodam numa thread de bloqueio, nunca numa do runtime. Os de uma conexão são respondidos um de cada vez, na ordem em que chegaram, e a resposta sai antes de qualquer notificação que venha depois dela: o app trata uma resposta como mais nova que tudo o que recebeu antes e grava o objeto inteiro (um `Bot`, uma `Routine`, a lista de uma carga). A exceção são as leituras que o app nunca cruza com notificações (`files.list`, `files.read`, `screens.list`, `attachments.read`, `usage.tokens`). Elas correm por fora e respondem quando ficam prontas, de modo que varrer uma pasta grande ou ler um arquivo grande não segura o texto ao vivo. Os requests do navegador (21.7, 21.10) pertencem à conexão e são respondidos na hora.
 - A versão 2 do protocolo troca `terminal.*` pelo chat (ADR 0001).
 
 ### 11.2 Métodos (MVP)
