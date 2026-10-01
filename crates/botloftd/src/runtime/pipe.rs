@@ -54,6 +54,7 @@ impl Runtime for PipeRuntime {
             let _ = child.kill();
             return Err(err);
         }
+        job.track(&command);
         let pid = Some(child.id());
         let stdout = child
             .stdout

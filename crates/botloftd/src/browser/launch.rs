@@ -81,6 +81,7 @@ pub async fn launch(
         let _ = child.wait();
         return Err(err.into());
     }
+    job.track(&command);
     let said = child.stderr.take().map(StartLog::read);
     let mut process = BrowserProcess { child, job };
     debug!(pid = process.child.id(), "browser: started");
