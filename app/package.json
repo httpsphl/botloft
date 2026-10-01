@@ -12,6 +12,7 @@
     "tauri": "tauri",
     "bundle": "node scripts/sidecar.mjs && tauri build --config src-tauri/tauri.bundle.conf.json",
     "bundle:setup": "node scripts/setup.mjs",
+    "local": "node scripts/local.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "lint": "biome check .",
     "format": "biome check --write .",
