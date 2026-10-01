@@ -69,7 +69,7 @@ export function Timeline({
           </p>
         )}
         {count === 0 && !loading && !error && <p className="p-5 text-muted text-sm">{empty}</p>}
-        <ol aria-label={text.list}>
+        <ol aria-label={text.list} className="offscreen-rows">
           {messages.map((message) => (
             <MessageRow key={message.id} message={message} />
           ))}

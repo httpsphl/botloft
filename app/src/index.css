@@ -11,6 +11,7 @@
 @import "./effort.css";
 @import "./motion-less.css";
 @import "./paused.css";
+@import "./offscreen.css";
 
 /* Colors are tokens so the light and dark themes swap in one place
    (spec 15.3). State colors always go with an icon and a label. */

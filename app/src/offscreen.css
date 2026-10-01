@@ -1,0 +1,9 @@
+/* Long lists (the chat, a crew's messages) keep every row in the page.
+   Rows out of sight skip layout and paint until they scroll near, and
+   keep the size they last had so the scrollbar stays still. The newest
+   rows are left out: that is where cards arrive with a glow that would
+   be clipped, and where the owner looks. */
+.offscreen-rows > li:not(:nth-last-child(-n + 8)) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
+}

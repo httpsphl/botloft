@@ -175,7 +175,7 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
             </div>
           )}
           <SeenSince.Provider value={openedAt}>
-            <ol aria-label={t.chat.view.messages} className="flex flex-col gap-6">
+            <ol aria-label={t.chat.view.messages} className="offscreen-rows flex flex-col gap-6">
               {list}
             </ol>
           </SeenSince.Provider>
