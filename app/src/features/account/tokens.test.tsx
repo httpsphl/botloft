@@ -45,7 +45,7 @@ describe("tokens by bot", () => {
     expect(dialog.textContent).toContain("All bots9.8k");
   });
 
-  test("the conversation sent again after a pause counts apart", async () => {
+  test("the conversation sent again after a pause counts in the total", async () => {
     const fake = new FakeBotloft();
     const ops = fake.addCrew("Ops");
     const scout = fake.addBot(ops.id, "Scout", "Finds sources");
@@ -64,7 +64,7 @@ describe("tokens by bot", () => {
       within(list)
         .getAllByRole("listitem")
         .map((row) => row.textContent),
-    ).toEqual(["Scout4.1kOps · Worked 2 times · 72k reloaded"]);
+    ).toEqual(["Scout76.1kOps · Worked 2 times"]);
   });
 
   test("bots with the same name in two crews show their crew", async () => {
