@@ -111,8 +111,8 @@ export function tokens(count: number): string {
 /**
  * The tokens a turn counts for (spec 8.7): new input read, with what went
  * into the prompt cache, and what the model wrote. The conversation reread
- * from the cache weighs much less and is shown apart, and so is the
- * conversation written to the cache again after it expired.
+ * from the cache is left out, and the conversation written to the cache
+ * again after it expired is shown apart.
  */
 export function usedTokens(usage: TokenUsage): number {
   return usage.input + usage.cacheWrite - usage.reloaded + usage.output;

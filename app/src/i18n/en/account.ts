@@ -30,15 +30,15 @@ export const account = {
     tokens: {
       title: "Tokens by bot",
       intro:
-        "Tokens are the pieces of text a bot reads and writes. The count adds the new text read and the replies written. The conversation reread each time shows apart, as it weighs much less, and so does the conversation sent again after a pause.",
+        "Tokens are the pieces of text a bot reads and writes. The count adds the new text read and the replies written. The conversation sent again after a pause shows apart.",
       period: "Period",
       periods: { today: "Today", week: "7 days", month: "30 days", all: "All time" },
       empty: "No bot worked in this period.",
       failed: "Could not load the tokens",
       archived: "archived",
       /** `crew` is null on the total of all bots. */
-      detail: (crew: string | null, times: number, reread: string, reloaded: string | null) =>
-        `${crew === null ? "" : `${crew} · `}Worked ${times === 1 ? "once" : `${times} times`} · ${reread} reread${
+      detail: (crew: string | null, times: number, reloaded: string | null) =>
+        `${crew === null ? "" : `${crew} · `}Worked ${times === 1 ? "once" : `${times} times`}${
           reloaded === null ? "" : ` · ${reloaded} reloaded`
         }`,
       total: "All bots",

@@ -6,7 +6,6 @@
 export interface TurnTokens {
   read: string;
   wrote: string;
-  reread: string;
   /** The conversation sent again after a pause, if it was worth telling. */
   reloaded: string | null;
 }
@@ -64,7 +63,7 @@ export const chat = {
       `Took ${time}${
         tokens === null
           ? ""
-          : `. Read ${tokens.read} new tokens and wrote ${tokens.wrote}; reread ${tokens.reread} of the conversation, which weighs much less.${
+          : `. Read ${tokens.read} new tokens and wrote ${tokens.wrote}.${
               tokens.reloaded === null
                 ? ""
                 : ` It also sent ${tokens.reloaded} of the conversation again, as the model no longer had it after a pause.`
