@@ -90,7 +90,9 @@ fn the_service_brings_the_daemon_back_until_it_is_stopped() {
         eprintln!("BOTLOFT_SERVICE_TEST is not set; skipping");
         return;
     }
-    let dir = tempfile::tempdir().expect("tempdir");
+    // Under the home folder, like a real data folder: the CI runner keeps a
+    // `/tmp` of its own that the user's service manager does not see.
+    let dir = tempfile::tempdir_in(dirs::home_dir().expect("home folder")).expect("tempdir");
     let home = dir.path().join("home");
     std::fs::create_dir_all(&home).expect("home");
     let port = free_port();

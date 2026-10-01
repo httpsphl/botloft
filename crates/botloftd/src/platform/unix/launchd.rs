@@ -7,7 +7,7 @@
 
 use std::io;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output, Stdio};
+use std::process::Output;
 use std::time::Duration;
 
 use super::write_atomically;
@@ -40,10 +40,7 @@ fn service(name: &str) -> String {
 }
 
 fn launchctl(args: &[&str]) -> io::Result<Output> {
-    Command::new("launchctl")
-        .args(args)
-        .stdin(Stdio::null())
-        .output()
+    super::manager("launchctl", args)
 }
 
 fn run(args: &[&str]) -> io::Result<()> {

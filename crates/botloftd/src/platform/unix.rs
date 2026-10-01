@@ -13,6 +13,8 @@ mod systemd;
 use std::io;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
+use std::process::{Command, Output, Stdio};
+use std::time::{Duration, Instant};
 
 pub use self::account::owner_name;
 pub use self::env::user_environment;
@@ -21,6 +23,37 @@ pub use self::job::ProcessJob;
 pub use self::launchd::{TASK_KIND, delete_task, find_task, register_task, run_task, stop_task};
 #[cfg(not(target_os = "macos"))]
 pub use self::systemd::{TASK_KIND, delete_task, find_task, register_task, run_task, stop_task};
+
+/// Longest a `systemctl` or `launchctl` call may take.
+const MANAGER_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// Runs a service manager command and collects what it said, giving up
+/// after `MANAGER_TIMEOUT`: a stuck `launchctl` must not hang the app.
+fn manager(program: &str, args: &[&str]) -> io::Result<Output> {
+    let mut child = Command::new(program)
+        .args(args)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+    let deadline = Instant::now() + MANAGER_TIMEOUT;
+    while child.try_wait()?.is_none() {
+        if Instant::now() > deadline {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(io::Error::new(
+                io::ErrorKind::TimedOut,
+                format!(
+                    "`{program} {}` did not finish in {} s",
+                    args.join(" "),
+                    MANAGER_TIMEOUT.as_secs()
+                ),
+            ));
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    child.wait_with_output()
+}
 
 /// Writes `path` whole or not at all, creating its folder.
 fn write_atomically(path: &Path, contents: &[u8]) -> io::Result<()> {

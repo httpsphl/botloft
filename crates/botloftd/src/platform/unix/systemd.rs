@@ -5,7 +5,7 @@
 
 use std::io;
 use std::path::PathBuf;
-use std::process::{Command, Output, Stdio};
+use std::process::Output;
 
 use super::write_atomically;
 use crate::platform::{TaskDefinition, TaskInfo, TaskState, Triggers};
@@ -23,11 +23,9 @@ fn unit_path(name: &str) -> io::Result<PathBuf> {
 }
 
 fn systemctl(args: &[&str]) -> io::Result<Output> {
-    Command::new("systemctl")
-        .arg("--user")
-        .args(args)
-        .stdin(Stdio::null())
-        .output()
+    let mut all = vec!["--user"];
+    all.extend_from_slice(args);
+    super::manager("systemctl", &all)
 }
 
 /// Runs `systemctl --user` and fails with what it said.
