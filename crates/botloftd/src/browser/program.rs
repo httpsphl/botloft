@@ -1,6 +1,6 @@
 //! Which browser a bot runs (spec 21.2): the one in the config, else the
 //! Edge that comes with Windows, or the first Edge, Chrome or Chromium
-//! installed on Linux and macOS.
+//! installed on macOS (Chrome or Chromium first on Linux).
 
 use std::path::PathBuf;
 
@@ -55,17 +55,19 @@ fn installed() -> Vec<PathBuf> {
         .collect()
 }
 
-/// The commands the Edge, Chrome and Chromium packages install, on the
-/// owner's `PATH`.
+/// The commands the Chrome, Chromium and Edge packages install, on the
+/// owner's `PATH`. Edge comes last: it is the rarer one on Linux, and on
+/// the Ubuntu runner its first start with each new profile took seconds
+/// where Chrome took under one.
 #[cfg(all(unix, not(target_os = "macos")))]
 fn installed() -> Vec<PathBuf> {
     const COMMANDS: &[&str] = &[
-        "microsoft-edge-stable",
-        "microsoft-edge",
         "google-chrome-stable",
         "google-chrome",
         "chromium",
         "chromium-browser",
+        "microsoft-edge-stable",
+        "microsoft-edge",
     ];
     let path = crate::platform::user_environment()
         .ok()

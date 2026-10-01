@@ -64,16 +64,6 @@ jobs:
               sudo chmod 4755 "$helper"
             fi
           done
-      # Edge's first start on a fresh runner took over 20 s, and the next
-      # ones under one. Starting it once keeps the tests off that wait.
-      - name: Start Edge once
-        if: runner.os == 'Linux'
-        run: |
-          dir=$(mktemp -d)
-          microsoft-edge-stable --headless=new --remote-debugging-port=0 --no-first-run \
-            --user-data-dir="$dir" about:blank > /dev/null 2>&1 &
-          for i in $(seq 1 120); do [ -f "$dir/DevToolsActivePort" ] && break; sleep 0.5; done
-          kill $! || true
       - run: cargo test
 
   app:
