@@ -53,19 +53,19 @@ export const account: Messages["account"] = {
     trayOn:
       "Com a janela fechada, o ícone fica perto do relógio: um clique abre o Botloft, e ele avisa quando um bot precisa de você.",
     trayOff: "Fechar a janela fecha o Botloft. Os bots seguem trabalhando, sem ícone nem avisos.",
-    startWithWindows: "Iniciar com o Windows",
-    startWithWindowsOn:
-      "Quando você entra no Windows, seus bots voltam a trabalhar sozinhos, sem abrir esta janela.",
-    startWithWindowsOff:
+    startWithSystem: (system: string) => `Iniciar com o ${system}`,
+    startWithSystemOn: (system: string) =>
+      `Quando você entra no ${system}, seus bots voltam a trabalhar sozinhos, sem abrir esta janela.`,
+    startWithSystemOff:
       "Depois que você reinicia o computador, os bots esperam você abrir o Botloft.",
-    openAtSignIn: "Abrir a janela ao entrar no Windows",
-    openAtSignInOn: "A janela do Botloft abre quando você entra no Windows.",
+    openAtSignIn: (system: string) => `Abrir a janela ao entrar no ${system}`,
+    openAtSignInOn: (system: string) => `A janela do Botloft abre quando você entra no ${system}.`,
     openAtSignInNearClock: "O Botloft começa perto do relógio, sem abrir a janela.",
     openAtSignInOff: "A janela só abre quando você abrir o Botloft.",
     alerts: "Avisos",
     notifyNeeds: "Quando um bot precisar de você",
-    notifyNeedsHint:
-      "Um aviso do Windows quando um bot pede permissão ou precisa que você entre na conta, se o Botloft não estiver na frente.",
+    notifyNeedsHint: (system: string) =>
+      `Um aviso do ${system} quando um bot pede permissão ou precisa que você entre na conta, se o Botloft não estiver na frente.`,
     notifyDone: "Quando um bot terminar",
     notifyDoneHint: "Um aviso quando um bot termina o que estava fazendo.",
     sound: "Tocar um som",
@@ -93,8 +93,8 @@ export const account: Messages["account"] = {
           ? "1 hora"
           : `${minutes / 60} horas`,
     lessMotion: "Menos animações",
-    lessMotionHint:
-      "A janela fica parada, como quando os efeitos de animação do Windows estão desligados.",
+    lessMotionHint: (system: string) =>
+      `A janela fica parada, como quando os efeitos de animação do ${system} estão desligados.`,
     appearance: "Aparência",
     theme: "Tema",
     themes: { system: "Sistema", light: "Claro", dark: "Escuro" },

@@ -53,18 +53,19 @@ export const account: Messages["account"] = {
     trayOn:
       "Con la ventana cerrada, su icono queda junto al reloj: un clic abre Botloft, y te avisa cuando un bot te necesita.",
     trayOff: "Cerrar la ventana cierra Botloft. Los bots siguen trabajando, sin icono ni avisos.",
-    startWithWindows: "Iniciar con Windows",
-    startWithWindowsOn:
-      "Cuando inicias sesión en Windows, tus bots vuelven a trabajar solos, sin abrir esta ventana.",
-    startWithWindowsOff: "Después de reiniciar el equipo, los bots esperan a que abras Botloft.",
-    openAtSignIn: "Abrir la ventana al iniciar sesión en Windows",
-    openAtSignInOn: "La ventana de Botloft se abre cuando inicias sesión en Windows.",
+    startWithSystem: (system: string) => `Iniciar con ${system}`,
+    startWithSystemOn: (system: string) =>
+      `Cuando inicias sesión en ${system}, tus bots vuelven a trabajar solos, sin abrir esta ventana.`,
+    startWithSystemOff: "Después de reiniciar el equipo, los bots esperan a que abras Botloft.",
+    openAtSignIn: (system: string) => `Abrir la ventana al iniciar sesión en ${system}`,
+    openAtSignInOn: (system: string) =>
+      `La ventana de Botloft se abre cuando inicias sesión en ${system}.`,
     openAtSignInNearClock: "Botloft empieza junto al reloj, sin abrir la ventana.",
     openAtSignInOff: "La ventana solo se abre cuando abres Botloft.",
     alerts: "Avisos",
     notifyNeeds: "Cuando un bot te necesite",
-    notifyNeedsHint:
-      "Un aviso de Windows cuando un bot pide permiso o necesita que inicies sesión, si Botloft no está al frente.",
+    notifyNeedsHint: (system: string) =>
+      `Un aviso de ${system} cuando un bot pide permiso o necesita que inicies sesión, si Botloft no está al frente.`,
     notifyDone: "Cuando un bot termine",
     notifyDoneHint: "Un aviso cuando un bot termina lo que estaba haciendo.",
     sound: "Reproducir un sonido",
@@ -92,8 +93,8 @@ export const account: Messages["account"] = {
           ? "1 hora"
           : `${minutes / 60} horas`,
     lessMotion: "Menos animaciones",
-    lessMotionHint:
-      "La ventana queda quieta, como cuando los efectos de animación de Windows están desactivados.",
+    lessMotionHint: (system: string) =>
+      `La ventana queda quieta, como cuando los efectos de animación de ${system} están desactivados.`,
     appearance: "Apariencia",
     theme: "Tema",
     themes: { system: "Sistema", light: "Claro", dark: "Oscuro" },

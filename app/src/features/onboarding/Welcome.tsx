@@ -1,6 +1,7 @@
 import { CircleCheck, CircleX, LoaderCircle, Plus } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useT } from "../../i18n";
+import { SYSTEM } from "../../lib/system";
 import { prefs, usePref } from "../../shell/prefs";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
@@ -22,7 +23,7 @@ export function Welcome() {
       ? w.runningWhileOpen
       : settings?.startWithWindows === false
         ? w.runningNotAtStart
-        : w.running;
+        : w.running(SYSTEM);
 
   let claude: ReactNode;
   if (!system || (system.claudeVersion === null && system.runtimeError === null)) {

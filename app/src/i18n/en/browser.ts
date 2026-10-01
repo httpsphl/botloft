@@ -33,8 +33,10 @@ export const browser = {
   closed: "Browser closed",
   closedBody: "It opens again when the bot needs it. Logins stay.",
   failedTitle: "The browser couldn't open",
-  failedBody:
-    "Botloft uses Microsoft Edge, which comes with Windows. Check that it's installed, then ask the bot to try again.",
+  failedBody: (system: string): string =>
+    system === "Windows"
+      ? "Botloft uses Microsoft Edge, which comes with Windows. Check that it's installed, then ask the bot to try again."
+      : "Botloft uses Google Chrome, Chromium or Microsoft Edge. Check that one of them is installed, then ask the bot to try again.",
   details: "Details",
   tabs: {
     label: "Tabs",

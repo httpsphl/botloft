@@ -9,6 +9,7 @@ import {
   useLocale,
   useT,
 } from "../../i18n";
+import { SYSTEM } from "../../lib/system";
 import { prefs, usePref } from "../../shell/prefs";
 import { Select } from "../../ui/Select";
 import { Section, Toggle } from "./settingsParts";
@@ -51,18 +52,18 @@ export function GeneralSettings() {
           />
         )}
         <Toggle
-          label={s.startWithWindows}
-          hint={startWithWindows ? s.startWithWindowsOn : s.startWithWindowsOff}
+          label={s.startWithSystem(SYSTEM)}
+          hint={startWithWindows ? s.startWithSystemOn(SYSTEM) : s.startWithSystemOff}
           checked={startWithWindows}
           disabled={!settings}
           onChange={(on) => change({ startWithWindows: on })}
         />
         {startWithWindows && settings && (
           <Toggle
-            label={s.openAtSignIn}
+            label={s.openAtSignIn(SYSTEM)}
             hint={
               openAtSignIn
-                ? s.openAtSignInOn
+                ? s.openAtSignInOn(SYSTEM)
                 : nearClock
                   ? s.openAtSignInNearClock
                   : s.openAtSignInOff

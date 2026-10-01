@@ -31,9 +31,10 @@ jobs:
       - name: Generated TypeScript bindings are up to date
         run: git diff --exit-code -- app/src/lib/protocol.gen.ts
 
-  # The daemon and its crates off Windows (spec 18, item 8). Plain `cargo`
-  # builds the default members only: the app crates need the desktop
-  # libraries of each system and join later.
+  # The daemon, its crates and the app's Rust side off Windows (spec 18,
+  # item 8). Plain `cargo` builds the default members; the app crate comes
+  # after, with the desktop libraries Tauri needs on Linux. The setup
+  # window is Windows only.
   rust-unix:
     name: Rust (${{ matrix.name }})
     strategy:
@@ -52,6 +53,16 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --all-targets -- -D warnings
+      - name: Desktop libraries for the app (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev librsvg2-dev libxdo-dev
+      - name: The app's Rust side
+        run: |
+          cargo clippy -p botloft-app --all-targets -- -D warnings
+          cargo test -p botloft-app
       # The runner image ships Edge and Chrome with sandbox helpers that are
       # not setuid root, as their packages would leave them, so they refuse
       # to start. The browser tests need a working sandbox.

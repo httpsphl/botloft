@@ -4,6 +4,7 @@
 //! because a window started by the foreground app comes to the front.
 
 use std::path::Path;
+#[cfg(windows)]
 use std::process::Command;
 
 /// Whether `path` is a Claude Code executable the app may run: the daemon
@@ -21,32 +22,38 @@ fn is_claude(path: &Path) -> bool {
         && path.is_file()
 }
 
-/// Runs `claude auth login` in a new console window and waits for it.
-/// Returns whether it signed in (exit code 0).
+/// Runs `claude auth login` in a new console window (a terminal window off
+/// Windows) and waits for it. Returns whether it signed in (exit code 0).
 pub fn sign_in(path: &Path) -> Result<bool, String> {
     if !is_claude(path) {
         return Err(format!("{} is not Claude Code", path.display()));
     }
-    let mut command = Command::new(path);
-    command.args(["auth", "login"]);
     // An app started from inside a Claude Code session would pass its
     // session variables on, and the login would think it runs inside it.
-    for (name, _) in std::env::vars_os() {
-        let name = name.to_string_lossy();
-        if name == "CLAUDECODE" || name.starts_with("CLAUDE_CODE_") {
-            command.env_remove(name.as_ref());
-        }
-    }
+    let session: Vec<String> = std::env::vars_os()
+        .map(|(name, _)| name.to_string_lossy().into_owned())
+        .filter(|name| name == "CLAUDECODE" || name.starts_with("CLAUDE_CODE_"))
+        .collect();
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt as _;
         const CREATE_NEW_CONSOLE: u32 = 0x0000_0010;
-        command.creation_flags(CREATE_NEW_CONSOLE);
+        let mut command = Command::new(path);
+        command
+            .args(["auth", "login"])
+            .creation_flags(CREATE_NEW_CONSOLE);
+        for name in &session {
+            command.env_remove(name);
+        }
+        let status = command
+            .status()
+            .map_err(|err| format!("cannot run {}: {err}", path.display()))?;
+        Ok(status.success())
     }
-    let status = command
-        .status()
-        .map_err(|err| format!("cannot run {}: {err}", path.display()))?;
-    Ok(status.success())
+    #[cfg(unix)]
+    {
+        crate::terminal::run(path, &["auth", "login"], &session)
+    }
 }
 
 #[cfg(test)]

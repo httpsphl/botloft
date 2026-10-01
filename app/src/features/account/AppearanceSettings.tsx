@@ -1,6 +1,7 @@
 // Settings, "Appearance": theme, size and motion (spec 15.3).
 
 import { useT } from "../../i18n";
+import { SYSTEM } from "../../lib/system";
 import { prefs, usePref } from "../../shell/prefs";
 import { setTheme, type ThemeChoice, useTheme } from "../../shell/theme";
 import { DEFAULT_ZOOM, setZoom, useZoom, ZOOM_LEVELS, type ZoomLevel } from "../../shell/zoom";
@@ -33,7 +34,7 @@ export function AppearanceSettings() {
       </Field>
       <Toggle
         label={s.lessMotion}
-        hint={s.lessMotionHint}
+        hint={s.lessMotionHint(SYSTEM)}
         checked={lessMotion}
         onChange={prefs.lessMotion.set}
       />

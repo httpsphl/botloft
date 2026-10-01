@@ -34,8 +34,10 @@ export const browser: Messages["browser"] = {
   closed: "Navegador cerrado",
   closedBody: "Se abre de nuevo cuando el bot lo necesite. Las sesiones iniciadas siguen.",
   failedTitle: "El navegador no se abrió",
-  failedBody:
-    "Botloft usa Microsoft Edge, que viene con Windows. Comprueba que esté instalado y pide al bot que lo intente de nuevo.",
+  failedBody: (system: string) =>
+    system === "Windows"
+      ? "Botloft usa Microsoft Edge, que viene con Windows. Comprueba que esté instalado y pide al bot que lo intente de nuevo."
+      : "Botloft usa Google Chrome, Chromium o Microsoft Edge. Comprueba que uno de ellos esté instalado y pide al bot que lo intente de nuevo.",
   details: "Detalles",
   tabs: {
     label: "Pestañas",

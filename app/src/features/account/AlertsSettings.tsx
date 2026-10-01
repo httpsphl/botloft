@@ -3,6 +3,7 @@
 // goes with it.
 
 import { useT } from "../../i18n";
+import { SYSTEM } from "../../lib/system";
 import { prefs, usePref } from "../../shell/prefs";
 import { Section, Toggle } from "./settingsParts";
 
@@ -18,7 +19,7 @@ export function AlertsSettings() {
     <Section title={s.alerts}>
       <Toggle
         label={s.notifyNeeds}
-        hint={s.notifyNeedsHint}
+        hint={s.notifyNeedsHint(SYSTEM)}
         checked={needs}
         onChange={prefs.notifyNeeds.set}
       />
