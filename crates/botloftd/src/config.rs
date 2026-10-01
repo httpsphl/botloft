@@ -218,7 +218,7 @@ mod tests {
     #[test]
     fn keys_override_defaults() {
         let config = Config::parse(
-            "port = 45999\nworkspaces_root = 'D:\\\\bots'\n[courier]\nmax_attempts = 3\n",
+            "port = 45999\nworkspaces_root = 'D:\\bots'\n[courier]\nmax_attempts = 3\n",
         )
         .expect("parse");
         assert_eq!(config.port, 45999);
