@@ -32,7 +32,7 @@ async fn each_turn_keeps_its_tokens_and_the_bots_add_them_up() {
         .expect("history");
     assert_eq!(
         history[0]["body"]["tokens"],
-        json!({ "input": 12, "cacheWrite": 300, "cacheRead": 4000, "output": 45 }),
+        json!({ "input": 12, "cacheWrite": 300, "reloaded": 0, "cacheRead": 4000, "output": 45 }),
         "the turn's own tokens, from the result's usage"
     );
 
@@ -48,7 +48,7 @@ async fn each_turn_keeps_its_tokens_and_the_bots_add_them_up() {
     assert_eq!(bots[0]["turns"], 2);
     assert_eq!(
         bots[0]["tokens"],
-        json!({ "input": 24, "cacheWrite": 600, "cacheRead": 8000, "output": 90 })
+        json!({ "input": 24, "cacheWrite": 600, "reloaded": 0, "cacheRead": 8000, "output": 90 })
     );
 
     assert!(

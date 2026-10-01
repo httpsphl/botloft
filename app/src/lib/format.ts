@@ -111,10 +111,19 @@ export function tokens(count: number): string {
 /**
  * The tokens a turn counts for (spec 8.7): new input read, with what went
  * into the prompt cache, and what the model wrote. The conversation reread
- * from the cache weighs much less and is shown apart.
+ * from the cache weighs much less and is shown apart, and so is the
+ * conversation written to the cache again after it expired.
  */
 export function usedTokens(usage: TokenUsage): number {
-  return usage.input + usage.cacheWrite + usage.output;
+  return usage.input + usage.cacheWrite - usage.reloaded + usage.output;
+}
+
+/** Below this, the conversation sent again is not worth a mention. */
+const RELOAD_SHOWN = 1000;
+
+/** The conversation sent again, written as a number, or `null` if it is too little to tell. */
+export function reloadedTokens(count: number): string | null {
+  return count >= RELOAD_SHOWN ? tokens(count) : null;
 }
 
 /** "0.8 s", "42 s", "3 min 5 s". */

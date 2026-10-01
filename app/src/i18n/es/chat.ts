@@ -49,13 +49,19 @@ export const chat: Messages["chat"] = {
   },
   run: {
     working: "Trabajando",
-    done: (time: string, tokens: string | null) =>
-      `Terminado en ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
+    done: (time: string, tokens: string | null, reloaded: string | null) =>
+      `Terminado en ${time}${tokens === null ? "" : ` · ${tokens} tokens`}${
+        reloaded === null ? "" : ` · recargó la conversación (${reloaded})`
+      }`,
     took: (time: string, tokens: TurnTokens | null) =>
       `Tardó ${time}${
         tokens === null
           ? ""
-          : `. Leyó ${tokens.read} tokens nuevos y escribió ${tokens.wrote}; releyó ${tokens.reread} de la conversación, que pesa mucho menos.`
+          : `. Leyó ${tokens.read} tokens nuevos y escribió ${tokens.wrote}; releyó ${tokens.reread} de la conversación, que pesa mucho menos.${
+              tokens.reloaded === null
+                ? ""
+                : ` También volvió a enviar ${tokens.reloaded} de la conversación, que el modelo ya no tenía tras una pausa.`
+            }`
       }`,
     stopped: (reason: string) => `El bot dejó de trabajar en esto: ${reason}`,
   },

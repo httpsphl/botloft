@@ -3,6 +3,8 @@
 //! when a turn ends and after a compaction, and follows the usage of each
 //! model request in between. Nothing is stored; a new daemon asks again.
 
+mod reload;
+
 use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard};
 
@@ -34,6 +36,7 @@ struct Entry {
     size: Option<Size>,
     /// A compaction is running, or waits behind the turn in progress.
     compacting: bool,
+    reload: reload::Tracker,
 }
 
 struct Size {
@@ -115,6 +118,7 @@ pub(crate) fn answered(daemon: &Daemon, bot: &BotId, body: &Value) {
     let at = daemon.clock.now_ms();
     debug!(bot = %bot, used, window, "context usage");
     update(daemon, bot, |entry| {
+        entry.reload.measured(used);
         entry.size = Some(Size {
             used,
             window,
@@ -144,6 +148,7 @@ pub(crate) fn used(daemon: &Daemon, bot: &BotId, message: &Value) {
     }
     let at = daemon.clock.now_ms();
     update(daemon, bot, |entry| {
+        entry.reload.request(message["id"].as_str(), usage);
         if let Some(size) = &mut entry.size
             && size.used != used
         {
@@ -166,7 +171,10 @@ pub(crate) fn status(daemon: &Daemon, bot: &BotId, event: &Value) {
 /// `system/compact_boundary`: the conversation is now a summary. The chat
 /// says so, and Claude Code is asked for the new size.
 pub(crate) fn compacted(daemon: &Daemon, bot: &BotId, event: &Value) {
-    update(daemon, bot, |entry| entry.compacting = false);
+    update(daemon, bot, |entry| {
+        entry.compacting = false;
+        entry.reload.restart();
+    });
     let (code, text) = if event["compact_metadata"]["trigger"] == "auto" {
         (
             NoticeCode::AutoCompacted,
@@ -226,12 +234,25 @@ pub(crate) fn turn_ended(daemon: &Daemon, bot: &BotId, event: &Value) -> bool {
     compaction
 }
 
+/// How much of the turn that ended was the conversation written again to
+/// the prompt cache (spec 8.7).
+pub(crate) fn reloaded(daemon: &Daemon, bot: &BotId) -> u64 {
+    let mut reloaded = 0;
+    update(daemon, bot, |entry| reloaded = entry.reload.take());
+    reloaded
+}
+
 /// A process started. A new conversation has a size of its own, not known
-/// until the process tells.
+/// until the process tells. A turn the old process left open counts
+/// nothing for the next.
 pub(crate) fn process_started(daemon: &Daemon, bot: &BotId, resumed: bool) {
-    if !resumed {
-        update(daemon, bot, |entry| entry.size = None);
-    }
+    update(daemon, bot, |entry| {
+        if !resumed {
+            entry.size = None;
+            entry.reload.restart();
+        }
+        entry.reload.take();
+    });
 }
 
 /// The process is gone, and a compaction it had not finished with it.

@@ -45,6 +45,28 @@ describe("tokens by bot", () => {
     expect(dialog.textContent).toContain("All bots9.8k");
   });
 
+  test("the conversation sent again after a pause counts apart", async () => {
+    const fake = new FakeBotloft();
+    const ops = fake.addCrew("Ops");
+    const scout = fake.addBot(ops.id, "Scout", "Finds sources");
+    fake.chat.turn(scout.id, null, {
+      input: 2,
+      cacheWrite: 72_636,
+      reloaded: 72_000,
+      cacheRead: 0,
+      output: 983,
+    });
+    fake.chat.turn(scout.id);
+
+    const dialog = await openUsage(fake);
+    const list = await within(dialog).findByRole("list", { name: "Tokens by bot" });
+    expect(
+      within(list)
+        .getAllByRole("listitem")
+        .map((row) => row.textContent),
+    ).toEqual(["Scout4.1kWorked 2 times · 24k reread · 72k reloaded"]);
+  });
+
   test("a period with no work says so", async () => {
     const dialog = await openUsage(new FakeBotloft());
     expect(await within(dialog).findByText("No bot worked in this period.")).toBeDefined();
