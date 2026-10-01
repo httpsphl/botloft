@@ -65,6 +65,31 @@ jobs:
             fi
           done
       - run: cargo test
+      # `botloftd service` against the real systemd or launchd (spec 14.1).
+      # The Linux runner has no user manager until the user lingers.
+      - name: The daemon as a service of the system
+        timeout-minutes: 10
+        env:
+          BOTLOFT_SERVICE_TEST: "1"
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            sudo loginctl enable-linger "$USER"
+            export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+            export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+            for i in $(seq 1 30); do
+              systemctl --user show-environment > /dev/null 2>&1 && break
+              sleep 1
+            done
+          fi
+          cargo test -p botloftd --test service -- --nocapture && exit 0
+          # What the service manager saw, when the test fails.
+          if [ "$RUNNER_OS" = Linux ]; then
+            journalctl --user --no-pager -n 60 || true
+          else
+            launchctl list | grep -i botloft || true
+            log show --last 5m --predicate 'subsystem == "com.apple.xpc.launchd"' --style compact 2>/dev/null | grep -i botloft | tail -40 || true
+          fi
+          exit 1
 
   app:
     name: App (Windows)

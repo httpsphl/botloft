@@ -44,6 +44,12 @@ pub fn install(source: &Path, bin_dir: &Path) -> io::Result<Installed> {
     }
     let staged = bin_dir.join(STAGED);
     fs::write(&staged, &bytes)?;
+    // A written file is not a program off Windows until it may run.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt as _;
+        fs::set_permissions(&staged, fs::Permissions::from_mode(0o755))?;
+    }
     if target.exists() {
         fs::rename(&target, aside(bin_dir))?;
     }
@@ -126,6 +132,15 @@ mod tests {
         let first = install(&source, &bin).expect("install");
         assert!(first.changed);
         assert_eq!(fs::read(&first.path).expect("read"), b"v1");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt as _;
+            let mode = fs::metadata(&first.path)
+                .expect("metadata")
+                .permissions()
+                .mode();
+            assert_eq!(mode & 0o111, 0o111, "the copy can run");
+        }
         assert!(!install(&source, &bin).expect("again").changed);
         assert!(
             !install(&first.path, &bin).expect("itself").changed,

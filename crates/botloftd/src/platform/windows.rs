@@ -20,6 +20,9 @@ pub use recycle::recycle;
 pub use sign_in::sign_in_id;
 pub use task::{delete_task, find_task, register_task, run_task, stop_task};
 
+/// What starts the daemon for the owner here, for messages (spec 14).
+pub const TASK_KIND: &str = "scheduled task";
+
 use std::io;
 use std::os::windows::ffi::OsStrExt;
 use std::path::Path;

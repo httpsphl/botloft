@@ -20,11 +20,34 @@ use crate::platform::{TaskDefinition, Triggers};
 const LOGON_TRIGGER: &str = "<LogonTrigger>";
 const WATCHDOG_TRIGGER: &str = "<TimeTrigger>";
 
+/// The arguments as one command line. Words of letters, digits and dashes
+/// go as they are; anything else is quoted.
+fn join_arguments(arguments: &[String]) -> String {
+    let plain = |arg: &String| {
+        !arg.is_empty()
+            && arg
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    };
+    arguments
+        .iter()
+        .map(|arg| if plain(arg) { arg.clone() } else { quote(arg) })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Quotes one argument for the Windows command line. Backslashes before
+/// the closing quote are doubled, so `C:\` does not escape it.
+fn quote(arg: &str) -> String {
+    let trailing = arg.len() - arg.trim_end_matches('\\').len();
+    format!("\"{arg}{}\"", "\\".repeat(trailing))
+}
+
 pub(super) fn render(task: &TaskDefinition, user_sid: &str) -> String {
     let sid = escape(user_sid);
     let description = escape(&task.description);
     let command = escape(&task.program.to_string_lossy());
-    let arguments = escape(&task.arguments);
+    let arguments = escape(&join_arguments(&task.arguments));
     let working_dir = escape(&task.working_dir.to_string_lossy());
     let triggers = triggers_xml(task.triggers, &sid);
     format!(
@@ -163,8 +186,13 @@ mod tests {
         TaskDefinition {
             description: "Botloft <daemon> & friends".into(),
             program: PathBuf::from(r"C:\Users\Ana Lima\AppData\Local\Botloft\bin\botloftd.exe"),
-            arguments: r#"serve --home "C:\Users\Ana Lima\AppData\Local\Botloft""#.into(),
+            arguments: vec![
+                "serve".into(),
+                "--home".into(),
+                r"C:\Users\Ana Lima\AppData\Local\Botloft".into(),
+            ],
             working_dir: PathBuf::from(r"C:\Users\Ana Lima\AppData\Local\Botloft"),
+            keep_alive: PathBuf::from(r"C:\Users\Ana Lima\AppData\Local\Botloft\run\keep-alive"),
             triggers: Triggers {
                 logon: true,
                 watchdog: true,
@@ -218,5 +246,15 @@ mod tests {
             )
         );
         assert_eq!(command_line("<Task/>"), None);
+    }
+
+    #[test]
+    fn arguments_are_quoted_for_the_command_line() {
+        assert_eq!(quote(r"D:\"), r#""D:\\""#);
+        let args = ["serve", "--home", r"C:\data", "--scheduled"].map(String::from);
+        assert_eq!(
+            join_arguments(&args),
+            r#"serve --home "C:\data" --scheduled"#
+        );
     }
 }
