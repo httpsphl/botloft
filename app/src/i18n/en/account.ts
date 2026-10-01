@@ -36,8 +36,9 @@ export const account = {
       empty: "No bot worked in this period.",
       failed: "Could not load the tokens",
       archived: "archived",
-      detail: (times: number, reread: string, reloaded: string | null) =>
-        `Worked ${times === 1 ? "once" : `${times} times`} · ${reread} reread${
+      /** `crew` is null on the total of all bots. */
+      detail: (crew: string | null, times: number, reread: string, reloaded: string | null) =>
+        `${crew === null ? "" : `${crew} · `}Worked ${times === 1 ? "once" : `${times} times`} · ${reread} reread${
           reloaded === null ? "" : ` · ${reloaded} reloaded`
         }`,
       total: "All bots",

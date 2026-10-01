@@ -786,6 +786,10 @@ since: number, };
  */
 export type BotTokens = { botId: BotId, name: string, color: string, 
 /**
+ * The name of the bot's crew, so two bots with one name stay apart.
+ */
+crew: string, 
+/**
  * The bot is archived.
  */
 archived: boolean, 

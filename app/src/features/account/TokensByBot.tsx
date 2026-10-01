@@ -1,6 +1,7 @@
 // Tokens each bot used over a period (spec 8.7), in the usage dialog: the
 // new text read plus the replies written, with the conversation reread
-// each time shown apart.
+// each time shown apart. Each bot shows its crew, as two crews can have
+// bots with the same name.
 
 import { useEffect, useState } from "react";
 import { useT } from "../../i18n";
@@ -99,7 +100,12 @@ function Row({ bot, most }: { bot: BotTokens; most: number }) {
           />
         </div>
         <span className="text-muted text-xs">
-          {u.detail(bot.turns, tokens(bot.tokens.cacheRead), reloadedTokens(bot.tokens.reloaded))}
+          {u.detail(
+            bot.crew,
+            bot.turns,
+            tokens(bot.tokens.cacheRead),
+            reloadedTokens(bot.tokens.reloaded),
+          )}
         </span>
       </div>
     </li>
@@ -119,7 +125,7 @@ function Total({ bots }: { bots: BotTokens[] }) {
         <span className="tabular-nums">{tokens(used)}</span>
       </div>
       <span className="text-muted text-xs">
-        {u.detail(turns, tokens(reread), reloadedTokens(reloaded))}
+        {u.detail(null, turns, tokens(reread), reloadedTokens(reloaded))}
       </span>
     </li>
   );
