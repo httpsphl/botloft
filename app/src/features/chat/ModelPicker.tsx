@@ -89,7 +89,7 @@ export function ModelPicker({ bot, onLater }: { bot: Bot; onLater(text: string):
         <ChevronDown
           aria-hidden
           size={14}
-          className={`shrink-0 opacity-60 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          className={`hidden shrink-0 opacity-60 transition-transform duration-200 @xs:block ${open ? "rotate-180" : ""}`}
         />
       </button>
     </div>

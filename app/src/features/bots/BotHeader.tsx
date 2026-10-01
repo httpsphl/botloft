@@ -74,12 +74,16 @@ export function BotHeader({
     );
 
   return (
-    <header className="flex items-center gap-3 border-line border-b px-5 py-2.5">
+    // In a narrow window the handle gives way first, then the button labels.
+    <header className="@container flex items-center gap-3 border-line border-b px-5 py-2.5">
       <BotAvatar color={bot.color} size={36} mood={moodOf(bot, crew.paused)} />
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
           <h1 className="truncate font-semibold text-lg tracking-tight">{bot.name}</h1>
-          <span className="font-mono text-muted text-sm" data-selectable>
+          <span
+            className="min-w-0 shrink-[100] truncate font-mono text-muted text-sm"
+            data-selectable
+          >
             @{bot.handle}
           </span>
         </div>
@@ -99,16 +103,16 @@ export function BotHeader({
         </div>
       </div>
       {bot.paused ? (
-        <Button icon={Play} onClick={() => setPaused(false)}>
-          {words.resume}
+        <Button icon={Play} title={words.resume} onClick={() => setPaused(false)}>
+          <Label>{words.resume}</Label>
         </Button>
       ) : (
-        <Button icon={Pause} onClick={() => setPaused(true)}>
-          {words.pause}
+        <Button icon={Pause} title={words.pause} onClick={() => setPaused(true)}>
+          <Label>{words.pause}</Label>
         </Button>
       )}
-      <Button icon={RotateCw} disabled={stopped} onClick={restart}>
-        {words.restart}
+      <Button icon={RotateCw} title={words.restart} disabled={stopped} onClick={restart}>
+        <Label>{words.restart}</Label>
       </Button>
       <span className="relative">
         <Button
@@ -190,4 +194,9 @@ export function BotHeader({
       {actions.dialogs}
     </header>
   );
+}
+
+/** A button's words, read aloud always but shown only where they fit. */
+function Label({ children }: { children: string }) {
+  return <span className="sr-only @3xl:not-sr-only">{children}</span>;
 }

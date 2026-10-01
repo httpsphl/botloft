@@ -59,7 +59,7 @@ export function ModePicker({ bot, onLater }: { bot: Bot; onLater(text: string): 
   };
 
   return (
-    <div ref={root} className="relative">
+    <div ref={root} className="relative shrink-0">
       {open && (
         <div
           role="menu"
@@ -112,11 +112,11 @@ export function ModePicker({ bot, onLater }: { bot: Bot; onLater(text: string): 
         }`}
       >
         <Icon aria-hidden size={15} />
-        <span className="whitespace-nowrap">{m.names[current]}</span>
+        <span className="hidden whitespace-nowrap @sm:inline">{m.names[current]}</span>
         <ChevronDown
           aria-hidden
           size={14}
-          className={`opacity-60 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          className={`hidden opacity-60 transition-transform duration-200 @sm:block ${open ? "rotate-180" : ""}`}
         />
       </button>
       {confirming && (
