@@ -12,7 +12,7 @@ use tracing::debug;
 
 use super::browser_args::Tool;
 use super::browser_help::ask_owner;
-use super::browser_reply::{answer, describe, report, unavailable};
+use super::browser_reply::{answer, describe, point, report, unavailable};
 use super::browser_sites::{allowed, page_allowed};
 use super::calls::explain;
 use crate::browser::{Done, OWNER_WAIT, Scroll, sites};
@@ -168,19 +168,38 @@ async fn run(
             }
             return Ok(Reply::Picture(data, line));
         }
-        Tool::Click { reference } => (BrowserActionKind::Click, session.click(&reference).await),
+        // The cursor goes first; these report before they act.
+        Tool::Click { reference } => {
+            let kind = BrowserActionKind::Click;
+            let aim = session
+                .aim(&reference)
+                .await
+                .map_err(|err| describe(&err))?;
+            point(daemon, id, kind, &aim).await;
+            (kind, session.click(aim).await)
+        }
         Tool::Type {
             reference,
             text,
             submit,
-        } => (
-            BrowserActionKind::Type,
-            session.type_text(&reference, &text, submit).await,
-        ),
-        Tool::Select { reference, option } => (
-            BrowserActionKind::Select,
-            session.choose(&reference, &option).await,
-        ),
+        } => {
+            let kind = BrowserActionKind::Type;
+            let aim = session
+                .aim_field(&reference)
+                .await
+                .map_err(|err| describe(&err))?;
+            point(daemon, id, kind, &aim).await;
+            (kind, session.type_text(aim, &text, submit).await)
+        }
+        Tool::Select { reference, option } => {
+            let kind = BrowserActionKind::Select;
+            let aim = session
+                .aim(&reference)
+                .await
+                .map_err(|err| describe(&err))?;
+            point(daemon, id, kind, &aim).await;
+            (kind, session.choose(aim, &option).await)
+        }
         Tool::Press { key } => {
             let label = Some(key.key.trim().to_owned()).filter(|key| !key.is_empty());
             let result = session.press(key).await.map(|()| Done {
@@ -206,7 +225,13 @@ async fn run(
         Tool::Open { .. } | Tool::Close | Tool::AskOwner { .. } => unreachable!("handled above"),
     };
     let done = done.map_err(|err| describe(&err))?;
-    report(daemon, id, kind, &done);
+    let pointed = matches!(
+        kind,
+        BrowserActionKind::Click | BrowserActionKind::Type | BrowserActionKind::Select
+    );
+    if !pointed {
+        report(daemon, id, kind, &done);
+    }
     let mut notes = Vec::new();
     if let Some(cover) = &done.cover {
         notes.push(format!(

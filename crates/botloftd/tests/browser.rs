@@ -4,6 +4,8 @@
 
 mod common;
 
+use std::time::{Duration, Instant};
+
 use common::browsing::{answer_site, call, ref_of, setup};
 use serde_json::{Value, json};
 
@@ -196,4 +198,37 @@ async fn new_tabs_and_dialogs_reach_the_bot_and_the_owner_watches() {
         .call("browser.unwatch", Value::Null)
         .await
         .expect("unwatch");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_owner_sees_the_cursor_get_there_before_the_click() {
+    let Some(mut b) = setup().await else { return };
+    b.app
+        .call("browser.watch", json!({ "botId": b.bot["id"] }))
+        .await
+        .expect("watch");
+    let opening = call(
+        &b.mcp,
+        "browser_open",
+        json!({ "url": format!("{}/links", b.site) }),
+    );
+    answer_site(&mut b.app, true, None).await;
+    let page = opening.await.expect("task").expect("page");
+
+    let warn = ref_of(&page, "button \"Warn me\"");
+    let clicking = call(&b.mcp, "browser_click", json!({ "ref": warn }));
+    let action = loop {
+        let action = b.app.notification("browser.action").await;
+        if action["kind"] == "click" {
+            break action;
+        }
+    };
+    let pointed = Instant::now();
+    assert_eq!(action["label"], "Warn me");
+    assert!(action["x"].as_f64().expect("x") > 0.0);
+    // The click waits for the cursor's glide in the panel.
+    assert!(!clicking.is_finished());
+    let warned = clicking.await.expect("task").expect("clicked");
+    assert!(warned.contains("\"Hi there\""), "{warned}");
+    assert!(pointed.elapsed() >= Duration::from_millis(500));
 }

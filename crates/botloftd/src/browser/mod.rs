@@ -39,7 +39,7 @@ pub use self::call::Call;
 pub use self::hands::{Asking, Hands, InputError, OWNER_WAIT, TakeError};
 pub use self::keys::{Key, find as find_key, names as key_names};
 pub use self::launch::find as find_program;
-pub use self::page::{Done, Scroll};
+pub use self::page::{Aim, Done, Scroll};
 pub use self::read::{READ_MAX, Reading};
 pub use self::session::Session;
 pub use self::sweep::{Want, run};

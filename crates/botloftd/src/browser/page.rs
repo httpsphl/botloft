@@ -1,6 +1,8 @@
 //! What a bot does in its active tab (spec 21.4): open, read, click, type,
 //! choose, press, scroll, go back and look. Each action waits for the page
-//! to settle (spec 21.3).
+//! to settle (spec 21.3). Acting on an element takes two steps: `aim` finds
+//! it and scrolls it into view, so the owner's cursor can get there first
+//! (spec 21.7), and then the action itself.
 
 use serde_json::{Value, json};
 
@@ -19,6 +21,14 @@ pub struct Done {
     pub cover: Option<String>,
     /// What `browser_select` chose.
     pub chosen: Option<String>,
+}
+
+/// An element found and in view, before anything is done to it.
+#[derive(Debug, Clone)]
+pub struct Aim {
+    reference: String,
+    point: Value,
+    pub done: Done,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -52,7 +62,7 @@ impl Session {
     }
 
     /// Scrolls the element into view and finds where to click it.
-    async fn locate(&self, reference: &str) -> Result<(Value, Done), BrowserError> {
+    pub async fn aim(&self, reference: &str) -> Result<Aim, BrowserError> {
         let point = self.reader(&format!("point({})", json!(reference))).await?;
         if point["missing"] == true {
             return Err(BrowserError::Stale(reference.to_owned()));
@@ -73,7 +83,24 @@ impl Session {
             cover: point["cover"].as_str().map(str::to_owned),
             chosen: None,
         };
-        Ok((point, done))
+        Ok(Aim {
+            reference: reference.to_owned(),
+            point,
+            done,
+        })
+    }
+
+    /// `aim` for a text field: anything else fails before the cursor goes
+    /// there.
+    pub async fn aim_field(&self, reference: &str) -> Result<Aim, BrowserError> {
+        let aim = self.aim(reference).await?;
+        if aim.point["text"] != true {
+            let role = aim.point["role"].as_str().unwrap_or("element");
+            return Err(BrowserError::Page(format!(
+                "{reference} is a {role}, not a text field; browser_type only types into text fields"
+            )));
+        }
+        Ok(aim)
     }
 
     async fn mouse_click(&self, (x, y): (f64, f64)) -> Result<(), BrowserError> {
@@ -87,27 +114,23 @@ impl Session {
         Ok(())
     }
 
-    pub async fn click(&self, reference: &str) -> Result<Done, BrowserError> {
-        let (_, done) = self.locate(reference).await?;
+    pub async fn click(&self, Aim { done, .. }: Aim) -> Result<Done, BrowserError> {
         let marks = self.marks();
         self.mouse_click(done.point.unwrap_or_default()).await?;
         self.settle(marks).await;
         Ok(done)
     }
 
+    /// Types into a field from `aim_field`.
     pub async fn type_text(
         &self,
-        reference: &str,
+        aim: Aim,
         text: &str,
         submit: bool,
     ) -> Result<Done, BrowserError> {
-        let (point, done) = self.locate(reference).await?;
-        if point["text"] != true {
-            let role = point["role"].as_str().unwrap_or("element");
-            return Err(BrowserError::Page(format!(
-                "{reference} is a {role}, not a text field; browser_type only types into text fields"
-            )));
-        }
+        let Aim {
+            reference, done, ..
+        } = aim;
         let marks = self.marks();
         self.mouse_click(done.point.unwrap_or_default()).await?;
         let ready = self
@@ -135,8 +158,12 @@ impl Session {
         Ok(done)
     }
 
-    pub async fn choose(&self, reference: &str, option: &str) -> Result<Done, BrowserError> {
-        let (_, mut done) = self.locate(reference).await?;
+    pub async fn choose(&self, aim: Aim, option: &str) -> Result<Done, BrowserError> {
+        let Aim {
+            reference,
+            mut done,
+            ..
+        } = aim;
         let marks = self.marks();
         let result = self
             .reader(&format!("select({}, {})", json!(reference), json!(option)))
@@ -237,7 +264,7 @@ impl Session {
     /// Scrolls until the element is in the middle of the screen.
     pub async fn scroll_to(&self, reference: &str) -> Result<Done, BrowserError> {
         let marks = self.marks();
-        let (_, done) = self.locate(reference).await?;
+        let Aim { done, .. } = self.aim(reference).await?;
         self.settle(marks).await;
         Ok(done)
     }
