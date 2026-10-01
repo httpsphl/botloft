@@ -4,7 +4,7 @@
 use std::io::{self, BufRead as _, BufReader};
 use std::path::Path;
 use std::process::{Child, ChildStderr, Command, Stdio};
-use std::sync::mpsc;
+use std::sync::{Arc, Mutex, mpsc};
 use std::time::{Duration, Instant};
 
 use tracing::debug;
@@ -80,7 +80,7 @@ pub async fn launch(
         let _ = child.wait();
         return Err(err.into());
     }
-    let why = child.stderr.take().map(why_it_stopped);
+    let said = child.stderr.take().map(StartLog::read);
     let mut process = BrowserProcess { child, job };
     debug!(pid = process.child.id(), "browser: started");
 
@@ -95,54 +95,81 @@ pub async fn launch(
         if process.child.try_wait()?.is_some() {
             // Its helpers may still hold stderr open until the group dies.
             process.kill();
-            let reason = why
-                .and_then(|why| why.recv_timeout(Duration::from_secs(1)).ok())
-                .map(|line| format!(" ({line})"))
-                .unwrap_or_default();
+            if let Some(said) = &said {
+                let _ = said.ended.recv_timeout(Duration::from_secs(1));
+            }
             return Err(BrowserError::Start(format!(
-                "the browser closed right after starting{reason}"
+                "the browser closed right after starting{}",
+                StartLog::reason(said.as_ref())
             )));
         }
         if started.elapsed() > START_TIMEOUT {
-            return Err(BrowserError::Start(
-                "the browser did not start in time".to_owned(),
-            ));
+            return Err(BrowserError::Start(format!(
+                "the browser did not start in time{}",
+                StartLog::reason(said.as_ref())
+            )));
         }
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
 }
 
-/// Reads the browser's stderr to its end and sends the line that best says
-/// why it stopped, for a browser that closes right after starting (a
-/// missing sandbox on Linux, say). Nothing of it goes to the log.
-fn why_it_stopped(stderr: ChildStderr) -> mpsc::Receiver<String> {
-    let (send, receive) = mpsc::channel();
-    let spawned = std::thread::Builder::new()
-        .name("browser-stderr".into())
-        .spawn(move || {
-            let mut best: Option<String> = None;
-            let mut last: Option<String> = None;
-            for line in BufReader::new(stderr).lines() {
-                let Ok(line) = line else { break };
-                let text = log_text(&line);
-                if text.is_empty() {
-                    continue;
+/// What the browser writes to stderr, kept as the line that best says why
+/// it failed to start (a missing sandbox on Linux, say). Nothing of it goes
+/// to the log.
+struct StartLog {
+    lines: Arc<Mutex<Said>>,
+    /// Hears when stderr ends.
+    ended: mpsc::Receiver<()>,
+}
+
+#[derive(Default)]
+struct Said {
+    best: Option<String>,
+    last: Option<String>,
+}
+
+impl StartLog {
+    fn read(stderr: ChildStderr) -> Self {
+        let lines = Arc::new(Mutex::new(Said::default()));
+        let (end, ended) = mpsc::channel();
+        let shared = Arc::clone(&lines);
+        let spawned = std::thread::Builder::new()
+            .name("browser-stderr".into())
+            .spawn(move || {
+                for line in BufReader::new(stderr).lines() {
+                    let Ok(line) = line else { break };
+                    let text: String = log_text(&line).chars().take(REASON_MAX).collect();
+                    if text.is_empty() {
+                        continue;
+                    }
+                    let lower = line.to_ascii_lowercase();
+                    let mut said = shared.lock().unwrap_or_else(|p| p.into_inner());
+                    let sandbox = lower.contains("sandbox") || lower.contains("namespace");
+                    if sandbox || (said.best.is_none() && lower.contains(":fatal:")) {
+                        said.best = Some(text.clone());
+                    }
+                    said.last = Some(text);
                 }
-                let lower = line.to_ascii_lowercase();
-                let sandbox = lower.contains("sandbox") || lower.contains("namespace");
-                if sandbox || (best.is_none() && lower.contains(":fatal:")) {
-                    best = Some(text.clone());
-                }
-                last = Some(text);
-            }
-            if let Some(line) = best.or(last) {
-                let _ = send.send(line.chars().take(REASON_MAX).collect());
-            }
-        });
-    if spawned.is_err() {
-        debug!("browser: cannot read its stderr");
+                let _ = end.send(());
+            });
+        if spawned.is_err() {
+            debug!("browser: cannot read its stderr");
+        }
+        Self { lines, ended }
     }
-    receive
+
+    /// ` (the line)`, or nothing when the browser said nothing.
+    fn reason(log: Option<&Self>) -> String {
+        let Some(log) = log else {
+            return String::new();
+        };
+        let said = log.lines.lock().unwrap_or_else(|p| p.into_inner());
+        said.best
+            .as_ref()
+            .or(said.last.as_ref())
+            .map(|line| format!(" ({line})"))
+            .unwrap_or_default()
+    }
 }
 
 /// A Chromium log line without its `[pid:tid:time:LEVEL:file.cc:123]` prefix.

@@ -185,7 +185,7 @@ async fn new_tabs_and_dialogs_reach_the_bot_and_the_owner_watches() {
     let open = b.app.call("browser.list", Value::Null).await.expect("list");
     // The new tab is the active one, after the tab that opened it.
     let tabs = open[0]["tabs"].as_array().expect("tabs");
-    assert_eq!(tabs.len(), 2);
+    assert_eq!(tabs.len(), 2, "{tabs:?}");
     assert_eq!(tabs[0]["active"], false);
     assert_eq!(tabs[1]["active"], true);
     assert!(tabs[1]["url"].as_str().expect("url").contains("/done"));
