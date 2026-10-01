@@ -731,6 +731,8 @@ Componentes dependem só de `BotloftApi` e `Host`, nunca do cliente concreto nem
 
 O store recarrega crews, bots e `system.status` a cada (re)conexão e depois segue as notificações. `system.status` não tem notificação e é relido a cada 15 s, menos com a janela fora de vista (minimizada, escondida perto do relógio ou aberta escondida no login do Windows): aí para, e é relido quando ela volta. Fora de vista, as animações também param onde estão (`paused.css`) e continuam quando a janela volta. O Windows pode não avisar a página quando o próprio app esconde a janela, então o app marca isso ele mesmo (`shell/visibility.ts`), e a janela voltar à frente desmarca.
 
+O chat e as mensagens de uma equipe guardam todas as páginas já carregadas. As linhas fora de vista não são diagramadas nem pintadas até chegarem perto da tela (`content-visibility: auto`, em `offscreen.css`), e guardam o tamanho que tiveram para a barra de rolagem não pular. As 8 mais novas ficam de fora: é onde os cartões chegam com o brilho de atenção, que a contenção cortaria.
+
 - **Deliveries:** entram no store pela message (cada message tem uma). Vêm as 500 atualizadas mais recentemente e todas as mortas, depois cada `delivery.changed`.
 - **Tasks:** todas, depois cada `task.changed`.
 - **Chat e timeline** não ficam no store. Cada um carrega uma página (50) do que mostra, pede as anteriores sob demanda com `before` e acrescenta o que chega por notificação (`chat.item`, `chat.delta`, `message.created`).
