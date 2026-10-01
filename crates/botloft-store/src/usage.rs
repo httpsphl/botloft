@@ -27,7 +27,7 @@ impl Store {
                AND json_type(c.data, '$.tokens') = 'object' \
              GROUP BY b.id \
              ORDER BY SUM(json_extract(c.data, '$.tokens.input')) \
-                    + SUM(json_extract(c.data, '$.tokens.cacheWrite')) - reloaded + output DESC, \
+                    + SUM(json_extract(c.data, '$.tokens.cacheWrite')) + output DESC, \
                     b.name, w.name",
         )?;
         let rows = stmt.query_map(params![since], |row| {

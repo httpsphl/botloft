@@ -39,7 +39,7 @@ function open() {
 }
 
 describe("conversation space", () => {
-  test("a turn after a pause tells the conversation it sent again apart", async () => {
+  test("a turn after a pause counts the conversation it sent again", async () => {
     const { fake, scout } = await openScout();
     act(() => {
       // The turn seen in spec 19: almost all of it was the conversation again.
@@ -51,24 +51,8 @@ describe("conversation space", () => {
         output: 983,
       });
     });
-    const done = screen.getByText("Done in 4.2 s · 1.6k tokens · reloaded the conversation (72k)");
-    expect(done.title).toBe(
-      "Took 4.2 s. Read 638 new tokens and wrote 983. It also sent 72k of the conversation again, as the model no longer had it after a pause.",
-    );
-  });
-
-  test("a little sent again is not worth a mention", async () => {
-    const { fake, scout } = await openScout();
-    act(() => {
-      fake.chat.turn(scout.id, null, {
-        input: 2,
-        cacheWrite: 1_400,
-        reloaded: 300,
-        cacheRead: 40_000,
-        output: 100,
-      });
-    });
-    expect(screen.getByText("Done in 4.2 s · 1.2k tokens")).toBeDefined();
+    const done = screen.getByText("Done in 4.2 s · 73.6k tokens");
+    expect(done.title).toBe("Took 4.2 s. Read 72.6k tokens and wrote 983.");
   });
 
   test("token counts read short", () => {

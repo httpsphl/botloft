@@ -1,12 +1,11 @@
 // Tokens each bot used over a period (spec 8.7), in the usage dialog: the
-// new text read plus the replies written, with the conversation sent
-// again after a pause shown apart. Each bot shows its crew, as two crews can have
+// text read plus the replies written. Each bot shows its crew, as two crews can have
 // bots with the same name.
 
 import { useEffect, useState } from "react";
 import { useT } from "../../i18n";
 import { errorText } from "../../lib/api";
-import { reloadedTokens, tokens, usedTokens } from "../../lib/format";
+import { tokens, usedTokens } from "../../lib/format";
 import type { BotTokens } from "../../lib/protocol.gen";
 import { useApi } from "../../store/context";
 import { Callout } from "../../ui/Callout";
@@ -99,9 +98,7 @@ function Row({ bot, most }: { bot: BotTokens; most: number }) {
             style={{ width: `${(used / most) * 100}%` }}
           />
         </div>
-        <span className="text-muted text-xs">
-          {u.detail(bot.crew, bot.turns, reloadedTokens(bot.tokens.reloaded))}
-        </span>
+        <span className="text-muted text-xs">{u.detail(bot.crew, bot.turns)}</span>
       </div>
     </li>
   );
@@ -111,14 +108,13 @@ function Total({ bots }: { bots: BotTokens[] }) {
   const u = useT().account.usage.tokens;
   const used = bots.reduce((sum, bot) => sum + usedTokens(bot.tokens), 0);
   const turns = bots.reduce((sum, bot) => sum + bot.turns, 0);
-  const reloaded = bots.reduce((sum, bot) => sum + bot.tokens.reloaded, 0);
   return (
     <li className="flex flex-col gap-1 border-line border-t pt-3">
       <div className="flex items-baseline justify-between gap-3 font-semibold">
         <span>{u.total}</span>
         <span className="tabular-nums">{tokens(used)}</span>
       </div>
-      <span className="text-muted text-xs">{u.detail(null, turns, reloadedTokens(reloaded))}</span>
+      <span className="text-muted text-xs">{u.detail(null, turns)}</span>
     </li>
   );
 }

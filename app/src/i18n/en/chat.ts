@@ -6,8 +6,6 @@
 export interface TurnTokens {
   read: string;
   wrote: string;
-  /** The conversation sent again after a pause, if it was worth telling. */
-  reloaded: string | null;
 }
 
 export const chat = {
@@ -55,19 +53,11 @@ export const chat = {
   },
   run: {
     working: "Working",
-    done: (time: string, tokens: string | null, reloaded: string | null) =>
-      `Done in ${time}${tokens === null ? "" : ` · ${tokens} tokens`}${
-        reloaded === null ? "" : ` · reloaded the conversation (${reloaded})`
-      }`,
+    done: (time: string, tokens: string | null) =>
+      `Done in ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
     took: (time: string, tokens: TurnTokens | null) =>
       `Took ${time}${
-        tokens === null
-          ? ""
-          : `. Read ${tokens.read} new tokens and wrote ${tokens.wrote}.${
-              tokens.reloaded === null
-                ? ""
-                : ` It also sent ${tokens.reloaded} of the conversation again, as the model no longer had it after a pause.`
-            }`
+        tokens === null ? "" : `. Read ${tokens.read} tokens and wrote ${tokens.wrote}.`
       }`,
     stopped: (reason: string) => `The bot stopped working on this: ${reason}`,
   },
