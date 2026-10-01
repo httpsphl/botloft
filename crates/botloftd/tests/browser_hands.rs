@@ -134,8 +134,10 @@ async fn the_bot_waits_while_the_owner_has_its_browser() {
 
     click(&mut b.app, &bot, 200.0, 115.0).await;
     press(&mut b.app, &bot, "abc", 0).await;
-    // Ctrl+A selects the field's text, so the next keys replace it.
-    press(&mut b.app, &bot, "a", 2).await;
+    // Ctrl+A (Cmd+A on a Mac) selects the field's text, so the next keys
+    // replace it.
+    let command = if cfg!(target_os = "macos") { 4 } else { 2 };
+    press(&mut b.app, &bot, "a", command).await;
     press(&mut b.app, &bot, "xyz", 0).await;
 
     let looking = call(&b.mcp, "browser_look", json!({}));
