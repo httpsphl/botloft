@@ -184,9 +184,9 @@ export const ChatComposer = memo(function ChatComposer({
           placeholder={t.chat.composer.placeholder(bot.name)}
           className="block max-h-60 w-full resize-none bg-transparent px-4 pt-3.5 pb-1.5 leading-relaxed outline-none placeholder:text-muted"
         />
-        {/* The meter and the effort open over the row's right edge. In a
-            narrow chat, what is on the right moves to a line of its own. */}
-        <div className="relative flex flex-wrap items-center gap-x-1 gap-y-1 px-2.5 pb-2.5">
+        {/* The meter and the effort open over the row's right edge. The row
+            never wraps: in a narrow chat the labels give way instead. */}
+        <div className="relative flex items-center gap-1 px-2.5 pb-2.5">
           <button
             type="button"
             aria-label={t.chat.composer.attach}
