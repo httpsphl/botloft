@@ -134,13 +134,20 @@ async fn run(
     outbox: &mpsc::Sender<String>,
     frames: &watch::Sender<Option<String>>,
     mut events: broadcast::Receiver<Event>,
-    daemon: &Daemon,
+    daemon: &Arc<Daemon>,
 ) {
     let mut watch = Watch::default();
     loop {
         let frame = tokio::select! {
             message = stream.next() => match message {
-                Some(Ok(Message::Text(text))) => handle(daemon, &text, &mut watch, frames),
+                Some(Ok(Message::Text(text))) => match route(daemon, &text, &mut watch, frames) {
+                    Routed::Reply(frame) => frame,
+                    Routed::InOrder(request) => answer(daemon, request).await,
+                    Routed::Aside(request) => {
+                        aside(daemon, request, outbox.clone());
+                        None
+                    }
+                },
                 Some(Ok(Message::Close(_)) | Err(_)) | None => return,
                 Some(Ok(_)) => None,
             },
@@ -166,18 +173,40 @@ async fn run(
     }
 }
 
-fn handle(
+/// Reads that the app never sets against notifications: their answer may
+/// come after newer notifications, so they wait neither for the requests
+/// before them nor hold back the notifications meanwhile.
+const ASIDE: [&str; 5] = [
+    method::FILES_LIST,
+    method::FILES_READ,
+    method::SCREENS_LIST,
+    method::ATTACHMENTS_READ,
+    method::USAGE_TOKENS,
+];
+
+enum Routed {
+    /// Answered here, or nothing to answer.
+    Reply(Option<String>),
+    /// Answered before anything else goes out (see [`answer`]).
+    InOrder(jsonrpc::Request),
+    /// Answered whenever it is ready (see [`ASIDE`]).
+    Aside(jsonrpc::Request),
+}
+
+fn route(
     daemon: &Daemon,
     text: &str,
     watch: &mut Watch,
     frames: &watch::Sender<Option<String>>,
-) -> Option<String> {
+) -> Routed {
     let request = match jsonrpc::parse(text) {
         Ok(request) => request,
-        Err((id, err)) => return Some(jsonrpc::failure(&id, &err)),
+        Err((id, err)) => return Routed::Reply(Some(jsonrpc::failure(&id, &err))),
     };
     debug!(method = %request.method, "rpc request");
-    let id = request.id.clone()?;
+    let Some(id) = request.id.clone() else {
+        return Routed::Reply(None);
+    };
     // Watching a browser belongs to this connection (spec 21.7).
     let result = match request.method.as_str() {
         method::BROWSER_WATCH | method::BROWSER_UNWATCH => {
@@ -194,46 +223,67 @@ fn handle(
         | method::BROWSER_NEW_TAB
         | method::BROWSER_SWITCH_TAB
         | method::BROWSER_OPEN => watch.request(daemon, &request.method, request.params),
-        name => dispatch::dispatch(daemon, name, request.params),
+        name if ASIDE.contains(&name) => return Routed::Aside(request),
+        _ => return Routed::InOrder(request),
     };
-    Some(match result {
-        Ok(value) => jsonrpc::success(&id, value),
-        Err(err) => jsonrpc::failure(&id, &err),
+    Routed::Reply(Some(reply(&id, result)))
+}
+
+/// Answers on the blocking pool, so the request holds no runtime thread.
+/// The connection waits for it: the app takes an answer as newer than
+/// every notification before it (spec 11.1).
+async fn answer(daemon: &Arc<Daemon>, request: jsonrpc::Request) -> Option<String> {
+    let daemon = Arc::clone(daemon);
+    let id = request.id.clone().unwrap_or(Value::Null);
+    let answered = tokio::task::spawn_blocking(move || {
+        dispatch::dispatch(&daemon, &request.method, request.params)
     })
+    .await;
+    let result = answered.unwrap_or_else(|_| {
+        Err(RpcError::new(
+            error_code::INTERNAL_ERROR,
+            "the request failed inside the daemon",
+        ))
+    });
+    Some(reply(&id, result))
+}
+
+/// Answers an [`ASIDE`] read on its own.
+fn aside(daemon: &Arc<Daemon>, request: jsonrpc::Request, outbox: mpsc::Sender<String>) {
+    let daemon = Arc::clone(daemon);
+    tokio::spawn(async move {
+        if let Some(frame) = answer(&daemon, request).await {
+            let _ = outbox.send(frame).await;
+        }
+    });
+}
+
+fn reply(id: &Value, result: Result<Value, RpcError>) -> String {
+    match result {
+        Ok(value) => jsonrpc::success(id, value),
+        Err(err) => jsonrpc::failure(id, &err),
+    }
 }
 
 fn to_notification(event: &Event) -> String {
-    let (name, params) = match event {
-        Event::CrewChanged(crew) => (notification::CREW_CHANGED, serde_json::to_value(crew)),
-        Event::CrewDeleted(crew) => (notification::CREW_DELETED, serde_json::to_value(crew)),
-        Event::BotChanged(bot) => (notification::BOT_CHANGED, serde_json::to_value(bot)),
-        Event::BotDeleted(bot) => (notification::BOT_DELETED, serde_json::to_value(bot)),
-        Event::FolderRecycled(folder) => {
-            (notification::FOLDER_RECYCLED, serde_json::to_value(folder))
-        }
-        Event::BotState(state) => (notification::BOT_STATE, serde_json::to_value(state)),
-        Event::BotContext(context) => (notification::BOT_CONTEXT, serde_json::to_value(context)),
-        Event::ChatItem(item) => (notification::CHAT_ITEM, serde_json::to_value(item)),
-        Event::ChatDelta(delta) => (notification::CHAT_DELTA, serde_json::to_value(delta)),
-        Event::MessageCreated(message) => {
-            (notification::MESSAGE_CREATED, serde_json::to_value(message))
-        }
-        Event::DeliveryChanged(delivery) => (
-            notification::DELIVERY_CHANGED,
-            serde_json::to_value(delivery),
-        ),
-        Event::TaskChanged(task) => (notification::TASK_CHANGED, serde_json::to_value(task)),
-        Event::RoutineChanged(routine) => {
-            (notification::ROUTINE_CHANGED, serde_json::to_value(routine))
-        }
-        Event::RoutineRun(run) => (notification::ROUTINE_RUN, serde_json::to_value(run)),
-        Event::BrowserChanged(state) => {
-            (notification::BROWSER_CHANGED, serde_json::to_value(state))
-        }
-        Event::BrowserAction(action) => {
-            (notification::BROWSER_ACTION, serde_json::to_value(action))
-        }
-        Event::ScreenDraft(draft) => (notification::SCREEN_DRAFT, serde_json::to_value(draft)),
-    };
-    jsonrpc::notification(name, params.unwrap_or(Value::Null))
+    use jsonrpc::notification as note;
+    match event {
+        Event::CrewChanged(crew) => note(notification::CREW_CHANGED, crew),
+        Event::CrewDeleted(crew) => note(notification::CREW_DELETED, crew),
+        Event::BotChanged(bot) => note(notification::BOT_CHANGED, bot),
+        Event::BotDeleted(bot) => note(notification::BOT_DELETED, bot),
+        Event::FolderRecycled(folder) => note(notification::FOLDER_RECYCLED, folder),
+        Event::BotState(state) => note(notification::BOT_STATE, state),
+        Event::BotContext(context) => note(notification::BOT_CONTEXT, context),
+        Event::ChatItem(item) => note(notification::CHAT_ITEM, item),
+        Event::ChatDelta(delta) => note(notification::CHAT_DELTA, delta),
+        Event::MessageCreated(message) => note(notification::MESSAGE_CREATED, message),
+        Event::DeliveryChanged(delivery) => note(notification::DELIVERY_CHANGED, delivery),
+        Event::TaskChanged(task) => note(notification::TASK_CHANGED, task),
+        Event::RoutineChanged(routine) => note(notification::ROUTINE_CHANGED, routine),
+        Event::RoutineRun(run) => note(notification::ROUTINE_RUN, run),
+        Event::BrowserChanged(state) => note(notification::BROWSER_CHANGED, state),
+        Event::BrowserAction(action) => note(notification::BROWSER_ACTION, action),
+        Event::ScreenDraft(draft) => note(notification::SCREEN_DRAFT, draft),
+    }
 }
