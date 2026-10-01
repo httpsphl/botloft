@@ -15,9 +15,8 @@ The release pipeline is ready to sign `Botloft.exe`, `botloftd.exe`, the setup w
 and the uninstaller as soon as a certificate is in place. All of them carry the product name
 "Botloft" and the version of the release.
 
-Botloft applied to the [SignPath Foundation](https://signpath.org) for free code signing on
-30 September 2026. If the application is accepted, this page will say so, and releases will be
-signed with a certificate issued to SignPath Foundation.
+Botloft does not have a code signing certificate yet. When it gets one, this page will say whose
+name is on it, and every release from then on will be signed with it.
 
 ## How releases are made
 
