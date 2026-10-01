@@ -277,23 +277,28 @@ pub(super) async fn pump(
 ) {
     let mut last = PageInfo::default();
     loop {
-        tokio::select! {
+        let handled = tokio::select! {
             event = events.recv() => {
                 let Some(event) = event else { break };
                 session.handle(&event, &hooks).await;
-                session.changed.notify_waiters();
                 if let Some(page) = event.session.filter(|_| retitles(&event.method)) {
                     let session = Arc::clone(&session);
                     tokio::spawn(async move { session.retitle(&page).await });
                 }
+                true
             }
             // The owner moved between tabs: no event says so.
-            () = session.moved.notified() => {}
-        }
+            () = session.moved.notified() => false,
+        };
         let info = session.lock().info();
         if info != last {
             (hooks.changed)(info.clone());
             last = info;
+        }
+        // Only now: a tool that waits for this event answers after the
+        // app's state shows it, so the tab list is never behind the bot.
+        if handled {
+            session.changed.notify_waiters();
         }
     }
     debug!("browser: closed");
