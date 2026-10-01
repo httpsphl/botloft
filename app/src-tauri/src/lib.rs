@@ -3,7 +3,10 @@
 
 mod claude;
 mod daemon;
+mod open;
 mod sign_in;
+#[cfg(unix)]
+mod terminal;
 mod window;
 
 use std::path::Path;
@@ -58,7 +61,8 @@ async fn read_owner_token() -> Result<String, String> {
     blocking(|| daemon::owner_token(&daemon::endpoint()?)).await
 }
 
-/// Opens a folder in Explorer. Files are refused: Explorer would run them.
+/// Opens a folder in the file manager. Files are refused: opening one
+/// could run it.
 #[tauri::command]
 async fn open_path(path: String) -> Result<(), String> {
     blocking(move || {
@@ -66,16 +70,12 @@ async fn open_path(path: String) -> Result<(), String> {
         if !folder.is_absolute() || !folder.is_dir() {
             return Err(format!("{path} is not a folder"));
         }
-        std::process::Command::new("explorer.exe")
-            .arg(folder)
-            .spawn()
-            .map(drop)
-            .map_err(|err| format!("cannot open Explorer: {err}"))
+        open::folder(folder)
     })
     .await
 }
 
-/// Extensions `open_file` will open with the program Windows picks. Anything
+/// Extensions `open_file` will open with the program the system picks. Anything
 /// else could be a program or a script that runs when opened.
 const OPENABLE: [&str; 24] = [
     "pdf", "png", "jpg", "jpeg", "gif", "webp", "svg", "txt", "md", "csv", "json", "log", "html",
@@ -88,7 +88,7 @@ fn is_openable(path: &Path) -> bool {
         .is_some_and(|extension| OPENABLE.contains(&extension.to_ascii_lowercase().as_str()))
 }
 
-/// Opens a file a bot made with the program Windows uses for it. Only
+/// Opens a file a bot made with the program the system uses for it. Only
 /// documents, images, sound and video: never something that runs.
 #[tauri::command]
 async fn open_file(path: String) -> Result<(), String> {
@@ -100,11 +100,7 @@ async fn open_file(path: String) -> Result<(), String> {
         if !is_openable(file) {
             return Err("this kind of file is not opened from Botloft".into());
         }
-        std::process::Command::new("explorer.exe")
-            .arg(file)
-            .spawn()
-            .map(drop)
-            .map_err(|err| format!("cannot open the file: {err}"))
+        open::file(file)
     })
     .await
 }
@@ -112,18 +108,12 @@ async fn open_file(path: String) -> Result<(), String> {
 /// Shows a file in its folder, selected. Nothing is run.
 #[tauri::command]
 async fn reveal_file(path: String) -> Result<(), String> {
-    use std::os::windows::process::CommandExt as _;
     blocking(move || {
         let file = Path::new(&path);
-        if !file.is_absolute() || !file.exists() || path.contains('"') {
+        if !file.is_absolute() || !file.exists() {
             return Err(format!("{path} is not a file"));
         }
-        // Explorer reads `/select,` and the path as one argument.
-        std::process::Command::new("explorer.exe")
-            .raw_arg(format!("/select,\"{path}\""))
-            .spawn()
-            .map(drop)
-            .map_err(|err| format!("cannot open Explorer: {err}"))
+        open::reveal(file)
     })
     .await
 }
@@ -159,14 +149,7 @@ async fn open_url(url: String) -> Result<(), String> {
     if !is_web_link(&url) {
         return Err("only web links can be opened".into());
     }
-    blocking(move || {
-        std::process::Command::new("explorer.exe")
-            .arg(&url)
-            .spawn()
-            .map(drop)
-            .map_err(|err| format!("cannot open the browser: {err}"))
-    })
-    .await
+    blocking(move || open::url(&url)).await
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
