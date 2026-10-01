@@ -16,7 +16,7 @@ use super::titles::retitles;
 
 impl Session {
     /// Sets up a new tab before it runs, and makes it the active one.
-    async fn attached(&self, params: &Value) {
+    async fn attached(&self, params: &Value, hooks: &Hooks) {
         let info = &params["targetInfo"];
         if info["type"] != "page" {
             return;
@@ -46,6 +46,9 @@ impl Session {
             let extra = (tabs.list.len() > MAX_TABS).then(|| tabs.list[0].target.clone());
             (previous, tabs.watching, extra, tabs.viewport)
         };
+        // The app hears of the tab now: the setup below lets the page run,
+        // and a bot's tool may read it before the setup is done.
+        (hooks.changed)(self.lock().info());
         let setup = [
             ("Page.enable", json!({})),
             ("Network.enable", json!({})),
@@ -123,7 +126,7 @@ impl Session {
         let params = &event.params;
         let Some(session) = event.session.as_deref() else {
             match event.method.as_str() {
-                "Target.attachedToTarget" => self.attached(params).await,
+                "Target.attachedToTarget" => self.attached(params, hooks).await,
                 "Target.detachedFromTarget" => self.detached(params).await,
                 "Target.targetInfoChanged" => self.info_changed(&params["targetInfo"]),
                 "Browser.downloadWillBegin" => {
@@ -277,23 +280,28 @@ pub(super) async fn pump(
 ) {
     let mut last = PageInfo::default();
     loop {
-        tokio::select! {
+        let handled = tokio::select! {
             event = events.recv() => {
                 let Some(event) = event else { break };
                 session.handle(&event, &hooks).await;
-                session.changed.notify_waiters();
                 if let Some(page) = event.session.filter(|_| retitles(&event.method)) {
                     let session = Arc::clone(&session);
                     tokio::spawn(async move { session.retitle(&page).await });
                 }
+                true
             }
             // The owner moved between tabs: no event says so.
-            () = session.moved.notified() => {}
-        }
+            () = session.moved.notified() => false,
+        };
         let info = session.lock().info();
         if info != last {
             (hooks.changed)(info.clone());
             last = info;
+        }
+        // Only now: a tool that waits for this event answers after the
+        // app's state shows it, so the tab list is never behind the bot.
+        if handled {
+            session.changed.notify_waiters();
         }
     }
     debug!("browser: closed");
