@@ -8,6 +8,11 @@ export const shell = {
     restore: "Restore",
     close: "Close",
   },
+  /** The button that hides the crews and bots on the left (Ctrl+B). */
+  sidebar: {
+    hide: "Hide the bots list",
+    show: "Show the bots list",
+  },
   zoom: {
     level: (percent: number, isDefault: boolean) =>
       isDefault ? `${percent}% (default)` : `${percent}%`,

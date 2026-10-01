@@ -7,6 +7,11 @@ export const shell: Messages["shell"] = {
     restore: "Restaurar",
     close: "Fechar",
   },
+  /** The button that hides the crews and bots on the left (Ctrl+B). */
+  sidebar: {
+    hide: "Esconder a lista de bots",
+    show: "Mostrar a lista de bots",
+  },
   zoom: {
     level: (percent: number, isDefault: boolean) =>
       isDefault ? `${percent}% (padrão)` : `${percent}%`,

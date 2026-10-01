@@ -1,0 +1,12 @@
+/* Hiding the crews and bots (spec 15.1, sidebarToggle.tsx): the list keeps
+   its width and slides out under the left edge while the chat widens.
+   Reduced motion makes it instant (motion.css). */
+
+.sidebar-slot {
+  width: 18rem;
+  transition: width 320ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-slot[data-open="false"] {
+  width: 0;
+}

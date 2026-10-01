@@ -18,6 +18,7 @@ import { Callout } from "../ui/Callout";
 import { useBotAlerts } from "./alerts";
 import { useAttentionMark } from "./attention";
 import { useFolderNotices } from "./folders";
+import { SidebarSlot, SidebarToggle } from "./sidebarToggle";
 import { useOpenAtSignIn } from "./signIn";
 import { TitleBar } from "./TitleBar";
 import { useTray } from "./tray";
@@ -57,7 +58,9 @@ export function Workspace() {
   } else {
     main = (
       <div className="flex min-h-0 flex-1">
-        <Sidebar />
+        <SidebarSlot>
+          <Sidebar />
+        </SidebarSlot>
         <main className="flex min-w-0 flex-1 flex-col [view-transition-name:main-pane]">
           {runtimeError ? (
             <div className="border-line border-b p-3">
@@ -92,6 +95,7 @@ export function Workspace() {
           </>
         }
       >
+        {hasCrews && <SidebarToggle />}
         <Breadcrumb />
       </TitleBar>
       {main}
