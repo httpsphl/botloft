@@ -967,7 +967,7 @@ M2 a M4 foram entregues com ConPTY, terminal com replay, inbox por named pipe e 
 5. Histórico de versões das instruções do bot.
 6. Acesso remoto com token por dispositivo (Tailscale).
 7. Sinais entre bots disparando rotinas.
-8. Suporte Linux/macOS. Em fatias: (1) CI com Ubuntu e macOS para o daemon; (2) runtime do bot (grupo de processos, ambiente, `claude`, navegador); (3) iniciar com o sistema (`systemd --user`, LaunchAgent); (4) app; (5) empacotamento e release. Feitas: 1, 2 e 3 (14.1).
+8. Suporte Linux/macOS. Em fatias: (1) CI com Ubuntu e macOS para o daemon; (2) runtime do bot (grupo de processos, ambiente, `claude`, navegador); (3) iniciar com o sistema (`systemd --user`, LaunchAgent); (4) app; (5) empacotamento e release. Feitas: 1 a 4 (14.1, 15.2, 15.6).
 9. Navegador dos bots, com o dono assistindo ao vivo. Desenho na seção 21.
 
 ## 19. Pontos a verificar na versão alvo do Claude Code
