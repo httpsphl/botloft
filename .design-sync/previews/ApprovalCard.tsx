@@ -1,4 +1,4 @@
-import { ApprovalCard, BotloftProvider, chat, makeBot, makeCrew, setLocaleChoice } from "@botloft/ui";
+import { ApprovalCard, BotloftProvider, chat, makeBot, makeCrew, schedule, setLocaleChoice } from "@botloft/ui";
 
 // The app follows the browser's language; the cards are in English.
 setLocaleChoice("en");
@@ -6,10 +6,11 @@ setLocaleChoice("en");
 const crew = makeCrew({ name: "Research" });
 const chief = makeBot({ crew, name: "Chief", chief: true });
 const scout = makeBot({ crew, name: "Scout", state: "needs_approval" });
+const writer = makeBot({ crew, name: "Writer" });
 
 function Card({ approval, bot }: { approval: Parameters<typeof ApprovalCard>[0]["approval"]; bot: typeof scout }) {
   return (
-    <BotloftProvider crews={[crew]} bots={[chief, scout]}>
+    <BotloftProvider crews={[crew]} bots={[chief, scout, writer]}>
       <div className="bg-canvas p-4" style={{ maxWidth: 640 }}>
         <ApprovalCard approval={approval} bot={bot} />
       </div>
@@ -68,5 +69,21 @@ export function Plan() {
 export function Allowed() {
   return (
     <Card bot={scout} approval={chat.askSite(scout, "https://arxiv.org/abs/2609.01234", { status: "allowed" }).body} />
+  );
+}
+
+export function Routine() {
+  return (
+    <Card
+      bot={chief}
+      approval={
+        chat.askRoutine(chief, {
+          name: "Friday summary",
+          prompt: "Write this week's summary from sources.md and send it to me.",
+          schedule: schedule.weekly([5], "09:00"),
+          bot: "writer",
+        }).body
+      }
+    />
   );
 }

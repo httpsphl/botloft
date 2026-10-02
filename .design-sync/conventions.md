@@ -61,6 +61,13 @@ const scout = makeBot({ crew, name: "Scout", state: "busy", role: "Finds sources
   `chat.askCommand(bot, command, { explanation })`, `chat.suggestBot(chief, { name, role, model,
   instructions, reason })`, `chat.askPlan(bot, markdown)`, `chat.turn(bot, seconds)`. Each takes
   `{ status: "allowed" | "denied" }` to show it answered. `ApprovalCard` takes one of them's `.body`.
+  `chat.askRoutine(bot, { name, prompt, schedule, bot: "writer" })` is a bot asking to set up a
+  routine (for itself, or for another bot by handle).
+- Routines, for `CrewRoutines` (pass them as `BotloftProvider` `routines`): `makeRoutine({ bot,
+  name, prompt, schedule: schedule.weekly([5], "09:00") | schedule.weekdays("08:30") |
+  schedule.every(120), lastRun: { status: "done" | "failed" | "queued" | "skipped" } })`. Days are
+  1 = Monday ... 7 = Sunday. The next run follows the schedule. `status: "queued"` reads "Running
+  now": a new `routines` array with it shows a routine starting.
 - `makeMessage({ from: bot | "owner" | "system", to: bot, body, kind: "note" | "task" })` for
   `InboundRow`: yours on the right, a bot's or Botloft's on the left.
 
@@ -76,8 +83,10 @@ const scout = makeBot({ crew, name: "Scout", state: "busy", role: "Finds sources
   `Choices` (2-6 options side by side), `Switch`, `Tabs`, `Menu`, `Details`, `SidePanel`.
 - App screens: `Sidebar` (crews and bots, 288px wide), `CrewBots` (a crew's bot cards), `BotRun`
   (one turn of a bot in its chat, inside a `<ul>`), `InboundRow` (a message in a chat, inside a
-  `<ul>`), `ApprovalCard` (a request: a website, a command, a suggested bot, a plan),
-  `BrowserPanel` (a bot's browser, live: tabs, address bar, the page and the bot's cursor).
+  `<ul>`), `ApprovalCard` (a request: a website, a command, a suggested bot, a plan, a routine),
+  `BrowserPanel` (a bot's browser, live: tabs, address bar, the page and the bot's cursor),
+  `CrewRoutines` (a crew's routines: each with its bot, schedule in words, next run, last run;
+  it fills the chat column's place, `<CrewRoutines crew={crew} />`).
   `BotloftProvider`'s `onAnswer` hears Allow and Deny on request cards.
 - **The app window:** one row, `className="flex bg-canvas text-ink"` with a fixed height
   (`style={{ height: 820 }}`): the `Sidebar` as its **direct first child**, then the chat column

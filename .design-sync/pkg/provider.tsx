@@ -17,6 +17,7 @@ import type {
   BotId,
   BrowserActionKind,
   Crew,
+  Routine,
 } from "../../app/src/lib/protocol.gen";
 import { DaemonProvider, HostProvider, useApp, useAppStore } from "../../app/src/store/context";
 
@@ -35,6 +36,8 @@ export interface BotloftProviderProps {
   bots?: Bot[];
   /** Open browsers, shown live by BrowserPanel. */
   browsers?: BrowserSeed[];
+  /** Routines from makeRoutine, listed by CrewRoutines; a new array updates them. */
+  routines?: Routine[];
   /** The bot whose chat is open: highlighted in the sidebar. */
   selectedBotId?: BotId | null;
   /** Called when Allow or Deny is clicked on a request card. */
@@ -76,6 +79,7 @@ export function BotloftProvider({
   crews = [],
   bots = [],
   browsers = [],
+  routines = [],
   selectedBotId,
   onAnswer,
   children,
@@ -89,6 +93,7 @@ export function BotloftProvider({
     // Before the store connects: the fake answers its first `browser.list`
     // at once, and an answer from before the browsers opened would win.
     for (const browser of browsers) showBrowser(api, browser);
+    for (const routine of routines) api.routines.routines.set(routine.id, routine);
     const call = api.call.bind(api) as FakeBotloft["call"];
     // A request card's answer goes to the design, not to a daemon.
     api.call = ((method: string, ...params: unknown[]) => {
@@ -124,6 +129,12 @@ export function BotloftProvider({
       showBrowser(fake, browser);
     }
   }, [fake, browsers]);
+  useEffect(() => {
+    for (const routine of routines) {
+      fake.routines.routines.set(routine.id, routine);
+      fake.emit({ name: "routine.changed", params: routine });
+    }
+  }, [fake, routines]);
 
   return (
     <HostProvider host={host}>
