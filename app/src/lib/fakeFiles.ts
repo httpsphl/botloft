@@ -17,17 +17,26 @@ const TYPES: Record<string, string> = {
 export class FakeFiles {
   private readonly files = new Map<BotId, BotFile[]>();
   private readonly contents = new Map<string, FileData>();
+  /** Readable but not listed, like a file older than the bot (spec 8.4). */
+  private readonly unlisted = new Set<string>();
 
   constructor(private readonly fake: FakeBotloft) {}
 
   /**
    * A file the bot made. `text` is what its preview shows; `folder` is
-   * relative to the work folder.
+   * relative to the work folder. `listed: false` leaves it out of the
+   * list, as the daemon does with a file older than the bot.
    */
   add(
     botId: BotId,
     name: string,
-    options: { text?: string; folder?: string; writtenByBot?: boolean; at?: number } = {},
+    options: {
+      text?: string;
+      folder?: string;
+      writtenByBot?: boolean;
+      at?: number;
+      listed?: boolean;
+    } = {},
   ): BotFile {
     this.fake.bot(botId);
     const folder = options.folder ?? "";
@@ -43,6 +52,9 @@ export class FakeFiles {
     };
     const list = (this.files.get(botId) ?? []).filter((other) => other.path !== file.path);
     this.files.set(botId, [file, ...list]);
+    if (options.listed === false) {
+      this.unlisted.add(file.path);
+    }
     this.contents.set(file.path, {
       mediaType: file.mediaType,
       data: encodeBytes(new TextEncoder().encode(text)),
@@ -54,7 +66,9 @@ export class FakeFiles {
     return {
       "files.list": ({ botId }) => {
         this.fake.bot(botId, false);
-        return [...(this.files.get(botId) ?? [])].sort((a, b) => b.modifiedAt - a.modifiedAt);
+        return (this.files.get(botId) ?? [])
+          .filter((file) => !this.unlisted.has(file.path))
+          .sort((a, b) => b.modifiedAt - a.modifiedAt);
       },
       "files.read": ({ botId, path }) => {
         const known = (this.files.get(botId) ?? []).some((file) => file.path === path);

@@ -20,9 +20,14 @@ export const files: Messages["files"] = {
   back: "Todos os arquivos",
   open: "Abrir",
   reveal: "Mostrar na pasta",
+  shared: (bot) => `Arquivos compartilhados por ${bot}`,
+  save: "Salvar como…",
+  saveOne: (name) => `Salvar uma cópia de ${name}`,
+  previewOne: "Ver",
   failed: {
     open: "Não foi possível abrir o arquivo",
     reveal: "Não foi possível mostrar o arquivo",
+    save: "Não foi possível salvar o arquivo",
   },
   preview: {
     loading: "Carregando…",

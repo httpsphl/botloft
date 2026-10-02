@@ -33,6 +33,7 @@ export const tools = {
     my_tasks: "See its tasks",
     suggest_bot: "Suggest a bot",
     schedule_routine: "Set up a routine",
+    share_file: "Share a file",
     browser: "Use a site",
     browser_help: "Ask for your hand",
     browser_open: "Open a page",

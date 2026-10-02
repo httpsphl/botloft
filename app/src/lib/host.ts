@@ -120,6 +120,11 @@ export interface Host {
   /** Shows a file in its folder, selected. */
   revealFile(path: string): Promise<void>;
   /**
+   * Saves a copy of a file where the owner picks with the system's Save
+   * dialog. Resolves false if they cancel.
+   */
+  saveFileAs(path: string): Promise<boolean>;
+  /**
    * Asks the owner for a folder with Windows' folder picker, starting at
    * `start` if given. Resolves null if they cancel.
    */

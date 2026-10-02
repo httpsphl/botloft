@@ -100,6 +100,7 @@ export function tauriHost(): Host {
     openPath: (path) => invoke<void>("open_path", { path }),
     openFile: (path) => invoke<void>("open_file", { path }),
     revealFile: (path) => invoke<void>("reveal_file", { path }),
+    saveFileAs: (path) => invoke<boolean>("save_file_as", { path }),
     pickFolder: async (title, start) => {
       const picked = await open({
         directory: true,

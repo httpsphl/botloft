@@ -26,6 +26,9 @@ export class FakeHost implements Host {
   /** Files opened with their program, and files shown in their folder. */
   readonly openedFiles: string[] = [];
   readonly revealed: string[] = [];
+  /** Files saved as a copy, and whether the Save dialog picks a place. */
+  readonly savedFiles: string[] = [];
+  saveChosen = true;
   /** What the folder picker gives back; null is a cancel. */
   nextFolder: string | null = null;
   /** Where each folder picker started. */
@@ -167,6 +170,11 @@ export class FakeHost implements Host {
   revealFile(path: string): Promise<void> {
     this.revealed.push(path);
     return Promise.resolve();
+  }
+
+  saveFileAs(path: string): Promise<boolean> {
+    this.savedFiles.push(path);
+    return Promise.resolve(this.saveChosen);
   }
 
   pickFolder(_title: string, start?: string): Promise<string | null> {
