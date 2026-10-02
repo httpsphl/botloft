@@ -11,9 +11,9 @@ import {
   requestPermission,
   sendNotification,
 } from "@tauri-apps/plugin-notification";
-import { check } from "@tauri-apps/plugin-updater";
+import { check, type Update } from "@tauri-apps/plugin-updater";
 import type { AppUpdate, DaemonStatus, Host } from "./host";
-import { hideTray, showTray } from "./tauriTray";
+import { hideTray, rebuildTray, showTray } from "./tauriTray";
 
 const DOT = 16;
 
@@ -46,34 +46,66 @@ async function checkForUpdate(): Promise<AppUpdate | null> {
   if (!update) {
     return null;
   }
+  let pending: Update | null = update;
   return {
     version: update.version,
     notes: update.body?.trim() || null,
     install: async (progress) => {
-      let total = 0;
-      let done = 0;
-      await update.downloadAndInstall((event) => {
-        switch (event.event) {
-          case "Started":
-            total = event.data.contentLength ?? 0;
-            progress(total > 0 ? 0 : null);
-            break;
-          case "Progress":
-            done += event.data.chunkLength;
-            progress(total > 0 ? Math.min(1, done / total) : null);
-            break;
-          case "Finished":
-            progress(1);
-            break;
-        }
-      });
+      pending ??= await check();
+      if (!pending) {
+        throw new Error("The update is no longer offered.");
+      }
+      const current = pending;
+      try {
+        await install(current, progress);
+      } catch (error) {
+        // Right before it runs the installer, Tauri drops every handle this
+        // page holds and hides the window. When the installer then fails to
+        // start (the owner said no to Windows, an antivirus stopped it), the
+        // app keeps running without them: look again on the next try.
+        pending = null;
+        await current.close().catch(() => {});
+        await recoverFromInstaller().catch(() => {});
+        throw error;
+      }
     },
   };
 }
 
+async function install(update: Update, progress: (fraction: number | null) => void) {
+  let total = 0;
+  let done = 0;
+  await update.downloadAndInstall((event) => {
+    switch (event.event) {
+      case "Started":
+        total = event.data.contentLength ?? 0;
+        progress(total > 0 ? 0 : null);
+        break;
+      case "Progress":
+        done += event.data.chunkLength;
+        progress(total > 0 ? Math.min(1, done / total) : null);
+        break;
+      case "Finished":
+        progress(1);
+        break;
+    }
+  });
+}
+
+/** The taskbar dot, made once; Tauri may drop it with the rest (above). */
+let overlay: Promise<Image> | undefined;
+
+/** Brings back what Tauri dropped before an installer that did not start. */
+async function recoverFromInstaller(): Promise<void> {
+  overlay = undefined;
+  await rebuildTray();
+  const window = getCurrentWindow();
+  await window.show();
+  await window.setFocus();
+}
+
 export function tauriHost(): Host {
   const window = getCurrentWindow();
-  let overlay: Promise<Image> | undefined;
   return {
     daemonStatus: () => invoke<DaemonStatus>("daemon_status"),
     installDaemon: () => invoke<DaemonStatus>("daemon_install"),

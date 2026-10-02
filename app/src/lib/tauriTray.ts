@@ -86,9 +86,29 @@ async function apply(view: TrayView): Promise<void> {
   menu = next;
 }
 
+let shown: TrayView | null = null;
+
 export function showTray(view: TrayView, next: TrayActions): Promise<void> {
   actions = next;
+  shown = view;
   const run = queue.then(() => apply(view));
+  queue = run.catch(() => {});
+  return run;
+}
+
+/**
+ * Makes the icon again after Tauri dropped it and everything this page held
+ * (an update that started its installer and then failed to run it).
+ */
+export function rebuildTray(): Promise<void> {
+  const run = queue.then(async () => {
+    tray = null;
+    menu = null;
+    icons.clear();
+    if (shown) {
+      await apply(shown);
+    }
+  });
   queue = run.catch(() => {});
   return run;
 }
@@ -99,6 +119,7 @@ export function hideTray(): Promise<void> {
     await menu?.close();
     tray = null;
     menu = null;
+    shown = null;
   });
   queue = run.catch(() => {});
   return run;
