@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
+import { useWindowVisible } from "../../shell/visibility";
 import { type BotPanel, routinesOf } from "../../store/app";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
@@ -98,6 +99,15 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
   });
   const fresh = filesOpen ? 0 : files.files.filter((file) => file.modifiedAt > seenAt).length;
   const routines = useApp(useShallow((state) => routinesOf(state, bot.id)));
+  // While the owner can see the chat, each new reply is seen (spec 15.1).
+  const visible = useWindowVisible();
+  const replyAt = useApp((state) => state.replyAt[bot.id]);
+  const markSeen = useApp((state) => state.markSeen);
+  useEffect(() => {
+    if (visible && replyAt !== undefined) {
+      markSeen(bot.id);
+    }
+  }, [bot.id, visible, replyAt, markSeen]);
   // A browser at rest is open, but the bot is not using it (spec 21.2).
   const browsing = useApp((state) => {
     const browser = state.browsers[bot.id];
