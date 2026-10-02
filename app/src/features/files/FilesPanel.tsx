@@ -11,7 +11,7 @@ import { Callout } from "../../ui/Callout";
 import { SidePanel } from "../../ui/SidePanel";
 import { BotAvatar } from "../bots/BotAvatar";
 import { FilePreview } from "./FilePreview";
-import { fileIcon } from "./kinds";
+import { fileKind, kindIcon } from "./kinds";
 import type { BotFiles } from "./useBotFiles";
 
 export function FilesPanel({
@@ -124,7 +124,8 @@ function FileRow({
   onOpen(path: string): void;
 }) {
   const t = useT().files;
-  const Icon = fileIcon(file.mediaType, file.name);
+  const kind = fileKind(file.mediaType, file.name);
+  const Icon = kindIcon(kind);
   return (
     <li>
       <button
@@ -133,7 +134,9 @@ function FileRow({
         title={file.path}
         className="flex w-full min-w-0 items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-sunken"
       >
-        <Icon aria-hidden size={18} className="shrink-0 text-muted" />
+        <span aria-hidden className="file-tile" data-kind={kind}>
+          <Icon size={18} />
+        </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
             <span className="truncate font-medium text-sm">{file.name}</span>
