@@ -5,7 +5,7 @@ import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
 import { useT } from "../i18n";
 import { useApp } from "../store/context";
-import { anyUnreadReply } from "../store/seen";
+import { anyUnread } from "../store/seen";
 import { attentionCount } from "./attention";
 import { prefs, usePref } from "./prefs";
 
@@ -19,7 +19,7 @@ export function SidebarToggle() {
   const t = useT().shell.sidebar;
   const open = usePref(prefs.sidebar);
   const waiting = useApp((state) => attentionCount(state) > 0);
-  const unread = useApp(anyUnreadReply);
+  const unread = useApp(anyUnread);
   const Icon = open ? PanelLeftClose : PanelLeftOpen;
   return (
     <span className="relative grid">

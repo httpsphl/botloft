@@ -21,7 +21,7 @@ import type {
   TaskId,
 } from "../lib/protocol.gen";
 import { viewTransition } from "../ui/motion";
-import { loadSeen, loadSeenSince, saveSeen } from "./seen";
+import { loadMarked, loadSeen, loadSeenSince, seenActions, withReply } from "./seen";
 
 /** A panel beside a bot's chat (spec 15.1). */
 export type BotPanel = "details" | "files" | "browser" | "screens";
@@ -61,6 +61,8 @@ export interface AppState {
   seenSince: number;
   /** When each bot last finished a reply (`Bot.lastReplyAt`), then every new one. */
   replyAt: Record<BotId, number>;
+  /** Bots the owner marked unread themselves, until they open them again. */
+  markedUnread: Record<BotId, true>;
   /**
    * The panel the owner left beside each bot's chat (null: closed), so it is
    * back when they come back to the bot. Kept until the app closes (spec 15.1).
@@ -73,6 +75,8 @@ export interface AppState {
   setPanel(botId: BotId, panel: BotPanel | null): void;
   /** The owner is looking at the bot's chat: what it said so far is seen. */
   markSeen(botId: BotId): void;
+  /** Marks the bot unread until its chat is opened; leaves it if it is open. */
+  markUnread(botId: BotId): void;
   /** Applies a record a call returned, before its notification arrives. */
   putCrew(crew: Crew): void;
   putBot(bot: Bot): void;
@@ -135,6 +139,7 @@ export function createAppStore(api: BotloftApi): AppStore {
     seenAt: loadSeen(),
     seenSince: loadSeenSince(),
     replyAt: {},
+    markedUnread: loadMarked(),
     panels: {},
     selectedCrewId: null,
     selectedBotId: null,
@@ -151,12 +156,7 @@ export function createAppStore(api: BotloftApi): AppStore {
         viewTransition(() => set({ selectedCrewId: bot.crewId, selectedBotId: botId }));
       }
     },
-    markSeen: (botId) => {
-      const { seenAt, replyAt } = get();
-      const next = { ...seenAt, [botId]: Math.max(Date.now(), replyAt[botId] ?? 0) };
-      saveSeen(next);
-      set({ seenAt: next });
-    },
+    ...seenActions(get, set),
     setPanel: (botId, panel) => set((state) => ({ panels: { ...state.panels, [botId]: panel } })),
     putCrew: (crew) => set((state) => withCrew(state, crew)),
     putBot: (bot) => set((state) => withBot(state, bot)),
@@ -310,15 +310,6 @@ function withBrowser(state: AppState, browser: BrowserState): Partial<AppState> 
 function withRoutine(state: AppState, routine: Routine): Partial<AppState> {
   const { [routine.id]: _, ...rest } = state.routines;
   return { routines: routine.archivedAt === null ? { ...rest, [routine.id]: routine } : rest };
-}
-
-/** `replyAt` with a reply of `botId` at `at`, if it is newer. */
-export function withReply(
-  replyAt: Record<BotId, number>,
-  botId: BotId,
-  at: number | null,
-): Record<BotId, number> {
-  return at !== null && at > (replyAt[botId] ?? 0) ? { ...replyAt, [botId]: at } : replyAt;
 }
 
 /** The routines of `botId`, oldest first. */

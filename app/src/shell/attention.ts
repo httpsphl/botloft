@@ -5,7 +5,8 @@ import { useEffect } from "react";
 import { actionableDead } from "../features/messages/FailedDeliveries";
 import type { AppState } from "../store/app";
 import { useApp, useHost } from "../store/context";
-import { unseenFailures } from "../store/seen";
+import { anyUnread, unseenFailures } from "../store/seen";
+import { prefs, usePref } from "./prefs";
 
 /**
  * Bots waiting for an answer or a sign-in, messages that gave up, and
@@ -35,7 +36,8 @@ let last: { inputs: readonly unknown[]; count: number } | null = null;
 
 export function useAttentionMark(): void {
   const host = useHost();
-  const needed = useApp((state) => attentionCount(state) > 0);
+  const replies = usePref(prefs.markReplies);
+  const needed = useApp((state) => attentionCount(state) > 0 || (replies && anyUnread(state)));
   useEffect(() => {
     host.window.setAttention(needed).catch(() => {});
   }, [host, needed]);

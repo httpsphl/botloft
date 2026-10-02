@@ -39,6 +39,7 @@ describe("a bot's right-click menu", () => {
       "Make crew chief",
       "Restart with a new conversation",
       "Open folder",
+      "Mark as unread",
       "Archive bot",
       "Delete bot",
     ]);

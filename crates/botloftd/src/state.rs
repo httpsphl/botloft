@@ -1,7 +1,7 @@
 //! State shared by every connection: the store, the supervisor, the
 //! courier, the event bus and what the daemon knows about itself.
 
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex, MutexGuard, TryLockError};
 use std::time::Instant;
 
 use botloft_core::protocol::{
@@ -10,6 +10,7 @@ use botloft_core::protocol::{
     Routine, RoutineRun, ScreenDraft, Task,
 };
 use botloft_store::Store;
+use tokio::runtime::{Handle, RuntimeFlavor};
 use tokio::sync::broadcast;
 
 use crate::approvals::Approvals;
@@ -160,9 +161,13 @@ impl Daemon {
     pub fn store(&self) -> MutexGuard<'_, Store> {
         // A panic while holding the lock cannot leave SQLite half-written
         // (every write is its own statement or transaction), so keep going.
-        self.store
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
+        match self.store.try_lock() {
+            Ok(store) => store,
+            Err(TryLockError::Poisoned(poisoned)) => poisoned.into_inner(),
+            Err(TryLockError::WouldBlock) => {
+                off_runtime(|| self.store.lock()).unwrap_or_else(|poisoned| poisoned.into_inner())
+            }
+        }
     }
 
     pub fn workspace_env(&self) -> WorkspaceEnv<'_> {
@@ -208,5 +213,18 @@ impl Daemon {
 
     pub fn uptime_ms(&self) -> i64 {
         i64::try_from(self.started.elapsed().as_millis()).unwrap_or(i64::MAX)
+    }
+}
+
+/// Runs `wait` so that it holds up no other task. A runtime thread stuck in
+/// it would also stop the timers and the sockets until another thread woke
+/// up (spec 11.1), so it hands its work to a new one first. Elsewhere, and
+/// on the single-threaded runtime of some tests, it just waits.
+fn off_runtime<T>(wait: impl FnOnce() -> T) -> T {
+    match Handle::try_current() {
+        Ok(handle) if handle.runtime_flavor() == RuntimeFlavor::MultiThread => {
+            tokio::task::block_in_place(wait)
+        }
+        _ => wait(),
     }
 }

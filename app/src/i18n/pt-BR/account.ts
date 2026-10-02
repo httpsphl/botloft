@@ -68,6 +68,9 @@ export const account: Messages["account"] = {
       `Um aviso do ${system} quando um bot pede permissão ou precisa que você entre na conta, se o Botloft não estiver na frente.`,
     notifyDone: "Quando um bot terminar",
     notifyDoneHint: "Um aviso quando um bot termina o que estava fazendo.",
+    markReplies: "Marcar o ícone quando um bot responder",
+    markRepliesHint:
+      "Um ponto no ícone do Botloft na barra de tarefas enquanto houver conversa que você não leu.",
     sound: "Tocar um som",
     soundHint: "Um som curto com cada aviso, também com o Botloft na frente.",
     alertsNeedTray:
