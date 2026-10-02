@@ -3,6 +3,7 @@
 //! MCP call waits here until the owner answers, the request times out, or
 //! the bot's process ends.
 
+mod always;
 mod prompt;
 
 use std::collections::HashMap;
@@ -12,7 +13,7 @@ use botloft_core::chat::{ROUTINE_TOOL, SUGGEST_TOOL, clip, tool_input_max, tool_
 use botloft_core::command::tool_explanation;
 use botloft_core::ids::{ApprovalId, BotId, ChatItemId};
 use botloft_core::protocol::{
-    Approval, ApprovalItem, ApprovalStatus, ApprovalsAnswerParams, ChatBody,
+    AllowScope, Approval, ApprovalItem, ApprovalStatus, ApprovalsAnswerParams, ChatBody,
 };
 use botloft_store::ApprovalRecord;
 use serde_json::Value;
@@ -166,6 +167,9 @@ pub fn answer(daemon: &Daemon, params: ApprovalsAnswerParams) -> ApiResult<Appro
             params.approval_id
         )));
     };
+    if params.allow && params.always == Some(true) {
+        always::remember(daemon, &record);
+    }
     if let Some(waiter) = daemon.approvals.lock().remove(&params.approval_id) {
         let _ = waiter.send(Decision {
             allow: params.allow,
@@ -231,7 +235,11 @@ fn open(
         created_at: now,
         answered_at: None,
     };
-    let shown = item_of(&approval, tool_explanation(tool_name, input));
+    let shown = item_of(
+        &approval,
+        tool_explanation(tool_name, input),
+        always::scope_of(tool_name, input),
+    );
     let item = items::add(daemon, bot, ChatBody::Approval(shown))?;
     let record = ApprovalRecord {
         approval,
@@ -245,7 +253,11 @@ fn open(
     Some(Pending { record })
 }
 
-fn item_of(approval: &Approval, explanation: Option<String>) -> ApprovalItem {
+fn item_of(
+    approval: &Approval,
+    explanation: Option<String>,
+    always: Option<AllowScope>,
+) -> ApprovalItem {
     ApprovalItem {
         approval_id: approval.id.clone(),
         tool_name: approval.tool_name.clone(),
@@ -254,6 +266,7 @@ fn item_of(approval: &Approval, explanation: Option<String>) -> ApprovalItem {
         input: approval.input.clone(),
         status: approval.status,
         note: approval.note.clone(),
+        always,
     }
 }
 
@@ -285,13 +298,14 @@ fn settle(
 
 fn show(daemon: &Daemon, record: &ApprovalRecord) {
     let item: &ChatItemId = &record.chat_item_id;
-    // The bot's explanation is kept only in the chat item.
+    // The bot's explanation and what "Allow always" covers are kept only
+    // in the chat item.
     let shown = daemon.store().chat_item(item).ok().flatten();
-    let explanation = match shown.map(|shown| shown.body) {
-        Some(ChatBody::Approval(shown)) => shown.explanation,
-        _ => None,
+    let (explanation, always) = match shown.map(|shown| shown.body) {
+        Some(ChatBody::Approval(shown)) => (shown.explanation, shown.always),
+        _ => (None, None),
     };
-    let shown = item_of(&record.approval, explanation);
+    let shown = item_of(&record.approval, explanation, always);
     items::update(daemon, item, ChatBody::Approval(shown));
 }
 

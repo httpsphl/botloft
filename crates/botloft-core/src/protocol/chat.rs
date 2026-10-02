@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{Message, TokenUsage};
+use super::{AllowScope, Message, TokenUsage};
 use crate::ids::{ApprovalId, BotId, ChatItemId};
 
 text_enum!(
@@ -153,6 +153,11 @@ pub struct ApprovalItem {
     pub status: ApprovalStatus,
     /// What the owner wrote with a denial.
     pub note: Option<String>,
+    /// What "Allow always" would cover (spec 10.1); `null` when the
+    /// request cannot be allowed for good. Kept only here, like the
+    /// explanation.
+    #[serde(default)]
+    pub always: Option<AllowScope>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -249,6 +254,11 @@ pub struct ApprovalsAnswerParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub input: Option<String>,
+    /// With `allow`, the bot no longer asks for what the request's
+    /// `always` covers (spec 10.1). Ignored for a request without one.
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub always: Option<bool>,
 }
 
 /// The last thing in a bot's chat, for the conversation list.

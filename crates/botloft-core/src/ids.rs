@@ -108,6 +108,10 @@ prefixed_id!(
     /// Identifies one run of a routine.
     RoutineRunId, "routine run", "rrn_"
 );
+prefixed_id!(
+    /// Identifies a request a bot may make without asking (spec 10.1).
+    RuleId, "rule", "rul_"
+);
 
 /// A random version 4 UUID, for Claude Code session ids and the uuid of
 /// each message written to a bot (spec 7.3, 9.2).

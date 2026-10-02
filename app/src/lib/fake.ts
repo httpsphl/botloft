@@ -3,6 +3,7 @@
 // handles, archiving, and the notifications each change sends.
 
 import type { BotloftApi } from "./api";
+import { FakeAllow } from "./fakeAllow";
 import { botHandlers } from "./fakeBots";
 import { FakeBrowser } from "./fakeBrowser";
 import { FakeChat } from "./fakeChat";
@@ -67,6 +68,7 @@ export class FakeBotloft implements BotloftApi {
   /** Every call, in order. */
   readonly calls: { method: Method; params: unknown }[] = [];
   readonly chat = new FakeChat(this);
+  readonly allow = new FakeAllow(this);
   readonly conversation = new FakeConversation(this);
   readonly routines = new FakeRoutines(this);
   readonly files = new FakeFiles(this);
@@ -249,6 +251,7 @@ export class FakeBotloft implements BotloftApi {
     ...crewHandlers(this),
     ...botHandlers(this),
     ...this.chat.handlers(),
+    ...this.allow.handlers(),
     ...this.conversation.handlers(),
     ...this.files.handlers(),
     ...this.browser.handlers(),

@@ -11,13 +11,15 @@ use super::*;
 use crate::avatar::PALETTE;
 use crate::ids::{
     ApprovalId, AttachmentId, BotId, ChatItemId, CrewId, DeliveryId, MessageId, RoutineId,
-    RoutineRunId, TaskId,
+    RoutineRunId, RuleId, TaskId,
 };
 
 #[path = "export_browser.rs"]
 mod browser;
 #[path = "export_routines.rs"]
 mod routines;
+#[path = "export_rules.rs"]
+mod rules;
 #[path = "export_session.rs"]
 mod session;
 #[path = "export_usage.rs"]
@@ -97,6 +99,7 @@ fn export_bindings() {
     out.decl::<AttachmentId>();
     out.decl::<RoutineId>();
     out.decl::<RoutineRunId>();
+    out.decl::<RuleId>();
     out.decl::<Crew>();
     out.decl::<BotState>();
     out.decl::<PermissionMode>();
@@ -163,6 +166,7 @@ fn export_bindings() {
     out.decl::<InboundItem>();
     out.decl::<ReplyItem>();
     out.decl::<ToolItem>();
+    rules::decls(&mut out);
     out.decl::<ApprovalItem>();
     usage::decls(&mut out);
     out.decl::<TurnItem>();
@@ -322,6 +326,7 @@ fn export_bindings() {
     );
     session::methods(&mut out);
     usage::methods(&mut out);
+    rules::methods(&mut out);
     routines::methods(&mut out);
     browser::methods(&mut out);
     out.text.push_str("}\n\n");
@@ -367,6 +372,7 @@ fn export_bindings() {
     let _ = writeln!(out.text, "  \"{}\": {task};", notification::TASK_CHANGED);
     session::notifications(&mut out);
     routines::notifications(&mut out);
+    rules::notifications(&mut out);
     browser::notifications(&mut out);
     out.text.push_str("}\n\n");
 

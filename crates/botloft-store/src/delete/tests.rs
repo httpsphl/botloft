@@ -92,6 +92,7 @@ fn fill(fx: &Fixture) -> Owned {
             input: approval.input.clone(),
             status: ApprovalStatus::Pending,
             note: None,
+            always: None,
         }),
         created_at: 10,
         updated_at: 10,
@@ -106,6 +107,12 @@ fn fill(fx: &Fixture) -> Owned {
     fx.store
         .allow_browser_site(scout, "example.com", 10)
         .expect("site");
+    let always = botloft_core::protocol::AllowScope {
+        tool_name: "Bash".into(),
+        kind: botloft_core::protocol::AllowKind::Command,
+        value: "git status".into(),
+    };
+    fx.store.add_allow_rule(scout, &always, 10).expect("rule");
 
     let routine = Routine {
         id: RoutineId::generate(),
@@ -199,6 +206,7 @@ fn a_deleted_bot_takes_what_was_its_own() {
             .is_empty()
     );
     assert!(fx.store.browser_sites(&scout).expect("sites").is_empty());
+    assert!(fx.store.allow_rules(&scout).expect("rules").is_empty());
     let crew = fx.store.crew(&fx.crew.id).expect("crew").expect("kept");
     assert_eq!(crew.lead_bot_id, None);
     assert_eq!(dangling(&fx.store), 0);
@@ -297,6 +305,7 @@ fn a_deleted_crew_takes_its_bots_and_leaves_other_crews_alone() {
         "routines",
         "routine_runs",
         "browser_sites",
+        "allow_rules",
     ] {
         assert_eq!(count(&fx.store, table), 0, "{table}");
     }

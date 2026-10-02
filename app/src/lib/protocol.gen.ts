@@ -66,6 +66,11 @@ export type RoutineId = string;
 export type RoutineRunId = string;
 
 /**
+ * Identifies a request a bot may make without asking (spec 10.1).
+ */
+export type RuleId = string;
+
+/**
  * A group of bots that can message each other and share a folder.
  */
 export type Crew = { id: CrewId, name: string, 
@@ -741,6 +746,44 @@ output: string | null,
  */
 file: string | null, };
 
+/**
+ * What an allow rule covers, besides its tool.
+ */
+export type AllowKind = "command" | "site" | "file" | "tool";
+
+/**
+ * What "Allow always" would cover for one request: the tool and, for a
+ * command, site or file, which one.
+ */
+export type AllowScope = { toolName: string, kind: AllowKind, 
+/**
+ * The command, the site or the file's path; empty for `tool`.
+ */
+value: string, };
+
+/**
+ * A request the bot no longer asks for: the daemon allows it alone.
+ */
+export type AllowRule = { id: RuleId, botId: BotId, scope: AllowScope, 
+/**
+ * Unix time in milliseconds.
+ */
+createdAt: number, };
+
+export type RulesListParams = { botId: BotId, };
+
+export type RuleIdParams = { ruleId: RuleId, };
+
+/**
+ * A bot's rules after one was added or removed: the result of
+ * `rules.delete` and the params of the `bot.rules` notification.
+ */
+export type BotRules = { botId: BotId, 
+/**
+ * Oldest first.
+ */
+rules: Array<AllowRule>, };
+
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
 /**
  * What the bot says the command is for, as in `ToolItem`. The bot
@@ -751,7 +794,13 @@ explanation: string | null, input: string, status: ApprovalStatus,
 /**
  * What the owner wrote with a denial.
  */
-note: string | null, };
+note: string | null, 
+/**
+ * What "Allow always" would cover (spec 10.1); `null` when the
+ * request cannot be allowed for good. Kept only here, like the
+ * explanation.
+ */
+always: AllowScope | null, };
 
 /**
  * Tokens of one turn, as the `usage` of Claude Code's `result` event: the
@@ -890,7 +939,12 @@ note?: string,
  * it, in the JSON of the tool's input (spec 10.2, 20.12). Ignored for
  * other requests.
  */
-input?: string, };
+input?: string, 
+/**
+ * With `allow`, the bot no longer asks for what the request's
+ * `always` covers (spec 10.1). Ignored for a request without one.
+ */
+always?: boolean, };
 
 /**
  * The daemon's part of the app's Settings.
@@ -1238,6 +1292,8 @@ export interface RpcMethods {
   "bots.setEffort": { params: BotsSetEffortParams; result: Bot };
   "bots.compact": { params: BotIdParams; result: Bot };
   "usage.tokens": { params: UsageTokensParams; result: Array<BotTokens> };
+  "rules.list": { params: RulesListParams; result: Array<AllowRule> };
+  "rules.delete": { params: RuleIdParams; result: BotRules };
   "routines.list": { params: RoutinesListParams; result: Array<Routine> };
   "routines.create": { params: RoutinesCreateParams; result: Routine };
   "routines.update": { params: RoutinesUpdateParams; result: Routine };
@@ -1275,6 +1331,7 @@ export interface RpcNotifications {
   "bot.context": BotContextChanged;
   "routine.changed": Routine;
   "routine.run": RoutineRun;
+  "bot.rules": BotRules;
   "browser.changed": BrowserState;
   "browser.action": BrowserAction;
   "browser.frame": BrowserFrame;

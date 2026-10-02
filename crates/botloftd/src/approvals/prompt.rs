@@ -8,7 +8,7 @@ use botloft_core::protocol::{ChatBody, ToolStatus};
 use serde_json::{Value, json};
 use tracing::debug;
 
-use super::{Answer, ask};
+use super::{Answer, always, ask};
 use crate::state::Daemon;
 
 /// How long to wait for the `tool_use` event that the request is about;
@@ -32,6 +32,11 @@ pub async fn prompt(daemon: &Daemon, bot: &BotId, generation: u64, args: PromptA
     if !matches_running_tool(daemon, bot, &args.tool_use_id).await {
         debug!(bot = %bot, "permission request for no running tool; denied");
         return deny("There is no pending tool call with that id.");
+    }
+    // The owner said once that this one needs no asking.
+    if always::allowed(daemon, bot, &args.tool_name, &args.input) {
+        debug!(bot = %bot, tool = %args.tool_name, "allowed by a rule of the bot");
+        return json!({ "behavior": "allow", "updatedInput": args.input }).to_string();
     }
     let asked = ask(
         daemon,

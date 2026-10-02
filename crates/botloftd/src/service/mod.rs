@@ -14,6 +14,7 @@ pub mod messages;
 pub mod models;
 pub mod modes;
 pub mod routines;
+pub mod rules;
 pub mod screens;
 pub mod settings;
 pub mod tasks;

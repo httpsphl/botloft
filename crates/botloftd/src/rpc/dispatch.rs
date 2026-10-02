@@ -9,7 +9,7 @@ use super::jsonrpc::{RpcError, empty_params};
 use crate::approvals;
 use crate::service::{
     self, ApiResult, archive, attachments, bots, chat, crews, delete, deliveries, files, lead,
-    messages, models, modes, routines, screens, settings, tasks, usage,
+    messages, models, modes, routines, rules, screens, settings, tasks, usage,
 };
 use crate::state::Daemon;
 
@@ -45,6 +45,8 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::BOTS_RESTART => reply(bots::restart(daemon, parse(params)?)),
         method::CHAT_HISTORY => reply(chat::history(daemon, parse(params)?)),
         method::APPROVALS_ANSWER => reply(approvals::answer(daemon, parse(params)?)),
+        method::RULES_LIST => reply(rules::list(daemon, parse(params)?)),
+        method::RULES_DELETE => reply(rules::delete(daemon, parse(params)?)),
         method::MESSAGES_SEND => reply(messages::send(daemon, parse(params)?)),
         method::MESSAGES_LIST => reply(messages::list(daemon, parse(params)?)),
         method::ATTACHMENTS_READ => reply(attachments::read(daemon, parse(params)?)),

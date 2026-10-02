@@ -275,6 +275,7 @@ fn to_notification(event: &Event) -> String {
         Event::FolderRecycled(folder) => note(notification::FOLDER_RECYCLED, folder),
         Event::BotState(state) => note(notification::BOT_STATE, state),
         Event::BotContext(context) => note(notification::BOT_CONTEXT, context),
+        Event::BotRules(rules) => note(notification::BOT_RULES, rules),
         Event::ChatItem(item) => note(notification::CHAT_ITEM, item),
         Event::ChatDelta(delta) => note(notification::CHAT_DELTA, delta),
         Event::MessageCreated(message) => note(notification::MESSAGE_CREATED, message),
