@@ -7,6 +7,8 @@ import { Menu, MenuItem, PredefinedMenuItem } from "@tauri-apps/api/menu";
 import { TrayIcon } from "@tauri-apps/api/tray";
 import type { TrayActions, TrayView } from "./host";
 
+const TRAY_ID = "botloft";
+
 let queue: Promise<unknown> = Promise.resolve();
 let tray: TrayIcon | null = null;
 let menu: Menu | null = null;
@@ -62,8 +64,13 @@ async function apply(view: TrayView): Promise<void> {
     await tray.setTooltip(view.tooltip);
     await tray.setIcon(image);
   } else {
+    // A reloaded page forgets the icon it made, but the icon stays near the
+    // clock: take it away before making this page's own.
+    while (await TrayIcon.getById(TRAY_ID)) {
+      await TrayIcon.removeById(TRAY_ID);
+    }
     tray = await TrayIcon.new({
-      id: "botloft",
+      id: TRAY_ID,
       menu: next,
       tooltip: view.tooltip,
       showMenuOnLeftClick: false,
