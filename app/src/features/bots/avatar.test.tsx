@@ -124,13 +124,13 @@ describe("ListAvatar", () => {
     paused: false,
   });
 
-  test("a bot at rest keeps its look but does not move; a working one moves", () => {
+  test("a sleeping bot keeps its look but does not move; an idle or working one moves", () => {
     const { container, rerender } = render(
       <ListAvatar bot={bot("idle")} crewPaused={false} size={32} />,
     );
     const svg = () => container.querySelector("svg") as SVGElement;
     expect(svg().dataset.mood).toBe("idle");
-    expect(svg().hasAttribute("data-still")).toBe(true);
+    expect(svg().hasAttribute("data-still")).toBe(false);
 
     rerender(<ListAvatar bot={bot("offline")} crewPaused={false} size={32} />);
     expect(svg().dataset.mood).toBe("sleeping");
