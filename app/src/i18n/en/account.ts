@@ -68,6 +68,8 @@ export const account = {
       `A ${system} notification when a bot asks for permission or needs you to sign in, if Botloft is not in front.`,
     notifyDone: "When a bot finishes",
     notifyDoneHint: "A notification when a bot finishes what it was doing.",
+    markReplies: "Mark the icon when a bot replies",
+    markRepliesHint: "A dot on the Botloft icon in the taskbar while a conversation is unread.",
     sound: "Play a sound",
     soundHint: "A short sound with each notification, also with Botloft in front.",
     alertsNeedTray:

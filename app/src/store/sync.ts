@@ -3,7 +3,8 @@
 import { type BotloftApi, type ConnectionState, errorText } from "../lib/api";
 import type { Delivery } from "../lib/protocol.gen";
 import { onVisibility, windowHidden } from "../shell/visibility";
-import { type AppStore, applyEvent, crewList, withReply } from "./app";
+import { type AppStore, applyEvent, crewList } from "./app";
+import { withReply } from "./seen";
 
 /**
  * How often `system.status` is refreshed; it has no notification. Not while

@@ -68,6 +68,8 @@ export const prefs = {
   notifyNeeds: pref<boolean>("botloft.notifyNeeds", true, ON_OFF),
   /** A Windows notification when a bot finishes what it was doing. */
   notifyDone: pref<boolean>("botloft.notifyDone", false, ON_OFF),
+  /** The mark on the app's icon also shows while a bot is unread. */
+  markReplies: pref<boolean>("botloft.markReplies", true, ON_OFF),
   /** A short sound with each of those. */
   sound: pref<boolean>("botloft.sound", true, ON_OFF),
 };

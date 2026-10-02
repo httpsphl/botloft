@@ -1,8 +1,18 @@
-import { Archive, Crown, FolderOpen, Pencil, RefreshCcw, Trash2 } from "lucide-react";
+import {
+  Archive,
+  Crown,
+  FolderOpen,
+  Mail,
+  MailOpen,
+  Pencil,
+  RefreshCcw,
+  Trash2,
+} from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
 import { useApi, useApp, useHost } from "../../store/context";
+import { isUnread } from "../../store/seen";
 import { Confirm } from "../../ui/Confirm";
 import type { MenuItem } from "../../ui/Menu";
 import { attempt } from "../../ui/toast";
@@ -27,6 +37,9 @@ export function useBotActions(
   const host = useHost();
   const putBot = useApp((state) => state.putBot);
   const putCrew = useApp((state) => state.putCrew);
+  const unread = useApp((state) => isUnread(state, bot.id));
+  const markSeen = useApp((state) => state.markSeen);
+  const markUnread = useApp((state) => state.markUnread);
   const chief = isChief(bot, crew);
   const [open, setOpen] = useState<Open>(null);
   const close = () => setOpen(null);
@@ -54,6 +67,9 @@ export function useBotActions(
       icon: FolderOpen,
       onSelect: () => attempt(words.failed.openFolder, () => host.openPath(bot.workspace)),
     },
+    unread
+      ? { label: words.markRead, icon: MailOpen, onSelect: () => markSeen(bot.id) }
+      : { label: words.markUnread, icon: Mail, onSelect: () => markUnread(bot.id) },
     { label: words.archive, icon: Archive, danger: true, onSelect: () => setOpen("archive") },
     { label: words.delete, icon: Trash2, danger: true, onSelect: () => setOpen("delete") },
   ];

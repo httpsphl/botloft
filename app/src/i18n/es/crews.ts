@@ -10,7 +10,8 @@ export const crews: Messages["crews"] = {
     noMessages: "Aún no hay mensajes",
     fromOwner: (text: string) => `Tú: ${text}`,
     awaitingApproval: (text: string) => `Esperando aprobación: ${text}`,
-    unread: "respuesta nueva",
+    unread: "sin leer",
+    unreadCount: (count: number) => `${count} sin leer`,
   },
   dialog: {
     folder: "Carpeta de trabajo",
