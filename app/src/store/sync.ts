@@ -3,7 +3,7 @@
 import { type BotloftApi, type ConnectionState, errorText } from "../lib/api";
 import type { Delivery } from "../lib/protocol.gen";
 import { onVisibility, windowHidden } from "../shell/visibility";
-import { type AppStore, applyEvent, crewList } from "./app";
+import { type AppStore, applyEvent, crewList, withReply } from "./app";
 
 /**
  * How often `system.status` is refreshed; it has no notification. Not while
@@ -41,10 +41,11 @@ export function syncStore(store: AppStore, api: BotloftApi): () => void {
     });
     const bots = api.call("bots.list", {}).then((list) => {
       if (alive) {
-        store.setState({
+        store.setState(({ replyAt }) => ({
           bots: Object.fromEntries(list.map((bot) => [bot.id, bot])),
           activity: Object.fromEntries(list.map((bot) => [bot.id, bot.lastActivity])),
-        });
+          replyAt: list.reduce((at, bot) => withReply(at, bot.id, bot.lastReplyAt), replyAt),
+        }));
       }
     });
     // Recent deliveries plus every dead one: the dead need the owner.

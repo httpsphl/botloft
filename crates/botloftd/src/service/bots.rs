@@ -211,6 +211,10 @@ pub(crate) fn to_protocol(daemon: &Daemon, store: &Store, crew: &Crew, record: B
         tracing::warn!(bot = %record.id, "could not read the last activity: {err}");
         None
     });
+    let last_reply_at = store.last_reply_at(&record.id).unwrap_or_else(|err| {
+        tracing::warn!(bot = %record.id, "could not read the last reply: {err}");
+        None
+    });
     let context = daemon.contexts.get(&record.id);
     Bot {
         id: record.id,
@@ -232,6 +236,7 @@ pub(crate) fn to_protocol(daemon: &Daemon, store: &Store, crew: &Crew, record: B
         generation,
         workspace: workspace.to_string_lossy().into_owned(),
         last_activity,
+        last_reply_at,
         created_at: record.created_at,
         archived_at: record.archived_at,
     }

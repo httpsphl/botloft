@@ -21,6 +21,7 @@ import type {
   TaskId,
 } from "../lib/protocol.gen";
 import { viewTransition } from "../ui/motion";
+import { loadSeen, loadSeenSince, saveSeen } from "./seen";
 
 /** A panel beside a bot's chat (spec 15.1). */
 export type BotPanel = "details" | "files" | "browser" | "screens";
@@ -51,8 +52,15 @@ export interface AppState {
   routines: Record<RoutineId, Routine>;
   /** The bots' browsers that are not closed (spec 21.7), then every change. */
   browsers: Record<BotId, BrowserState>;
-  /** When the owner last had each bot open, for failed routine runs. */
+  /**
+   * When the owner last looked at each bot's chat (`seen.ts`), for unread
+   * replies and failed routine runs.
+   */
   seenAt: Record<BotId, number>;
+  /** Replies before this count as seen (`loadSeenSince`). */
+  seenSince: number;
+  /** When each bot last finished a reply (`Bot.lastReplyAt`), then every new one. */
+  replyAt: Record<BotId, number>;
   /**
    * The panel the owner left beside each bot's chat (null: closed), so it is
    * back when they come back to the bot. Kept until the app closes (spec 15.1).
@@ -63,6 +71,8 @@ export interface AppState {
   selectCrew(crewId: CrewId | null): void;
   selectBot(botId: BotId): void;
   setPanel(botId: BotId, panel: BotPanel | null): void;
+  /** The owner is looking at the bot's chat: what it said so far is seen. */
+  markSeen(botId: BotId): void;
   /** Applies a record a call returned, before its notification arrives. */
   putCrew(crew: Crew): void;
   putBot(bot: Bot): void;
@@ -123,6 +133,8 @@ export function createAppStore(api: BotloftApi): AppStore {
     routines: {},
     browsers: {},
     seenAt: loadSeen(),
+    seenSince: loadSeenSince(),
+    replyAt: {},
     panels: {},
     selectedCrewId: null,
     selectedBotId: null,
@@ -135,10 +147,15 @@ export function createAppStore(api: BotloftApi): AppStore {
     selectBot: (botId) => {
       const bot = get().bots[botId];
       if (bot && get().selectedBotId !== botId) {
-        const seenAt = { ...get().seenAt, [botId]: Date.now() };
-        saveSeen(seenAt);
-        viewTransition(() => set({ selectedCrewId: bot.crewId, selectedBotId: botId, seenAt }));
+        get().markSeen(botId);
+        viewTransition(() => set({ selectedCrewId: bot.crewId, selectedBotId: botId }));
       }
+    },
+    markSeen: (botId) => {
+      const { seenAt, replyAt } = get();
+      const next = { ...seenAt, [botId]: Math.max(Date.now(), replyAt[botId] ?? 0) };
+      saveSeen(next);
+      set({ seenAt: next });
     },
     setPanel: (botId, panel) => set((state) => ({ panels: { ...state.panels, [botId]: panel } })),
     putCrew: (crew) => set((state) => withCrew(state, crew)),
@@ -175,6 +192,7 @@ function withBot(state: AppState, bot: Bot): Partial<AppState> {
     return {
       bots: { ...state.bots, [bot.id]: bot },
       activity: { ...state.activity, [bot.id]: bot.lastActivity },
+      replyAt: withReply(state.replyAt, bot.id, bot.lastReplyAt),
     };
   }
   const { [bot.id]: _gone, ...bots } = state.bots;
@@ -195,6 +213,7 @@ function withoutBots(state: AppState, botIds: BotId[]): Partial<AppState> {
   return {
     bots: kept(state.bots, (bot) => !gone.has(bot.id)),
     activity: Object.fromEntries(Object.entries(state.activity).filter(([id]) => !gone.has(id))),
+    replyAt: Object.fromEntries(Object.entries(state.replyAt).filter(([id]) => !gone.has(id))),
     routines: kept(state.routines, (routine) => !gone.has(routine.botId)),
     browsers: kept(state.browsers, (browser) => !gone.has(browser.botId)),
     deliveries: kept(state.deliveries, (delivery) => !gone.has(delivery.botId)),
@@ -251,7 +270,11 @@ export function applyEvent(state: AppState, event: ServerEvent): Partial<AppStat
       if (!state.bots[item.botId] || !activity) {
         return null;
       }
-      return { activity: { ...state.activity, [item.botId]: activity } };
+      const reply = item.body.kind === "reply" ? item.updatedAt : null;
+      return {
+        activity: { ...state.activity, [item.botId]: activity },
+        replyAt: withReply(state.replyAt, item.botId, reply),
+      };
     }
     case "delivery.changed":
       return { deliveries: { ...state.deliveries, [event.params.messageId]: event.params } };
@@ -289,24 +312,13 @@ function withRoutine(state: AppState, routine: Routine): Partial<AppState> {
   return { routines: routine.archivedAt === null ? { ...rest, [routine.id]: routine } : rest };
 }
 
-const SEEN_KEY = "botloft.seen";
-
-/** When each bot was last open, remembered across restarts of the app. */
-function loadSeen(): Record<BotId, number> {
-  try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(SEEN_KEY) ?? "{}");
-    return typeof parsed === "object" && parsed !== null ? (parsed as Record<BotId, number>) : {};
-  } catch {
-    return {};
-  }
-}
-
-function saveSeen(seen: Record<BotId, number>): void {
-  try {
-    localStorage.setItem(SEEN_KEY, JSON.stringify(seen));
-  } catch {
-    // Storage may be off; the mark just shows again after a restart.
-  }
+/** `replyAt` with a reply of `botId` at `at`, if it is newer. */
+export function withReply(
+  replyAt: Record<BotId, number>,
+  botId: BotId,
+  at: number | null,
+): Record<BotId, number> {
+  return at !== null && at > (replyAt[botId] ?? 0) ? { ...replyAt, [botId]: at } : replyAt;
 }
 
 /** The routines of `botId`, oldest first. */
@@ -314,16 +326,4 @@ export function routinesOf(state: AppState, botId: BotId): Routine[] {
   return Object.values(state.routines)
     .filter((routine) => routine.botId === botId)
     .sort(byCreation);
-}
-
-/** Routines whose last run failed after the owner last had their bot open. */
-export function unseenFailures(state: AppState): Routine[] {
-  return Object.values(state.routines).filter((routine) => {
-    const last = routine.lastRun;
-    return (
-      last?.status === "failed" &&
-      routine.botId !== state.selectedBotId &&
-      (last.finishedAt ?? 0) > (state.seenAt[routine.botId] ?? 0)
-    );
-  });
 }

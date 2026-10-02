@@ -279,6 +279,9 @@ export class FakeChat {
       const bot = this.fake.bots.get(item.botId);
       if (bot) {
         bot.lastActivity = activity;
+        if (item.body.kind === "reply") {
+          bot.lastReplyAt = item.updatedAt;
+        }
       }
     }
     this.fake.emit({ name: "chat.item", params: { item, activity } });

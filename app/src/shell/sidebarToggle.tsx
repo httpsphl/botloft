@@ -5,16 +5,21 @@ import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
 import { useT } from "../i18n";
 import { useApp } from "../store/context";
+import { anyUnreadReply } from "../store/seen";
 import { attentionCount } from "./attention";
 import { prefs, usePref } from "./prefs";
 
 export const toggleSidebar = () => prefs.sidebar.set(!prefs.sidebar.get());
 
-/** The button in the title bar, with a dot while the list is hidden and something waits. */
+/**
+ * The button in the title bar. While the list is hidden, a dot says
+ * something waits for the owner, or, quieter, that a bot replied.
+ */
 export function SidebarToggle() {
   const t = useT().shell.sidebar;
   const open = usePref(prefs.sidebar);
   const waiting = useApp((state) => attentionCount(state) > 0);
+  const unread = useApp(anyUnreadReply);
   const Icon = open ? PanelLeftClose : PanelLeftOpen;
   return (
     <span className="relative grid">
@@ -28,11 +33,11 @@ export function SidebarToggle() {
       >
         <Icon aria-hidden size={15} />
       </button>
-      {!open && waiting && (
+      {!open && (waiting || unread) && (
         <span
           aria-hidden
-          className="live-dot pointer-events-none absolute top-0.5 right-0.5"
-          style={{ background: "var(--warn)" }}
+          className={`pointer-events-none absolute top-0.5 right-0.5 ${waiting ? "live-dot" : "size-[7px] rounded-full"}`}
+          style={{ background: waiting ? "var(--warn)" : "var(--accent)" }}
         />
       )}
     </span>

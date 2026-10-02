@@ -45,6 +45,7 @@ async fn create_a_crew_and_a_bot_and_get_a_ready_workspace() {
     assert_eq!(bot["state"], "offline");
     assert_eq!(bot["color"], "#FF7A59");
     assert_eq!(bot["lastActivity"], Value::Null);
+    assert_eq!(bot["lastReplyAt"], Value::Null);
     assert_eq!(watcher.notification("bot.changed").await, bot);
 
     let ws = daemon.paths.bot_workspace("site-da-loja", "revisao");

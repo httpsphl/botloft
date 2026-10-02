@@ -7,6 +7,7 @@ import { when } from "../../lib/format";
 import type { Activity, Bot, Crew } from "../../lib/protocol.gen";
 import { activityOf, botsOf, crewList } from "../../store/app";
 import { useApp } from "../../store/context";
+import { hasUnreadReply } from "../../store/seen";
 import { Button } from "../../ui/Button";
 import { ContextMenu, menuPoint, type Point } from "../../ui/ContextMenu";
 import { APP_OPENED } from "../../ui/motion";
@@ -94,12 +95,15 @@ const Conversation = memo(function Conversation({ bot, crew }: { bot: Bot; crew:
   const [menuAt, setMenuAt] = useState<Point | null>(null);
   const closeMenu = useCallback(() => setMenuAt(null), []);
   const activity = useApp((state) => activityOf(state, bot.id));
+  const unread = useApp((state) => hasUnreadReply(state, bot.id));
   return (
     <li className={bot.createdAt > APP_OPENED ? "animate-rise" : undefined}>
       <button
         type="button"
         aria-current={selected ? "page" : undefined}
-        aria-label={`${bot.name}, ${stateView(bot, crew.paused).label}`}
+        aria-label={[bot.name, stateView(bot, crew.paused).label, unread && t.crews.sidebar.unread]
+          .filter(Boolean)
+          .join(", ")}
         onClick={() => selectBot(bot.id)}
         onContextMenu={(event) => {
           event.preventDefault();
@@ -111,12 +115,14 @@ const Conversation = memo(function Conversation({ bot, crew }: { bot: Bot; crew:
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-2">
             <span className="flex min-w-0 flex-1 items-center gap-1">
-              <span className="truncate font-medium text-sm">{bot.name}</span>
+              <span className={`truncate text-sm ${unread ? "font-semibold" : "font-medium"}`}>
+                {bot.name}
+              </span>
               {isChief(bot, crew) && <ChiefBadge crew={crew} compact />}
             </span>
             {activity && (
               <time
-                className="shrink-0 text-muted text-xs"
+                className={`shrink-0 text-xs ${unread ? "font-semibold text-accent" : "text-muted"}`}
                 dateTime={new Date(activity.at).toISOString()}
               >
                 {when(activity.at)}
@@ -125,9 +131,10 @@ const Conversation = memo(function Conversation({ bot, crew }: { bot: Bot; crew:
           </span>
           <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs">
             <BotStateBadge bot={bot} crewPaused={crew.paused} compact />
-            <span className="min-w-0 truncate text-muted">
+            <span className={`min-w-0 flex-1 truncate ${unread ? "text-ink" : "text-muted"}`}>
               {activity ? activityText(activity, t) : bot.role || t.crews.sidebar.noMessages}
             </span>
+            {unread && <span aria-hidden className="size-2.5 shrink-0 rounded-full bg-accent" />}
           </span>
         </span>
       </button>

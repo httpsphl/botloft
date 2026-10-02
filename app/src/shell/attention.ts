@@ -3,8 +3,9 @@
 
 import { useEffect } from "react";
 import { actionableDead } from "../features/messages/FailedDeliveries";
-import { type AppState, unseenFailures } from "../store/app";
+import type { AppState } from "../store/app";
 import { useApp, useHost } from "../store/context";
+import { unseenFailures } from "../store/seen";
 
 /**
  * Bots waiting for an answer or a sign-in, messages that gave up, and
