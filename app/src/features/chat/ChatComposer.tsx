@@ -20,6 +20,7 @@ import { errorText } from "../../lib/api";
 import { fileSize } from "../../lib/format";
 import { type Bot, FIELD_LIMITS } from "../../lib/protocol.gen";
 import { prefs, usePref } from "../../shell/prefs";
+import { playSound } from "../../shell/sounds";
 import { useApi } from "../../store/context";
 import { ContextMeter } from "./ContextMeter";
 import { draftOf, keepDraft } from "./drafts";
@@ -129,6 +130,7 @@ export const ChatComposer = memo(function ChatComposer({
       });
       setText("");
       files.clear();
+      playSound("sent");
       onSent();
     } catch (failure) {
       files.setError(errorText(failure));

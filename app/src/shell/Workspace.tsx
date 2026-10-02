@@ -21,6 +21,7 @@ import { useAttentionMark } from "./attention";
 import { useFolderNotices } from "./folders";
 import { SidebarSlot, SidebarToggle } from "./sidebarToggle";
 import { useOpenAtSignIn } from "./signIn";
+import { useAppSounds } from "./sounds";
 import { TitleBar } from "./TitleBar";
 import { useTray } from "./tray";
 
@@ -34,6 +35,7 @@ export function Workspace() {
   useAttentionMark();
   useTray();
   useBotAlerts();
+  useAppSounds();
   useFolderNotices();
   useOpenAtSignIn();
 

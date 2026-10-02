@@ -73,6 +73,9 @@ export const account: Messages["account"] = {
       "Un punto en el icono de Botloft en la barra de tareas mientras haya una conversación sin leer.",
     sound: "Reproducir un sonido",
     soundHint: "Un sonido corto con cada aviso, también con Botloft al frente.",
+    appSounds: "Sonidos de la app",
+    appSoundsHint:
+      "Sonidos suaves con Botloft al frente: mensaje enviado, respuesta o archivo en el chat abierto, bot o equipo nuevo.",
     alertsNeedTray:
       "Con la ventana cerrada, los avisos solo llegan con Botloft junto al reloj (en General).",
     keepAwake: "Mantener el equipo despierto mientras los bots trabajan",

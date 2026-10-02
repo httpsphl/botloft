@@ -72,6 +72,8 @@ export const prefs = {
   markReplies: pref<boolean>("botloft.markReplies", true, ON_OFF),
   /** A short sound with each of those. */
   sound: pref<boolean>("botloft.sound", true, ON_OFF),
+  /** Soft sounds for a message sent, a reply or a file, and a new bot or crew. */
+  appSounds: pref<boolean>("botloft.appSounds", true, ON_OFF),
 };
 
 export function usePref<T extends Value>(choice: Pref<T>): T {

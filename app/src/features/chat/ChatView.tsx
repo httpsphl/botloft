@@ -26,6 +26,7 @@ import { NoticeRow } from "./NoticeRow";
 import { chatRows } from "./rows";
 import { useChat } from "./useChat";
 import { useFiles } from "./useFiles";
+import { useSharedSound } from "./useSharedSound";
 
 /** Distance from the bottom that still counts as "reading the latest". */
 const STICKY_PX = 80;
@@ -46,6 +47,7 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
   // arrives while they look animates in.
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new bot is a new chat
   const openedAt = useMemo(() => Date.now(), [bot.id]);
+  useSharedSound(chat.items, openedAt);
   const last = chat.items.at(-1);
   /** Changes whenever the end of the chat does. */
   const end = `${chat.items.length}/${last?.id}/${last?.updatedAt}/${chat.draft.length}`;
