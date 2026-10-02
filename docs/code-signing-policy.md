@@ -83,8 +83,9 @@ On Linux and macOS (preview since 0.8.0):
   `~/Library/Application Support/Botloft`. A launch agent,
   `~/Library/LaunchAgents/io.github.httpsphl.botloft.daemon.plist`, keeps the bots running; when
   Botloft opens its window at sign-in, it adds `io.github.httpsphl.botloft.app.plist` next to it.
-- Bots keep their work in `~/Botloft`, or in the folder you pick for a crew. Keeping the computer
-  awake while bots work is Windows-only for now.
+- Bots keep their work in `~/Botloft`, or in the folder you pick for a crew.
+- While a bot is working, a helper keeps the computer from sleeping when idle: `caffeinate` on
+  macOS, `systemd-inhibit` on Linux. Settings > General turns this off.
 
 ## Uninstalling
 
