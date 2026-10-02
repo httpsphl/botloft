@@ -8,7 +8,7 @@ const noop = () => {};
 export function BotMenu() {
   return (
     <div className="flex items-center gap-2 p-4">
-      <BotAvatar color="#4FC382" size={28} />
+      <BotAvatar color="#5EC8FF" size={28} />
       <span className="font-semibold text-ink text-sm">Scout</span>
       <Menu
         label="More for Scout"

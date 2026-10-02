@@ -37,7 +37,19 @@ Tailwind and TypeScript). Nothing there reimplements a component.
 - Fixed overlays (`Dialog`, `Confirm`, `Toaster`) render inside a box with `transform:
   translateZ(0)`, which makes it their containing block; without it the per-story capture is
   0 px tall.
-- `ListAvatar` is excluded (cfg.componentSrcMap): a wrapper over `BotAvatar` that needs a bot object.
+- The app screens (`Sidebar`, `CrewBots`, `BotRun`, `InboundRow`, `ApprovalCard`) read the app's
+  store and API. `pkg/provider.tsx` (`BotloftProvider`) wires the app's own `DaemonProvider` and
+  `HostProvider` to `FakeBotloft` and `FakeHost`, seeded with the crews and bots it is given, and
+  turns `approvals.answer` into an `onAnswer` callback. `pkg/scene.ts` builds protocol objects
+  (`makeCrew`, `makeBot`, `makeMessage`, `chat.*`) with the fake daemon's defaults; request
+  inputs and summaries follow the daemon (`crates/botloft-core/src/chat.rs` `tool_summary`,
+  `crates/botloftd/src/tools/browser_sites.rs`): a site request is `{site, url}` with the site as
+  its summary.
+- Type emission covers the whole package with the repo as root; `.design-sync` is renamed to `ds`
+  in `dist/types/emit` (ts-morph skips dot folders), and `paths` points bare imports at
+  `app/node_modules` (`@types` first, or React resolves to its JS). `vite/client.d.ts` is added
+  for the fake daemon's `?raw` import.
+- Bot colors come from `AVATAR_PALETTE` (protocol.gen.ts); previews and conventions use it.
 
 ## Known render warns
 
@@ -45,6 +57,10 @@ Tailwind and TypeScript). Nothing there reimplements a component.
   Mono ships. Accepted.
 - `Menu` shows only its closed button: opening takes a click.
 - `SelectField` Disabled looks like the enabled one: the app's own control does not style disabled.
+- `[RENDER_ERRORS] AbortError: Transition was skipped` on the app screens: each preview cell has
+  its own `BotloftProvider`, and each opens its first crew with the app's view transition
+  (`ui/motion.ts`); the transitions of several cells on one page cut each other off. Renders fine;
+  a design uses one provider.
 
 ## Re-sync risks
 
@@ -54,5 +70,8 @@ Tailwind and TypeScript). Nothing there reimplements a component.
   ranges. Change both together.
 - The icon set follows the app's imports: an icon the app stops using disappears from `icons`.
 - Bot colors in previews and conventions are sample values, not tokens.
-- The scope is the base pieces plus the bot badges (owner's choice on 2026-10-02). Chat rows,
-  approval cards and the sidebar are not in the package.
+- Scope (owner's choices on 2026-10-02): the base pieces, the bot badges, and the app screens the
+  explainer video needs (sidebar, crew cards, a bot's turn, messages, requests). Not in it yet:
+  the whole crew view, the composer, the browser and screens panels, routines, settings.
+- `scene.ts` mirrors protocol shapes and daemon summaries by hand; a protocol change
+  (`protocol.gen.ts`) or a new request kind needs it updated, or the tsc step fails.
