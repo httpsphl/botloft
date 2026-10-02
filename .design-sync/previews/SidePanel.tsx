@@ -9,7 +9,7 @@ export function FilesBesideChat() {
     <div className="flex w-full border border-line bg-canvas" style={{ height: 360 }}>
       <main className="flex min-w-0 flex-1 flex-col gap-3 p-4">
         <div className="flex items-center gap-2">
-          <BotAvatar color="#6EA6FF" size={28} />
+          <BotAvatar color="#A48BFF" size={28} />
           <span className="font-semibold text-ink text-sm">Writer</span>
         </div>
         <p className="max-w-sm rounded-xl bg-panel px-3 py-2 text-ink text-sm">

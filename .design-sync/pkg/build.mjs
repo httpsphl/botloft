@@ -6,7 +6,7 @@
 //   node .design-sync/pkg/build.mjs
 
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -87,29 +87,32 @@ await build({
   rmSync(noFonts, { force: true });
 }
 
-// Types: declarations for the app files the entry re-exports, then an
-// index.d.ts that is the entry with its paths pointed at them.
-const entry = readFileSync(join(here, "index.ts"), "utf8");
-const sources = [...entry.matchAll(/from "\.\.\/\.\.\/app\/src\/([^"]+)"/g)].map(
-  (match) =>
-    existsSync(join(app, `src/${match[1]}.tsx`)) ? `src/${match[1]}.tsx` : `src/${match[1]}/index.ts`,
-);
+// Types: declarations for the whole entry (the app files it re-exports and
+// the package's own provider and builders), emitted under dist/types/emit
+// with the repo as the root. The .design-sync folder is renamed to ds there,
+// since tools skip dot folders; the relative imports between the two trees
+// keep their depth, so they still resolve.
 const tsconfig = join(here, "tsconfig.types.json");
+const slash = (path) => path.replaceAll("\\", "/");
+const modules = join(app, "node_modules");
 writeFileSync(
   tsconfig,
   `${JSON.stringify(
     {
-      extends: join(app, "tsconfig.json").replaceAll("\\", "/"),
+      extends: slash(join(app, "tsconfig.json")),
       compilerOptions: {
         noEmit: false,
         declaration: true,
         emitDeclarationOnly: true,
-        rootDir: join(app, "src").replaceAll("\\", "/"),
-        outDir: join(dist, "types", "app").replaceAll("\\", "/"),
+        rootDir: slash(resolve(here, "../..")),
+        outDir: slash(join(dist, "types", "emit")),
         types: [],
-        typeRoots: [join(app, "node_modules", "@types").replaceAll("\\", "/")],
+        typeRoots: [slash(join(modules, "@types"))],
+        // The package sits outside the app: its imports resolve in the app's node_modules.
+        paths: { "*": [slash(join(modules, "@types", "*")), slash(join(modules, "*"))] },
       },
-      files: sources.map((source) => join(app, source).replaceAll("\\", "/")),
+      // `?raw` and the other Vite imports the app uses.
+      files: [slash(join(here, "index.ts")), slash(join(modules, "vite", "client.d.ts"))],
       include: [],
     },
     null,
@@ -118,20 +121,10 @@ writeFileSync(
 );
 try {
   const tsc = join(dirname(require.resolve("typescript/package.json")), "bin", "tsc");
-  execFileSync(process.execPath, [tsc, "-p", tsconfig], {
-    stdio: "inherit",
-  });
+  execFileSync(process.execPath, [tsc, "-p", tsconfig], { stdio: "inherit" });
 } finally {
   rmSync(tsconfig, { force: true });
 }
-writeFileSync(
-  join(dist, "types", "index.d.ts"),
-  entry
-    .split("\n")
-    .filter((line) => !line.startsWith("import ") && !line.startsWith("//"))
-    .join("\n")
-    .replaceAll("../../app/src/", "./app/")
-    .trimStart(),
-);
-writeFileSync(join(dist, "types", "icons.gen.d.ts"), iconsModule);
+renameSync(join(dist, "types", "emit", ".design-sync"), join(dist, "types", "emit", "ds"));
+writeFileSync(join(dist, "types", "index.d.ts"), 'export * from "./emit/ds/pkg/index";\n');
 console.log(`built ${dist}`);

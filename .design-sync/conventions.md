@@ -5,7 +5,13 @@ mascot in its own color. The look is quiet and warm: neutral surfaces, one orang
 
 ## Setup
 
-- No provider is needed. Link `styles.css` and load `_ds_bundle.js`; components are on `window.Botloft`.
+- Link `styles.css` and load `_ds_bundle.js`; components are on `window.Botloft`. The basic pieces
+  (Button, fields, Dialog, Callout, BotAvatar, BotStateBadge...) need nothing around them.
+- **App screens need `BotloftProvider`.** `Sidebar`, `CrewBots`, `BotRun`, `InboundRow` and
+  `ApprovalCard` are the app's real screens and read the app's data: wrap them in one
+  `<BotloftProvider crews={[...]} bots={[...]}>` per design (not one per piece). Build the data
+  with `makeCrew`, `makeBot`, `makeMessage` and `chat.*` (below); never write a bot object by hand.
+  A new `bots` array updates every screen, which is how a design animates states.
 - **Theme:** light by default. Put `data-theme="dark"` on a wrapper (or `<html>`) and every token
   switches. Give the page `bg-canvas text-ink` so the background follows the theme.
 - **Language:** the components' own words (state labels, Close, Cancel) follow the browser's
@@ -34,8 +40,29 @@ use `style={{ height: 360 }}` for one-off sizes.
 The tokens behind them are CSS variables: `--canvas`, `--panel`, `--sunken`, `--line`,
 `--line-strong`, `--ink`, `--ink-soft`, `--muted`, `--accent`, `--ok`, `--work`, `--warn`,
 `--danger`. Use `var(--accent)` in inline styles; never hard-code hex for UI colors.
-Bot colors are the exception: each bot has its own (`#FF7A59` Botloft orange, `#4FC382`, `#6EA6FF`,
-`#F0B24A`, `#C084FC`), passed to `BotAvatar`.
+Bot colors are the exception: each bot has its own from `Botloft.AVATAR_PALETTE` (`#FF7A59`
+Botloft orange, `#5EC8FF`, `#A48BFF`, `#9BE564`, `#FFC857`, `#FF7EB6`, `#3DD9C1`, `#E8D5B0`);
+`makeBot` hands them out in that order.
+
+## Data for the app screens
+
+```jsx
+const { makeCrew, makeBot, makeMessage, chat } = window.Botloft;
+const crew = makeCrew({ name: "Research" });
+const chief = makeBot({ crew, name: "Chief", chief: true, state: "idle" });
+const scout = makeBot({ crew, name: "Scout", state: "busy", role: "Finds sources.",
+  activity: { kind: "tool", text: "on-device AI news", tool: "WebSearch" } }); // sidebar line
+```
+
+- `state`: `idle`, `busy` (working), `needs_approval`, `launching`, `rate_limited`, `backoff`,
+  `auth_error`, `offline` (with `paused: true` it reads Paused).
+- A bot's turn is a list for `BotRun`: `chat.reply(bot, markdown)`, `chat.tool(bot, { name:
+  "WebSearch" | "WebFetch" | "Read" | "Write" | "Bash", summary })`, `chat.askSite(bot, url)`,
+  `chat.askCommand(bot, command, { explanation })`, `chat.suggestBot(chief, { name, role, model,
+  instructions, reason })`, `chat.askPlan(bot, markdown)`, `chat.turn(bot, seconds)`. Each takes
+  `{ status: "allowed" | "denied" }` to show it answered. `ApprovalCard` takes one of them's `.body`.
+- `makeMessage({ from: bot | "owner" | "system", to: bot, body, kind: "note" | "task" })` for
+  `InboundRow`: yours on the right, a bot's or Botloft's on the left.
 
 ## Components and their roles
 
@@ -47,6 +74,11 @@ Bot colors are the exception: each bot has its own (`#FF7A59` Botloft orange, `#
   `Toaster` + `notifyError(what, error)` for failures away from a form.
 - Fields: `TextField`, `TextArea`, `SelectField` (labeled), `Select` (custom dropdown),
   `Choices` (2-6 options side by side), `Switch`, `Tabs`, `Menu`, `Details`, `SidePanel`.
+- App screens: `Sidebar` (crews and bots, 288px wide, give it a height), `CrewBots` (a crew's bot
+  cards), `BotRun` (one turn of a bot in its chat, inside a `<ul>`), `InboundRow` (a message in a
+  chat, inside a `<ul>`), `ApprovalCard` (a request: a website, a command, a suggested bot, a plan).
+  The app's window is the `Sidebar` on the left and the open bot's chat on the right, on `bg-canvas`.
+  `BotloftProvider`'s `onAnswer` hears Allow and Deny on request cards.
 
 Read `components/<group>/<Name>/<Name>.prompt.md` for each one's props.
 
@@ -58,24 +90,29 @@ you"), never "the agent" or "Claude". Never say "daemon"; say "Botloft" or "in t
 ## Example
 
 ```jsx
-const { BotAvatar, BotStateBadge, Button, Callout, icons, setLocaleChoice } = window.Botloft;
+const { BotloftProvider, Sidebar, BotRun, BotStateBadge, makeCrew, makeBot, chat, setLocaleChoice } =
+  window.Botloft;
 setLocaleChoice("en");
+const crew = makeCrew({ name: "Research" });
+const chief = makeBot({ crew, name: "Chief", chief: true });
+const scout = makeBot({ crew, name: "Scout", state: "needs_approval" });
+const site = chat.askSite(scout, "https://arxiv.org/abs/2609.01234");
 
-function CrewCard() {
+function AppWindow() {
+  const [allowed, setAllowed] = React.useState(false);
+  const scoutNow = allowed ? { ...scout, state: "busy" } : scout;
+  const card = allowed ? { ...site, body: { ...site.body, status: "allowed" } } : site;
   return (
-    <div className="flex max-w-md flex-col gap-3 rounded-xl border border-line bg-panel p-4">
-      <div className="flex items-center gap-3">
-        <BotAvatar color="#4FC382" size={36} mood="working" />
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold text-ink text-sm">Scout</p>
-          <BotStateBadge bot={{ state: "busy", paused: false }} compact />
-        </div>
-        <Button variant="ghost" icon={icons.Pause} label="Pause Scout" />
+    <BotloftProvider crews={[crew]} bots={[chief, scoutNow]} selectedBotId={scout.id}
+      onAnswer={(answer) => setAllowed(answer.allow)}>
+      <div className="flex bg-canvas text-ink" style={{ height: 560 }}>
+        <Sidebar />
+        <ul className="flex min-w-0 flex-1 flex-col gap-5 p-5">
+          <BotRun bot={scoutNow} items={[chat.reply(scout, "I need to open this paper."), card]}
+            live={{ draft: "", working: allowed }} />
+        </ul>
       </div>
-      <Callout tone="warn" title="Scout needs your approval">
-        It wants to open arxiv.org for the first time.
-      </Callout>
-    </div>
+    </BotloftProvider>
   );
 }
 ```
