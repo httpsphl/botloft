@@ -51,7 +51,7 @@ you decide what they may do.
 - **Schedule routines.** Weekday mornings, every two hours or any cron schedule, with missed runs
   and overlaps handled.
 - **Leave them running.** Bots keep working after you close Botloft. They start when you sign in,
-  come back soon after a crash and, on Windows, keep the computer awake while they work. Botloft
+  come back soon after a crash and keep the computer awake while they work. Botloft
   waits near the clock and tells you when a bot needs you.
 - **Choose per bot.** How much it asks before acting, and which Claude model it uses. See how much
   of your plan's usage is left.
