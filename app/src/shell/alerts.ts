@@ -9,8 +9,8 @@ import { t } from "../i18n";
 import type { Bot, BotId, BotState } from "../lib/protocol.gen";
 import { type AppState, activityOf } from "../store/app";
 import { useAppStore, useHost } from "../store/context";
-import { chime } from "./chime";
 import { prefs } from "./prefs";
+import { playSound } from "./sounds";
 
 /** How long after a notification opening Botloft goes to its bot. */
 const FOLLOW_MS = 10 * 60 * 1000;
@@ -74,9 +74,7 @@ export function useBotAlerts(): void {
         }
         const sound = prefs.sound.get();
         if (host.window.inFront()) {
-          if (sound) {
-            chime(kind === "done" ? "done" : "needs");
-          }
+          playSound(kind === "done" ? "done" : "needs");
           continue;
         }
         last = { bot: bot.id, at: Date.now() };

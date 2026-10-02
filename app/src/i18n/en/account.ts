@@ -72,6 +72,9 @@ export const account = {
     markRepliesHint: "A dot on the Botloft icon in the taskbar while a conversation is unread.",
     sound: "Play a sound",
     soundHint: "A short sound with each notification, also with Botloft in front.",
+    appSounds: "App sounds",
+    appSoundsHint:
+      "Soft sounds while Botloft is in front: a message sent, a reply or a file in the open chat, a new bot or crew.",
     alertsNeedTray:
       "With the window closed, notifications only come with Botloft near the clock (in General).",
     keepAwake: "Keep the computer awake while bots work",

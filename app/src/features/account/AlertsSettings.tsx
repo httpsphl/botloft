@@ -12,6 +12,7 @@ export function AlertsSettings() {
   const needs = usePref(prefs.notifyNeeds);
   const done = usePref(prefs.notifyDone);
   const sound = usePref(prefs.sound);
+  const appSounds = usePref(prefs.appSounds);
   const replies = usePref(prefs.markReplies);
   const tray = usePref(prefs.tray);
   const keep = usePref(prefs.whenClosed) === "keep";
@@ -40,6 +41,12 @@ export function AlertsSettings() {
         />
       )}
       <Toggle label={s.sound} hint={s.soundHint} checked={sound} onChange={prefs.sound.set} />
+      <Toggle
+        label={s.appSounds}
+        hint={s.appSoundsHint}
+        checked={appSounds}
+        onChange={prefs.appSounds.set}
+      />
       {!nearClock && <p className="text-muted text-xs leading-relaxed">{s.alertsNeedTray}</p>}
     </Section>
   );
