@@ -180,7 +180,7 @@ how to check a download.
 <summary><b>Does it run on macOS or Linux?</b></summary>
 
 Yes, as a preview since 0.8.0: Linux (64-bit, `.deb` or AppImage) and macOS on Apple Silicon. Intel
-Macs are not supported yet, and keeping the computer awake while bots work is Windows-only for now.
+Macs are not supported yet.
 Windows came first and has had the most use; if something does not work elsewhere, please
 [open an issue](https://github.com/httpsphl/botloft/issues).
 </details>
