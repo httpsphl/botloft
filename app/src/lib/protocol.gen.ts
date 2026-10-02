@@ -232,6 +232,12 @@ workspace: string,
  */
 lastActivity: Activity | null, 
 /**
+ * When the bot last finished a reply, in Unix milliseconds; `null`
+ * before its first. The app marks the bot unread when this is newer
+ * than the owner's last look (spec 15.1).
+ */
+lastReplyAt: number | null, 
+/**
  * Unix time in milliseconds.
  */
 createdAt: number, 

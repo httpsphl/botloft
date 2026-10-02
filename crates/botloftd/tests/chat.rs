@@ -127,6 +127,8 @@ async fn what_the_bot_prints_becomes_the_chat() {
     assert_eq!(older.as_array().map(Vec::len), Some(2));
     let listed = c.app.call("bots.list", json!({})).await.expect("bots");
     assert_eq!(listed[0]["lastActivity"]["text"], "All 12 tests pass.");
+    // The newest reply, the one before the turn ended.
+    assert_eq!(listed[0]["lastReplyAt"], history[1]["updatedAt"]);
 }
 
 /// Starts a permission request for `tool_use_id` the way Claude Code does,

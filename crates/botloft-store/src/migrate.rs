@@ -19,6 +19,7 @@ const MIGRATIONS: &[(u32, &str)] = &[
     (10, include_str!("../migrations/0010_bot_effort.sql")),
     (11, include_str!("../migrations/0011_turn_tokens.sql")),
     (12, include_str!("../migrations/0012_perf_indexes.sql")),
+    (13, include_str!("../migrations/0013_reply_index.sql")),
 ];
 
 /// Schema version after every migration has run.

@@ -151,6 +151,10 @@ pub struct Bot {
     pub workspace: String,
     /// The last item of the bot's chat, in one line; `null` for a new bot.
     pub last_activity: Option<Activity>,
+    /// When the bot last finished a reply, in Unix milliseconds; `null`
+    /// before its first. The app marks the bot unread when this is newer
+    /// than the owner's last look (spec 15.1).
+    pub last_reply_at: Option<i64>,
     /// Unix time in milliseconds.
     pub created_at: i64,
     /// Unix time in milliseconds; `null` while the bot is active.
