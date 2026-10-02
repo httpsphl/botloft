@@ -50,6 +50,11 @@ Tailwind and TypeScript). Nothing there reimplements a component.
   provider's `useState` initializer, before the store connects: the fake answers the store's
   first `browser.list` synchronously, so an answer taken before the browsers opened arrives after
   their `browser.changed` and wins (the panel then says "Browser closed" over the page).
+- Routines: `BotloftProvider` `routines` go into `FakeRoutines` in the initializer too (same
+  first-answer race as the browsers) and as `routine.changed` after. `pkg/routines.ts` builds
+  them; with no `nextInMinutes` the next run follows the schedule (local time; cron is not worked
+  out, an hour from now), so the row's "Next" agrees with its schedule. `pkg/ids.ts` holds the
+  shared id and time helpers.
 - Type emission covers the whole package with the repo as root; `.design-sync` is renamed to `ds`
   in `dist/types/emit` (ts-morph skips dot folders), and `paths` points bare imports at
   `app/node_modules` (`@types` first, or React resolves to its JS). `vite/client.d.ts` is added
@@ -76,7 +81,7 @@ Tailwind and TypeScript). Nothing there reimplements a component.
 - The icon set follows the app's imports: an icon the app stops using disappears from `icons`.
 - Bot colors in previews and conventions are sample values, not tokens.
 - Scope (owner's choices on 2026-10-02): the base pieces, the bot badges, and the app screens the
-  explainer video needs (sidebar, crew cards, a bot's turn, messages, requests, the live browser).
-  Not in it yet: the whole crew view, the composer, the screens panel, routines, settings.
+  explainer video needs (sidebar, crew cards, a bot's turn, messages, requests, the live browser, routines).
+  Not in it yet: the whole crew view, the composer, the screens panel, settings.
 - `scene.ts` mirrors protocol shapes and daemon summaries by hand; a protocol change
   (`protocol.gen.ts`) or a new request kind needs it updated, or the tsc step fails.

@@ -7,6 +7,7 @@
 import { SITE_TOOL } from "../../app/src/features/browser/SiteCard";
 import { PLAN_TOOL } from "../../app/src/features/chat/PlanCard";
 import { SUGGEST_TOOL } from "../../app/src/features/chat/SuggestionCard";
+import { ROUTINE_TOOL } from "../../app/src/features/routines/RoutineRequestCard";
 import {
   AVATAR_PALETTE,
   type Activity,
@@ -21,12 +22,12 @@ import {
   type Message,
   type MessageKind,
   type PermissionMode,
+  type Schedule,
   type ToolStatus,
 } from "../../app/src/lib/protocol.gen";
+import { ago, id } from "./ids";
+import { zone } from "./routines";
 
-let counter = 0;
-const id = (prefix: string) => `${prefix}_${String(++counter).padStart(6, "0")}`;
-const ago = (minutes: number) => Date.now() - minutes * 60_000;
 const slug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "bot";
 
 export interface CrewSeed {
@@ -193,6 +194,20 @@ export const chat = {
     // As the daemon does: the plan's first line without its heading marks.
     const title = plan.split("\n").map((line) => line.replace(/^#+/, "").trim()).find(Boolean) ?? "";
     return ask(bot, PLAN_TOOL, { plan }, title, extra);
+  },
+  /** The bot asks to set up a routine (for itself, or for `bot`, another bot's handle). */
+  askRoutine(
+    bot: Bot,
+    routine: { name: string; prompt: string; schedule: Schedule; bot?: string },
+    extra: { status?: ApprovalStatus; minutesAgo?: number } = {},
+  ): ChatItem {
+    return ask(
+      bot,
+      ROUTINE_TOOL,
+      { timezone: zone(), overlap: "skip", missed: "run_once", ...routine },
+      routine.name,
+      extra,
+    );
   },
   /** How the turn ended; closes a BotRun. */
   turn(bot: Bot, seconds: number, minutesAgo = 0): ChatItem {
