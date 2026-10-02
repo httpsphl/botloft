@@ -74,11 +74,22 @@ const scout = makeBot({ crew, name: "Scout", state: "busy", role: "Finds sources
   `Toaster` + `notifyError(what, error)` for failures away from a form.
 - Fields: `TextField`, `TextArea`, `SelectField` (labeled), `Select` (custom dropdown),
   `Choices` (2-6 options side by side), `Switch`, `Tabs`, `Menu`, `Details`, `SidePanel`.
-- App screens: `Sidebar` (crews and bots, 288px wide, give it a height), `CrewBots` (a crew's bot
-  cards), `BotRun` (one turn of a bot in its chat, inside a `<ul>`), `InboundRow` (a message in a
-  chat, inside a `<ul>`), `ApprovalCard` (a request: a website, a command, a suggested bot, a plan).
-  The app's window is the `Sidebar` on the left and the open bot's chat on the right, on `bg-canvas`.
+- App screens: `Sidebar` (crews and bots, 288px wide), `CrewBots` (a crew's bot cards), `BotRun`
+  (one turn of a bot in its chat, inside a `<ul>`), `InboundRow` (a message in a chat, inside a
+  `<ul>`), `ApprovalCard` (a request: a website, a command, a suggested bot, a plan),
+  `BrowserPanel` (a bot's browser, live: tabs, address bar, the page and the bot's cursor).
   `BotloftProvider`'s `onAnswer` hears Allow and Deny on request cards.
+- **The app window:** one row, `className="flex bg-canvas text-ink"` with a fixed height
+  (`style={{ height: 820 }}`): the `Sidebar` as its **direct first child**, then the chat column
+  (`flex min-w-0 flex-1 flex-col`), then, when a bot's browser is open, `<BrowserPanel bot={...}
+  onClose={...} />` as the **last direct child**. The Sidebar stretches to the row's full height,
+  with the account pinned at the bottom-left; wrapped in any other element it shrinks to its
+  content and looks cut short. Never wrap the Sidebar or the BrowserPanel. Give the window at
+  least 1400px of width when the browser is open, so the chat keeps its room.
+- **A browser:** pass `browsers={[{ bot: scout, url, title, tabs: [{ url, title }], action: { kind:
+  "click", x, y, label } }]}` to `BotloftProvider`. The page is drawn for you (title, address,
+  text lines); `action` moves the bot's cursor (`open`, `click`, `type`, `scroll`, `back`), and a
+  new `browsers` array with another `url` or `action` makes the bot browse on.
 
 Read `components/<group>/<Name>/<Name>.prompt.md` for each one's props.
 
@@ -105,8 +116,8 @@ function AppWindow() {
   return (
     <BotloftProvider crews={[crew]} bots={[chief, scoutNow]} selectedBotId={scout.id}
       onAnswer={(answer) => setAllowed(answer.allow)}>
-      <div className="flex bg-canvas text-ink" style={{ height: 560 }}>
-        <Sidebar />
+      <div className="flex bg-canvas text-ink" style={{ height: 820 }}>
+        <Sidebar /> {/* direct child of the row: it runs the full height */}
         <ul className="flex min-w-0 flex-1 flex-col gap-5 p-5">
           <BotRun bot={scoutNow} items={[chat.reply(scout, "I need to open this paper."), card]}
             live={{ draft: "", working: allowed }} />

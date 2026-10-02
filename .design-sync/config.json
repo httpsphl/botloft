@@ -26,8 +26,9 @@
     "BotRun": "/** One turn of the bot, in order: items from Botloft.chat.reply / tool / askCommand / askSite / suggestBot / askPlan / turn(bot, ...). Needs BotloftProvider around it. */ items: any[]; /** A bot from Botloft.makeBot(...). */ bot: any; /** The turn in progress: the reply being written (draft) or the working dots (working). Only a live run moves the avatar. */ live?: { draft: string; working: boolean };",
     "InboundRow": "/** A message from Botloft.makeMessage({ from, to, body }). From \"owner\" it is your bubble on the right; from a bot or \"system\" it sits on the left with the sender's avatar. The sender must be among BotloftProvider bots. */ message: any; /** The bot whose chat this is: the message's recipient. */ /** A bot from Botloft.makeBot(...). */ bot: any;",
     "CrewBots": "/** A crew from Botloft.makeCrew(...). */ crew: any; /** Its bots, from Botloft.makeBot({ crew, ... }); the Chief (chief: true) gets the crown. Pass the same ones to BotloftProvider. */ bots: any[]; onNewBot: () => void;",
-    "Sidebar": "/** No props: it lists the crews and bots given to BotloftProvider, with each bot's state and last activity, and the account at the bottom. Give it a fixed height. */ className?: never;",
-    "BotloftProvider": "/** Crews from Botloft.makeCrew(...). */ crews?: any[]; /** Bots from Botloft.makeBot(...). A new array updates them, e.g. to change a state over time. */ bots?: any[]; /** The bot whose chat is open: highlighted in the sidebar. */ selectedBotId?: string; /** Called when Allow or Deny is clicked on a request card. */ onAnswer?: (answer: { approvalId: string; allow: boolean; note?: string }) => void; children: React.ReactNode;"
+    "Sidebar": "/** No props: it lists the crews and bots given to BotloftProvider, with each bot's state and last activity, and the account at the bottom. Put it as the direct first child of the app window's flex row (fixed height); wrapped in anything else it shrinks to its content. */ className?: never;",
+    "BotloftProvider": "/** Crews from Botloft.makeCrew(...). */ crews?: any[]; /** Bots from Botloft.makeBot(...). A new array updates them, e.g. to change a state over time. */ bots?: any[]; /** Open browsers for BrowserPanel: [{ bot, url, title, tabs?: [{ url, title }], action?: { kind: \"open\" | \"click\" | \"type\" | \"scroll\" | \"back\", x?, y?, label? } }]. A new action object moves the bot's cursor on the page again. */ browsers?: any[]; /** The bot whose chat is open: highlighted in the sidebar. */ selectedBotId?: string; /** Called when Allow or Deny is clicked on a request card. */ onAnswer?: (answer: { approvalId: string; allow: boolean; note?: string }) => void; children: React.ReactNode;",
+    "BrowserPanel": "/** The bot whose browser this is; its page comes from BotloftProvider browsers (it shows \"closed\" without one). Place it as the last child of the app window's flex row, right of the chat column: it is a side panel the owner can widen. */ bot: any; /** Counts up each time the owner asks to take the browser into their own hands. */ take?: number; onClose: () => void;"
   },
   "overrides": {
     "Dialog": {
@@ -67,6 +68,10 @@
     "BotloftProvider": {
       "cardMode": "single",
       "viewport": "1000x560"
+    },
+    "BrowserPanel": {
+      "cardMode": "single",
+      "viewport": "1440x620"
     }
   },
   "readmeHeader": ".design-sync/conventions.md"
