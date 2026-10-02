@@ -83,6 +83,15 @@ export const chat = {
     notePlaceholder: "Why not? Sent to the bot if you deny (optional)",
     allow: "Allow",
     deny: "Deny",
+    /** "Allow always" (spec 10.1), by what it covers. */
+    always: {
+      command: "Always allow this command",
+      site: (site: string) => `Always allow ${site}`,
+      file: "Always allow this file",
+      tool: "Always allow",
+      hint: (bot: string) =>
+        `${bot} will not ask for this again. You can undo it in ${bot}'s details.`,
+    },
     allowFailed: "Could not allow it",
     denyFailed: "Could not deny it",
     allowed: (action: string) => `Allowed: ${action}`,

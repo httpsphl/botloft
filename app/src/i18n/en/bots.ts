@@ -116,5 +116,10 @@ export const bots = {
     generation: (generation: number) => `generation ${generation}`,
     instructions: "Instructions",
     noInstructions: "None yet.",
+    always: "Allowed without asking",
+    alwaysNone: (bot: string) =>
+      `Nothing yet. When ${bot} asks for something, "Always allow" puts it here.`,
+    alwaysRemove: (what: string) => `Ask again: ${what}`,
+    alwaysRemoveFailed: "Could not remove it",
   },
 };

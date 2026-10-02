@@ -23,6 +23,7 @@ import { BotRoutines } from "../routines/RoutineList";
 import { ScreensPanel } from "../screens/ScreensPanel";
 import { ShowScreen } from "../screens/showScreen";
 import { useScreens } from "../screens/useScreens";
+import { AllowRules } from "./AllowRules";
 import { BotHeader } from "./BotHeader";
 import { stateView } from "./BotStateBadge";
 import { useFollowBot } from "./useFollowBot";
@@ -287,6 +288,7 @@ function Details({ bot, onClose }: { bot: Bot; onClose(): void }) {
             {bot.instructions || words.noInstructions}
           </dd>
         </div>
+        <AllowRules bot={bot} />
       </dl>
     </SidePanel>
   );

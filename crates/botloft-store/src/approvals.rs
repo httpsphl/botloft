@@ -148,6 +148,7 @@ mod tests {
                 input: approval.input.clone(),
                 status: ApprovalStatus::Pending,
                 note: None,
+                always: None,
             }),
             created_at: 10,
             updated_at: 10,

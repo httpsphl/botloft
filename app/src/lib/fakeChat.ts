@@ -2,6 +2,7 @@
 // the bot: live text, replies, tool calls and permission requests.
 
 import type { FakeBotloft, Handlers } from "./fake";
+import { scopeOf } from "./fakeAllow";
 import { conflict, notFound } from "./fakeRules";
 import type {
   Activity,
@@ -169,6 +170,7 @@ export class FakeChat {
       input,
       status: "pending",
       note: null,
+      always: scopeOf(toolName, input),
     });
   }
 
@@ -183,7 +185,7 @@ export class FakeChat {
           .reverse()
           .slice(0, limit ?? 50);
       },
-      "approvals.answer": ({ approvalId, allow, note, input }) => {
+      "approvals.answer": ({ approvalId, allow, note, input, always }) => {
         const approval = this.approvals.get(approvalId);
         if (!approval) {
           throw notFound(`approval ${approvalId}`);
@@ -249,6 +251,9 @@ export class FakeChat {
         );
         if (item) {
           const body = item.body as { kind: "approval" } & ApprovalItem;
+          if (allow && always && body.always) {
+            this.fake.allow.remember(approval.botId, body.always);
+          }
           this.update(item.id, {
             ...body,
             input: approval.input,

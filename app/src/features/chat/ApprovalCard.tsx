@@ -1,10 +1,10 @@
 // A permission request (spec 10.1): what the bot wants to do, with Allow
 // and Deny. Once answered it shrinks to one line.
 
-import { Ban, Check, Hand, TimerOff } from "lucide-react";
+import { Ban, Check, CheckCheck, Hand, TimerOff } from "lucide-react";
 import { useId } from "react";
 import { useT } from "../../i18n";
-import type { ApprovalItem, Bot } from "../../lib/protocol.gen";
+import type { AllowScope, ApprovalItem, Bot } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
 import { Details } from "../../ui/Details";
 import { HELP_TOOL, HelpCard } from "../browser/HelpCard";
@@ -75,6 +75,23 @@ export function ApprovalCard({ approval, bot }: { approval: ApprovalItem; bot: B
       return <HelpCard approval={approval} bot={bot} />;
     default:
       return <ToolApproval approval={approval} bot={bot} />;
+  }
+}
+
+/** "Allow always", by what it would cover. */
+function alwaysLabel(
+  scope: AllowScope,
+  words: ReturnType<typeof useT>["chat"]["approval"]["always"],
+): string {
+  switch (scope.kind) {
+    case "command":
+      return words.command;
+    case "site":
+      return words.site(scope.value);
+    case "file":
+      return words.file;
+    default:
+      return words.tool;
   }
 }
 
@@ -158,10 +175,20 @@ function ToolApproval({ approval, bot }: { approval: ApprovalItem; bot: Bot }) {
         placeholder={t.chat.approval.notePlaceholder}
         className="mt-3 h-9 w-full rounded-xl border border-line-strong bg-canvas px-3 text-sm outline-none placeholder:text-muted focus:border-muted"
       />
-      <div className="mt-2.5 flex gap-2">
+      <div className="mt-2.5 flex flex-wrap gap-2">
         <Button variant="primary" icon={Check} disabled={busy} onClick={() => answer(true)}>
           {t.chat.approval.allow}
         </Button>
+        {approval.always && (
+          <Button
+            icon={CheckCheck}
+            disabled={busy}
+            title={t.chat.approval.always.hint(bot.name)}
+            onClick={() => answer(true, undefined, true)}
+          >
+            {alwaysLabel(approval.always, t.chat.approval.always)}
+          </Button>
+        )}
         <Button variant="danger" icon={Ban} disabled={busy} onClick={() => answer(false)}>
           {t.chat.approval.deny}
         </Button>

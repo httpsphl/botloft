@@ -4,6 +4,7 @@
 //! One [`Store`] wraps one connection. The daemon keeps a single store behind
 //! a mutex; queries are short, so there is no connection pool.
 
+mod allow_rules;
 mod approvals;
 mod bots;
 mod browser_sites;

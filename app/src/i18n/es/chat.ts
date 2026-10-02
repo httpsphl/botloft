@@ -80,6 +80,14 @@ export const chat: Messages["chat"] = {
     notePlaceholder: "¿Por qué no? Se envía al bot si deniegas (opcional)",
     allow: "Permitir",
     deny: "Denegar",
+    always: {
+      command: "Permitir siempre este comando",
+      site: (site: string) => `Permitir siempre en ${site}`,
+      file: "Permitir siempre este archivo",
+      tool: "Permitir siempre",
+      hint: (bot: string) =>
+        `${bot} no volverá a pedir esto. Puedes deshacerlo en los detalles de ${bot}.`,
+    },
     allowFailed: "No se pudo permitir",
     denyFailed: "No se pudo denegar",
     allowed: (action: string) => `Permitido: ${action}`,

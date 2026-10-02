@@ -114,5 +114,10 @@ export const bots: Messages["bots"] = {
     generation: (generation: number) => `generación ${generation}`,
     instructions: "Instrucciones",
     noInstructions: "Ninguna todavía.",
+    always: "Permitido sin preguntar",
+    alwaysNone: (bot: string) =>
+      `Nada todavía. Cuando ${bot} pida algo, "Permitir siempre" lo pone aquí.`,
+    alwaysRemove: (what: string) => `Volver a preguntar: ${what}`,
+    alwaysRemoveFailed: "No se pudo quitar",
   },
 };
