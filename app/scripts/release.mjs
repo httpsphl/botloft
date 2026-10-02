@@ -141,7 +141,9 @@ gh attestation verify ${setup} --repo ${repo}
 
 How releases are made, and what Botloft changes on your computer: [Code signing policy](https://github.com/${repo}/blob/main/docs/code-signing-policy.md).
 
-### Linux and macOS
+### Linux and macOS (preview)
+
+New in this release and not tried on many computers yet: please [open an issue](https://github.com/${repo}/issues) for anything that does not work.
 
 - **Linux:** the \`.deb\` for Debian and Ubuntu, or the \`.AppImage\` for any other distribution (make it executable first).
 - **macOS (Apple Silicon):** Apple has not notarized the app yet. Open the \`.dmg\`, drag Botloft to Applications and open it once; then allow it in System Settings → Privacy & Security → Open Anyway.
