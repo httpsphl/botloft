@@ -1,0 +1,38 @@
+name: Antivirus warning
+description: Your antivirus or SmartScreen flagged a Botloft download or the installed app.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Botloft's releases are not code-signed yet, so an antivirus may flag them by guesswork
+        (a "machine-learning" or "heuristic" detection). The
+        [code signing policy](https://github.com/httpsphl/botloft/blob/main/docs/code-signing-policy.md)
+        explains why and how each release is built. We report every false positive to the vendor.
+  - type: input
+    id: file
+    attributes:
+      label: File
+      description: The name of the file that was flagged.
+      placeholder: Botloft_0.8.0_x64-setup.exe
+    validations:
+      required: true
+  - type: input
+    id: antivirus
+    attributes:
+      label: Antivirus
+      placeholder: Microsoft Defender
+    validations:
+      required: true
+  - type: input
+    id: detection
+    attributes:
+      label: Detection name
+      placeholder: Trojan:Win32/Wacatac.C!ml
+    validations:
+      required: true
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: When it happened (on download, on install, while running) and a VirusTotal link, if you have one.

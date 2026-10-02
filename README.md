@@ -23,6 +23,8 @@
   <a href="#how-it-works">How it works</a>
   &nbsp;·&nbsp;
   <a href="#faq">FAQ</a>
+  &nbsp;·&nbsp;
+  <a href="#contributing">Contributing</a>
 </p>
 
 <picture>
@@ -193,9 +195,9 @@ and is not affiliated with or endorsed by Anthropic.
 ## Status
 
 Botloft is young (version 0.x) and moves fast. The daemon, the chat, crews with a Chief, messages
-and tasks between bots, routines, the live browser, screens, the installer and updates are in place.
-Planned next: a question box where bots ask you things, "always allow" for requests, search, and a
-code-signed installer. `main` can be ahead of the latest release.
+and tasks between bots, routines, the live browser, screens, "always allow" for requests, the
+installer and updates are in place. Planned next: a question box where bots ask you things, search,
+and a code-signed installer. `main` can be ahead of the latest release.
 
 <details>
 <summary><b>Development</b></summary>
@@ -245,6 +247,13 @@ app/                   Tauri v2 + React desktop app
 docs/                  specification and ADRs
 ```
 </details>
+
+## Contributing
+
+Contributions are welcome: bug reports, ideas, translations and code. Start with
+[CONTRIBUTING.md](CONTRIBUTING.md); issues labeled
+[`good first issue`](https://github.com/httpsphl/botloft/labels/good%20first%20issue) are a good
+first step. Security problems go through [SECURITY.md](SECURITY.md), not public issues.
 
 ## License
 
