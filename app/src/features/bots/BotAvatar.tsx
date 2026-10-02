@@ -209,9 +209,11 @@ function Eye({ eye, side, fill }: { eye: Ellipse; side: "l" | "r"; fill: string 
 }
 
 /**
- * A bot's mascot in a list (the sidebar, a crew's cards): it moves only
- * while the bot does something. One idle mascot per bot, all moving, cost
- * a repaint every frame even with nothing going on.
+ * A bot's mascot in a list (the sidebar, a crew's cards): it moves while
+ * the bot is awake, idle too, since the owner reads an idle bot by its
+ * slow flame and glances. A sleeping one keeps its look but does not
+ * move: a morphing flame repaints every frame, and a stopped bot has
+ * nothing to show.
  */
 export function ListAvatar({
   bot,
@@ -223,6 +225,6 @@ export function ListAvatar({
   size: number;
 }) {
   const mood = moodOf(bot, crewPaused);
-  const still = mood === "idle" || mood === "sleeping";
+  const still = mood === "sleeping";
   return <BotAvatar color={bot.color} size={size} mood={mood} still={still} />;
 }
