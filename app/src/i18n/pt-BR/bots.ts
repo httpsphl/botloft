@@ -97,6 +97,15 @@ export const bots: Messages["bots"] = {
     color: "Cor",
     swatch: (color: string) => `Cor ${color}`,
     colorUnset: "Se você não escolher, o bot recebe a próxima cor da equipe.",
+    custom: "Escolher qualquer cor",
+    picker: {
+      area: "Saturação e brilho",
+      areaValue: (saturation: string, brightness: string) =>
+        `Saturação ${saturation}, brilho ${brightness}`,
+      hue: "Matiz",
+      hex: "Hex",
+      channels: { r: "R", g: "G", b: "B" },
+    },
   },
   notices: {
     crewPaused: (crew: string) => `A equipe ${crew} está pausada`,

@@ -4,7 +4,7 @@
 export const PROTOCOL_VERSION = 2;
 
 /** Avatar colors the daemon assigns in order (spec 15.3). */
-export const AVATAR_PALETTE = ["#FF7A59", "#5EC8FF", "#A48BFF", "#9BE564", "#FFC857", "#FF7EB6", "#3DD9C1", "#E8D5B0"] as const;
+export const AVATAR_PALETTE = ["#FF7A59", "#5EC8FF", "#A48BFF", "#9BE564", "#FFC857", "#FF7EB6", "#3DD9C1", "#E8D5B0", "#F25F5C", "#4C7BFF", "#E26BE0", "#3FBF6F", "#FF9F43", "#8C9BB0", "#B07A54", "#E9EEF2"] as const;
 
 /** Longest values the daemon accepts, in characters (files, for attachments). */
 export const FIELD_LIMITS = {

@@ -1,9 +1,11 @@
 //! Avatar colors. Every bot is drawn as the Botloft mascot in its own color
 //! (spec 15.3); the color identifies the bot and never encodes its state.
 
-/// Default palette, assigned in order as bots join a crew.
-pub const PALETTE: [&str; 8] = [
+/// Default palette, assigned in order as bots join a crew. The owner may
+/// also pick any other `#RRGGBB`.
+pub const PALETTE: [&str; 16] = [
     "#FF7A59", "#5EC8FF", "#A48BFF", "#9BE564", "#FFC857", "#FF7EB6", "#3DD9C1", "#E8D5B0",
+    "#F25F5C", "#4C7BFF", "#E26BE0", "#3FBF6F", "#FF9F43", "#8C9BB0", "#B07A54", "#E9EEF2",
 ];
 
 /// Palette color for the `index`-th bot of a crew, wrapping around.

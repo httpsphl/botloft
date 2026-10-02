@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check, Pipette } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { useT } from "../../i18n";
 import { errorText } from "../../lib/api";
@@ -14,6 +14,7 @@ import { Button } from "../../ui/Button";
 import { Dialog } from "../../ui/Dialog";
 import { SelectField, TextArea, TextField } from "../../ui/Field";
 import { BotAvatar } from "./BotAvatar";
+import { ColorPicker } from "./ColorPicker";
 
 const MODELS: BotModel[] = ["default", "fable", "opus", "sonnet", "haiku"];
 
@@ -30,6 +31,8 @@ export function BotDialog(props: Props) {
   const [role, setRole] = useState(editing?.role ?? "");
   const [instructions, setInstructions] = useState(editing?.instructions ?? "");
   const [color, setColor] = useState<string | undefined>(editing?.color);
+  const custom = color !== undefined && !(AVATAR_PALETTE as readonly string[]).includes(color);
+  const [picking, setPicking] = useState(custom);
   const [model, setModel] = useState<BotModel>(editing?.model ?? "default");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -126,7 +129,7 @@ export function BotDialog(props: Props) {
           <legend className="mb-1.5 font-medium text-ink-soft text-sm">
             {t.bots.dialog.color}
           </legend>
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             {AVATAR_PALETTE.map((swatch) => (
               <button
                 key={swatch}
@@ -142,7 +145,27 @@ export function BotDialog(props: Props) {
                 )}
               </button>
             ))}
+            <button
+              type="button"
+              aria-label={t.bots.dialog.custom}
+              title={t.bots.dialog.custom}
+              aria-expanded={picking}
+              aria-pressed={custom}
+              onClick={() => setPicking(!picking)}
+              className={`relative flex size-[30px] items-center justify-center rounded-lg ${
+                custom
+                  ? "ring-2 ring-accent"
+                  : "border border-line-strong border-dashed text-muted hover:text-ink"
+              }`}
+            >
+              {custom && color ? (
+                <BotAvatar color={color} size={26} />
+              ) : (
+                <Pipette aria-hidden size={14} />
+              )}
+            </button>
           </div>
+          {picking && <ColorPicker value={color ?? AVATAR_PALETTE[0]} onChange={setColor} />}
           {!editing && color === undefined && (
             <p className="text-muted text-xs">{t.bots.dialog.colorUnset}</p>
           )}
