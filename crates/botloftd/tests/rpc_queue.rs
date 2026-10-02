@@ -31,6 +31,10 @@ async fn race(c: &mut Crew, request: Value) -> Vec<&'static str> {
     });
     is_locked.recv().expect("store held");
     c.app.send_raw(&request.to_string()).await;
+    // Give the daemon time to take the request off the socket, so the text
+    // comes after it. Nothing shows when it has, but this is far below the
+    // time the store is held.
+    tokio::time::sleep(Duration::from_millis(200)).await;
     // The block that ends sends the text at once, without the timer.
     let stop =
         json!({ "type": "stream_event", "event": { "type": "content_block_stop", "index": 0 } });
