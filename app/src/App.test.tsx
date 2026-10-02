@@ -36,7 +36,7 @@ describe("app", () => {
     type("Name", "Ops");
     fireEvent.click(screen.getByRole("button", { name: "Create crew" }));
     expect(await screen.findByRole("heading", { level: 1, name: "Ops" })).toBeDefined();
-    expect(within(sidebar()).getByRole("button", { name: /Ops/ })).toBeDefined();
+    expect(within(sidebar()).getByRole("button", { name: "Ops" })).toBeDefined();
   });
 
   test("a new bot opens with its handle and follows its state", async () => {

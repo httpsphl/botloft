@@ -1,4 +1,4 @@
-import { Pause, Plus } from "lucide-react";
+import { ChevronDown, ChevronsDownUp, ChevronsUpDown, Pause, Plus } from "lucide-react";
 import { memo, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import { useShallow } from "zustand/react/shallow";
@@ -18,19 +18,40 @@ import { useBotActions } from "../bots/botActions";
 import { ChiefBadge, isChief } from "../bots/ChiefBadge";
 import { toolAction, toolTitle } from "../chat/toolNames";
 import { CrewDialog } from "./CrewDialog";
+import { setAllCollapsed, setCollapsed, useCollapsed, useCollapsedSet } from "./collapsed";
 
 /** Crews as sections and their bots as conversations (spec 15.1). */
 export function Sidebar() {
   const t = useT();
+  const words = t.crews.sidebar;
   const crews = useApp(useShallow(crewList));
+  const overview = useApp((state) => state.selectedCrewId === null);
+  const selectCrew = useApp((state) => state.selectCrew);
+  const collapsed = useCollapsedSet();
+  const allFolded = crews.length > 0 && crews.every((crew) => collapsed.has(crew.id));
   const [creating, setCreating] = useState(false);
   return (
     <div className="flex w-72 shrink-0 flex-col border-line border-r bg-panel">
-      <nav aria-label={t.crews.sidebar.label} className="flex min-h-0 flex-1 flex-col">
-        <div className="flex h-10 shrink-0 items-center justify-between pr-1.5 pl-4">
-          <h2 className="font-semibold text-muted text-xs uppercase tracking-[0.12em]">
-            {t.crews.sidebar.label}
+      <nav aria-label={words.label} className="flex min-h-0 flex-1 flex-col">
+        <div className="flex h-10 shrink-0 items-center gap-0.5 pr-1.5 pl-2">
+          <h2 className="min-w-0 flex-1">
+            <button
+              type="button"
+              aria-current={overview ? "page" : undefined}
+              title={words.showAll}
+              onClick={() => selectCrew(null)}
+              className={`rounded-md px-2 py-1 font-semibold text-xs uppercase tracking-[0.12em] transition-colors hover:bg-sunken hover:text-ink ${overview ? "bg-sunken text-ink" : "text-muted"}`}
+            >
+              {words.label}
+            </button>
           </h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={allFolded ? ChevronsUpDown : ChevronsDownUp}
+            label={allFolded ? words.expandAll : words.collapseAll}
+            onClick={() => setAllCollapsed(allFolded ? [] : crews.map((crew) => crew.id))}
+          />
           <Button
             variant="ghost"
             size="sm"
@@ -60,31 +81,60 @@ function CrewEntry({ crew }: { crew: Crew }) {
   const selected = useApp((state) => state.selectedCrewId === crew.id && !state.selectedBotId);
   const unread = useApp((state) => unreadIn(state, crew.id));
   const selectCrew = useApp((state) => state.selectCrew);
+  const openBotId = useApp((state) => state.selectedBotId);
+  const collapsed = useCollapsed(crew.id);
+  // Folded, the open conversation still shows, and a dot tells a bot waits.
+  const shown = collapsed ? bots.filter((bot) => bot.id === openBotId) : bots;
+  const waiting =
+    collapsed && bots.some((bot) => bot.state === "needs_approval" || bot.state === "auth_error");
+  const words = t.crews.sidebar;
 
   return (
     <li className="mt-2">
-      <button
-        type="button"
-        aria-current={selected ? "page" : undefined}
-        onClick={() => selectCrew(crew.id)}
-        className={`${row} h-8 gap-2 px-2.5 font-semibold text-sm ${selected ? "bg-sunken" : ""}`}
-      >
-        <span className="min-w-0 flex-1 truncate">{crew.name}</span>
-        {unread > 0 && (
-          <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-accent px-1 font-semibold text-[11px] text-canvas tabular-nums">
-            <span aria-hidden>{unread}</span>
-            <span className="sr-only">{t.crews.sidebar.unreadCount(unread)}</span>
-          </span>
-        )}
-        {crew.paused && (
-          <span className="flex items-center gap-1 font-medium text-quiet text-xs">
-            <Pause aria-hidden size={12} />
-            {t.crews.paused}
-          </span>
-        )}
-      </button>
+      <div className="relative flex items-center">
+        <button
+          type="button"
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? words.expand(crew.name) : words.collapse(crew.name)}
+          title={collapsed ? words.expand(crew.name) : words.collapse(crew.name)}
+          onClick={() => setCollapsed(crew.id, !collapsed)}
+          className="absolute left-1 z-10 grid size-6 place-items-center rounded-md text-muted hover:bg-line hover:text-ink"
+        >
+          <ChevronDown
+            aria-hidden
+            size={14}
+            className={`transition-transform duration-150 ${collapsed ? "-rotate-90" : ""}`}
+          />
+        </button>
+        <button
+          type="button"
+          aria-current={selected ? "page" : undefined}
+          onClick={() => selectCrew(crew.id)}
+          className={`${row} h-8 gap-2 pr-2.5 pl-8 font-semibold text-sm ${selected ? "bg-sunken" : ""}`}
+        >
+          <span className="min-w-0 flex-1 truncate">{crew.name}</span>
+          {waiting && (
+            <span className="flex shrink-0">
+              <span aria-hidden className="live-dot" style={{ background: "var(--warn)" }} />
+              <span className="sr-only">{words.waiting}</span>
+            </span>
+          )}
+          {unread > 0 && (
+            <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-accent px-1 font-semibold text-[11px] text-canvas tabular-nums">
+              <span aria-hidden>{unread}</span>
+              <span className="sr-only">{t.crews.sidebar.unreadCount(unread)}</span>
+            </span>
+          )}
+          {crew.paused && (
+            <span className="flex items-center gap-1 font-medium text-quiet text-xs">
+              <Pause aria-hidden size={12} />
+              {t.crews.paused}
+            </span>
+          )}
+        </button>
+      </div>
       <ul>
-        {bots.map((bot) => (
+        {shown.map((bot) => (
           <Conversation key={bot.id} bot={bot} crew={crew} />
         ))}
       </ul>

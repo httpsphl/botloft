@@ -5,6 +5,7 @@ import { ChevronRight, LoaderCircle, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { BotAvatar } from "../features/bots/BotAvatar";
 import { BotView } from "../features/bots/BotView";
+import { CrewsOverview } from "../features/crews/CrewsOverview";
 import { CrewView } from "../features/crews/CrewView";
 import { Sidebar } from "../features/crews/Sidebar";
 import { FailedDeliveries } from "../features/messages/FailedDeliveries";
@@ -96,7 +97,7 @@ export function Workspace() {
         }
       >
         {hasCrews && <SidebarToggle />}
-        <Breadcrumb />
+        {hasCrews && <Breadcrumb />}
       </TitleBar>
       {main}
     </div>
@@ -104,7 +105,6 @@ export function Workspace() {
 }
 
 function Selection() {
-  const t = useT();
   const crew = useApp((state) => (state.selectedCrewId ? state.crews[state.selectedCrewId] : null));
   const bot = useApp((state) => (state.selectedBotId ? state.bots[state.selectedBotId] : null));
   if (crew && bot) {
@@ -113,15 +113,22 @@ function Selection() {
   if (crew) {
     return <CrewView key={crew.id} crew={crew} />;
   }
-  return <p className="p-6 text-muted">{t.shell.pickCrew}</p>;
+  return <CrewsOverview />;
 }
 
 function Breadcrumb() {
+  const t = useT();
   const crew = useApp((state) => (state.selectedCrewId ? state.crews[state.selectedCrewId] : null));
   const bot = useApp((state) => (state.selectedBotId ? state.bots[state.selectedBotId] : null));
   const selectCrew = useApp((state) => state.selectCrew);
   if (!crew) {
-    return null;
+    // Only shown with crews: the overview is where "no crew" leads.
+    return (
+      <>
+        <ChevronRight aria-hidden size={14} className="text-muted" />
+        <span className="truncate text-ink-soft">{t.crews.sidebar.label}</span>
+      </>
+    );
   }
   return (
     <>

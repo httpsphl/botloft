@@ -119,7 +119,7 @@ describe("deleting a crew", () => {
     const { fake, crew, scout } = await twoBots();
     const docs = fake.addCrew("Docs");
     await waitFor(() =>
-      expect(within(sidebar()).getByRole("button", { name: /Docs/ })).toBeDefined(),
+      expect(within(sidebar()).getByRole("button", { name: "Docs" })).toBeDefined(),
     );
     const dialog = askToDeleteCrew("Ops");
     expect(dialog.textContent).toContain(
@@ -130,13 +130,13 @@ describe("deleting a crew", () => {
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Delete crew" }));
     await waitFor(() =>
-      expect(within(sidebar()).queryByRole("button", { name: /Ops/ })).toBeNull(),
+      expect(within(sidebar()).queryByRole("button", { name: "Ops" })).toBeNull(),
     );
     expect(fake.calls.at(-1)).toEqual({ method: "crews.delete", params: { crewId: crew.id } });
     expect(fake.bots.has(scout.id)).toBe(false);
     expect(inSidebar("Scout")).toBeNull();
     expect(fake.crews.has(docs.id)).toBe(true);
-    expect(within(sidebar()).getByRole("button", { name: /Docs/ })).toBeDefined();
+    expect(within(sidebar()).getByRole("button", { name: "Docs" })).toBeDefined();
   });
 
   test("an empty crew and a crew of one read right", async () => {
@@ -230,7 +230,7 @@ describe("sending the folder to the Recycle Bin", () => {
     await waitFor(() => expect(fake.recycled).toEqual(["C:\\Users\\owner\\Botloft\\ops"]));
     expect(fake.calls.at(-1)?.params).toEqual({ crewId: ops.id, recycleFolder: true });
 
-    fireEvent.click(within(sidebar()).getByRole("button", { name: /Site/ }));
+    fireEvent.click(within(sidebar()).getByRole("button", { name: "Site" }));
     await crewOpened("Site");
     fireEvent.click(screen.getByRole("button", { name: "More crew actions" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Delete crew" }));
