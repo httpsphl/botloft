@@ -89,7 +89,9 @@ export function tauriHost(): Host {
       }
       sendNotification({ title, body, ...(sound ? { sound: "Default" } : {}) });
     },
-    showTray,
+    // A dev build runs beside the installed app: its icon says which it is.
+    showTray: (view, actions) =>
+      showTray(import.meta.env.DEV ? { ...view, tooltip: `${view.tooltip} (dev)` } : view, actions),
     hideTray,
     signInToClaude: (path) => invoke<boolean>("claude_sign_in", { path }),
     setZoom: (factor) => getCurrentWebview().setZoom(factor),
