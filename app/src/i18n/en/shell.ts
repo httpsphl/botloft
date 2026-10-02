@@ -30,7 +30,6 @@ export const shell = {
   /** A deleted bot's or crew's folder that could not go to the Recycle Bin. */
   recycleFailed: (path: string) =>
     `The folder ${path} did not go to the Recycle Bin and is still there`,
-  pickCrew: "Pick a crew on the left, or create one with the + button.",
   botsCantStart: "Bots can't start",
   signIn: {
     title: "Sign in to Claude",

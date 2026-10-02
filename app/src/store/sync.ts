@@ -88,7 +88,10 @@ export function syncStore(store: AppStore, api: BotloftApi): () => void {
       }
       const state = store.getState();
       const valid = state.selectedCrewId !== null && state.crews[state.selectedCrewId];
-      if (!valid) {
+      // The first load opens the first crew; the page of all crews stays
+      // open across a reconnection.
+      const overview = state.loaded && state.selectedCrewId === null;
+      if (!valid && !overview) {
         state.selectCrew(crewList(state)[0]?.id ?? null);
       }
       store.setState({ loaded: true });

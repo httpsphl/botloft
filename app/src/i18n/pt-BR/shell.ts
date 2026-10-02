@@ -26,7 +26,6 @@ export const shell: Messages["shell"] = {
   },
   loadFailed: "Não foi possível carregar suas equipes",
   recycleFailed: (path: string) => `A pasta ${path} não foi para a Lixeira e continua lá`,
-  pickCrew: "Escolha uma equipe à esquerda, ou crie uma com o botão +.",
   botsCantStart: "Os bots não conseguem iniciar",
   signIn: {
     title: "Entre no Claude",

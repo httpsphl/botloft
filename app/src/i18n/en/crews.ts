@@ -16,6 +16,22 @@ export const crews = {
     unread: "unread",
     /** Beside a crew's name: how many of its bots are unread. */
     unreadCount: (count: number) => `${count} unread`,
+    showAll: "See all crews",
+    collapseAll: "Fold all crews",
+    expandAll: "Unfold all crews",
+    /** The arrow beside a crew's name, which hides or shows its bots. */
+    collapse: (crew: string) => `Fold ${crew}`,
+    expand: (crew: string) => `Unfold ${crew}`,
+    /** Beside a folded crew's name, when one of its bots needs the owner. */
+    waiting: "a bot needs you",
+  },
+  /** The page of all crews, opened from "Crews" on the left. */
+  overview: {
+    count: (count: number) => (count === 1 ? "1 crew" : `${count} crews`),
+    working: (count: number) => `${count} working`,
+    waiting: (count: number) => (count === 1 ? "1 needs you" : `${count} need you`),
+    calm: "All quiet",
+    noBots: "No bots yet",
   },
   dialog: {
     folder: "Work folder",
