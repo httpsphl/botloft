@@ -30,6 +30,34 @@ function write(text: string) {
 }
 
 describe("chat", () => {
+  test("what the owner was writing waits for them in each chat", async () => {
+    const { fake, scout } = crew();
+    const writer = fake.addBot(scout.crewId, "Writer", "Writes drafts");
+    fake.setBotState(writer.id, "idle");
+    await openScout(fake);
+    write("Half a thought");
+    openBot("Writer");
+    const writerField = (await screen.findByLabelText("Message to Writer")) as HTMLTextAreaElement;
+    expect(writerField.value).toBe("");
+    fireEvent.change(writerField, { target: { value: "For Writer" } });
+    openBot("Scout");
+    expect(
+      (await screen.findByLabelText("Message to Scout")) as HTMLTextAreaElement,
+    ).toHaveProperty("value", "Half a thought");
+    fireEvent.keyDown(field(), { key: "Enter" });
+    await within(chat()).findByText("Half a thought");
+    openBot("Writer");
+    expect(
+      (await screen.findByLabelText("Message to Writer")) as HTMLTextAreaElement,
+    ).toHaveProperty("value", "For Writer");
+    // Drafts outlive the render, and fake ids repeat in the next test.
+    fireEvent.change(screen.getByLabelText("Message to Writer"), { target: { value: "" } });
+    openBot("Scout");
+    expect(
+      (await screen.findByLabelText("Message to Scout")) as HTMLTextAreaElement,
+    ).toHaveProperty("value", "");
+  });
+
   test("Enter sends, Shift+Enter does not, and the bubble follows the delivery", async () => {
     const { fake } = crew();
     await openScout(fake);

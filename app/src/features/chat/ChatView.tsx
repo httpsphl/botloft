@@ -182,7 +182,8 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
         </div>
       </div>
       <div className="w-full">
-        <ChatComposer bot={bot} files={files} stopped={stopped} onSent={onSent} />
+        {/* Keyed by bot: each one has its own draft (spec 15.1). */}
+        <ChatComposer key={bot.id} bot={bot} files={files} stopped={stopped} onSent={onSent} />
       </div>
       {dragging && (
         <div className="pointer-events-none absolute inset-3 grid place-items-center rounded-2xl border-2 border-accent border-dashed bg-canvas/85">

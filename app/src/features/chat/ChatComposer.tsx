@@ -22,6 +22,7 @@ import { type Bot, FIELD_LIMITS } from "../../lib/protocol.gen";
 import { prefs, usePref } from "../../shell/prefs";
 import { useApi } from "../../store/context";
 import { ContextMeter } from "./ContextMeter";
+import { draftOf, keepDraft } from "./drafts";
 import { EffortPicker } from "./EffortPicker";
 import { rememberImage } from "./images";
 import { ModelPicker } from "./ModelPicker";
@@ -71,7 +72,12 @@ export const ChatComposer = memo(function ChatComposer({
 }) {
   const api = useApi();
   const t = useT();
-  const [text, setText] = useState("");
+  const botId = bot.id;
+  const [text, setShown] = useState(() => draftOf(botId));
+  const setText = (value: string) => {
+    setShown(value);
+    keepDraft(botId, value);
+  };
   const [busy, setBusy] = useState(false);
   /** A new mode, model or effort, or a compaction, that waits for the bot to finish what it is doing. */
   const [later, setLater] = useState<string | null>(null);
