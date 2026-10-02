@@ -8,6 +8,7 @@ mod job;
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 mod launchd;
 mod orphans;
+mod power;
 #[cfg_attr(target_os = "macos", allow(dead_code))]
 mod systemd;
 
@@ -23,6 +24,7 @@ pub use self::job::ProcessJob;
 #[cfg(target_os = "macos")]
 pub use self::launchd::{TASK_KIND, delete_task, find_task, register_task, run_task, stop_task};
 pub use self::orphans::track_groups;
+pub use self::power::KeepAwake;
 #[cfg(not(target_os = "macos"))]
 pub use self::systemd::{TASK_KIND, delete_task, find_task, register_task, run_task, stop_task};
 
@@ -88,20 +90,6 @@ pub async fn shutdown_signal() {
     tokio::select! {
         _ = tokio::signal::ctrl_c() => {}
         () = terminate => {}
-    }
-}
-
-/// Nothing keeps a Unix machine awake yet.
-#[derive(Debug)]
-pub struct KeepAwake;
-
-impl KeepAwake {
-    pub fn new() -> io::Result<Self> {
-        Ok(Self)
-    }
-
-    pub fn set(&mut self, _on: bool) -> io::Result<()> {
-        Ok(())
     }
 }
 
