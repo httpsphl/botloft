@@ -1,0 +1,9 @@
+{
+  "name": "@botloft/ui",
+  "version": "0.8.0",
+  "private": true,
+  "description": "Botloft's interface pieces, built from the app's own source for claude.ai/design. Not published.",
+  "type": "module",
+  "module": "dist/index.js",
+  "types": "dist/types/index.d.ts"
+}

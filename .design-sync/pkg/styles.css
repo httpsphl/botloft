@@ -1,0 +1,28 @@
+/* The design system's stylesheet: the app's own (tokens, fonts, motion and
+   every utility the app uses) plus a fixed layout vocabulary, so a design
+   built with these components can count on common utilities that the app
+   itself happens not to use. */
+@import "../../app/src/index.css";
+
+/* The previews' own layout. */
+@source "../previews";
+
+/* Spacing, sizing and layout. */
+@source inline("{p,px,py,pt,pr,pb,pl,m,mx,my,mt,mr,mb,ml,gap,gap-x,gap-y,space-x,space-y}-{0,0.5,1,1.5,2,2.5,3,3.5,4,5,6,7,8,9,10,12,14,16,20,24}");
+@source inline("{w,h,min-w,min-h,size}-{0,1,2,3,4,5,6,7,8,9,10,11,12,14,16,20,24,28,32,36,40,44,48,52,56,60,64,72,80,96,full,screen,auto,fit,min,max}");
+@source inline("{max-w,w}-{3xs,2xs,xs,sm,md,lg,xl,2xl,3xl,4xl,5xl,6xl,7xl,full,none,prose}");
+@source inline("{grid-cols,grid-rows,col-span,row-span}-{1,2,3,4,5,6,7,8,9,10,11,12,full}");
+@source inline("{flex,flex-row,flex-col,flex-wrap,flex-1,flex-none,grow,shrink-0,grid,block,inline-flex,inline-block,hidden,contents}");
+@source inline("{items,self}-{start,center,end,stretch,baseline}");
+@source inline("{justify,content}-{start,center,end,between,around,evenly}");
+@source inline("{relative,absolute,fixed,sticky,inset-0,top-0,right-0,bottom-0,left-0,overflow-hidden,overflow-auto,overflow-y-auto,truncate,whitespace-nowrap,break-words}");
+
+/* Color, border and type on the design tokens. */
+@source inline("{bg,text,border,divide,ring,outline,fill,stroke}-{canvas,panel,sunken,line,line-strong,ink,ink-soft,muted,accent,ok,work,warn,danger,quiet,read,transparent,white,black}");
+@source inline("{bg,text,border}-{accent,ok,work,warn,danger}/{5,10,15,20,30,40,50,60}");
+@source inline("{border,border-t,border-r,border-b,border-l,border-0,border-2,divide-x,divide-y}");
+@source inline("rounded{,-none,-sm,-md,-lg,-xl,-2xl,-3xl,-full}");
+@source inline("{shadow-lift,shadow-sm,shadow-none}");
+@source inline("text-{xs,sm,base,lg,xl,2xl,3xl,4xl,5xl,left,center,right}");
+@source inline("{font-sans,font-mono,font-normal,font-medium,font-semibold,font-bold,tracking-tight,leading-tight,leading-snug,leading-relaxed,uppercase,italic,underline}");
+@source inline("{opacity-0,opacity-50,opacity-75,opacity-100,transition,transition-colors,duration-150,duration-200,duration-300}");

@@ -23,3 +23,12 @@ Thumbs.db
 
 # Setup window build (spec 15.7)
 /app/dist-setup/
+
+# Design sync (claude.ai/design): staged scripts, build output, machine state
+/.ds-sync/
+/ds-bundle/
+/.design-sync/.cache/
+/.design-sync/learnings/
+/.design-sync/node_modules
+/.design-sync/pkg/dist/
+/.design-sync/pkg/icons.gen.ts
