@@ -51,7 +51,7 @@ you decide what they may do.
 - **Schedule routines.** Weekday mornings, every two hours or any cron schedule, with missed runs
   and overlaps handled.
 - **Leave them running.** Bots keep working after you close Botloft. They start when you sign in,
-  come back soon after a crash and, on Windows, keep the computer awake while they work. Botloft
+  come back soon after a crash and keep the computer awake while they work. Botloft
   waits near the clock and tells you when a bot needs you.
 - **Choose per bot.** How much it asks before acting, and which Claude model it uses. See how much
   of your plan's usage is left.
@@ -180,7 +180,7 @@ how to check a download.
 <summary><b>Does it run on macOS or Linux?</b></summary>
 
 Yes, as a preview since 0.8.0: Linux (64-bit, `.deb` or AppImage) and macOS on Apple Silicon. Intel
-Macs are not supported yet, and keeping the computer awake while bots work is Windows-only for now.
+Macs are not supported yet.
 Windows came first and has had the most use; if something does not work elsewhere, please
 [open an issue](https://github.com/httpsphl/botloft/issues).
 </details>

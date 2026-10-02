@@ -26,7 +26,6 @@ export const shell: Messages["shell"] = {
   },
   loadFailed: "No se pudieron cargar tus equipos",
   recycleFailed: (path: string) => `La carpeta ${path} no fue a la Papelera y sigue allí`,
-  pickCrew: "Elige un equipo a la izquierda, o crea uno con el botón +.",
   botsCantStart: "Los bots no pueden iniciar",
   signIn: {
     title: "Inicia sesión en Claude",

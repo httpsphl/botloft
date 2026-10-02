@@ -5,10 +5,10 @@ setLocaleChoice("en");
 
 const crew = [
   { name: "Chief", color: "#FF7A59" },
-  { name: "Scout", color: "#4FC382" },
-  { name: "Writer", color: "#6EA6FF" },
-  { name: "Editor", color: "#F0B24A" },
-  { name: "Ops", color: "#C084FC" },
+  { name: "Scout", color: "#5EC8FF" },
+  { name: "Writer", color: "#A48BFF" },
+  { name: "Editor", color: "#9BE564" },
+  { name: "Ops", color: "#FFC857" },
 ];
 
 export function Colors() {
@@ -30,7 +30,7 @@ export function Moods() {
     <div className="flex items-end gap-5 p-4">
       {moods.map((mood) => (
         <div key={mood} className="flex flex-col items-center gap-1.5">
-          <BotAvatar color="#4FC382" size={48} mood={mood} still />
+          <BotAvatar color="#5EC8FF" size={48} mood={mood} still />
           <span className="text-muted text-xs">{mood}</span>
         </div>
       ))}
@@ -42,7 +42,7 @@ export function Sizes() {
   return (
     <div className="flex items-end gap-4 p-4">
       {[20, 28, 40, 64].map((size) => (
-        <BotAvatar key={size} color="#6EA6FF" size={size} />
+        <BotAvatar key={size} color="#A48BFF" size={size} />
       ))}
     </div>
   );
