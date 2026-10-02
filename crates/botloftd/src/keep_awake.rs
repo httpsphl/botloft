@@ -111,6 +111,9 @@ mod tests {
         assert_eq!(*calls.lock().expect("calls"), [true, false]);
     }
 
+    // Off Windows the helper may be missing (a container); its own test
+    // covers it there.
+    #[cfg(windows)]
     #[test]
     fn a_keep_awake_request_can_be_set_and_cleared() {
         let mut request = KeepAwake::new().expect("request");
