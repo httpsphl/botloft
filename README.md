@@ -5,18 +5,18 @@
 <h1 align="center">Botloft</h1>
 
 <p align="center">
-  <b>A crew of Claude Code bots that stays on and works together on your Windows PC.</b>
+  <b>A crew of Claude Code bots that stays on and works together on your computer.</b>
 </p>
 
 <p align="center">
   <a href="https://github.com/httpsphl/botloft/releases/latest"><img src="https://img.shields.io/github/v/release/httpsphl/botloft?label=release&color=ff7a59" alt="Latest release"></a>
   <a href="https://github.com/httpsphl/botloft/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/httpsphl/botloft/ci.yml?branch=main&label=CI" alt="CI status"></a>
-  <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4" alt="Windows 10 and 11">
+  <img src="https://img.shields.io/badge/Windows%20%7C%20Linux%20%7C%20macOS-0078d4" alt="Windows, Linux and macOS">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/httpsphl/botloft?color=3b3b38" alt="Apache 2.0 license"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/httpsphl/botloft/releases/latest"><b>Download for Windows</b></a>
+  <a href="https://github.com/httpsphl/botloft/releases/latest"><b>Download</b></a>
   &nbsp;·&nbsp;
   <a href="#what-you-can-do">Features</a>
   &nbsp;·&nbsp;
@@ -48,9 +48,9 @@ you decide what they may do.
   for it. Watch the screens it designs take shape while it writes them. Open the files it made.
 - **Schedule routines.** Weekday mornings, every two hours or any cron schedule, with missed runs
   and overlaps handled.
-- **Leave them running.** Bots keep working after you close Botloft. They start with Windows, come
-  back within a minute if something crashes and keep the PC awake while they work. Botloft waits
-  near the clock and tells you when a bot needs you.
+- **Leave them running.** Bots keep working after you close Botloft. They start when you sign in,
+  come back soon after a crash and, on Windows, keep the computer awake while they work. Botloft
+  waits near the clock and tells you when a bot needs you.
 - **Choose per bot.** How much it asks before acting, and which Claude model it uses. See how much
   of your plan's usage is left.
 
@@ -70,21 +70,33 @@ itself.
 
 ## Get started
 
-You need Windows 10 or 11 (64-bit) and [Claude Code](https://code.claude.com/docs/en/setup),
-installed and signed in once with your Claude account. Bots run on your own Claude plan.
+You need [Claude Code](https://code.claude.com/docs/en/setup), installed and signed in once with
+your Claude account. Bots run on your own Claude plan.
 
-1. Download `Botloft_<version>_x64-setup.exe` from the
-   [latest release](https://github.com/httpsphl/botloft/releases/latest) and run it. It installs for
-   your Windows user only, with no administrator prompt. The installer is not code-signed yet, so
-   Windows SmartScreen may ask you to confirm ("More info", then "Run anyway"). The
-   [code signing policy](docs/code-signing-policy.md) says how releases are made and how to check
-   your download.
+1. Download Botloft for your computer from the
+   [latest release](https://github.com/httpsphl/botloft/releases/latest):
+   - **Windows 10 or 11 (64-bit):** `Botloft_<version>_x64-setup.exe`. Run it; it installs for your
+     Windows user only, with no administrator prompt. The installer is not code-signed yet, so
+     Windows SmartScreen may ask you to confirm ("More info", then "Run anyway").
+   - **Linux (64-bit, preview):** `Botloft_<version>_amd64.deb` for Debian and Ubuntu, or
+     `Botloft_<version>_amd64.AppImage` for other distributions (make it executable first).
+   - **macOS on Apple Silicon (preview):** `Botloft_<version>_aarch64.dmg`. Drag Botloft to
+     Applications and open it once. Apple has not notarized it yet, so macOS blocks it the first
+     time: allow it in System Settings > Privacy & Security > Open Anyway.
+
+   The [code signing policy](docs/code-signing-policy.md) says how releases are made and how to
+   check your download.
 2. Open Botloft. It sets itself up; there is nothing to configure.
 3. Create your first crew and tell it what it is for.
 
-When a new version is out, an **Update available** button shows in the title bar. Uninstalling
-(Settings > Apps) removes the app and stops Botloft from running in the background. Your bots and
-their files stay in `%LOCALAPPDATA%\Botloft` and `%USERPROFILE%\Botloft`.
+When a new version is out, an **Update available** button shows in the title bar.
+
+On Windows, uninstalling (Settings > Apps) removes the app and stops Botloft from running in the
+background. On Linux and macOS, stop it first with
+`~/.local/share/Botloft/bin/botloftd service uninstall` (Linux) or
+`~/"Library/Application Support/Botloft/bin/botloftd" service uninstall` (macOS), then remove the
+app. Your bots and their files stay either way (see
+[Where are my bots and their files?](#faq)).
 
 ## How it works
 
@@ -97,8 +109,8 @@ flowchart LR
 ```
 
 - **The daemon is the source of truth.** Closing the app never stops a bot. `botloftd` runs as a
-  scheduled task of your Windows user: it starts when you sign in and comes back within a minute if
-  it dies.
+  scheduled task of your Windows user, a systemd user service on Linux or a launch agent on macOS:
+  it starts when you sign in and comes back soon if it dies.
 - **Claude Code is the runtime.** Each bot is a real `claude -p` session with its own workspace,
   memory (`CLAUDE.md`) and conversation. There is no custom agent SDK and no API key to manage.
 - **One conversation per bot.** Your messages, messages from other bots and notices from the daemon
@@ -117,9 +129,9 @@ The full design, from the protocol to the states of a bot, lives in [`docs/spec.
 - **You decide what bots may do.** Per bot: ask before anything, accept edits, plan only, or decide on
   its own what needs your OK. Unless it decides on its own, a bot also asks before its first visit
   to each website.
-- **Tokens stay safe.** The app authenticates with an owner token readable only by your Windows user.
+- **Tokens stay safe.** The app authenticates with an owner token readable only by your user account.
   Each bot gets its own token per start, and the daemon keeps only its SHA-256 hash.
-- **Botloft is not a sandbox.** Every bot runs as your Windows user, so isolation between bots is
+- **Botloft is not a sandbox.** Every bot runs as your user account, so isolation between bots is
   cooperative: a bot can read other bots' folders if it decides to. Give bots only the permissions
   you would give Claude Code directly.
 
@@ -138,22 +150,25 @@ your own Claude account, so they use your plan's limits; Botloft shows how much 
 <details>
 <summary><b>Do I need to keep the window open?</b></summary>
 
-No. The bots run in the background, even after you close Botloft, and start with Windows if you want.
+No. The bots run in the background, even after you close Botloft, and start when you sign in if you
+want.
 Settings has a switch to stop them when you close the app instead.
 </details>
 
 <details>
 <summary><b>Where are my bots and their files?</b></summary>
 
-Each bot has a folder under `%USERPROFILE%\Botloft\<crew>\<bot>`, and each crew a shared work folder
-that you can point at a project of yours. Botloft's own data (SQLite, logs, secrets) is in
-`%LOCALAPPDATA%\Botloft`.
+Each bot has a folder under `Botloft\<crew>\<bot>` in your home folder (`%USERPROFILE%` on Windows,
+`~` on Linux and macOS), and each crew a shared work folder that you can point at a project of
+yours. Botloft's own data (SQLite, logs, secrets) is in `%LOCALAPPDATA%\Botloft` on Windows,
+`~/.local/share/Botloft` on Linux and `~/Library/Application Support/Botloft` on macOS.
 </details>
 
 <details>
-<summary><b>Why does Windows warn me when I install it?</b></summary>
+<summary><b>Why does Windows or macOS warn me when I install it?</b></summary>
 
-The installer is not code-signed yet, so SmartScreen does not know its publisher. Each release is
+The Windows installer is not code-signed yet, so SmartScreen does not know its publisher, and Apple
+has not notarized the macOS app, so Gatekeeper blocks its first opening until you allow it. Each release is
 built by GitHub Actions from this repository, and updates are signed and checked by the app before
 they install. The [code signing policy](docs/code-signing-policy.md) says how releases are made and
 how to check a download.
@@ -162,7 +177,10 @@ how to check a download.
 <details>
 <summary><b>Does it run on macOS or Linux?</b></summary>
 
-Not yet. Botloft is Windows-first: it uses scheduled tasks, Job Objects and Windows notifications.
+Yes, as a preview since 0.8.0: Linux (64-bit, `.deb` or AppImage) and macOS on Apple Silicon. Intel
+Macs are not supported yet, and keeping the computer awake while bots work is Windows-only for now.
+Windows came first and has had the most use; if something does not work elsewhere, please
+[open an issue](https://github.com/httpsphl/botloft/issues).
 </details>
 
 <details>
@@ -182,8 +200,10 @@ code-signed installer. `main` can be ahead of the latest release.
 <details>
 <summary><b>Development</b></summary>
 
-Requirements: Windows 10 or 11, Rust stable (MSVC toolchain), Node.js 24 and pnpm. Running real
-bots also needs Claude Code (the native `claude.exe`) installed and signed in.
+Requirements: Rust stable (the MSVC toolchain on Windows), Node.js 24 and pnpm. On Linux, the app
+also needs the desktop libraries Tauri uses (on Ubuntu: `libwebkit2gtk-4.1-dev`,
+`libayatana-appindicator3-dev`, `librsvg2-dev`, `libxdo-dev`). Running real bots also needs Claude
+Code (the native `claude` executable) installed and signed in.
 
 ```powershell
 # Daemon and libraries
@@ -198,13 +218,14 @@ pnpm install
 pnpm tauri dev
 pnpm dev          # the UI alone in a browser, with a fake daemon and sample crews
 pnpm check        # typecheck + Biome + Vitest
-pnpm bundle       # NSIS installer with the daemon inside
+pnpm bundle       # this system's packages with the daemon inside: NSIS, .deb and AppImage, or .dmg
 ```
 
 Set `BOTLOFT_HOME` to an absolute path such as `$PWD\.dev\home` during development so the daemon
 never touches a real installation in `%LOCALAPPDATA%\Botloft`.
 
-The daemon manages its own scheduled task:
+The daemon manages its own scheduled task (a systemd user service on Linux, a launch agent on
+macOS):
 
 ```powershell
 botloftd service install     # copy botloftd into the data folder, start it now and at every logon
