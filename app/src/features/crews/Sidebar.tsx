@@ -7,7 +7,7 @@ import { when } from "../../lib/format";
 import type { Activity, Bot, Crew } from "../../lib/protocol.gen";
 import { activityOf, botsOf, crewList } from "../../store/app";
 import { useApp } from "../../store/context";
-import { hasUnreadReply } from "../../store/seen";
+import { isUnread, unreadIn } from "../../store/seen";
 import { Button } from "../../ui/Button";
 import { ContextMenu, menuPoint, type Point } from "../../ui/ContextMenu";
 import { APP_OPENED } from "../../ui/motion";
@@ -58,6 +58,7 @@ function CrewEntry({ crew }: { crew: Crew }) {
   const t = useT();
   const bots = useApp(useShallow((state) => botsOf(state, crew.id)));
   const selected = useApp((state) => state.selectedCrewId === crew.id && !state.selectedBotId);
+  const unread = useApp((state) => unreadIn(state, crew.id));
   const selectCrew = useApp((state) => state.selectCrew);
 
   return (
@@ -69,6 +70,12 @@ function CrewEntry({ crew }: { crew: Crew }) {
         className={`${row} h-8 gap-2 px-2.5 font-semibold text-sm ${selected ? "bg-sunken" : ""}`}
       >
         <span className="min-w-0 flex-1 truncate">{crew.name}</span>
+        {unread > 0 && (
+          <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-accent px-1 font-semibold text-[11px] text-canvas tabular-nums">
+            <span aria-hidden>{unread}</span>
+            <span className="sr-only">{t.crews.sidebar.unreadCount(unread)}</span>
+          </span>
+        )}
         {crew.paused && (
           <span className="flex items-center gap-1 font-medium text-quiet text-xs">
             <Pause aria-hidden size={12} />
@@ -95,7 +102,7 @@ const Conversation = memo(function Conversation({ bot, crew }: { bot: Bot; crew:
   const [menuAt, setMenuAt] = useState<Point | null>(null);
   const closeMenu = useCallback(() => setMenuAt(null), []);
   const activity = useApp((state) => activityOf(state, bot.id));
-  const unread = useApp((state) => hasUnreadReply(state, bot.id));
+  const unread = useApp((state) => isUnread(state, bot.id));
   return (
     <li className={bot.createdAt > APP_OPENED ? "animate-rise" : undefined}>
       <button

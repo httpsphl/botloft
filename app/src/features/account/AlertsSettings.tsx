@@ -12,6 +12,7 @@ export function AlertsSettings() {
   const needs = usePref(prefs.notifyNeeds);
   const done = usePref(prefs.notifyDone);
   const sound = usePref(prefs.sound);
+  const replies = usePref(prefs.markReplies);
   const tray = usePref(prefs.tray);
   const keep = usePref(prefs.whenClosed) === "keep";
   const nearClock = tray && keep;
@@ -29,6 +30,15 @@ export function AlertsSettings() {
         checked={done}
         onChange={prefs.notifyDone.set}
       />
+      {/* The mark on the icon is a taskbar overlay, which only Windows has. */}
+      {SYSTEM === "Windows" && (
+        <Toggle
+          label={s.markReplies}
+          hint={s.markRepliesHint}
+          checked={replies}
+          onChange={prefs.markReplies.set}
+        />
+      )}
       <Toggle label={s.sound} hint={s.soundHint} checked={sound} onChange={prefs.sound.set} />
       {!nearClock && <p className="text-muted text-xs leading-relaxed">{s.alertsNeedTray}</p>}
     </Section>

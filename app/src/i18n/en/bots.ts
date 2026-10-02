@@ -47,6 +47,8 @@ export const bots = {
     openFolder: "Open folder",
     makeChief: "Make crew chief",
     stopChief: "Stop being chief",
+    markUnread: "Mark as unread",
+    markRead: "Mark as read",
     archive: "Archive bot",
     delete: "Delete bot",
     failed: {

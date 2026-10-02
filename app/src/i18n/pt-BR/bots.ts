@@ -43,6 +43,8 @@ export const bots: Messages["bots"] = {
     openFolder: "Abrir pasta",
     makeChief: "Tornar chefe da equipe",
     stopChief: "Deixar de ser chefe",
+    markUnread: "Marcar como não lida",
+    markRead: "Marcar como lida",
     archive: "Arquivar bot",
     delete: "Excluir bot",
     failed: {
