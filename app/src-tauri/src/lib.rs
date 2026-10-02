@@ -4,6 +4,7 @@
 mod claude;
 mod daemon;
 mod open;
+mod save;
 mod sign_in;
 #[cfg(unix)]
 mod terminal;
@@ -118,6 +119,13 @@ async fn reveal_file(path: String) -> Result<(), String> {
     .await
 }
 
+/// Saves a copy of a bot's file where the owner picks with the system's
+/// Save dialog. Returns false when they cancel.
+#[tauri::command]
+async fn save_file_as(app: tauri::AppHandle, path: String) -> Result<bool, String> {
+    blocking(move || save::copy_as(&app, Path::new(&path))).await
+}
+
 /// Opens Botloft when the owner signs in to Windows, or stops doing so.
 #[tauri::command]
 async fn open_at_sign_in(on: bool) -> Result<(), String> {
@@ -184,6 +192,7 @@ pub fn run() {
             open_path,
             open_file,
             reveal_file,
+            save_file_as,
             open_url,
             open_at_sign_in,
             launched_at_sign_in

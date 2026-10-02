@@ -97,11 +97,19 @@ export function seedChats(fake: FakeBotloft, crew: Crew): void {
     writtenByBot: true,
     at: fake.now,
   });
-  made.add(crew.scout, "papers.csv", {
+  const papers = made.add(crew.scout, "papers.csv", {
     text: "paper,pages,deep_read\nRetrieval at scale,14,yes\nAgents that plan,22,yes\nSmall evals,9,maybe\n",
     at: fake.now + MINUTE,
   });
-  made.add(crew.scout, "week-39-report.docx", { text: "docx", at: fake.now + 2 * MINUTE });
+  const report = made.add(crew.scout, "week-39-report.docx", {
+    text: "docx",
+    at: fake.now + 2 * MINUTE,
+  });
+  const shared = chat.tool(crew.scout, "mcp__botloft__share_file", {
+    summary: "week-39-report.docx, papers.csv",
+    input: JSON.stringify({ files: [report.path, papers.path] }),
+  });
+  chat.finish(shared, JSON.stringify({ shown: [report, papers] }));
   at(92);
   chat.reply(crew.scout, SUMMARY);
   const handoff = chat.tool(crew.scout, "mcp__botloft__send_message", {

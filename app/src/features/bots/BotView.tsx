@@ -2,7 +2,7 @@ import { X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useT } from "../../i18n";
-import type { Bot, Crew } from "../../lib/protocol.gen";
+import type { Bot, BotFile, Crew } from "../../lib/protocol.gen";
 import { useWindowVisible } from "../../shell/visibility";
 import { type BotPanel, routinesOf } from "../../store/app";
 import { useApp } from "../../store/context";
@@ -74,6 +74,8 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
     setSince(now);
   }, [bot.id]);
   const [shown, setShown] = useState<string | null>(null);
+  // A file shared in the chat, for when the panel's list leaves it out.
+  const [described, setDescribed] = useState<BotFile | null>(null);
   // biome-ignore lint/correctness/useExhaustiveDependencies: another bot's file is not this bot's
   useEffect(() => setShown(null), [bot.id]);
   const filesOpen = side === "files";
@@ -90,12 +92,13 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
   // A tool line in the chat points to its file: read the list first, so the
   // file is in it when the panel goes to it.
   // Stable, so the chat does not re-render when this view does.
-  const showFile = useStable(async (path: string) => {
+  const showFile = useStable(async (path: string, file?: BotFile) => {
     if (!filesOpen) {
       seen();
     }
     setSide("files");
     await files.refresh();
+    setDescribed(file ?? null);
     setShown(path);
   });
   const fresh = filesOpen ? 0 : files.files.filter((file) => file.modifiedAt > seenAt).length;
@@ -213,6 +216,7 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
                 data={files}
                 since={since}
                 path={shown}
+                described={described}
                 onPath={setShown}
                 onClose={toggleFiles}
               />

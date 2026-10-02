@@ -12,6 +12,8 @@ import { BotAvatar, moodOf } from "../bots/BotAvatar";
 import { ApprovalCard } from "./ApprovalCard";
 import { Markdown } from "./Markdown";
 import { runParts, splitDraft } from "./rows";
+import { SharedFiles } from "./SharedFiles";
+import { isSharedFiles } from "./shared";
 import { ToolLines } from "./ToolLines";
 
 export interface Live {
@@ -124,7 +126,11 @@ function BotRunView({
           const head = part[0] as ChatItem;
           switch (head.body.kind) {
             case "tool":
-              return <ToolLines key={head.id} items={part} />;
+              return isSharedFiles(head) ? (
+                <SharedFiles key={head.id} item={head} botId={bot.id} bot={bot.name} />
+              ) : (
+                <ToolLines key={head.id} items={part} />
+              );
             case "reply":
               // It was already on screen as it was written.
               return <Markdown key={head.id} text={head.body.text} />;

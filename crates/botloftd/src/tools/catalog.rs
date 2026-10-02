@@ -24,7 +24,8 @@ pub fn tools() -> Value {
     if let Value::Array(list) = &mut tools {
         // Before permission_prompt, which stays last.
         let at = list.len() - 1;
-        list.splice(at..at, super::browser_catalog::tools());
+        let more = std::iter::once(super::share::tool()).chain(super::browser_catalog::tools());
+        list.splice(at..at, more);
     }
     tools
 }

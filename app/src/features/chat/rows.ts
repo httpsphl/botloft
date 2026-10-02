@@ -3,6 +3,7 @@
 // line starts every day.
 
 import type { ChatItem, Message, NoticeItem } from "../../lib/protocol.gen";
+import { isSharedFiles } from "./shared";
 
 export type Row =
   | { kind: "day"; key: string; at: number }
@@ -48,12 +49,20 @@ export function chatRows(items: ChatItem[]): Row[] {
   return rows;
 }
 
-/** Splits a run into replies, approvals and turns alone, and tool calls together. */
+/** Tool calls that run together as lines; shared files are cards of their own. */
+function isLine(item: ChatItem | undefined): boolean {
+  return item?.body.kind === "tool" && !isSharedFiles(item);
+}
+
+/**
+ * Splits a run into replies, approvals, shared files and turns alone, and
+ * tool calls together.
+ */
 export function runParts(items: ChatItem[]): ChatItem[][] {
   const parts: ChatItem[][] = [];
   for (const item of items) {
     const last = parts.at(-1);
-    if (item.body.kind === "tool" && last?.[0]?.body.kind === "tool") {
+    if (last && isLine(item) && isLine(last[0])) {
       last.push(item);
     } else {
       parts.push([item]);

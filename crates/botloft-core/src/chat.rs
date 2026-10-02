@@ -109,6 +109,14 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
             field(input, "task").map(str::to_owned)
         }
         "mcp__botloft__browser_open" => field(input, "url").map(str::to_owned),
+        "mcp__botloft__share_file" => input.get("files").and_then(Value::as_array).map(|files| {
+            let names: Vec<String> = files
+                .iter()
+                .filter_map(Value::as_str)
+                .map(file_name)
+                .collect();
+            names.join(", ")
+        }),
         // Element refs ("e12") mean nothing to the owner, and a direction
         // needs words: the app says those (spec 21.8).
         "mcp__botloft__browser_press" => field(input, "key").map(str::to_owned),
@@ -239,6 +247,13 @@ mod tests {
             "notebook jupyter"
         );
         assert_eq!(tool_summary("SomethingNew", &json!({ "a": 1 })), "");
+        assert_eq!(
+            tool_summary(
+                "mcp__botloft__share_file",
+                &json!({ "files": [r"C:\work\report.pdf", "out/chart.png"] })
+            ),
+            "report.pdf, chart.png"
+        );
         assert_eq!(
             tool_summary(
                 "mcp__botloft__browser_open",

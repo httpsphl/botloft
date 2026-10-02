@@ -18,9 +18,14 @@ export const files = {
   back: "All files",
   open: "Open",
   reveal: "Show in folder",
+  shared: (bot: string) => `Files shared by ${bot}`,
+  save: "Save as…",
+  saveOne: (name: string) => `Save a copy of ${name}`,
+  previewOne: "Preview",
   failed: {
     open: "Could not open the file",
     reveal: "Could not show the file",
+    save: "Could not save the file",
   },
   preview: {
     loading: "Loading…",

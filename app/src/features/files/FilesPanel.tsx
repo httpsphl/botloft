@@ -19,6 +19,7 @@ export function FilesPanel({
   data,
   since,
   path,
+  described,
   onPath,
   onClose,
 }: {
@@ -28,11 +29,15 @@ export function FilesPanel({
   since: number;
   /** The file shown, or null for the list. */
   path: string | null;
+  /** The file at `path` as the chat described it, if the list leaves it out. */
+  described?: BotFile | null;
   onPath(path: string | null): void;
   onClose(): void;
 }) {
   const t = useT().files;
-  const chosen = data.files.find((file) => file.path === path);
+  const chosen =
+    data.files.find((file) => file.path === path) ??
+    (described?.path === path ? described : undefined);
 
   return (
     <SidePanel label={t.panel(bot.name)} name="files" defaultWidth={416}>
