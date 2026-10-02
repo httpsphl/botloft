@@ -14,7 +14,14 @@ vi.mock("@tauri-apps/api/tray", () => ({
   TrayIcon: {
     new: async ({ id }: { id: string }) => {
       shown.push(id);
-      return { setMenu: async () => {}, setTooltip: async () => {}, setIcon: async () => {} };
+      return {
+        setMenu: async () => {},
+        setTooltip: async () => {},
+        setIcon: async () => {},
+        close: async () => {
+          shown.splice(shown.indexOf(id), 1);
+        },
+      };
     },
     getById: async (id: string) => (shown.includes(id) ? {} : null),
     removeById: async (id: string) => {
@@ -51,4 +58,16 @@ test("a reloaded page replaces the icon it left behind", async () => {
   const after = await import("./tauriTray");
   await after.showTray(view, actions);
   expect(shown).toEqual(["botloft"]);
+});
+
+test("an icon Tauri dropped comes back with the last view", async () => {
+  const { hideTray, rebuildTray, showTray } = await import("./tauriTray");
+  await showTray(view, actions);
+  shown.length = 0;
+  await rebuildTray();
+  expect(shown).toEqual(["botloft"]);
+  await hideTray();
+  shown.length = 0;
+  await rebuildTray();
+  expect(shown).toEqual([]);
 });
