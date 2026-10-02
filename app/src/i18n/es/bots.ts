@@ -98,6 +98,15 @@ export const bots: Messages["bots"] = {
     color: "Color",
     swatch: (color: string) => `Color ${color}`,
     colorUnset: "Si no eliges uno, el bot recibe el siguiente color del equipo.",
+    custom: "Elegir cualquier color",
+    picker: {
+      area: "Saturación y brillo",
+      areaValue: (saturation: string, brightness: string) =>
+        `Saturación ${saturation}, brillo ${brightness}`,
+      hue: "Tono",
+      hex: "Hex",
+      channels: { r: "R", g: "G", b: "B" },
+    },
   },
   notices: {
     crewPaused: (crew: string) => `El equipo ${crew} está en pausa`,

@@ -100,6 +100,15 @@ export const bots = {
     color: "Color",
     swatch: (color: string) => `Color ${color}`,
     colorUnset: "Left unset, the bot gets the crew's next color.",
+    custom: "Pick any color",
+    picker: {
+      area: "Saturation and brightness",
+      areaValue: (saturation: string, brightness: string) =>
+        `Saturation ${saturation}, brightness ${brightness}`,
+      hue: "Hue",
+      hex: "Hex",
+      channels: { r: "R", g: "G", b: "B" },
+    },
   },
   notices: {
     crewPaused: (crew: string) => `${crew} is paused`,
