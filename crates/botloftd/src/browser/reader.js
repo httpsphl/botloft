@@ -165,8 +165,9 @@
     const walk = (node, parentCursor, depth) => {
       if (++nodes > MAX_NODES || depth > MAX_DEPTH) return;
       if (node.nodeType === Node.TEXT_NODE) {
-        const text = node.nodeValue.replace(/\s+/g, " ");
-        if (text.trim()) out.push(text);
+        // A text node of spaces alone still parts words: pages that put
+        // each letter in its own element keep their spaces that way.
+        out.push(node.nodeValue.replace(/\s+/g, " "));
         return;
       }
       if (node.nodeType !== Node.ELEMENT_NODE) return;

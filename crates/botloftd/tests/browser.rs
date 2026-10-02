@@ -90,6 +90,19 @@ async fn a_bot_fills_a_form_after_the_owner_allows_the_site() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn words_made_of_one_element_per_letter_keep_their_spaces() {
+    let Some(mut b) = setup().await else { return };
+    let opening = call(
+        &b.mcp,
+        "browser_open",
+        json!({ "url": format!("{}/letters", b.site) }),
+    );
+    answer_site(&mut b.app, true, None).await;
+    let page = opening.await.expect("task").expect("page");
+    assert!(page.contains("Two words"), "{page}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn a_site_the_owner_denies_stays_closed() {
     let Some(mut b) = setup().await else { return };
     let opening = call(&b.mcp, "browser_open", json!({ "url": b.site.clone() }));

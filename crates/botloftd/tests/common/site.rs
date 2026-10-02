@@ -1,8 +1,9 @@
 //! A small web site on 127.0.0.1 for the browser tests: a form, the page
 //! it leads to, a link that opens a new tab, a button that shows a dialog,
 //! a sign-in page with its fields at fixed points, for the owner's hands,
-//! a page that says how big its window is, one that counts its loads and
-//! one that counts the times it went out of sight.
+//! a page that says how big its window is, one that counts its loads, one
+//! that counts the times it went out of sight and one with each letter in
+//! its own element.
 
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -24,6 +25,11 @@ const FORM: &str = "<!doctype html><title>Order</title><h1>Order a cake</h1>\
 const POPUP: &str = "<!doctype html><title>Links</title>\
     <a href=\"/done?name=Tab&size=Small\" target=\"_blank\">Open in a new tab</a>\
     <button onclick=\"alert('Hi there')\">Warn me</button>";
+
+/// Each letter in a span, spaces too, as example.com's own script does.
+const LETTERS: &str = "<!doctype html><title>Letters</title><p><span>T</span><span>w</span>\
+    <span>o</span><span> </span><span>w</span><span>o</span><span>r</span><span>d</span>\
+    <span>s</span></p>";
 
 /// The fields' middles: user (200, 115), password (200, 215).
 const LOGIN: &str = "<!doctype html><title>Sign in</title><style>body{margin:0}\
@@ -86,6 +92,7 @@ pub async fn serve() -> SocketAddr {
         .route("/login", get(|| async { Html(LOGIN) }))
         .route("/size", get(|| async { Html(SIZE) }))
         .route("/sight", get(|| async { Html(SIGHT) }))
+        .route("/letters", get(|| async { Html(LETTERS) }))
         .route("/account", post(account));
     let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
     let addr = listener.local_addr().expect("addr");

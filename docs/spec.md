@@ -1261,6 +1261,7 @@ Esqueceu a senha? [e5 link "Recuperar acesso"]
 ```
 
 - Um script injetado (`Runtime.evaluate`) percorre o documento em ordem de leitura: texto visível, títulos com `#`, itens de lista com `-`, quebras de bloco, e cada controle entre colchetes com uma `ref` (`e<n>`), o papel (`link`, `button`, `textbox`, `checkbox`, `radio`, `select`, `clickable`...), o nome acessível (`aria-label`, `<label>`, texto, `placeholder`, `title`, `alt`) e o estado (valor, marcado, desabilitado). Senhas aparecem só como `(password)`.
+- Um nó de texto só com espaços vira um espaço, e espaços seguidos viram um. Assim uma página que põe cada letra num elemento próprio, espaços incluídos (o script do example.com faz isso com o texto em inglês), não chega ao bot com as palavras grudadas.
 - Entra o que está visível na página inteira, não só na tela: nada com `display: none`, `visibility: hidden`, `aria-hidden` ou tamanho zero. `iframe` do mesmo site e shadow DOM aberto entram; de outro site, só `[frame]`.
 - Elementos clicáveis sem papel (um `div` com `cursor: pointer` que não herda o cursor do pai) viram `clickable`.
 - A mesma ref aponta sempre para o mesmo elemento enquanto ele existir, também entre leituras.
