@@ -16,6 +16,7 @@ use tracing::warn;
 
 use super::Failure;
 use super::catalog::{COMPLETE_TASK, CREW_ROSTER, MY_TASKS, SEND_MESSAGE};
+use super::share::{self, SHARE_FILE};
 use crate::service::tasks::{self, BotMessage};
 use crate::service::{ApiError, bots, lead};
 use crate::state::Daemon;
@@ -36,6 +37,7 @@ pub(super) fn call(daemon: &Daemon, bot: &BotId, params: &Value) -> Result<Value
         SEND_MESSAGE => parse(arguments).and_then(|args| send(daemon, bot, args)),
         COMPLETE_TASK => parse(arguments).and_then(|args| complete(daemon, bot, args)),
         MY_TASKS => parse(arguments).and_then(|args| my_tasks(daemon, bot, args)),
+        SHARE_FILE => parse(arguments).and_then(|args| share::share(daemon, bot, args)),
         other => return Err(invalid(&format!("Unknown tool: {other}"))),
     };
     Ok(tool_result(outcome))

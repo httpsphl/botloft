@@ -121,14 +121,18 @@ fn file_name(path: &Path) -> String {
         .map_or_else(String::new, |name| name.to_string_lossy().into_owned())
 }
 
-/// `files.read`: the bytes of a file `files.list` can show. A path outside
-/// the bot's folders that the bot did not write is refused, so the panel
-/// cannot be used to read anything else on the computer.
-pub fn read(daemon: &Daemon, params: FilesReadParams) -> ApiResult<FileData> {
-    let (_, places) = places(daemon, &params.bot_id)?;
-    let asked = PathBuf::from(&params.path);
-    let gone = || ApiError::NotFound(format!("{} is no longer there", params.path));
-    let path = asked.canonicalize().map_err(|_| gone())?;
+/// Why a path is not one of the bot's files.
+enum Refused {
+    /// Nothing is there, or it is not a file.
+    Gone,
+    /// Outside the bot's folders, and the bot did not write it.
+    Outside,
+}
+
+/// The real path of one of the bot's files: inside one of its two folders,
+/// or written by its own calls. `asked` must be absolute.
+fn reach(places: &Places, asked: &Path) -> Result<(PathBuf, std::fs::Metadata), Refused> {
+    let path = asked.canonicalize().map_err(|_| Refused::Gone)?;
     let inside = [&places.work, &places.workspace]
         .into_iter()
         .filter_map(|root| root.canonicalize().ok())
@@ -139,15 +143,28 @@ pub fn read(daemon: &Daemon, params: FilesReadParams) -> ApiResult<FileData> {
         .filter_map(|file| Path::new(file).canonicalize().ok())
         .any(|file| file == path);
     if !asked.is_absolute() || !(inside || written) {
-        return Err(ApiError::NotFound(format!(
-            "{} is not one of this bot's files",
-            params.path
-        )));
+        return Err(Refused::Outside);
     }
-    let meta = std::fs::metadata(&path).map_err(|_| gone())?;
+    let meta = std::fs::metadata(&path).map_err(|_| Refused::Gone)?;
     if !meta.is_file() {
-        return Err(gone());
+        return Err(Refused::Gone);
     }
+    Ok((path, meta))
+}
+
+/// `files.read`: the bytes of a file `files.list` can show. A path outside
+/// the bot's folders that the bot did not write is refused, so the panel
+/// cannot be used to read anything else on the computer.
+pub fn read(daemon: &Daemon, params: FilesReadParams) -> ApiResult<FileData> {
+    let (_, places) = places(daemon, &params.bot_id)?;
+    let gone = || ApiError::NotFound(format!("{} is no longer there", params.path));
+    let (path, meta) =
+        reach(&places, Path::new(&params.path)).map_err(|refused| match refused {
+            Refused::Gone => gone(),
+            Refused::Outside => {
+                ApiError::NotFound(format!("{} is not one of this bot's files", params.path))
+            }
+        })?;
     if meta.len() > PREVIEW_MAX_BYTES {
         return Err(ApiError::validation(format!(
             "the file is larger than {} MB",
@@ -159,4 +176,31 @@ pub fn read(daemon: &Daemon, params: FilesReadParams) -> ApiResult<FileData> {
         media_type: media_type(&file_name(&path)).to_owned(),
         data: BASE64.encode(bytes),
     })
+}
+
+/// A file the bot shows the owner in the chat (`share_file`, spec 10): one
+/// `files.read` can read, so the owner can preview and save it. A relative
+/// path is in the bot's own folder, where it runs.
+pub fn shared(daemon: &Daemon, bot_id: &BotId, path: &str) -> ApiResult<BotFile> {
+    let (_, places) = places(daemon, bot_id)?;
+    let asked = std::path::absolute(places.workspace.join(path.trim()))
+        .map_err(|_| ApiError::NotFound(format!("{path} is not a file path")))?;
+    let (_, meta) = reach(&places, &asked).map_err(|refused| {
+        ApiError::NotFound(match refused {
+            Refused::Gone => format!("There is no file at {}", asked.display()),
+            Refused::Outside => format!(
+                "{} is outside the work folder and your own folder: copy it into the work \
+                 folder first, then share the copy",
+                asked.display()
+            ),
+        })
+    })?;
+    let written = keys(&places.written).contains(&key(&asked));
+    let found = Found {
+        size: meta.len(),
+        modified_at: millis(&meta),
+        path: asked,
+    };
+    let folders = [places.work.as_path(), places.workspace.as_path()];
+    Ok(describe(found, written, &folders))
 }
