@@ -1,0 +1,70 @@
+/* The tile in front of each file in a bot's files panel: one color per kind
+   of file, so a Word document, a sheet and a PDF tell apart at a glance. The
+   kind also has its own icon, and the name says the extension. */
+
+.file-tile {
+  --kind: var(--muted);
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  color: var(--kind);
+  background: color-mix(in srgb, var(--kind) 14%, transparent);
+}
+
+.file-tile[data-kind="pdf"] {
+  --kind: #d13a2f;
+}
+.file-tile[data-kind="word"] {
+  --kind: #2b62c9;
+}
+.file-tile[data-kind="sheet"] {
+  --kind: #1e7d45;
+}
+.file-tile[data-kind="slides"] {
+  --kind: #c8561b;
+}
+.file-tile[data-kind="image"] {
+  --kind: #8546c9;
+}
+.file-tile[data-kind="audio"],
+.file-tile[data-kind="video"] {
+  --kind: #c2367a;
+}
+.file-tile[data-kind="archive"] {
+  --kind: #93641a;
+}
+.file-tile[data-kind="code"] {
+  --kind: #127a80;
+}
+
+[data-theme="dark"] .file-tile {
+  background: color-mix(in srgb, var(--kind) 20%, transparent);
+}
+[data-theme="dark"] .file-tile[data-kind="pdf"] {
+  --kind: #ff7066;
+}
+[data-theme="dark"] .file-tile[data-kind="word"] {
+  --kind: #74a6ff;
+}
+[data-theme="dark"] .file-tile[data-kind="sheet"] {
+  --kind: #55c985;
+}
+[data-theme="dark"] .file-tile[data-kind="slides"] {
+  --kind: #ff9a5c;
+}
+[data-theme="dark"] .file-tile[data-kind="image"] {
+  --kind: #bf8cff;
+}
+[data-theme="dark"] .file-tile[data-kind="audio"],
+[data-theme="dark"] .file-tile[data-kind="video"] {
+  --kind: #ff7ab8;
+}
+[data-theme="dark"] .file-tile[data-kind="archive"] {
+  --kind: #e0ad5a;
+}
+[data-theme="dark"] .file-tile[data-kind="code"] {
+  --kind: #4fc8cf;
+}
