@@ -1,0 +1,50 @@
+{
+  "projectId": "1f0e61c2-d3f4-4621-a902-66ef64e8cc5f",
+  "shape": "package",
+  "pkg": "@botloft/ui",
+  "globalName": "Botloft",
+  "buildCmd": "node .design-sync/pkg/build.mjs",
+  "entry": ".design-sync/pkg/dist/index.js",
+  "srcDir": "../../app/src",
+  "cssEntry": "dist/styles.css",
+  "extraFonts": [
+    "../../app/node_modules/@fontsource/ibm-plex-sans/latin-400.css",
+    "../../app/node_modules/@fontsource/ibm-plex-sans/latin-500.css",
+    "../../app/node_modules/@fontsource/ibm-plex-sans/latin-600.css",
+    "../../app/node_modules/@fontsource/ibm-plex-mono/latin-400.css",
+    "../../app/node_modules/@fontsource/ibm-plex-mono/latin-500.css"
+  ],
+  "dtsPropsFor": {
+    "Button": "variant?: \"primary\" | \"secondary\" | \"ghost\" | \"danger\"; size?: \"sm\" | \"md\"; /** An icon from window.Botloft.icons, e.g. icons.Plus. */ icon?: React.ComponentType<{ size?: number; strokeWidth?: number }>; /** Shows only the icon; label becomes its accessible name and tooltip. */ label?: string; onClick?: React.MouseEventHandler<HTMLButtonElement>; type?: \"button\" | \"submit\"; title?: string; className?: string; id?: string; style?: React.CSSProperties; disabled?: boolean; autoFocus?: boolean; children?: React.ReactNode;",
+    "TextField": "label: string; hint?: string; /** Shows used / max and warns past it. */ max?: number; value?: string; defaultValue?: string; placeholder?: string; onChange?: React.ChangeEventHandler<HTMLInputElement>; type?: string; name?: string; className?: string; id?: string; style?: React.CSSProperties; disabled?: boolean; autoFocus?: boolean; ",
+    "TextArea": "label: string; hint?: string; /** Shows used / max and warns past it. */ max?: number; value?: string; defaultValue?: string; placeholder?: string; rows?: number; onChange?: React.ChangeEventHandler<HTMLTextAreaElement>; name?: string; className?: string; id?: string; style?: React.CSSProperties; disabled?: boolean; autoFocus?: boolean; ",
+    "SelectField": "label: string; hint?: string; options: { value: string; label: string }[]; value?: string; defaultValue?: string; onChange?: React.ChangeEventHandler<HTMLSelectElement>; name?: string; className?: string; id?: string; style?: React.CSSProperties; disabled?: boolean; autoFocus?: boolean; ",
+    "BotStateBadge": "/** The bot: its state and whether the owner paused it. */ bot: { state: \"offline\" | \"launching\" | \"idle\" | \"busy\" | \"needs_approval\" | \"rate_limited\" | \"auth_error\" | \"backoff\" | \"archived\"; paused: boolean }; /** A paused crew shows its stopped bots as paused. */ crewPaused?: boolean; compact?: boolean;",
+    "ChiefBadge": "/** The crew this bot leads; only its name is read, for the tooltip. */ crew: { name: string }; /** Just the crown, for tight rows. */ compact?: boolean;",
+    "Menu": "/** Accessible name of the button that opens the menu. */ label: string; /** An icon from window.Botloft.icons, e.g. icons.Ellipsis. */ icon: React.ComponentType<{ size?: number; strokeWidth?: number }>; items: { label: string; icon?: React.ComponentType<{ size?: number; strokeWidth?: number }>; danger?: boolean; disabled?: boolean; /** Makes the item one of a set of choices, marked when chosen. */ checked?: boolean; onSelect: () => void }[];"
+  },
+  "componentSrcMap": {
+    "ListAvatar": null
+  },
+  "overrides": {
+    "Dialog": {
+      "cardMode": "single",
+      "viewport": "720x520"
+    },
+    "Confirm": {
+      "cardMode": "single",
+      "viewport": "720x480"
+    },
+    "BotAvatar": {
+      "cardMode": "column"
+    },
+    "SidePanel": {
+      "cardMode": "column"
+    },
+    "Toaster": {
+      "cardMode": "single",
+      "primaryStory": "ErrorNotice"
+    }
+  },
+  "readmeHeader": ".design-sync/conventions.md"
+}
