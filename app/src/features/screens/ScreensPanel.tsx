@@ -9,6 +9,7 @@ import { fileSize } from "../../lib/format";
 import type { Bot, Screen, ScreenDevice } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
+import { EmptyState } from "../../ui/EmptyState";
 import { SidePanel } from "../../ui/SidePanel";
 import { BotAvatar } from "../bots/BotAvatar";
 import { DEVICES, LiveFrame } from "./LiveFrame";
@@ -142,18 +143,13 @@ function Board({
   }
   if (data.screens.length === 0 && !data.loading) {
     return (
-      <div className="mx-auto flex max-w-80 flex-col items-center gap-3 rounded-2xl bg-panel/80 px-6 py-10 text-center">
-        <span className="relative">
-          <BotAvatar color={bot.color} size={44} mood="idle" />
-          <LayoutTemplate
-            aria-hidden
-            size={18}
-            className="absolute -right-2 -bottom-1 rounded-full bg-panel p-0.5 text-muted"
-          />
-        </span>
-        <p className="font-semibold text-sm">{t.emptyTitle(bot.name)}</p>
-        <p className="text-muted text-sm">{t.emptyBody}</p>
-      </div>
+      <EmptyState
+        framed
+        color={bot.color}
+        icon={LayoutTemplate}
+        title={t.emptyTitle(bot.name)}
+        body={t.emptyBody}
+      />
     );
   }
   const shown = all ? data.screens : data.screens.slice(0, BOARD_MAX);

@@ -11,6 +11,7 @@ import type { Archive, Bot, Crew } from "../../lib/protocol.gen";
 import { useApi, useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
+import { IconBadge } from "../../ui/ChatCard";
 import { BotAvatar } from "../bots/BotAvatar";
 import { DeleteBot } from "../bots/DeleteBot";
 import { DeleteCrew } from "../crews/DeleteCrew";
@@ -73,11 +74,7 @@ export function ArchivedSettings() {
           {archive.crews.map((crew) => (
             <Row
               key={crew.id}
-              icon={
-                <span className="grid size-7 place-items-center rounded-full bg-sunken text-muted">
-                  <Users aria-hidden size={14} />
-                </span>
-              }
+              icon={<IconBadge icon={Users} tone="quiet" />}
               name={crew.name}
               line={s.archivedCrew(botsOf(crew).length, fromNow(crew.archivedAt ?? 0))}
               onDelete={() => setAsking({ crew })}

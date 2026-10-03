@@ -10,9 +10,10 @@ import {
 } from "lucide-react";
 import { type Messages, t, useT } from "../../i18n";
 import type { Bot, BotState } from "../../lib/protocol.gen";
+import { TONES, type Tone as ToneName } from "../../ui/tone";
 import { ReadyIcon, type StateIcon, WorkingIcon } from "./StateIcons";
 
-type Tone = "ok" | "work" | "warn" | "danger" | "quiet";
+type Tone = Exclude<ToneName, "accent">;
 
 export interface StateView {
   label: string;
@@ -57,14 +58,6 @@ export function stateView(
   return { ...looks[bot.state], ...words[bot.state] };
 }
 
-const toneText: Record<Tone, string> = {
-  ok: "text-ok",
-  work: "text-work",
-  warn: "text-warn",
-  danger: "text-danger",
-  quiet: "text-quiet",
-};
-
 export function BotStateBadge({
   bot,
   crewPaused,
@@ -80,7 +73,7 @@ export function BotStateBadge({
   return (
     <span
       title={view.hint}
-      className={`inline-flex shrink-0 items-center gap-1 font-medium transition-colors duration-300 ${compact ? "text-xs" : "text-sm"} ${toneText[view.tone]}`}
+      className={`inline-flex shrink-0 items-center gap-1 font-medium transition-colors duration-300 ${compact ? "text-xs" : "text-sm"} ${TONES[view.tone].text}`}
     >
       <Icon
         aria-hidden

@@ -6,11 +6,12 @@ import { memo } from "react";
 import { type Messages, useT } from "../../i18n";
 import type { NoticeItem } from "../../lib/protocol.gen";
 import { useArrival } from "../../ui/motion";
+import { TONES } from "../../ui/tone";
 
 const LOOK = {
-  info: { icon: Info, tone: "text-work", frame: "border-line bg-panel" },
-  warning: { icon: TriangleAlert, tone: "text-warn", frame: "border-warn/40 bg-warn/6" },
-  error: { icon: CircleAlert, tone: "text-danger", frame: "border-danger/40 bg-danger/6" },
+  info: { icon: Info, tone: TONES.work.text, frame: TONES.quiet.frame },
+  warning: { icon: TriangleAlert, tone: TONES.warn.text, frame: TONES.warn.frame },
+  error: { icon: CircleAlert, tone: TONES.danger.text, frame: TONES.danger.frame },
 } as const;
 
 /** `at` is when the notice came, so a new one animates in. */

@@ -4,6 +4,7 @@
 import { Crown } from "lucide-react";
 import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
+import { Badge } from "../../ui/Badge";
 
 export const isChief = (bot: Bot, crew: Crew) => crew.leadBotId === bot.id;
 
@@ -18,12 +19,8 @@ export function ChiefBadge({ crew, compact = false }: { crew: Crew; compact?: bo
     );
   }
   return (
-    <span
-      title={c.hint(crew.name)}
-      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 font-medium text-accent-text text-xs"
-    >
-      <Crown aria-hidden size={12} />
+    <Badge tone="accent" icon={Crown} title={c.hint(crew.name)}>
       {c.badge}
-    </span>
+    </Badge>
   );
 }

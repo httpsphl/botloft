@@ -9,8 +9,10 @@ import { useT } from "../../i18n";
 import type { Bot } from "../../lib/protocol.gen";
 import { SYSTEM } from "../../lib/system";
 import { useApp } from "../../store/context";
+import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
+import { EmptyState } from "../../ui/EmptyState";
 import { SidePanel } from "../../ui/SidePanel";
 import { BotAvatar } from "../bots/BotAvatar";
 import { AddressBar } from "./AddressBar";
@@ -81,19 +83,15 @@ export function BrowserPanel({
         <h2 className="flex items-center gap-2 font-semibold text-sm">
           {t.heading}
           {resting ? (
-            <span
-              title={t.restingWhy(bot.name)}
-              className="inline-flex items-center gap-1.5 rounded-full bg-sunken px-2 py-0.5 font-medium text-muted text-xs"
-            >
-              <Moon aria-hidden size={11} />
+            <Badge tone="quiet" icon={Moon} title={t.restingWhy(bot.name)}>
               {t.resting}
-            </span>
+            </Badge>
           ) : (
             live && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-danger/10 px-2 py-0.5 font-medium text-danger text-xs">
+              <Badge tone="danger">
                 <span aria-hidden className="live-dot" />
                 {t.live}
-              </span>
+              </Badge>
             )
           )}
         </h2>
@@ -211,17 +209,6 @@ function Overlay({ busy, title, body }: { busy: boolean; title: string; body: st
 function Empty({ bot }: { bot: Bot }) {
   const t = useT().browser;
   return (
-    <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
-      <span className="relative">
-        <BotAvatar color={bot.color} size={44} mood="idle" />
-        <Globe
-          aria-hidden
-          size={18}
-          className="absolute -right-2 -bottom-1 rounded-full bg-panel p-0.5 text-muted"
-        />
-      </span>
-      <p className="font-semibold text-sm">{t.emptyTitle(bot.name)}</p>
-      <p className="max-w-80 text-muted text-sm">{t.emptyBody}</p>
-    </div>
+    <EmptyState color={bot.color} icon={Globe} title={t.emptyTitle(bot.name)} body={t.emptyBody} />
   );
 }

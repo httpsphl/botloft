@@ -12,6 +12,7 @@ import {
 import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
 import { useApi, useApp } from "../../store/context";
+import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { Menu } from "../../ui/Menu";
 import { attempt } from "../../ui/toast";
@@ -91,13 +92,9 @@ export function BotHeader({
           <BotStateBadge bot={bot} crewPaused={crew.paused} />
           {chief && <ChiefBadge crew={crew} />}
           {bot.permissionMode === "bypass_permissions" && (
-            <span
-              title={t.chat.mode.badgeHint}
-              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-danger/10 px-2 py-0.5 font-medium text-danger text-xs"
-            >
-              <ShieldOff aria-hidden size={12} />
+            <Badge tone="danger" icon={ShieldOff} title={t.chat.mode.badgeHint}>
               {t.chat.mode.badge}
-            </span>
+            </Badge>
           )}
           <span className="truncate text-muted">{bot.role || words.noRole}</span>
         </div>

@@ -1,12 +1,13 @@
 import { CircleAlert, Info, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
+import { TONES } from "./tone";
 
 type Tone = "info" | "warn" | "danger";
 
 const tones: Record<Tone, { icon: typeof Info; frame: string; mark: string }> = {
-  info: { icon: Info, frame: "border-line bg-panel", mark: "text-work" },
-  warn: { icon: TriangleAlert, frame: "border-warn/45 bg-warn/6", mark: "text-warn" },
-  danger: { icon: CircleAlert, frame: "border-danger/45 bg-danger/6", mark: "text-danger" },
+  info: { icon: Info, frame: TONES.quiet.frame, mark: TONES.work.text },
+  warn: { icon: TriangleAlert, frame: TONES.warn.frame, mark: TONES.warn.text },
+  danger: { icon: CircleAlert, frame: TONES.danger.frame, mark: TONES.danger.text },
 };
 
 export function Callout({

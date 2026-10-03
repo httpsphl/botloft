@@ -5,6 +5,7 @@ import { MessageCircleQuestion, Search } from "lucide-react";
 import { useT } from "../../i18n";
 import { useApp } from "../../store/context";
 import { openQuestions } from "../../store/questions";
+import { CountBadge } from "../../ui/Badge";
 
 /** A row of the sidebar, as the conversations are. */
 export const row =
@@ -54,12 +55,7 @@ export function QuestionsEntry() {
           className={count > 0 ? "text-warn" : "text-muted"}
         />
         <span className="min-w-0 flex-1 truncate font-medium">{words.label}</span>
-        {count > 0 && (
-          <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-warn px-1 font-semibold text-[11px] text-canvas tabular-nums">
-            <span aria-hidden>{count}</span>
-            <span className="sr-only">{words.open(count)}</span>
-          </span>
-        )}
+        {count > 0 && <CountBadge tone="warn" count={count} label={words.open(count)} />}
       </button>
     </div>
   );

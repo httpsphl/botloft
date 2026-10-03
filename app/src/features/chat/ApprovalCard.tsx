@@ -2,10 +2,10 @@
 // and Deny. Once answered it shrinks to one line.
 
 import { Ban, Check, CheckCheck, Hand, TimerOff } from "lucide-react";
-import { useId } from "react";
 import { useT } from "../../i18n";
 import type { AllowScope, ApprovalItem, Bot } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
+import { NoteInput, RequestCard, SettledLine } from "../../ui/ChatCard";
 import { Details } from "../../ui/Details";
 import { HELP_TOOL, HelpCard } from "../browser/HelpCard";
 import { SITE_TOOL, SiteCard } from "../browser/SiteCard";
@@ -29,35 +29,28 @@ function About({ approval }: { approval: ApprovalItem }) {
 function Answered({ approval }: { approval: ApprovalItem }) {
   const t = useT();
   const label = toolAction(approval.toolName, t.tools);
-  const line = "flex min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 text-sm";
   switch (approval.status) {
     case "allowed":
       return (
-        <p className={line}>
-          <Check aria-hidden size={14} className="shrink-0 text-ok" />
-          <span className="shrink-0 font-medium">{t.chat.approval.allowed(label)}</span>
-          <About approval={approval} />
-        </p>
+        <SettledLine
+          icon={Check}
+          tone="ok"
+          text={t.chat.approval.allowed(label)}
+          aside={<About approval={approval} />}
+        />
       );
     case "denied":
       return (
-        <p className={line}>
-          <Ban aria-hidden size={14} className="shrink-0 text-danger" />
-          <span className="shrink-0 font-medium">{t.chat.approval.denied(label)}</span>
-          {approval.note ? (
-            <span className="truncate text-muted text-xs">{`“${approval.note}”`}</span>
-          ) : (
-            <About approval={approval} />
-          )}
-        </p>
+        <SettledLine
+          icon={Ban}
+          tone="danger"
+          text={t.chat.approval.denied(label)}
+          note={approval.note}
+          aside={approval.note ? undefined : <About approval={approval} />}
+        />
       );
     default:
-      return (
-        <p className={line}>
-          <TimerOff aria-hidden size={14} className="shrink-0 text-quiet" />
-          <span className="font-medium">{t.chat.approval.expired(label)}</span>
-        </p>
-      );
+      return <SettledLine icon={TimerOff} tone="quiet" text={t.chat.approval.expired(label)} />;
   }
 }
 
@@ -134,23 +127,18 @@ function ToolApproval({ approval, bot }: { approval: ApprovalItem; bot: Bot }) {
     allow: t.chat.approval.allowFailed,
     deny: t.chat.approval.denyFailed,
   });
-  const noteId = useId();
   if (approval.status !== "pending") {
     return <Answered approval={approval} />;
   }
   const label = toolAction(approval.toolName, t.tools);
 
   return (
-    <section
-      aria-label={t.chat.approval.asks(bot.name, label)}
-      className="my-1 max-w-2xl rounded-2xl border border-warn/40 bg-panel px-4 py-3.5 shadow-sm animate-attention"
+    <RequestCard
+      label={t.chat.approval.asks(bot.name, label)}
+      icon={Hand}
+      tone="warn"
+      title={t.chat.approval.wants(bot.name, label)}
     >
-      <p className="flex items-center gap-2.5 font-semibold text-sm">
-        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-warn/12 text-warn">
-          <Hand aria-hidden size={15} />
-        </span>
-        {t.chat.approval.wants(bot.name, label)}
-      </p>
       {isCommand(approval.toolName) ? (
         <CommandAsked approval={approval} bot={bot} />
       ) : (
@@ -165,15 +153,11 @@ function ToolApproval({ approval, bot }: { approval: ApprovalItem; bot: Bot }) {
           </Details>
         </>
       )}
-      <label htmlFor={noteId} className="sr-only">
-        {t.chat.approval.noteLabel(bot.name)}
-      </label>
-      <input
-        id={noteId}
+      <NoteInput
+        label={t.chat.approval.noteLabel(bot.name)}
         value={note}
-        onChange={(event) => setNote(event.target.value)}
+        onChange={setNote}
         placeholder={t.chat.approval.notePlaceholder}
-        className="mt-3 h-9 w-full rounded-xl border border-line-strong bg-canvas px-3 text-sm outline-none placeholder:text-muted focus:border-muted"
       />
       <div className="mt-2.5 flex flex-wrap gap-2">
         <Button variant="primary" icon={Check} disabled={busy} onClick={() => answer(true)}>
@@ -193,6 +177,6 @@ function ToolApproval({ approval, bot }: { approval: ApprovalItem; bot: Bot }) {
           {t.chat.approval.deny}
         </Button>
       </div>
-    </section>
+    </RequestCard>
   );
 }
