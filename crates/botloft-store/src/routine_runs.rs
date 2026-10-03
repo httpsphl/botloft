@@ -1,14 +1,15 @@
 //! `routine_runs` table (spec 20.7). A run that sends a message is saved
 //! with that message, its delivery and the chat item, in one transaction.
 
+use botloft_core::ids::BotId;
 use botloft_core::ids::{MessageId, RoutineId, RoutineRunId};
-use botloft_core::protocol::{ChatItem, Delivery, Message, RoutineRun, RunStatus};
+use botloft_core::protocol::{ChatItem, Delivery, Message, RoutineRun, RunSignal, RunStatus};
 use rusqlite::{OptionalExtension, Row, params};
 
 use crate::messages::optional_column;
 use crate::{Result, Store, parse_column};
 
-pub(crate) const RUN_COLUMNS: &str = "id, routine_id, scheduled_for, status, reason, skipped_count, message_id, created_at, finished_at";
+pub(crate) const RUN_COLUMNS: &str = "id, routine_id, scheduled_for, status, reason, skipped_count, message_id, created_at, finished_at, signal_name, signal_from, signal_note";
 
 pub(crate) fn run_from_row(row: &Row<'_>) -> rusqlite::Result<RoutineRun> {
     Ok(RoutineRun {
@@ -21,6 +22,14 @@ pub(crate) fn run_from_row(row: &Row<'_>) -> rusqlite::Result<RoutineRun> {
         message_id: optional_column(row, 6)?,
         created_at: row.get(7)?,
         finished_at: row.get(8)?,
+        signal: match row.get::<_, Option<String>>(9)? {
+            Some(name) => Some(RunSignal {
+                name,
+                from_bot_id: optional_column(row, 10)?,
+                note: row.get(11)?,
+            }),
+            None => None,
+        },
     })
 }
 
@@ -48,7 +57,7 @@ impl Store {
     fn insert_run_in(conn: &rusqlite::Connection, run: &RoutineRun) -> Result<()> {
         conn.execute(
             &format!(
-                "INSERT INTO routine_runs ({RUN_COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
+                "INSERT INTO routine_runs ({RUN_COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)"
             ),
             params![
                 run.id.as_str(),
@@ -60,6 +69,12 @@ impl Store {
                 run.message_id.as_ref().map(MessageId::as_str),
                 run.created_at,
                 run.finished_at,
+                run.signal.as_ref().map(|signal| signal.name.as_str()),
+                run.signal
+                    .as_ref()
+                    .and_then(|signal| signal.from_bot_id.as_ref())
+                    .map(BotId::as_str),
+                run.signal.as_ref().and_then(|signal| signal.note.as_deref()),
             ],
         )?;
         Ok(())

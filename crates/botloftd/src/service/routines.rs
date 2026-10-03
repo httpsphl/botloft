@@ -12,7 +12,7 @@ use tracing::warn;
 
 use super::{ApiError, ApiResult, bots};
 use crate::routines;
-use crate::routines::schedule::{Plan, Problem};
+use crate::routines::schedule::{Plan, Problem, normalized};
 use crate::state::{Daemon, Event};
 
 const NAME_MAX_CHARS: usize = 80;
@@ -31,7 +31,8 @@ pub fn create(daemon: &Daemon, params: RoutinesCreateParams) -> ApiResult<Routin
     let name = name(&params.name)?;
     let prompt = validate::message("prompt", &params.prompt)?;
     let now = daemon.clock.now_ms();
-    let plan = plan(&params.schedule, &params.timezone, now)?;
+    let schedule = normalized(params.schedule);
+    let plan = plan(&schedule, &params.timezone, now)?;
     let store = daemon.store();
     bots::active(&store, &params.bot_id)?;
     let routine = Routine {
@@ -39,7 +40,7 @@ pub fn create(daemon: &Daemon, params: RoutinesCreateParams) -> ApiResult<Routin
         bot_id: params.bot_id,
         name,
         prompt,
-        schedule: params.schedule,
+        schedule,
         timezone: params.timezone,
         overlap: params.overlap.unwrap_or(Overlap::Skip),
         missed: params.missed.unwrap_or(Missed::RunOnce),
@@ -59,7 +60,8 @@ pub fn create(daemon: &Daemon, params: RoutinesCreateParams) -> ApiResult<Routin
 pub(crate) fn check(daemon: &Daemon, params: &RoutinesCreateParams) -> ApiResult<()> {
     name(&params.name)?;
     validate::message("prompt", &params.prompt)?;
-    plan(&params.schedule, &params.timezone, daemon.clock.now_ms())?;
+    let schedule = normalized(params.schedule.clone());
+    plan(&schedule, &params.timezone, daemon.clock.now_ms())?;
     Ok(())
 }
 
@@ -81,7 +83,7 @@ pub fn update(daemon: &Daemon, params: RoutinesUpdateParams) -> ApiResult<Routin
     let now = daemon.clock.now_ms();
     let timing = params.schedule.is_some() || params.timezone.is_some();
     if let Some(schedule) = params.schedule {
-        routine.schedule = schedule;
+        routine.schedule = normalized(schedule);
     }
     if let Some(timezone) = params.timezone {
         routine.timezone = timezone;

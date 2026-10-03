@@ -17,6 +17,8 @@ pub enum Schedule {
     Interval { minutes: u32 },
     /// A 5-field cron expression, in the routine's time zone.
     Cron { expr: String },
+    /// When a bot of the crew sends the signal `name` (spec 20.13).
+    Signal { name: String },
 }
 
 text_enum!(
@@ -64,6 +66,8 @@ text_enum!(
         BotPaused => "bot_paused",
         /// The time passed while the daemon was not running.
         Missed => "missed",
+        /// A signal came less than 5 minutes after the last one it ran for.
+        TooSoon => "too_soon",
     }
 );
 
@@ -107,6 +111,21 @@ pub struct RoutineRun {
     pub message_id: Option<MessageId>,
     pub created_at: i64,
     pub finished_at: Option<i64>,
+    /// The signal that made it run, for a routine that waits for one.
+    #[serde(default)]
+    pub signal: Option<RunSignal>,
+}
+
+/// A signal a bot sent (spec 20.13).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct RunSignal {
+    pub name: String,
+    /// The bot that sent it; `null` once that bot was deleted.
+    pub from_bot_id: Option<BotId>,
+    /// What the bot wrote with it.
+    pub note: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]

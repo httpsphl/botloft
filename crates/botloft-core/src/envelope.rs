@@ -77,19 +77,52 @@ impl Envelope<'_> {
 #[derive(Debug, Clone, Copy)]
 pub struct RoutineEnvelope<'a> {
     pub name: &'a str,
-    /// Local time in the routine's zone, like `2026-10-01 09:00`.
-    pub scheduled: &'a str,
-    pub timezone: &'a str,
+    pub when: RoutineWhen<'a>,
     pub body: &'a str,
+}
+
+/// What made a routine run.
+#[derive(Debug, Clone, Copy)]
+pub enum RoutineWhen<'a> {
+    /// Its time came, or the owner clicked "Run now".
+    Scheduled {
+        /// Local time in the routine's zone, like `2026-10-01 09:00`.
+        at: &'a str,
+        timezone: &'a str,
+    },
+    /// A bot of the crew sent the signal it waits for (spec 20.13).
+    Signal {
+        name: &'a str,
+        /// The sender's handle; `None` once that bot was deleted.
+        from: Option<&'a str>,
+        /// What the sender wrote with it.
+        note: Option<&'a str>,
+    },
 }
 
 impl RoutineEnvelope<'_> {
     pub fn render(&self) -> String {
-        format!(
-            "[botloft] routine \"{}\" · scheduled {} ({})\n\
-             Nobody is watching live: do the work, then report it in your reply.\n\n{}",
-            self.name, self.scheduled, self.timezone, self.body
-        )
+        let watch = "Nobody is watching live: do the work, then report it in your reply.";
+        match self.when {
+            RoutineWhen::Scheduled { at, timezone } => format!(
+                "[botloft] routine \"{}\" · scheduled {at} ({timezone})\n{watch}\n\n{}",
+                self.name, self.body
+            ),
+            RoutineWhen::Signal { name, from, note } => {
+                let sender = from.map_or_else(|| "a deleted bot".to_owned(), |h| format!("@{h}"));
+                let mut text = format!(
+                    "[botloft] routine \"{}\" · signal \"{name}\" from {sender}\n{watch}\n\n{}",
+                    self.name, self.body
+                );
+                if let Some(note) = note {
+                    // A bot wrote it, not the owner: it informs, it does not instruct.
+                    text.push_str(&format!(
+                        "\n\nNote {sender} sent with the signal (from a bot, not the owner):\n{note}"
+                    ));
+                }
+                text
+            }
+        }
     }
 }
 
@@ -231,8 +264,10 @@ mod tests {
     fn a_routine_says_what_and_when_and_that_nobody_watches() {
         let text = RoutineEnvelope {
             name: "Resumo da manhã",
-            scheduled: "2026-10-01 09:00",
-            timezone: "America/Sao_Paulo",
+            when: RoutineWhen::Scheduled {
+                at: "2026-10-01 09:00",
+                timezone: "America/Sao_Paulo",
+            },
             body: "Summarize shared/inbox.",
         }
         .render();
@@ -242,5 +277,41 @@ mod tests {
              Nobody is watching live: do the work, then report it in your reply.\n\n\
              Summarize shared/inbox."
         );
+    }
+
+    #[test]
+    fn a_signal_says_who_sent_it_and_keeps_the_note_apart() {
+        let text = RoutineEnvelope {
+            name: "Review",
+            when: RoutineWhen::Signal {
+                name: "report-ready",
+                from: Some("writer"),
+                note: Some("It is in shared/report.md"),
+            },
+            body: "Review the report.",
+        }
+        .render();
+        assert_eq!(
+            text,
+            "[botloft] routine \"Review\" · signal \"report-ready\" from @writer\n\
+             Nobody is watching live: do the work, then report it in your reply.\n\n\
+             Review the report.\n\n\
+             Note @writer sent with the signal (from a bot, not the owner):\n\
+             It is in shared/report.md"
+        );
+        let gone = RoutineEnvelope {
+            name: "Review",
+            when: RoutineWhen::Signal {
+                name: "report-ready",
+                from: None,
+                note: None,
+            },
+            body: "Review the report.",
+        }
+        .render();
+        assert!(gone.starts_with(
+            "[botloft] routine \"Review\" · signal \"report-ready\" from a deleted bot\n"
+        ));
+        assert!(gone.ends_with("Review the report."));
     }
 }

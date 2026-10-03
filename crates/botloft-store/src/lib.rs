@@ -20,6 +20,7 @@ mod questions;
 mod routine_runs;
 mod routines;
 mod search;
+mod signals;
 mod tasks;
 mod usage;
 

@@ -144,6 +144,7 @@ fn fill(fx: &Fixture) -> Owned {
         message_id: Some(fired.id.clone()),
         created_at: 100,
         finished_at: None,
+        signal: None,
     };
     fx.store.fire_run(&run, &fired, &delivery).expect("run");
 

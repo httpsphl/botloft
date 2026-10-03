@@ -11,6 +11,7 @@ pub(super) fn decls(out: &mut Out) {
     out.decl::<Missed>();
     out.decl::<RunStatus>();
     out.decl::<SkipReason>();
+    out.decl::<RunSignal>();
     out.decl::<RoutineRun>();
     out.decl::<Routine>();
     out.decl::<RoutinesListParams>();

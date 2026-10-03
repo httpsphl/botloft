@@ -27,6 +27,7 @@ export function seedRoutines(fake: FakeBotloft, bots: { scout: BotId; analyst: B
       messageId: null,
       createdAt: fake.now - 2 * HOUR,
       finishedAt: fake.now - HOUR,
+      signal: null,
       ...run,
     };
   };
@@ -62,4 +63,14 @@ export function seedRoutines(fake: FakeBotloft, bots: { scout: BotId; analyst: B
   });
   backup.enabled = false;
   backup.nextRunAt = null;
+
+  // Spec 20.13: runs when Analyst says the numbers are in.
+  const recheck = create(bots.scout, {
+    name: "Recheck the sources",
+    prompt: "The numbers changed: check that every claim in the report still has a source.",
+    schedule: { kind: "signal", name: "numbers-updated" },
+  });
+  lastRun(recheck, {
+    signal: { name: "numbers-updated", fromBotId: bots.analyst, note: null },
+  });
 }

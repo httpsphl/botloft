@@ -1,11 +1,11 @@
 // The routine form's fields and the schedule they stand for (spec 20.9):
-// every day, weekdays, chosen days or every N minutes or hours, or a cron
-// expression under "More options".
+// every day, weekdays, chosen days, every N minutes or hours, or when a
+// bot signals (spec 20.13), or a cron expression under "More options".
 
 import type { Missed, Overlap, Routine, Schedule } from "../../lib/protocol.gen";
 import { systemZone } from "./describe";
 
-export type Frequency = "daily" | "weekdays" | "days" | "interval";
+export type Frequency = "daily" | "weekdays" | "days" | "interval" | "signal";
 export type Unit = "minutes" | "hours";
 
 export interface RoutineForm {
@@ -23,6 +23,8 @@ export interface RoutineForm {
   missed: Missed;
   useCron: boolean;
   cron: string;
+  /** The signal the routine waits for. */
+  signal: string;
 }
 
 const EVERY_DAY = [1, 2, 3, 4, 5, 6, 7];
@@ -42,6 +44,7 @@ export function blankForm(): RoutineForm {
     missed: "run_once",
     useCron: false,
     cron: "",
+    signal: "",
   };
 }
 
@@ -86,6 +89,10 @@ export function formOf(routine: RoutineFields): RoutineForm {
       form.useCron = true;
       form.cron = schedule.expr;
       break;
+    case "signal":
+      form.frequency = "signal";
+      form.signal = schedule.name;
+      break;
   }
   return form;
 }
@@ -107,5 +114,7 @@ export function scheduleOf(form: RoutineForm): Schedule {
         kind: "interval",
         minutes: Math.round(form.every) * (form.unit === "hours" ? 60 : 1),
       };
+    case "signal":
+      return { kind: "signal", name: form.signal.trim() };
   }
 }

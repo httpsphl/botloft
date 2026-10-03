@@ -15,6 +15,7 @@ export const routines = {
   more: (name: string) => `More actions for ${name}`,
   next: (time: string) => `Next: ${time}`,
   off: "Off",
+  waitsSignal: "Waits for a signal",
   today: (time: string) => `today at ${time}`,
   tomorrow: (time: string) => `tomorrow at ${time}`,
   onDay: (day: string, time: string) => `${day} at ${time}`,
@@ -24,6 +25,8 @@ export const routines = {
     failed: "Last run failed",
     overlap: "Last time was skipped: the run before hadn't finished",
     bot_paused: "Last time was skipped: the bot was paused",
+    too_soon: "Last signal was skipped: it came less than 5 minutes after the one before",
+    signalFrom: (bot: string) => `signal from ${bot}`,
     missed: (count: number) =>
       count === 1
         ? "Last time was skipped: the computer was off"
@@ -37,6 +40,7 @@ export const routines = {
     everyMinutes: (count: number) => (count === 1 ? "Every minute" : `Every ${count} minutes`),
     everyHours: (count: number) => (count === 1 ? "Every hour" : `Every ${count} hours`),
     cron: (expr: string) => `Cron: ${expr}`,
+    signal: (name: string) => `When a bot signals “${name}”`,
   },
   tag: (name: string) => `Routine · ${name}`,
   dialog: {
@@ -52,6 +56,7 @@ export const routines = {
       weekdays: "Weekdays",
       days: "Chosen days",
       interval: "Every…",
+      signal: "When a bot signals",
     },
     at: "At",
     every: "Every",
@@ -68,6 +73,10 @@ export const routines = {
     wakeNote: "Botloft doesn't wake the computer to run a routine.",
     advanced: "Use a cron expression",
     cron: "Cron expression",
+    signal: "Signal",
+    signalPlaceholder: "report-ready",
+    signalHint: (bot: string) =>
+      `${bot} runs this when a bot of the crew sends this signal. Tell that bot, in its instructions, when to send it, like “send report-ready when the report is saved”.`,
     cronHint: "Minute, hour, day of the month, month and day of the week. It replaces When.",
     create: "Create routine",
     save: "Save",
@@ -80,6 +89,7 @@ export const routines = {
       cron_invalid: "That cron expression isn't valid.",
       too_often: "Runs must be at least 5 minutes apart.",
       never_runs: "This schedule never runs.",
+      signal_invalid: "A signal needs letters or digits, like report-ready.",
     },
   },
   removeTitle: (name: string) => `Delete ${name}?`,

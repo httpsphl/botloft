@@ -4,8 +4,8 @@
 
 use botloft_core::ids::{MessageId, RoutineId, RoutineRunId};
 use botloft_core::protocol::{
-    Crew, Message, MessageKind, Missed, Overlap, Routine, RoutineRun, RunStatus, SenderKind,
-    SkipReason,
+    Crew, Message, MessageKind, Missed, Overlap, Routine, RoutineRun, RunSignal, RunStatus,
+    SenderKind, SkipReason,
 };
 use botloft_store::{BotRecord, Store};
 use tracing::{debug, warn};
@@ -66,7 +66,7 @@ pub(super) fn due(daemon: &Daemon, mut routine: Routine, now: i64) {
         record(daemon, &store, run);
     }
     if let Some(at) = fire_at
-        && let Err(err) = attempt(daemon, &store, &routine, &crew, &bot, at, true)
+        && let Err(err) = attempt(daemon, &store, &routine, &crew, &bot, at, Trigger::Schedule)
     {
         warn!(routine = %routine.id, "a routine could not run: {err}");
     }
@@ -87,7 +87,7 @@ pub fn fire_now(daemon: &Daemon, id: &RoutineId) -> ApiResult<RoutineRun> {
     }
     let (crew, bot) = bots::active(&store, &routine.bot_id)?;
     let now = daemon.clock.now_ms();
-    let run = attempt(daemon, &store, &routine, &crew, &bot, now, false)?;
+    let run = attempt(daemon, &store, &routine, &crew, &bot, now, Trigger::Now)?;
     drop(store);
     announce_routine(daemon, id);
     Ok(run)
@@ -100,22 +100,41 @@ pub fn next_run_at(routine: &Routine, from: i64, now: i64) -> Option<i64> {
         .next_after(from, now)
 }
 
+/// What makes a routine run.
+pub(super) enum Trigger {
+    /// Its time came.
+    Schedule,
+    /// The owner clicked "Run now".
+    Now,
+    /// A bot of the crew sent the signal it waits for (spec 20.13).
+    Signal(RunSignal),
+}
+
 /// Sends the routine's message, unless the bot is paused (for a scheduled
-/// time) or a run is still open.
-fn attempt(
+/// time or a signal) or a run is still open.
+pub(super) fn attempt(
     daemon: &Daemon,
     store: &Store,
     routine: &Routine,
     crew: &Crew,
     bot: &BotRecord,
     at: i64,
-    scheduled: bool,
+    trigger: Trigger,
 ) -> ApiResult<RoutineRun> {
     let now = daemon.clock.now_ms();
-    if scheduled && (bot.paused || crew.paused) {
-        let run = skipped(routine, at, SkipReason::BotPaused, 1, now);
+    let (waits, signal) = match trigger {
+        Trigger::Schedule => (true, None),
+        Trigger::Now => (false, None),
+        Trigger::Signal(signal) => (true, Some(signal)),
+    };
+    let skip = |reason| {
+        let mut run = skipped(routine, at, reason, 1, now);
+        run.signal.clone_from(&signal);
         record(daemon, store, run.clone());
-        return Ok(run);
+        Ok(run)
+    };
+    if waits && (bot.paused || crew.paused) {
+        return skip(SkipReason::BotPaused);
     }
     let open = store.open_runs(&routine.id)?;
     let room = match routine.overlap {
@@ -123,9 +142,7 @@ fn attempt(
         Overlap::Queue => 2,
     };
     if open >= room {
-        let run = skipped(routine, at, SkipReason::Overlap, 1, now);
-        record(daemon, store, run.clone());
-        return Ok(run);
+        return skip(SkipReason::Overlap);
     }
     let message = Message {
         id: MessageId::generate(),
@@ -152,6 +169,7 @@ fn attempt(
         message_id: Some(message.id.clone()),
         created_at: now,
         finished_at: None,
+        signal,
     };
     let item = store.fire_run(&run, &message, &delivery)?;
     debug!(routine = %routine.id, run = %run.id, "routine fired");
@@ -160,7 +178,13 @@ fn attempt(
     Ok(run)
 }
 
-fn skipped(routine: &Routine, at: i64, reason: SkipReason, count: usize, now: i64) -> RoutineRun {
+pub(super) fn skipped(
+    routine: &Routine,
+    at: i64,
+    reason: SkipReason,
+    count: usize,
+    now: i64,
+) -> RoutineRun {
     RoutineRun {
         id: RoutineRunId::generate(),
         routine_id: routine.id.clone(),
@@ -171,10 +195,11 @@ fn skipped(routine: &Routine, at: i64, reason: SkipReason, count: usize, now: i6
         message_id: None,
         created_at: now,
         finished_at: Some(now),
+        signal: None,
     }
 }
 
-fn record(daemon: &Daemon, store: &Store, run: RoutineRun) {
+pub(super) fn record(daemon: &Daemon, store: &Store, run: RoutineRun) {
     match store.insert_run(&run) {
         Ok(()) => daemon.emit(Event::RoutineRun(run)),
         Err(err) => warn!(routine = %run.routine_id, "could not record a skipped run: {err}"),

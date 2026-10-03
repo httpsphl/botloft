@@ -232,7 +232,7 @@ struct Draft {
     sender_handle: Option<String>,
     task: Option<Task>,
     workspace: PathBuf,
-    routine: Option<(String, String, String)>,
+    routine: Option<context::RoutineContext>,
     /// The question an answer is for: its id and text.
     question: Option<(String, String)>,
 }
@@ -245,10 +245,7 @@ impl Draft {
             sender_handle: self.sender_handle.as_deref(),
             task: self.task.as_ref(),
             workspace: &self.workspace,
-            routine: self
-                .routine
-                .as_ref()
-                .map(|(name, scheduled, zone)| (name.as_str(), scheduled.as_str(), zone.as_str())),
+            routine: self.routine.as_ref(),
             question: self
                 .question
                 .as_ref()

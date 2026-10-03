@@ -218,6 +218,7 @@ describe("failed runs", () => {
           messageId: null,
           createdAt: Date.now(),
           finishedAt: Date.now() + 1000,
+          signal: null,
         },
       });
     });

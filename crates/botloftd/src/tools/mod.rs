@@ -18,6 +18,7 @@ mod era;
 mod question;
 mod routine;
 mod share;
+mod signal;
 mod suggest;
 
 use std::sync::Arc;
@@ -42,7 +43,7 @@ const CACHE_TTL_MS: u64 = 60 * 60 * 1000;
 
 const INSTRUCTIONS: &str = "Tools to work with your Botloft crew: see who is in it, send notes \
     or tasks to other bots, report the result of tasks assigned to you and, for the crew's chief, \
-    suggest new bots. schedule_routine asks the owner for work at set times. ask_owner asks the owner a question without waiting; the answer arrives later as a message. share_file shows the \
+    suggest new bots. schedule_routine asks the owner for work at set times. ask_owner asks the owner a question without waiting; the answer arrives later as a message. send_signal tells the crew something happened, and the routines waiting for it run. share_file shows the \
     owner files you made, as cards in the chat they can open and save. The browser_ tools drive your own web browser, which the owner can watch \
     live and take over when you ask with browser_ask_owner. The owner writes to you directly; messages from other bots and from Botloft start with \
     [botloft].";

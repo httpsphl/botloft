@@ -17,6 +17,7 @@ export const routines: Messages["routines"] = {
   more: (name: string) => `Más acciones de ${name}`,
   next: (time: string) => `Próxima: ${time}`,
   off: "Apagada",
+  waitsSignal: "Espera un aviso",
   today: (time: string) => `hoy a las ${time}`,
   tomorrow: (time: string) => `mañana a las ${time}`,
   onDay: (day: string, time: string) => `${day} a las ${time}`,
@@ -26,6 +27,8 @@ export const routines: Messages["routines"] = {
     failed: "La última falló",
     overlap: "La última vez se saltó: la anterior no había terminado",
     bot_paused: "La última vez se saltó: el bot estaba en pausa",
+    too_soon: "El último aviso se saltó: llegó menos de 5 minutos después del anterior",
+    signalFrom: (bot: string) => `aviso de ${bot}`,
     missed: (count: number) =>
       count === 1
         ? "La última vez se saltó: el ordenador estaba apagado"
@@ -39,6 +42,7 @@ export const routines: Messages["routines"] = {
     everyMinutes: (count: number) => (count === 1 ? "Cada minuto" : `Cada ${count} minutos`),
     everyHours: (count: number) => (count === 1 ? "Cada hora" : `Cada ${count} horas`),
     cron: (expr: string) => `Cron: ${expr}`,
+    signal: (name: string) => `Cuando un bot avise “${name}”`,
   },
   tag: (name: string) => `Rutina · ${name}`,
   dialog: {
@@ -54,6 +58,7 @@ export const routines: Messages["routines"] = {
       weekdays: "Días laborables",
       days: "Días elegidos",
       interval: "Cada…",
+      signal: "Cuando un bot avise",
     },
     at: "A las",
     every: "Cada",
@@ -70,6 +75,10 @@ export const routines: Messages["routines"] = {
     wakeNote: "Botloft no enciende el ordenador para ejecutar una rutina.",
     advanced: "Usar una expresión cron",
     cron: "Expresión cron",
+    signal: "Aviso",
+    signalPlaceholder: "informe-listo",
+    signalHint: (bot: string) =>
+      `${bot} hace esto cuando un bot del equipo manda este aviso. Dile a ese bot, en sus instrucciones, cuándo avisar, como “avisa informe-listo cuando guardes el informe”.`,
     cronHint: "Minuto, hora, día del mes, mes y día de la semana. Sustituye a Cuándo.",
     create: "Crear rutina",
     save: "Guardar",
@@ -82,6 +91,7 @@ export const routines: Messages["routines"] = {
       cron_invalid: "Esa expresión cron no es válida.",
       too_often: "Las ejecuciones deben tener al menos 5 minutos entre sí.",
       never_runs: "Ese horario nunca ocurre.",
+      signal_invalid: "El aviso necesita letras o números, como informe-listo.",
     },
   },
   removeTitle: (name: string) => `¿Eliminar ${name}?`,

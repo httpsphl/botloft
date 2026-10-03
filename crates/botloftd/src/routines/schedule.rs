@@ -53,9 +53,16 @@ pub struct Plan {
 
 #[derive(Debug, Clone)]
 enum Kind {
-    Weekly { days: u8, time: Time },
-    Interval { ms: i64 },
+    Weekly {
+        days: u8,
+        time: Time,
+    },
+    Interval {
+        ms: i64,
+    },
     Cron(Cron),
+    /// Runs when a bot sends the signal, never by the clock.
+    Signal,
 }
 
 impl Plan {
@@ -107,12 +114,25 @@ impl Plan {
             Schedule::Cron { expr } => {
                 Kind::Cron(Cron::parse(expr).map_err(|err| Problem::new("cron_invalid", err))?)
             }
+            Schedule::Signal { name } => {
+                if name.is_empty() || signal_name(name) != *name {
+                    return Err(Problem::new(
+                        "signal_invalid",
+                        "a signal name needs letters or digits, like report-ready",
+                    ));
+                }
+                Kind::Signal
+            }
         };
         Ok(Self { kind, tz })
     }
 
     /// Checks that runs are never closer than five minutes, from `now` on.
     pub fn check_spacing(&self, now: i64) -> Result<(), Problem> {
+        // Signals are kept apart when they come (spec 20.13).
+        if matches!(self.kind, Kind::Signal) {
+            return Ok(());
+        }
         let mut last = self.next_after(now, now);
         let mut samples = 0;
         while let Some(at) = last
@@ -160,6 +180,7 @@ impl Plan {
                         .collect()
                 })
             }),
+            Kind::Signal => None,
         }
     }
 
@@ -221,6 +242,23 @@ impl Plan {
                     .to_string()
             })
             .unwrap_or_default()
+    }
+}
+
+/// A signal's name as it is kept: lowercase letters, digits and single
+/// hyphens, without accents (`Relatório pronto` -> `relatorio-pronto`).
+/// Empty when nothing usable is left.
+pub fn signal_name(text: &str) -> String {
+    botloft_core::slug::slugify(text, "")
+}
+
+/// The schedule as it is kept: a signal's name normalized.
+pub fn normalized(schedule: Schedule) -> Schedule {
+    match schedule {
+        Schedule::Signal { name } => Schedule::Signal {
+            name: signal_name(&name),
+        },
+        other => other,
     }
 }
 

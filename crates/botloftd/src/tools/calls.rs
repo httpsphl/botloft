@@ -18,6 +18,7 @@ use super::Failure;
 use super::catalog::{COMPLETE_TASK, CREW_ROSTER, MY_TASKS, SEND_MESSAGE};
 use super::question::{self, ASK_OWNER};
 use super::share::{self, SHARE_FILE};
+use super::signal::{self, SEND_SIGNAL};
 use crate::service::tasks::{self, BotMessage};
 use crate::service::{ApiError, bots, lead};
 use crate::state::Daemon;
@@ -40,6 +41,7 @@ pub(super) fn call(daemon: &Daemon, bot: &BotId, params: &Value) -> Result<Value
         MY_TASKS => parse(arguments).and_then(|args| my_tasks(daemon, bot, args)),
         SHARE_FILE => parse(arguments).and_then(|args| share::share(daemon, bot, args)),
         ASK_OWNER => parse(arguments).and_then(|args| question::ask(daemon, bot, args)),
+        SEND_SIGNAL => parse(arguments).and_then(|args| signal::send(daemon, bot, args)),
         other => return Err(invalid(&format!("Unknown tool: {other}"))),
     };
     Ok(tool_result(outcome))
@@ -104,6 +106,7 @@ fn roster(daemon: &Daemon, bot: &BotId) -> Outcome {
         "you": me.handle,
         "you_lead": lead::is_lead(&crew, &me.id),
         "bots": others,
+        "signals": signal::waited_for(daemon, bot)?,
     }))
 }
 

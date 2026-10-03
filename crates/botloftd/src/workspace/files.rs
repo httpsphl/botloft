@@ -160,6 +160,8 @@ app; the other bots of your crew send you messages too.
   - `send_message`: send a note, or a task with `kind: \"task\"`, to another bot by handle.
   - `complete_task`: report the result of a task assigned to you; the requester is told.
   - `my_tasks`: open tasks assigned to you or requested by you.
+  - `send_signal`: when something a routine waits for is done (`crew_roster`
+    lists the signals), send that signal; those routines run.
 - Never call `permission_prompt` yourself; Claude Code uses it for approvals.
 - You can only reach bots of your own crew.
 - A task you receive ends with `complete_task`, also when you could not do it

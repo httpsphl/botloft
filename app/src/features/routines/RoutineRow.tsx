@@ -73,9 +73,13 @@ export function RoutineRow({
           {describeSchedule(routine.schedule, r.when)}
           <span className="text-muted">
             {" · "}
-            {routine.enabled && routine.nextRunAt !== null
-              ? r.next(nextText(routine.nextRunAt, routine.timezone, r))
-              : r.off}
+            {!routine.enabled
+              ? r.off
+              : routine.schedule.kind === "signal"
+                ? r.waitsSignal
+                : routine.nextRunAt !== null
+                  ? r.next(nextText(routine.nextRunAt, routine.timezone, r))
+                  : r.off}
           </span>
         </p>
         {routine.lastRun && <LastRun run={routine.lastRun} words={r.last} />}
@@ -112,12 +116,18 @@ export function RoutineRow({
 
 function LastRun({ run, words }: { run: RoutineRun; words: Messages["routines"]["last"] }) {
   const line = "mt-1 flex items-center gap-1.5 text-xs";
+  // Who sent the signal it ran for (spec 20.13), while that bot is around.
+  const sender = useApp((state) =>
+    run.signal?.fromBotId ? (state.bots[run.signal.fromBotId]?.name ?? null) : null,
+  );
+  const from = sender && <span className="text-muted">· {words.signalFrom(sender)}</span>;
   switch (run.status) {
     case "queued":
       return (
         <p className={`${line} text-work`}>
           <LoaderCircle aria-hidden size={12} className="animate-spin" />
           {words.queued}
+          {from}
         </p>
       );
     case "done":
@@ -125,6 +135,7 @@ function LastRun({ run, words }: { run: RoutineRun; words: Messages["routines"][
         <p className={`${line} text-ok`}>
           <CircleCheck aria-hidden size={12} />
           {words.done}
+          {from}
         </p>
       );
     case "failed":
@@ -132,6 +143,7 @@ function LastRun({ run, words }: { run: RoutineRun; words: Messages["routines"][
         <p className={`${line} text-danger`}>
           <CircleAlert aria-hidden size={12} />
           {words.failed}
+          {from}
         </p>
       );
     case "skipped": {
@@ -140,11 +152,14 @@ function LastRun({ run, words }: { run: RoutineRun; words: Messages["routines"][
           ? words.missed(run.skippedCount)
           : run.reason === "bot_paused"
             ? words.bot_paused
-            : words.overlap;
+            : run.reason === "too_soon"
+              ? words.too_soon
+              : words.overlap;
       return (
         <p className={`${line} text-muted`}>
           <SkipForward aria-hidden size={12} />
           {text}
+          {from}
         </p>
       );
     }
