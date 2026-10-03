@@ -39,6 +39,7 @@ const inbound = (body: string, at?: number) =>
         body,
         taskId: null,
         routineId: null,
+        questionId: null,
         attachments: [],
         createdAt: at ?? start,
       },

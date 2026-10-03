@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{AllowScope, Message, TokenUsage};
+use super::{AllowScope, Message, Question, TokenUsage};
 use crate::ids::{ApprovalId, BotId, ChatItemId};
 
 text_enum!(
@@ -65,6 +65,8 @@ text_enum!(
         Tool => "tool",
         /// A permission request; `text` is the tool.
         Approval => "approval",
+        /// A question for the owner (spec 23); `text` is the question.
+        Question => "question",
         Notice => "notice",
     }
 );
@@ -95,6 +97,8 @@ pub enum ChatBody {
     Reply(ReplyItem),
     Tool(ToolItem),
     Approval(ApprovalItem),
+    /// A question for the owner (spec 23.4).
+    Question(QuestionItem),
     /// The end of a turn.
     Turn(TurnItem),
     Notice(NoticeItem),
@@ -158,6 +162,13 @@ pub struct ApprovalItem {
     /// explanation.
     #[serde(default)]
     pub always: Option<AllowScope>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct QuestionItem {
+    pub question: Question,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

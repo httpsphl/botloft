@@ -2,7 +2,9 @@
 //! its attachments, its delivery, the task it creates and the recipient's
 //! chat item, in one transaction (spec 9.1).
 
-use botloft_core::ids::{AttachmentId, BotId, ChatItemId, CrewId, MessageId, RoutineId, TaskId};
+use botloft_core::ids::{
+    AttachmentId, BotId, ChatItemId, CrewId, MessageId, QuestionId, RoutineId, TaskId,
+};
 use botloft_core::protocol::{
     Attachment, ChatBody, ChatItem, Delivery, InboundItem, Message, Task,
 };
@@ -10,8 +12,7 @@ use rusqlite::{Connection, OptionalExtension, Row, params};
 
 use crate::{Result, Store, cached_execute, cached_row, parse_column, to_sql_int};
 
-const COLUMNS: &str =
-    "id, crew_id, from_kind, from_bot_id, to_bot_id, kind, body, task_id, created_at, routine_id";
+const COLUMNS: &str = "id, crew_id, from_kind, from_bot_id, to_bot_id, kind, body, task_id, created_at, routine_id, \n     question_id";
 
 fn from_row(row: &Row<'_>) -> rusqlite::Result<Message> {
     Ok(Message {
@@ -24,6 +25,7 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<Message> {
         body: row.get(6)?,
         task_id: optional_column(row, 7)?,
         routine_id: optional_column(row, 9)?,
+        question_id: optional_column(row, 10)?,
         attachments: Vec::new(),
         created_at: row.get(8)?,
     })
@@ -103,7 +105,7 @@ impl Store {
         cached_execute(
             conn,
             &format!(
-                "INSERT INTO messages ({COLUMNS})                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)"
+                "INSERT INTO messages ({COLUMNS})                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)"
             ),
             params![
                 message.id.as_str(),
@@ -116,6 +118,7 @@ impl Store {
                 message.task_id.as_ref().map(TaskId::as_str),
                 message.created_at,
                 message.routine_id.as_ref().map(RoutineId::as_str),
+                message.question_id.as_ref().map(QuestionId::as_str),
             ],
         )?;
         for attachment in &message.attachments {

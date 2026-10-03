@@ -137,6 +137,7 @@ fn attempt(
         body: routine.prompt.clone(),
         task_id: None,
         routine_id: Some(routine.id.clone()),
+        question_id: None,
         attachments: Vec::new(),
         created_at: now,
     };

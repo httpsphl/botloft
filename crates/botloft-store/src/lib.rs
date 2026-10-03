@@ -16,6 +16,7 @@ mod messages;
 mod migrate;
 #[cfg(test)]
 mod plans;
+mod questions;
 mod routine_runs;
 mod routines;
 mod tasks;
@@ -33,6 +34,7 @@ pub use bots::BotRecord;
 pub use deliveries::DeliveryOutcome;
 pub use messages::MessageFilter;
 pub use migrate::LATEST_VERSION;
+pub use questions::{Answered, QuestionRecord};
 pub use tasks::TaskFilter;
 
 #[derive(Debug, thiserror::Error)]
@@ -207,6 +209,7 @@ pub(crate) mod tests {
             body: body.to_owned(),
             task_id: None,
             routine_id: None,
+            question_id: None,
             attachments: Vec::new(),
             created_at: 0,
         };

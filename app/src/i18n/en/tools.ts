@@ -34,6 +34,7 @@ export const tools = {
     suggest_bot: "Suggest a bot",
     schedule_routine: "Set up a routine",
     share_file: "Share a file",
+    ask_owner: "Ask you a question",
     browser: "Use a site",
     browser_help: "Ask for your hand",
     browser_open: "Open a page",

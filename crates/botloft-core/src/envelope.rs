@@ -93,6 +93,21 @@ impl RoutineEnvelope<'_> {
     }
 }
 
+/// Longest part of a question quoted above the owner's answer, in
+/// characters.
+const QUOTED_QUESTION_MAX_CHARS: usize = 300;
+
+/// The owner's answer to a bot's question (spec 23.4). No `[botloft]`: it is
+/// the owner speaking, after a line that says what it answers.
+pub fn answer(question_id: &str, question: &str, body: &str) -> String {
+    let quoted = crate::chat::one_line(question, QUOTED_QUESTION_MAX_CHARS);
+    format!(
+        "Answer to your question {question_id}: \"{quoted}\"
+
+{body}"
+    )
+}
+
 /// Time left until `deadline_ms`, rounded for a reader who does not know
 /// the current time.
 pub fn due(deadline_ms: i64, now_ms: i64) -> String {

@@ -13,6 +13,14 @@ export type Row =
   | { kind: "run"; key: string; items: ChatItem[] }
   | { kind: "notice"; key: string; item: ChatItem; notice: NoticeItem };
 
+/** The bot asking the owner (spec 23.2): its question card says it all. */
+const ASK_TOOL = "mcp__botloft__ask_owner";
+
+/** A call to ask the owner that worked; the card stands for it. */
+function isAskLine(item: ChatItem): boolean {
+  return item.body.kind === "tool" && item.body.name === ASK_TOOL && item.body.status !== "failed";
+}
+
 function dayOf(ms: number): string {
   return new Date(ms).toDateString();
 }
@@ -22,6 +30,9 @@ export function chatRows(items: ChatItem[]): Row[] {
   let day: string | null = null;
   let run: ChatItem[] | null = null;
   for (const item of items) {
+    if (isAskLine(item)) {
+      continue;
+    }
     const today = dayOf(item.createdAt);
     if (today !== day) {
       day = today;

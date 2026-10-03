@@ -46,6 +46,7 @@ pub fn send(daemon: &Daemon, params: MessagesSendParams) -> ApiResult<Message> {
         body,
         task_id: None,
         routine_id: None,
+        question_id: None,
         attachments,
         created_at: now,
     };
