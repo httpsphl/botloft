@@ -3,10 +3,11 @@
 // it" answer the request; once answered it shrinks to one line.
 
 import { Ban, Check, Hand, TimerOff } from "lucide-react";
-import { useContext, useId } from "react";
+import { useContext } from "react";
 import { useT } from "../../i18n";
 import type { ApprovalItem, Bot } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
+import { NoteInput, RequestCard, SettledLine } from "../../ui/ChatCard";
 import { useAnswer } from "../chat/useAnswer";
 import { ShowBrowser } from "./showBrowser";
 
@@ -28,30 +29,15 @@ function read(approval: ApprovalItem): { task: string; site: string | null } {
 
 function Answered({ approval, task }: { approval: ApprovalItem; task: string }) {
   const words = useT().browser.help;
-  const line = "flex min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 text-sm";
   switch (approval.status) {
     case "allowed":
-      return (
-        <p className={line}>
-          <Check aria-hidden size={14} className="shrink-0 text-ok" />
-          <span className="truncate font-medium">{words.doneLine(task)}</span>
-        </p>
-      );
+      return <SettledLine icon={Check} tone="ok" text={words.doneLine(task)} />;
     case "denied":
       return (
-        <p className={line}>
-          <Ban aria-hidden size={14} className="shrink-0 text-danger" />
-          <span className="truncate font-medium">{words.wontLine(task)}</span>
-          {approval.note && <span className="truncate text-muted text-xs">“{approval.note}”</span>}
-        </p>
+        <SettledLine icon={Ban} tone="danger" text={words.wontLine(task)} note={approval.note} />
       );
     default:
-      return (
-        <p className={line}>
-          <TimerOff aria-hidden size={14} className="shrink-0 text-quiet" />
-          <span className="truncate font-medium">{words.expired(task)}</span>
-        </p>
-      );
+      return <SettledLine icon={TimerOff} tone="quiet" text={words.expired(task)} />;
   }
 }
 
@@ -63,23 +49,18 @@ export function HelpCard({ approval, bot }: { approval: ApprovalItem; bot: Bot }
     allow: t.chat.approval.allowFailed,
     deny: t.chat.approval.denyFailed,
   });
-  const noteId = useId();
   const { task, site } = read(approval);
   if (approval.status !== "pending") {
     return <Answered approval={approval} task={task} />;
   }
 
   return (
-    <section
-      aria-label={words.asks(bot.name, task)}
-      className="my-1 max-w-2xl rounded-2xl border border-accent/40 bg-panel px-4 py-3.5 shadow-sm animate-attention"
+    <RequestCard
+      label={words.asks(bot.name, task)}
+      icon={Hand}
+      tone="accent"
+      title={words.needs(bot.name)}
     >
-      <p className="flex items-center gap-2.5 font-semibold text-sm">
-        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-accent/12 text-accent">
-          <Hand aria-hidden size={15} />
-        </span>
-        {words.needs(bot.name)}
-      </p>
       <p className="mt-2 break-words text-sm" data-selectable>
         {task}
       </p>
@@ -89,15 +70,11 @@ export function HelpCard({ approval, bot }: { approval: ApprovalItem; bot: Bot }
         </p>
       )}
       <p className="mt-1.5 text-muted text-xs">{words.why}</p>
-      <label htmlFor={noteId} className="sr-only">
-        {t.chat.approval.noteLabel(bot.name)}
-      </label>
-      <input
-        id={noteId}
+      <NoteInput
+        label={t.chat.approval.noteLabel(bot.name)}
         value={note}
-        onChange={(event) => setNote(event.target.value)}
+        onChange={setNote}
         placeholder={t.chat.approval.notePlaceholder}
-        className="mt-3 h-9 w-full rounded-xl border border-line-strong bg-canvas px-3 text-sm outline-none placeholder:text-muted focus:border-muted"
       />
       <div className="mt-2.5 flex flex-wrap gap-2">
         {showBrowser && (
@@ -117,6 +94,6 @@ export function HelpCard({ approval, bot }: { approval: ApprovalItem; bot: Bot }
           {words.wontDo}
         </Button>
       </div>
-    </section>
+    </RequestCard>
   );
 }

@@ -4,14 +4,15 @@
 // explains with a reason is worded here. Once answered it shrinks to one
 // line.
 
-import { AlarmClock, Ban, Check, ChevronRight, TimerOff } from "lucide-react";
-import { useId, useState } from "react";
+import { AlarmClock, Ban, Check, TimerOff } from "lucide-react";
+import { useState } from "react";
 import { useT } from "../../i18n";
 import { errorText } from "../../lib/api";
 import { type ApprovalItem, type Bot, FIELD_LIMITS } from "../../lib/protocol.gen";
 import { RpcError } from "../../lib/rpc";
 import { useApi, useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
+import { NoteArea, SectionCard, SettledLine } from "../../ui/ChatCard";
 import { TextArea, TextField } from "../../ui/Field";
 import { describeSchedule, systemZone } from "./describe";
 import { formOf, type RoutineFields, type RoutineForm, scheduleOf } from "./form";
@@ -78,7 +79,6 @@ export function RoutineRequestCard({ approval, bot }: { approval: ApprovalItem; 
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const noteId = useId();
   if (approval.status !== "pending") {
     return <Answered approval={approval} />;
   }
@@ -108,16 +108,34 @@ export function RoutineRequestCard({ approval, bot }: { approval: ApprovalItem; 
 
   const title = asked.bot ? r.titleFor(bot.name, runner.name) : r.title(bot.name);
   return (
-    <section
-      aria-label={title}
-      className="my-1 overflow-hidden rounded-2xl border border-line bg-panel shadow-sm animate-attention"
+    <SectionCard
+      label={title}
+      icon={AlarmClock}
+      tone="accent"
+      footer={
+        <>
+          <NoteArea
+            label={r.noteLabel(bot.name)}
+            value={note}
+            onChange={setNote}
+            placeholder={r.notePlaceholder(bot.name)}
+          />
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            <Button
+              variant="primary"
+              icon={Check}
+              disabled={busy || !form.name.trim() || !form.prompt.trim()}
+              onClick={() => answer(true)}
+            >
+              {r.create}
+            </Button>
+            <Button icon={Ban} disabled={busy} onClick={() => answer(false)}>
+              {r.decline}
+            </Button>
+          </div>
+        </>
+      }
     >
-      <p className="flex items-center gap-2.5 border-line border-b px-4 py-3 font-semibold text-sm">
-        <span className="grid h-7 w-7 place-items-center rounded-full bg-accent/12 text-accent">
-          <AlarmClock aria-hidden size={15} />
-        </span>
-        {title}
-      </p>
       <div className="flex flex-col gap-4 px-4 py-3">
         <TextField
           label={d.name}
@@ -141,33 +159,7 @@ export function RoutineRequestCard({ approval, bot }: { approval: ApprovalItem; 
           </p>
         )}
       </div>
-      <div className="border-line border-t bg-canvas/40 px-4 py-3">
-        <label htmlFor={noteId} className="sr-only">
-          {r.noteLabel(bot.name)}
-        </label>
-        <textarea
-          id={noteId}
-          rows={2}
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
-          placeholder={r.notePlaceholder(bot.name)}
-          className="block w-full resize-none rounded-xl border border-line-strong bg-panel px-3 py-2 text-sm outline-none placeholder:text-muted focus:border-muted"
-        />
-        <div className="mt-2.5 flex flex-wrap gap-2">
-          <Button
-            variant="primary"
-            icon={Check}
-            disabled={busy || !form.name.trim() || !form.prompt.trim()}
-            onClick={() => answer(true)}
-          >
-            {r.create}
-          </Button>
-          <Button icon={Ban} disabled={busy} onClick={() => answer(false)}>
-            {r.decline}
-          </Button>
-        </div>
-      </div>
-    </section>
+    </SectionCard>
   );
 }
 
@@ -177,36 +169,27 @@ function Answered({ approval }: { approval: ApprovalItem }) {
   const r = t.chat.routineRequest;
   const { routine } = askedOf(approval.input);
   const name = routine.name || t.routines.dialog.name;
-  const [Icon, text, tone] =
+  const [icon, text, tone] =
     approval.status === "allowed"
-      ? [Check, r.created(name), "text-ok"]
+      ? ([Check, r.created(name), "ok"] as const)
       : approval.status === "denied"
-        ? [Ban, r.declined(name), "text-danger"]
-        : [TimerOff, r.expired(name), "text-quiet"];
+        ? ([Ban, r.declined(name), "danger"] as const)
+        : ([TimerOff, r.expired(name), "quiet"] as const);
   return (
-    <details className="group">
-      <summary className="flex min-w-0 cursor-default items-center gap-2 rounded-lg px-1.5 py-1 text-sm hover:bg-sunken">
-        <Icon aria-hidden size={14} className={`shrink-0 ${tone}`} />
-        <span className="shrink-0 font-medium">{text}</span>
-        {approval.note && (
-          <span className="truncate text-muted text-xs">{`“${approval.note}”`}</span>
-        )}
-        <ChevronRight
-          aria-hidden
-          size={13}
-          className="shrink-0 text-muted transition-transform group-open:rotate-90"
-        />
-      </summary>
-      <dl
-        className="mt-1.5 ml-6 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-xl border border-line bg-panel px-4 py-3 text-sm"
-        data-selectable
-      >
-        <dt className="text-muted">{t.routines.dialog.when}</dt>
-        <dd>{describeSchedule(routine.schedule, t.routines.when)}</dd>
-        <dt className="text-muted">{t.routines.dialog.name}</dt>
-        <dd>{routine.name}</dd>
-        <dd className="col-span-2 whitespace-pre-wrap">{routine.prompt}</dd>
-      </dl>
-    </details>
+    <SettledLine
+      icon={icon}
+      tone={tone}
+      text={text}
+      note={approval.note}
+      details={
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+          <dt className="text-muted">{t.routines.dialog.when}</dt>
+          <dd>{describeSchedule(routine.schedule, t.routines.when)}</dd>
+          <dt className="text-muted">{t.routines.dialog.name}</dt>
+          <dd>{routine.name}</dd>
+          <dd className="col-span-2 whitespace-pre-wrap">{routine.prompt}</dd>
+        </dl>
+      }
+    />
   );
 }
