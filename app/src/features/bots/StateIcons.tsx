@@ -1,6 +1,6 @@
-// Two state icons that move (motion.css), where a still lucide icon would
-// say less: a ready bot pulses, a working one runs a line. Both keep the
-// lucide look (24 grid, 2px stroke) so they sit with the other states.
+// A state icon that moves (motion.css), where a still lucide icon would
+// say less: a working bot runs a line. It keeps the lucide look (24 grid,
+// 2px stroke) so it sits with the other states.
 
 import type { ComponentType } from "react";
 
@@ -12,26 +12,6 @@ export interface StateIconProps {
 
 /** A state's icon: one of these, or any lucide icon. */
 export type StateIcon = ComponentType<StateIconProps>;
-
-/** "Ready": a dot with two rings spreading from it, one after the other. */
-export function ReadyIcon({ size = 14, className = "" }: StateIconProps) {
-  return (
-    <svg
-      aria-hidden
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      className={className}
-    >
-      <circle className="state-ring" cx="12" cy="12" r="5" />
-      <circle className="state-ring state-ring-late" cx="12" cy="12" r="5" />
-      <circle cx="12" cy="12" r="5" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
 
 // The line of lucide's Activity, the icon this state had before it moved.
 const PULSE =

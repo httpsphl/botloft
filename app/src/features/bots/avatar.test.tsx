@@ -106,11 +106,11 @@ describe("mascot", () => {
 });
 
 describe("state badge", () => {
-  test("ready pulses and working runs its line", () => {
+  test("idle shows nothing and working runs its line", () => {
     const { container, rerender } = render(
       <BotStateBadge bot={{ state: "idle", paused: false }} />,
     );
-    expect(container.querySelectorAll(".state-ring")).toHaveLength(2);
+    expect(container.textContent).toBe("");
 
     rerender(<BotStateBadge bot={{ state: "busy", paused: false }} />);
     expect(container.querySelector(".state-trace")?.getAttribute("pathLength")).toBe("100");
