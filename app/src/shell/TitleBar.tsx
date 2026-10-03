@@ -124,7 +124,7 @@ function WindowControls() {
         type="button"
         aria-label={t.shell.window.close}
         onClick={() => window.close()}
-        className={`${control} hover:bg-[#c42b1c] hover:text-white`}
+        className={`${control} hover:bg-close hover:text-white`}
       >
         <X aria-hidden size={16} strokeWidth={1.5} />
       </button>

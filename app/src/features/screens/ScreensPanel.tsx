@@ -73,7 +73,7 @@ export function ScreensPanel({
                 type="button"
                 onClick={() => setZoom("fit")}
                 title={t.fit}
-                className="h-7 min-w-12 rounded-md px-1.5 font-mono text-muted text-xs tabular-nums transition-colors hover:bg-sunken hover:text-ink"
+                className="h-7 min-w-12 rounded-lg px-1.5 font-mono text-muted text-xs tabular-nums transition-colors hover:bg-sunken hover:text-ink"
               >
                 {Math.round(scale * 100)}%
               </button>
@@ -226,7 +226,7 @@ function Artboard({
         )}
       </p>
       <div
-        className="relative overflow-hidden rounded-md shadow-lift ring-1 ring-line transition-shadow"
+        className="relative overflow-hidden rounded-lg shadow-lift ring-1 ring-line transition-shadow"
         style={
           screen.writing
             ? { boxShadow: `0 0 0 2px ${bot.color}, 0 0 28px ${bot.color}55` }

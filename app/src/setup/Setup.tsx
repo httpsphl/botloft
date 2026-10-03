@@ -92,7 +92,7 @@ function CloseButton({ onClose }: { onClose: () => void }) {
       type="button"
       aria-label={t.shell.window.close}
       onClick={onClose}
-      className="grid h-9 w-11 place-items-center text-ink-soft hover:bg-[#c42b1c] hover:text-white"
+      className="grid h-9 w-11 place-items-center text-ink-soft hover:bg-close hover:text-white"
     >
       <X aria-hidden size={16} strokeWidth={1.5} />
     </button>

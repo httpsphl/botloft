@@ -60,7 +60,7 @@ export function ScheduleFields({
                 onClick={() => toggleDay(day)}
                 className={`grid h-8 w-10 place-items-center rounded-lg border text-sm transition-colors ${
                   on
-                    ? "border-accent bg-accent/12 font-medium text-accent"
+                    ? "border-accent bg-accent/12 font-medium text-accent-text"
                     : "border-line-strong text-ink-soft hover:bg-sunken"
                 }`}
               >
