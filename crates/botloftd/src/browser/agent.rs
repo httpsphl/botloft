@@ -19,8 +19,10 @@ const SECURE_PAGE: &str = "chrome://version";
 const READ_METADATA: &str = "navigator.userAgentData ? navigator.userAgentData\
     .getHighEntropyValues(['architecture', 'bitness', 'fullVersionList', 'model', \
     'platformVersion', 'wow64']) : null";
-/// Tries while the page loads, 50 ms apart.
-const TRIES: usize = 40;
+/// Tries while the page loads, 50 ms apart: up to 10 s. Usually under
+/// 100 ms, but a busy CI runner took over 2 s, and without the data the
+/// brands go empty.
+const TRIES: usize = 200;
 
 /// The params of `Emulation.setUserAgentOverride` for every tab. Run before
 /// anything else reads `events`: the page it reads from opens and closes
