@@ -176,12 +176,13 @@ async fn run(
 /// Reads that the app never sets against notifications: their answer may
 /// come after newer notifications, so they wait neither for the requests
 /// before them nor hold back the notifications meanwhile.
-const ASIDE: [&str; 5] = [
+const ASIDE: [&str; 6] = [
     method::FILES_LIST,
     method::FILES_READ,
     method::SCREENS_LIST,
     method::ATTACHMENTS_READ,
     method::USAGE_TOKENS,
+    method::CHAT_SEARCH,
 ];
 
 enum Routed {
