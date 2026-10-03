@@ -53,6 +53,7 @@ export class FakeConversation {
       body: options.body,
       taskId: options.taskId ?? null,
       routineId: null,
+      questionId: null,
       attachments: [],
       createdAt: this.fake.now,
     };
@@ -129,6 +130,7 @@ export class FakeConversation {
           body: body.trim(),
           taskId: null,
           routineId: null,
+          questionId: null,
           attachments: files.map((file) => this.saved(file)),
           createdAt: this.fake.now,
         };
@@ -179,7 +181,8 @@ export class FakeConversation {
     };
   }
 
-  private record(message: Message): Delivery {
+  /** Saves a message for the bot with its delivery and chat item. */
+  record(message: Message): Delivery {
     this.messages.push(message);
     const delivery: Delivery = {
       id: this.fake.id("dlv"),

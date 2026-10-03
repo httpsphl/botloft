@@ -60,6 +60,10 @@ export function activityLine(
       text = body.explanation ?? body.summary;
       tool = body.toolName;
       break;
+    case "question":
+      kind = "question";
+      text = body.question.text;
+      break;
     case "notice":
       // A compaction is housekeeping, not news about the conversation.
       if (
@@ -266,7 +270,8 @@ export class FakeChat {
     };
   }
 
-  private update(id: string, body: ChatBody): ChatItem {
+  /** Saves a new body for an item; the conversation line stays. */
+  update(id: string, body: ChatBody): ChatItem {
     const item = this.items.find((entry) => entry.id === id);
     if (!item) {
       throw notFound(`chat item ${id}`);
