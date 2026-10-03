@@ -3,6 +3,7 @@
 //! first browser tool, closes when nobody uses or watches it, and sends
 //! live frames to the app connection that watches it.
 
+mod agent;
 mod call;
 mod cdp;
 mod events;

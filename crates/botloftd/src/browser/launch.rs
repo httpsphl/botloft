@@ -65,6 +65,9 @@ pub async fn launch(
             // open their own tabs in the bot's browser.
             "--disable-extensions",
             "--disable-sync",
+            // `navigator.webdriver` stays `false`, as in a browser someone
+            // uses: some sites refuse to sign in to one a program drives.
+            "--disable-blink-features=AutomationControlled",
         ])
         .arg(format!("--user-data-dir={}", profile.display()))
         .arg("about:blank")

@@ -57,10 +57,7 @@ impl Session {
                 json!({ "enabled": true }),
             ),
             ("Emulation.setDeviceMetricsOverride", viewport.metrics()),
-            (
-                "Emulation.setUserAgentOverride",
-                json!({ "userAgent": self.user_agent }),
-            ),
+            ("Emulation.setUserAgentOverride", self.user_agent.clone()),
         ];
         // A tab opened by a page waits for us, and some of these only
         // answer once it runs: send them all, the go-ahead last, then wait.
