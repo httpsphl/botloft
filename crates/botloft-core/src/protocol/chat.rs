@@ -247,6 +247,12 @@ pub struct ChatHistoryParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub limit: Option<u32>,
+    /// Instead of a page: every item from this one to the newest, up to
+    /// 1,000 newest, to open the chat at a search result (spec 8.8).
+    /// Not with `before` or `limit`.
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub until: Option<ChatItemId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

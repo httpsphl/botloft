@@ -19,6 +19,7 @@ mod plans;
 mod questions;
 mod routine_runs;
 mod routines;
+mod search;
 mod tasks;
 mod usage;
 
@@ -35,6 +36,7 @@ pub use deliveries::DeliveryOutcome;
 pub use messages::MessageFilter;
 pub use migrate::LATEST_VERSION;
 pub use questions::{Answered, QuestionRecord};
+pub use search::{Found, SearchFilter, fts_query};
 pub use tasks::TaskFilter;
 
 #[derive(Debug, thiserror::Error)]

@@ -950,6 +950,41 @@ export type ChatItemChanged = { item: ChatItem,
  */
 activity: Activity | null, };
 
+/** What a search snippet puts around each matched word (spec 8.8). */
+export const SNIPPET_MARKS = { open: "\u0002", close: "\u0003" } as const;
+
+/**
+ * Newest first. Page back with `before` set to the oldest item received.
+ */
+export type ChatSearchParams = { 
+/**
+ * Words to find, as the owner typed them; the last one may be the
+ * start of a word.
+ */
+query: string, 
+/**
+ * Only this bot's chat.
+ */
+botId?: BotId, 
+/**
+ * Only the chats of this crew's bots.
+ */
+crewId?: CrewId, before?: ChatItemId, 
+/**
+ * 1 to 100; 30 when absent.
+ */
+limit?: number, };
+
+/**
+ * A chat item with every searched word.
+ */
+export type SearchHit = { item: ChatItem, crewId: CrewId, 
+/**
+ * A few words around the match, on one line, with each matched word
+ * between `\u0002` and `\u0003`.
+ */
+snippet: string, };
+
 /**
  * A permission request (spec 10.1).
  */
@@ -975,7 +1010,13 @@ export type ChatHistoryParams = { botId: BotId, before?: ChatItemId,
 /**
  * 1 to 200; 50 when absent.
  */
-limit?: number, };
+limit?: number, 
+/**
+ * Instead of a page: every item from this one to the newest, up to
+ * 1,000 newest, to open the chat at a search result (spec 8.8).
+ * Not with `before` or `limit`.
+ */
+until?: ChatItemId, };
 
 export type ApprovalsAnswerParams = { approvalId: ApprovalId, allow: boolean, 
 /**
@@ -1352,6 +1393,7 @@ export interface RpcMethods {
   "questions.list": { params: QuestionsListParams; result: Array<Question> };
   "questions.answer": { params: QuestionsAnswerParams; result: Question };
   "questions.dismiss": { params: QuestionIdParams; result: Question };
+  "chat.search": { params: ChatSearchParams; result: Array<SearchHit> };
   "browser.list": { params: undefined; result: Array<BrowserState> };
   "browser.watch": { params: BrowserWatchParams; result: BrowserView };
   "browser.unwatch": { params: undefined; result: null };
