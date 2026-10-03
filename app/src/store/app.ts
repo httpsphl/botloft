@@ -9,6 +9,7 @@ import type {
   Bot,
   BotId,
   BrowserState,
+  ChatItemId,
   Crew,
   CrewId,
   Delivery,
@@ -57,8 +58,10 @@ export interface AppState {
   browsers: Record<BotId, BrowserState>;
   /** Questions waiting for the owner (spec 23.5), then every change. */
   questions: Record<QuestionId, Question>;
-  /** The question box is open in the middle, instead of a crew or bot. */
-  questionBox: boolean;
+  /** A page open in the middle instead of a crew or a bot. */
+  page: Page;
+  /** The chat item a search result opened, to show it (spec 8.8). */
+  focus: { botId: BotId; itemId: ChatItemId } | null;
   /**
    * When the owner last looked at each bot's chat (`seen.ts`), for unread
    * replies and failed routine runs.
@@ -79,7 +82,9 @@ export interface AppState {
   selectedBotId: BotId | null;
   selectCrew(crewId: CrewId | null): void;
   selectBot(botId: BotId): void;
-  openQuestionBox(): void;
+  openPage(page: Exclude<Page, null>): void;
+  /** Opens the bot's chat at one of its items. */
+  openAt(botId: BotId, itemId: ChatItemId): void;
   setPanel(botId: BotId, panel: BotPanel | null): void;
   /** The owner is looking at the bot's chat: what it said so far is seen. */
   markSeen(botId: BotId): void;
@@ -98,6 +103,9 @@ export interface AppState {
 }
 
 export type AppStore = StoreApi<AppState>;
+
+/** The question box (spec 23.6) or the search (spec 8.8). */
+export type Page = "questions" | "search" | null;
 
 const byCreation = <T extends { createdAt: number; id: string }>(a: T, b: T) =>
   a.createdAt - b.createdAt || a.id.localeCompare(b.id);
@@ -131,62 +139,72 @@ export function tasksOf(state: AppState, crewId: CrewId): Task[] {
 }
 
 export function createAppStore(api: BotloftApi): AppStore {
-  return createStore<AppState>()((set, get) => ({
-    connection: api.connection(),
-    loaded: false,
-    loadError: null,
-    system: null,
-    settings: null,
-    crews: {},
-    bots: {},
-    activity: {},
-    deliveries: {},
-    tasks: {},
-    routines: {},
-    browsers: {},
-    questions: {},
-    questionBox: false,
-    seenAt: loadSeen(),
-    seenSince: loadSeenSince(),
-    replyAt: {},
-    markedUnread: loadMarked(),
-    panels: {},
-    selectedCrewId: null,
-    selectedBotId: null,
-    selectCrew: (crewId) => {
-      const { selectedCrewId, selectedBotId, questionBox } = get();
-      if (selectedCrewId !== crewId || selectedBotId !== null || questionBox) {
-        viewTransition(() =>
-          set({ selectedCrewId: crewId, selectedBotId: null, questionBox: false }),
-        );
-      }
-    },
-    selectBot: (botId) => {
+  return createStore<AppState>()((set, get) => {
+    /** Opens a bot's chat; with `focus`, at that item, even if it is open. */
+    const openBot = (botId: BotId, focus: AppState["focus"]) => {
       const bot = get().bots[botId];
-      if (bot && (get().selectedBotId !== botId || get().questionBox)) {
+      if (!bot) {
+        return;
+      }
+      const change = { selectedCrewId: bot.crewId, selectedBotId: botId, page: null, focus };
+      if (get().selectedBotId !== botId || get().page) {
         get().markSeen(botId);
-        viewTransition(() =>
-          set({ selectedCrewId: bot.crewId, selectedBotId: botId, questionBox: false }),
-        );
+        viewTransition(() => set(change));
+      } else if (focus) {
+        set({ focus });
       }
-    },
-    openQuestionBox: () => {
-      if (!get().questionBox) {
-        viewTransition(() => set({ questionBox: true, selectedCrewId: null, selectedBotId: null }));
-      }
-    },
-    ...seenActions(get, set),
-    setPanel: (botId, panel) => set((state) => ({ panels: { ...state.panels, [botId]: panel } })),
-    putCrew: (crew) => set((state) => withCrew(state, crew)),
-    putBot: (bot) => set((state) => withBot(state, bot)),
-    dropCrew: (crewId) => set((state) => withoutCrew(state, crewId)),
-    dropBot: (botId) => set((state) => withoutBots(state, [botId])),
-    putRoutine: (routine) => set((state) => withRoutine(state, routine)),
-    putBrowser: (browser) => set((state) => withBrowser(state, browser)),
-    putSettings: (settings) => set({ settings }),
-    putDelivery: (delivery) =>
-      set((state) => ({ deliveries: { ...state.deliveries, [delivery.messageId]: delivery } })),
-  }));
+    };
+    return {
+      connection: api.connection(),
+      loaded: false,
+      loadError: null,
+      system: null,
+      settings: null,
+      crews: {},
+      bots: {},
+      activity: {},
+      deliveries: {},
+      tasks: {},
+      routines: {},
+      browsers: {},
+      questions: {},
+      page: null,
+      focus: null,
+      seenAt: loadSeen(),
+      seenSince: loadSeenSince(),
+      replyAt: {},
+      markedUnread: loadMarked(),
+      panels: {},
+      selectedCrewId: null,
+      selectedBotId: null,
+      selectCrew: (crewId) => {
+        const { selectedCrewId, selectedBotId, page } = get();
+        if (selectedCrewId !== crewId || selectedBotId !== null || page) {
+          viewTransition(() =>
+            set({ selectedCrewId: crewId, selectedBotId: null, page: null, focus: null }),
+          );
+        }
+      },
+      selectBot: (botId) => openBot(botId, null),
+      openAt: (botId, itemId) => openBot(botId, { botId, itemId }),
+      openPage: (page) => {
+        if (get().page !== page) {
+          viewTransition(() => set({ page, selectedCrewId: null, selectedBotId: null }));
+        }
+      },
+      ...seenActions(get, set),
+      setPanel: (botId, panel) => set((state) => ({ panels: { ...state.panels, [botId]: panel } })),
+      putCrew: (crew) => set((state) => withCrew(state, crew)),
+      putBot: (bot) => set((state) => withBot(state, bot)),
+      dropCrew: (crewId) => set((state) => withoutCrew(state, crewId)),
+      dropBot: (botId) => set((state) => withoutBots(state, [botId])),
+      putRoutine: (routine) => set((state) => withRoutine(state, routine)),
+      putBrowser: (browser) => set((state) => withBrowser(state, browser)),
+      putSettings: (settings) => set({ settings }),
+      putDelivery: (delivery) =>
+        set((state) => ({ deliveries: { ...state.deliveries, [delivery.messageId]: delivery } })),
+    };
+  });
 }
 
 function withCrew(state: AppState, crew: Crew): Partial<AppState> {

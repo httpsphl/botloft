@@ -22,6 +22,8 @@ mod questions;
 mod routines;
 #[path = "export_rules.rs"]
 mod rules;
+#[path = "export_search.rs"]
+mod search;
 #[path = "export_session.rs"]
 mod session;
 #[path = "export_usage.rs"]
@@ -178,6 +180,7 @@ fn export_bindings() {
     out.decl::<ChatBody>();
     out.decl::<ChatItem>();
     out.decl::<ChatItemChanged>();
+    search::decls(&mut out);
     out.decl::<Approval>();
     out.decl::<ChatDelta>();
     out.decl::<ChatHistoryParams>();
@@ -333,6 +336,7 @@ fn export_bindings() {
     rules::methods(&mut out);
     routines::methods(&mut out);
     questions::methods(&mut out);
+    search::methods(&mut out);
     browser::methods(&mut out);
     out.text.push_str("}\n\n");
 

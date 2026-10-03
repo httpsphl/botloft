@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { errorText } from "../../lib/api";
-import type { BotId, ChatItem } from "../../lib/protocol.gen";
+import type { BotId, ChatItem, ChatItemId } from "../../lib/protocol.gen";
 import { useApi, useApp } from "../../store/context";
 
 const PAGE = 50;
@@ -44,7 +44,8 @@ function merge(history: ChatItem[], live: ChatItem[]): ChatItem[] {
   return items;
 }
 
-export function useChat(botId: BotId) {
+/** With `focus`, the chat loads from that item to the newest (spec 8.8). */
+export function useChat(botId: BotId, focus: ChatItemId | null = null) {
   const api = useApi();
   const open = useApp((state) => state.connection.kind === "open");
   const [page, setPage] = useState<ChatPage>(EMPTY);
@@ -71,13 +72,19 @@ export function useChat(botId: BotId) {
         setPage((current) => ({ ...current, draft: current.draft + text }));
       }
     });
-    api.call("chat.history", { botId, limit: PAGE }).then(
+    const newest = () => api.call("chat.history", { botId, limit: PAGE });
+    // An item that is gone opens the chat as usual.
+    const first = focus
+      ? api.call("chat.history", { botId, until: focus }).catch(newest)
+      : newest();
+    first.then(
       (history) => {
         if (alive) {
           setPage((current) => ({
             ...current,
             items: merge(history, current.items),
-            complete: history.length < PAGE,
+            // From an item, older ones may still be there.
+            complete: !focus && history.length < PAGE,
             loading: false,
           }));
         }
@@ -92,7 +99,7 @@ export function useChat(botId: BotId) {
       alive = false;
       unsubscribe();
     };
-  }, [api, open, botId]);
+  }, [api, open, botId, focus]);
 
   const oldest = page.items[0]?.id;
   const loadOlder = useCallback(async () => {

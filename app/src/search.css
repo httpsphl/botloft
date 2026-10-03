@@ -1,0 +1,33 @@
+/* The chat item a search result opened (spec 8.8): a soft band behind it
+   that fades, so the eye finds it. With less motion the band stays still
+   for the same time and then goes. */
+.search-focus {
+  border-radius: 16px;
+  animation: search-focus 2.4s var(--ease-out) both;
+}
+
+@keyframes search-focus {
+  0%,
+  40% {
+    background: color-mix(in srgb, var(--warn) 16%, transparent);
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--warn) 16%, transparent);
+  }
+  100% {
+    background: transparent;
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+
+/* biome-ignore-start lint/complexity/noImportantStyles: it must win over the less-motion rules */
+@media (prefers-reduced-motion: reduce) {
+  .search-focus {
+    animation: none !important;
+    background: color-mix(in srgb, var(--warn) 16%, transparent);
+  }
+}
+
+:root[data-motion="less"] .search-focus {
+  animation: none !important;
+  background: color-mix(in srgb, var(--warn) 16%, transparent);
+}
+/* biome-ignore-end lint/complexity/noImportantStyles: it must win over the less-motion rules */

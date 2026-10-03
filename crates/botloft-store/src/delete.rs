@@ -11,7 +11,8 @@ use crate::{Result, Store};
 /// what points at a row goes, or lets go of it, before the row.
 const DELETE_BOT: &[&str] = &[
     // Questions point at chat items, and answers at questions.
-    "UPDATE messages SET question_id = NULL      WHERE question_id IN (SELECT id FROM questions WHERE bot_id = ?1)",
+    "UPDATE messages SET question_id = NULL \
+     WHERE question_id IN (SELECT id FROM questions WHERE bot_id = ?1)",
     "DELETE FROM questions WHERE bot_id = ?1",
     "DELETE FROM approvals WHERE bot_id = ?1",
     "DELETE FROM chat_items WHERE bot_id = ?1",

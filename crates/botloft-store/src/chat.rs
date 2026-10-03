@@ -11,7 +11,7 @@ use crate::{Result, Store, cached_execute, cached_row, parse_column};
 
 const COLUMNS: &str = "id, bot_id, data, created_at, updated_at";
 
-fn from_row(row: &Row<'_>) -> rusqlite::Result<ChatItem> {
+pub(crate) fn from_row(row: &Row<'_>) -> rusqlite::Result<ChatItem> {
     let data: String = row.get(2)?;
     let body = serde_json::from_str(&data)
         .map_err(|err| rusqlite::Error::FromSqlConversionFailure(2, Type::Text, Box::new(err)))?;
@@ -120,6 +120,19 @@ impl Store {
             params![bot.as_str(), before.map(ChatItemId::as_str), limit],
             from_row,
         )?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    /// Every item from `until` to the newest, newest first, at most
+    /// `limit`; empty if `until` is not in the bot's chat.
+    pub fn chat_since(&self, bot: &BotId, until: &ChatItemId, limit: u32) -> Result<Vec<ChatItem>> {
+        let mut stmt = self.conn.prepare_cached(&format!(
+            "SELECT {COLUMNS} FROM chat_items \
+             WHERE bot_id = ?1 \
+               AND rowid >= (SELECT rowid FROM chat_items WHERE id = ?2 AND bot_id = ?1) \
+             ORDER BY rowid DESC LIMIT ?3"
+        ))?;
+        let rows = stmt.query_map(params![bot.as_str(), until.as_str(), limit], from_row)?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 

@@ -180,8 +180,16 @@ export class FakeChat {
 
   handlers(): Pick<Handlers, "chat.history" | "approvals.answer"> {
     return {
-      "chat.history": ({ botId, before, limit }) => {
+      "chat.history": ({ botId, before, limit, until }) => {
         this.fake.bot(botId, false);
+        const mine = this.items.filter((item) => item.botId === botId);
+        if (until) {
+          const at = mine.findIndex((item) => item.id === until);
+          if (at < 0) {
+            throw notFound(`chat item ${until}`);
+          }
+          return mine.slice(at).reverse().slice(0, 1000);
+        }
         const end = before ? this.items.findIndex((item) => item.id === before) : this.items.length;
         const older = this.items.slice(0, end < 0 ? this.items.length : end);
         return older

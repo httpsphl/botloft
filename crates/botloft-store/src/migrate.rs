@@ -22,6 +22,7 @@ const MIGRATIONS: &[(u32, &str)] = &[
     (13, include_str!("../migrations/0013_reply_index.sql")),
     (14, include_str!("../migrations/0014_allow_rules.sql")),
     (15, include_str!("../migrations/0015_questions.sql")),
+    (16, include_str!("../migrations/0016_chat_search.sql")),
 ];
 
 /// Schema version after every migration has run.
@@ -64,6 +65,33 @@ mod tests {
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .expect("version");
         assert_eq!(version, LATEST_VERSION);
+    }
+
+    #[test]
+    fn chats_from_before_search_are_indexed() {
+        let mut conn = Connection::open_in_memory().expect("open");
+        for &(version, sql) in &MIGRATIONS[..15] {
+            conn.execute_batch(sql).expect("migration");
+            conn.pragma_update(None, "user_version", version)
+                .expect("version");
+        }
+        conn.execute_batch(
+            // Items without their bot: only the index is under test.
+            r#"PRAGMA foreign_keys = OFF;
+               INSERT INTO chat_items (id, bot_id, kind, data, created_at, updated_at) VALUES
+               ('cht_1', 'bot_1', 'reply', '{"kind":"reply","text":"older answer"}', 0, 0),
+               ('cht_2', 'bot_1', 'tool', '{"kind":"tool","summary":"older"}', 0, 0);"#,
+        )
+        .expect("items");
+        run(&mut conn).expect("search migration");
+        let found: Vec<String> = conn
+            .prepare("SELECT c.id FROM chat_search JOIN chat_items c ON c.rowid = chat_search.rowid WHERE chat_search MATCH 'older'")
+            .expect("query")
+            .query_map([], |row| row.get(0))
+            .expect("rows")
+            .collect::<rusqlite::Result<_>>()
+            .expect("ids");
+        assert_eq!(found, ["cht_1"]);
     }
 
     #[test]

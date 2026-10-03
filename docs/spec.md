@@ -422,6 +422,19 @@ O dono vê quantos tokens cada bot gasta: em cada turno, no chat, e somados por 
 - **Por bot.** `usage.tokens {since}` soma os itens `turn` com `tokens` terminados a partir de `since` (ms Unix), por bot, com nome, cor, o nome da equipe (dois bots podem ter o mesmo nome em equipes diferentes) e se está arquivado, do que mais gastou para o que menos. Bots sem turno no período ficam de fora; bots excluídos levam os itens junto (7.6). O app oferece hoje (desde a meia-noite local), 7 dias, 30 dias e tudo, com o total dos bots embaixo.
 - Uma compactação (8.6) não vira item `turn` e não entra na conta.
 
+### 8.8 Busca
+
+O dono procura palavras em todas as conversas: o que ele mandou, o que outros bots e o Botloft mandaram, o que cada bot respondeu, e as perguntas dos bots com as respostas (23). Ferramentas, pedidos e avisos ficam de fora: são o trabalho, não a conversa.
+
+- **Índice.** Uma tabela FTS5 (`chat_search`) sobre `chat_items`, lida por uma view (`chat_text`) que tira o texto do JSON de cada item: nada é gravado duas vezes. Triggers acompanham cada item novo, mudado ou apagado (a exclusão de um bot, 7.6, leva o índice junto); a migration indexa o que já existia. O tokenizador é `unicode61` sem acentos: "previsao" acha "previsão", e maiúsculas não contam.
+- **Consulta.** `chat.search {query, botId?, crewId?, before?, limit?}` acha os itens com **todas** as palavras, em qualquer ordem; a última vale também como começo de palavra ("relat" acha "relatório"). Cada palavra é tomada ao pé da letra: aspas, `OR`, `NEAR` e `*` do FTS5 não fazem nada de especial. Precisa de pelo menos 2 letras ou números; menos que isso é `validation`. Só bots e crews ativos, do item mais novo ao mais velho; `before` pagina, `limit` de 1 a 100 (30 se ausente).
+- **Resultado.** `SearchHit`: o `ChatItem`, o `crewId` e um trecho (`snippet`) de umas 18 palavras em volta do que foi achado, com cada palavra achada entre `\u0002` e `\u0003` (`SNIPPET_MARKS` no TypeScript), que o app destaca.
+- **Abrir no ponto.** `chat.history {botId, until}` devolve do item achado até o mais novo, até 1 000 itens (o chat abre ali e o resto carrega como sempre). Um item que não é do bot dá `not_found`.
+- **Por fora da fila.** `chat.search` responde quando fica pronta, como `files.list` (11.1): uma busca lenta não segura o texto ao vivo.
+- **Privacidade.** A consulta é texto do dono e nunca vai para o log em `info` ou acima (8.5).
+
+**No app.** "Buscar", no topo da barra lateral (ou Ctrl+K), abre a busca no meio da janela: um campo, a escolha de uma equipe ou de todas, e os resultados conforme o dono escreve, cada um com o rosto e o nome do bot, a equipe, a hora, quem escreveu (o dono, outro bot, o Botloft ou o próprio bot) e o trecho com as palavras em destaque. "Mostrar mais" traz os anteriores. Um clique abre o chat do bot nesse ponto, com o item em destaque por um instante. A busca guarda o que foi digitado enquanto o app está aberto, e o texto volta selecionado, pronto para uma busca nova. Sem nada achado: "Nada encontrado".
+
 ## 9. Mensagens e entrega
 
 ### 9.1 Fluxo
@@ -597,7 +610,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 - Qualquer outro método antes do hello: erro `-32001` e a conexão fecha. Token errado também dá `-32001`; `protocol` diferente dá `-32004`; nos dois casos a conexão fecha. O hello tem que chegar em até 10 s.
 - `Origin` aceito: `http://tauri.localhost`, `tauri://localhost` e `http://localhost:1420` (dev). Qualquer outro `Origin` recebe HTTP 403 antes do upgrade. Sem `Origin` (cliente nativo, testes) é aceito: navegadores sempre mandam o header, e o token continua obrigatório.
 - Um cliente lento que deixa acumular mais de 4096 notificações é desconectado e recarrega o estado ao reconectar.
-- Os requests rodam numa thread de bloqueio, nunca numa do runtime. Quem espera o banco numa thread do runtime (o courier, o supervisor, as tools) espera com `block_in_place`, que passa o resto do trabalho dessa thread para outra: parada ali, ela deixaria de rodar os timers e os sockets de todo o daemon até outra thread acordar, e um request lento seguraria até o `/health`. Os de uma conexão são respondidos um de cada vez, na ordem em que chegaram, e a resposta sai antes de qualquer notificação que venha depois dela: o app trata uma resposta como mais nova que tudo o que recebeu antes e grava o objeto inteiro (um `Bot`, uma `Routine`, a lista de uma carga). A exceção são as leituras que o app nunca cruza com notificações (`files.list`, `files.read`, `screens.list`, `attachments.read`, `usage.tokens`). Elas correm por fora e respondem quando ficam prontas, de modo que varrer uma pasta grande ou ler um arquivo grande não segura o texto ao vivo. Os requests do navegador (21.7, 21.10) pertencem à conexão e são respondidos na hora.
+- Os requests rodam numa thread de bloqueio, nunca numa do runtime. Quem espera o banco numa thread do runtime (o courier, o supervisor, as tools) espera com `block_in_place`, que passa o resto do trabalho dessa thread para outra: parada ali, ela deixaria de rodar os timers e os sockets de todo o daemon até outra thread acordar, e um request lento seguraria até o `/health`. Os de uma conexão são respondidos um de cada vez, na ordem em que chegaram, e a resposta sai antes de qualquer notificação que venha depois dela: o app trata uma resposta como mais nova que tudo o que recebeu antes e grava o objeto inteiro (um `Bot`, uma `Routine`, a lista de uma carga). A exceção são as leituras que o app nunca cruza com notificações (`files.list`, `files.read`, `screens.list`, `attachments.read`, `usage.tokens`, `chat.search`). Elas correm por fora e respondem quando ficam prontas, de modo que varrer uma pasta grande ou ler um arquivo grande não segura o texto ao vivo. Os requests do navegador (21.7, 21.10) pertencem à conexão e são respondidos na hora.
 - A versão 2 do protocolo troca `terminal.*` pelo chat (ADR 0001).
 
 ### 11.2 Métodos (MVP)
@@ -626,7 +639,8 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `bots.restart` | `botId, fresh?` | `Bot` |
 | `bots.archive` | `botId` | `Bot` |
 | `bots.delete` | `botId, recycleFolder?` | `{botId, crewId}`; exclui o bot, ativo ou arquivado; com `recycleFolder`, a pasta dele vai depois para a Lixeira (7.6) |
-| `chat.history` | `botId, before?, limit?` | `ChatItem[]`, mais novo primeiro; `limit` de 1 a 200, 50 se ausente |
+| `chat.history` | `botId, before?, limit?` ou `botId, until` | `ChatItem[]`, mais novo primeiro; `limit` de 1 a 200, 50 se ausente; `until`: do item até o mais novo, até 1 000 (8.8) |
+| `chat.search` | `query, botId?, crewId?, before?, limit?` | `SearchHit[]`: itens com todas as palavras, mais novo primeiro, com um trecho em destaque (8.8) |
 | `approvals.answer` | `approvalId, allow, note?, input?, always?` (`input`: a sugestão de bot como o dono a deixou, 10.2; `always`: com `allow`, grava o `always` do pedido como regra do bot, 10.1) | `Approval` |
 | `rules.list` | `botId` | `AllowRule[]`: o que o bot faz sem perguntar, da regra mais antiga à mais nova (10.1) |
 | `rules.delete` | `ruleId` | `{botId, rules}`: as regras que ficaram; o bot volta a perguntar pelo que saiu (10.1) |
@@ -684,6 +698,7 @@ Pragmas: `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON`, `busy_time
 | `browser_sites` | `bot_id, host, allowed_at`: sites que o dono deixou o bot usar no navegador (21.5) |
 | `allow_rules` | `id (rul_), bot_id, tool_name, kind, value, created_at`, única por `(bot_id, tool_name, kind, value)`: o que o dono permitiu de vez para o bot (10.1) |
 | `questions` | seção 23.7; `messages` ganha `question_id` |
+| `chat_search` | índice FTS5 do texto de `chat_items`, pela view `chat_text`, mantido por triggers (8.8) |
 
 Índices mínimos: `deliveries(state, next_attempt_at)`, `messages(crew_id, created_at)`, `tasks(assignee_bot_id, status)`, `bots(crew_id)`, `chat_items(bot_id, id)`, `chat_items(created_at) WHERE kind = 'turn'` (8.7), `attachments(message_id)`.
 
@@ -991,7 +1006,7 @@ M2 a M4 foram entregues com ConPTY, terminal com replay, inbox por named pipe e 
 1. Rotinas: horário semanal, intervalo ou cron, com fuso, sobreposição e horários perdidos. Desenho na seção 20.
 2. Caixa de perguntas ao owner (bot pergunta, owner responde, resposta volta como mensagem). Desenho na seção 23.
 3. "Permitir sempre" nas aprovações, gravado como regra do bot. Feito (10.1).
-4. Busca FTS5 em mensagens e no chat.
+4. Busca FTS5 em mensagens e no chat. Feito (8.8).
 5. Histórico de versões das instruções do bot.
 6. Acesso remoto com token por dispositivo (Tailscale).
 7. Sinais entre bots disparando rotinas.
