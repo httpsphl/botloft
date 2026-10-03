@@ -103,6 +103,21 @@ async fn words_made_of_one_element_per_letter_keep_their_spaces() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn sites_see_a_common_browser() {
+    let Some(mut b) = setup().await else { return };
+    let opening = call(
+        &b.mcp,
+        "browser_open",
+        json!({ "url": format!("{}/signals", b.site) }),
+    );
+    answer_site(&mut b.app, true, None).await;
+    let page = opening.await.expect("task").expect("page");
+    assert!(page.contains("Webdriver: false"), "{page}");
+    assert!(page.contains("Brands: Chromium"), "{page}");
+    assert!(!page.contains("Headless"), "{page}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn a_site_the_owner_denies_stays_closed() {
     let Some(mut b) = setup().await else { return };
     let opening = call(&b.mcp, "browser_open", json!({ "url": b.site.clone() }));

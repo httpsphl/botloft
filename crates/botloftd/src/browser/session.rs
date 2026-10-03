@@ -13,11 +13,11 @@ use serde_json::json;
 use tokio::sync::{Notify, watch};
 use tracing::debug;
 
-use super::BrowserError;
 use super::cdp::Cdp;
 use super::events::pump;
 use super::launch::{self, BrowserProcess};
 use super::viewport::{MAX_HEIGHT, Viewport, WIDTH};
+use super::{BrowserError, agent};
 
 /// Most tabs a browser keeps; past this, the one active longest ago closes.
 pub(super) const MAX_TABS: usize = 6;
@@ -125,7 +125,8 @@ pub struct Session {
     /// The next element ref, shared by every page of this browser.
     pub next_ref: AtomicU64,
     process: Mutex<Option<BrowserProcess>>,
-    pub(super) user_agent: String,
+    /// The params of `Emulation.setUserAgentOverride` (`agent.rs`).
+    pub(super) user_agent: serde_json::Value,
     /// One change of what the app wants at a time (`watch.rs`).
     pub(super) syncing: tokio::sync::Mutex<()>,
 }
@@ -141,12 +142,8 @@ impl Session {
         hooks: Hooks,
     ) -> Result<Arc<Self>, BrowserError> {
         let (process, url) = launch::launch(program, profile).await?;
-        let (cdp, events) = Cdp::connect(&url).await?;
-        let version = cdp.call(None, "Browser.getVersion", json!({})).await?;
-        let user_agent = version["userAgent"]
-            .as_str()
-            .unwrap_or_default()
-            .replace("HeadlessChrome", "Chrome");
+        let (cdp, mut events) = Cdp::connect(&url).await?;
+        let user_agent = agent::read(&cdp, &mut events).await?;
         let session = Arc::new(Self {
             cdp,
             tabs: Mutex::new(Tabs {
