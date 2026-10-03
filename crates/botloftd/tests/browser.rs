@@ -113,7 +113,13 @@ async fn sites_see_a_common_browser() {
     answer_site(&mut b.app, true, None).await;
     let page = opening.await.expect("task").expect("page");
     assert!(page.contains("Webdriver: false"), "{page}");
-    assert!(page.contains("Brands: Chromium"), "{page}");
+    // The order of the brands changes from one version to the next.
+    let brands = page
+        .split("Brands: ")
+        .nth(1)
+        .and_then(|rest| rest.split(';').next())
+        .unwrap_or_default();
+    assert!(brands.contains("Chromium"), "{page}");
     assert!(!page.contains("Headless"), "{page}");
 }
 
