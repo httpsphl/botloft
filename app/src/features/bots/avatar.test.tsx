@@ -115,6 +115,17 @@ describe("state badge", () => {
     rerender(<BotStateBadge bot={{ state: "busy", paused: false }} />);
     expect(container.querySelector(".state-trace")?.getAttribute("pathLength")).toBe("100");
   });
+
+  test("fades in when the bot starts working, not when it was already working", () => {
+    const { container, rerender } = render(
+      <BotStateBadge bot={{ state: "busy", paused: false }} />,
+    );
+    expect(container.querySelector(".animate-fade")).toBeNull();
+
+    rerender(<BotStateBadge bot={{ state: "idle", paused: false }} />);
+    rerender(<BotStateBadge bot={{ state: "busy", paused: false }} />);
+    expect(container.querySelector(".animate-fade")).not.toBeNull();
+  });
 });
 
 describe("ListAvatar", () => {
