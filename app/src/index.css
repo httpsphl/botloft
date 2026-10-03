@@ -28,13 +28,16 @@
   --line-strong: #b5b5ae;
   --ink: #121212;
   --ink-soft: #3b3b38;
-  --muted: #6f6f69;
+  --muted: #5f5f59;
   --accent: #d9481f;
-  --ok: #1d7f46;
+  /* The accent as text: the fill above reads under 4.5:1 on the light
+     backgrounds, so words in it use this darker one (spec 15.3). */
+  --accent-text: #b83a14;
+  --ok: #17703d;
   --work: #1f5fc4;
-  --warn: #a35f00;
-  --danger: #c2372a;
-  --idle-state: #6f6f69;
+  --warn: #8a5000;
+  --danger: #bd3529;
+  --idle-state: #5f5f59;
   /* The check marks of a message the bot has read: a lighter blue than
      --work, still 3:1 or more on canvas, panel and sunken in both themes. */
   --read: #1787c9;
@@ -42,6 +45,10 @@
   --avatar-edge: rgb(0 0 0 / 0.2);
   /* Under menus, pickers and dialogs. */
   --lift: rgb(0 0 0 / 0.12);
+  /* Behind a dialog. */
+  --scrim: rgb(0 0 0 / 0.5);
+  /* Windows' close button on hover, the same in both themes. */
+  --close: #c42b1c;
 }
 
 [data-theme="dark"] {
@@ -55,6 +62,7 @@
   --ink-soft: #c6c6c0;
   --muted: #8c8c86;
   --accent: #ff7a59;
+  --accent-text: #ff7a59;
   --ok: #4fc382;
   --work: #6ea6ff;
   --warn: #f0b24a;
@@ -63,6 +71,7 @@
   --read: #5cc4f2;
   --avatar-edge: rgb(255 255 255 / 0.14);
   --lift: rgb(0 0 0 / 0.5);
+  --scrim: rgb(0 0 0 / 0.6);
 }
 
 @theme inline {
@@ -75,6 +84,9 @@
   --color-ink-soft: var(--ink-soft);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
+  --color-accent-text: var(--accent-text);
+  --color-scrim: var(--scrim);
+  --color-close: var(--close);
   --color-ok: var(--ok);
   --color-work: var(--work);
   --color-warn: var(--warn);

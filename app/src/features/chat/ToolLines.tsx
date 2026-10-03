@@ -134,7 +134,7 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
             title={t.files.showInPanel}
             aria-label={`${t.files.showInPanel}: ${tool.summary}`}
             onClick={() => showFile(tool.file as string)}
-            className="grid size-6 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-sunken hover:text-ink"
+            className="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-sunken hover:text-ink"
           >
             <Files aria-hidden size={14} />
           </button>
@@ -145,7 +145,7 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
             title={t.screens.showInPanel}
             aria-label={`${t.screens.showInPanel}: ${tool.summary}`}
             onClick={() => showScreen(tool.file as string)}
-            className="grid size-6 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-sunken hover:text-ink"
+            className="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-sunken hover:text-ink"
           >
             <LayoutTemplate aria-hidden size={14} />
           </button>
@@ -156,7 +156,7 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
             title={t.browser.showInPanel}
             aria-label={`${t.browser.showInPanel}: ${title}`}
             onClick={() => showBrowser()}
-            className="grid size-6 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-sunken hover:text-ink"
+            className="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-sunken hover:text-ink"
           >
             <Globe aria-hidden size={14} />
           </button>

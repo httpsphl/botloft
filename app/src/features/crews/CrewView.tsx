@@ -79,7 +79,7 @@ export function CrewView({ crew }: { crew: Crew }) {
               type="button"
               onClick={openFolder}
               title={words.openFolder}
-              className="flex min-w-0 items-center gap-1 rounded-md px-1 hover:bg-sunken hover:text-ink"
+              className="flex min-w-0 items-center gap-1 rounded-lg px-1 hover:bg-sunken hover:text-ink"
             >
               <Folder aria-hidden size={13} className="shrink-0" />
               <span className="truncate">{words.folder(crew.workFolder)}</span>

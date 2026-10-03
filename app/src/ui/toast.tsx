@@ -55,7 +55,7 @@ export function Toaster() {
             type="button"
             aria-label={t.common.dismiss}
             onClick={() => dismiss(toast.id)}
-            className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-muted hover:bg-sunken hover:text-ink"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-lg text-muted hover:bg-sunken hover:text-ink"
           >
             <X aria-hidden size={14} />
           </button>

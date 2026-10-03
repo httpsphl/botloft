@@ -91,7 +91,7 @@ export function ModePicker({ bot, onLater }: { bot: Bot; onLater(text: string): 
               }
             }}
             trailing={
-              <span className="shrink-0 rounded-md border border-danger/50 px-2 py-0.5 font-medium text-danger text-xs">
+              <span className="shrink-0 rounded-lg border border-danger/50 px-2 py-0.5 font-medium text-danger text-xs">
                 {m.turnOn}
               </span>
             }
