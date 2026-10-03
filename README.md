@@ -47,7 +47,9 @@ you decide what they may do.
 - **Let them hand work to each other.** Bots send messages and tasks to each other. Every message is
   saved before it is sent and retried until it arrives.
 - **Watch them work.** See every page a bot opens in its browser, live, and take control to sign in
-  for it. Watch the screens it designs take shape while it writes them. Open the files it made.
+  for it. Sites that refuse to sign in there, like Google, take one click more: sign in in a real
+  window of the bot's browser, close it, and the bot keeps the login. Watch the screens it designs
+  take shape while it writes them. Open the files it made.
 - **Schedule routines.** Weekday mornings, every two hours or any cron schedule, with missed runs
   and overlaps handled.
 - **Leave them running.** Bots keep working after you close Botloft. They start when you sign in,
