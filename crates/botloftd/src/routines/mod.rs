@@ -8,6 +8,7 @@
 mod cron;
 mod fire;
 pub mod schedule;
+pub mod signal;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};

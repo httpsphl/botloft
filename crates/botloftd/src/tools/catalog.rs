@@ -24,9 +24,13 @@ pub fn tools() -> Value {
     if let Value::Array(list) = &mut tools {
         // Before permission_prompt, which stays last.
         let at = list.len() - 1;
-        let more = [super::share::tool(), super::question::tool()]
-            .into_iter()
-            .chain(super::browser_catalog::tools());
+        let more = [
+            super::share::tool(),
+            super::question::tool(),
+            super::signal::tool(),
+        ]
+        .into_iter()
+        .chain(super::browser_catalog::tools());
         list.splice(at..at, more);
     }
     tools
@@ -169,7 +173,8 @@ fn crew_tools() -> Value {
             "name": SCHEDULE_ROUTINE,
             "title": "Schedule a routine",
             "description": "Asks the owner for a routine: work done at set times, such as every \
-                weekday at 08:00 or every 2 hours. Each time, the bot gets your prompt as a \
+                weekday at 08:00 or every 2 hours, or whenever a bot of the crew sends a signal \
+                (send_signal), such as \"report-ready\". Each time, the bot gets your prompt as a \
                 message, even after restarts. The owner sees the routine in your chat, may change \
                 it, and approves or declines it; the call waits for that. Approved, it shows among \
                 the bot's routines in the Botloft app. This is the only way to schedule work.",
@@ -225,6 +230,19 @@ fn crew_tools() -> Value {
                                     },
                                 },
                                 "required": ["kind", "expr"],
+                                "additionalProperties": false,
+                            },
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "kind": { "const": "signal" },
+                                    "name": {
+                                        "type": "string",
+                                        "description": "The signal it waits for, like \
+                                            \"report-ready\".",
+                                    },
+                                },
+                                "required": ["kind", "name"],
                                 "additionalProperties": false,
                             },
                         ],

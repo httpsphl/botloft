@@ -4,12 +4,14 @@ use std::path::Path;
 
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64;
-use botloft_core::envelope::{self, Envelope, RoutineEnvelope, Sender};
+use botloft_core::envelope::{self, Envelope, Sender};
 use botloft_core::ids::random_uuid;
 use botloft_core::protocol::{Attachment, Message, SenderKind, Task};
 use bytes::Bytes;
 use serde_json::{Value, json};
 use tracing::debug;
+
+use super::context::RoutineContext;
 
 /// Images the API accepts inline (spec 9.5).
 const INLINE_IMAGES: &[&str] = &["image/png", "image/jpeg", "image/gif", "image/webp"];
@@ -23,9 +25,9 @@ pub(super) struct Context<'a> {
     pub task: Option<&'a Task>,
     /// The recipient's workspace, where attachments were saved.
     pub workspace: &'a Path,
-    /// For a routine's message: its name, the local time it is for and the
-    /// zone (spec 20.5).
-    pub routine: Option<(&'a str, &'a str, &'a str)>,
+    /// For a routine's message: the routine and what made it run (spec
+    /// 20.5, 20.13).
+    pub routine: Option<&'a RoutineContext>,
     /// For the owner's answer to a question: its id and text (spec 23.4).
     pub question: Option<(&'a str, &'a str)>,
 }
@@ -56,13 +58,7 @@ pub(super) fn render(message: &Message, context: &Context<'_>, now: i64) -> Rend
             envelope(message, context, from, now)
         }
         SenderKind::System => match context.routine {
-            Some((name, scheduled, timezone)) => RoutineEnvelope {
-                name,
-                scheduled,
-                timezone,
-                body: &message.body,
-            }
-            .render(),
+            Some(routine) => routine.envelope(&message.body).render(),
             None => envelope(message, context, Sender::Botloft, now),
         },
     };
