@@ -1,5 +1,6 @@
 // The owner's hands in a bot's browser (spec 21.10): taking it, giving it
-// back, sending what they do on the page, and moving between its tabs.
+// back, sending what they do on the page, moving between its tabs, and
+// opening it in a window of its own (spec 21.11).
 // Events go out in order and without waiting for each other: the daemon
 // queues them for the page.
 
@@ -15,6 +16,8 @@ export interface Hands {
   busy: boolean;
   take(): Promise<void>;
   release(): Promise<void>;
+  /** Opens the browser in a window of its own, to sign in. */
+  window(): Promise<void>;
   send(input: BrowserInput): void;
   /** Opens a blank tab; `true` once the daemon took the request. */
   newTab(): Promise<boolean>;
@@ -46,6 +49,14 @@ export function useHands(bot: Pick<Bot, "id">, state: BrowserState | null): Hand
     setBusy(false);
   }, [api, botId, putBrowser, t.hands.giveBackFailed]);
 
+  const openWindow = useCallback(async () => {
+    setBusy(true);
+    await attempt(t.window.openFailed, async () => {
+      putBrowser(await api.call("browser.window", { botId }));
+    });
+    setBusy(false);
+  }, [api, botId, putBrowser, t.window.openFailed]);
+
   const send = useCallback(
     (input: BrowserInput) => {
       // One lost event is not worth a message; the page shows what arrived.
@@ -73,6 +84,7 @@ export function useHands(bot: Pick<Bot, "id">, state: BrowserState | null): Hand
     busy,
     take,
     release,
+    window: openWindow,
     send,
     newTab,
     switchTab,

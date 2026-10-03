@@ -81,6 +81,15 @@ export const browser: Messages["browser"] = {
     typing: "O que você digita vai para a página",
     screen: (bot) => `Navegador de ${bot}, nas suas mãos`,
   },
+  window: {
+    open: "Entrar numa janela",
+    why: (bot) =>
+      `Para sites que recusam o login aqui, como o Google: o navegador de ${bot} abre numa janela própria, e o login fica com ${bot}.`,
+    openFailed: "Não foi possível abrir a janela",
+    title: "Aberto numa janela",
+    body: (bot) =>
+      `Entre na conta na janela que abriu e depois feche-a. ${bot} espera enquanto isso e fica com o login.`,
+  },
   help: {
     needs: (bot) => `${bot} precisa de você no navegador`,
     asks: (bot, task) => `${bot} pede: ${task}`,

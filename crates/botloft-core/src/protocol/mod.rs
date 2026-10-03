@@ -143,6 +143,7 @@ pub mod method {
     pub const BROWSER_NEW_TAB: &str = "browser.newTab";
     pub const BROWSER_SWITCH_TAB: &str = "browser.switchTab";
     pub const BROWSER_OPEN: &str = "browser.open";
+    pub const BROWSER_WINDOW: &str = "browser.window";
     pub const SCREENS_LIST: &str = "screens.list";
     pub const QUESTIONS_LIST: &str = "questions.list";
     pub const QUESTIONS_ANSWER: &str = "questions.answer";

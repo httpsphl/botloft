@@ -1,7 +1,8 @@
 // The bot's own browser beside its chat (spec 21.8): its tabs, the address
 // and the page it is on, live, with its cursor and a line about what it
 // just did. Watching starts when the panel opens and stops when it closes.
-// The owner can take it into their own hands and give it back (spec 21.10).
+// The owner can take it into their own hands and give it back (spec 21.10),
+// or open it in a window of its own to sign in (spec 21.11).
 
 import { Globe, LoaderCircle, Maximize2, Minimize2, Moon, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -23,6 +24,7 @@ import { TabStrip } from "./TabStrip";
 import { useBrowserView } from "./useBrowserView";
 import { useHands } from "./useHands";
 import { useFitPage, useRoom } from "./useRoom";
+import { WindowBar } from "./WindowBar";
 
 /** Around the page in the panel, in px. */
 const PAD = 12;
@@ -51,6 +53,7 @@ export function BrowserPanel({
   const hands = useHands(bot, state);
   const [focused, setFocused] = useState(false);
   const ask = state?.ask ?? null;
+  const windowed = state?.window === true;
   // The page takes the shape of the room the panel has for it (spec 21.3).
   // Notices that come and go are not counted: they never resize the page.
   const [inside, body] = useRoom();
@@ -118,6 +121,7 @@ export function BrowserPanel({
         className="flex min-h-0 flex-1 flex-col overflow-y-auto"
         style={{ padding: PAD }}
       >
+        {windowed && <WindowBar bot={bot} />}
         {status === "failed" ? (
           <Callout tone="danger" title={t.failedTitle}>
             {t.failedBody(SYSTEM)}
@@ -131,7 +135,7 @@ export function BrowserPanel({
             )}
           </Callout>
         ) : status === "closed" && !frame ? (
-          <Empty bot={bot} />
+          !windowed && <Empty bot={bot} />
         ) : (
           <>
             {live && ask && !hands.held && <AskCallout bot={bot} task={ask} hands={hands} />}
@@ -167,8 +171,8 @@ export function BrowserPanel({
                 {(status !== "open" || !frame) && (
                   <Overlay
                     busy={status === "starting" || status === "open"}
-                    title={status === "closed" ? t.closed : t.starting}
-                    body={status === "closed" ? t.closedBody : null}
+                    title={windowed ? t.window.title : status === "closed" ? t.closed : t.starting}
+                    body={status === "closed" && !windowed ? t.closedBody : null}
                   />
                 )}
               </div>

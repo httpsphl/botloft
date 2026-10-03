@@ -55,6 +55,10 @@ pub struct BrowserState {
     pub resting: bool,
     /// What the bot asked the owner to do in it, while it waits.
     pub ask: Option<String>,
+    /// The owner has it open in a window of its own, to sign in where a
+    /// site refuses a browser a program drives (spec 21.11). It is
+    /// `closed` meanwhile, and the bot's tools wait.
+    pub window: bool,
     /// Unix time in milliseconds.
     pub updated_at: i64,
 }
@@ -72,6 +76,7 @@ impl BrowserState {
             control: BrowserControl::Bot,
             resting: false,
             ask: None,
+            window: false,
             updated_at: now,
         }
     }

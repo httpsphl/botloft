@@ -2,7 +2,9 @@
 //! and `browser.unwatch`, the frames that follow, and the size its panel
 //! gives the page. The same connection reloads the page, takes the browser
 //! into the owner's hands, moves between its tabs and gives it back (spec
-//! 21.10).
+//! 21.10), or opens it in a window of its own (spec 21.11).
+
+use std::sync::Arc;
 
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{
@@ -111,19 +113,41 @@ impl Watch {
         let bot = &params.bot_id;
         if self.hands.as_ref().is_some_and(|hands| hands.bot == *bot) {
             self.hands = None;
-            if let Some(approval_id) = daemon.browsers.take_ask(bot) {
-                let done = ApprovalsAnswerParams {
-                    approval_id,
-                    allow: true,
-                    note: None,
-                    input: None,
-                    always: None,
-                };
-                // It may have been answered in the chat a moment before.
-                let _ = approvals::answer(daemon, done);
-            }
+            helped(daemon, bot);
         }
         to_value(&daemon.browsers.view(bot).state)
+    }
+
+    /// Opens the browser in a window of its own; the owner's hands give
+    /// way to it. Closing the window is giving the browser back.
+    pub(super) fn window(
+        &mut self,
+        daemon: &Arc<Daemon>,
+        params: Option<Value>,
+    ) -> Result<Value, RpcError> {
+        let params: BrowserControlParams = parse(params)?;
+        let bot = params.bot_id;
+        if !self.watches(&bot) {
+            return Err(ApiError::Conflict(
+                "watch this browser before opening it in a window".to_owned(),
+            )
+            .into());
+        }
+        if self.hands.as_ref().is_some_and(|hands| hands.bot == bot) {
+            self.hands = None;
+        }
+        let closed = daemon
+            .browsers
+            .open_window(&bot)
+            .map_err(|err| ApiError::Conflict(err.to_string()))?;
+        let state = daemon.browsers.view(&bot).state;
+        let daemon = Arc::clone(daemon);
+        tokio::spawn(async move {
+            if closed.await.is_ok() {
+                helped(&daemon, &bot);
+            }
+        });
+        to_value(&state)
     }
 
     /// The owner's hold on the bot's browser, if this connection has it.
@@ -176,6 +200,21 @@ impl Watch {
         }
         let frame = watching.frames.borrow_and_update().clone()?;
         Some(jsonrpc::notification(notification::BROWSER_FRAME, &*frame))
+    }
+}
+
+/// The owner gave the browser back: an open request for help is done.
+fn helped(daemon: &Daemon, bot: &BotId) {
+    if let Some(approval_id) = daemon.browsers.take_ask(bot) {
+        let done = ApprovalsAnswerParams {
+            approval_id,
+            allow: true,
+            note: None,
+            input: None,
+            always: None,
+        };
+        // It may have been answered in the chat a moment before.
+        let _ = approvals::answer(daemon, done);
     }
 }
 

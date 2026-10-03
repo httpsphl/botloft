@@ -50,6 +50,7 @@ pub(super) fn methods(out: &mut Out) {
     let state = out.name::<BrowserState>();
     out.method(method::BROWSER_TAKE, &control, &state);
     out.method(method::BROWSER_RELEASE, &control, &state);
+    out.method(method::BROWSER_WINDOW, &control, &state);
     out.method(
         method::BROWSER_INPUT,
         &out.name::<BrowserInputParams>(),
