@@ -4,7 +4,7 @@ use std::path::Path;
 
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64;
-use botloft_core::envelope::{Envelope, RoutineEnvelope, Sender};
+use botloft_core::envelope::{self, Envelope, RoutineEnvelope, Sender};
 use botloft_core::ids::random_uuid;
 use botloft_core::protocol::{Attachment, Message, SenderKind, Task};
 use bytes::Bytes;
@@ -26,6 +26,8 @@ pub(super) struct Context<'a> {
     /// For a routine's message: its name, the local time it is for and the
     /// zone (spec 20.5).
     pub routine: Option<(&'a str, &'a str, &'a str)>,
+    /// For the owner's answer to a question: its id and text (spec 23.4).
+    pub question: Option<(&'a str, &'a str)>,
 }
 
 pub(super) struct Rendered {
@@ -38,7 +40,13 @@ pub(super) struct Rendered {
 pub(super) fn render(message: &Message, context: &Context<'_>, now: i64) -> Rendered {
     let text = match message.from_kind {
         // The owner is the session's user: their words go as written.
-        SenderKind::Owner => with_attachment_list(&message.body, &message.attachments),
+        SenderKind::Owner => {
+            let body = with_attachment_list(&message.body, &message.attachments);
+            match context.question {
+                Some((id, question)) => envelope::answer(id, question, &body),
+                None => body,
+            }
+        }
         SenderKind::Bot => {
             let from = match context.sender_handle {
                 Some(handle) => Sender::Bot { handle },
@@ -144,6 +152,7 @@ mod tests {
             body: body.into(),
             task_id: None,
             routine_id: None,
+            question_id: None,
             attachments: Vec::new(),
             created_at: 0,
         }
@@ -163,6 +172,7 @@ mod tests {
             task: None,
             workspace: dir.path(),
             routine: None,
+            question: None,
         };
         let owner = render(&message(SenderKind::Owner, "Ship it"), &context, 0);
         let line = parse(&owner);
@@ -207,6 +217,7 @@ mod tests {
             task: None,
             workspace: dir.path(),
             routine: None,
+            question: None,
         };
         let line = parse(&render(&owner, &context, 0));
         let content = line["message"]["content"].as_array().expect("blocks");

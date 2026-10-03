@@ -13,6 +13,7 @@ pub mod lead;
 pub mod messages;
 pub mod models;
 pub mod modes;
+pub mod questions;
 pub mod routines;
 pub mod rules;
 pub mod screens;

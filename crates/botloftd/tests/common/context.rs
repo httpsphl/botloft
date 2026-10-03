@@ -92,6 +92,7 @@ pub fn kinds(s: &Setup) -> Vec<&'static str> {
             ChatBody::Reply(_) => "reply",
             ChatBody::Tool(_) => "tool",
             ChatBody::Approval(_) => "approval",
+            ChatBody::Question(_) => "question",
             ChatBody::Turn(_) => "turn",
             ChatBody::Notice(_) => "notice",
         })

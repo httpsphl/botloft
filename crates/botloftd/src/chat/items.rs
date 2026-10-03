@@ -32,6 +32,15 @@ pub(crate) fn announce(daemon: &Daemon, item: ChatItem) {
     daemon.emit(Event::ChatItem(ChatItemChanged { item, activity }));
 }
 
+/// Announces an item saved again with a new body, which leaves the
+/// conversation-list line as it was.
+pub(crate) fn changed(daemon: &Daemon, item: ChatItem) {
+    daemon.emit(Event::ChatItem(ChatItemChanged {
+        item,
+        activity: None,
+    }));
+}
+
 /// Replaces an item's body, e.g. a tool that finished, and announces it.
 pub(crate) fn update(daemon: &Daemon, id: &ChatItemId, body: ChatBody) -> Option<ChatItem> {
     let now = daemon.clock.now_ms();
