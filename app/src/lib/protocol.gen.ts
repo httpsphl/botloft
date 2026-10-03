@@ -1067,7 +1067,7 @@ approvalWaitMinutes?: number, };
  * When a routine runs (spec 20.2), kept as structure rather than cron text
  * so the app can show and edit it without jargon.
  */
-export type Schedule = { "kind": "weekly", days: Array<number>, time: string, } | { "kind": "interval", minutes: number, } | { "kind": "cron", expr: string, };
+export type Schedule = { "kind": "weekly", days: Array<number>, time: string, } | { "kind": "interval", minutes: number, } | { "kind": "cron", expr: string, } | { "kind": "signal", name: string, };
 
 /**
  * What happens when a routine's time comes while its last run is still
@@ -1089,7 +1089,20 @@ export type RunStatus = "queued" | "done" | "failed" | "skipped";
 /**
  * Why a run was skipped.
  */
-export type SkipReason = "overlap" | "bot_paused" | "missed";
+export type SkipReason = "overlap" | "bot_paused" | "missed" | "too_soon";
+
+/**
+ * A signal a bot sent (spec 20.13).
+ */
+export type RunSignal = { name: string, 
+/**
+ * The bot that sent it; `null` once that bot was deleted.
+ */
+fromBotId: BotId | null, 
+/**
+ * What the bot wrote with it.
+ */
+note: string | null, };
 
 export type RoutineRun = { id: RoutineRunId, routineId: RoutineId, 
 /**
@@ -1103,7 +1116,11 @@ skippedCount: number,
 /**
  * The message it sent, unless skipped.
  */
-messageId: MessageId | null, createdAt: number, finishedAt: number | null, };
+messageId: MessageId | null, createdAt: number, finishedAt: number | null, 
+/**
+ * The signal that made it run, for a routine that waits for one.
+ */
+signal: RunSignal | null, };
 
 export type Routine = { id: RoutineId, botId: BotId, name: string, 
 /**

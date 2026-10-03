@@ -537,13 +537,14 @@ Transporte: Streamable HTTP, só POST e resposta `application/json`, sem sessão
 
 | Tool | Entrada | Saída (JSON em texto) |
 |---|---|---|
-| `crew_roster` | nenhuma | `crew`, `you`, `you_lead` e os outros bots da crew: handle, nome, papel, estado e `chief` |
+| `crew_roster` | nenhuma | `crew`, `you`, `you_lead`, os outros bots da crew (handle, nome, papel, estado e `chief`) e `signals`, os avisos que as rotinas da crew esperam (20.13) |
 | `send_message` | `to` (handle, com ou sem `@`), `body`, `kind?` (`note` padrão, `task`), `deadline_minutes?` (só task) | `message_id`, `task_id` e `due` (task), e um lembrete de que a resposta chega depois |
 | `complete_task` | `task_id`, `result`, `status?` (`done` padrão, `failed`) | `task_id`, `status` e quem recebe o resultado |
 | `my_tasks` | `role?` (`assigned`, `requested`) | tasks `open` e `expired`: id, de, para, status, prazo relativo, hops e o pedido original |
 | `suggest_bot` | `name`, `role`, `instructions` (até 8 000 caracteres), `model?`, `reason` (até 1 000) | `created` e, criado, `handle`, `name`, `role`, `model` e um lembrete para mandar a primeira task; recusado ou sem resposta, o porquê (10.2). Só o chefe |
 | `schedule_routine` | `name`, `prompt` (até 8 000 caracteres), `schedule` (como em 20.2), `bot?` (handle de outro bot da crew) | `created` e, criada, `routine_id`, nome, pedido, horário, fuso e a próxima vez; recusada ou sem resposta, o aviso de que nada foi agendado (20.12) |
 | `share_file` | `files` (1 a 10 caminhos, absolutos ou relativos à pasta do bot) | `shown` (um `BotFile` por arquivo, 8.4) e um lembrete de que o dono vê cada um como cartão no chat; um arquivo fora das pastas do bot e não escrito por ele, ou que não existe, recusa a chamada inteira e diz qual e por quê |
+| `send_signal` | `name`, `note?` (até 2 000 caracteres) | o aviso normalizado e, para cada rotina da crew que o espera, se rodou e por que não (20.13) |
 | `ask_owner` | `question` (até 2 000 caracteres), `options?` (2 a 5, até 100 caracteres cada) | `question_id` e o lembrete de que a resposta chega depois, como mensagem; a tool não espera (23.2) |
 | `permission_prompt` | `tool_name`, `input`, `tool_use_id` | decisão do dono (10.1). Chamada pelo Claude Code, não pelo modelo |
 | `browser_*` | seção 21.4 | o navegador do bot: abrir, ler, clicar, digitar, rolar, ver a tela, pedir a mão do dono |
@@ -1009,7 +1010,7 @@ M2 a M4 foram entregues com ConPTY, terminal com replay, inbox por named pipe e 
 4. Busca FTS5 em mensagens e no chat. Feito (8.8).
 5. Histórico de versões das instruções do bot.
 6. Acesso remoto com token por dispositivo (Tailscale).
-7. Sinais entre bots disparando rotinas.
+7. Sinais entre bots disparando rotinas. Feito (20.13).
 8. Suporte Linux/macOS. Em fatias: (1) CI com Ubuntu e macOS para o daemon; (2) runtime do bot (grupo de processos, ambiente, `claude`, navegador); (3) iniciar com o sistema (`systemd --user`, LaunchAgent); (4) app; (5) empacotamento e release. Feitas: 1 a 5 (14.1, 15.2, 15.4 a 15.6). O macOS sai sem notarização (sem conta Apple Developer por enquanto).
 9. Navegador dos bots, com o dono assistindo ao vivo. Desenho na seção 21.
 
@@ -1091,6 +1092,7 @@ O horário fica guardado como JSON estruturado (`schedule`), e não como texto c
 | `weekly` | `days` (1 = segunda … 7 = domingo, ao menos um), `time` (`HH:MM`) | "Todo dia às 09:00", "Dias úteis às 09:00", "Segunda e quinta às 14:30" |
 | `interval` | `minutes` (de 5 a 10 080) | "A cada 2 horas" |
 | `cron` | `expr` (5 campos, sem segundos) | só em "Avançado"; o app mostra a expressão como está |
+| `signal` | `name` (o aviso, normalizado) | "Quando um bot avisar “relatorio-pronto”"; roda quando um bot da crew manda o aviso (20.13) |
 
 - Horários de calendário (`weekly`, `cron`) valem no fuso da rotina (`timezone`, nome IANA como `America/Sao_Paulo`). O app manda o fuso do sistema ao criar (`Intl.DateTimeFormat().resolvedOptions().timeZone`). Mudar o fuso do Windows depois não mexe em rotinas existentes.
 - `interval` conta a partir do último horário marcado, e não do fim do trabalho: `próximo = último marcado + minutes`, ancorado na criação. Não deriva.
@@ -1108,7 +1110,7 @@ Cada disparo vira uma `routine_run`, com o horário marcado (`scheduled_for`), u
 | `queued` | a message foi gravada e espera a entrega ou o fim do turno dela |
 | `done` | o turno que começou com essa message terminou |
 | `failed` | a delivery morreu (`dead`) ou o turno terminou com erro |
-| `skipped` | não disparou; `reason`: `overlap`, `bot_paused` ou `missed` |
+| `skipped` | não disparou; `reason`: `overlap`, `bot_paused`, `missed` ou `too_soon` (um aviso menos de 5 minutos depois do anterior, 20.13) |
 
 - **Fim de uma execução:** o daemon já sabe quando o bot pega uma message (o replay com o mesmo `uuid`, 9.1 passo 7). O `result` seguinte fecha o turno em que ela entrou, também quando outra message entrou no mesmo turno: a execução vira `done`, ou `failed` se o `result` trouxer erro. Se o processo morrer antes de ler a message, a delivery volta para a fila (9.1 passo 8) e a execução continua `queued`; se morrer no meio do turno, a execução vira `failed`, porque ninguém mais vai fechar aquele turno. Pelo mesmo motivo, ao subir, o daemon marca `failed` as execuções cujo turno começou sob o daemon anterior. Uma delivery `dead` também leva a execução a `failed`.
 - **Sobreposição:** o horário chega com a execução anterior ainda `queued` (o bot está lento, parado por limite de uso, sem login ou fora do ar).
@@ -1158,6 +1160,7 @@ Migration nova:
 | `routines` | `id` (`rtn_`), `bot_id`, `name`, `prompt`, `schedule` (JSON), `timezone`, `overlap` (`skip`, `queue`), `missed` (`run_once`, `skip`), `enabled`, `next_run_at`, `created_at`, `updated_at`, `archived_at` |
 | `routine_runs` | `id` (`rrn_`), `routine_id`, `scheduled_for`, `status`, `reason`, `skipped_count`, `message_id`, `created_at`, `finished_at` |
 | `messages` | `kind` ganha `routine`; coluna nova `routine_id` |
+| `routine_runs` (0017) | `signal_name`, `signal_from`, `signal_note`: o aviso que fez a execução rodar (20.13) |
 
 Índices: `routines(enabled, next_run_at)` e `routine_runs(routine_id, id)`.
 
@@ -1174,7 +1177,7 @@ Migration nova:
 | `routines.runs` | `routineId, before?, limit?` | `RoutineRun[]`, mais nova primeiro |
 
 - Notificações: `routine.changed` e `routine.run`.
-- Validação (`-32004`): nome de 1 a 80 caracteres; pedido dentro do limite de uma message; `days` não vazio e de 1 a 7; `time` válido; `minutes` de 5 a 10 080; `cron` válido e com espaçamento de pelo menos 5 minutos; `timezone` conhecido. Os problemas do horário vêm com `data.reason` (`timezone_unknown`, `days_empty`, `days_range`, `time_invalid`, `interval_range`, `cron_invalid`, `too_often`, `never_runs`), que o app escreve no idioma do dono (15.6); a mensagem em inglês fica para quem não conhece o código.
+- Validação (`-32004`): nome de 1 a 80 caracteres; pedido dentro do limite de uma message; `days` não vazio e de 1 a 7; `time` válido; `minutes` de 5 a 10 080; `cron` válido e com espaçamento de pelo menos 5 minutos; `timezone` conhecido. Os problemas do horário vêm com `data.reason` (`timezone_unknown`, `days_empty`, `days_range`, `time_invalid`, `interval_range`, `cron_invalid`, `too_often`, `never_runs`, `signal_invalid`), que o app escreve no idioma do dono (15.6); a mensagem em inglês fica para quem não conhece o código.
 
 ### 20.9 App
 
@@ -1195,7 +1198,7 @@ Sem jargão (15.2): o dono não vê "cron", "overlap" nem "timezone" no caminho 
 
 ### 20.10 Fora desta etapa
 
-- Sinais entre bots disparando rotinas (seção 18, item 7).
+- Sinais entre bots disparando rotinas (seção 18, item 7). Feito depois, em 20.13.
 - Notificação do Windows quando uma rotina termina ou falha.
 - Acordar o PC para uma rotina.
 
@@ -1218,6 +1221,20 @@ Pedido para fazer algo em horário marcado ("confere o e-mail todo dia às 8"), 
 - **Bot em `bypass_permissions`:** cria na hora, sem cartão (13).
 - **Regras do bot** (5.1): trabalho em horário marcado é `schedule_routine`; é a única forma de agendar, e o bot só diz que agendou depois que a tool diz que criou.
 - Mudar, pausar e apagar rotinas continua sendo só do dono, pelo app.
+
+### 20.13 Sinais entre bots
+
+Uma rotina pode esperar um **aviso** (sinal) em vez de um horário: ela roda quando um bot da equipe diz que algo aconteceu. Exemplo: o @writer salva o relatório e avisa `relatorio-pronto`; a rotina "Revisar o relatório" do @revisor roda na hora, sem o dono no meio e sem o @writer precisar saber quem revisa.
+
+- **Agendamento.** Um `kind` novo em `schedule` (20.2): `{"kind": "signal", "name": "relatorio-pronto"}`. O nome é guardado normalizado, como um slug (minúsculas, números e hífens, sem acento, até 32 caracteres: "Relatório Pronto" vira `relatorio-pronto`); sem letra nem número, é `validation` com `data.reason: signal_invalid`. A rotina não tem horário: `next_run_at` fica `null`, o agendador nunca a dispara, e `missed` e o fuso não valem para ela. "Rodar agora" e ligar e desligar valem como em qualquer rotina.
+- **Mandar.** A tool `send_signal {name, note?}` (10): o nome é normalizado igual, e a nota (até 2 000 caracteres) vai junto para quem roda. Para cada rotina ligada de um bot ativo da **mesma crew** que espera aquele nome, o daemon tenta uma execução agora, pelas regras de 20.3: bot ou crew pausados viram `skipped` (`bot_paused`), e a sobreposição vale como sempre. O próprio bot que avisa também pode ter uma rotina esperando o aviso.
+- **Espaçamento.** Uma rotina roda por aviso no máximo uma vez a cada 5 minutos, como o espaçamento dos horários (20.2): um aviso que chega antes disso vira `skipped` com `reason: too_soon`. Assim dois bots que se avisam em círculo não gastam o plano do dono.
+- **Resposta ao bot.** O nome normalizado e, para cada rotina alcançada, o nome, o bot e se rodou, com o porquê quando não rodou. Nenhuma rotina esperando não é erro: a resposta diz que nada rodou.
+- **O que o bot que roda recebe** (9.3): `[botloft] routine "<nome>" · signal "<aviso>" from @writer` (ou `from a deleted bot`), a linha de que ninguém está olhando, o pedido do dono e, se veio nota, a nota depois, marcada como escrita por um bot e não pelo dono.
+- **Execução.** `RoutineRun.signal` guarda `{name, fromBotId, note}`; `routine_runs` ganha `signal_name`, `signal_from` (sem chave estrangeira: um bot excluído só deixa o id) e `signal_note` (migration 0017).
+- **Achar os avisos.** `crew_roster` lista em `signals` cada aviso que uma rotina da crew espera, com a rotina e o bot. As regras do bot (5.1) dizem para mandar o aviso quando o que ele nomeia estiver feito. `schedule_routine` (20.12) aceita o mesmo `kind`, então um bot pode pedir ao dono uma rotina por aviso.
+- **App.** Em "Quando", a opção "Quando um bot avisar", com o campo "Aviso" e a explicação de que o dono deve dizer ao outro bot, nas instruções dele, quando avisar. Em "Mais opções" sobra só a regra de sobreposição. Na lista: "Quando um bot avisar “relatorio-pronto”" e "Espera um aviso" no lugar da próxima vez; a última execução diz de quem veio o aviso ("aviso de Writer"), e um aviso cedo demais aparece como pulado.
+- **Fora desta etapa:** escolher de qual bot o aviso precisa vir; avisos entre crews; o dono mandar um aviso pelo app.
 
 ## 21. Navegador
 

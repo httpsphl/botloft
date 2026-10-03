@@ -7,9 +7,9 @@ use rusqlite::{OptionalExtension, Row, params};
 
 use crate::{Result, Store, parse_column};
 
-const COLUMNS: &str = "id, bot_id, name, prompt, schedule, timezone, overlap, missed, enabled, \
+pub(crate) const COLUMNS: &str = "id, bot_id, name, prompt, schedule, timezone, overlap, missed, enabled, \
      next_run_at, created_at, updated_at, archived_at";
-fn from_row(row: &Row<'_>) -> rusqlite::Result<Routine> {
+pub(crate) fn from_row(row: &Row<'_>) -> rusqlite::Result<Routine> {
     let schedule: String = row.get(4)?;
     let schedule: Schedule = serde_json::from_str(&schedule)
         .map_err(|err| rusqlite::Error::FromSqlConversionFailure(4, Type::Text, Box::new(err)))?;
