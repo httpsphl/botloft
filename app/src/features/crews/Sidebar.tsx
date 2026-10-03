@@ -1,11 +1,4 @@
-import {
-  ChevronDown,
-  ChevronsDownUp,
-  ChevronsUpDown,
-  MessageCircleQuestion,
-  Pause,
-  Plus,
-} from "lucide-react";
+import { ChevronDown, ChevronsDownUp, ChevronsUpDown, Pause, Plus } from "lucide-react";
 import { memo, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import { useShallow } from "zustand/react/shallow";
@@ -14,7 +7,6 @@ import { when } from "../../lib/format";
 import type { Activity, Bot, Crew } from "../../lib/protocol.gen";
 import { activityOf, botsOf, crewList } from "../../store/app";
 import { useApp } from "../../store/context";
-import { openQuestions } from "../../store/questions";
 import { isUnread, unreadIn } from "../../store/seen";
 import { Button } from "../../ui/Button";
 import { ContextMenu, menuPoint, type Point } from "../../ui/ContextMenu";
@@ -27,13 +19,14 @@ import { ChiefBadge, isChief } from "../bots/ChiefBadge";
 import { toolAction, toolTitle } from "../chat/toolNames";
 import { CrewDialog } from "./CrewDialog";
 import { setAllCollapsed, setCollapsed, useCollapsed, useCollapsedSet } from "./collapsed";
+import { QuestionsEntry, row, SearchEntry } from "./SidebarPages";
 
 /** Crews as sections and their bots as conversations (spec 15.1). */
 export function Sidebar() {
   const t = useT();
   const words = t.crews.sidebar;
   const crews = useApp(useShallow(crewList));
-  const overview = useApp((state) => state.selectedCrewId === null && !state.questionBox);
+  const overview = useApp((state) => state.selectedCrewId === null && !state.page);
   const selectCrew = useApp((state) => state.selectCrew);
   const collapsed = useCollapsedSet();
   const allFolded = crews.length > 0 && crews.every((crew) => collapsed.has(crew.id));
@@ -68,6 +61,7 @@ export function Sidebar() {
             onClick={() => setCreating(true)}
           />
         </div>
+        <SearchEntry />
         <QuestionsEntry />
         <ul className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
           {crews.map((crew) => (
@@ -77,42 +71,6 @@ export function Sidebar() {
       </nav>
       <AccountArea />
       {creating && <CrewDialog onClose={() => setCreating(false)} />}
-    </div>
-  );
-}
-
-const row =
-  "relative flex w-full items-center rounded-lg text-left transition-colors duration-150 hover:bg-sunken";
-
-/** The question box (spec 23.6), with how many questions wait. */
-function QuestionsEntry() {
-  const t = useT();
-  const words = t.questions.box;
-  const count = useApp((state) => openQuestions(state).length);
-  const open = useApp((state) => state.questionBox);
-  const openBox = useApp((state) => state.openQuestionBox);
-  return (
-    <div className="shrink-0 px-2">
-      <button
-        type="button"
-        aria-current={open ? "page" : undefined}
-        title={words.open(count)}
-        onClick={openBox}
-        className={`${row} gap-2.5 px-2.5 py-1.5 text-sm ${open ? "bg-sunken text-ink" : "text-ink-soft"}`}
-      >
-        <MessageCircleQuestion
-          aria-hidden
-          size={16}
-          className={count > 0 ? "text-warn" : "text-muted"}
-        />
-        <span className="min-w-0 flex-1 truncate font-medium">{words.label}</span>
-        {count > 0 && (
-          <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-warn px-1 font-semibold text-[11px] text-canvas tabular-nums">
-            <span aria-hidden>{count}</span>
-            <span className="sr-only">{words.open(count)}</span>
-          </span>
-        )}
-      </button>
     </div>
   );
 }

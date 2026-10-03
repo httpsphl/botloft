@@ -13,6 +13,8 @@ import { ClaudeCodeHelp } from "../features/onboarding/ClaudeCodeHelp";
 import { SignInButton } from "../features/onboarding/SignIn";
 import { Welcome } from "../features/onboarding/Welcome";
 import { QuestionBox } from "../features/questions/QuestionBox";
+import { SearchPage } from "../features/search/SearchPage";
+import { useSearchKey } from "../features/search/searchKey";
 import { UpdateButton } from "../features/updates/UpdateButton";
 import { useT } from "../i18n";
 import { useApp } from "../store/context";
@@ -39,6 +41,7 @@ export function Workspace() {
   useAppSounds();
   useFolderNotices();
   useOpenAtSignIn();
+  useSearchKey();
 
   let main: ReactNode;
   if (loadError) {
@@ -108,11 +111,14 @@ export function Workspace() {
 }
 
 function Selection() {
-  const box = useApp((state) => state.questionBox);
+  const page = useApp((state) => state.page);
   const crew = useApp((state) => (state.selectedCrewId ? state.crews[state.selectedCrewId] : null));
   const bot = useApp((state) => (state.selectedBotId ? state.bots[state.selectedBotId] : null));
-  if (box) {
+  if (page === "questions") {
     return <QuestionBox />;
+  }
+  if (page === "search") {
+    return <SearchPage />;
   }
   if (crew && bot) {
     return <BotView key={bot.id} bot={bot} crew={crew} />;
@@ -128,12 +134,14 @@ function Breadcrumb() {
   const crew = useApp((state) => (state.selectedCrewId ? state.crews[state.selectedCrewId] : null));
   const bot = useApp((state) => (state.selectedBotId ? state.bots[state.selectedBotId] : null));
   const selectCrew = useApp((state) => state.selectCrew);
-  const box = useApp((state) => state.questionBox);
-  if (box) {
+  const page = useApp((state) => state.page);
+  if (page) {
     return (
       <>
         <ChevronRight aria-hidden size={14} className="text-muted" />
-        <span className="truncate text-ink-soft">{t.questions.box.label}</span>
+        <span className="truncate text-ink-soft">
+          {page === "questions" ? t.questions.box.label : t.search.label}
+        </span>
       </>
     );
   }

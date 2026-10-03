@@ -60,6 +60,18 @@ export function chatRows(items: ChatItem[]): Row[] {
   return rows;
 }
 
+/** Whether the row shows the chat item `id`. */
+export function rowHas(row: Row, id: string): boolean {
+  switch (row.kind) {
+    case "day":
+      return false;
+    case "run":
+      return row.items.some((item) => item.id === id);
+    default:
+      return row.item.id === id;
+  }
+}
+
 /** Tool calls that run together as lines; shared files are cards of their own. */
 function isLine(item: ChatItem | undefined): boolean {
   return item?.body.kind === "tool" && !isSharedFiles(item);

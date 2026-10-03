@@ -14,6 +14,7 @@ import { FakeQuestions } from "./fakeQuestions";
 import { FakeRoutines } from "./fakeRoutines";
 import { conflict, invalid, notFound, slugify } from "./fakeRules";
 import { FakeScreens } from "./fakeScreens";
+import { searchHandlers } from "./fakeSearch";
 import { usageHandlers } from "./fakeUsage";
 import {
   type Bot,
@@ -261,5 +262,6 @@ export class FakeBotloft implements BotloftApi {
     ...this.routines.handlers(),
     ...this.questions.handlers(),
     ...usageHandlers(this),
+    ...searchHandlers(this),
   };
 }

@@ -15,6 +15,7 @@ import {
 import { useT } from "../../i18n";
 import { day } from "../../lib/format";
 import type { Bot } from "../../lib/protocol.gen";
+import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { SeenSince } from "../../ui/motion";
@@ -23,10 +24,13 @@ import { BotRun, type Live } from "./BotRun";
 import { ChatComposer } from "./ChatComposer";
 import { InboundRow } from "./InboundRow";
 import { NoticeRow } from "./NoticeRow";
-import { chatRows } from "./rows";
+import { chatRows, rowHas } from "./rows";
 import { useChat } from "./useChat";
 import { useFiles } from "./useFiles";
 import { useSharedSound } from "./useSharedSound";
+
+/** How long a search result stays marked (`search.css`). */
+const FOCUS_MS = 2400;
 
 /** Distance from the bottom that still counts as "reading the latest". */
 const STICKY_PX = 80;
@@ -36,9 +40,13 @@ const hasFiles = (event: DragEvent) => event.dataTransfer.types.includes("Files"
 /** Skips the renders of the view around it; the text being written re-renders only the last run. */
 export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
   const t = useT();
-  const chat = useChat(bot.id);
+  const focus = useApp((state) => (state.focus?.botId === bot.id ? state.focus.itemId : null));
+  const chat = useChat(bot.id, focus);
   const files = useFiles();
   const scroller = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLOListElement>(null);
+  /** The search result already shown, so it is not scrolled to again. */
+  const shownFocus = useRef<string | null>(null);
   const atEnd = useRef(true);
   /** Distance from the bottom to keep while older items load above. */
   const anchor = useRef<number | null>(null);
@@ -111,6 +119,23 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
       />
     );
   });
+  // A search result opened the chat: bring its row into view, marked.
+  useLayoutEffect(() => {
+    if (!focus || shownFocus.current === focus) {
+      return;
+    }
+    const row = listRef.current?.children[rows.findIndex((each) => rowHas(each, focus))];
+    if (!row) {
+      return;
+    }
+    shownFocus.current = focus;
+    atEnd.current = false;
+    row.scrollIntoView?.({ block: "center" });
+    row.classList.add("search-focus");
+    // As long as the band's animation, also when it does not move.
+    setTimeout(() => row.classList.remove("search-focus"), FOCUS_MS);
+  }, [focus, rows]);
+
   if (live && !openRun) {
     list.push(<BotRun key="live" items={[]} bot={bot} live={live} />);
   }
@@ -177,7 +202,11 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
             </div>
           )}
           <SeenSince.Provider value={openedAt}>
-            <ol aria-label={t.chat.view.messages} className="offscreen-rows flex flex-col gap-6">
+            <ol
+              ref={listRef}
+              aria-label={t.chat.view.messages}
+              className="offscreen-rows flex flex-col gap-6"
+            >
               {list}
             </ol>
           </SeenSince.Provider>

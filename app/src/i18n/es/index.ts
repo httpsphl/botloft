@@ -14,6 +14,7 @@ import { onboarding } from "./onboarding";
 import { questions } from "./questions";
 import { routines } from "./routines";
 import { screens } from "./screens";
+import { search } from "./search";
 import { setup } from "./setup";
 import { shell } from "./shell";
 import { tools } from "./tools";
@@ -35,6 +36,7 @@ export const es: Messages = {
   questions,
   routines,
   screens,
+  search,
   setup,
   tools,
 };
