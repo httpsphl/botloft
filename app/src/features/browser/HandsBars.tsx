@@ -30,6 +30,7 @@ export function AskCallout({ bot, task, hands }: { bot: Bot; task: string; hands
           </Button>
           <WindowButton hands={hands} />
         </div>
+        <p className="mt-2 text-muted text-xs">{t.window.hint}</p>
       </Callout>
     </div>
   );
@@ -83,6 +84,7 @@ export function HeldBar({
           {focused ? t.hands.typing : t.hands.clickToType}
         </span>
       </div>
+      <p className="mt-2 pl-6.5 text-muted text-xs">{t.window.hint}</p>
     </div>
   );
 }

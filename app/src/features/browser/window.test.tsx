@@ -45,6 +45,14 @@ describe("the browser in a window of its own", () => {
     await waitFor(() => expect(within(panel()).queryByText(/keeps the login/)).toBeNull());
   });
 
+  test("is suggested while the owner is in control, where a sign-in may fail", async () => {
+    await openScout();
+    fireEvent.click(within(panel()).getByRole("button", { name: "Take control" }));
+    expect(await within(panel()).findByText("You are in control")).toBeDefined();
+    expect(within(panel()).getByText(/won't let you sign in here\?/)).toBeDefined();
+    expect(within(panel()).getByRole("button", { name: "Sign in in a window" })).toBeDefined();
+  });
+
   test("is offered when the bot asks for a hand", async () => {
     const { fake, scout } = await openScout();
     act(() => {
@@ -52,6 +60,9 @@ describe("the browser in a window of its own", () => {
     });
     const asking = await within(panel()).findByText("Sign in to your Google account");
     expect(asking).toBeDefined();
+    const hint = /won't let you sign in here\? Use Sign in in a window/;
+    expect(within(panel()).getByText(hint)).toBeDefined();
+    expect(screen.getByText(/won't let you sign in there, use Sign in in a window/)).toBeDefined();
     fireEvent.click(within(panel()).getByRole("button", { name: "Sign in in a window" }));
     expect(await within(panel()).findByText(/keeps the login/)).toBeDefined();
 

@@ -89,11 +89,12 @@ export const browser: Messages["browser"] = {
     title: "Aberto numa janela",
     body: (bot) =>
       `Entre na conta na janela que abriu e depois feche-a. ${bot} espera enquanto isso e fica com o login.`,
+    hint: "O site não deixa entrar aqui? Use Entrar numa janela e feche a janela quando terminar.",
   },
   help: {
     needs: (bot) => `${bot} precisa de você no navegador`,
     asks: (bot, task) => `${bot} pede: ${task}`,
-    why: "Assuma o controle, faça isso na página e devolva. O bot não vê o que você digita em campos de senha.",
+    why: "Assuma o controle, faça isso na página e devolva. Se o site não deixar entrar por ali, use Entrar numa janela no painel do navegador. O bot não vê o que você digita em campos de senha.",
     take: "Assumir o navegador",
     done: "Pronto",
     wontDo: "Não vou fazer",

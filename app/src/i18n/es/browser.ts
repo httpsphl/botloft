@@ -87,11 +87,12 @@ export const browser: Messages["browser"] = {
     title: "Abierto en una ventana",
     body: (bot) =>
       `Inicia sesión en la ventana que se abrió y luego ciérrala. ${bot} espera mientras tanto y conserva la sesión.`,
+    hint: "¿El sitio no te deja iniciar sesión aquí? Usa Iniciar sesión en una ventana y ciérrala al terminar.",
   },
   help: {
     needs: (bot) => `${bot} te necesita en el navegador`,
     asks: (bot, task) => `${bot} pide: ${task}`,
-    why: "Toma el control, hazlo en la página y devuélvelo. El bot no ve lo que escribes en campos de contraseña.",
+    why: "Toma el control, hazlo en la página y devuélvelo. Si el sitio no te deja iniciar sesión ahí, usa Iniciar sesión en una ventana en el panel del navegador. El bot no ve lo que escribes en campos de contraseña.",
     take: "Tomar el navegador",
     done: "Listo",
     wontDo: "No lo haré",

@@ -87,11 +87,12 @@ export const browser = {
     title: "Open in a window",
     body: (bot: string) =>
       `Sign in in the window that opened, then close it. ${bot} waits meanwhile and keeps the login.`,
+    hint: "Site won't let you sign in here? Use Sign in in a window, and close the window when you're done.",
   },
   help: {
     needs: (bot: string) => `${bot} needs you in the browser`,
     asks: (bot: string, task: string) => `${bot} asks: ${task}`,
-    why: "Take control, do it on the page yourself and give it back. The bot doesn't see what you type in password fields.",
+    why: "Take control, do it on the page yourself and give it back. If the site won't let you sign in there, use Sign in in a window in the browser panel. The bot doesn't see what you type in password fields.",
     take: "Take the browser",
     done: "Done",
     wontDo: "I won't do it",
