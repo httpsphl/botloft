@@ -28,7 +28,7 @@ export function Dialog({ title, onClose, children, footer, width = "md" }: Dialo
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-40 grid animate-fade place-items-center bg-black/50 p-6">
+    <div className="fixed inset-0 z-40 grid animate-fade place-items-center bg-scrim p-6">
       <div
         role="dialog"
         aria-modal="true"

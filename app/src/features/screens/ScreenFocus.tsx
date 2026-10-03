@@ -60,7 +60,7 @@ export function ScreenFocus({
                 title={t.devices[one]}
                 aria-label={t.devices[one]}
                 onClick={() => onDevice(one)}
-                className={`grid size-7 place-items-center rounded-md transition-colors ${
+                className={`grid size-7 place-items-center rounded-lg transition-colors ${
                   one === device ? "bg-panel text-ink shadow-sm" : "text-muted hover:text-ink"
                 }`}
               >
@@ -85,7 +85,7 @@ export function ScreenFocus({
         />
       </div>
       <div ref={stage} className="design-board min-h-0 flex-1 overflow-auto p-4">
-        <div className="mx-auto w-fit overflow-hidden rounded-md shadow-lift ring-1 ring-line">
+        <div className="mx-auto w-fit overflow-hidden rounded-lg shadow-lift ring-1 ring-line">
           <LiveFrame
             url={screen.url}
             device={device}

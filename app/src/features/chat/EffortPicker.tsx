@@ -140,7 +140,7 @@ export function EffortPicker({ bot, onLater }: { bot: Bot; onLater(text: string)
                       left: `${(at(recommended) / LAST) * 100}%`,
                       transform: `translateX(${EDGE[at(recommended)] ?? "-50%"})`,
                     }}
-                    className="absolute top-2.5 whitespace-nowrap text-[0.6875rem] text-accent"
+                    className="absolute top-2.5 whitespace-nowrap text-[0.6875rem] text-accent-text"
                   >
                     {m.recommended}
                   </span>
@@ -170,7 +170,7 @@ export function EffortPicker({ bot, onLater }: { bot: Bot; onLater(text: string)
                   pending.current = null;
                   void set("default", recommended ? m.names[recommended] : m.recommended);
                 }}
-                className="shrink-0 rounded-md px-1.5 py-0.5 font-medium text-ink-soft text-xs hover:bg-sunken hover:text-ink"
+                className="shrink-0 rounded-lg px-1.5 py-0.5 font-medium text-ink-soft text-xs hover:bg-sunken hover:text-ink"
               >
                 {m.useRecommended}
               </button>

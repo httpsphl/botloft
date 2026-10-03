@@ -49,7 +49,7 @@ function TaskTag({ message }: { message: Message }) {
   );
   if (message.kind === "routine") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-md border border-accent/40 px-1.5 text-accent text-xs">
+      <span className="inline-flex items-center gap-1 rounded-lg border border-accent/40 px-1.5 text-accent-text text-xs">
         <AlarmClock aria-hidden size={11} />
         {t.routines.tag(routine?.name ?? t.routines.tab)}
       </span>
@@ -60,7 +60,7 @@ function TaskTag({ message }: { message: Message }) {
   }
   const Icon = message.kind === "task" ? ListTodo : Reply;
   return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-line px-1.5 text-muted text-xs">
+    <span className="inline-flex items-center gap-1 rounded-lg border border-line px-1.5 text-muted text-xs">
       <Icon aria-hidden size={11} />
       {message.kind === "task" ? t.chat.inbound.task : t.chat.inbound.result}
     </span>

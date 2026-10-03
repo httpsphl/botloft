@@ -29,7 +29,7 @@ export function SidebarToggle() {
         title={`${open ? t.hide : t.show} (Ctrl+B)`}
         aria-pressed={!open}
         onClick={toggleSidebar}
-        className="grid h-7 w-7 place-items-center rounded-md text-ink-soft hover:bg-sunken hover:text-ink"
+        className="grid h-7 w-7 place-items-center rounded-lg text-ink-soft hover:bg-sunken hover:text-ink"
       >
         <Icon aria-hidden size={15} />
       </button>

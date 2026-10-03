@@ -41,7 +41,7 @@ export function Sidebar() {
               aria-current={overview ? "page" : undefined}
               title={words.showAll}
               onClick={() => selectCrew(null)}
-              className={`rounded-md px-2 py-1 font-semibold text-xs uppercase tracking-[0.12em] transition-colors hover:bg-sunken hover:text-ink ${overview ? "bg-sunken text-ink" : "text-muted"}`}
+              className={`rounded-lg px-2 py-1 font-semibold text-xs uppercase tracking-[0.12em] transition-colors hover:bg-sunken hover:text-ink ${overview ? "bg-sunken text-ink" : "text-muted"}`}
             >
               {words.label}
             </button>
@@ -98,7 +98,7 @@ function CrewEntry({ crew }: { crew: Crew }) {
           aria-label={collapsed ? words.expand(crew.name) : words.collapse(crew.name)}
           title={collapsed ? words.expand(crew.name) : words.collapse(crew.name)}
           onClick={() => setCollapsed(crew.id, !collapsed)}
-          className="absolute left-1 z-10 grid size-6 place-items-center rounded-md text-muted hover:bg-line hover:text-ink"
+          className="absolute left-1 z-10 grid size-6 place-items-center rounded-lg text-muted hover:bg-line hover:text-ink"
         >
           <ChevronDown
             aria-hidden
@@ -179,7 +179,7 @@ const Conversation = memo(function Conversation({ bot, crew }: { bot: Bot; crew:
             </span>
             {activity && (
               <time
-                className={`shrink-0 text-xs ${unread ? "font-semibold text-accent" : "text-muted"}`}
+                className={`shrink-0 text-xs ${unread ? "font-semibold text-accent-text" : "text-muted"}`}
                 dateTime={new Date(activity.at).toISOString()}
               >
                 {when(activity.at)}
