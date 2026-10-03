@@ -23,6 +23,7 @@ mod sweep;
 mod titles;
 mod viewport;
 mod watch;
+mod window;
 
 use std::collections::HashMap;
 use std::io;
@@ -32,7 +33,7 @@ use std::time::{Duration, Instant};
 
 use botloft_core::ids::{ApprovalId, BotId};
 use botloft_core::protocol::{
-    BrowserAction, BrowserFrame, BrowserState, BrowserStatus, BrowserView,
+    BrowserAction, BrowserControl, BrowserFrame, BrowserState, BrowserStatus, BrowserView,
 };
 use tokio::sync::broadcast;
 use tracing::{debug, warn};
@@ -47,6 +48,7 @@ pub use self::session::Session;
 pub use self::sweep::{Want, run};
 pub use self::viewport::Viewport;
 pub use self::watch::Watching;
+pub use self::window::WindowError;
 use crate::clock::Clock;
 use crate::config::Config;
 use crate::state::Event;
@@ -114,6 +116,8 @@ struct Slot {
     held: Held,
     /// The bot's open request for the owner's help.
     asking: Option<ApprovalId>,
+    /// The owner has the profile open in a window of its own.
+    window: Option<window::Window>,
 }
 
 type Slots = Arc<Mutex<HashMap<BotId, Slot>>>;
@@ -164,6 +168,7 @@ impl Browsers {
             used: Instant::now(),
             held: tokio::sync::watch::channel(None).0,
             asking: None,
+            window: None,
         })
     }
 
@@ -204,10 +209,13 @@ impl Browsers {
     }
 
     /// Closes the bot's browser; the profile stays. The owner's hands let
-    /// go of it too.
+    /// go of it too, but not a window of its own they have open: the bot
+    /// keeps waiting for that one (spec 21.11).
     pub fn close(&self, bot: &BotId) {
         let session = lock(&self.slots).get_mut(bot).and_then(|slot| {
-            slot.held.send_replace(None);
+            if slot.window.is_none() {
+                slot.held.send_replace(None);
+            }
             slot.session.take()
         });
         if let Some((_, session)) = session {
@@ -215,12 +223,24 @@ impl Browsers {
             session.close();
         }
         self.set_state(bot, |state| {
+            let window = state.window;
             *state = BrowserState::closed(state.bot_id.clone(), state.updated_at);
+            if window {
+                state.window = true;
+                state.control = BrowserControl::Owner;
+            }
         });
     }
 
-    /// Closes the browser and deletes its profile: the bot was archived.
+    /// Closes the browser, a window of it too, and deletes its profile:
+    /// the bot was archived.
     pub fn forget(&self, bot: &BotId) {
+        if let Some(window) = lock(&self.slots)
+            .get_mut(bot)
+            .and_then(|slot| slot.window.take())
+        {
+            window.kill();
+        }
         self.close(bot);
         let profile = self.profiles.join(bot.as_str());
         let Ok(runtime) = tokio::runtime::Handle::try_current() else {
@@ -240,12 +260,13 @@ impl Browsers {
         });
     }
 
-    /// The browsers that are not closed (`browser.list`).
+    /// The browsers that are not closed, or open in a window of their own
+    /// (`browser.list`).
     pub fn list(&self) -> Vec<BrowserState> {
         lock(&self.slots)
             .values()
             .map(|slot| slot.state.clone())
-            .filter(|state| state.status != BrowserStatus::Closed)
+            .filter(|state| state.status != BrowserStatus::Closed || state.window)
             .collect()
     }
 

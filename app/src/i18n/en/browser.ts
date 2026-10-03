@@ -79,6 +79,15 @@ export const browser = {
     typing: "What you type goes to the page",
     screen: (bot: string) => `${bot}'s browser, in your hands`,
   },
+  window: {
+    open: "Sign in in a window",
+    why: (bot: string) =>
+      `For sites that refuse to sign in here, like Google: ${bot}'s browser opens in a window of its own, and the login stays for ${bot}.`,
+    openFailed: "Could not open the window",
+    title: "Open in a window",
+    body: (bot: string) =>
+      `Sign in in the window that opened, then close it. ${bot} waits meanwhile and keeps the login.`,
+  },
   help: {
     needs: (bot: string) => `${bot} needs you in the browser`,
     asks: (bot: string, task: string) => `${bot} asks: ${task}`,

@@ -154,14 +154,22 @@ impl Asking<'_> {
 
 impl Drop for Asking<'_> {
     /// Answered or not, the browser goes back to the bot.
+    /// A window of its own stays the owner's until they close it.
     fn drop(&mut self) {
-        if let Some(slot) = lock(&self.browsers.slots).get_mut(&self.bot) {
-            slot.asking = None;
-            slot.held.send_replace(None);
-        }
+        let window = lock(&self.browsers.slots)
+            .get_mut(&self.bot)
+            .is_some_and(|slot| {
+                slot.asking = None;
+                if slot.window.is_none() {
+                    slot.held.send_replace(None);
+                }
+                slot.window.is_some()
+            });
         self.browsers.set_state(&self.bot, |state| {
             state.ask = None;
-            state.control = BrowserControl::Bot;
+            if !window {
+                state.control = BrowserControl::Bot;
+            }
         });
     }
 }

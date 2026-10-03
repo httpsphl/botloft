@@ -1,7 +1,7 @@
 // The fake daemon's browsers (spec 21.7): each bot's state and tabs, the
 // live frames of the one being watched and what the bot does, for the
 // browser panel, the size the panel gives the page (spec 21.3), and the
-// owner's hands in it (spec 21.10).
+// owner's hands in it (spec 21.10) or in a window of its own (spec 21.11).
 
 import type { FakeBotloft, Handlers } from "./fake";
 import { fitting, PAGE, type PageSize, typed } from "./fakePages";
@@ -52,6 +52,7 @@ export class FakeBrowser {
         control: "bot",
         resting: false,
         ask: null,
+        window: false,
         updatedAt: this.fake.now,
       }
     );
@@ -125,6 +126,15 @@ export class FakeBrowser {
     this.set(botId, { ask: null, control: "bot" });
   }
 
+  /** The owner closed the window of the bot's browser: it is the bot's again. */
+  closeWindow(botId: BotId): void {
+    const approvalId = this.asks.get(botId);
+    if (approvalId) {
+      void this.fake.call("approvals.answer", { approvalId, allow: true });
+    }
+    this.set(botId, { window: false, control: "bot" });
+  }
+
   /** The size of the bot's page now. */
   size(botId: BotId): PageSize {
     return this.sizes.get(botId) ?? PAGE;
@@ -174,7 +184,8 @@ export class FakeBrowser {
   /** The watched browser leaves the owner's hands, if it was in them. */
   private release(): BrowserState | null {
     const botId = this.watching;
-    if (botId === null || this.state(botId).control !== "owner") {
+    const state = botId === null ? null : this.state(botId);
+    if (botId === null || state?.control !== "owner" || state.window) {
       return null;
     }
     return this.set(botId, { control: "bot" });
@@ -210,9 +221,11 @@ export class FakeBrowser {
     | "browser.newTab"
     | "browser.switchTab"
     | "browser.open"
+    | "browser.window"
   > {
     return {
-      "browser.list": () => [...this.states.values()].filter((state) => state.status !== "closed"),
+      "browser.list": () =>
+        [...this.states.values()].filter((state) => state.status !== "closed" || state.window),
       "browser.watch": ({ botId }) => {
         this.fake.bot(botId, false);
         this.unwatch();
@@ -295,6 +308,17 @@ export class FakeBrowser {
         this.open(botId, address, new URL(address).hostname);
         this.repaint(botId);
         return null;
+      },
+      "browser.window": ({ botId }) => {
+        if (this.watching !== botId) {
+          throw conflict("watch this browser before opening it in a window");
+        }
+        if (this.state(botId).window) {
+          throw conflict("the browser is already open in a window");
+        }
+        this.frames.delete(botId);
+        const away = { status: "closed", control: "owner", resting: false, window: true } as const;
+        return this.setTabs(botId, [], away);
       },
     };
   }

@@ -91,8 +91,8 @@ impl std::fmt::Debug for BrowserInput {
     }
 }
 
-/// `browser.take`, `browser.release`, `browser.reload` and
-/// `browser.newTab`.
+/// `browser.take`, `browser.release`, `browser.reload`, `browser.newTab`
+/// and `browser.window`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]

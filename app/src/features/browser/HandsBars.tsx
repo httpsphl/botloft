@@ -1,6 +1,7 @@
 // The owner's controls in the browser panel (spec 21.10): taking the
 // browser, the bot's request for a hand, and the bar that says the owner
-// has it, with the button that gives it back.
+// has it, with the button that gives it back. Each offers a window of its
+// own too, for sites that refuse to sign in here (spec 21.11).
 
 import { Check, Hand, Keyboard, MousePointerClick } from "lucide-react";
 import { useT } from "../../i18n";
@@ -8,6 +9,7 @@ import type { Bot } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import type { Hands } from "./useHands";
+import { WindowButton } from "./WindowBar";
 
 /** The bot asked for a hand and the owner has not taken the browser yet. */
 export function AskCallout({ bot, task, hands }: { bot: Bot; task: string; hands: Hands }) {
@@ -16,16 +18,18 @@ export function AskCallout({ bot, task, hands }: { bot: Bot; task: string; hands
     <div className="mb-3">
       <Callout tone="warn" title={t.help.needs(bot.name)}>
         <p data-selectable>{task}</p>
-        <Button
-          variant="primary"
-          size="sm"
-          icon={Hand}
-          className="mt-2.5"
-          disabled={hands.busy}
-          onClick={() => void hands.take()}
-        >
-          {t.hands.take}
-        </Button>
+        <div className="mt-2.5 flex flex-wrap gap-2">
+          <Button
+            variant="primary"
+            size="sm"
+            icon={Hand}
+            disabled={hands.busy}
+            onClick={() => void hands.take()}
+          >
+            {t.hands.take}
+          </Button>
+          <WindowButton hands={hands} />
+        </div>
       </Callout>
     </div>
   );
@@ -73,6 +77,7 @@ export function HeldBar({
         >
           {t.hands.giveBack(bot.name)}
         </Button>
+        <WindowButton hands={hands} />
         <span className="flex items-center gap-1.5 text-muted text-xs">
           <Hint aria-hidden size={12} className="shrink-0" />
           {focused ? t.hands.typing : t.hands.clickToType}
@@ -84,9 +89,9 @@ export function HeldBar({
 
 /** Under the live screen: the owner may take the browser at any time. */
 export function TakeBar({ bot, hands }: { bot: Bot; hands: Hands }) {
-  const t = useT().browser.hands;
+  const t = useT().browser;
   return (
-    <div className="mt-3 flex items-center gap-3">
+    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
       <Button
         variant="secondary"
         size="sm"
@@ -94,9 +99,12 @@ export function TakeBar({ bot, hands }: { bot: Bot; hands: Hands }) {
         disabled={hands.busy}
         onClick={() => void hands.take()}
       >
-        {t.take}
+        {t.hands.take}
       </Button>
-      <p className="min-w-0 text-muted text-xs">{t.takeWhy(bot.name)}</p>
+      <WindowButton hands={hands} />
+      <p className="min-w-0 basis-full text-muted text-xs">
+        {t.hands.takeWhy(bot.name)} {t.window.why(bot.name)}
+      </p>
     </div>
   );
 }

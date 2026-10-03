@@ -157,7 +157,8 @@ pub(super) fn tools() -> Vec<Value> {
                 until they are done: signing in to their account, solving a captcha, typing a \
                 code sent to their phone, anything only they should or can do. Open the page \
                 first; they take over your browser, and it comes back to you with the page as \
-                they left it. \
+                they left it. To sign in where a site refuses your browser, they may open it \
+                in a window of its own; then it comes back closed, with their logins kept. \
                 Never ask for passwords, codes or card numbers in the chat: ask with this tool, \
                 so the owner types them where you never see them.",
             "inputSchema": {

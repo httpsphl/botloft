@@ -1213,6 +1213,12 @@ resting: boolean,
  */
 ask: string | null, 
 /**
+ * The owner has it open in a window of its own, to sign in where a
+ * site refuses a browser a program drives (spec 21.11). It is
+ * `closed` meanwhile, and the bot's tools wait.
+ */
+window: boolean, 
+/**
  * Unix time in milliseconds.
  */
 updatedAt: number, };
@@ -1282,8 +1288,8 @@ buttons: number,
 clicks: number, modifiers: number, } | { "kind": "wheel", x: number, y: number, dx: number, dy: number, modifiers: number, } | { "kind": "key", key: string, code: string, modifiers: number, } | { "kind": "text", text: string, };
 
 /**
- * `browser.take`, `browser.release`, `browser.reload` and
- * `browser.newTab`.
+ * `browser.take`, `browser.release`, `browser.reload`, `browser.newTab`
+ * and `browser.window`.
  */
 export type BrowserControlParams = { botId: BotId, };
 
@@ -1417,6 +1423,7 @@ export interface RpcMethods {
   "browser.resize": { params: BrowserResizeParams; result: null };
   "browser.take": { params: BrowserControlParams; result: BrowserState };
   "browser.release": { params: BrowserControlParams; result: BrowserState };
+  "browser.window": { params: BrowserControlParams; result: BrowserState };
   "browser.input": { params: BrowserInputParams; result: null };
   "browser.reload": { params: BrowserControlParams; result: null };
   "browser.newTab": { params: BrowserControlParams; result: null };

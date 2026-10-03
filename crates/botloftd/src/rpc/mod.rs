@@ -195,7 +195,7 @@ enum Routed {
 }
 
 fn route(
-    daemon: &Daemon,
+    daemon: &Arc<Daemon>,
     text: &str,
     watch: &mut Watch,
     frames: &watch::Sender<Option<String>>,
@@ -224,6 +224,8 @@ fn route(
         | method::BROWSER_NEW_TAB
         | method::BROWSER_SWITCH_TAB
         | method::BROWSER_OPEN => watch.request(daemon, &request.method, request.params),
+        // A window of its own outlives the request (spec 21.11).
+        method::BROWSER_WINDOW => watch.window(daemon, request.params),
         name if ASIDE.contains(&name) => return Routed::Aside(request),
         _ => return Routed::InOrder(request),
     };

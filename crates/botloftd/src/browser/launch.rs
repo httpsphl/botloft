@@ -118,6 +118,46 @@ pub async fn launch(
     }
 }
 
+/// Starts `program` with a window of its own and no DevTools on the
+/// profile in `profile`, at `url` (spec 21.11). The process is the
+/// browser: it ends when the owner closes the window.
+pub fn window(
+    program: &Path,
+    profile: &Path,
+    url: Option<&str>,
+) -> Result<(Child, ProcessJob), BrowserError> {
+    std::fs::create_dir_all(profile)?;
+    let env = platform::user_environment()?;
+    let mut command = Command::new(program);
+    command
+        .args([
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--disable-extensions",
+            "--disable-sync",
+            // The browser without a window was killed, not closed.
+            "--hide-crash-restore-bubble",
+        ])
+        .arg(format!("--user-data-dir={}", profile.display()))
+        .arg(url.unwrap_or("about:blank"))
+        .env_clear()
+        .envs(env.iter().map(|(name, value)| (name, value)))
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    ProcessJob::prepare(&mut command);
+    let job = ProcessJob::new()?;
+    let mut child = command.spawn()?;
+    if let Err(err) = job.assign(&child) {
+        let _ = child.kill();
+        let _ = child.wait();
+        return Err(err.into());
+    }
+    job.track(&command);
+    debug!(pid = child.id(), "browser: started in a window");
+    Ok((child, job))
+}
+
 /// What the browser writes to stderr, kept as the line that best says why
 /// it failed to start (a missing sandbox on Linux, say). Nothing of it goes
 /// to the log.

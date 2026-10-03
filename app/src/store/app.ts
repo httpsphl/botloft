@@ -342,7 +342,9 @@ export function applyEvent(state: AppState, event: ServerEvent): Partial<AppStat
 function withBrowser(state: AppState, browser: BrowserState): Partial<AppState> {
   const { [browser.botId]: _, ...rest } = state.browsers;
   return {
-    browsers: browser.status === "closed" ? rest : { ...rest, [browser.botId]: browser },
+    // Closed is no browser, unless it is open in a window of its own.
+    browsers:
+      browser.status === "closed" && !browser.window ? rest : { ...rest, [browser.botId]: browser },
   };
 }
 

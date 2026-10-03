@@ -79,6 +79,15 @@ export const browser: Messages["browser"] = {
     typing: "Lo que escribes va a la página",
     screen: (bot) => `Navegador de ${bot}, en tus manos`,
   },
+  window: {
+    open: "Iniciar sesión en una ventana",
+    why: (bot) =>
+      `Para sitios que rechazan el inicio de sesión aquí, como Google: el navegador de ${bot} se abre en una ventana propia y la sesión queda para ${bot}.`,
+    openFailed: "No se pudo abrir la ventana",
+    title: "Abierto en una ventana",
+    body: (bot) =>
+      `Inicia sesión en la ventana que se abrió y luego ciérrala. ${bot} espera mientras tanto y conserva la sesión.`,
+  },
   help: {
     needs: (bot) => `${bot} te necesita en el navegador`,
     asks: (bot, task) => `${bot} pide: ${task}`,

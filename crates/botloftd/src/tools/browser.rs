@@ -87,8 +87,9 @@ async fn run(
         // What they did last reaches the browser before the bot reads it.
         daemon.browsers.wait_for_owner(id, OWNER_WAIT).await;
         let session = call.running().ok_or(
-            "The owner is done, but your browser closed meanwhile. Open the page again with \
-             browser_open.",
+            "The owner is done, but your browser closed meanwhile: they may have used it in a \
+             window of its own. Open the page again with browser_open; the logins they made \
+             stay.",
         )?;
         let done = "The owner is done and gave your browser back. This is the page now.";
         let mut notes = vec![done.to_owned()];
