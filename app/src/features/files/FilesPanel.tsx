@@ -6,10 +6,11 @@ import { ArrowLeft, RefreshCw, X } from "lucide-react";
 import { useT } from "../../i18n";
 import { fileSize, fromNow } from "../../lib/format";
 import type { Bot, BotFile } from "../../lib/protocol.gen";
+import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
+import { EmptyState } from "../../ui/EmptyState";
 import { SidePanel } from "../../ui/SidePanel";
-import { BotAvatar } from "../bots/BotAvatar";
 import { FilePreview } from "./FilePreview";
 import { fileKind, kindIcon } from "./kinds";
 import type { BotFiles } from "./useBotFiles";
@@ -102,13 +103,7 @@ function List({
     );
   }
   if (data.files.length === 0 && !data.loading) {
-    return (
-      <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
-        <BotAvatar color={bot.color} size={44} mood="idle" />
-        <p className="font-semibold text-sm">{t.emptyTitle(bot.name)}</p>
-        <p className="text-muted text-sm">{t.emptyBody}</p>
-      </div>
-    );
+    return <EmptyState color={bot.color} title={t.emptyTitle(bot.name)} body={t.emptyBody} />;
   }
   return (
     <ul aria-label={t.list} className="min-h-0 flex-1 overflow-y-auto p-1.5">
@@ -145,11 +140,7 @@ function FileRow({
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
             <span className="truncate font-medium text-sm">{file.name}</span>
-            {fresh && (
-              <span className="shrink-0 rounded-full bg-work/12 px-1.5 py-px font-medium text-work text-xs">
-                {t.newTag}
-              </span>
-            )}
+            {fresh && <Badge tone="work">{t.newTag}</Badge>}
           </span>
           <span className="block truncate text-muted text-xs">
             {file.folder ? `${file.folder} · ` : ""}

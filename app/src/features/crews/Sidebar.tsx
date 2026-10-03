@@ -8,6 +8,7 @@ import type { Activity, Bot, Crew } from "../../lib/protocol.gen";
 import { activityOf, botsOf, crewList } from "../../store/app";
 import { useApp } from "../../store/context";
 import { isUnread, unreadIn } from "../../store/seen";
+import { CountBadge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { ContextMenu, menuPoint, type Point } from "../../ui/ContextMenu";
 import { APP_OPENED } from "../../ui/motion";
@@ -120,10 +121,7 @@ function CrewEntry({ crew }: { crew: Crew }) {
             </span>
           )}
           {unread > 0 && (
-            <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-accent px-1 font-semibold text-[11px] text-canvas tabular-nums">
-              <span aria-hidden>{unread}</span>
-              <span className="sr-only">{t.crews.sidebar.unreadCount(unread)}</span>
-            </span>
+            <CountBadge tone="accent" count={unread} label={t.crews.sidebar.unreadCount(unread)} />
           )}
           {crew.paused && (
             <span className="flex items-center gap-1 font-medium text-quiet text-xs">

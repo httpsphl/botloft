@@ -7,7 +7,8 @@ export type Tone = "accent" | "work" | "ok" | "warn" | "danger" | "quiet";
 interface ToneClasses {
   /** An icon or a mark in the tone. */
   text: string;
-  /** A soft fill with the tone on it: badges, a card's round icon. */
+  /** A soft fill with the tone on it: badges, a card's round icon. Words
+   *  in the accent use `accent-text` (spec 15.3). */
   soft: string;
   /** A border in the tone, for a card that asks for something. */
   border: string;
@@ -20,7 +21,7 @@ interface ToneClasses {
 export const TONES: Record<Tone, ToneClasses> = {
   accent: {
     text: "text-accent",
-    soft: "bg-accent/12 text-accent",
+    soft: "bg-accent/12 text-accent-text",
     border: "border-accent/40",
     frame: "border-accent/40 bg-accent/6",
     solid: "bg-accent text-canvas",

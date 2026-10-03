@@ -8,6 +8,7 @@ import { AVATAR_PALETTE, type Question } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
 import { openQuestions } from "../../store/questions";
 import { Button } from "../../ui/Button";
+import { EmptyState } from "../../ui/EmptyState";
 import { BotAvatar } from "../bots/BotAvatar";
 import { QuestionCard } from "./QuestionCard";
 
@@ -74,20 +75,16 @@ function Entry({ question }: { question: Question }) {
 }
 
 function Empty() {
-  const t = useT();
-  const words = t.questions.box;
+  const words = useT().questions.box;
   return (
-    <div className="mx-auto mt-10 flex max-w-80 flex-col items-center gap-3 rounded-2xl bg-panel/80 px-6 py-10 text-center">
-      <span className="relative">
-        <BotAvatar color={AVATAR_PALETTE[0]} size={44} mood="idle" />
-        <MessageCircleQuestion
-          aria-hidden
-          size={18}
-          className="absolute -right-2 -bottom-1 rounded-full bg-panel p-0.5 text-muted"
-        />
-      </span>
-      <p className="font-semibold text-sm">{words.emptyTitle}</p>
-      <p className="text-muted text-sm">{words.emptyBody}</p>
+    <div className="mt-10">
+      <EmptyState
+        framed
+        color={AVATAR_PALETTE[0]}
+        icon={MessageCircleQuestion}
+        title={words.emptyTitle}
+        body={words.emptyBody}
+      />
     </div>
   );
 }
