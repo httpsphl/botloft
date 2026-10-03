@@ -13,6 +13,8 @@ import type {
   CrewId,
   Delivery,
   MessageId,
+  Question,
+  QuestionId,
   Routine,
   RoutineId,
   Settings,
@@ -21,6 +23,7 @@ import type {
   TaskId,
 } from "../lib/protocol.gen";
 import { viewTransition } from "../ui/motion";
+import { withQuestion } from "./questions";
 import { loadMarked, loadSeen, loadSeenSince, seenActions, withReply } from "./seen";
 
 /** A panel beside a bot's chat (spec 15.1). */
@@ -52,6 +55,10 @@ export interface AppState {
   routines: Record<RoutineId, Routine>;
   /** The bots' browsers that are not closed (spec 21.7), then every change. */
   browsers: Record<BotId, BrowserState>;
+  /** Questions waiting for the owner (spec 23.5), then every change. */
+  questions: Record<QuestionId, Question>;
+  /** The question box is open in the middle, instead of a crew or bot. */
+  questionBox: boolean;
   /**
    * When the owner last looked at each bot's chat (`seen.ts`), for unread
    * replies and failed routine runs.
@@ -72,6 +79,7 @@ export interface AppState {
   selectedBotId: BotId | null;
   selectCrew(crewId: CrewId | null): void;
   selectBot(botId: BotId): void;
+  openQuestionBox(): void;
   setPanel(botId: BotId, panel: BotPanel | null): void;
   /** The owner is looking at the bot's chat: what it said so far is seen. */
   markSeen(botId: BotId): void;
@@ -136,6 +144,8 @@ export function createAppStore(api: BotloftApi): AppStore {
     tasks: {},
     routines: {},
     browsers: {},
+    questions: {},
+    questionBox: false,
     seenAt: loadSeen(),
     seenSince: loadSeenSince(),
     replyAt: {},
@@ -144,16 +154,25 @@ export function createAppStore(api: BotloftApi): AppStore {
     selectedCrewId: null,
     selectedBotId: null,
     selectCrew: (crewId) => {
-      const { selectedCrewId, selectedBotId } = get();
-      if (selectedCrewId !== crewId || selectedBotId !== null) {
-        viewTransition(() => set({ selectedCrewId: crewId, selectedBotId: null }));
+      const { selectedCrewId, selectedBotId, questionBox } = get();
+      if (selectedCrewId !== crewId || selectedBotId !== null || questionBox) {
+        viewTransition(() =>
+          set({ selectedCrewId: crewId, selectedBotId: null, questionBox: false }),
+        );
       }
     },
     selectBot: (botId) => {
       const bot = get().bots[botId];
-      if (bot && get().selectedBotId !== botId) {
+      if (bot && (get().selectedBotId !== botId || get().questionBox)) {
         get().markSeen(botId);
-        viewTransition(() => set({ selectedCrewId: bot.crewId, selectedBotId: botId }));
+        viewTransition(() =>
+          set({ selectedCrewId: bot.crewId, selectedBotId: botId, questionBox: false }),
+        );
+      }
+    },
+    openQuestionBox: () => {
+      if (!get().questionBox) {
+        viewTransition(() => set({ questionBox: true, selectedCrewId: null, selectedBotId: null }));
       }
     },
     ...seenActions(get, set),
@@ -216,6 +235,7 @@ function withoutBots(state: AppState, botIds: BotId[]): Partial<AppState> {
     replyAt: Object.fromEntries(Object.entries(state.replyAt).filter(([id]) => !gone.has(id))),
     routines: kept(state.routines, (routine) => !gone.has(routine.botId)),
     browsers: kept(state.browsers, (browser) => !gone.has(browser.botId)),
+    questions: kept(state.questions, (question) => !gone.has(question.botId)),
     deliveries: kept(state.deliveries, (delivery) => !gone.has(delivery.botId)),
     tasks: kept(
       state.tasks,
@@ -284,6 +304,8 @@ export function applyEvent(state: AppState, event: ServerEvent): Partial<AppStat
       return withRoutine(state, event.params);
     case "browser.changed":
       return withBrowser(state, event.params);
+    case "question.changed":
+      return withQuestion(state, event.params);
     case "routine.run": {
       const routine = state.routines[event.params.routineId];
       const last = routine?.lastRun;

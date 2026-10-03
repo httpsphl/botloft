@@ -12,6 +12,7 @@ import { FailedDeliveries } from "../features/messages/FailedDeliveries";
 import { ClaudeCodeHelp } from "../features/onboarding/ClaudeCodeHelp";
 import { SignInButton } from "../features/onboarding/SignIn";
 import { Welcome } from "../features/onboarding/Welcome";
+import { QuestionBox } from "../features/questions/QuestionBox";
 import { UpdateButton } from "../features/updates/UpdateButton";
 import { useT } from "../i18n";
 import { useApp } from "../store/context";
@@ -107,8 +108,12 @@ export function Workspace() {
 }
 
 function Selection() {
+  const box = useApp((state) => state.questionBox);
   const crew = useApp((state) => (state.selectedCrewId ? state.crews[state.selectedCrewId] : null));
   const bot = useApp((state) => (state.selectedBotId ? state.bots[state.selectedBotId] : null));
+  if (box) {
+    return <QuestionBox />;
+  }
   if (crew && bot) {
     return <BotView key={bot.id} bot={bot} crew={crew} />;
   }
@@ -123,6 +128,15 @@ function Breadcrumb() {
   const crew = useApp((state) => (state.selectedCrewId ? state.crews[state.selectedCrewId] : null));
   const bot = useApp((state) => (state.selectedBotId ? state.bots[state.selectedBotId] : null));
   const selectCrew = useApp((state) => state.selectCrew);
+  const box = useApp((state) => state.questionBox);
+  if (box) {
+    return (
+      <>
+        <ChevronRight aria-hidden size={14} className="text-muted" />
+        <span className="truncate text-ink-soft">{t.questions.box.label}</span>
+      </>
+    );
+  }
   if (!crew) {
     // Only shown with crews: the overview is where "no crew" leads.
     return (

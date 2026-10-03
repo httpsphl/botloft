@@ -4,6 +4,7 @@ import { type BotloftApi, type ConnectionState, errorText } from "../lib/api";
 import type { Delivery } from "../lib/protocol.gen";
 import { onVisibility, windowHidden } from "../shell/visibility";
 import { type AppStore, applyEvent, crewList } from "./app";
+import { questionsById } from "./questions";
 import { withReply } from "./seen";
 
 /**
@@ -74,6 +75,11 @@ export function syncStore(store: AppStore, api: BotloftApi): () => void {
         (list) =>
           alive && store.setState({ browsers: Object.fromEntries(list.map((b) => [b.botId, b])) }),
       )
+      .catch(() => {});
+    api
+      .call("questions.list", {})
+      .then((list) => alive && store.setState({ questions: questionsById(list) }))
+      // An older daemon has no questions.
       .catch(() => {});
     api
       .call("tasks.list", {})

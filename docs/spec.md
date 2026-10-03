@@ -1466,7 +1466,7 @@ Uma área de design ao lado do chat: cada página HTML que o bot faz aparece com
 
 ## 23. Perguntas ao dono
 
-Status: **P1 implementado** (23.9); P2 em andamento. É o item 2 da seção 18.
+Status: **P1 e P2 implementados** (23.9). É o item 2 da seção 18.
 
 ### 23.1 O que é
 

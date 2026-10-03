@@ -9,6 +9,7 @@ import { duration, tokens, usedTokens, when } from "../../lib/format";
 import type { Bot, ChatItem, TurnItem } from "../../lib/protocol.gen";
 import { useArrival } from "../../ui/motion";
 import { BotAvatar, moodOf } from "../bots/BotAvatar";
+import { QuestionCard } from "../questions/QuestionCard";
 import { ApprovalCard } from "./ApprovalCard";
 import { Markdown } from "./Markdown";
 import { runParts, splitDraft } from "./rows";
@@ -138,6 +139,12 @@ function BotRunView({
               return (
                 <Arriving key={head.id} at={head.createdAt}>
                   <ApprovalCard approval={head.body} bot={bot} />
+                </Arriving>
+              );
+            case "question":
+              return (
+                <Arriving key={head.id} at={head.createdAt}>
+                  <QuestionCard question={head.body.question} bot={bot.name} />
                 </Arriving>
               );
             case "turn":

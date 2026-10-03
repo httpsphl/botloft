@@ -11,6 +11,7 @@ import { crews } from "./crews";
 import { files } from "./files";
 import { messages } from "./messages";
 import { onboarding } from "./onboarding";
+import { questions } from "./questions";
 import { routines } from "./routines";
 import { screens } from "./screens";
 import { setup } from "./setup";
@@ -31,6 +32,7 @@ export const ptBR: Messages = {
   crews,
   files,
   messages,
+  questions,
   routines,
   screens,
   setup,

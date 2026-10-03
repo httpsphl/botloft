@@ -5,12 +5,14 @@ import { useEffect } from "react";
 import { actionableDead } from "../features/messages/FailedDeliveries";
 import type { AppState } from "../store/app";
 import { useApp, useHost } from "../store/context";
+import { openQuestions } from "../store/questions";
 import { anyUnread, unseenFailures } from "../store/seen";
 import { prefs, usePref } from "./prefs";
 
 /**
- * Bots waiting for an answer or a sign-in, messages that gave up, and
- * routine runs that failed since the owner last opened their bot.
+ * Bots waiting for an answer or a sign-in, messages that gave up, routine
+ * runs that failed since the owner last opened their bot, and questions
+ * the bots asked (spec 23.6).
  */
 export function attentionCount(state: AppState): number {
   // Asked on every change to the store; the answer changes only with these.
@@ -20,6 +22,7 @@ export function attentionCount(state: AppState): number {
     state.routines,
     state.seenAt,
     state.selectedBotId,
+    state.questions,
   ] as const;
   if (last?.inputs.every((input, index) => input === inputs[index])) {
     return last.count;
@@ -27,7 +30,11 @@ export function attentionCount(state: AppState): number {
   const bots = Object.values(state.bots).filter(
     (bot) => bot.state === "needs_approval" || bot.state === "auth_error",
   ).length;
-  const count = bots + actionableDead(state).length + unseenFailures(state).length;
+  const count =
+    bots +
+    actionableDead(state).length +
+    unseenFailures(state).length +
+    openQuestions(state).length;
   last = { inputs, count };
   return count;
 }
