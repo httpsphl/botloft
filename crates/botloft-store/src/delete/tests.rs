@@ -146,6 +146,15 @@ fn fill(fx: &Fixture) -> Owned {
         finished_at: None,
     };
     fx.store.fire_run(&run, &fired, &delivery).expect("run");
+
+    // A question the owner answered.
+    let question = crate::questions::tests::ask(&fx.store, fx, scout, "Which client?", 120);
+    let (mut answer, delivery) = message_to(&fx.crew.id, scout, "Acme");
+    answer.question_id = Some(question.id.clone());
+    fx.store
+        .answer_question(&question.id, &answer, &delivery)
+        .expect("answer")
+        .expect("open");
     Owned {
         attachment,
         approval: record.approval.id,
@@ -207,6 +216,7 @@ fn a_deleted_bot_takes_what_was_its_own() {
     );
     assert!(fx.store.browser_sites(&scout).expect("sites").is_empty());
     assert!(fx.store.allow_rules(&scout).expect("rules").is_empty());
+    assert_eq!(count(&fx.store, "questions"), 0);
     let crew = fx.store.crew(&fx.crew.id).expect("crew").expect("kept");
     assert_eq!(crew.lead_bot_id, None);
     assert_eq!(dangling(&fx.store), 0);

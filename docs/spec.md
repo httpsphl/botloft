@@ -347,6 +347,7 @@ Todo item tem `id` (`cht_`), `botId`, `kind`, `createdAt` e `updatedAt`.
 | `reply` | `text` | texto do bot |
 | `tool` | `toolUseId`, `name`, `summary`, `explanation`, `input`, `status` (`running`, `done`, `failed`), `output`, `file` | ferramenta usada pelo bot; `explanation` é o que o bot diz que um comando faz (10.1; ausente nas outras ferramentas, quando o bot não disse nada e nos itens antigos); `file` é o caminho completo que uma chamada de `Write`, `Edit`, `MultiEdit` ou `NotebookEdit` altera (ausente nas outras e nos itens antigos) |
 | `approval` | `approvalId`, `toolName`, `summary`, `explanation`, `input`, `status` (`pending`, `allowed`, `denied`, `expired`), `note` | pedido de permissão (10.1); `explanation` como no item `tool`, guardada só no item do chat |
+| `question` | `question` (a `Question`, 23.3) | pergunta do bot ao dono (23.4), regravada quando ele responde ou descarta |
 | `turn` | `durationMs`, `tokens` (8.7; `null` quando o Claude Code não disse e nos itens antigos), `error` | fim de um turno |
 | `notice` | `level` (`info`, `warning`, `error`), `code` (`signed_out`, `usage_limit`, `turn_failed`, `model_unavailable`, `compacted`, `auto_compacted`, `compact_failed`; ausente em avisos antigos), `text` | avisos do daemon: limite de uso, login, turno com erro, conversa compactada (8.6). O app escreve os avisos com `code` no idioma do dono; `text` fica em inglês para quem não conhece o código e, em `turn_failed` e `compact_failed`, traz o detalhe do erro |
 
@@ -464,7 +465,7 @@ A resposta sai no stdout como `{"type":"control_response","response":{"subtype":
 
 ### 9.3 Texto que o bot recebe
 
-A mensagem do **dono** vai como ele escreveu, sem envelope: é o usuário da sessão falando, com a autoridade de quem digita.
+A mensagem do **dono** vai como ele escreveu, sem envelope: é o usuário da sessão falando, com a autoridade de quem digita. A resposta a uma pergunta do bot vem depois de uma linha que cita a pergunta (23.4).
 
 Mensagens de **outros bots** e **avisos do daemon** levam um envelope em inglês, como as regras geradas (5.1):
 
@@ -530,6 +531,7 @@ Transporte: Streamable HTTP, só POST e resposta `application/json`, sem sessão
 | `suggest_bot` | `name`, `role`, `instructions` (até 8 000 caracteres), `model?`, `reason` (até 1 000) | `created` e, criado, `handle`, `name`, `role`, `model` e um lembrete para mandar a primeira task; recusado ou sem resposta, o porquê (10.2). Só o chefe |
 | `schedule_routine` | `name`, `prompt` (até 8 000 caracteres), `schedule` (como em 20.2), `bot?` (handle de outro bot da crew) | `created` e, criada, `routine_id`, nome, pedido, horário, fuso e a próxima vez; recusada ou sem resposta, o aviso de que nada foi agendado (20.12) |
 | `share_file` | `files` (1 a 10 caminhos, absolutos ou relativos à pasta do bot) | `shown` (um `BotFile` por arquivo, 8.4) e um lembrete de que o dono vê cada um como cartão no chat; um arquivo fora das pastas do bot e não escrito por ele, ou que não existe, recusa a chamada inteira e diz qual e por quê |
+| `ask_owner` | `question` (até 2 000 caracteres), `options?` (2 a 5, até 100 caracteres cada) | `question_id` e o lembrete de que a resposta chega depois, como mensagem; a tool não espera (23.2) |
 | `permission_prompt` | `tool_name`, `input`, `tool_use_id` | decisão do dono (10.1). Chamada pelo Claude Code, não pelo modelo |
 | `browser_*` | seção 21.4 | o navegador do bot: abrir, ler, clicar, digitar, rolar, ver a tela, pedir a mão do dono |
 
@@ -638,15 +640,18 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `tasks.list` | `crewId?, status?` | `Task[]` |
 | `browser.list`, `browser.watch`, `browser.unwatch`, `browser.take`, `browser.release`, `browser.input` | seção 21.7 | o navegador dos bots, a tela ao vivo e o dono no controle |
 | `screens.list` | seção 22.4 | as telas HTML do bot |
+| `questions.list` | `status?` (`open` se ausente) | `Question[]` de bots e crews ativos, da mais nova à mais velha (23.5) |
+| `questions.answer` | `questionId, answer` | `Question`; a resposta vai ao bot como message do dono (23.3) |
+| `questions.dismiss` | `questionId` | `Question`; fecha sem avisar o bot (23.3) |
 | `settings.get` | | `Settings`: `startWithWindows`, `keepAwake` e `approvalWaitMinutes`, como estão no `config.toml` (6) |
 | `usage.tokens` | `since` (ms Unix, não negativo) | `BotTokens[]`: `botId`, `name`, `color`, `crew` (nome da equipe), `archived`, `turns` e `tokens` somados (8.7) |
 | `settings.update` | `startWithWindows?, keepAwake?, approvalWaitMinutes?` (1 a 1440) | `Settings`; grava o que veio e aplica na hora (6, 14). Se a tarefa não pode mudar, nada é gravado e volta um erro |
 
-`Crew` traz `workFolder`, o caminho da pasta de trabalho (a escolhida ou a `shared\`), `workFolderChosen` e `leadBotId`, o chefe (10.2). `Bot` traz também `permissionMode`, `model`, `modelInUse`, `effort` e `effortDefault` (7.4), `context` (8.6; `null` enquanto o Claude Code não disse o tamanho da conversa) e `lastActivity`: o último item do chat resumido em uma linha, para a lista de conversas: `kind` (`owner`, `message`, `reply`, `tool`, `approval`, `notice`), `text`, `tool` e `at`. O `text` não tem palavras do daemon: a mensagem do dono vem sem "You:", e uma ferramenta ou um pedido vêm só com o resumo (num comando, com a explicação do bot, se ele deu uma, 10.1), com a ferramenta à parte em `tool`; o app completa no idioma do dono ("Mandar uma mensagem · @writer", "Aguardando aprovação: rodar um comando"). `lastReplyAt` é quando o bot terminou a última resposta (`null` antes da primeira), lido à parte porque a linha da conversa pode já ser outra coisa (uma ferramenta, a mensagem de outro bot); o app marca a conversa como não lida com ele (15.1).
+`Crew` traz `workFolder`, o caminho da pasta de trabalho (a escolhida ou a `shared\`), `workFolderChosen` e `leadBotId`, o chefe (10.2). `Bot` traz também `permissionMode`, `model`, `modelInUse`, `effort` e `effortDefault` (7.4), `context` (8.6; `null` enquanto o Claude Code não disse o tamanho da conversa) e `lastActivity`: o último item do chat resumido em uma linha, para a lista de conversas: `kind` (`owner`, `message`, `reply`, `tool`, `approval`, `question`, `notice`), `text`, `tool` e `at`. O `text` não tem palavras do daemon: a mensagem do dono vem sem "You:", e uma ferramenta ou um pedido vêm só com o resumo (num comando, com a explicação do bot, se ele deu uma, 10.1), com a ferramenta à parte em `tool`; o app completa no idioma do dono ("Mandar uma mensagem · @writer", "Aguardando aprovação: rodar um comando"). `lastReplyAt` é quando o bot terminou a última resposta (`null` antes da primeira), lido à parte porque a linha da conversa pode já ser outra coisa (uma ferramenta, a mensagem de outro bot); o app marca a conversa como não lida com ele (15.1).
 
 ### 11.3 Notificações do servidor
 
-`bot.state`, `bot.changed`, `bot.context` (8.6), `bot.rules` (10.1), `bot.deleted`, `crew.changed`, `crew.deleted`, `folder.recycled` (7.6), `chat.item`, `chat.delta`, `message.created`, `delivery.changed`, `task.changed`, das rotinas `routine.changed` e `routine.run` (20.8), e do navegador `browser.changed`, `browser.action` e, só para quem assiste, `browser.frame` (21.7), e das telas `screen.draft` (22.3).
+`bot.state`, `bot.changed`, `bot.context` (8.6), `bot.rules` (10.1), `bot.deleted`, `crew.changed`, `crew.deleted`, `folder.recycled` (7.6), `chat.item`, `chat.delta`, `message.created`, `delivery.changed`, `task.changed`, das rotinas `routine.changed` e `routine.run` (20.8), e do navegador `browser.changed`, `browser.action` e, só para quem assiste, `browser.frame` (21.7), e das telas `screen.draft` (22.3), e das perguntas `question.changed` (23.5).
 
 ### 11.4 Erros
 
@@ -662,7 +667,7 @@ Além desses, os códigos padrão do JSON-RPC: `-32700` (JSON inválido), `-3260
 
 ## 12. Dados (SQLite)
 
-Pragmas: `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON`, `busy_timeout=5000`, `temp_store=MEMORY`, cache de 16 MB e `PRAGMA optimize` ao abrir. Com WAL, `NORMAL` não corrompe o banco; uma queda de energia pode perder os últimos commits, mas nenhum commit espera o disco (com `FULL`, cada item de chat pagava um flush no Windows). As consultas quentes passam pelo cache de statements do rusqlite, e toda coluna que aponta para outra tabela tem índice: as tabelas nunca encolhem, e sem índice a exclusão varre a tabela filha uma vez por linha apagada. Migrations numeradas em `botloft-store/migrations/NNNN_nome.sql`, versão em `PRAGMA user_version`. Tempo em milissegundos Unix (`INTEGER`). Arquivamento é lógico (`archived_at`). Exclusão (7.6) apaga as linhas: as chaves estrangeiras não têm `ON DELETE`, então o daemon apaga ou solta, na ordem e numa transação só, tudo que aponta para o bot (`approvals`, `chat_items`, `browser_sites`, `allow_rules`, `routine_runs`, `attachments`, `deliveries`, as `messages` recebidas, `routines`, `tasks`), e zera `messages.from_bot_id`, `messages.task_id`, `tasks.origin_task_id` e `crews.lead_bot_id` onde apontavam para o que saiu. Uma crew sai depois dos bots dela.
+Pragmas: `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON`, `busy_timeout=5000`, `temp_store=MEMORY`, cache de 16 MB e `PRAGMA optimize` ao abrir. Com WAL, `NORMAL` não corrompe o banco; uma queda de energia pode perder os últimos commits, mas nenhum commit espera o disco (com `FULL`, cada item de chat pagava um flush no Windows). As consultas quentes passam pelo cache de statements do rusqlite, e toda coluna que aponta para outra tabela tem índice: as tabelas nunca encolhem, e sem índice a exclusão varre a tabela filha uma vez por linha apagada. Migrations numeradas em `botloft-store/migrations/NNNN_nome.sql`, versão em `PRAGMA user_version`. Tempo em milissegundos Unix (`INTEGER`). Arquivamento é lógico (`archived_at`). Exclusão (7.6) apaga as linhas: as chaves estrangeiras não têm `ON DELETE`, então o daemon apaga ou solta, na ordem e numa transação só, tudo que aponta para o bot (`questions`, `approvals`, `chat_items`, `browser_sites`, `allow_rules`, `routine_runs`, `attachments`, `deliveries`, as `messages` recebidas, `routines`, `tasks`), e zera `messages.from_bot_id`, `messages.task_id`, `tasks.origin_task_id` e `crews.lead_bot_id` onde apontavam para o que saiu. Uma crew sai depois dos bots dela.
 
 | Tabela | Colunas principais |
 |---|---|
@@ -678,6 +683,7 @@ Pragmas: `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON`, `busy_time
 | `routines`, `routine_runs` | seção 20.7; `messages` ganha `routine_id` |
 | `browser_sites` | `bot_id, host, allowed_at`: sites que o dono deixou o bot usar no navegador (21.5) |
 | `allow_rules` | `id (rul_), bot_id, tool_name, kind, value, created_at`, única por `(bot_id, tool_name, kind, value)`: o que o dono permitiu de vez para o bot (10.1) |
+| `questions` | seção 23.7; `messages` ganha `question_id` |
 
 Índices mínimos: `deliveries(state, next_attempt_at)`, `messages(crew_id, created_at)`, `tasks(assignee_bot_id, status)`, `bots(crew_id)`, `chat_items(bot_id, id)`, `chat_items(created_at) WHERE kind = 'turn'` (8.7), `attachments(message_id)`.
 
@@ -983,7 +989,7 @@ M2 a M4 foram entregues com ConPTY, terminal com replay, inbox por named pipe e 
 ## 18. Fora do MVP (ordem sugerida)
 
 1. Rotinas: horário semanal, intervalo ou cron, com fuso, sobreposição e horários perdidos. Desenho na seção 20.
-2. Caixa de perguntas ao owner (bot pergunta, owner responde, resposta volta como mensagem).
+2. Caixa de perguntas ao owner (bot pergunta, owner responde, resposta volta como mensagem). Desenho na seção 23.
 3. "Permitir sempre" nas aprovações, gravado como regra do bot. Feito (10.1).
 4. Busca FTS5 em mensagens e no chat.
 5. Histórico de versões das instruções do bot.
@@ -1457,3 +1463,80 @@ Uma área de design ao lado do chat: cada página HTML que o bot faz aparece com
 | **T1** Telas no daemon | rascunho a partir do stream, JSON parcial, `/view` com sandbox, `screens.list`, `screen.draft`, regras do bot, testes com `FakeRuntime` | um `Write` de `.html` transmitido pelo `FakeRuntime` aparece como rascunho em `/view` e vira o arquivo depois do resultado |
 | **T2** Área de design | painel de telas, quadro com zoom, tela em foco, aparelhos, escrita ao vivo, "Ver em telas" no chat, textos nos três idiomas | ver pelo app um bot real escrever uma tela e ela se montar enquanto ele escreve |
 | **T3** Cursor do bot | script do cursor nos rascunhos, cursor e moldura na prancheta e na tela em foco, a prévia com o mesmo script | ver pelo app um bot real escrever uma tela com o cursor dele seguindo cada parte que nasce |
+
+## 23. Perguntas ao dono
+
+Status: **P1 implementado** (23.9); P2 em andamento. É o item 2 da seção 18.
+
+### 23.1 O que é
+
+Um bot que precisa de uma decisão ou de uma informação do dono pergunta com a tool `ask_owner` e **não espera**: a pergunta vai para a caixa de perguntas do app e para o chat do bot, e o bot segue com o que não depende dela ou termina o turno. Quando o dono responde, a resposta chega ao bot como uma mensagem do dono, num turno novo.
+
+É diferente de uma aprovação (10.1), que segura a ferramenta até o dono decidir e expira no prazo. Uma pergunta não tem prazo: um bot de rotina (20) pergunta às 3 da manhã, e o dono responde quando acordar. É por isso que ela não usa o caminho das aprovações nem deixa o bot em `needs_approval`.
+
+### 23.2 A tool
+
+`ask_owner {question, options?}`:
+
+- `question`: o que o bot quer saber, para o dono, na língua dele; até 2 000 caracteres, em markdown.
+- `options`: de 2 a 5 respostas prontas, cada uma até 100 caracteres, sem repetir. O dono pode escolher uma ou escrever outra coisa.
+- **Saída:** `question_id` e o lembrete de que a resposta chega depois, como mensagem que começa com `Answer to your question`, e de que o bot não deve esperar nem adivinhar a resposta: segue com o que não depende dela ou termina o turno.
+- **Limite:** até 5 perguntas abertas por bot. A sexta volta como erro ao bot, que deve esperar uma resposta antes de perguntar de novo. Campo inválido também volta como erro, sem pergunta.
+- Vale em qualquer modo de permissão, também em `bypass_permissions`: perguntar não faz nada no computador.
+- A chamada aparece no chat como o item `tool` de sempre; o app não mostra essa linha, porque o cartão da pergunta (23.4) já diz tudo.
+
+**Regras do bot** (5.1): quando precisar de uma decisão ou informação do dono para continuar, e principalmente numa rotina ou numa task de outro bot, em que ninguém lê o chat na hora, pergunte com `ask_owner` em vez de só escrever a pergunta na resposta. Uma pergunta por assunto, curta, com `options` quando as respostas possíveis forem poucas. Não espere: siga com o resto ou termine o turno. Nunca peça senha, código ou dado de cartão: no navegador, isso é `browser_ask_owner` (21.10).
+
+### 23.3 Estados
+
+`Question`: `id` (`qst_`), `crewId`, `botId`, `text`, `options`, `status`, `answer`, `createdAt` e `answeredAt`.
+
+| `status` | Quando |
+|---|---|
+| `open` | o bot perguntou e o dono ainda não respondeu |
+| `answered` | o dono respondeu; `answer` guarda a resposta |
+| `dismissed` | o dono descartou sem responder |
+
+- **Responder** (`questions.answer {questionId, answer}`): a resposta é validada como uma mensagem do dono (9.1) e vira, numa transação, a resposta gravada, a pergunta `answered` e uma message do dono para o bot com `question_id`, entregue pelo courier como qualquer outra (bot pausado recebe quando voltar).
+- **Descartar** (`questions.dismiss {questionId}`): fecha a pergunta e **não** avisa o bot, para não gastar um turno com isso. Quem quer que o bot saiba responde, mesmo que seja "deixa pra lá".
+- Só uma pergunta `open` pode ser respondida ou descartada; outra dá `conflict`. Bot ou crew arquivados também dão `conflict`.
+- A conversa normal não fecha a pergunta: o dono pode falar do assunto no chat e depois descartar.
+
+### 23.4 No chat
+
+- **Item `question`** (8.2): `{question}`, a `Question` inteira, criado quando o bot pergunta e regravado quando ela muda. A linha da conversa (`lastActivity`) ganha o `kind` `question`, com o texto da pergunta.
+- **A resposta** chega como `inbound` (a message do dono, com `questionId`). O bot a lê assim (9.3), sem o envelope `[botloft]`, porque é o dono falando:
+
+```
+Answer to your question qst_01J9Z...: "<as primeiras 300 letras da pergunta>"
+
+<resposta>
+```
+
+### 23.5 Caixa de perguntas
+
+`questions.list {status?}` devolve as perguntas de bots e crews ativos, da mais nova à mais velha; sem `status`, só as `open`. As de bots ou crews arquivados ficam de fora e voltam se eles forem restaurados. `question.changed {question}` avisa o app de toda pergunta nova ou que mudou, para a caixa não depender do chat de cada bot estar carregado.
+
+### 23.6 App (P2)
+
+- **Cartão no chat:** "<bot> pergunta", o texto da pergunta (markdown, como uma resposta do bot), as opções como botões e um campo para escrever outra resposta, com **Responder** e **Descartar**. Respondida, o cartão mostra a resposta e quando; descartada, "Descartada". Opção escolhida responde na hora, com o texto da opção.
+- **Caixa:** "Perguntas", no topo da barra lateral, abaixo de "Equipes", com o número de perguntas abertas na cor de aviso. Abre no meio da janela a lista das perguntas abertas, cada uma com o rosto e o nome do bot, a crew, a hora e o mesmo cartão para responder ali mesmo, e "Abrir conversa" para ir ao chat do bot. Sem perguntas: o mascote e "Nenhuma pergunta esperando você".
+- Uma pergunta aberta conta como algo que espera o dono: marca o ícone na barra de tarefas e o ponto do botão da barra lateral escondida (15.1, 15.2).
+- Textos nos três idiomas (15.6).
+
+### 23.7 Dados
+
+Tabela `questions`: `id, crew_id, bot_id, chat_item_id, text, options (JSON), status, answer, created_at, answered_at`, com índice em `(status, created_at)` e em `bot_id`. `messages` ganha `question_id`. Excluir um bot (7.6) solta `messages.question_id` das perguntas dele e apaga as perguntas, antes dos itens do chat.
+
+### 23.8 Fora desta etapa
+
+- Notificação do Windows quando chega uma pergunta.
+- Pergunta com prazo, ou que cai sozinha depois de um tempo.
+- Responder com anexos.
+
+### 23.9 Marcos
+
+| Marco | Entrega | Pronto quando |
+|---|---|---|
+| **P1** Perguntas no daemon | migration, tool `ask_owner`, item `question`, `questions.list`, `questions.answer`, `questions.dismiss`, `question.changed`, a resposta como message, regras do bot, exclusão, testes com `FakeRuntime` | com `FakeRuntime`, um bot pergunta, a tool volta na hora, o dono responde e o bot recebe a resposta pelo stdin com a pergunta citada |
+| **P2** App | cartão no chat, caixa de perguntas na barra lateral, marca de espera, textos nos três idiomas | com o Claude Code real, um bot pergunta, o dono responde pela caixa e o bot continua o trabalho com a resposta |

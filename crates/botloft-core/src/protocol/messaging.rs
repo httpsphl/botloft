@@ -3,7 +3,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::ids::{AttachmentId, BotId, CrewId, DeliveryId, MessageId, RoutineId, TaskId};
+use crate::ids::{
+    AttachmentId, BotId, CrewId, DeliveryId, MessageId, QuestionId, RoutineId, TaskId,
+};
 
 text_enum!(
     /// Who wrote a message.
@@ -70,6 +72,9 @@ pub struct Message {
     pub task_id: Option<TaskId>,
     /// The routine that sent it (spec 20.5).
     pub routine_id: Option<RoutineId>,
+    /// The bot's question this message answers (spec 23.4).
+    #[serde(default)]
+    pub question_id: Option<QuestionId>,
     /// Files the owner attached (spec 9.5); empty for everything else.
     pub attachments: Vec<Attachment>,
     /// Unix time in milliseconds.

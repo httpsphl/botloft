@@ -58,6 +58,7 @@ mod files;
 mod messaging;
 mod methods;
 mod model;
+mod questions;
 mod routines;
 mod rules;
 mod screens;
@@ -72,6 +73,7 @@ pub use files::*;
 pub use messaging::*;
 pub use methods::*;
 pub use model::*;
+pub use questions::*;
 pub use routines::*;
 pub use rules::*;
 pub use screens::*;
@@ -139,6 +141,9 @@ pub mod method {
     pub const BROWSER_SWITCH_TAB: &str = "browser.switchTab";
     pub const BROWSER_OPEN: &str = "browser.open";
     pub const SCREENS_LIST: &str = "screens.list";
+    pub const QUESTIONS_LIST: &str = "questions.list";
+    pub const QUESTIONS_ANSWER: &str = "questions.answer";
+    pub const QUESTIONS_DISMISS: &str = "questions.dismiss";
     pub const SETTINGS_GET: &str = "settings.get";
     pub const SETTINGS_UPDATE: &str = "settings.update";
     pub const USAGE_TOKENS: &str = "usage.tokens";
@@ -166,6 +171,7 @@ pub mod notification {
     /// Only to the connection watching that bot's browser (spec 21.7).
     pub const BROWSER_FRAME: &str = "browser.frame";
     pub const SCREEN_DRAFT: &str = "screen.draft";
+    pub const QUESTION_CHANGED: &str = "question.changed";
 }
 
 /// Error codes: the standard JSON-RPC ones plus the daemon's (spec 11.4).

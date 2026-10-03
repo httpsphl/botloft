@@ -112,6 +112,10 @@ prefixed_id!(
     /// Identifies a request a bot may make without asking (spec 10.1).
     RuleId, "rule", "rul_"
 );
+prefixed_id!(
+    /// Identifies a question a bot asked the owner (spec 23).
+    QuestionId, "question", "qst_"
+);
 
 /// A random version 4 UUID, for Claude Code session ids and the uuid of
 /// each message written to a bot (spec 7.3, 9.2).

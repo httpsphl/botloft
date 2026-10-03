@@ -71,6 +71,11 @@ export type RoutineRunId = string;
 export type RuleId = string;
 
 /**
+ * Identifies a question a bot asked the owner (spec 23).
+ */
+export type QuestionId = string;
+
+/**
  * A group of bots that can message each other and share a folder.
  */
 export type Crew = { id: CrewId, name: string, 
@@ -121,7 +126,7 @@ export type BotModel = "default" | "fable" | "opus" | "sonnet" | "haiku";
 /**
  * What the conversation-list line shows; the app words it.
  */
-export type ActivityKind = "owner" | "message" | "reply" | "tool" | "approval" | "notice";
+export type ActivityKind = "owner" | "message" | "reply" | "tool" | "approval" | "question" | "notice";
 
 /**
  * The last thing in a bot's chat, for the conversation list.
@@ -608,6 +613,10 @@ taskId: TaskId | null,
  */
 routineId: RoutineId | null, 
 /**
+ * The bot's question this message answers (spec 23.4).
+ */
+questionId: QuestionId | null, 
+/**
  * Files the owner attached (spec 9.5); empty for everything else.
  */
 attachments: Array<Attachment>, 
@@ -853,6 +862,45 @@ archived: boolean,
  */
 turns: number, tokens: TokenUsage, };
 
+export type QuestionStatus = "open" | "answered" | "dismissed";
+
+export type Question = { id: QuestionId, crewId: CrewId, botId: BotId, 
+/**
+ * What the bot asks, markdown.
+ */
+text: string, 
+/**
+ * Ready answers the owner may pick; empty for a free answer only.
+ */
+options: Array<string>, status: QuestionStatus, 
+/**
+ * What the owner answered; `null` unless `answered`.
+ */
+answer: string | null, 
+/**
+ * Unix time in milliseconds.
+ */
+createdAt: number, 
+/**
+ * Unix time in milliseconds the owner answered or dismissed it.
+ */
+answeredAt: number | null, };
+
+export type QuestionItem = { question: Question, };
+
+/**
+ * Newest first.
+ */
+export type QuestionsListParams = { 
+/**
+ * `open` when absent.
+ */
+status?: QuestionStatus, };
+
+export type QuestionsAnswerParams = { questionId: QuestionId, answer: string, };
+
+export type QuestionIdParams = { questionId: QuestionId, };
+
 export type TurnItem = { durationMs: number, 
 /**
  * Tokens the turn used (spec 8.7); `null` when Claude Code did not say
@@ -877,7 +925,7 @@ text: string, };
 /**
  * What a chat item holds, by `kind`.
  */
-export type ChatBody = { "kind": "inbound" } & InboundItem | { "kind": "reply" } & ReplyItem | { "kind": "tool" } & ToolItem | { "kind": "approval" } & ApprovalItem | { "kind": "turn" } & TurnItem | { "kind": "notice" } & NoticeItem;
+export type ChatBody = { "kind": "inbound" } & InboundItem | { "kind": "reply" } & ReplyItem | { "kind": "tool" } & ToolItem | { "kind": "approval" } & ApprovalItem | { "kind": "question" } & QuestionItem | { "kind": "turn" } & TurnItem | { "kind": "notice" } & NoticeItem;
 
 /**
  * One entry of a bot's chat.
@@ -1301,6 +1349,9 @@ export interface RpcMethods {
   "routines.runNow": { params: RoutineIdParams; result: RoutineRun };
   "routines.archive": { params: RoutineIdParams; result: Routine };
   "routines.runs": { params: RoutinesRunsParams; result: Array<RoutineRun> };
+  "questions.list": { params: QuestionsListParams; result: Array<Question> };
+  "questions.answer": { params: QuestionsAnswerParams; result: Question };
+  "questions.dismiss": { params: QuestionIdParams; result: Question };
   "browser.list": { params: undefined; result: Array<BrowserState> };
   "browser.watch": { params: BrowserWatchParams; result: BrowserView };
   "browser.unwatch": { params: undefined; result: null };
@@ -1331,6 +1382,7 @@ export interface RpcNotifications {
   "bot.context": BotContextChanged;
   "routine.changed": Routine;
   "routine.run": RoutineRun;
+  "question.changed": Question;
   "bot.rules": BotRules;
   "browser.changed": BrowserState;
   "browser.action": BrowserAction;

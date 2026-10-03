@@ -58,7 +58,7 @@ Em dev, use `$env:BOTLOFT_HOME = "$PWD\.dev\home"` (caminho absoluto) no daemon 
 - Código, identificadores, comentários, commits e README em **inglês**. Docs em `docs/` podem ser em português.
 - Arquivos com no máximo **~300 linhas**. Passou disso, divida por responsabilidade.
 - Erros: `thiserror` nos crates de biblioteca, `anyhow` só no binário.
-- IDs são ULID com prefixo (`crw_`, `bot_`, `msg_`, `dlv_`, `tsk_`, `cht_`, `apr_`, `att_`). Tempo em ms Unix.
+- IDs são ULID com prefixo (`crw_`, `bot_`, `msg_`, `dlv_`, `tsk_`, `cht_`, `apr_`, `att_`, `qst_`). Tempo em ms Unix.
 - Tudo que é específico de Windows fica em `crates/botloftd/src/platform/`. O resto do daemon não chama Win32 direto.
 - A UI depende só da interface `BotloftApi` (`app/src/lib/api.ts`). Testes de componente usam `FakeBotloft`.
 - Nenhum texto de interface escrito direto no componente: tudo vai em `app/src/i18n/{en,pt-BR,es}/<área>.ts` e é lido com `useT()` (ou `t()` fora do React). Texto novo entra nos três idiomas no mesmo commit; o TypeScript acusa o que faltar (spec 15.6). Palavras simples, sem "daemon" nem outro jargão.

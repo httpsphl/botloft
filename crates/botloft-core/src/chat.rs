@@ -168,6 +168,7 @@ pub fn activity(body: &ChatBody, at: i64) -> Option<Activity> {
             ActivityKind::Approval,
             item.explanation.as_ref().unwrap_or(&item.summary).clone(),
         ),
+        ChatBody::Question(item) => (ActivityKind::Question, item.question.text.clone()),
         // A compaction is housekeeping, not news about the conversation.
         ChatBody::Notice(item)
             if matches!(

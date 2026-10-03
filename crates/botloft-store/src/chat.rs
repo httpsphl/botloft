@@ -31,6 +31,7 @@ fn kind(body: &ChatBody) -> &'static str {
         ChatBody::Reply(_) => "reply",
         ChatBody::Tool(_) => "tool",
         ChatBody::Approval(_) => "approval",
+        ChatBody::Question(_) => "question",
         ChatBody::Turn(_) => "turn",
         ChatBody::Notice(_) => "notice",
     }
@@ -70,8 +71,17 @@ impl Store {
         body: &ChatBody,
         now: i64,
     ) -> Result<Option<ChatItem>> {
+        Self::update_chat_item_in(&self.conn, id, body, now)
+    }
+
+    pub(crate) fn update_chat_item_in(
+        conn: &Connection,
+        id: &ChatItemId,
+        body: &ChatBody,
+        now: i64,
+    ) -> Result<Option<ChatItem>> {
         Ok(cached_row(
-            &self.conn,
+            conn,
             &format!(
                 "UPDATE chat_items SET kind = ?2, data = ?3, updated_at = ?4 \
                      WHERE id = ?1 RETURNING {COLUMNS}"
