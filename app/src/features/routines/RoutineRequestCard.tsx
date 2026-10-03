@@ -132,7 +132,7 @@ export function RoutineRequestCard({ approval, bot }: { approval: ApprovalItem; 
           rows={4}
           onChange={(event) => change({ prompt: event.target.value })}
         />
-        <ScheduleFields form={form} change={change} />
+        <ScheduleFields form={form} change={change} bot={runner.name} />
         <MoreOptions form={form} change={change} />
         <p className="text-muted text-xs">{r.explain(runner.name)}</p>
         {error && (

@@ -89,7 +89,7 @@ export function RoutineDialog({ bot, routine, onClose }: Props) {
           placeholder={d.promptPlaceholder}
           required
         />
-        <ScheduleFields form={form} change={change} />
+        <ScheduleFields form={form} change={change} bot={bot.name} />
         <MoreOptions form={form} change={change} />
         {error && (
           <p role="alert" className="text-danger text-sm">

@@ -13,18 +13,23 @@ const control =
 export function ScheduleFields({
   form,
   change,
+  bot,
 }: {
   form: RoutineForm;
   change(patch: Partial<RoutineForm>): void;
+  /** The bot's name, for the signal's hint. */
+  bot: string;
 }) {
   const d = useT().routines.dialog;
   const timeId = useId();
   const everyId = useId();
+  const signalId = useId();
   const frequencies: { value: Frequency; label: string }[] = [
     { value: "daily", label: d.frequency.daily },
     { value: "weekdays", label: d.frequency.weekdays },
     { value: "days", label: d.frequency.days },
     { value: "interval", label: d.frequency.interval },
+    { value: "signal", label: d.frequency.signal },
   ];
 
   const toggleDay = (day: number) =>
@@ -65,7 +70,24 @@ export function ScheduleFields({
           })}
         </fieldset>
       )}
-      {form.frequency === "interval" ? (
+      {form.frequency === "signal" ? (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2">
+            <label htmlFor={signalId} className="text-ink-soft text-sm">
+              {d.signal}
+            </label>
+            <input
+              id={signalId}
+              required
+              value={form.signal}
+              placeholder={d.signalPlaceholder}
+              onChange={(event) => change({ signal: event.target.value })}
+              className={`${control} w-56`}
+            />
+          </div>
+          <p className="text-muted text-xs">{d.signalHint(bot)}</p>
+        </div>
+      ) : form.frequency === "interval" ? (
         <div className="flex items-center gap-2">
           <label htmlFor={everyId} className="text-ink-soft text-sm">
             {d.every}

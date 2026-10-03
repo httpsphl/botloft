@@ -51,6 +51,8 @@ export function describeSchedule(schedule: Schedule, words: Words["when"]): stri
         : words.everyMinutes(schedule.minutes);
     case "cron":
       return words.cron(schedule.expr);
+    case "signal":
+      return words.signal(schedule.name);
   }
 }
 
