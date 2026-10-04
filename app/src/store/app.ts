@@ -28,7 +28,7 @@ import { withQuestion } from "./questions";
 import { loadMarked, loadSeen, loadSeenSince, seenActions, withReply } from "./seen";
 
 /** A panel beside a bot's chat (spec 15.1). */
-export type BotPanel = "details" | "files" | "browser" | "screens";
+export type BotPanel = "details" | "files" | "browser" | "screens" | "terminal";
 
 export interface AppState {
   connection: ConnectionState;
