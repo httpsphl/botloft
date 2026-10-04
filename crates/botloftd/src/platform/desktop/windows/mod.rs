@@ -6,6 +6,7 @@ mod capture;
 mod process;
 #[cfg(test)]
 mod tests;
+mod uia;
 
 use std::collections::HashMap;
 use std::ffi::c_void;
@@ -21,6 +22,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use windows::core::{BOOL, w};
 
 pub use capture::capture;
+pub use uia::read;
 
 use super::{App, DesktopError, Window};
 
