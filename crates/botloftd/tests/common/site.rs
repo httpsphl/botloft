@@ -41,8 +41,14 @@ const LOGIN: &str = "<!doctype html><title>Sign in</title><style>body{margin:0}\
 
 const SIZE: &str = "<!doctype html><title>Size</title><p id=\"size\"></p><script>\
     const show = () => { document.getElementById('size').textContent = \
-    'Window: ' + innerWidth + ' x ' + innerHeight; }; show(); \
-    addEventListener('resize', show);</script>";
+    'Window: ' + innerWidth + ' x ' + innerHeight + ', pixels ' + devicePixelRatio; }; \
+    show(); addEventListener('resize', show);</script>";
+
+/// White on top, black far down: what a picture of it shows says where
+/// the page is scrolled to.
+const TALL: &str = "<!doctype html><title>Tall</title><style>body{margin:0}</style>\
+    <div style=\"height:3000px;background:#fff\"></div>\
+    <div id=\"end\" style=\"height:3000px;background:#000\"></div>";
 
 /// Counts how many times it went out of sight.
 const SIGHT: &str = "<!doctype html><title>Sight</title><p id=\"hidden\">Hidden 0 times</p>\
@@ -97,6 +103,7 @@ pub async fn serve() -> SocketAddr {
         .route("/links", get(|| async { Html(POPUP) }))
         .route("/login", get(|| async { Html(LOGIN) }))
         .route("/size", get(|| async { Html(SIZE) }))
+        .route("/tall", get(|| async { Html(TALL) }))
         .route("/sight", get(|| async { Html(SIGHT) }))
         .route("/letters", get(|| async { Html(LETTERS) }))
         .route("/signals", get(|| async { Html(SIGNALS) }))

@@ -11,7 +11,7 @@ use tokio::sync::mpsc;
 use tracing::debug;
 
 use super::cdp::CdpEvent;
-use super::session::{FRAME_GAP, Hooks, MAX_TABS, PageInfo, Session, Tab};
+use super::session::{FRAME_GAP, Hooks, MAX_TABS, PageInfo, QUICK_GAP, Session, Tab};
 use super::titles::retitles;
 
 impl Session {
@@ -196,29 +196,60 @@ impl Session {
     }
 
     fn frame(&self, session: &str, params: &Value, hooks: &Hooks) {
-        let (active, viewport) = {
+        let (active, viewport, gap) = {
             let tabs = self.lock();
             let active = tabs.active().is_some_and(|tab| tab.session == session);
-            (active, tabs.viewport)
+            let gap = if tabs.quick { QUICK_GAP } else { FRAME_GAP };
+            (active, tabs.viewport, gap)
         };
-        if active && let Some(data) = params["data"].as_str() {
-            let size = |key: &str, fallback: u32| {
-                params["metadata"][key]
-                    .as_f64()
-                    .map_or(fallback, |value| value.round() as u32)
-            };
+        let size = |key: &str, fallback: u32| {
+            params["metadata"][key]
+                .as_f64()
+                .map_or(fallback, |value| value.round() as u32)
+        };
+        let (width, height) = (
+            size("deviceWidth", viewport.width),
+            size("deviceHeight", viewport.height),
+        );
+        // The screencast draws in the page's own pixels, however sharp the
+        // page is (spec 19): on a sharper screen its frame only says the page
+        // changed, and the frame sent is a screenshot, which is that sharp.
+        let sharp = active && viewport.scale > 100;
+        if active
+            && !sharp
+            && let Some(data) = params["data"].as_str()
+        {
             hooks.frames.send_replace(Some(Arc::new(BrowserFrame {
                 bot_id: hooks.bot.clone(),
                 data: data.to_owned(),
-                width: size("deviceWidth", viewport.width),
-                height: size("deviceHeight", viewport.height),
+                width,
+                height,
             })));
         }
         let cdp = self.cdp.clone();
         let session = session.to_owned();
         let ack = json!({ "sessionId": params["sessionId"] });
+        let (frames, bot) = (hooks.frames.clone(), hooks.bot.clone());
         tokio::spawn(async move {
-            tokio::time::sleep(FRAME_GAP).await;
+            if sharp {
+                let shot = json!({ "format": "jpeg", "quality": 60, "optimizeForSpeed": true });
+                let taken = cdp
+                    .call(Some(&session), "Page.captureScreenshot", shot)
+                    .await;
+                if let Some(data) = taken
+                    .ok()
+                    .and_then(|shot| shot["data"].as_str().map(str::to_owned))
+                {
+                    frames.send_replace(Some(Arc::new(BrowserFrame {
+                        bot_id: bot,
+                        data,
+                        width,
+                        height,
+                    })));
+                }
+            }
+            // Confirmed only after, so screenshots never pile up.
+            tokio::time::sleep(gap).await;
             cdp.send(Some(&session), "Page.screencastFrameAck", ack);
         });
     }

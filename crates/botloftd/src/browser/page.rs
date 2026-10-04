@@ -294,21 +294,4 @@ impl Session {
         self.settle(marks).await;
         Ok(true)
     }
-
-    /// The screen as a JPEG, base64.
-    pub async fn screenshot(&self) -> Result<String, BrowserError> {
-        let (session, _) = self.page()?;
-        let shot = self
-            .cdp
-            .call(
-                Some(&session),
-                "Page.captureScreenshot",
-                json!({ "format": "jpeg", "quality": 70 }),
-            )
-            .await?;
-        shot["data"]
-            .as_str()
-            .map(str::to_owned)
-            .ok_or_else(|| BrowserError::Page("the browser returned no picture".to_owned()))
-    }
 }

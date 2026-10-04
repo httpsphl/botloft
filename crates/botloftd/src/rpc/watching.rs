@@ -83,9 +83,12 @@ impl Watch {
                 ApiError::validation(format!("width and height go from 1 to {ROOM_MAX}")).into(),
             );
         }
-        daemon
-            .browsers
-            .resize(&params.bot_id, params.width, params.height);
+        daemon.browsers.resize(
+            &params.bot_id,
+            params.width,
+            params.height,
+            params.scale.unwrap_or(100),
+        );
         Ok(Value::Null)
     }
 

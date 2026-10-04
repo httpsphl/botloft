@@ -49,21 +49,24 @@ export function useRoom(): [Size | null, (node: HTMLElement | null) => void] {
 
 /**
  * Tells the daemon the room the page has, once it stops changing, while
- * this connection watches the bot's browser.
+ * this connection watches the bot's browser, and how sharp the screen is,
+ * so the page is drawn with as many pixels as show it (spec 21.3).
  */
 export function useFitPage(bot: Pick<Bot, "id">, room: Size | null, watched: boolean): void {
   const api = useApi();
   const known = room !== null;
   const width = Math.max(1, room?.width ?? 0);
   const height = Math.max(1, room?.height ?? 0);
+  // A change of the app's zoom changes the room too, which reads it again.
+  const scale = Math.round((typeof devicePixelRatio === "number" ? devicePixelRatio : 1) * 100);
   useEffect(() => {
     if (!watched || !known) {
       return;
     }
     const timer = setTimeout(() => {
       // The next change of the room asks again.
-      api.call("browser.resize", { botId: bot.id, width, height }).catch(() => {});
+      api.call("browser.resize", { botId: bot.id, width, height, scale }).catch(() => {});
     }, SETTLED_MS);
     return () => clearTimeout(timer);
-  }, [api, bot.id, watched, known, width, height]);
+  }, [api, bot.id, watched, known, width, height, scale]);
 }

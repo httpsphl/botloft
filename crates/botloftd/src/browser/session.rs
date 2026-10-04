@@ -21,8 +21,14 @@ use super::{BrowserError, agent};
 
 /// Most tabs a browser keeps; past this, the one active longest ago closes.
 pub(super) const MAX_TABS: usize = 6;
-/// Frames are confirmed after this, so the browser sends ~15 a second.
+/// Frames are confirmed after this, so the browser sends ~15 a second
+/// while the owner watches the bot work...
 pub(super) const FRAME_GAP: Duration = Duration::from_millis(66);
+/// ...and ~30 while the browser is in the owner's hands, so the page keeps
+/// up with them as they scroll and point (spec 21.8).
+pub(super) const QUICK_GAP: Duration = Duration::from_millis(33);
+/// The largest side of a frame that only says the page changed.
+const SIGNAL: u32 = 64;
 /// How long the first tab may take to show up.
 const FIRST_TAB_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -76,6 +82,8 @@ pub struct Tabs {
     pub(super) resting: bool,
     pub closed: bool,
     pub viewport: Viewport,
+    /// The owner has it in their hands: frames come quicker.
+    pub(super) quick: bool,
     /// The tab the bot was on when the owner took the browser, until the
     /// bot's next tool (spec 21.10).
     pub(super) owner_from: Option<String>,
@@ -251,9 +259,16 @@ impl Session {
 
     pub(super) async fn cast(&self, session: &str, on: bool) {
         let result = if on {
-            // Frames come the size of the page, however tall it is.
+            // Frames come the size of the page, however tall it is. On a
+            // sharper screen they only say the page changed (`events.rs`),
+            // so they come small.
+            let (max_width, max_height) = if self.viewport().scale > 100 {
+                (SIGNAL, SIGNAL)
+            } else {
+                (MAX_WIDTH, MAX_HEIGHT)
+            };
             let params = json!({
-                "format": "jpeg", "quality": 60, "maxWidth": MAX_WIDTH, "maxHeight": MAX_HEIGHT,
+                "format": "jpeg", "quality": 60, "maxWidth": max_width, "maxHeight": max_height,
             });
             self.cdp
                 .call(Some(session), "Page.startScreencast", params)

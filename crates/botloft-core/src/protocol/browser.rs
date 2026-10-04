@@ -166,4 +166,10 @@ pub struct BrowserResizeParams {
     pub bot_id: BotId,
     pub width: u32,
     pub height: u32,
+    /// The screen's pixels per pixel of the app, in percent (its
+    /// `devicePixelRatio` times 100): the page is drawn that sharp for the
+    /// owner, up to twice (spec 21.3). Absent, 100.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, ts(optional))]
+    pub scale: Option<u32>,
 }

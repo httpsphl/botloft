@@ -281,6 +281,7 @@ impl Drop for Hands {
             mine
         });
         if released {
+            self.session.owner_gave_back();
             update(
                 &self.slots,
                 &self.events,
