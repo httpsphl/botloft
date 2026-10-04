@@ -27,6 +27,9 @@ pub struct Control {
     pub selected: bool,
     /// Windows' id for it, to find it again to act on it (D2).
     pub runtime_id: Vec<i32>,
+    /// Where it is on the screen, in real pixels: left, top, width and
+    /// height. For the real mouse (spec 24.7).
+    pub rect: Option<[i32; 4]>,
 }
 
 /// The `ref` of the control at `index` in a reading.

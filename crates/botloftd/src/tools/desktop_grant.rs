@@ -40,6 +40,19 @@ pub(super) fn describe(err: &DesktopError) -> String {
         DesktopError::NoOption(option) => format!(
             "There is no option \"{option}\" there. Read the window again to see the options."
         ),
+        DesktopError::OwnerTookOver => "The owner moved the mouse or pressed a key, so you \
+            stopped at once: they are using their computer. Wait, then try again; do not fight \
+            them for the mouse."
+            .to_owned(),
+        DesktopError::NotInFront => "Windows did not bring the app's window to the front, or \
+            another window came over it, so nothing was sent. Try again in a moment."
+            .to_owned(),
+        DesktopError::Covered => "Another window covers that point, so the click was not sent. \
+            Read the windows again."
+            .to_owned(),
+        DesktopError::Locked => "The screen is locked or takes no input now, so the real mouse \
+            and keyboard cannot be used. Accessibility may still work."
+            .to_owned(),
     }
 }
 

@@ -1,11 +1,11 @@
 //! One control as a line of a reading (spec 24.5): its properties, fetched
 //! with the walk, read out of UI Automation's variants.
 
-use windows::Win32::System::Variant::{VARIANT, VT_ARRAY, VT_BSTR, VT_I4};
+use windows::Win32::System::Variant::{VARIANT, VT_ARRAY, VT_BSTR, VT_I4, VT_R8};
 use windows::Win32::UI::Accessibility::{
     ExpandCollapseState_Collapsed, ExpandCollapseState_Expanded,
-    ExpandCollapseState_PartiallyExpanded, IUIAutomationElement, UIA_CONTROLTYPE_ID,
-    UIA_ExpandCollapseExpandCollapseStatePropertyId, UIA_IsEnabledPropertyId,
+    ExpandCollapseState_PartiallyExpanded, IUIAutomationElement, UIA_BoundingRectanglePropertyId,
+    UIA_CONTROLTYPE_ID, UIA_ExpandCollapseExpandCollapseStatePropertyId, UIA_IsEnabledPropertyId,
     UIA_IsPasswordPropertyId, UIA_IsValuePatternAvailablePropertyId, UIA_PROPERTY_ID,
     UIA_RuntimeIdPropertyId, UIA_SelectionItemIsSelectedPropertyId,
     UIA_ToggleToggleStatePropertyId, UIA_ValueValuePropertyId,
@@ -65,6 +65,7 @@ pub(super) unsafe fn control(
             runtime_id: property(element, UIA_RuntimeIdPropertyId)
                 .map(|value| runtime_id(&value))
                 .unwrap_or_default(),
+            rect: property(element, UIA_BoundingRectanglePropertyId).and_then(|value| rect(&value)),
         }
     }
 }
@@ -93,6 +94,30 @@ fn runtime_id(value: &VARIANT) -> Vec<i32> {
         }
         let length = (*array).rgsabound[0].cElements as usize;
         std::slice::from_raw_parts((*array).pvData.cast::<i32>(), length).to_vec()
+    }
+}
+
+/// A place on the screen: four doubles, left, top, width and height; none
+/// for what has no size.
+fn rect(value: &VARIANT) -> Option<[i32; 4]> {
+    // SAFETY: the union is read as an array only when its type says so,
+    // and the array's own bounds limit the read.
+    unsafe {
+        let inner = &value.Anonymous.Anonymous;
+        if inner.vt != (VT_ARRAY | VT_R8) {
+            return None;
+        }
+        let array = inner.Anonymous.parray;
+        if array.is_null() || (*array).cDims != 1 || (*array).pvData.is_null() {
+            return None;
+        }
+        if (*array).rgsabound[0].cElements != 4 {
+            return None;
+        }
+        let numbers = std::slice::from_raw_parts((*array).pvData.cast::<f64>(), 4);
+        let rect =
+            [numbers[0], numbers[1], numbers[2], numbers[3]].map(|number| number.round() as i32);
+        (rect[2] > 0 && rect[3] > 0).then_some(rect)
     }
 }
 
