@@ -93,8 +93,10 @@ read every line, run the checks and make sure it follows the rules above.
 
 ## License
 
-Botloft is licensed under the [Apache License 2.0](LICENSE). By sending a contribution, you agree
-that it is licensed under the same terms (section 5 of the license).
+Botloft is licensed under the [Functional Source License 1.1, Apache 2.0 future license](LICENSE)
+(FSL-1.1-ALv2). By sending a contribution, you agree that it is licensed under the same terms, and
+you allow Phelipe Lorran to also distribute it under other license terms, so the project can change
+its license later without asking every contributor. You keep the copyright of your contribution.
 
 ## Security
 
