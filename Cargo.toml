@@ -6,7 +6,7 @@ default-members = ["crates/botloft-core", "crates/botloft-store", "crates/botlof
 [workspace.package]
 version = "0.9.1"
 edition = "2024"
-license = "Apache-2.0"
+license = "FSL-1.1-ALv2"
 repository = "https://github.com/httpsphl/botloft"
 authors = ["Phelipe Lorran"]
 

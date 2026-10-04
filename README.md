@@ -12,7 +12,7 @@
   <a href="https://github.com/httpsphl/botloft/releases/latest"><img src="https://img.shields.io/github/v/release/httpsphl/botloft?label=release&color=ff7a59" alt="Latest release"></a>
   <a href="https://github.com/httpsphl/botloft/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/httpsphl/botloft/ci.yml?branch=main&label=CI" alt="CI status"></a>
   <img src="https://img.shields.io/badge/Windows%20%7C%20Linux%20%7C%20macOS-0078d4" alt="Windows, Linux and macOS">
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/httpsphl/botloft?color=3b3b38" alt="Apache 2.0 license"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-FSL--1.1--ALv2-3b3b38" alt="FSL-1.1-ALv2 license"></a>
 </p>
 
 <p align="center">
@@ -147,7 +147,8 @@ the [code signing policy](docs/code-signing-policy.md).
 <details>
 <summary><b>Does Botloft cost anything?</b></summary>
 
-No. Botloft is free and open source under the Apache 2.0 license. The bots run on Claude Code with
+No. Botloft is free to use, at home or at work, and its source code is public (see
+[License](#license)). The bots run on Claude Code with
 your own Claude account, so they use your plan's limits; Botloft shows how much is left.
 </details>
 
@@ -190,7 +191,7 @@ Windows came first and has had the most use; if something does not work elsewher
 <details>
 <summary><b>Is Botloft made by Anthropic?</b></summary>
 
-No. Botloft is an independent open-source project. It uses Claude Code as installed on your computer
+No. Botloft is an independent project. It uses Claude Code as installed on your computer
 and is not affiliated with or endorsed by Anthropic.
 </details>
 
@@ -259,6 +260,18 @@ first step. Security problems go through [SECURITY.md](SECURITY.md), not public 
 
 ## License
 
-Botloft is licensed under the [Apache License 2.0](LICENSE). See [NOTICE](NOTICE) for the copyright
-notice that goes with redistributions. The screenshots show sample crews from the app's preview, not
+Botloft is licensed under the [Functional Source License 1.1, Apache 2.0 future license](LICENSE)
+(FSL-1.1-ALv2). In short:
+
+- You may use Botloft for anything, including at work, read and change its code, and send
+  contributions.
+- You may not offer Botloft, or a copy or a change of it, as a commercial product or service that
+  competes with it.
+- Two years after each version is released, that version also becomes available under the
+  [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+
+Versions up to 0.9.1 were released under the Apache License 2.0 and stay under it. The
+[LICENSE](LICENSE) file is what counts; this summary is not legal advice.
+
+The screenshots show sample crews from the app's preview, not
 real data.
