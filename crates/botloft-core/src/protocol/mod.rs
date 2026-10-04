@@ -96,6 +96,7 @@ pub const PROTOCOL_VERSION: u32 = 2;
 /// Request method names.
 pub mod method {
     pub const SESSION_HELLO: &str = "session.hello";
+    pub const SESSION_SET_LOCALE: &str = "session.setLocale";
     pub const SYSTEM_STATUS: &str = "system.status";
     pub const SYSTEM_REFRESH: &str = "system.refresh";
     pub const CREWS_LIST: &str = "crews.list";

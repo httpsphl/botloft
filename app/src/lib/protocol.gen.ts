@@ -265,7 +265,12 @@ archivedAt: number | null, };
 /**
  * Identifies the connecting app in `session.hello`.
  */
-export type ClientInfo = { name: string, version: string, };
+export type ClientInfo = { name: string, version: string, 
+/**
+ * The language the owner reads the app in ("en", "pt-BR", "es"), for
+ * what the daemon itself shows them (spec 24.7).
+ */
+locale?: string, };
 
 /**
  * First request of every connection.
@@ -275,6 +280,11 @@ export type HelloParams = {
  * Owner token from `secrets\owner.token`.
  */
 token: string, client: ClientInfo, protocol: number, };
+
+/**
+ * `session.setLocale`: the owner changed the app's language.
+ */
+export type LocaleParams = { locale: string, };
 
 export type HelloResult = { daemonVersion: string, protocol: number, };
 
@@ -1589,6 +1599,7 @@ done: boolean, };
 /** Params and result of every request method. */
 export interface RpcMethods {
   "session.hello": { params: HelloParams; result: HelloResult };
+  "session.setLocale": { params: LocaleParams; result: null };
   "system.status": { params: undefined; result: SystemStatus };
   "system.refresh": { params: undefined; result: SystemStatus };
   "settings.get": { params: undefined; result: Settings };

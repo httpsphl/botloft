@@ -4,6 +4,7 @@ import packageJson from "../package.json";
 import { App } from "./App";
 import { startEyeMoments } from "./features/bots/eyeMoments";
 import type { Connect } from "./features/onboarding/link";
+import { currentLocale } from "./i18n";
 import { connect, rpcUrl } from "./lib/client";
 import type { Host } from "./lib/host";
 import { tauriHost } from "./lib/tauriHost";
@@ -22,7 +23,9 @@ async function props(): Promise<{ host: Host; connect: Connect }> {
     const client = { name: "botloft-app", version: packageJson.version };
     return {
       host: tauriHost(),
-      connect: (port, token) => connect({ url: rpcUrl(port), token, client }),
+      // Its language, for what the daemon shows on screen (spec 24.7).
+      connect: (port, token) =>
+        connect({ url: rpcUrl(port), token, client: { ...client, locale: currentLocale() } }),
     };
   }
   if (import.meta.env.DEV) {

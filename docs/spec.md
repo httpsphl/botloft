@@ -1653,7 +1653,7 @@ Tabela `questions`: `id, crew_id, bot_id, chat_item_id, text, options (JSON), st
 
 ## 24. Desktop
 
-Status: **D1, D2 e D3 implementados** (24.12). É o item 10 da seção 18. Decisões e riscos em `docs/adr/0002-desktop-use.md`.
+Status: **D1, D2, D3 e D4 implementados** (24.12). É o item 10 da seção 18. Decisões e riscos em `docs/adr/0002-desktop-use.md`.
 
 ### 24.1 O que é
 
@@ -1750,7 +1750,7 @@ No servidor `botloft` (11), como as do navegador.
 - **Mãos livres**: o bot só pega o mouse e o teclado com o dono 2 s sem mexer neles (`GetLastInputInfo`, sem a entrada do próprio bot); depois de o dono assumir no meio de uma ação, 10 s, por 10 minutos. Antes disso, a tool diz que o dono está usando o computador e para tentar depois.
 - **Ligar e desligar**: a opção é de cada permissão (`real_input`), e só o dono a muda: `desktop.setOptions {grantId, realInput}`, que devolve as permissões do bot (`BotDesktop`) e manda `bot.desktop`. O bot não pede pelo chat; sem ela, as tools que precisam dizem para ele pedir ao dono, que liga nos detalhes do bot (24.10).
 - **Quando a acessibilidade não alcança**: um clique ou uma digitação que o controle não aceita pela UI Automation vai com o mouse e o teclado de verdade, se ligados ali: clique no centro do controle; digitar é clicar nele, selecionar do início ao fim (`Ctrl+Home`, `Ctrl+Shift+End`: `Ctrl+A` não vale em todo campo clássico) e digitar. A tool diz que foi com o mouse e o teclado de verdade. Sem a opção, diz que daria com eles e como pedir.
-- **Aviso na tela**: enquanto o bot age assim, o daemon mostra uma borda fina na cor do bot em volta da tela e uma pílula no alto, "<bot> está usando o seu mouse e teclado. Mexa o mouse para parar." (uma janela própria em camadas, sempre no topo, que não recebe clique). O texto vem nos três idiomas (15.6).
+- **Aviso na tela**: enquanto o bot age assim, o daemon mostra uma borda fina na cor do bot em volta do monitor da janela do app e uma pílula escura no alto, com a borda na cor do bot: "<bot> está usando o seu mouse e teclado. Mexa o mouse para parar." É uma janela própria, num thread com fila própria: em camadas com uma cor que vira transparente (`LWA_COLORKEY`), sempre no topo, que deixa os cliques passarem (`WS_EX_TRANSPARENT`), não pega o foco (`WS_EX_NOACTIVATE`) e não entra na lista de janelas nem na foto de outra (`WS_EX_TOOLWINDOW`, `PrintWindow` só da janela). Aparece antes de cada ação de mouse e teclado e some 3 s depois da última. O texto é do daemon, nos três idiomas (15.6), porque o app pode estar fechado: o idioma é o que o app manda no `session.hello` (`client.locale`) e, quando o dono troca, em `session.setLocale {locale}`; sem nenhum, inglês.
 - Com a tela bloqueada, não há mouse e teclado de verdade: o Windows não entrega a entrada. A tool diz isso; a acessibilidade continua (24.8).
 - **O tempo sem o dono** (24.8) não conta o que o bot mandou: guardada a marca da última entrada do bot e a do dono antes dela, quando a última entrada da sessão é a do bot vale a do dono.
 - **Testes**: mexem no cursor e digitam no computador em que rodam, então só rodam com `BOTLOFT_REAL_INPUT_TESTS=1`, que o CI liga no runner do Windows, onde ninguém está na frente. No computador de quem desenvolve, ficam de fora.
@@ -1780,7 +1780,7 @@ No servidor `botloft` (11), como as do navegador.
   - sem você na frente, ninguém vê na hora; você vê depois, no chat;
   - o que nunca é liberado (24.3).
   O botão de confirmar só acende depois de o dono marcar "Entendi os riscos". A data em que ele aceitou fica gravada com a permissão.
-- Mouse e teclado de verdade também mostram o que muda (o cursor fica com o bot enquanto ele age, e como parar).
+- **Mouse e teclado de verdade**: em cada permissão de usar um app, um interruptor, desligado de início (só nas de usar). Ligar abre antes um diálogo, "Deixar <bot> usar seu mouse e teclado de verdade no <app>?", que diz o que muda: quando a acessibilidade não alcança, o bot move o cursor e digita como se fosse o dono; enquanto ele age, o mouse e o teclado são dele, com o aviso na tela; mexer no mouse ou numa tecla o para na hora, e Ctrl+Alt+Esc para todos; nunca campos de senha nem teclas do Windows. Desligar é na hora. O app chama `desktop.setOptions`.
 
 ### 24.11 Dados
 

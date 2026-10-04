@@ -81,3 +81,16 @@ async fn a_stopped_bot_cannot_use_the_desktop_until_the_owner_lets_it_go_on() {
         reading(&refused)
     );
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_notice_on_screen_speaks_the_language_the_owner_reads_the_app_in() {
+    let mut s = setup().await;
+    assert_eq!(s.t.daemon.desktop.locale(), "en");
+    s.app
+        .call("session.setLocale", json!({ "locale": "pt-BR" }))
+        .await
+        .expect("locale");
+    assert_eq!(s.t.daemon.desktop.locale(), "pt-BR");
+    let words = botloftd::desktop::notice::words(&s.t.daemon.desktop.locale(), "Scout");
+    assert!(words.contains("Mexa o mouse para parar"), "{words}");
+}

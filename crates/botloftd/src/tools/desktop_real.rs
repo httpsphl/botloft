@@ -9,7 +9,7 @@ use botloft_core::protocol::{DesktopAction, DesktopActionKind, DesktopGrant, Des
 
 use super::desktop_grant::describe;
 use super::desktop_list::covering;
-use crate::desktop::STOPPED;
+use crate::desktop::{STOPPED, notice};
 use crate::platform::desktop::{self as platform, DesktopError, Window, keys};
 use crate::state::Daemon;
 
@@ -33,6 +33,7 @@ pub(super) fn real_allowed(grants: &[DesktopGrant], window: &Window) -> bool {
 pub(super) async fn with_real_hands<T: Send + 'static>(
     daemon: &Daemon,
     bot: &BotId,
+    over: u64,
     real: impl FnOnce() -> Result<T, DesktopError> + Send + 'static,
 ) -> Result<T, String> {
     let _turn = daemon.desktop.turn().await;
@@ -40,7 +41,11 @@ pub(super) async fn with_real_hands<T: Send + 'static>(
         return Err(STOPPED.to_owned());
     }
     daemon.desktop.hands_free()?;
-    match tokio::task::spawn_blocking(real).await {
+    // The owner sees that the bot has their mouse and keyboard.
+    let number = notice::before(daemon, bot, over);
+    let done = tokio::task::spawn_blocking(real).await;
+    notice::after(daemon, number);
+    match done {
         Ok(Err(DesktopError::OwnerTookOver)) => {
             daemon.desktop.owner_took_over();
             Err(describe(&DesktopError::OwnerTookOver))
@@ -63,7 +68,7 @@ pub(super) async fn press(
         return Err(needs_real(&window.app.name));
     }
     let id = window.id;
-    with_real_hands(daemon, bot, move || platform::real_press(id, &keys)).await?;
+    with_real_hands(daemon, bot, id, move || platform::real_press(id, &keys)).await?;
     Ok(DesktopAction {
         kind: DesktopActionKind::Press,
         target: String::new(),
@@ -99,7 +104,7 @@ pub(super) async fn click_at(
         y: y / f64::from(height),
     };
     let id = window.id;
-    with_real_hands(daemon, bot, move || platform::real_click(id, spot)).await?;
+    with_real_hands(daemon, bot, id, move || platform::real_click(id, spot)).await?;
     Ok(DesktopAction {
         kind: DesktopActionKind::Click,
         target: String::new(),
@@ -125,7 +130,7 @@ pub(super) async fn instead(
         y: top + height / 2,
     };
     let id = window.id;
-    with_real_hands(daemon, bot, move || {
+    with_real_hands(daemon, bot, id, move || {
         platform::real_click(id, spot)?;
         if let Some(text) = text {
             // Ctrl+A is not in every classic field; from the start to the
@@ -146,6 +151,6 @@ pub(super) async fn instead(
 pub(super) async fn enter(daemon: &Daemon, bot: &BotId, window: &Window) -> Result<(), String> {
     let id = window.id;
     let enter = keys::parse("Enter").map_err(|err| err.to_string())?;
-    with_real_hands(daemon, bot, move || platform::real_press(id, &enter)).await?;
+    with_real_hands(daemon, bot, id, move || platform::real_press(id, &enter)).await?;
     Ok(())
 }

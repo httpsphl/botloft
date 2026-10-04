@@ -14,6 +14,19 @@ use crate::ids::{BotId, CrewId};
 pub struct ClientInfo {
     pub name: String,
     pub version: String,
+    /// The language the owner reads the app in ("en", "pt-BR", "es"), for
+    /// what the daemon itself shows them (spec 24.7).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, ts(optional))]
+    pub locale: Option<String>,
+}
+
+/// `session.setLocale`: the owner changed the app's language.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct LocaleParams {
+    pub locale: String,
 }
 
 /// First request of every connection.

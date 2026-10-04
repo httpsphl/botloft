@@ -54,5 +54,16 @@ export const desktop: Messages["desktop"] = {
     whole: "O desktop inteiro",
     remove: (app) => `Tirar ${app}`,
     removeFailed: "Não foi possível tirar",
+    real: "Mouse e teclado de verdade",
+    realFailed: "Não foi possível mudar",
+    realTitle: (bot, app) => `Deixar ${bot} usar seu mouse e teclado de verdade no ${app}?`,
+    realPoints: (bot) => [
+      `Quando a acessibilidade não alcança algo nesse app, ${bot} move o seu cursor e digita como se fosse você.`,
+      `Enquanto ele age, o mouse e o teclado são dele, e um aviso na sua tela diz isso.`,
+      `Mexa o mouse ou aperte uma tecla e ele para na hora. Ctrl+Alt+Esc para todos os bots no seu desktop.`,
+      `Ele nunca digita em campos de senha e nunca aperta teclas do próprio Windows, como a tecla Windows ou Alt+Tab.`,
+    ],
+    realConfirm: "Ligar",
+    cancel: "Cancelar",
   },
 };

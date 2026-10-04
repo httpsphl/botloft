@@ -4,6 +4,7 @@
 //! its panel, live.
 
 mod activity;
+pub mod notice;
 mod screen;
 
 pub use activity::{Activity, STOPPED};
@@ -55,6 +56,10 @@ pub struct Desktop {
     took_over: Mutex<Option<Instant>>,
     /// Each bot's last picture: the window and its size, for clicks on it.
     pictures: Mutex<HashMap<BotId, (u64, u32, u32)>>,
+    /// The language the owner reads the app in, for the notice on screen.
+    locale: Mutex<String>,
+    /// Counts each real action, so the notice goes only after the last.
+    notices: Arc<std::sync::atomic::AtomicU64>,
 }
 
 /// Why the bot may not use the desktop now.
@@ -93,6 +98,8 @@ impl Desktop {
             screens: Arc::default(),
             took_over: Mutex::new(None),
             pictures: Mutex::new(HashMap::new()),
+            locale: Mutex::new("en".to_owned()),
+            notices: Arc::default(),
         }
     }
 
@@ -195,6 +202,28 @@ impl Desktop {
             .get(bot)
             .filter(|(id, _, _)| *id == window)
             .map(|&(_, width, height)| (width, height))
+    }
+
+    /// The language the owner reads the app in.
+    pub fn set_locale(&self, locale: &str) {
+        *self.locale.lock().unwrap_or_else(PoisonError::into_inner) = locale.to_owned();
+    }
+
+    pub fn locale(&self) -> String {
+        self.locale
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+
+    /// A new real action began: the number the notice's end waits on.
+    pub fn notice_began(&self) -> u64 {
+        self.notices.fetch_add(1, Ordering::SeqCst) + 1
+    }
+
+    /// The count of real actions, for a wait that outlives the call.
+    pub fn notices(&self) -> Arc<std::sync::atomic::AtomicU64> {
+        Arc::clone(&self.notices)
     }
 
     /// Starts watching the window the bot is using (spec 24.9).

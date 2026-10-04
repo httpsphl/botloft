@@ -246,6 +246,22 @@ pub fn real_press(id: u64, keys: &keys::Keys) -> Result<(), DesktopError> {
     }
 }
 
+/// Shows the notice that a bot uses the real mouse and keyboard: `text`
+/// in a pill, a border in `color` around the monitor of window `over`
+/// (spec 24.7).
+pub fn notice_show(text: &str, color: (u8, u8, u8), over: u64) {
+    #[cfg(windows)]
+    windows::notice_show(text, color, over);
+    #[cfg(not(windows))]
+    let _ = (text, color, over);
+}
+
+/// Takes the notice away.
+pub fn notice_hide() {
+    #[cfg(windows)]
+    windows::notice_hide();
+}
+
 /// A picture of the window `id`, only of it, even behind other windows, in
 /// logical pixels up to [`PICTURE_MAX`] (spec 24.4).
 pub fn picture(id: u64) -> Result<Picture, DesktopError> {
