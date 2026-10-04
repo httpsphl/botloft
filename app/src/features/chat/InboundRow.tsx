@@ -1,8 +1,8 @@
 // A message to the bot, in its chat: the owner's on the right in a bubble,
 // another bot's or Botloft's on the left under its name (spec 15.3).
 
-import { AlarmClock, ListTodo, Reply } from "lucide-react";
-import { memo } from "react";
+import { AlarmClock, ChevronRight, ListTodo, Reply } from "lucide-react";
+import { memo, useState } from "react";
 import { useT } from "../../i18n";
 import { when } from "../../lib/format";
 import type { Bot, Message } from "../../lib/protocol.gen";
@@ -42,19 +42,41 @@ function OwnerMessage({ message, bot }: { message: Message; bot: Bot }) {
   );
 }
 
-function TaskTag({ message }: { message: Message }) {
+/** A routine's tag, which opens what the routine asks: folded, it is only the name. */
+function RoutineTag({
+  message,
+  open,
+  onToggle,
+}: {
+  message: Message;
+  open: boolean;
+  onToggle: () => void;
+}) {
   const t = useT();
   const routine = useApp((state) =>
     message.routineId ? state.routines[message.routineId] : undefined,
   );
-  if (message.kind === "routine") {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-lg border border-accent/40 px-1.5 text-accent-text text-xs">
-        <AlarmClock aria-hidden size={11} />
-        {t.routines.tag(routine?.name ?? t.routines.tab)}
-      </span>
-    );
-  }
+  return (
+    <button
+      type="button"
+      aria-expanded={open}
+      title={t.chat.inbound.routine}
+      onClick={onToggle}
+      className="inline-flex items-center gap-1 rounded-lg border border-accent/40 px-1.5 text-accent-text text-xs transition-colors hover:bg-accent/10"
+    >
+      <AlarmClock aria-hidden size={11} />
+      {t.routines.tag(routine?.name ?? t.routines.tab)}
+      <ChevronRight
+        aria-hidden
+        size={11}
+        className={`transition-transform ${open ? "rotate-90" : ""}`}
+      />
+    </button>
+  );
+}
+
+function TaskTag({ message }: { message: Message }) {
+  const t = useT();
   if (message.kind !== "task" && message.kind !== "result") {
     return null;
   }
@@ -74,6 +96,8 @@ function OtherMessage({ message }: { message: Message }) {
   const system = message.fromKind === "system";
   const name = system ? "Botloft" : (sender?.name ?? t.chat.inbound.goneBot);
   const arrival = useArrival(message.createdAt);
+  const routine = message.kind === "routine";
+  const [open, setOpen] = useState(false);
   return (
     <li className={`flex gap-3 pr-12 ${arrival}`}>
       <BotAvatar
@@ -85,15 +109,21 @@ function OtherMessage({ message }: { message: Message }) {
         <div className="flex flex-wrap items-center gap-x-2 text-sm">
           <span className="font-semibold">{name}</span>
           {sender && <span className="font-mono text-muted text-xs">@{sender.handle}</span>}
-          <TaskTag message={message} />
+          {routine ? (
+            <RoutineTag message={message} open={open} onToggle={() => setOpen(!open)} />
+          ) : (
+            <TaskTag message={message} />
+          )}
           <Time at={message.createdAt} />
         </div>
-        <p
-          className={`mt-1 max-w-[36rem] whitespace-pre-wrap break-words rounded-2xl rounded-tl-md border border-line bg-panel px-4 py-2.5 leading-relaxed ${system ? "text-ink-soft" : ""}`}
-          data-selectable
-        >
-          {message.body}
-        </p>
+        {(!routine || open) && (
+          <p
+            className={`mt-1 max-w-[36rem] ${routine ? "animate-rise" : ""} whitespace-pre-wrap break-words rounded-2xl rounded-tl-md border border-line bg-panel px-4 py-2.5 leading-relaxed ${system ? "text-ink-soft" : ""}`}
+            data-selectable
+          >
+            {message.body}
+          </p>
+        )}
         {delivery && delivery.state !== "sent" && (
           <div className="mt-1">
             <DeliveryStatus delivery={delivery} />

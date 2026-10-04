@@ -50,6 +50,7 @@ export const chat = {
     task: "Task",
     result: "Result",
     goneBot: "A bot no longer in the crew",
+    routine: "Show what the routine asks",
   },
   run: {
     working: "Working",

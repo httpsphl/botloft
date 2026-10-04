@@ -1196,7 +1196,7 @@ Sem jargão (15.2): o dono não vê "cron", "overlap" nem "timezone" no caminho 
   - "Se a anterior ainda não terminou": pular ou esperar a vez;
   - "Se o computador estava desligado na hora": rodar quando ligar, ou pular;
   - "Avançado": expressão cron.
-- No chat, a message da rotina aparece com a etiqueta "Rotina · <nome>".
+- No chat, a message da rotina aparece só com a etiqueta "Rotina · <nome>" e uma seta; o texto que a rotina manda fica dobrado até o dono abrir.
 - Na página da crew, uma aba com as rotinas de todos os bots dela.
 - Uma execução `failed` entra na marca da barra de tarefas (15.2) até o dono abrir o bot. O app guarda quando o dono abriu cada bot (`localStorage`, `botloft.seen`); um bot aberto não marca.
 - O store carrega `routines.list` a cada conexão e segue `routine.changed` e `routine.run`.

@@ -46,6 +46,7 @@ export const chat: Messages["chat"] = {
     task: "Tarefa",
     result: "Resultado",
     goneBot: "Um bot que não está mais na equipe",
+    routine: "Mostrar o que a rotina pede",
   },
   run: {
     working: "Trabalhando",
