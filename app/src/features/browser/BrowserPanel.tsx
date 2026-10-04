@@ -16,6 +16,7 @@ import { Callout } from "../../ui/Callout";
 import { EmptyState } from "../../ui/EmptyState";
 import { SidePanel } from "../../ui/SidePanel";
 import { BotAvatar } from "../bots/BotAvatar";
+import { ComputerDock } from "../terminal/ComputerDock";
 import { AddressBar } from "./AddressBar";
 import { AskCallout, ControlPill, HeldNotes, TakeNotes } from "./HandsBars";
 import { HandsLayer } from "./HandsLayer";
@@ -36,6 +37,8 @@ const STAGE = 14;
 const STAGE_BOTTOM = 30;
 /** Kept under the page, for the pill and what the bot just did. */
 const UNDER = 56;
+/** The dock of the bot's computer, on the desk under the page. */
+const DOCK = 56;
 
 export function BrowserPanel({
   bot,
@@ -65,7 +68,7 @@ export function BrowserPanel({
   const [inside, body] = useRoom();
   const room = inside && {
     width: inside.width - 2 * PAD - 2 * STAGE,
-    height: inside.height - 2 * PAD - STAGE - STAGE_BOTTOM - UNDER,
+    height: inside.height - 2 * PAD - STAGE - STAGE_BOTTOM - UNDER - DOCK,
   };
   useFitPage(bot, room, watched);
   // A new tab is blank: the owner says where it goes.
@@ -141,7 +144,12 @@ export function BrowserPanel({
             )}
           </Callout>
         ) : status === "closed" && !frame ? (
-          !windowed && <Empty bot={bot} />
+          !windowed && (
+            <>
+              <Empty bot={bot} />
+              <ComputerDock className="mt-auto" />
+            </>
+          )
         ) : (
           <>
             {live && ask && !hands.held && <AskCallout bot={bot} task={ask} hands={hands} />}
@@ -189,6 +197,7 @@ export function BrowserPanel({
                   )}
                 </div>
               </div>
+              <ComputerDock className="mt-3" />
             </div>
             {(hands.held || (live && !ask)) && (
               <ControlPill key={String(hands.held)} bot={bot} hands={hands} />

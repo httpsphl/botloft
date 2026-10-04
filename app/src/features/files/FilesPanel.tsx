@@ -11,6 +11,7 @@ import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { EmptyState } from "../../ui/EmptyState";
 import { SidePanel } from "../../ui/SidePanel";
+import { ComputerDock } from "../terminal/ComputerDock";
 import { FilePreview } from "./FilePreview";
 import { fileKind, kindIcon } from "./kinds";
 import type { BotFiles } from "./useBotFiles";
@@ -62,6 +63,9 @@ export function FilesPanel({
       ) : (
         <List bot={bot} data={data} since={since} onOpen={onPath} />
       )}
+      <div className="shrink-0 border-line border-t py-2">
+        <ComputerDock />
+      </div>
     </SidePanel>
   );
 }

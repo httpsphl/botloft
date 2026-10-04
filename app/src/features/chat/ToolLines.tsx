@@ -31,6 +31,7 @@ import { useArrival } from "../../ui/motion";
 import { isBrowserTool, ShowBrowser } from "../browser/showBrowser";
 import { ShowFile } from "../files/showFile";
 import { isScreenFile, ShowScreen } from "../screens/showScreen";
+import { ShowTerminal } from "../terminal/showTerminal";
 import { commandOf, isCommand } from "./command";
 import { toolDetail, toolKey, toolTitle } from "./toolNames";
 
@@ -94,6 +95,7 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
   const showFile = useContext(ShowFile);
   const showBrowser = useContext(ShowBrowser);
   const showScreen = useContext(ShowScreen);
+  const showTerminal = useContext(ShowTerminal);
   const arrival = useArrival(createdAt);
   const title = toolTitle(tool.name, t.tools);
   // A command reads in the bot's own words, when it gave them; the command
@@ -148,6 +150,17 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
             className="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-sunken hover:text-ink"
           >
             <LayoutTemplate aria-hidden size={14} />
+          </button>
+        )}
+        {showTerminal && command && (
+          <button
+            type="button"
+            title={t.terminal.showInPanel}
+            aria-label={`${t.terminal.showInPanel}: ${detail}`}
+            onClick={() => showTerminal()}
+            className="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-sunken hover:text-ink"
+          >
+            <SquareTerminal aria-hidden size={14} />
           </button>
         )}
         {showBrowser && isBrowserTool(tool.name) && (
