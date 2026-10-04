@@ -33,9 +33,15 @@
     transition: opacity 320ms var(--ease-out);
   }
 
-  [data-mood] .avatar-eye {
-    animation: eye-blink 7s infinite;
-    animation-delay: var(--blink-delay, 0s);
+  [data-mood="sleeping"] .avatar-eye {
+    opacity: 0;
+    animation: none;
+  }
+
+  /* The eyes move only in moments eyeMoments.ts picks: an animation that
+     runs forever makes the WebView draw every frame. */
+  [data-mood][data-blink] .avatar-eye {
+    animation: eye-blink 260ms;
   }
 
   [data-mood="idle"] .avatar-fire {
@@ -43,9 +49,8 @@
     animation-delay: var(--blink-delay, 0s);
   }
 
-  [data-mood="idle"] .avatar-look {
-    animation: eye-look 11s ease-in-out infinite;
-    animation-delay: var(--blink-delay, 0s);
+  [data-mood="idle"][data-look] .avatar-look {
+    animation: eye-look 4.4s ease-in-out;
   }
 
   [data-mood="working"] .avatar-fire {
@@ -69,24 +74,26 @@
     animation: hop 2.6s var(--ease-out) infinite;
   }
 
-  /* Heavy lids, slanting down to the outside, that droop now and then. */
+  /* Heavy lids, slanting down to the outside, that droop in the moments
+     a blink would come. */
   [data-mood="tired"] .avatar-eye-l {
     clip-path: polygon(0 34%, 100% 22%, 100% 100%, 0 100%);
-    animation: eye-tired-l 6s infinite;
   }
 
   [data-mood="tired"] .avatar-eye-r {
     clip-path: polygon(0 22%, 100% 34%, 100% 100%, 0 100%);
-    animation: eye-tired-r 6s infinite;
+  }
+
+  [data-mood="tired"][data-blink] .avatar-eye-l {
+    animation: eye-tired-l 800ms;
+  }
+
+  [data-mood="tired"][data-blink] .avatar-eye-r {
+    animation: eye-tired-r 800ms;
   }
 
   [data-mood="tired"] .avatar-hl {
     transform: translateY(12px);
-  }
-
-  [data-mood="sleeping"] .avatar-eye {
-    opacity: 0;
-    animation: none;
   }
 
   [data-mood="sleeping"] .avatar-closed {
@@ -108,11 +115,10 @@
 
 @keyframes eye-blink {
   0%,
-  91%,
   100% {
     clip-path: inset(0);
   }
-  94% {
+  45% {
     clip-path: inset(50% 0);
   }
 }
@@ -120,47 +126,43 @@
 /* A glance down to the left, back, then up to the right, resting between. */
 @keyframes eye-look {
   0%,
-  30%,
+  44%,
   56%,
-  64%,
-  92%,
   100% {
     transform: translate(0, 0);
   }
-  36%,
-  50% {
+  10%,
+  34% {
     transform: translate(-3px, 10px);
   }
-  70%,
-  86% {
+  66%,
+  90% {
     transform: translate(7px, -6px);
   }
 }
 
 @keyframes eye-tired-l {
   0%,
-  78%,
   100% {
     clip-path: polygon(0 34%, 100% 22%, 100% 100%, 0 100%);
   }
-  84% {
+  30% {
     clip-path: polygon(0 58%, 100% 46%, 100% 100%, 0 100%);
   }
-  90% {
+  60% {
     clip-path: polygon(0 30%, 100% 18%, 100% 100%, 0 100%);
   }
 }
 
 @keyframes eye-tired-r {
   0%,
-  78%,
   100% {
     clip-path: polygon(0 22%, 100% 34%, 100% 100%, 0 100%);
   }
-  84% {
+  30% {
     clip-path: polygon(0 46%, 100% 58%, 100% 100%, 0 100%);
   }
-  90% {
+  60% {
     clip-path: polygon(0 18%, 100% 30%, 100% 100%, 0 100%);
   }
 }
