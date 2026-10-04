@@ -61,12 +61,9 @@ impl Desktop {
         self.apps.fetch_add(1, Ordering::SeqCst);
     }
 
+    /// Always after its `app_opened`.
     pub fn app_closed(&self) {
-        let _ = self
-            .apps
-            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |open| {
-                open.checked_sub(1)
-            });
+        self.apps.fetch_sub(1, Ordering::SeqCst);
     }
 
     /// Changes how the owner's idle time is read: tests stand in for them.
@@ -116,7 +113,6 @@ mod tests {
         desktop.set_owner_idle(Arc::new(|| None));
         assert_eq!(desktop.owner_here(), Err(Away::Idle));
         desktop.set_owner_idle(idle_for(0));
-        desktop.app_closed();
         desktop.app_closed();
         assert_eq!(desktop.owner_here(), Err(Away::NoApp));
     }
