@@ -1,12 +1,13 @@
 //! `messages.*` operations, and posting a message for the courier to deliver
 //! (spec 9.1).
 
-use botloft_core::ids::{DeliveryId, MessageId};
+use botloft_core::envelope::QUOTED_REPLY_MAX_CHARS;
+use botloft_core::ids::{BotId, ChatItemId, DeliveryId, MessageId};
 use botloft_core::protocol::{
-    ChatItem, Delivery, DeliveryState, Message, MessageKind, MessagesListParams,
-    MessagesSendParams, SenderKind, Task,
+    ChatBody, ChatItem, Delivery, DeliveryState, Message, MessageKind, MessageReply,
+    MessagesListParams, MessagesSendParams, SenderKind, Task,
 };
-use botloft_core::validate;
+use botloft_core::{chat, validate};
 use botloft_store::{MessageFilter, Store};
 
 use super::{ApiError, ApiResult, attachments, bots, crews};
@@ -36,6 +37,10 @@ pub fn send(daemon: &Daemon, params: MessagesSendParams) -> ApiResult<Message> {
     let store = daemon.store();
     // Archived or deleted while the files were saved.
     let (crew, bot) = bots::active(&store, &params.bot_id)?;
+    let reply_to = match &params.reply_to {
+        Some(item) => Some(quote(&store, &bot.id, item)?),
+        None => None,
+    };
     let message = Message {
         id: MessageId::generate(),
         crew_id: crew.id,
@@ -47,10 +52,39 @@ pub fn send(daemon: &Daemon, params: MessagesSendParams) -> ApiResult<Message> {
         task_id: None,
         routine_id: None,
         question_id: None,
+        reply_to,
         attachments,
         created_at: now,
     };
     post(daemon, &store, message, None)
+}
+
+/// What the owner replies to (spec 9.3): something the bot wrote, or a
+/// message it got, in its own chat, quoted on one line.
+fn quote(store: &Store, bot: &BotId, item_id: &ChatItemId) -> ApiResult<MessageReply> {
+    let item = store
+        .chat_item(item_id)?
+        .filter(|item| &item.bot_id == bot)
+        .ok_or_else(|| ApiError::NotFound(format!("chat item {item_id} does not exist")))?;
+    let text = match &item.body {
+        ChatBody::Reply(reply) => &reply.text,
+        ChatBody::Inbound(inbound) => &inbound.message.body,
+        _ => {
+            return Err(ApiError::validation(
+                "reply_to: only a reply or a message can be quoted",
+            ));
+        }
+    };
+    let text = chat::one_line(text, QUOTED_REPLY_MAX_CHARS);
+    if text.is_empty() {
+        return Err(ApiError::validation(
+            "reply_to: the item has no text to quote",
+        ));
+    }
+    Ok(MessageReply {
+        item_id: item.id,
+        text,
+    })
 }
 
 /// Stores the message with a pending delivery (and the task it creates),

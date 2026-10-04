@@ -126,6 +126,7 @@ pub fn answer(daemon: &Daemon, params: QuestionsAnswerParams) -> ApiResult<Quest
         task_id: None,
         routine_id: None,
         question_id: Some(question.id.clone()),
+        reply_to: None,
         attachments: Vec::new(),
         created_at: daemon.clock.now_ms(),
     };

@@ -24,6 +24,7 @@ import { BotRun, type Live } from "./BotRun";
 import { ChatComposer } from "./ChatComposer";
 import { InboundRow } from "./InboundRow";
 import { NoticeRow } from "./NoticeRow";
+import { type ReplyTarget, StartReply } from "./Replying";
 import { chatRows, rowHas } from "./rows";
 import { useChat } from "./useChat";
 import { useFiles } from "./useFiles";
@@ -51,6 +52,9 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
   /** Distance from the bottom to keep while older items load above. */
   const anchor = useRef<number | null>(null);
   const [dragging, setDragging] = useState(false);
+  /** What the owner's next message replies to (spec 9.3). */
+  const [replying, setReplying] = useState<ReplyTarget | null>(null);
+  const cancelReply = useCallback(() => setReplying(null), []);
   // What was there when the owner opened this chat stays still; what
   // arrives while they look animates in.
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new bot is a new chat
@@ -104,7 +108,7 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
       );
     }
     if (row.kind === "inbound") {
-      return <InboundRow key={row.key} message={row.message} bot={bot} />;
+      return <InboundRow key={row.key} message={row.message} bot={bot} itemId={row.item.id} />;
     }
     if (row.kind === "notice") {
       return <NoticeRow key={row.key} notice={row.notice} at={row.item.createdAt} />;
@@ -207,20 +211,30 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
               <p className="max-w-md text-muted text-sm">{t.chat.view.emptyBody}</p>
             </div>
           )}
-          <SeenSince.Provider value={openedAt}>
-            <ol
-              ref={listRef}
-              aria-label={t.chat.view.messages}
-              className="offscreen-rows flex flex-col gap-6"
-            >
-              {list}
-            </ol>
-          </SeenSince.Provider>
+          <StartReply.Provider value={setReplying}>
+            <SeenSince.Provider value={openedAt}>
+              <ol
+                ref={listRef}
+                aria-label={t.chat.view.messages}
+                className="offscreen-rows flex flex-col gap-6"
+              >
+                {list}
+              </ol>
+            </SeenSince.Provider>
+          </StartReply.Provider>
         </div>
       </div>
       <div className="w-full">
         {/* Keyed by bot: each one has its own draft (spec 15.1). */}
-        <ChatComposer key={bot.id} bot={bot} files={files} stopped={stopped} onSent={onSent} />
+        <ChatComposer
+          key={bot.id}
+          bot={bot}
+          files={files}
+          stopped={stopped}
+          onSent={onSent}
+          replying={replying}
+          onCancelReply={cancelReply}
+        />
       </div>
       {dragging && (
         <div className="pointer-events-none absolute inset-3 grid place-items-center rounded-2xl border-2 border-accent border-dashed bg-canvas/85">

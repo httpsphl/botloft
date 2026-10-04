@@ -157,6 +157,7 @@ fn export_bindings() {
     out.decl::<FilesReadParams>();
     out.decl::<FileData>();
     out.decl::<Message>();
+    out.decl::<MessageReply>();
     out.decl::<Delivery>();
     out.decl::<Task>();
     out.decl::<MessagesSendParams>();

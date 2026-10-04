@@ -155,6 +155,7 @@ pub(super) fn attempt(
         task_id: None,
         routine_id: Some(routine.id.clone()),
         question_id: None,
+        reply_to: None,
         attachments: Vec::new(),
         created_at: now,
     };

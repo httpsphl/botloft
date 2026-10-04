@@ -621,9 +621,22 @@ questionId: QuestionId | null,
  */
 attachments: Array<Attachment>, 
 /**
+ * What in the bot's chat the owner replied to (spec 9.3).
+ */
+replyTo: MessageReply | null, 
+/**
  * Unix time in milliseconds.
  */
 createdAt: number, };
+
+/**
+ * The chat item a message replies to, and its text as quoted.
+ */
+export type MessageReply = { itemId: ChatItemId, 
+/**
+ * The start of the item's text, on one line (at most 300 characters).
+ */
+text: string, };
 
 /**
  * Getting one message into one bot's process.
@@ -682,7 +695,11 @@ export type MessagesSendParams = { botId: BotId, body: string,
 /**
  * Up to 10 files (spec 9.5).
  */
-attachments?: Array<AttachmentUpload>, };
+attachments?: Array<AttachmentUpload>, 
+/**
+ * A reply of the bot, or a message it got, in its chat (spec 9.3).
+ */
+replyTo?: ChatItemId, };
 
 /**
  * Newest first. Page back with `before` set to the oldest id received.

@@ -87,6 +87,13 @@ export const chat: Messages["chat"] = {
     changed: "O que mudou",
     now: "Agora a memória diz:",
   },
+  reply: {
+    action: "Responder",
+    to: (who) => `Responder a ${who}`,
+    replyingTo: (who) => `Respondendo a ${who}`,
+    cancel: "Cancelar a resposta",
+    jump: "Mostrar a mensagem respondida",
+  },
   approval: {
     asks: (bot: string, action: string) => `${bot} pede para ${action}`,
     wants: (bot: string, action: string) => `${bot} quer ${action}`,

@@ -28,6 +28,7 @@ import { EffortPicker } from "./EffortPicker";
 import { rememberImage } from "./images";
 import { ModelPicker } from "./ModelPicker";
 import { ModePicker } from "./ModePicker";
+import { ReplyBar, type ReplyTarget } from "./Replying";
 import type { Files, PendingFile } from "./useFiles";
 
 const MAX_HEIGHT_PX = 240;
@@ -64,12 +65,17 @@ export const ChatComposer = memo(function ChatComposer({
   files,
   stopped,
   onSent,
+  replying = null,
+  onCancelReply,
 }: {
   bot: Bot;
   files: Files;
   /** The bot is paused or its crew is. */
   stopped: boolean;
   onSent(): void;
+  /** What the message replies to (spec 9.3). */
+  replying?: ReplyTarget | null;
+  onCancelReply?(): void;
 }) {
   const api = useApi();
   const t = useT();
@@ -87,6 +93,13 @@ export const ChatComposer = memo(function ChatComposer({
   const fieldId = useId();
   const tooLong = text.length > FIELD_LIMITS.message;
   const empty = !text.trim() && files.files.length === 0;
+
+  // Replying starts in the field.
+  useEffect(() => {
+    if (replying) {
+      field.current?.focus();
+    }
+  }, [replying]);
 
   const working = bot.state === "busy" || bot.state === "needs_approval";
   useEffect(() => {
@@ -120,6 +133,7 @@ export const ChatComposer = memo(function ChatComposer({
         botId: bot.id,
         body: text,
         ...(attachments.length > 0 ? { attachments } : {}),
+        ...(replying ? { replyTo: replying.itemId } : {}),
       });
       // The daemon keeps the order it was given.
       message.attachments.forEach((attachment, index) => {
@@ -130,6 +144,7 @@ export const ChatComposer = memo(function ChatComposer({
       });
       setText("");
       files.clear();
+      onCancelReply?.();
       playSound("sent");
       onSent();
     } catch (failure) {
@@ -142,6 +157,11 @@ export const ChatComposer = memo(function ChatComposer({
 
   const enterSends = usePref(prefs.enterSends);
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Escape" && replying) {
+      event.preventDefault();
+      onCancelReply?.();
+      return;
+    }
     if (event.key !== "Enter" || event.nativeEvent.isComposing) {
       return;
     }
@@ -171,6 +191,7 @@ export const ChatComposer = memo(function ChatComposer({
         </p>
       )}
       <div className="@container rounded-2xl border border-line-strong bg-panel shadow-sm transition-colors focus-within:border-muted">
+        {replying && onCancelReply && <ReplyBar target={replying} onCancel={onCancelReply} />}
         {files.files.length > 0 && (
           <ul aria-label={t.chat.composer.filesToSend} className="flex flex-wrap gap-2 px-3 pt-3">
             {files.files.map((file) => (

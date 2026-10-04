@@ -105,6 +105,7 @@ pub fn send(
         task_id: task.as_ref().map(|task| task.id.clone()),
         routine_id: None,
         question_id: None,
+        reply_to: None,
         attachments: Vec::new(),
         created_at: now,
     };
@@ -230,6 +231,7 @@ pub fn complete(
         task_id: Some(task.id.clone()),
         routine_id: None,
         question_id: None,
+        reply_to: None,
         attachments: Vec::new(),
         created_at: now,
     };

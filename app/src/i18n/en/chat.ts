@@ -95,6 +95,14 @@ export const chat = {
     changed: "What changed",
     now: "The memory now says:",
   },
+  /** Replying to something in the chat (spec 9.3). */
+  reply: {
+    action: "Reply",
+    to: (who: string) => `Reply to ${who}`,
+    replyingTo: (who: string) => `Replying to ${who}`,
+    cancel: "Cancel the reply",
+    jump: "Show what this replies to",
+  },
   approval: {
     asks: (bot: string, action: string) => `${bot} asks to ${action}`,
     wants: (bot: string, action: string) => `${bot} wants to ${action}`,

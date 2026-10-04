@@ -44,6 +44,10 @@ pub(super) fn render(message: &Message, context: &Context<'_>, now: i64) -> Rend
         // The owner is the session's user: their words go as written.
         SenderKind::Owner => {
             let body = with_attachment_list(&message.body, &message.attachments);
+            let body = match &message.reply_to {
+                Some(reply) => envelope::reply(&reply.text, &body),
+                None => body,
+            };
             match context.question {
                 Some((id, question)) => envelope::answer(id, question, &body),
                 None => body,
@@ -132,8 +136,8 @@ fn inline_image(attachment: &Attachment, workspace: &Path) -> Option<Value> {
 
 #[cfg(test)]
 mod tests {
-    use botloft_core::ids::{AttachmentId, BotId, CrewId, MessageId};
-    use botloft_core::protocol::MessageKind;
+    use botloft_core::ids::{AttachmentId, BotId, ChatItemId, CrewId, MessageId};
+    use botloft_core::protocol::{MessageKind, MessageReply};
 
     use super::*;
 
@@ -150,6 +154,7 @@ mod tests {
             routine_id: None,
             question_id: None,
             attachments: Vec::new(),
+            reply_to: None,
             created_at: 0,
         }
     }
@@ -183,6 +188,31 @@ mod tests {
             "{text}"
         );
         assert!(text.ends_with("hi"));
+    }
+
+    #[test]
+    fn a_reply_quotes_the_chat_item_above_the_owner_words() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let context = Context {
+            crew_name: "Ops",
+            sender_handle: None,
+            task: None,
+            workspace: dir.path(),
+            routine: None,
+            question: None,
+        };
+        let mut owner = message(SenderKind::Owner, "Make it yearly");
+        owner.reply_to = Some(MessageReply {
+            item_id: ChatItemId::generate(),
+            text: "Acme signs monthly.".into(),
+        });
+        let line = parse(&render(&owner, &context, 0));
+        assert_eq!(
+            line["message"]["content"][0]["text"],
+            "Replying to: \"Acme signs monthly.\"
+
+Make it yearly"
+        );
     }
 
     #[test]

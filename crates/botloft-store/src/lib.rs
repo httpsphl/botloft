@@ -213,6 +213,7 @@ pub(crate) mod tests {
             task_id: None,
             routine_id: None,
             question_id: None,
+            reply_to: None,
             attachments: Vec::new(),
             created_at: 0,
         };

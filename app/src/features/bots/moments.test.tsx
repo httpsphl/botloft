@@ -129,6 +129,7 @@ describe("glances", () => {
       routineId: null,
       questionId: null,
       attachments: [],
+      replyTo: null,
       createdAt: Date.now(),
     };
     act(() => fake.emit({ name: "message.created", params: message }));
