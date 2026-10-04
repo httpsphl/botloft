@@ -83,6 +83,36 @@ export const browser = {
     typing: "What you type goes to the page",
     screen: (bot: string) => `${bot}'s browser, in your hands`,
   },
+  /** Teaching the bot a task in its browser (spec 21.13). */
+  lesson: {
+    teach: "Teach a task",
+    teachWhy: (bot: string) =>
+      `Do the task here once: ${bot} keeps each step, never what you type.`,
+    recording: "Recording the lesson",
+    empty: "Do the task on the page: each step shows up here.",
+    finish: "Finish the lesson",
+    cancel: "Cancel",
+    failed: "Could not start or end the lesson",
+    title: (bot: string) => `Teach ${bot} a task`,
+    name: "Name of the task",
+    namePlaceholder: "Check new listings",
+    steps: "Steps",
+    remove: (n: number) => `Remove step ${n}`,
+    makeRoutine: "Make it a routine…",
+    sendToBot: (bot: string) => `Send to ${bot} to remember`,
+    sendFailed: "Could not send the lesson",
+    step: {
+      open: (url: string) => `Open ${url}`,
+      click: (label: string) => `Click "${label}"`,
+      type: (label: string) => `Type in "${label}"`,
+      secret: (label: string) => `Type the password in "${label}": ask me to type it`,
+      press: (key: string) => `Press ${key}`,
+    },
+    intro: (name: string) => `How to do "${name}" in the browser, as I showed you:`,
+    typedNote: "Where I typed something, I don't show what: use what the task needs, or ask me.",
+    forRoutine: "Do it now.",
+    forMemory: (name: string) => `Keep this in your memory, so you can do "${name}" when I ask.`,
+  },
   window: {
     open: "Sign in in a window",
     why: (bot: string) =>

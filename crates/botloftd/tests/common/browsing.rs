@@ -80,3 +80,34 @@ pub fn ref_of(page: &str, what: &str) -> String {
         .expect("ref")
         .to_owned()
 }
+
+/// One of the owner's events, as the app sends it.
+pub async fn send(app: &mut Client, bot: &Value, input: Value) {
+    app.call(
+        "browser.input",
+        json!({ "botId": bot["id"], "input": input }),
+    )
+    .await
+    .expect("input");
+}
+
+/// A left click at a point of the page.
+pub async fn click(app: &mut Client, bot: &Value, x: f64, y: f64) {
+    for (action, buttons) in [("move", 0), ("down", 1), ("up", 0)] {
+        let input = json!({
+            "kind": "mouse", "action": action, "x": x, "y": y, "button": "left",
+            "buttons": buttons, "clicks": 1, "modifiers": 0,
+        });
+        send(app, bot, input).await;
+    }
+}
+
+/// Presses the keys of `text`, one by one, as the app sends them.
+pub async fn press(app: &mut Client, bot: &Value, text: &str, modifiers: u32) {
+    for key in text.chars() {
+        let code = format!("Key{}", key.to_ascii_uppercase());
+        let input =
+            json!({ "kind": "key", "key": key.to_string(), "code": code, "modifiers": modifiers });
+        send(app, bot, input).await;
+    }
+}

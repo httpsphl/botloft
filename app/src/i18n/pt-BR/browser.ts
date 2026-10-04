@@ -83,6 +83,36 @@ export const browser: Messages["browser"] = {
     typing: "O que você digita vai para a página",
     screen: (bot) => `Navegador de ${bot}, nas suas mãos`,
   },
+  lesson: {
+    teach: "Ensinar uma tarefa",
+    teachWhy: (bot) =>
+      `Faça a tarefa aqui uma vez: ${bot} guarda cada passo, nunca o que você digita.`,
+    recording: "Gravando a lição",
+    empty: "Faça a tarefa na página: cada passo aparece aqui.",
+    finish: "Terminar a lição",
+    cancel: "Cancelar",
+    failed: "Não foi possível começar ou terminar a lição",
+    title: (bot) => `Ensinar uma tarefa a ${bot}`,
+    name: "Nome da tarefa",
+    namePlaceholder: "Ver anúncios novos",
+    steps: "Passos",
+    remove: (n) => `Tirar o passo ${n}`,
+    makeRoutine: "Fazer virar rotina…",
+    sendToBot: (bot) => `Mandar para ${bot} guardar`,
+    sendFailed: "Não foi possível mandar a lição",
+    step: {
+      open: (url) => `Abra ${url}`,
+      click: (label) => `Clique em "${label}"`,
+      type: (label) => `Escreva em "${label}"`,
+      secret: (label) => `Escreva a senha em "${label}": peça para eu digitar`,
+      press: (key) => `Aperte ${key}`,
+    },
+    intro: (name) => `Como fazer "${name}" no navegador, do jeito que eu mostrei:`,
+    typedNote:
+      "Onde eu escrevi algo, eu não mostro o quê: use o que a tarefa pede, ou me pergunte.",
+    forRoutine: "Faça isso agora.",
+    forMemory: (name) => `Guarde isso na sua memória, para fazer "${name}" quando eu pedir.`,
+  },
   window: {
     open: "Entrar numa janela",
     why: (bot) =>

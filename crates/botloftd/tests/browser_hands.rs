@@ -8,37 +8,8 @@ mod common;
 use std::time::Duration;
 
 use common::Client;
-use common::browsing::{Browsing, answer_site, call, pending_approval, setup};
+use common::browsing::{Browsing, answer_site, call, click, pending_approval, press, send, setup};
 use serde_json::{Value, json};
-
-async fn send(app: &mut Client, bot: &Value, input: Value) {
-    app.call(
-        "browser.input",
-        json!({ "botId": bot["id"], "input": input }),
-    )
-    .await
-    .expect("input");
-}
-
-async fn click(app: &mut Client, bot: &Value, x: f64, y: f64) {
-    for (action, buttons) in [("move", 0), ("down", 1), ("up", 0)] {
-        let input = json!({
-            "kind": "mouse", "action": action, "x": x, "y": y, "button": "left",
-            "buttons": buttons, "clicks": 1, "modifiers": 0,
-        });
-        send(app, bot, input).await;
-    }
-}
-
-/// Presses the keys of `text`, one by one, as the app sends them.
-async fn press(app: &mut Client, bot: &Value, text: &str, modifiers: u32) {
-    for key in text.chars() {
-        let code = format!("Key{}", key.to_ascii_uppercase());
-        let input =
-            json!({ "kind": "key", "key": key.to_string(), "code": code, "modifiers": modifiers });
-        send(app, bot, input).await;
-    }
-}
 
 /// The bot opens the sign-in page; the owner allows the site.
 async fn sign_in_page(b: &mut Browsing) -> String {

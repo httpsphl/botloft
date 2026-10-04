@@ -10,6 +10,7 @@ import { FakeChat } from "./fakeChat";
 import { FakeConversation } from "./fakeConversation";
 import { crewHandlers } from "./fakeCrews";
 import { FakeFiles } from "./fakeFiles";
+import { FakeLesson } from "./fakeLesson";
 import { FakeQuestions } from "./fakeQuestions";
 import { FakeReactions } from "./fakeReactions";
 import { FakeRoutines } from "./fakeRoutines";
@@ -79,6 +80,7 @@ export class FakeBotloft implements BotloftApi {
   readonly screens = new FakeScreens(this);
   readonly questions = new FakeQuestions(this);
   readonly reactions = new FakeReactions(this);
+  readonly lesson = new FakeLesson(this);
   /** Clock for created and updated times. */
   now = Date.now();
   closed = false;
@@ -264,6 +266,7 @@ export class FakeBotloft implements BotloftApi {
     ...this.routines.handlers(),
     ...this.questions.handlers(),
     ...this.reactions.handlers(),
+    ...this.lesson.handlers(),
     ...usageHandlers(this),
     ...searchHandlers(this),
   };

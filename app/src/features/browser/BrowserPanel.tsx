@@ -20,6 +20,7 @@ import { ComputerDock } from "../terminal/ComputerDock";
 import { AddressBar } from "./AddressBar";
 import { AskCallout, ControlPill, HeldNotes, TakeNotes } from "./HandsBars";
 import { HandsLayer } from "./HandsLayer";
+import { LessonArea, LessonDialog, useLesson } from "./Lesson";
 import { LiveView, useCaption } from "./LiveView";
 import { TabStrip } from "./TabStrip";
 import { useBrowserView } from "./useBrowserView";
@@ -60,6 +61,7 @@ export function BrowserPanel({
   // Nobody uses it: its pages stand still until someone does (spec 21.2).
   const resting = status === "open" && state?.resting === true;
   const hands = useHands(bot, state);
+  const lesson = useLesson(bot, state);
   const [focused, setFocused] = useState(false);
   const ask = state?.ask ?? null;
   const windowed = state?.window === true;
@@ -200,7 +202,7 @@ export function BrowserPanel({
               <ComputerDock className="mt-3" />
             </div>
             {(hands.held || (live && !ask)) && (
-              <ControlPill key={String(hands.held)} bot={bot} hands={hands} />
+              <ControlPill key={String(hands.held)} bot={bot} hands={hands} lesson={lesson} />
             )}
             {status === "open" && !hands.held && (
               // Its place is kept while empty, so the page never moves for it.
@@ -213,7 +215,8 @@ export function BrowserPanel({
                 )}
               </p>
             )}
-            {hands.held && (
+            {hands.held && <LessonArea bot={bot} lesson={lesson} />}
+            {hands.held && lesson.steps === null && (
               <HeldNotes
                 bot={bot}
                 task={ask}
@@ -226,6 +229,7 @@ export function BrowserPanel({
           </>
         )}
       </div>
+      {lesson.done && <LessonDialog bot={bot} lesson={lesson} />}
     </SidePanel>
   );
 }

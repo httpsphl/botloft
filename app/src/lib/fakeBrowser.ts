@@ -53,6 +53,7 @@ export class FakeBrowser {
         resting: false,
         ask: null,
         window: false,
+        lesson: null,
         updatedAt: this.fake.now,
       }
     );
@@ -188,11 +189,12 @@ export class FakeBrowser {
     if (botId === null || state?.control !== "owner" || state.window) {
       return null;
     }
-    return this.set(botId, { control: "bot" });
+    // Giving the browser back ends a lesson not finished (spec 21.13).
+    return this.set(botId, { control: "bot", lesson: null });
   }
 
   /** The owner has the watched browser, or the call is refused. */
-  private held(botId: BotId): void {
+  held(botId: BotId): void {
     if (this.watching !== botId || this.state(botId).control !== "owner") {
       throw conflict("take the browser before using it");
     }

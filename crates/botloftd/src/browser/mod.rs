@@ -11,6 +11,7 @@ mod hands;
 mod input;
 mod keys;
 mod launch;
+mod lesson;
 mod moves;
 mod page;
 mod program;

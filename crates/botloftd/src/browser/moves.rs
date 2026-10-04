@@ -12,6 +12,7 @@ use serde_json::json;
 use tokio::sync::mpsc;
 use tracing::debug;
 
+use super::lesson::Teacher;
 use super::rest::wake;
 use super::session::{Session, Tab};
 use super::{BrowserError, Browsers};
@@ -173,7 +174,11 @@ impl Session {
 /// Does what the owner did, one thing at a time, in order. Of several mouse
 /// moves in a row only the newest matters. Each thing queued counts in
 /// `owner_moves` until it is done or skipped.
-pub(super) async fn feed(session: Arc<Session>, mut queue: mpsc::UnboundedReceiver<Move>) {
+pub(super) async fn feed(
+    session: Arc<Session>,
+    mut queue: mpsc::UnboundedReceiver<Move>,
+    teacher: Teacher,
+) {
     let done = || {
         session
             .owner_moves
@@ -189,6 +194,10 @@ pub(super) async fn feed(session: Arc<Session>, mut queue: mpsc::UnboundedReceiv
                 next = Some(later);
                 break;
             }
+        }
+        if !session.is_closed() {
+            // A lesson reads the page before the step changes it.
+            teacher.observe(&session, &step).await;
         }
         if !session.is_closed()
             && let Err(err) = session.make(&step).await

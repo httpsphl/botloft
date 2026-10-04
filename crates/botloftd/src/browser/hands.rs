@@ -7,11 +7,12 @@ use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
 
 use botloft_core::ids::{ApprovalId, BotId};
-use botloft_core::protocol::{BrowserControl, BrowserInput};
+use botloft_core::protocol::{BrowserControl, BrowserInput, LessonStep, LessonStepKind};
 use tokio::sync::{broadcast, mpsc};
 use tracing::debug;
 
 use super::input::fits;
+use super::lesson::{self, Teacher};
 use super::moves::{Move, feed};
 use super::rest::wake;
 use super::session::Session;
@@ -84,7 +85,13 @@ impl Browsers {
         tokio::spawn(async move {
             // A browser at rest wakes for the owner's hands.
             wake(&page, &slots, &events, clock.as_ref(), &owner).await;
-            feed(page, queue).await;
+            let teacher = Teacher {
+                slots,
+                events,
+                clock,
+                bot: owner,
+            };
+            feed(page, queue, teacher).await;
         });
         Ok(Hands {
             slots: Arc::clone(&self.slots),
@@ -222,6 +229,40 @@ impl Hands {
         self.make(Move::SwitchTab(id.to_owned()))
     }
 
+    /// Starts a lesson (spec 21.13), from the page the active tab shows, or
+    /// ends it; the steps so far.
+    pub fn teach(&self, on: bool) -> Result<Vec<LessonStep>, InputError> {
+        self.page()?;
+        let start = on
+            .then(|| self.session.lock().active().map(|tab| tab.url.clone()))
+            .flatten()
+            .and_then(|url| lesson::address(&url));
+        let mut steps = Vec::new();
+        update(
+            &self.slots,
+            &self.events,
+            self.clock.as_ref(),
+            &self.bot,
+            |state| {
+                if on {
+                    steps = start
+                        .map(|url| LessonStep {
+                            kind: LessonStepKind::Open,
+                            label: url,
+                            role: None,
+                            secret: false,
+                        })
+                        .into_iter()
+                        .collect();
+                    state.lesson = Some(steps.clone());
+                } else {
+                    steps = state.lesson.take().unwrap_or_default();
+                }
+            },
+        );
+        Ok(steps)
+    }
+
     /// Takes the active tab to the web address the owner typed.
     pub fn open(&self, address: &str) -> Result<(), InputError> {
         self.page()?;
@@ -245,7 +286,11 @@ impl Drop for Hands {
                 &self.events,
                 self.clock.as_ref(),
                 &self.bot,
-                |state| state.control = BrowserControl::Bot,
+                |state| {
+                    state.control = BrowserControl::Bot;
+                    // Giving the browser back ends a lesson not finished.
+                    state.lesson = None;
+                },
             );
             debug!(bot = %self.bot, "browser: the owner gave it back");
         }
