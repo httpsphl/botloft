@@ -1200,6 +1200,7 @@ Sem jargão (15.2): o dono não vê "cron", "overlap" nem "timezone" no caminho 
   - "Avançado": expressão cron.
 - No chat, a message da rotina aparece só com a etiqueta "Rotina · <nome>" e uma seta; o texto que a rotina manda fica dobrado até o dono abrir.
 - Na página da crew, uma aba com as rotinas de todos os bots dela.
+- Na barra lateral, embaixo de Buscar e Perguntas, a página **Rotinas**, com as rotinas de todas as crews; a entrada aparece quando existe ao menos uma rotina. Em cima, "Próximas": as ligadas que rodam por horário, da mais próxima para a mais distante, cinco de início e "Mostrar mais" para o resto. Cada uma mostra o mascote do bot, o nome, quando roda de novo ("Amanhã às 09:00") e a frase de quando; uma rotina por intervalo diz "Vigiando" no lugar da hora, porque está sempre de olho; uma que está rodando diz "Rodando agora". Uma rotina por sinal não entra, porque espera o sinal. Um clique abre a rotina para editar. Embaixo, um grupo por bot que tem rotina, na ordem das crews e dos bots: o mascote, o nome do bot e o da crew, uma seta para dobrar o grupo e **+** para uma rotina nova desse bot, com a lista de 20.9 (interruptor, rodar agora, editar e apagar).
 - Uma execução `failed` entra na marca da barra de tarefas (15.2) até o dono abrir o bot. O app guarda quando o dono abriu cada bot (`localStorage`, `botloft.seen`); um bot aberto não marca.
 - O store carrega `routines.list` a cada conexão e segue `routine.changed` e `routine.run`.
 - Textos nos três idiomas (15.6); a frase de "quando" é montada pelo app a partir do `schedule`.

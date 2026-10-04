@@ -21,7 +21,7 @@ import { ListAvatar } from "../bots/ListAvatar";
 import { toolAction, toolTitle } from "../chat/toolNames";
 import { CrewDialog } from "./CrewDialog";
 import { setAllCollapsed, setCollapsed, useCollapsed, useCollapsedSet } from "./collapsed";
-import { QuestionsEntry, row, SearchEntry } from "./SidebarPages";
+import { QuestionsEntry, RoutinesEntry, row, SearchEntry } from "./SidebarPages";
 
 /** Crews as sections and their bots as conversations (spec 15.1). */
 export function Sidebar() {
@@ -65,6 +65,7 @@ export function Sidebar() {
         </div>
         <SearchEntry />
         <QuestionsEntry />
+        <RoutinesEntry />
         <ul className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
           {crews.map((crew) => (
             <CrewEntry key={crew.id} crew={crew} />
