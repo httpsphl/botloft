@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 import { FakeBotloft } from "../../lib/fake";
-import { crewOpened, openBot, renderApp, sidebar } from "../../test/app";
+import { crewOpened, openBot, rail, renderApp, sidebar } from "../../test/app";
 
 afterEach(cleanup);
 
@@ -16,7 +16,7 @@ function crew() {
   return { fake, scout, writer };
 }
 
-const entry = () => within(sidebar()).getByRole("button", { name: /^Questions/ });
+const entry = () => within(rail()).getByRole("button", { name: "Questions" });
 
 describe("questions to the owner", () => {
   test("a question in the chat is answered with a ready answer", async () => {
@@ -52,7 +52,8 @@ describe("questions to the owner", () => {
     const { fake, scout, writer } = crew();
     const { host } = renderApp(fake);
     await crewOpened("Ops");
-    expect(entry().textContent).toBe("Questions");
+    // No count while nothing waits.
+    expect(entry().textContent).toBe("");
     expect(host.attention).toBe(false);
 
     act(() => {

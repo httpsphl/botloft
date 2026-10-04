@@ -21,12 +21,15 @@ async function openAccount() {
 }
 
 describe("account area", () => {
-  test("the owner and their plan show at the bottom of the sidebar, even before a crew", async () => {
+  test("the owner sits at the foot of the rail, even before a crew, with their plan", async () => {
     renderApp();
     await screen.findByRole("heading", { name: "Welcome to Botloft" });
     const button = screen.getByRole("button", { name: "Ana Lima: account and settings" });
-    expect(button.textContent).toContain("Ana Lima");
-    expect(button.textContent).toContain("Max plan");
+    expect(button.textContent).toBe("A");
+    expect(button.title).toBe("Ana Lima · Max plan");
+    fireEvent.click(button);
+    const menu = screen.getByRole("menu", { name: "Ana Lima" });
+    expect(menu.textContent).toContain("Max plan");
   });
 
   test("the title bar keeps no settings once connected", async () => {
