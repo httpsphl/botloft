@@ -39,8 +39,15 @@ describe("the owner's hands in the browser", () => {
     const { fake, scout } = crew();
     await openScout(fake);
     await openPanel(fake, scout.id);
+    // The pill under the screen says who has it.
+    const pill = () =>
+      within(panel())
+        .getAllByRole("status")
+        .find((s) => s.closest(".control-pill"));
+    expect(pill()?.textContent).toContain("Scout is in control");
     fireEvent.click(within(panel()).getByRole("button", { name: "Take control" }));
     expect(await within(panel()).findByText("You are in control")).toBeDefined();
+    expect(pill()?.textContent).toContain("Done, give it back to Scout");
     expect(called(fake, "browser.take")).toEqual([{ botId: scout.id }]);
 
     const page = within(panel()).getByRole("application", {
