@@ -185,6 +185,7 @@ fn tell(daemon: &Daemon, store: &Store, crew: &Crew, to: BotId, body: String) {
         task_id: None,
         routine_id: None,
         question_id: None,
+        reply_to: None,
         attachments: Vec::new(),
         created_at: daemon.clock.now_ms(),
     };

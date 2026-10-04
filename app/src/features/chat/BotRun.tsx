@@ -15,6 +15,7 @@ import { ApprovalCard } from "./ApprovalCard";
 import { Markdown } from "./Markdown";
 import { MemoryNote } from "./MemoryNote";
 import { memoryOf, memoryPlaces } from "./memory";
+import { Repliable } from "./Replying";
 import { runParts, splitDraft } from "./rows";
 import { SharedFiles } from "./SharedFiles";
 import { isSharedFiles } from "./shared";
@@ -160,7 +161,14 @@ function BotRunView({
             }
             case "reply":
               // It was already on screen as it was written.
-              return <Markdown key={head.id} text={head.body.text} />;
+              return (
+                <Repliable
+                  key={head.id}
+                  target={{ itemId: head.id, who: bot.name, text: head.body.text }}
+                >
+                  <Markdown text={head.body.text} />
+                </Repliable>
+              );
             case "approval":
               return (
                 <Arriving key={head.id} at={head.createdAt}>

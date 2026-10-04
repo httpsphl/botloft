@@ -480,6 +480,14 @@ A resposta sai no stdout como `{"type":"control_response","response":{"subtype":
 
 A mensagem do **dono** vai como ele escreveu, sem envelope: é o usuário da sessão falando, com a autoridade de quem digita. A resposta a uma pergunta do bot vem depois de uma linha que cita a pergunta (23.4).
 
+**Responder a algo do chat.** O dono pode responder a uma fala do bot (item `reply`) ou a uma message que ele recebeu (item `inbound`) no chat desse bot: `messages.send` leva `replyTo` com o id do item. O daemon confere que o item é do mesmo bot e tem texto (senão, `not_found` ou `validation`) e guarda na message `replyTo {itemId, text}`, com o texto numa linha só e cortado em 300 caracteres, como estava na hora. O bot recebe a citação antes das palavras do dono:
+
+```
+Replying to: "<texto citado>"
+
+<o que o dono escreveu>
+```
+
 Mensagens de **outros bots** e **avisos do daemon** levam um envelope em inglês, como as regras geradas (5.1):
 
 ```
@@ -645,7 +653,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `approvals.answer` | `approvalId, allow, note?, input?, always?` (`input`: a sugestão de bot como o dono a deixou, 10.2; `always`: com `allow`, grava o `always` do pedido como regra do bot, 10.1) | `Approval` |
 | `rules.list` | `botId` | `AllowRule[]`: o que o bot faz sem perguntar, da regra mais antiga à mais nova (10.1) |
 | `rules.delete` | `ruleId` | `{botId, rules}`: as regras que ficaram; o bot volta a perguntar pelo que saiu (10.1) |
-| `messages.send` | `botId, body, attachments?` (`[{name, mediaType, data}]`, data em base64) | `Message` |
+| `messages.send` | `botId, body, attachments?` (`[{name, mediaType, data}]`, data em base64), `replyTo?` (id de um item do chat do bot, 9.3) | `Message` |
 | `messages.list` | `crewId?, botId?, before?, limit?` | `Message[]` |
 | `attachments.read` | `attachmentId` | `{mediaType, data}`, data em base64 (9.5) |
 | `files.list` | `botId` | `BotFile[]`: os arquivos que o bot fez, do mais novo ao mais antigo (8.4) |
@@ -688,7 +696,7 @@ Pragmas: `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON`, `busy_time
 |---|---|
 | `crews` | `id, name, slug, paused, work_dir, lead_bot_id, created_at, archived_at` (`work_dir` é a pasta escolhida; `NULL` usa a `shared`. `lead_bot_id` é o chefe, sem chave estrangeira: ele é gravado junto com a crew) |
 | `bots` | `id, crew_id, name, handle, slug, role, instructions, color, paused, permission_mode, model, model_in_use, effort, effort_default, token_hash, session_id, created_at, archived_at` (`effort_default` é o nível do próprio modelo, como o Claude Code disse: `low` a `max`, `none` ou `NULL`, 7.4) |
-| `messages` | `id, crew_id, from_kind (owner/bot/system), from_bot_id, to_bot_id, kind (note/task/result/system), body, task_id, created_at` |
+| `messages` | `id, crew_id, from_kind (owner/bot/system), from_bot_id, to_bot_id, kind (note/task/result/system), body, task_id, created_at`; `reply_item_id` e `reply_text` quando o dono respondeu a algo do chat (9.3; sem chave estrangeira, porque os itens saem antes das messages na exclusão, 7.6) |
 | `attachments` | `id, message_id, name, media_type, size, path, created_at` |
 | `deliveries` | `id, message_id, bot_id, state, attempts, next_attempt_at, lease_until, last_error, sent_generation, turn_uuid, read_at, updated_at` |
 | `tasks` | `id, crew_id, requester_bot_id, assignee_bot_id, status, deadline_at, hops, origin_task_id, result, created_at, updated_at` |
@@ -881,6 +889,7 @@ No chat:
 
 - O chat ocupa toda a largura que sobra, alinhado à esquerda, com o compositor na mesma largura (sem coluna centralizada, que deixava vazio dos dois lados); o dia é uma pílula no meio.
 - O dono fala em balões à direita; o bot, à esquerda, com markdown.
+- Passando o mouse numa fala do bot ou numa message de outro bot, aparece no canto o botão de responder (a seta para a esquerda; pelo teclado, ele aparece com o foco). Ele leva a citação para cima do compositor, "Respondendo a <bot>" com o começo do texto e um X; o campo ganha o foco, e Esc cancela. Enviada, a citação vai junto (9.3) e aparece em cima do balão do dono, com uma borda de destaque; um clique leva até o item citado no chat.
 - Embaixo da mensagem do dono, e em cada linha da timeline da crew, fica onde ela está (9.1), com ícone e texto: esperando, entregando, "Entregue" com um tique e, quando o bot começou a trabalhar nela, "Lida" com dois tiques. Os dois tiques de "Lida" ficam em azul-claro, como nos apps de mensagem, para o dono ver de relance que o bot leu; a palavra continua na cor apagada das outras linhas, e é ela que diz o estado. A cor é o token `--read` (`#1787c9` no tema claro, `#5cc4f2` no escuro): mais clara que o `--work`, que é de bot trabalhando e de mensagem sendo entregue, e com contraste de ao menos 3:1 sobre `canvas`, `panel` e `sunken` nos dois temas, o que um teste confere. O azul dos apps de mensagem (`#53bdeb`) não passa de 2,2:1 no tema claro, por isso o claro usa um tom mais fechado.
 - Mensagens de outros bots aparecem à esquerda, com o avatar e o nome de quem mandou.
 - **Bots se chamando.** Uma message de um bot para outro é uma chamada até o outro pegá-la (`read_at`, 9.1). Enquanto toca, uma pílula mostra os mascotes dos dois, um sobre o outro em círculos, com "Chamando <bot>" e três pontos; quando o outro pega, vira "<bot> atendeu", com um tique, por 4 s, e some. Uma delivery `dead` encerra a chamada, e uma que ninguém pegou em uma hora deixa de ser chamada. Aparece no chat de quem chamou, flutuando acima do compositor sem mexer na conversa, e no cabeçalho da página da crew, com as chamadas de todos os bots dela. Uma pílula por par de bots, a da chamada mais nova. O app guarda quem chamou quem a partir de `message.created` desde que conectou; se foi atendida, sabe pela delivery, que toda conexão carrega de novo. Os mascotes da pílula se olham como os outros (15.3). O leitor de tela ouve quem chama antes ("Writer: Chamando Revisão").

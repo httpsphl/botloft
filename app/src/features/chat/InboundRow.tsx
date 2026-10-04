@@ -12,6 +12,7 @@ import { BOTLOFT_COLOR, BotAvatar } from "../bots/BotAvatar";
 import { DeliveryStatus } from "../messages/DeliveryStatus";
 import { AttachmentList } from "./AttachmentList";
 import { Mentions } from "./mentions";
+import { Repliable, ReplyQuote } from "./Replying";
 
 function Time({ at }: { at: number }) {
   return (
@@ -26,6 +27,7 @@ function OwnerMessage({ message, bot }: { message: Message; bot: Bot }) {
   const arrival = useArrival(message.createdAt);
   return (
     <li className={`flex flex-col items-end gap-1.5 pl-12 ${arrival}`}>
+      {message.replyTo && <ReplyQuote botId={bot.id} reply={message.replyTo} />}
       <AttachmentList attachments={message.attachments} workspace={bot.workspace} align="end" />
       {message.body && (
         <p
@@ -90,7 +92,7 @@ function TaskTag({ message }: { message: Message }) {
   );
 }
 
-function OtherMessage({ message }: { message: Message }) {
+function OtherMessage({ message, itemId }: { message: Message; itemId: string }) {
   const t = useT();
   const sender = useApp((state) => (message.fromBotId ? state.bots[message.fromBotId] : undefined));
   const delivery = useApp((state) => state.deliveries[message.id]);
@@ -118,12 +120,17 @@ function OtherMessage({ message }: { message: Message }) {
           <Time at={message.createdAt} />
         </div>
         {(!routine || open) && (
-          <p
-            className={`mt-1 max-w-[36rem] ${routine ? "animate-rise" : ""} whitespace-pre-wrap break-words rounded-2xl rounded-tl-md border border-line bg-panel px-4 py-2.5 leading-relaxed ${system ? "text-ink-soft" : ""}`}
-            data-selectable
+          <Repliable
+            target={{ itemId, who: name, text: message.body }}
+            className="w-fit max-w-full"
           >
-            <Mentions text={message.body} />
-          </p>
+            <p
+              className={`mt-1 max-w-[36rem] ${routine ? "animate-rise" : ""} whitespace-pre-wrap break-words rounded-2xl rounded-tl-md border border-line bg-panel px-4 py-2.5 leading-relaxed ${system ? "text-ink-soft" : ""}`}
+              data-selectable
+            >
+              <Mentions text={message.body} />
+            </p>
+          </Repliable>
         )}
         {delivery && delivery.state !== "sent" && (
           <div className="mt-1">
@@ -138,13 +145,16 @@ function OtherMessage({ message }: { message: Message }) {
 export const InboundRow = memo(function InboundRow({
   message,
   bot,
+  itemId,
 }: {
   message: Message;
   bot: Bot;
+  /** The chat item that shows it, to reply to. */
+  itemId: string;
 }) {
   return message.fromKind === "owner" ? (
     <OwnerMessage message={message} bot={bot} />
   ) : (
-    <OtherMessage message={message} />
+    <OtherMessage message={message} itemId={itemId} />
   );
 });

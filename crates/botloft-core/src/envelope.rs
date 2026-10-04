@@ -141,6 +141,21 @@ pub fn answer(question_id: &str, question: &str, body: &str) -> String {
     )
 }
 
+/// Longest part of a chat item quoted in a message that replies to it, in
+/// characters.
+pub const QUOTED_REPLY_MAX_CHARS: usize = 300;
+
+/// The owner's message replying to something in the bot's chat (spec 9.3):
+/// their words, after a line that quotes what they reply to. `quote` is
+/// already on one line.
+pub fn reply(quote: &str, body: &str) -> String {
+    format!(
+        "Replying to: \"{quote}\"
+
+{body}"
+    )
+}
+
 /// Time left until `deadline_ms`, rounded for a reader who does not know
 /// the current time.
 pub fn due(deadline_ms: i64, now_ms: i64) -> String {
@@ -217,6 +232,16 @@ mod tests {
         assert_eq!(
             text,
             "[botloft] from the owner · crew Site\n\nCheck the build.\nThanks!"
+        );
+    }
+
+    #[test]
+    fn a_reply_quotes_what_it_replies_to_above_the_owner_words() {
+        assert_eq!(
+            reply("Acme signs annual.", "Then send the yearly quote."),
+            "Replying to: \"Acme signs annual.\"
+
+Then send the yearly quote."
         );
     }
 

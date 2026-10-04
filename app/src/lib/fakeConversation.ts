@@ -14,6 +14,7 @@ import {
   FIELD_LIMITS,
   type Message,
   type MessageKind,
+  type MessageReply,
   type Task,
   type TaskId,
 } from "./protocol.gen";
@@ -55,9 +56,29 @@ export class FakeConversation {
       routineId: null,
       questionId: null,
       attachments: [],
+      replyTo: null,
       createdAt: this.fake.now,
     };
     return { message, delivery: this.record(message) };
+  }
+
+  /** What a reply quotes, as the daemon checks it (spec 9.3). */
+  private quote(botId: BotId, itemId: string): MessageReply {
+    const item = this.fake.chat.items.find((one) => one.id === itemId && one.botId === botId);
+    if (!item) {
+      throw notFound(`chat item ${itemId}`);
+    }
+    const text =
+      item.body.kind === "reply"
+        ? item.body.text
+        : item.body.kind === "inbound"
+          ? item.body.message.body
+          : null;
+    if (text === null) {
+      throw invalid("reply_to: only a reply or a message can be quoted");
+    }
+    const flat = text.split(/\s+/).filter(Boolean).join(" ");
+    return { itemId, text: flat.length > 300 ? `${flat.slice(0, 299)}…` : flat };
   }
 
   /** The courier moves a delivery along. */
@@ -111,7 +132,7 @@ export class FakeConversation {
 
   handlers(): Conversation {
     return {
-      "messages.send": ({ botId, body, attachments }) => {
+      "messages.send": ({ botId, body, attachments, replyTo }) => {
         const bot = this.fake.bot(botId);
         const files = attachments ?? [];
         if (!body.trim() && files.length === 0) {
@@ -132,6 +153,7 @@ export class FakeConversation {
           routineId: null,
           questionId: null,
           attachments: files.map((file) => this.saved(file)),
+          replyTo: replyTo ? this.quote(botId, replyTo) : null,
           createdAt: this.fake.now,
         };
         this.record(message);

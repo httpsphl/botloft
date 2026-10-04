@@ -88,6 +88,7 @@ export class FakeQuestions {
           routineId: null,
           questionId: question.id,
           attachments: [],
+          replyTo: null,
           createdAt: this.fake.now,
         });
         return question;

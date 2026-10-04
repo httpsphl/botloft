@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::ids::{
-    AttachmentId, BotId, CrewId, DeliveryId, MessageId, QuestionId, RoutineId, TaskId,
+    AttachmentId, BotId, ChatItemId, CrewId, DeliveryId, MessageId, QuestionId, RoutineId, TaskId,
 };
 
 text_enum!(
@@ -77,8 +77,21 @@ pub struct Message {
     pub question_id: Option<QuestionId>,
     /// Files the owner attached (spec 9.5); empty for everything else.
     pub attachments: Vec<Attachment>,
+    /// What in the bot's chat the owner replied to (spec 9.3).
+    #[serde(default)]
+    pub reply_to: Option<MessageReply>,
     /// Unix time in milliseconds.
     pub created_at: i64,
+}
+
+/// The chat item a message replies to, and its text as quoted.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct MessageReply {
+    pub item_id: ChatItemId,
+    /// The start of the item's text, on one line (at most 300 characters).
+    pub text: String,
 }
 
 /// A file attached to a message, saved in the bot's folder.
@@ -208,6 +221,10 @@ pub struct MessagesSendParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub attachments: Option<Vec<AttachmentUpload>>,
+    /// A reply of the bot, or a message it got, in its chat (spec 9.3).
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub reply_to: Option<ChatItemId>,
 }
 
 /// Newest first. Page back with `before` set to the oldest id received.

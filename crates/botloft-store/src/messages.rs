@@ -6,13 +6,13 @@ use botloft_core::ids::{
     AttachmentId, BotId, ChatItemId, CrewId, MessageId, QuestionId, RoutineId, TaskId,
 };
 use botloft_core::protocol::{
-    Attachment, ChatBody, ChatItem, Delivery, InboundItem, Message, Task,
+    Attachment, ChatBody, ChatItem, Delivery, InboundItem, Message, MessageReply, Task,
 };
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
 use crate::{Result, Store, cached_execute, cached_row, parse_column, to_sql_int};
 
-const COLUMNS: &str = "id, crew_id, from_kind, from_bot_id, to_bot_id, kind, body, task_id, created_at, routine_id, \n     question_id";
+const COLUMNS: &str = "id, crew_id, from_kind, from_bot_id, to_bot_id, kind, body, task_id, created_at, routine_id, \n     question_id, reply_item_id, reply_text";
 
 fn from_row(row: &Row<'_>) -> rusqlite::Result<Message> {
     Ok(Message {
@@ -27,6 +27,10 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<Message> {
         routine_id: optional_column(row, 9)?,
         question_id: optional_column(row, 10)?,
         attachments: Vec::new(),
+        reply_to: match (optional_column::<ChatItemId>(row, 11)?, row.get(12)?) {
+            (Some(item_id), Some(text)) => Some(MessageReply { item_id, text }),
+            _ => None,
+        },
         created_at: row.get(8)?,
     })
 }
@@ -105,7 +109,7 @@ impl Store {
         cached_execute(
             conn,
             &format!(
-                "INSERT INTO messages ({COLUMNS})                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)"
+                "INSERT INTO messages ({COLUMNS})                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)"
             ),
             params![
                 message.id.as_str(),
@@ -119,6 +123,11 @@ impl Store {
                 message.created_at,
                 message.routine_id.as_ref().map(RoutineId::as_str),
                 message.question_id.as_ref().map(QuestionId::as_str),
+                message
+                    .reply_to
+                    .as_ref()
+                    .map(|reply| reply.item_id.as_str()),
+                message.reply_to.as_ref().map(|reply| reply.text.as_str()),
             ],
         )?;
         for attachment in &message.attachments {
