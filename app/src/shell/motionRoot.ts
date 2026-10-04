@@ -1,5 +1,5 @@
 // "Less motion" in Settings (spec 15.3): marks the root, which
-// `motion-less.css` and `reducedMotion()` follow.
+// `motion-less.css` follows.
 
 import { useEffect } from "react";
 import { prefs, usePref } from "./prefs";

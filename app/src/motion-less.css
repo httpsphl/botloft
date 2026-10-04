@@ -12,12 +12,6 @@
   transition-duration: 0.01ms !important;
 }
 
-:root[data-motion="less"]::view-transition-group(*),
-:root[data-motion="less"]::view-transition-old(*),
-:root[data-motion="less"]::view-transition-new(*) {
-  animation: none !important;
-}
-
 /* A still stretch would read as a broken line: light up all of it. */
 :root[data-motion="less"] .state-trace {
   stroke-dasharray: none;

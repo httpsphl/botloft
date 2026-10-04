@@ -68,7 +68,7 @@ export function Workspace() {
         <SidebarSlot>
           <Sidebar />
         </SidebarSlot>
-        <main className="flex min-w-0 flex-1 flex-col [view-transition-name:main-pane]">
+        <main className="flex min-w-0 flex-1 flex-col">
           {runtimeError ? (
             <div className="border-line border-b p-3">
               <Callout tone="danger" title={t.shell.botsCantStart}>
@@ -110,23 +110,31 @@ export function Workspace() {
   );
 }
 
+/** What the main pane shows; another bot, crew or page rises in. */
 function Selection() {
   const page = useApp((state) => state.page);
   const crew = useApp((state) => (state.selectedCrewId ? state.crews[state.selectedCrewId] : null));
   const bot = useApp((state) => (state.selectedBotId ? state.bots[state.selectedBotId] : null));
+  let view: ReactNode;
   if (page === "questions") {
-    return <QuestionBox />;
+    view = <QuestionBox />;
+  } else if (page === "search") {
+    view = <SearchPage />;
+  } else if (crew && bot) {
+    view = <BotView bot={bot} crew={crew} />;
+  } else if (crew) {
+    view = <CrewView crew={crew} />;
+  } else {
+    view = <CrewsOverview />;
   }
-  if (page === "search") {
-    return <SearchPage />;
-  }
-  if (crew && bot) {
-    return <BotView key={bot.id} bot={bot} crew={crew} />;
-  }
-  if (crew) {
-    return <CrewView key={crew.id} crew={crew} />;
-  }
-  return <CrewsOverview />;
+  return (
+    <div
+      key={page ?? bot?.id ?? crew?.id ?? "crews"}
+      className="pane-rise flex min-h-0 flex-1 flex-col"
+    >
+      {view}
+    </div>
+  );
 }
 
 function Breadcrumb() {
