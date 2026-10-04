@@ -41,6 +41,7 @@ export const desktop = {
     select: (option: string) => `Chose "${option}"`,
     scroll: (target: string) => `Scrolled "${target}"`,
     scrollSomething: "Scrolled",
+    press: (keys: string) => `Pressed ${keys}`,
     showInPanel: "Watch on the desktop panel",
     close: "Close",
   },
@@ -53,5 +54,17 @@ export const desktop = {
     whole: "The whole desktop",
     remove: (app: string) => `Take back ${app}`,
     removeFailed: "Could not take it back",
+    real: "Real mouse and keyboard",
+    realFailed: "Could not change it",
+    realTitle: (bot: string, app: string) =>
+      `Let ${bot} use your real mouse and keyboard in ${app}?`,
+    realPoints: (bot: string) => [
+      `When accessibility cannot do something in this app, ${bot} moves your cursor and types as if it were you.`,
+      `While it acts, your mouse and keyboard are its, and a notice on your screen says so.`,
+      `Move the mouse or press a key and it stops at once. Ctrl+Alt+Esc stops every bot on your desktop.`,
+      `It never types in password fields and never presses Windows' own keys, like the Windows key or Alt+Tab.`,
+    ],
+    realConfirm: "Turn on",
+    cancel: "Cancel",
   },
 };

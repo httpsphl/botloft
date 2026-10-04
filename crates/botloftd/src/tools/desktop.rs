@@ -12,9 +12,10 @@ use serde_json::{Value, json};
 use tracing::debug;
 
 use super::calls::explain;
-use super::desktop_act::{Ask, act};
+use super::desktop_act::{Ask, act, answered};
 use super::desktop_grant::{blocking, granted, heading};
 use super::desktop_list::list;
+use super::desktop_real::{click_at, press};
 use crate::desktop::STOPPED;
 use crate::platform::desktop::Window;
 use crate::platform::desktop::{self as platform, Action, Scroll, render};
@@ -34,6 +35,19 @@ enum Tool {
         why: String,
     },
     Act(Ask),
+    /// Keys with the real keyboard (spec 24.7).
+    Press {
+        window: u64,
+        keys: String,
+        why: Option<String>,
+    },
+    /// A click with the real mouse at a point of the window's picture.
+    ClickAt {
+        window: u64,
+        x: f64,
+        y: f64,
+        why: Option<String>,
+    },
 }
 
 /// The text argument `name`, trimmed, if it is there.
@@ -64,6 +78,7 @@ impl Tool {
                 reference,
                 action,
                 why: text(arguments, "why"),
+                submit: arguments["submit"].as_bool().unwrap_or(false),
             }))
         };
         Ok(match name.strip_prefix(PREFIX) {
@@ -94,6 +109,26 @@ impl Tool {
                 Some("bottom") => Scroll::Bottom,
                 _ => Scroll::Down,
             }))?,
+            Some("press") => {
+                let keys = text(arguments, "keys").ok_or("Say the keys, like Enter or Ctrl+S.")?;
+                // Refused before anything is asked of the owner.
+                platform::keys::parse(&keys).map_err(|err| format!("{err}."))?;
+                Self::Press {
+                    window: window()?,
+                    keys,
+                    why: text(arguments, "why"),
+                }
+            }
+            Some("click_at") => Self::ClickAt {
+                window: window()?,
+                x: arguments["x"]
+                    .as_f64()
+                    .ok_or("Say x, in pixels of the picture.")?,
+                y: arguments["y"]
+                    .as_f64()
+                    .ok_or("Say y, in pixels of the picture.")?,
+                why: text(arguments, "why"),
+            },
             _ => return Err(format!("There is no tool {name}.")),
         })
     }
@@ -200,6 +235,9 @@ async fn run(daemon: &Daemon, bot: &BotId, generation: u64, tool: Tool) -> Resul
             }
             let id = window.id;
             let picture = blocking(move || platform::picture(id)).await?;
+            daemon
+                .desktop
+                .pictured(bot, id, picture.width, picture.height);
             used(daemon, bot, &window, None);
             if picture.jpeg.is_empty() {
                 return Err("The picture of that window came out empty.".to_owned());
@@ -208,6 +246,44 @@ async fn run(daemon: &Daemon, bot: &BotId, generation: u64, tool: Tool) -> Resul
                 BASE64.encode(&picture.jpeg),
                 heading(&window),
             ))
+        }
+        Tool::Press { window, keys, why } => {
+            let act = DesktopLevel::Act;
+            let window = granted(
+                daemon,
+                bot,
+                generation,
+                &windows,
+                &grants,
+                window,
+                why.as_deref(),
+                act,
+            )
+            .await?;
+            let action = press(daemon, bot, &grants, &window, &keys).await?;
+            let said = format!("Pressed {}.", keys.trim());
+            answered(daemon, bot, window, said, action)
+                .await
+                .map(Reply::Text)
+        }
+        Tool::ClickAt { window, x, y, why } => {
+            let act = DesktopLevel::Act;
+            let window = granted(
+                daemon,
+                bot,
+                generation,
+                &windows,
+                &grants,
+                window,
+                why.as_deref(),
+                act,
+            )
+            .await?;
+            let action = click_at(daemon, bot, &grants, &window, (x, y)).await?;
+            let said = format!("Clicked at {x}, {y} with the real mouse.");
+            answered(daemon, bot, window, said, action)
+                .await
+                .map(Reply::Text)
         }
         Tool::Act(ask) => act(daemon, bot, generation, &windows, &grants, ask)
             .await

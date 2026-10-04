@@ -97,6 +97,18 @@ pub struct DesktopGrantIdParams {
     pub grant_id: DesktopGrantId,
 }
 
+/// `desktop.setOptions`: what the owner changes in a grant (spec 24.10).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct DesktopOptionsParams {
+    pub grant_id: DesktopGrantId,
+    /// The bot may use the real mouse and keyboard there (spec 24.7).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, ts(optional))]
+    pub real_input: Option<bool>,
+}
+
 /// A bot's grants after one changed: the result of `desktop.revoke` and
 /// the params of the `bot.desktop` notification.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -129,6 +141,8 @@ pub enum DesktopActionKind {
     Type,
     Select,
     Scroll,
+    /// Keys pressed with the real keyboard; `option` says which.
+    Press,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

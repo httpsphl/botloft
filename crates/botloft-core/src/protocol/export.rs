@@ -120,6 +120,7 @@ fn export_bindings() {
     out.decl::<Bot>();
     out.decl::<ClientInfo>();
     out.decl::<HelloParams>();
+    out.decl::<LocaleParams>();
     out.decl::<HelloResult>();
     out.decl::<DeliveryBacklog>();
     out.decl::<UsageWindow>();
@@ -210,6 +211,11 @@ fn export_bindings() {
         method::SESSION_HELLO,
         &out.name::<HelloParams>(),
         &out.name::<HelloResult>(),
+    );
+    out.method(
+        method::SESSION_SET_LOCALE,
+        &out.name::<LocaleParams>(),
+        "null",
     );
     out.method(
         method::SYSTEM_STATUS,

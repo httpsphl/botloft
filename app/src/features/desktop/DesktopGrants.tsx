@@ -8,6 +8,7 @@ import type { Bot, DesktopGrant } from "../../lib/protocol.gen";
 import { useApi } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { attempt } from "../../ui/toast";
+import { RealInput } from "./RealInput";
 
 /** The bot's grants, read when shown and kept current by `bot.desktop`. */
 function useDesktopGrants(botId: Bot["id"]): DesktopGrant[] | null {
@@ -60,6 +61,7 @@ export function DesktopGrants({ bot }: { bot: Bot }) {
                     <span className="block text-ink-soft text-xs">
                       {grant.level === "act" ? words.act : words.see}
                     </span>
+                    {grant.level === "act" && <RealInput bot={bot} grant={grant} app={app} />}
                     {grant.appPath && (
                       <span
                         className="block break-all font-mono text-muted text-xs"

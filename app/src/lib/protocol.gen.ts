@@ -265,7 +265,12 @@ archivedAt: number | null, };
 /**
  * Identifies the connecting app in `session.hello`.
  */
-export type ClientInfo = { name: string, version: string, };
+export type ClientInfo = { name: string, version: string, 
+/**
+ * The language the owner reads the app in ("en", "pt-BR", "es"), for
+ * what the daemon itself shows them (spec 24.7).
+ */
+locale?: string, };
 
 /**
  * First request of every connection.
@@ -275,6 +280,11 @@ export type HelloParams = {
  * Owner token from `secrets\owner.token`.
  */
 token: string, client: ClientInfo, protocol: number, };
+
+/**
+ * `session.setLocale`: the owner changed the app's language.
+ */
+export type LocaleParams = { locale: string, };
 
 export type HelloResult = { daemonVersion: string, protocol: number, };
 
@@ -860,6 +870,15 @@ export type DesktopGrantsParams = { botId: BotId, };
 export type DesktopGrantIdParams = { grantId: DesktopGrantId, };
 
 /**
+ * `desktop.setOptions`: what the owner changes in a grant (spec 24.10).
+ */
+export type DesktopOptionsParams = { grantId: DesktopGrantId, 
+/**
+ * The bot may use the real mouse and keyboard there (spec 24.7).
+ */
+realInput?: boolean, };
+
+/**
  * A bot's grants after one changed: the result of `desktop.revoke` and
  * the params of the `bot.desktop` notification.
  */
@@ -882,7 +901,7 @@ app: string, };
  * What a bot did in a window (spec 24.5), for its panel, which words it
  * in the owner's language.
  */
-export type DesktopActionKind = "click" | "type" | "select" | "scroll";
+export type DesktopActionKind = "click" | "type" | "select" | "scroll" | "press";
 
 export type DesktopAction = { kind: DesktopActionKind, 
 /**
@@ -1580,6 +1599,7 @@ done: boolean, };
 /** Params and result of every request method. */
 export interface RpcMethods {
   "session.hello": { params: HelloParams; result: HelloResult };
+  "session.setLocale": { params: LocaleParams; result: null };
   "system.status": { params: undefined; result: SystemStatus };
   "system.refresh": { params: undefined; result: SystemStatus };
   "settings.get": { params: undefined; result: Settings };
@@ -1619,6 +1639,7 @@ export interface RpcMethods {
   "rules.delete": { params: RuleIdParams; result: BotRules };
   "desktop.grants": { params: DesktopGrantsParams; result: Array<DesktopGrant> };
   "desktop.revoke": { params: DesktopGrantIdParams; result: BotDesktop };
+  "desktop.setOptions": { params: DesktopOptionsParams; result: BotDesktop };
   "desktop.watch": { params: DesktopBotParams; result: DesktopView };
   "desktop.unwatch": { params: undefined; result: null };
   "desktop.stop": { params: DesktopBotParams; result: DesktopState };

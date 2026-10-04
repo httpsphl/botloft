@@ -34,6 +34,8 @@ export function actionText(action: DesktopAction | null, t: Words): string {
       return t.select(action.option ?? "");
     case "scroll":
       return target ? t.scroll(target) : t.scrollSomething;
+    case "press":
+      return t.press(action.option ?? "");
   }
 }
 

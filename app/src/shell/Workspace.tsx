@@ -8,6 +8,7 @@ import { BotView } from "../features/bots/BotView";
 import { CrewsOverview } from "../features/crews/CrewsOverview";
 import { CrewView } from "../features/crews/CrewView";
 import { Sidebar } from "../features/crews/Sidebar";
+import { useLocaleToDaemon } from "../features/desktop/useLocaleToDaemon";
 import { FailedDeliveries } from "../features/messages/FailedDeliveries";
 import { ClaudeCodeHelp } from "../features/onboarding/ClaudeCodeHelp";
 import { SignInButton } from "../features/onboarding/SignIn";
@@ -32,6 +33,7 @@ import { useTray } from "./tray";
 
 export function Workspace() {
   const t = useT();
+  useLocaleToDaemon();
   const loaded = useApp((state) => state.loaded);
   const loadError = useApp((state) => state.loadError);
   const hasCrews = useApp((state) => Object.keys(state.crews).length > 0);

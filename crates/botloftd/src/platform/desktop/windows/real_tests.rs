@@ -71,3 +71,28 @@ fn every_control_shown_has_its_place_on_the_screen() {
     let [_, _, width, height] = save.rect.expect("a place");
     assert!(width > 0 && height > 0);
 }
+
+#[test]
+fn the_notice_on_screen_never_gets_in_the_way_of_a_click() {
+    if !allowed() {
+        return;
+    }
+    let window = TestWindow::open("Botloft desktop test: notice");
+    super::super::notice_show(
+        "Scout is using your mouse and keyboard.",
+        (0x5E, 0xC8, 0xFF),
+        window.id,
+    );
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let save = find(&window, |control| control.name == "Save");
+    let clicked = real_click(window.id, center(&save));
+    super::super::notice_hide();
+    clicked.expect("a click through the notice");
+    std::thread::sleep(std::time::Duration::from_millis(300));
+    let title = listed()
+        .expect("windows")
+        .into_iter()
+        .find(|found| found.id == window.id)
+        .map(|found| found.title);
+    assert_eq!(title.as_deref(), Some("Saved"));
+}

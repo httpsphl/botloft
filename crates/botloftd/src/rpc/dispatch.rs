@@ -17,6 +17,11 @@ use crate::state::Daemon;
 pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Value, RpcError> {
     match name {
         method::SYSTEM_STATUS => reply(service::status(daemon)),
+        method::SESSION_SET_LOCALE => {
+            let params: botloft_core::protocol::LocaleParams = parse(params)?;
+            daemon.desktop.set_locale(&params.locale);
+            Ok(Value::Null)
+        }
         // Asks for a new check and answers at once; the app polls the result.
         method::SYSTEM_REFRESH => {
             daemon.supervisor.refresh_claude();
@@ -52,6 +57,7 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::DESKTOP_GRANTS => reply(desktop::grants(daemon, parse(params)?)),
         method::DESKTOP_REVOKE => reply(desktop::revoke(daemon, parse(params)?)),
         method::DESKTOP_STOP => reply(desktop::stop(daemon, parse(params)?)),
+        method::DESKTOP_SET_OPTIONS => reply(desktop::set_options(daemon, parse(params)?)),
         method::DESKTOP_RESUME => reply(desktop::resume(daemon, parse(params)?)),
         method::MESSAGES_SEND => reply(messages::send(daemon, parse(params)?)),
         method::MESSAGES_LIST => reply(messages::list(daemon, parse(params)?)),

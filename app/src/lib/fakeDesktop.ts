@@ -104,6 +104,17 @@ export class FakeDesktop {
         this.changed(grant.botId);
         return { botId: grant.botId, grants: this.of(grant.botId) };
       },
+      "desktop.setOptions": ({ grantId, realInput }) => {
+        const grant = this.grants.find((each) => each.id === grantId);
+        if (!grant) {
+          throw notFound(`desktop grant ${grantId}`);
+        }
+        if (realInput !== undefined) {
+          grant.realInput = realInput;
+        }
+        this.changed(grant.botId);
+        return { botId: grant.botId, grants: this.of(grant.botId) };
+      },
       "desktop.watch": ({ botId }) => {
         this.fake.bot(botId);
         this.watching = botId;

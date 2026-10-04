@@ -96,6 +96,7 @@ pub const PROTOCOL_VERSION: u32 = 2;
 /// Request method names.
 pub mod method {
     pub const SESSION_HELLO: &str = "session.hello";
+    pub const SESSION_SET_LOCALE: &str = "session.setLocale";
     pub const SYSTEM_STATUS: &str = "system.status";
     pub const SYSTEM_REFRESH: &str = "system.refresh";
     pub const CREWS_LIST: &str = "crews.list";
@@ -125,6 +126,7 @@ pub mod method {
     pub const RULES_DELETE: &str = "rules.delete";
     pub const DESKTOP_GRANTS: &str = "desktop.grants";
     pub const DESKTOP_REVOKE: &str = "desktop.revoke";
+    pub const DESKTOP_SET_OPTIONS: &str = "desktop.setOptions";
     pub const DESKTOP_WATCH: &str = "desktop.watch";
     pub const DESKTOP_UNWATCH: &str = "desktop.unwatch";
     pub const DESKTOP_STOP: &str = "desktop.stop";

@@ -75,6 +75,8 @@ export class FakeBotloft implements BotloftApi {
   readonly chat = new FakeChat(this);
   readonly allow = new FakeAllow(this);
   readonly desktop = new FakeDesktop(this);
+  /** The language the app last told, as the daemon keeps it (spec 24.7). */
+  locale: string | null = null;
   readonly conversation = new FakeConversation(this);
   readonly routines = new FakeRoutines(this);
   readonly files = new FakeFiles(this);
@@ -239,6 +241,10 @@ export class FakeBotloft implements BotloftApi {
       daemonVersion: this.system.daemonVersion,
       protocol: PROTOCOL_VERSION,
     }),
+    "session.setLocale": ({ locale }) => {
+      this.locale = locale;
+      return null;
+    },
     "system.status": () => this.system,
     "system.refresh": () => {
       this.refreshes += 1;

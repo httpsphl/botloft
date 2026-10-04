@@ -7,7 +7,7 @@
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{
     BotDesktop, DesktopBotParams, DesktopGrant, DesktopGrantIdParams, DesktopGrantsParams,
-    DesktopState,
+    DesktopOptionsParams, DesktopState,
 };
 use tracing::{info, warn};
 
@@ -20,6 +20,23 @@ pub fn grants(daemon: &Daemon, params: DesktopGrantsParams) -> ApiResult<Vec<Des
         return Err(ApiError::NotFound(format!("bot {}", params.bot_id)));
     }
     Ok(store.desktop_grants(&params.bot_id)?)
+}
+
+/// Changes a grant's options: the real mouse and keyboard.
+pub fn set_options(daemon: &Daemon, params: DesktopOptionsParams) -> ApiResult<BotDesktop> {
+    let Some(on) = params.real_input else {
+        let store = daemon.store();
+        let grant = store
+            .desktop_grants_of(&params.grant_id)?
+            .ok_or_else(|| ApiError::NotFound(format!("desktop grant {}", params.grant_id)))?;
+        drop(store);
+        return changed(daemon, &grant);
+    };
+    let bot_id = daemon
+        .store()
+        .set_desktop_real_input(&params.grant_id, on)?
+        .ok_or_else(|| ApiError::NotFound(format!("desktop grant {}", params.grant_id)))?;
+    changed(daemon, &bot_id)
 }
 
 /// Takes a grant away: the bot asks for that again.
