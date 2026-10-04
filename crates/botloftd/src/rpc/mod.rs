@@ -37,7 +37,10 @@ pub async fn serve_connection(socket: WebSocket, daemon: Arc<Daemon>) {
     // Subscribe before answering hello so no change slips in between.
     let events = daemon.subscribe();
     if authenticate(&mut stream, &outbox, &daemon).await {
+        // An open app is part of the owner being there (spec 24.8).
+        daemon.desktop.app_opened();
         run(stream, &outbox, &frames, events, &daemon).await;
+        daemon.desktop.app_closed();
     }
     drop(outbox);
     drop(frames);
@@ -280,6 +283,7 @@ fn to_notification(event: &Event) -> String {
         Event::BotState(state) => note(notification::BOT_STATE, state),
         Event::BotContext(context) => note(notification::BOT_CONTEXT, context),
         Event::BotRules(rules) => note(notification::BOT_RULES, rules),
+        Event::BotDesktop(desktop) => note(notification::BOT_DESKTOP, desktop),
         Event::ChatItem(item) => note(notification::CHAT_ITEM, item),
         Event::ChatDelta(delta) => note(notification::CHAT_DELTA, delta),
         Event::MessageCreated(message) => note(notification::MESSAGE_CREATED, message),

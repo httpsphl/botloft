@@ -24,6 +24,9 @@ pub const DELETE_ROUTINE_TOOL: &str = "mcp__botloft__delete_routine";
 /// model calls: the daemon opens this request from inside the `browser_*`
 /// tools.
 pub const BROWSER_SITE_TOOL: &str = "mcp__botloft__browser";
+/// A bot asking to see or use an app on the owner's desktop (spec 24.2),
+/// opened from inside the `desktop_*` tools.
+pub const DESKTOP_TOOL: &str = "mcp__botloft__desktop";
 /// A bot asking the owner to do something in its browser themselves (spec
 /// 21.10), opened from inside `browser_ask_owner`.
 pub const BROWSER_HELP_TOOL: &str = "mcp__botloft__browser_help";
@@ -111,6 +114,10 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
             field(input, "name").map(str::to_owned)
         }
         BROWSER_SITE_TOOL => field(input, "site").map(str::to_owned),
+        DESKTOP_TOOL => field(input, "app").map(str::to_owned),
+        "mcp__botloft__desktop_look" | "mcp__botloft__desktop_screenshot" => {
+            field(input, "why").map(str::to_owned)
+        }
         BROWSER_HELP_TOOL | "mcp__botloft__browser_ask_owner" => {
             field(input, "task").map(str::to_owned)
         }

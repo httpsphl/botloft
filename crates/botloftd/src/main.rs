@@ -133,6 +133,7 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
         browser: BrowserSettings::from_config(&config),
         settings: LiveSettings::new(Some(config_path), &config),
         trash: Arc::new(RecycleBin),
+        owner_idle: Arc::new(platform::desktop::owner_idle),
     });
     // No bot process survived the last run, so nobody waits for these.
     approvals::expire_all(&daemon);

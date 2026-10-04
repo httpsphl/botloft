@@ -1,13 +1,14 @@
 //! State shared by every connection: the store, the supervisor, the
 //! courier, the event bus and what the daemon knows about itself.
 
+use crate::desktop::{Desktop, OwnerIdle};
 use std::sync::{Arc, Mutex, MutexGuard, TryLockError};
 use std::time::Instant;
 
 use botloft_core::protocol::{
-    AccountUsage, Bot, BotContextChanged, BotDeleted, BotRules, BotStateChanged, BrowserAction,
-    BrowserState, ChatDelta, ChatItemChanged, Crew, CrewDeleted, Delivery, FolderRecycled, Message,
-    Question, ReactionChanged, Routine, RoutineRun, ScreenDraft, Task,
+    AccountUsage, Bot, BotContextChanged, BotDeleted, BotDesktop, BotRules, BotStateChanged,
+    BrowserAction, BrowserState, ChatDelta, ChatItemChanged, Crew, CrewDeleted, Delivery,
+    FolderRecycled, Message, Question, ReactionChanged, Routine, RoutineRun, ScreenDraft, Task,
 };
 use botloft_store::Store;
 use tokio::runtime::{Handle, RuntimeFlavor};
@@ -41,6 +42,7 @@ pub enum Event {
     BotState(BotStateChanged),
     BotContext(BotContextChanged),
     BotRules(BotRules),
+    BotDesktop(BotDesktop),
     ChatItem(ChatItemChanged),
     ChatDelta(ChatDelta),
     MessageCreated(Message),
@@ -94,6 +96,8 @@ pub struct DaemonOptions {
     pub settings: LiveSettings,
     /// Where a deleted bot's folder goes when the owner asks (spec 7.6).
     pub trash: Arc<dyn Trash>,
+    /// How long ago the owner last used the computer (spec 24.8).
+    pub owner_idle: OwnerIdle,
 }
 
 pub struct Daemon {
@@ -108,6 +112,7 @@ pub struct Daemon {
     pub routines: Routines,
     pub browsers: Browsers,
     pub screens: Screens,
+    pub desktop: Desktop,
     pub trash: Arc<dyn Trash>,
     pub contexts: Contexts,
     /// Time for everything stored or compared with stored times.
@@ -145,6 +150,7 @@ impl Daemon {
                 Arc::clone(&options.clock),
             ),
             screens: Screens::default(),
+            desktop: Desktop::new(options.owner_idle),
             trash: options.trash,
             contexts: Contexts::default(),
             clock: options.clock,

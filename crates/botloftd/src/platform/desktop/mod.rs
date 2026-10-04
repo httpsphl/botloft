@@ -80,6 +80,19 @@ pub fn windows() -> Result<Vec<Window>, DesktopError> {
     }
 }
 
+/// How long ago the owner last used the mouse or keyboard (spec 24.8);
+/// `None` where that cannot be known.
+pub fn owner_idle() -> Option<std::time::Duration> {
+    #[cfg(windows)]
+    {
+        windows::owner_idle()
+    }
+    #[cfg(not(windows))]
+    {
+        None
+    }
+}
+
 /// The controls of window `id` through its accessibility tree, in the
 /// order they sit in it, the ones shown on screen (spec 24.5).
 pub fn read(id: u64) -> Result<Vec<Control>, DesktopError> {

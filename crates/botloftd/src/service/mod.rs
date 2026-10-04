@@ -8,6 +8,7 @@ pub mod chat;
 pub mod crews;
 pub mod delete;
 pub mod deliveries;
+pub mod desktop;
 pub mod files;
 pub mod lead;
 pub mod messages;

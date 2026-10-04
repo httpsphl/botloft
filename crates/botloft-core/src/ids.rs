@@ -116,6 +116,11 @@ prefixed_id!(
     /// Identifies a question a bot asked the owner (spec 23).
     QuestionId, "question", "qst_"
 );
+prefixed_id!(
+    /// Identifies what the owner let a bot see or do on their desktop
+    /// (spec 24.2).
+    DesktopGrantId, "desktop grant", "dsk_"
+);
 
 /// A random version 4 UUID, for Claude Code session ids and the uuid of
 /// each message written to a bot (spec 7.3, 9.2).

@@ -130,6 +130,8 @@ pub fn new_daemon_waiting(settings: SupervisorSettings, approval_wait: Duration)
         browser: BrowserSettings::default(),
         settings: LiveSettings::new(None, &Config::default()).with_approval_wait(approval_wait),
         trash: Arc::new(trash.clone()),
+        // The owner is always right there, unless a test says otherwise.
+        owner_idle: Arc::new(|| Some(Duration::ZERO)),
     });
     Parts {
         daemon,

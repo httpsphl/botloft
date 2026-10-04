@@ -19,6 +19,7 @@ const DELETE_BOT: &[&str] = &[
     "DELETE FROM approvals WHERE bot_id = ?1",
     "DELETE FROM chat_items WHERE bot_id = ?1",
     "DELETE FROM browser_sites WHERE bot_id = ?1",
+    "DELETE FROM desktop_grants WHERE bot_id = ?1",
     "DELETE FROM allow_rules WHERE bot_id = ?1",
     "DELETE FROM routine_runs WHERE routine_id IN (SELECT id FROM routines WHERE bot_id = ?1)",
     // What the bot received goes with it.

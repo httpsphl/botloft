@@ -113,6 +113,15 @@ fn fill(fx: &Fixture) -> Owned {
         value: "git status".into(),
     };
     fx.store.add_allow_rule(scout, &always, 10).expect("rule");
+    fx.store
+        .grant_desktop_app(
+            scout,
+            "C:/Windows/notepad.exe",
+            "Notepad",
+            botloft_core::protocol::DesktopLevel::See,
+            10,
+        )
+        .expect("desktop");
 
     let routine = Routine {
         id: RoutineId::generate(),
@@ -217,6 +226,7 @@ fn a_deleted_bot_takes_what_was_its_own() {
     );
     assert!(fx.store.browser_sites(&scout).expect("sites").is_empty());
     assert!(fx.store.allow_rules(&scout).expect("rules").is_empty());
+    assert!(fx.store.desktop_grants(&scout).expect("desktop").is_empty());
     assert_eq!(count(&fx.store, "questions"), 0);
     let crew = fx.store.crew(&fx.crew.id).expect("crew").expect("kept");
     assert_eq!(crew.lead_bot_id, None);
@@ -317,6 +327,7 @@ fn a_deleted_crew_takes_its_bots_and_leaves_other_crews_alone() {
         "routine_runs",
         "browser_sites",
         "allow_rules",
+        "desktop_grants",
     ] {
         assert_eq!(count(&fx.store, table), 0, "{table}");
     }
