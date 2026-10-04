@@ -1,10 +1,12 @@
 //! The size of the page (spec 21.3): a desktop screen while the bot works
 //! alone, and the shape and width of the owner's panel while they watch,
-//! so the page shows near its own size there.
+//! so the page shows near its own size there, drawn as sharp as their
+//! screen. The bot's own pictures stay the size of the page.
 
 use serde_json::{Value, json};
 use tracing::debug;
 
+use super::BrowserError;
 use super::session::{FRAME_GAP, Session};
 
 /// The page size bots and the owner see, in CSS pixels. The height is the
@@ -18,12 +20,17 @@ pub const MAX_WIDTH: u32 = 1600;
 /// How short and how tall the owner's panel may make the page.
 pub const MIN_HEIGHT: u32 = 600;
 pub const MAX_HEIGHT: u32 = 2000;
+/// The sharpest the page is drawn for the owner, in percent: two pixels of
+/// their screen to one of the page.
+pub const MAX_SCALE: u32 = 200;
 
 /// The size of the page, the same in every tab.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Viewport {
     pub width: u32,
     pub height: u32,
+    /// The owner's screen pixels per pixel of the page, in percent.
+    pub scale: u32,
 }
 
 impl Default for Viewport {
@@ -31,6 +38,7 @@ impl Default for Viewport {
         Self {
             width: WIDTH,
             height: HEIGHT,
+            scale: 100,
         }
     }
 }
@@ -47,12 +55,26 @@ impl Viewport {
             height: u32::try_from(tall)
                 .unwrap_or(MAX_HEIGHT)
                 .clamp(MIN_HEIGHT, MAX_HEIGHT),
+            scale: 100,
         }
+    }
+
+    /// The same page, drawn `scale` percent as sharp, within limits.
+    pub fn at_scale(self, scale: u32) -> Self {
+        Self {
+            scale: scale.clamp(100, MAX_SCALE),
+            ..self
+        }
+    }
+
+    fn factor(self) -> f64 {
+        f64::from(self.scale) / 100.0
     }
 
     pub(super) fn metrics(self) -> Value {
         json!({
-            "width": self.width, "height": self.height, "deviceScaleFactor": 1, "mobile": false,
+            "width": self.width, "height": self.height, "deviceScaleFactor": self.factor(),
+            "mobile": false,
         })
     }
 
@@ -106,6 +128,44 @@ impl Session {
             self.cast(&page, true).await;
         }
     }
+
+    /// The screen as a JPEG, base64, for the bot: the size of the page,
+    /// however sharp the owner's screen has it drawn.
+    pub async fn screenshot(&self) -> Result<String, BrowserError> {
+        self.capture(false).await
+    }
+
+    /// The screen as a JPEG, base64, as sharp as the owner's panel draws it.
+    pub async fn picture(&self) -> Result<String, BrowserError> {
+        self.capture(true).await
+    }
+
+    async fn capture(&self, sharp: bool) -> Result<String, BrowserError> {
+        let (session, _) = self.page()?;
+        let page = self.viewport();
+        let mut params = json!({ "format": "jpeg", "quality": 70 });
+        if !sharp && page.scale > 100 {
+            // The page where it is scrolled to, scaled back down (spec 19).
+            let metrics = self
+                .cdp
+                .call(Some(&session), "Page.getLayoutMetrics", json!({}))
+                .await?;
+            let view = &metrics["cssVisualViewport"];
+            params["clip"] = json!({
+                "x": view["pageX"], "y": view["pageY"],
+                "width": page.width, "height": page.height,
+                "scale": 1.0 / page.factor(),
+            });
+        }
+        let shot = self
+            .cdp
+            .call(Some(&session), "Page.captureScreenshot", params)
+            .await?;
+        shot["data"]
+            .as_str()
+            .map(str::to_owned)
+            .ok_or_else(|| BrowserError::Page("the browser returned no picture".to_owned()))
+    }
 }
 
 #[cfg(test)]
@@ -120,7 +180,8 @@ mod tests {
             page(1000, 700),
             Viewport {
                 width: 1000,
-                height: 700
+                height: 700,
+                scale: 100,
             }
         );
         // A narrow one keeps the desktop layout, in the room's shape.
@@ -128,7 +189,8 @@ mod tests {
             page(536, 700),
             Viewport {
                 width: 800,
-                height: 1044
+                height: 1044,
+                scale: 100,
             }
         );
         assert_eq!(page(1280, 800), Viewport::default());
@@ -138,6 +200,18 @@ mod tests {
         assert_eq!(page(256, 1400).height, MAX_HEIGHT);
         assert_eq!(page(0, 0).height, MIN_HEIGHT);
         assert_eq!(page(1, u32::MAX).height, MAX_HEIGHT);
+    }
+
+    #[test]
+    fn the_page_is_drawn_as_sharp_as_the_screen_up_to_twice() {
+        let page = Viewport::fitting(1000, 700);
+        assert_eq!(page.scale, 100);
+        assert_eq!(page.at_scale(150).scale, 150);
+        assert_eq!(page.at_scale(300).scale, MAX_SCALE);
+        // A screen less sharp than the page still gets one pixel each.
+        assert_eq!(page.at_scale(80).scale, 100);
+        assert_eq!(page.at_scale(150).metrics()["deviceScaleFactor"], 1.5);
+        assert_eq!(page.at_scale(150).width, 1000);
     }
 
     #[test]

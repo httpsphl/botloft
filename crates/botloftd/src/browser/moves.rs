@@ -136,12 +136,19 @@ impl Session {
         Ok(())
     }
 
-    /// The owner took the browser: remember the tab the bot was on.
+    /// The owner took the browser: remember the tab the bot was on, and
+    /// send them frames quicker.
     pub(super) fn owner_took(&self) {
         let mut tabs = self.lock();
+        tabs.quick = true;
         if tabs.owner_from.is_none() {
             tabs.owner_from = tabs.active().map(|tab| tab.target.clone());
         }
+    }
+
+    /// The owner gave the browser back: frames as for watching the bot.
+    pub(super) fn owner_gave_back(&self) {
+        self.lock().quick = false;
     }
 
     /// Whether the owner had the browser and left the bot on another tab

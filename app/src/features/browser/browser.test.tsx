@@ -82,7 +82,9 @@ describe("browser panel", () => {
     fireEvent.click(toggle());
     const resized = () =>
       fake.calls.filter((call) => call.method === "browser.resize").map((call) => call.params);
-    await waitFor(() => expect(resized()).toEqual([{ botId: scout.id, width: 560, height: 804 }]));
+    await waitFor(() =>
+      expect(resized()).toEqual([{ botId: scout.id, width: 560, height: 804, scale: 100 }]),
+    );
     // A narrow room keeps the desktop layout's width, in the room's shape.
     expect(fake.browser.size(scout.id)).toEqual({ width: 800, height: 1148 });
 

@@ -1340,7 +1340,13 @@ export type BrowserWatchParams = { botId: BotId, };
  * `browser.resize`: the room the app's panel has for the page, in the
  * app's pixels. The page takes its shape (spec 21.3).
  */
-export type BrowserResizeParams = { botId: BotId, width: number, height: number, };
+export type BrowserResizeParams = { botId: BotId, width: number, height: number, 
+/**
+ * The screen's pixels per pixel of the app, in percent (its
+ * `devicePixelRatio` times 100): the page is drawn that sharp for the
+ * owner, up to twice (spec 21.3). Absent, 100.
+ */
+scale?: number, };
 
 export type MouseAction = "move" | "down" | "up";
 

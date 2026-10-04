@@ -41,12 +41,13 @@ impl Browsers {
             .is_some_and(|slot| slot.watchers > 0)
     }
 
-    /// The room a watching app has for the page, `width` by `height`: the
-    /// page takes its shape, now or when the browser opens (spec 21.3).
-    pub fn resize(&self, bot: &BotId, width: u32, height: u32) {
+    /// The room a watching app has for the page, `width` by `height`, on
+    /// a screen `scale` percent as sharp: the page takes its shape and is
+    /// drawn that sharp, now or when the browser opens (spec 21.3).
+    pub fn resize(&self, bot: &BotId, width: u32, height: u32, scale: u32) {
         {
             let mut slots = lock(&self.slots);
-            self.slot(&mut slots, bot).viewport = Viewport::fitting(width, height);
+            self.slot(&mut slots, bot).viewport = Viewport::fitting(width, height).at_scale(scale);
         }
         sync_soon(&self.slots, bot);
     }

@@ -123,7 +123,7 @@ impl Browsers {
             if held || session.is_resting() {
                 return;
             }
-            if let Ok(data) = session.screenshot().await {
+            if let Ok(data) = session.picture().await {
                 let page = session.viewport();
                 frames.send_replace(Some(Arc::new(BrowserFrame {
                     bot_id: bot.clone(),
