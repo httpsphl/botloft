@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 import { FakeBotloft } from "../../lib/fake";
-import { crewOpened, renderApp, sidebar } from "../../test/app";
+import { crewOpened, rail, renderApp } from "../../test/app";
 import { snippetParts } from "./SearchResult";
 
 afterEach(cleanup);
@@ -56,7 +56,7 @@ describe("searching the chats", () => {
     const { fake } = world();
     renderApp(fake);
     await crewOpened("Ops");
-    fireEvent.click(within(sidebar()).getByRole("button", { name: /^Search/ }));
+    fireEvent.click(within(rail()).getByRole("button", { name: "Search" }));
     const all = await search("saturday");
     expect(within(all).getAllByRole("listitem")).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: /All crews/ }));

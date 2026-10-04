@@ -23,6 +23,7 @@ import { Callout } from "../ui/Callout";
 import { useBotAlerts } from "./alerts";
 import { useAttentionMark } from "./attention";
 import { useFolderNotices } from "./folders";
+import { Rail } from "./Rail";
 import { SidebarSlot, SidebarToggle } from "./sidebarToggle";
 import { useOpenAtSignIn } from "./signIn";
 import { useAppSounds } from "./sounds";
@@ -59,6 +60,7 @@ export function Workspace() {
     // The sidebar stays, with the account area, before the first crew too.
     main = (
       <div className="flex min-h-0 flex-1">
+        <Rail />
         <Sidebar />
         <Welcome />
       </div>
@@ -66,6 +68,7 @@ export function Workspace() {
   } else {
     main = (
       <div className="flex min-h-0 flex-1">
+        <Rail />
         <SidebarSlot>
           <Sidebar />
         </SidebarSlot>

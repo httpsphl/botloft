@@ -9,6 +9,11 @@ export const shell = {
     close: "Close",
   },
   /** The button that hides the crews and bots on the left (Ctrl+B). */
+  /** The icons at the far left. */
+  rail: {
+    label: "Places",
+    home: "Home",
+  },
   sidebar: {
     hide: "Hide the bots list",
     show: "Show the bots list",

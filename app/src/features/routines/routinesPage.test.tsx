@@ -42,12 +42,11 @@ async function openPage(fake: FakeBotloft) {
 }
 
 describe("the routines page", () => {
-  test("is in the sidebar only once there is a routine", async () => {
+  test("is on the rail, and says how to get one before any routine", async () => {
     const fake = new FakeBotloft();
     fake.addBot(fake.addCrew("Ops").id, "Scout", "Finds sources");
-    renderApp(fake);
-    await crewOpened("Ops");
-    expect(screen.queryByRole("button", { name: "Routines" })).toBeNull();
+    await openPage(fake);
+    expect(screen.getByText("No routines yet")).toBeDefined();
   });
 
   test("lists what comes up across crews, interval routines as keeping watch", async () => {

@@ -1,12 +1,11 @@
-// The owner at the bottom of the sidebar, like the account corner of a
-// chat app: their name and Claude plan, and a menu with usage, settings,
-// language, what's new and help (spec 15.1).
+// The owner at the foot of the rail, like the account corner of a chat
+// app: their initial, and a menu with their name and Claude plan, usage,
+// settings, language, what's new and help (spec 15.1).
 
 import {
   ChartColumn,
   Check,
   ChevronRight,
-  ChevronsUpDown,
   CircleHelp,
   Languages,
   Settings,
@@ -53,10 +52,11 @@ export function AccountArea() {
   };
 
   return (
-    <div ref={root} className="relative shrink-0 border-line border-t p-2">
+    <div ref={root} className="relative flex shrink-0 justify-center py-2">
       {open && (
         <AccountMenu
           name={name}
+          detail={detail}
           email={account?.claude?.email ?? null}
           onShow={show}
           onClose={() => setOpen(false)}
@@ -67,8 +67,9 @@ export function AccountArea() {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={a.open(name)}
+        title={detail ? `${name} · ${detail}` : name}
         onClick={() => setOpen(!open)}
-        className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-sunken ${open ? "bg-sunken" : ""}`}
+        className={`grid size-10 place-items-center rounded-xl hover:bg-sunken ${open ? "bg-sunken" : ""}`}
       >
         <span
           aria-hidden
@@ -76,11 +77,6 @@ export function AccountArea() {
         >
           {Array.from(name)[0]?.toUpperCase()}
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-medium text-sm">{name}</span>
-          {detail && <span className="block truncate text-muted text-xs">{detail}</span>}
-        </span>
-        <ChevronsUpDown aria-hidden size={14} className="shrink-0 text-muted" />
       </button>
       {dialog === "usage" && <UsageDialog onClose={() => setDialog(null)} />}
       {dialog === "settings" && <SettingsDialog onClose={() => setDialog(null)} />}
@@ -101,11 +97,13 @@ function describe(
 
 function AccountMenu({
   name,
+  detail,
   email,
   onShow,
   onClose,
 }: {
   name: string;
+  detail: string;
   email: string | null;
   onShow(which: "usage" | "settings"): void;
   onClose(): void;
@@ -125,13 +123,17 @@ function AccountMenu({
     <div
       role="menu"
       aria-label={name}
-      className={`absolute right-2 bottom-full left-2 mb-1 origin-bottom ${POPOVER}`}
+      className={`absolute bottom-2 left-full ml-1 w-64 origin-bottom-left ${POPOVER}`}
     >
-      {email && (
-        <p className="truncate px-2.5 pt-1.5 pb-2 text-muted text-xs" data-selectable>
-          {email}
-        </p>
-      )}
+      <div className="px-2.5 pt-1.5 pb-2">
+        <p className="truncate font-medium text-sm">{name}</p>
+        {detail && <p className="truncate text-muted text-xs">{detail}</p>}
+        {email && (
+          <p className="truncate text-muted text-xs" data-selectable>
+            {email}
+          </p>
+        )}
+      </div>
       <Item icon={ChartColumn} onClick={() => onShow("usage")}>
         {m.usage}
       </Item>

@@ -8,6 +8,10 @@ export const shell: Messages["shell"] = {
     close: "Cerrar",
   },
   /** The button that hides the crews and bots on the left (Ctrl+B). */
+  rail: {
+    label: "Lugares",
+    home: "Inicio",
+  },
   sidebar: {
     hide: "Ocultar la lista de bots",
     show: "Mostrar la lista de bots",
