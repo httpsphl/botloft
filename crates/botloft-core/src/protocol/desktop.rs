@@ -119,6 +119,29 @@ pub struct DesktopWindow {
     pub app: String,
 }
 
+/// What a bot did in a window (spec 24.5), for its panel, which words it
+/// in the owner's language.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub enum DesktopActionKind {
+    Click,
+    Type,
+    Select,
+    Scroll,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct DesktopAction {
+    pub kind: DesktopActionKind,
+    /// The control's name as the window reads it; empty when it has none.
+    pub target: String,
+    /// The option chosen, for `select`.
+    pub option: Option<String>,
+}
+
 /// What a bot does on the owner's desktop, for its panel (spec 24.9): the
 /// params of `desktop.changed`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -128,9 +151,8 @@ pub struct DesktopState {
     pub bot_id: BotId,
     /// The window it read or acted in last.
     pub window: Option<DesktopWindow>,
-    /// What it did last, in English, as its tool said ("Clicked button
-    /// \"Save\"."); `null` after only reading.
-    pub action: Option<String>,
+    /// What it did last; `null` after only reading.
+    pub action: Option<DesktopAction>,
     /// When it last read or acted, Unix ms.
     pub at: Option<i64>,
     /// The owner stopped it (spec 24.9): its desktop tools refuse until

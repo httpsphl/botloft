@@ -8,6 +8,7 @@ import type { FakeBotloft, Handlers } from "./fake";
 import { notFound } from "./fakeRules";
 import type {
   BotId,
+  DesktopAction,
   DesktopFrame,
   DesktopGrant,
   DesktopLevel,
@@ -74,7 +75,7 @@ export class FakeDesktop {
   }
 
   /** The bot read or acted in `window`; `action` says what it did. */
-  use(botId: BotId, window: DesktopWindow, action: string | null = null): DesktopState {
+  use(botId: BotId, window: DesktopWindow, action: DesktopAction | null = null): DesktopState {
     return this.set(botId, { window, action, at: this.fake.now });
   }
 

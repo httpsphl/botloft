@@ -7,7 +7,7 @@
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use botloft_core::ids::BotId;
-use botloft_core::protocol::DesktopLevel;
+use botloft_core::protocol::{DesktopAction, DesktopLevel};
 use serde_json::{Value, json};
 use tracing::debug;
 
@@ -216,7 +216,7 @@ async fn run(daemon: &Daemon, bot: &BotId, generation: u64, tool: Tool) -> Resul
 }
 
 /// The bot read or acted in `window`: its panel shows it (spec 24.9).
-pub(super) fn used(daemon: &Daemon, bot: &BotId, window: &Window, action: Option<String>) {
+pub(super) fn used(daemon: &Daemon, bot: &BotId, window: &Window, action: Option<DesktopAction>) {
     let now = daemon.clock.now_ms();
     let state = daemon.desktop.activity.used(bot, window, action, now);
     daemon.emit(Event::DesktopChanged(state));

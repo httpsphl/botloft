@@ -879,6 +879,22 @@ export type DesktopWindow = { id: number, title: string,
 app: string, };
 
 /**
+ * What a bot did in a window (spec 24.5), for its panel, which words it
+ * in the owner's language.
+ */
+export type DesktopActionKind = "click" | "type" | "select" | "scroll";
+
+export type DesktopAction = { kind: DesktopActionKind, 
+/**
+ * The control's name as the window reads it; empty when it has none.
+ */
+target: string, 
+/**
+ * The option chosen, for `select`.
+ */
+option: string | null, };
+
+/**
  * What a bot does on the owner's desktop, for its panel (spec 24.9): the
  * params of `desktop.changed`.
  */
@@ -888,10 +904,9 @@ export type DesktopState = { botId: BotId,
  */
 window: DesktopWindow | null, 
 /**
- * What it did last, in English, as its tool said ("Clicked button
- * \"Save\"."); `null` after only reading.
+ * What it did last; `null` after only reading.
  */
-action: string | null, 
+action: DesktopAction | null, 
 /**
  * When it last read or acted, Unix ms.
  */

@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::sync::{Mutex, PoisonError};
 
 use botloft_core::ids::BotId;
-use botloft_core::protocol::{DesktopState, DesktopWindow};
+use botloft_core::protocol::{DesktopAction, DesktopState, DesktopWindow};
 
 use crate::platform::desktop::Window;
 
@@ -57,7 +57,7 @@ impl Activity {
         &self,
         bot: &BotId,
         window: &Window,
-        action: Option<String>,
+        action: Option<DesktopAction>,
         now: i64,
     ) -> DesktopState {
         self.change(bot, |state| {
@@ -104,12 +104,12 @@ mod tests {
             minimized: false,
             elevated: false,
         };
-        let used = activity.used(
-            &bot,
-            &window,
-            Some("Clicked button \"Save\".".to_owned()),
-            9,
-        );
+        let click = DesktopAction {
+            kind: botloft_core::protocol::DesktopActionKind::Click,
+            target: "Save".to_owned(),
+            option: None,
+        };
+        let used = activity.used(&bot, &window, Some(click), 9);
         assert_eq!(activity.window(&bot), Some(7));
         assert_eq!(
             used.window.map(|window| window.app),

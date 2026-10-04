@@ -5,14 +5,15 @@
 //! control a reading named, to act on it.
 
 use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::time::{Duration, Instant};
 
 use windows::Win32::System::Com::{
     CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED, CoCreateInstance, CoInitializeEx, CoUninitialize,
 };
 use windows::Win32::System::Variant::VARIANT;
 use windows::Win32::UI::Accessibility::{
-    CUIAutomation, IUIAutomation, IUIAutomationCacheRequest, IUIAutomationCondition,
-    IUIAutomationElement, TreeScope_Children, UIA_ControlTypePropertyId,
+    CUIAutomation, IUIAutomation, IUIAutomation2, IUIAutomationCacheRequest,
+    IUIAutomationCondition, IUIAutomationElement, TreeScope_Children, UIA_ControlTypePropertyId,
     UIA_ExpandCollapseExpandCollapseStatePropertyId, UIA_IsEnabledPropertyId,
     UIA_IsOffscreenPropertyId, UIA_IsPasswordPropertyId, UIA_IsValuePatternAvailablePropertyId,
     UIA_NamePropertyId, UIA_PROPERTY_ID, UIA_RuntimeIdPropertyId,
@@ -24,11 +25,16 @@ use super::super::DesktopError;
 use super::super::read::Control;
 use super::handle;
 use super::uia_control::{control, kind_of};
+use windows::core::Interface;
 
-/// The most controls one walk gathers, and how deep it goes: a huge
-/// window is cut short, not read for minutes.
+/// The most controls one walk gathers, how deep it goes and how long it
+/// takes: a huge or stuck window is cut short, not read for minutes.
 const CONTROLS_MAX: usize = 3000;
 const DEPTH_MAX: usize = 40;
+const WALK_MAX: Duration = Duration::from_secs(15);
+/// How long one call into an app may take, and connecting to it: an app
+/// busy with a dialog, or stuck, would otherwise hold the call for long.
+const CALL_MS: u32 = 5000;
 
 const PROPERTIES: [UIA_PROPERTY_ID; 11] = [
     UIA_NamePropertyId,
@@ -95,6 +101,10 @@ impl Session {
             let automation: IUIAutomation =
                 CoCreateInstance(&CUIAutomation, None, CLSCTX_INPROC_SERVER)
                     .map_err(|err| system(&err))?;
+            if let Ok(limited) = automation.cast::<IUIAutomation2>() {
+                let _ = limited.SetTransactionTimeout(CALL_MS);
+                let _ = limited.SetConnectionTimeout(CALL_MS);
+            }
             let cache = automation
                 .CreateCacheRequest()
                 .map_err(|err| system(&err))?;
@@ -138,6 +148,7 @@ impl Session {
             target,
             hit: None,
             found: Vec::new(),
+            until: Instant::now() + WALK_MAX,
         };
         // SAFETY: as above.
         unsafe { walk.children(&root, 0) };
@@ -167,6 +178,8 @@ struct Walk<'a> {
     target: Option<&'a [i32]>,
     hit: Option<IUIAutomationElement>,
     found: Vec<Control>,
+    /// When the walk gives up and keeps what it has.
+    until: Instant,
 }
 
 /// The controls of window `id`, in the order they sit in it.
@@ -177,7 +190,11 @@ pub fn read(id: u64) -> Result<Vec<Control>, DesktopError> {
 impl Walk<'_> {
     /// Adds the shown children of `element`, and theirs.
     unsafe fn children(&mut self, element: &IUIAutomationElement, depth: usize) {
-        if depth > DEPTH_MAX || self.found.len() >= CONTROLS_MAX || self.hit.is_some() {
+        if depth > DEPTH_MAX
+            || self.found.len() >= CONTROLS_MAX
+            || self.hit.is_some()
+            || Instant::now() > self.until
+        {
             return;
         }
         let session = self.session;

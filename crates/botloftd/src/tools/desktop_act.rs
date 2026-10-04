@@ -6,7 +6,7 @@
 use std::time::Duration;
 
 use botloft_core::ids::BotId;
-use botloft_core::protocol::{DesktopGrant, DesktopLevel};
+use botloft_core::protocol::{DesktopAction, DesktopActionKind, DesktopGrant, DesktopLevel};
 
 use super::desktop::used;
 use super::desktop_grant::{blocking, describe, granted, heading};
@@ -37,6 +37,21 @@ fn done(action: &Action, control: &Control) -> String {
         Action::Type(_) => format!("Typed in {what}."),
         Action::Select(option) => format!("Chose \"{option}\" in {what}."),
         Action::Scroll(_) => format!("Scrolled {what}."),
+    }
+}
+
+/// The action as the bot's panel shows it.
+fn shown(action: &Action, control: &Control) -> DesktopAction {
+    let (kind, option) = match action {
+        Action::Click => (DesktopActionKind::Click, None),
+        Action::Type(_) => (DesktopActionKind::Type, None),
+        Action::Select(option) => (DesktopActionKind::Select, Some(option.clone())),
+        Action::Scroll(_) => (DesktopActionKind::Scroll, None),
+    };
+    DesktopAction {
+        kind,
+        target: control.name.clone(),
+        option,
     }
 }
 
@@ -92,7 +107,7 @@ pub(super) async fn act(
     let (text, next) = render(&controls, 0);
     daemon.desktop.keep(bot, id, controls);
     let mut answer = done(&ask.action, &control);
-    used(daemon, bot, &window, Some(answer.clone()));
+    used(daemon, bot, &window, Some(shown(&ask.action, &control)));
     if acted == Acted::Waiting {
         answer.push_str(
             " The app did not answer in time: it may be showing a dialog. Call desktop_windows \

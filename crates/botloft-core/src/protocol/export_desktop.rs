@@ -13,6 +13,8 @@ pub(super) fn decls(out: &mut Out) {
     out.decl::<DesktopGrantIdParams>();
     out.decl::<BotDesktop>();
     out.decl::<DesktopWindow>();
+    out.decl::<DesktopActionKind>();
+    out.decl::<DesktopAction>();
     out.decl::<DesktopState>();
     out.decl::<DesktopFrame>();
     out.decl::<DesktopView>();
