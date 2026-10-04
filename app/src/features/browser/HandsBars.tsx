@@ -5,7 +5,7 @@
 // refuse to sign in here (spec 21.11).
 
 import { Check, ChevronDown, GraduationCap, Hand, Keyboard, MousePointerClick } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useT } from "../../i18n";
 import type { Bot } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
@@ -91,14 +91,25 @@ export function ControlPill({
 
 /**
  * The window button, and why to take the browser or use a window, folded:
- * an owner who knows it does not read it every time.
+ * an owner who knows it does not read it every time. One row, so the page
+ * above keeps the room.
  */
-function WindowAndWhy({ hands, why }: { hands: Hands; why: string }) {
+function WindowAndWhy({
+  hands,
+  why,
+  children,
+}: {
+  hands: Hands;
+  why: ReactNode;
+  /** More buttons, before the window's. */
+  children?: ReactNode;
+}) {
   const t = useT().browser.hands;
   const [open, setOpen] = useState(false);
   return (
     <>
       <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+        {children}
         <WindowButton hands={hands} />
         <button
           type="button"
@@ -114,7 +125,9 @@ function WindowAndWhy({ hands, why }: { hands: Hands; why: string }) {
           />
         </button>
       </div>
-      {open && <p className="max-w-md animate-rise text-muted text-xs">{why}</p>}
+      {open && (
+        <div className="flex max-w-md animate-rise flex-col gap-1 text-muted text-xs">{why}</div>
+      )}
     </>
   );
 }
@@ -124,18 +137,25 @@ export function TakeNotes({ bot, hands }: { bot: Bot; hands: Hands }) {
   const t = useT().browser;
   return (
     <div className="mt-2 flex flex-col items-center gap-2 text-center">
-      <WindowAndWhy hands={hands} why={`${t.hands.takeWhy(bot.name)} ${t.window.why(bot.name)}`} />
+      <WindowAndWhy
+        hands={hands}
+        why={<p>{`${t.hands.takeWhy(bot.name)} ${t.window.why(bot.name)}`}</p>}
+      />
     </div>
   );
 }
 
-/** Under the pill, while the owner has the browser. */
+/**
+ * Under the pill, while the owner has the browser: what the bot asked, and
+ * one row of buttons, with the rest folded, so the page keeps the room.
+ */
 export function HeldNotes({
   bot,
   task,
   tabs,
   focused,
   hands,
+  onTeach,
 }: {
   bot: Bot;
   task: string | null;
@@ -143,22 +163,37 @@ export function HeldNotes({
   tabs: number;
   focused: boolean;
   hands: Hands;
+  /** Starts a lesson (spec 21.13). */
+  onTeach(): void;
 }) {
   const t = useT().browser;
   const Hint = focused ? Keyboard : MousePointerClick;
   return (
     <div className="mt-2 flex flex-col items-center gap-1.5 text-center text-xs">
-      <p className="flex items-center gap-1.5 font-medium text-ink-soft">
-        <Hint aria-hidden size={12} className="shrink-0" />
-        {focused ? t.hands.typing : t.hands.clickToType}
-      </p>
-      <p className="line-clamp-2 max-w-md text-ink-soft" data-selectable>
-        {task ? t.help.asks(bot.name, task) : t.hands.waits(bot.name)}
-      </p>
-      {tabs > 1 && <p className="text-muted">{t.hands.leaves(bot.name)}</p>}
-      <div className="mt-1 flex flex-col items-center gap-2">
-        <WindowAndWhy hands={hands} why={t.window.hint} />
-      </div>
+      {task && (
+        <p className="line-clamp-1 max-w-md text-ink-soft" data-selectable>
+          {t.help.asks(bot.name, task)}
+        </p>
+      )}
+      <WindowAndWhy
+        hands={hands}
+        why={
+          <>
+            <p className="flex items-center justify-center gap-1.5">
+              <Hint aria-hidden size={12} className="shrink-0" />
+              {focused ? t.hands.typing : t.hands.clickToType}
+            </p>
+            {!task && <p>{t.hands.waits(bot.name)}</p>}
+            {tabs > 1 && <p>{t.hands.leaves(bot.name)}</p>}
+            <p>{t.lesson.teachWhy(bot.name)}</p>
+            <p>{t.window.hint}</p>
+          </>
+        }
+      >
+        <Button size="sm" icon={GraduationCap} onClick={onTeach}>
+          {t.lesson.teach}
+        </Button>
+      </WindowAndWhy>
     </div>
   );
 }

@@ -32,12 +32,11 @@ import { WindowBar } from "./WindowBar";
 const PAD = 12;
 /**
  * The bot's color around the page, in px: on the sides and top, and below,
- * where the pill that says who is in control hangs over its edge.
+ * where the pill that says who is in control hangs over its edge. The pill
+ * reaches into it less than this, so it never covers the page.
  */
 const STAGE = 10;
 const STAGE_BOTTOM = 26;
-/** Kept under the page, for the pill and what the bot just did. */
-const UNDER = 56;
 
 export function BrowserPanel({
   bot,
@@ -63,13 +62,9 @@ export function BrowserPanel({
   const [focused, setFocused] = useState(false);
   const ask = state?.ask ?? null;
   const windowed = state?.window === true;
-  // The page takes the shape of the room the panel has for it (spec 21.3).
-  // Notices that come and go are not counted: they never resize the page.
-  const [inside, body] = useRoom();
-  const room = inside && {
-    width: inside.width - 2 * PAD - 2 * STAGE,
-    height: inside.height - 2 * PAD - STAGE - STAGE_BOTTOM - UNDER,
-  };
+  // The page takes the shape of the room it has on the desk (spec 21.3), so
+  // it fills it at its own size, with no bands of the desk beside it.
+  const [room, stage] = useRoom();
   useFitPage(bot, room, watched);
   // A new tab is blank: the owner says where it goes.
   const address = useRef<HTMLInputElement>(null);
@@ -126,7 +121,6 @@ export function BrowserPanel({
         </>
       )}
       <div
-        ref={body}
         className="@container flex min-h-0 flex-1 flex-col overflow-y-auto"
         style={{ padding: PAD }}
       >
@@ -159,6 +153,7 @@ export function BrowserPanel({
               }
             >
               <div
+                ref={stage}
                 className="grid min-h-0 flex-1 place-items-center"
                 style={{ containerType: "size" }}
               >
@@ -207,7 +202,7 @@ export function BrowserPanel({
                 )}
               </p>
             )}
-            {hands.held && <LessonArea bot={bot} lesson={lesson} />}
+            {hands.held && <LessonArea lesson={lesson} />}
             {hands.held && lesson.steps === null && (
               <HeldNotes
                 bot={bot}
@@ -215,6 +210,7 @@ export function BrowserPanel({
                 tabs={state?.tabs.length ?? 0}
                 focused={focused}
                 hands={hands}
+                onTeach={() => void lesson.start()}
               />
             )}
             {live && !hands.held && !ask && <TakeNotes bot={bot} hands={hands} />}

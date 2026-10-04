@@ -71,20 +71,20 @@ describe("browser panel", () => {
     expect(within(panel()).queryByText("Opened elsewhere.com")).toBeNull();
   });
 
-  test("gives the page the shape of the room the panel has, and shows it as large as fits", async () => {
+  test("gives the page the shape of the room on the desk, and shows it as large as fits", async () => {
     const { fake, scout } = crew();
     fake.browser.open(scout.id, "https://example.com/", "Example");
-    // The panel under its address row, as the app measures it: 516 by 688
-    // for the page, once what goes around and under it is set aside.
+    // The room on the desk, inside its edge, as the app measures it: all
+    // of it is the page's, so no band of the desk shows beside it.
     vi.spyOn(Element.prototype, "clientWidth", "get").mockReturnValue(560);
     vi.spyOn(Element.prototype, "clientHeight", "get").mockReturnValue(804);
     await openScout(fake);
     fireEvent.click(toggle());
     const resized = () =>
       fake.calls.filter((call) => call.method === "browser.resize").map((call) => call.params);
-    await waitFor(() => expect(resized()).toEqual([{ botId: scout.id, width: 516, height: 688 }]));
+    await waitFor(() => expect(resized()).toEqual([{ botId: scout.id, width: 560, height: 804 }]));
     // A narrow room keeps the desktop layout's width, in the room's shape.
-    expect(fake.browser.size(scout.id)).toEqual({ width: 800, height: 1066 });
+    expect(fake.browser.size(scout.id)).toEqual({ width: 800, height: 1148 });
 
     act(() => {
       fake.browser.frame(scout.id, "AAAA");
@@ -92,7 +92,7 @@ describe("browser panel", () => {
     // The bot's cursor lands where it acted on the taller page.
     const screenshot = within(panel()).getByRole("figure", { name: "What Scout sees" });
     act(() => {
-      fake.browser.act(scout.id, "click", { x: 400, y: 1066, label: "More" });
+      fake.browser.act(scout.id, "click", { x: 400, y: 1148, label: "More" });
     });
     const cursor = screenshot.querySelector(".bot-cursor") as HTMLElement;
     expect(cursor.style.top).toBe("100%");
