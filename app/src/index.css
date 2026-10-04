@@ -20,6 +20,7 @@
 @import "./activity.css";
 @import "./calls.css";
 @import "./browser-stage.css";
+@import "./terminal.css";
 @import "./motion-less.css";
 @import "./paused.css";
 @import "./offscreen.css";
@@ -59,6 +60,14 @@
   --scrim: rgb(0 0 0 / 0.5);
   /* Windows' close button on hover, the same in both themes. */
   --close: #c42b1c;
+  /* The bot's terminal (terminal.css): dark in both themes. Words read at
+     4.5:1 or more on --terminal. */
+  --terminal: #131416;
+  --terminal-ink: #e8e8e2;
+  --terminal-soft: #c6c6bf;
+  --terminal-muted: #9c9c94;
+  --terminal-ok: #6fd49a;
+  --terminal-danger: #ff8a7e;
 }
 
 [data-theme="dark"] {

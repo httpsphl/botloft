@@ -1,15 +1,11 @@
-import { X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useT } from "../../i18n";
 import type { Bot, BotFile, Crew } from "../../lib/protocol.gen";
 import { useWindowVisible } from "../../shell/visibility";
-import { type BotPanel, routinesOf } from "../../store/app";
+import { routinesOf } from "../../store/app";
 import { useApp } from "../../store/context";
-import { Button } from "../../ui/Button";
-import { Callout } from "../../ui/Callout";
 import { PanelClosing, PanelRestored } from "../../ui/panelMotion";
-import { SidePanel } from "../../ui/SidePanel";
 import { type Tab, Tabs, tabId } from "../../ui/Tabs";
 import { useStable } from "../../ui/useStable";
 import { BrowserPanel } from "../browser/BrowserPanel";
@@ -18,19 +14,20 @@ import { ChatView } from "../chat/ChatView";
 import { FilesPanel } from "../files/FilesPanel";
 import { ShowFile } from "../files/showFile";
 import { useBotFiles } from "../files/useBotFiles";
-import { SignInButton } from "../onboarding/SignIn";
 import { BotRoutines } from "../routines/RoutineList";
 import { ScreensPanel } from "../screens/ScreensPanel";
 import { ShowScreen } from "../screens/showScreen";
 import { useScreens } from "../screens/useScreens";
-import { AllowRules } from "./AllowRules";
+import { Dock } from "../terminal/ComputerDock";
+import { ShowTerminal } from "../terminal/showTerminal";
+import { TerminalPanel } from "../terminal/TerminalPanel";
 import { BotHeader } from "./BotHeader";
+import { Details, Notices } from "./BotPanels";
 import { stateView } from "./BotStateBadge";
 import { useFollowBot } from "./useFollowBot";
+import { usePanel } from "./usePanel";
 
 type Pane = "chat" | "routines";
-/** What the panel beside the chat shows. */
-type Side = BotPanel | null;
 
 /**
  * A bot's conversation and its routines, with its details in a side panel
@@ -38,30 +35,9 @@ type Side = BotPanel | null;
  */
 export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
   const t = useT();
-  // Kept per bot in the store, not here: the panel the owner left open is
-  // back when they come back to the bot, and one they closed stays closed
-  // (spec 15.1).
-  const side = useApp((state) => state.panels[bot.id] ?? null);
-  const keepPanel = useApp((state) => state.setPanel);
-  // The panel that came back is there at once; one opened after it slides.
-  const [restored, setRestored] = useState(side !== null);
-  const setSide = (panel: Side) => {
-    setRestored(false);
-    keepPanel(bot.id, panel);
-  };
-  // The panel on screen: the one open, or the last one while it slides
-  // closed (spec 15.1).
-  const [leaving, setLeaving] = useState<Side>(null);
-  useEffect(() => {
-    if (side !== null) {
-      setLeaving(side);
-    }
-  }, [side]);
-  const beside = side ?? leaving;
-  const closing = useMemo(
-    () => (side === null && leaving !== null ? { closed: () => setLeaving(null) } : null),
-    [side, leaving],
-  );
+  // Kept per bot in the store: the panel the owner left open is back when
+  // they come back to the bot, and one they closed stays closed (spec 15.1).
+  const { side, setSide, beside, restored, closing } = usePanel(bot.id);
   const [pane, setPane] = useState<Pane>("chat");
   const files = useBotFiles(bot, side === "files");
   // What the owner has seen: files newer than this are new to them.
@@ -152,6 +128,25 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
     open: (panel) => (panel === "browser" ? showBrowser() : showScreen(null)),
     close: (panel) => side === panel && setSide(null),
   });
+  const showTerminal = useStable(() => {
+    if (filesOpen) {
+      seen();
+    }
+    setSide("terminal");
+  });
+  // The dock of the bot's computer: browser, terminal and files.
+  const dock = {
+    open: side,
+    pick: (place: "browser" | "terminal" | "files") => {
+      if (place === "browser") {
+        showBrowser();
+      } else if (place === "terminal") {
+        showTerminal();
+      } else if (!filesOpen) {
+        toggleFiles();
+      }
+    },
+  };
   const view = stateView(bot, crew.paused, t);
   const tabs: Tab<Pane>[] = [
     { id: "chat", label: t.routines.chatTab },
@@ -188,7 +183,9 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
             <ShowFile.Provider value={showFile}>
               <ShowBrowser.Provider value={showBrowser}>
                 <ShowScreen.Provider value={showScreen}>
-                  <ChatView bot={bot} stopped={bot.paused || crew.paused} />
+                  <ShowTerminal.Provider value={showTerminal}>
+                    <ChatView bot={bot} stopped={bot.paused || crew.paused} />
+                  </ShowTerminal.Provider>
                 </ShowScreen.Provider>
               </ShowBrowser.Provider>
             </ShowFile.Provider>
@@ -196,105 +193,38 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
             <BotRoutines bot={bot} />
           )}
         </div>
-        <PanelRestored.Provider value={restored}>
-          <PanelClosing.Provider value={closing}>
-            {beside === "details" && <Details bot={bot} onClose={() => setSide(null)} />}
-            {beside === "browser" && (
-              <BrowserPanel bot={bot} take={takeBrowser} onClose={() => setSide(null)} />
-            )}
-            {beside === "screens" && (
-              <ScreensPanel
-                bot={bot}
-                data={screens}
-                path={screenPath}
-                onPath={setScreenPath}
-                onClose={() => setSide(null)}
-              />
-            )}
-            {beside === "files" && (
-              <FilesPanel
-                bot={bot}
-                data={files}
-                since={since}
-                path={shown}
-                described={described}
-                onPath={setShown}
-                onClose={toggleFiles}
-              />
-            )}
-          </PanelClosing.Provider>
-        </PanelRestored.Provider>
+        <Dock.Provider value={dock}>
+          <PanelRestored.Provider value={restored}>
+            <PanelClosing.Provider value={closing}>
+              {beside === "details" && <Details bot={bot} onClose={() => setSide(null)} />}
+              {beside === "browser" && (
+                <BrowserPanel bot={bot} take={takeBrowser} onClose={() => setSide(null)} />
+              )}
+              {beside === "screens" && (
+                <ScreensPanel
+                  bot={bot}
+                  data={screens}
+                  path={screenPath}
+                  onPath={setScreenPath}
+                  onClose={() => setSide(null)}
+                />
+              )}
+              {beside === "files" && (
+                <FilesPanel
+                  bot={bot}
+                  data={files}
+                  since={since}
+                  path={shown}
+                  described={described}
+                  onPath={setShown}
+                  onClose={toggleFiles}
+                />
+              )}
+              {beside === "terminal" && <TerminalPanel bot={bot} onClose={() => setSide(null)} />}
+            </PanelClosing.Provider>
+          </PanelRestored.Provider>
+        </Dock.Provider>
       </div>
     </section>
-  );
-}
-
-function Notices({
-  bot,
-  crew,
-  view,
-}: {
-  bot: Bot;
-  crew: Crew;
-  view: ReturnType<typeof stateView>;
-}) {
-  const t = useT();
-  const notices = [];
-  if (crew.paused && !bot.paused) {
-    notices.push(
-      <Callout key="crew" title={t.bots.notices.crewPaused(crew.name)}>
-        {t.bots.notices.crewPausedBody}
-      </Callout>,
-    );
-  }
-  // An approval shows in the chat itself; the rest needs a word up here.
-  if ((view.tone === "warn" || view.tone === "danger") && bot.state !== "needs_approval") {
-    notices.push(
-      <Callout key="state" tone={view.tone} title={view.label}>
-        {view.hint}
-        {bot.state === "auth_error" && <SignInButton />}
-      </Callout>,
-    );
-  }
-  if (notices.length === 0) {
-    return null;
-  }
-  return <div className="flex flex-col gap-2 border-line border-b px-5 py-3">{notices}</div>;
-}
-
-function Details({ bot, onClose }: { bot: Bot; onClose(): void }) {
-  const words = useT().bots.details;
-  return (
-    <SidePanel label={words.title(bot.name)} name="details" defaultWidth={320}>
-      <header className="flex h-11 shrink-0 items-center justify-between border-line border-b pr-1.5 pl-4">
-        <h2 className="font-semibold text-sm">{words.title(bot.name)}</h2>
-        <Button variant="ghost" size="sm" icon={X} label={words.close} onClick={onClose} />
-      </header>
-      <dl className="flex min-h-0 flex-col gap-4 overflow-y-auto p-4 text-sm">
-        <div>
-          <dt className="text-muted text-xs">{words.role}</dt>
-          <dd className="mt-0.5 text-ink-soft">{bot.role || words.noRole}</dd>
-        </div>
-        <div>
-          <dt className="text-muted text-xs">{words.folder}</dt>
-          <dd className="mt-0.5 break-all font-mono text-xs" data-selectable>
-            {bot.workspace}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-muted text-xs">{words.process}</dt>
-          <dd className="mt-0.5 font-mono text-xs">
-            {bot.generation === null ? words.notStarted : words.generation(bot.generation)}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-muted text-xs">{words.instructions}</dt>
-          <dd className="mt-0.5 whitespace-pre-wrap text-ink-soft" data-selectable>
-            {bot.instructions || words.noInstructions}
-          </dd>
-        </div>
-        <AllowRules bot={bot} />
-      </dl>
-    </SidePanel>
   );
 }

@@ -17,6 +17,7 @@ import { screens } from "./screens";
 import { search } from "./search";
 import { setup } from "./setup";
 import { shell } from "./shell";
+import { terminal } from "./terminal";
 import { tools } from "./tools";
 import { updates } from "./updates";
 
@@ -38,5 +39,6 @@ export const ptBR: Messages = {
   screens,
   search,
   setup,
+  terminal,
   tools,
 };
