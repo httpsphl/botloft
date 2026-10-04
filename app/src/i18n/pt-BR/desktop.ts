@@ -31,7 +31,7 @@ export const desktop: Messages["desktop"] = {
     emptyTitle: (bot) => `${bot} ainda não usou seu desktop`,
     emptyBody:
       "Quando ele ler ou usar uma janela de um app que você liberou, a janela aparece aqui, ao vivo.",
-    shortcut: "Ctrl+Alt+End para todos os bots no seu desktop, mesmo com o Botloft fechado.",
+    shortcut: "Ctrl+Alt+Esc para todos os bots no seu desktop, mesmo com o Botloft fechado.",
     waiting: "Esperando a imagem…",
     read: "Leu a janela",
     click: (target) => `Clicou em "${target}"`,

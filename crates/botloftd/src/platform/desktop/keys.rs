@@ -139,6 +139,8 @@ mod tests {
             "Alt+Tab",
             "Alt+Shift+Tab",
             "Alt+Esc",
+            // The owner's own key to stop every bot (spec 24.9).
+            "Ctrl+Alt+Esc",
             "Ctrl+Esc",
             "Ctrl+Alt+Delete",
             "Ctrl+Alt+Del",

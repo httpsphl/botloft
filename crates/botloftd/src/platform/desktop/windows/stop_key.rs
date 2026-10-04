@@ -1,11 +1,11 @@
-//! The shortcut that stops every bot on the desktop, Ctrl+Alt+End (spec
+//! The shortcut that stops every bot on the desktop, Ctrl+Alt+Esc (spec
 //! 24.9): registered for the whole session on a thread of its own, so it
 //! works with the app closed.
 
 use std::sync::mpsc;
 
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    MOD_ALT, MOD_CONTROL, MOD_NOREPEAT, RegisterHotKey, VK_END,
+    MOD_ALT, MOD_CONTROL, MOD_NOREPEAT, RegisterHotKey, VK_ESCAPE,
 };
 use windows::Win32::UI::WindowsAndMessaging::{GetMessageW, MSG, WM_HOTKEY};
 
@@ -27,7 +27,7 @@ pub fn on_stop_key(stop: impl Fn() + Send + 'static) -> Result<(), DesktopError>
                     None,
                     STOP,
                     MOD_CONTROL | MOD_ALT | MOD_NOREPEAT,
-                    u32::from(VK_END.0),
+                    u32::from(VK_ESCAPE.0),
                 )
             };
             let ok = held.is_ok();
