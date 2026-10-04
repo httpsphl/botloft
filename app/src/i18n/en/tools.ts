@@ -55,6 +55,10 @@ export const tools = {
     desktop_windows: "See your windows",
     desktop_look: "Read a window",
     desktop_screenshot: "Look at a window",
+    desktop_click: "Click in a window",
+    desktop_type: "Type in a window",
+    desktop_select: "Choose in a window",
+    desktop_scroll: "Scroll a window",
   },
   /** Where `browser_scroll` went. */
   scroll: { down: "down", up: "up", top: "to the top", bottom: "to the end" },

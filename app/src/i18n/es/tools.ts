@@ -56,6 +56,10 @@ export const tools: Messages["tools"] = {
     desktop_windows: "Ver tus ventanas",
     desktop_look: "Leer una ventana",
     desktop_screenshot: "Mirar una ventana",
+    desktop_click: "Hacer clic en una ventana",
+    desktop_type: "Escribir en una ventana",
+    desktop_select: "Elegir en una ventana",
+    desktop_scroll: "Desplazar una ventana",
   },
   scroll: {
     down: "hacia abajo",

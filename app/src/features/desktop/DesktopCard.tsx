@@ -1,6 +1,6 @@
-// A bot asking to see an app on the owner's desktop (spec 24.2): the app,
-// why the bot wants it, what seeing it means, and Allow or Deny. Once
-// answered it shrinks to one line.
+// A bot asking to see, or to use, an app on the owner's desktop (spec
+// 24.2): the app, why the bot wants it, what that means, and Allow or
+// Deny. Once answered it shrinks to one line.
 
 import { Ban, Check, Monitor, TimerOff } from "lucide-react";
 import { useT } from "../../i18n";
@@ -15,29 +15,47 @@ export const DESKTOP_TOOL = "mcp__botloft__desktop";
 interface Asked {
   path: string | null;
   why: string | null;
+  /** To use the app, not only see it. */
+  use: boolean;
 }
 
 function askedOf(input: string): Asked {
   try {
-    const parsed = JSON.parse(input) as { path?: unknown; why?: unknown };
+    const parsed = JSON.parse(input) as { path?: unknown; why?: unknown; level?: unknown };
     const text = (value: unknown) => (typeof value === "string" && value.trim() ? value : null);
-    return { path: text(parsed.path), why: text(parsed.why) };
+    return { path: text(parsed.path), why: text(parsed.why), use: parsed.level === "act" };
   } catch {
-    return { path: null, why: null };
+    return { path: null, why: null, use: false };
   }
 }
 
-function Answered({ approval, bot, app }: { approval: ApprovalItem; bot: Bot; app: string }) {
+function Answered({
+  approval,
+  bot,
+  app,
+  use,
+}: {
+  approval: ApprovalItem;
+  bot: Bot;
+  app: string;
+  use: boolean;
+}) {
   const words = useT().desktop.card;
   switch (approval.status) {
     case "allowed":
-      return <SettledLine icon={Check} tone="ok" text={words.allowed(bot.name, app)} />;
+      return (
+        <SettledLine
+          icon={Check}
+          tone="ok"
+          text={(use ? words.allowedUse : words.allowed)(bot.name, app)}
+        />
+      );
     case "denied":
       return (
         <SettledLine
           icon={Ban}
           tone="danger"
-          text={words.denied(bot.name, app)}
+          text={(use ? words.deniedUse : words.denied)(bot.name, app)}
           note={approval.note}
         />
       );
@@ -54,19 +72,20 @@ export function DesktopCard({ approval, bot }: { approval: ApprovalItem; bot: Bo
     deny: t.chat.approval.denyFailed,
   });
   const app = approval.summary;
+  const { path, why, use } = askedOf(approval.input);
   if (approval.status !== "pending") {
-    return <Answered approval={approval} bot={bot} app={app} />;
+    return <Answered approval={approval} bot={bot} app={app} use={use} />;
   }
-  const { path, why } = askedOf(approval.input);
 
   return (
     <RequestCard
-      label={words.asks(bot.name, app)}
+      label={(use ? words.asksUse : words.asks)(bot.name, app)}
       icon={Monitor}
       tone="warn"
       title={
         <span>
-          {words.wants(bot.name)} <span className="font-semibold">{app}</span>
+          {(use ? words.wantsUse : words.wants)(bot.name)}{" "}
+          <span className="font-semibold">{app}</span>
         </span>
       }
     >
@@ -80,7 +99,7 @@ export function DesktopCard({ approval, bot }: { approval: ApprovalItem; bot: Bo
           {path}
         </p>
       )}
-      <p className="mt-1.5 text-muted text-xs">{words.means(bot.name)}</p>
+      <p className="mt-1.5 text-muted text-xs">{(use ? words.meansUse : words.means)(bot.name)}</p>
       <NoteInput
         label={t.chat.approval.noteLabel(bot.name)}
         value={note}

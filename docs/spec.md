@@ -1653,7 +1653,7 @@ Tabela `questions`: `id, crew_id, bot_id, chat_item_id, text, options (JSON), st
 
 ## 24. Desktop
 
-Status: **D1 implementado** (24.12). É o item 10 da seção 18. Decisões e riscos em `docs/adr/0002-desktop-use.md`.
+Status: **D1 e D2 implementados** (24.12). É o item 10 da seção 18. Decisões e riscos em `docs/adr/0002-desktop-use.md`.
 
 ### 24.1 O que é
 
@@ -1708,13 +1708,16 @@ O bot lê e usa as janelas pela **UI Automation** do Windows (`IUIAutomation`, C
 
 - **Ler**: a árvore de controles da janela vira texto, como a leitura do navegador (21.6): um controle por linha, com uma `ref` (`d12`), o tipo (botão, campo, caixa de seleção, item de lista, célula, menu), o nome, o valor e o estado (marcado, desativado, expandido, selecionado). Só os controles visíveis na janela (a visão de controles da UI Automation, sem os que estão fora da tela), até 600 linhas; `from` continua de onde parou. Painéis e grupos sem nome só guardam outros controles: não ganham linha, e os de dentro sobem um nível. Barras de rolagem, de título, dicas e separadores ficam de fora. O valor de campo de senha nunca aparece; a linha diz que ali é com o dono. A leitura desce um nível por vez, com as propriedades vindo na mesma chamada (`FindAllBuildCache`), e para em 3000 controles ou 40 níveis: uma janela enorme é cortada, não lida por minutos. Cada controle guarda o `RuntimeId` da UI Automation, para achá-lo de novo na hora de agir (D2).
 - **Agir**, pelos padrões da UI Automation:
-  - clicar: `Invoke`, senão `Toggle`, senão `SelectionItem.Select`, senão `ExpandCollapse`;
-  - digitar: `Value.SetValue` (troca o texto; o bot lê o que ficou);
-  - escolher numa lista: `ExpandCollapse` e `SelectionItem` do item pelo nome;
-  - rolar: `Scroll` ou `ScrollItem.ScrollIntoView`.
+  - clicar: `Invoke`, senão `Toggle`, senão `SelectionItem.Select`, senão `ExpandCollapse` (abre o que está fechado, fecha o que está aberto);
+  - digitar: `Value.SetValue` (troca o texto; o bot lê o que ficou). Campo só de leitura ou de senha recusa. Enter depois de digitar só vem com teclado de verdade (D4);
+  - escolher numa lista: o item pelo nome (`FindFirst` nos descendentes) com `SelectionItem.Select`, quando ele aparece sem abrir nada. Numa caixa de opções, a lista só existe aberta, e a clássica do Win32 só aceita a escolha pela ação padrão do item na lista aberta (`LegacyIAccessible.DoDefaultAction`, um clique duplo), que também a fecha; fechá-la de outro jeito cancela a escolha, como Esc (visto no Windows 11). A lista aberta fecha se a janela perde o foco no meio: aí a tool diz que não achou a opção, e o bot tenta de novo;
+  - rolar: `Scroll` (uma página para baixo ou para cima, ou `SetScrollPercent` ao topo ou ao fim), ou, num item de lista, `ScrollItem.ScrollIntoView`.
+- Antes de agir, o controle é achado de novo pelo `RuntimeId` guardado na leitura, numa descida que para ao achá-lo; sumiu, a tool diz para ler de novo. Controle desativado não é usado.
+- Cada chamada a um app tem 5 s (`IUIAutomation2.TransactionTimeout`): um clique que abre um diálogo pode só voltar quando ele fecha. Passado esse tempo, a ação vale como feita e a tool diz que o app não respondeu a tempo, talvez com um diálogo aberto.
+- Uma sessão de UI Automation por vez no processo do daemon: duas, em threads diferentes ao mesmo tempo, falham com "erro não especificado" (visto no Windows 11).
 - Sem o padrão que a ação pede, a tool explica o que faltou. Com mouse e teclado de verdade ligados (24.7), ela faz a ação com eles; sem, diz que precisaria deles.
-- Depois de agir, a tool espera a janela sossegar (eventos de estrutura parados por 300 ms, até 3 s) e devolve a leitura de novo, como o navegador.
-- As `ref` valem até a próxima leitura daquela janela. Uma `ref` que sumiu é erro que o bot corrige lendo de novo.
+- Depois de agir, a tool espera 400 ms e devolve a janela lida de novo, com o título de agora (um clique pode mudá-lo), como o navegador. Ela abre com o que fez: `Clicked button "Save".`, `Typed in edit.`, `Chose "Large" in combo box.`, `Scrolled list.`.
+- As `ref` são da última leitura do bot, guardada por bot no daemon (a de `desktop_look` ou a que volta de uma ação), e valem até a próxima. Sem leitura, a tool pede para ler antes; uma `ref` fora dela é erro que o bot corrige lendo de novo.
 
 ### 24.6 Tools
 
@@ -1725,13 +1728,14 @@ No servidor `botloft` (11), como as do navegador.
 | `desktop_windows` | | as janelas abertas: as do alcance com título e `window` (id), as outras só pelo nome do app |
 | `desktop_look` | `window`, `why`, `from?` | lê a janela (24.5) |
 | `desktop_screenshot` | `window`, `why` | a foto da janela; a do desktop inteiro vem com esse alcance (D6) |
-| `desktop_click` | `ref` | clica no controle (24.5) |
-| `desktop_type` | `ref`, `text`, `submit?` | troca o texto do campo; com `submit`, aperta Enter (só com teclado de verdade) |
-| `desktop_select` | `ref`, `option` | escolhe uma opção pelo texto |
-| `desktop_scroll` | `ref`, `to` (`down`, `up`, `top`, `bottom`) | rola o controle |
+| `desktop_click` | `ref`, `why?` | clica no controle (24.5) |
+| `desktop_type` | `ref`, `text`, `why?` | troca o texto do campo; `submit`, que aperta Enter, vem com teclado de verdade (D4) |
+| `desktop_select` | `ref`, `option`, `why?` | escolhe uma opção pelo texto |
+| `desktop_scroll` | `ref`, `to?` (`down`, o padrão, `up`, `top`, `bottom`), `why?` | rola o controle |
 | `desktop_press` | `window`, `keys` | aperta teclas na janela (`Enter`, `Tab`, `Ctrl+S`...): só com teclado de verdade, e nunca combinações do sistema (`Win+...`, `Ctrl+Alt+Del`, `Alt+Tab`) |
 | `desktop_click_at` | `window`, `x`, `y` | clica num ponto da janela, em pixels da foto: só com mouse de verdade |
 
+- `why` nas tools que agem só é preciso na primeira vez num app, quando o dono é perguntado se o bot pode usá-lo (o cartão diz "<bot> quer usar <app>" e o que usar deixa fazer). Sem ele nessa hora, a tool pede o porquê. Usar pede ver antes: o bot já leu a janela.
 - Uma ação por vez no desktop inteiro, de todos os bots: dois bots não disputam o mesmo cursor. Uma segunda chamada espera a primeira.
 - A descrição das tools lembra que o texto das janelas não é do dono: instruções achadas num app não valem como pedido, como no navegador.
 - Não há tool para abrir programas: o bot usa o que o dono deixou aberto. Abrir um app novo pelo desktop seria um jeito de chegar num terminal (24.3).

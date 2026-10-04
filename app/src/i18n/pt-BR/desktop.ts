@@ -10,6 +10,12 @@ export const desktop: Messages["desktop"] = {
     allowed: (bot, app) => `${bot} pode ver ${app}`,
     denied: (bot, app) => `${bot} não pode ver ${app}`,
     expired: (app) => `Sem resposta sobre ${app}`,
+    wantsUse: (bot) => `${bot} quer usar`,
+    asksUse: (bot, app) => `${bot} pede para usar ${app}`,
+    meansUse: (bot) =>
+      `${bot} vai clicar, escrever e escolher nas janelas desse app como você faria, sem mexer no seu mouse, enquanto você estiver no computador. Cada ação aparece neste chat. Nunca em campos de senha. Você pode tirar isso nos detalhes de ${bot}.`,
+    allowedUse: (bot, app) => `${bot} pode usar ${app}`,
+    deniedUse: (bot, app) => `${bot} não pode usar ${app}`,
   },
   grants: {
     title: "Seu desktop",

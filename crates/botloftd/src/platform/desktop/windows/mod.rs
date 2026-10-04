@@ -2,12 +2,18 @@
 //! their session, which program each one is from, and whether it runs as
 //! administrator.
 
+mod act;
+#[cfg(test)]
+mod act_tests;
 mod capture;
 mod input;
 mod process;
 #[cfg(test)]
+mod test_window;
+#[cfg(test)]
 mod tests;
 mod uia;
+mod uia_control;
 
 use std::collections::HashMap;
 use std::ffi::c_void;
@@ -22,6 +28,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::{BOOL, w};
 
+pub use act::act;
 pub use capture::capture;
 pub use input::owner_idle;
 pub use uia::read;

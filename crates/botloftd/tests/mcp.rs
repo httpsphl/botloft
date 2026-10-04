@@ -93,6 +93,10 @@ async fn claude_code_discovers_the_server_and_lists_the_tools() {
             "desktop_windows",
             "desktop_look",
             "desktop_screenshot",
+            "desktop_click",
+            "desktop_type",
+            "desktop_select",
+            "desktop_scroll",
             "permission_prompt"
         ]
     );
@@ -137,7 +141,7 @@ async fn earlier_revisions_start_with_initialize() {
     let listed = mcp::post(t.addr, &legacy, &list).await;
     assert_eq!(
         listed.body["result"]["tools"].as_array().map(Vec::len),
-        Some(27)
+        Some(31)
     );
     let unknown = json!({ "jsonrpc": "2.0", "id": 2, "method": "prompts/list" }).to_string();
     let unknown = mcp::post(t.addr, &legacy, &unknown).await;
