@@ -1,0 +1,80 @@
+/* The mascot falling asleep (mascotMoments.ts, spec 15.3), once, when its
+   bot has nothing left to do or is paused or stopped: it yawns, stretching
+   up, its lids grow heavy, open a little once more and close into the two
+   arcs, and it slumps as the flame burns down to the ember (`fire-sleep`
+   in mascot-flame.css). Every frame ends asleep, so less motion shows
+   only that. */
+
+@layer components {
+  [data-mood][data-sleep] .avatar-hop {
+    animation: sleep-slump 900ms both;
+  }
+
+  [data-mood][data-sleep] .avatar-fire {
+    animation: fire-sleep 900ms ease-in-out both;
+  }
+
+  [data-mood][data-sleep] .avatar-eye {
+    animation: sleep-shut 900ms both;
+  }
+
+  [data-mood][data-sleep] .avatar-closed {
+    animation: sleep-arcs 900ms both;
+  }
+}
+
+@keyframes sleep-slump {
+  0% {
+    transform: scale(1, 1);
+    animation-timing-function: ease-out;
+  }
+  25% {
+    transform: scale(0.97, 1.05);
+    animation-timing-function: ease-in-out;
+  }
+  60% {
+    transform: scale(1.05, 0.94);
+  }
+  80% {
+    transform: scale(0.99, 1.01);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
+
+/* Heavy, a little open again, then shut. */
+@keyframes sleep-shut {
+  0% {
+    opacity: 1;
+    clip-path: inset(0);
+  }
+  30% {
+    opacity: 1;
+    clip-path: inset(32% 0);
+  }
+  45% {
+    opacity: 1;
+    clip-path: inset(20% 0);
+  }
+  72% {
+    opacity: 1;
+    clip-path: inset(50% 0);
+  }
+  78%,
+  100% {
+    opacity: 0;
+    clip-path: inset(50% 0);
+  }
+}
+
+@keyframes sleep-arcs {
+  0%,
+  72% {
+    opacity: 0;
+  }
+  80%,
+  100% {
+    opacity: 1;
+  }
+}

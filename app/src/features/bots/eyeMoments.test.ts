@@ -25,36 +25,39 @@ afterEach(() => {
 });
 
 describe("the eyes' moments", () => {
-  test("awake mascots blink for a moment, then stand still", () => {
+  test("mascots with open eyes blink for a moment, then stand still", () => {
+    const working = mascot("working");
     const idle = mascot("idle");
     const sleeping = mascot("sleeping");
-    const still = mascot("idle", true);
+    const still = mascot("working", true);
     // Every draw says yes, with no spread.
     stop = startEyeMoments(() => 0);
     // A moment starts on its own timer, right after the tick.
     vi.advanceTimersByTime(2001);
-    expect(idle.hasAttribute("data-blink")).toBe(true);
+    expect(working.hasAttribute("data-blink")).toBe(true);
+    // A bot with nothing to do sleeps, as a stopped one does.
+    expect(idle.hasAttribute("data-blink")).toBe(false);
     expect(sleeping.hasAttribute("data-blink")).toBe(false);
     expect(still.hasAttribute("data-blink")).toBe(false);
     vi.advanceTimersByTime(300);
-    expect(idle.hasAttribute("data-blink")).toBe(false);
+    expect(working.hasAttribute("data-blink")).toBe(false);
   });
 
-  test("one idle mascot looks around now and then, not on every tick", () => {
-    const idle = mascot("idle");
+  test("one awake mascot looks around now and then, not on every tick", () => {
+    const awake = mascot("awake");
     const working = mascot("working");
     stop = startEyeMoments(() => 0.99);
     vi.advanceTimersByTime(8000);
-    expect(idle.hasAttribute("data-look")).toBe(false);
+    expect(awake.hasAttribute("data-look")).toBe(false);
     vi.advanceTimersByTime(2001);
-    expect(idle.hasAttribute("data-look")).toBe(true);
+    expect(awake.hasAttribute("data-look")).toBe(true);
     expect(working.hasAttribute("data-look")).toBe(false);
     vi.advanceTimersByTime(4500);
-    expect(idle.hasAttribute("data-look")).toBe(false);
+    expect(awake.hasAttribute("data-look")).toBe(false);
   });
 
   test("nothing moves while the window has no focus", () => {
-    const idle = mascot("idle");
+    const idle = mascot("awake");
     document.documentElement.setAttribute("data-blurred", "");
     stop = startEyeMoments(() => 0);
     vi.advanceTimersByTime(20_000);

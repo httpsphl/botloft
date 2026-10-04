@@ -122,7 +122,7 @@ function Page({
       );
     case "done":
       return (
-        <Frame mood="idle" title={s.done} line={phase.openFailed ? s.openFailed : s.opening} />
+        <Frame mood="awake" title={s.done} line={phase.openFailed ? s.openFailed : s.opening} />
       );
     case "failed": {
       const { state, failure } = phase;
@@ -167,7 +167,7 @@ function Ready({
   }[state.relation];
   const closesApp = state.appRunning && state.relation !== "newer";
   return (
-    <Frame mood="idle" title="Botloft" line={line}>
+    <Frame mood="awake" title="Botloft" line={line}>
       <div className="mt-6 flex flex-wrap justify-center gap-2">
         {state.relation === "same" || state.relation === "newer" ? (
           <Button variant="primary" onClick={() => onOpen(state)}>

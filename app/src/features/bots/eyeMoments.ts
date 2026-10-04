@@ -1,7 +1,8 @@
 // When the mascots blink and glance around (spec 15.3). An animation that
 // runs forever makes the WebView draw every frame, so the eyes do not run
 // one: every couple of seconds this picks which mascots on screen blink,
-// each a little apart, and now and then one idle mascot looks around.
+// each a little apart, and now and then one awake mascot (one that is no
+// bot's) looks around. A bot with nothing to do sleeps: its eyes are shut.
 // Between those moments the eyes stand still and cost nothing. Paused while
 // the window is out of sight or has no focus, and with less motion.
 
@@ -14,7 +15,7 @@ const SPREAD_MS = 600;
 /** A blink, as `eye-blink` in mascot.css; a tired droop takes longer. */
 const BLINK_MS = 260;
 const DROOP_MS = 800;
-/** One idle mascot looks around, at most this often, for this long. */
+/** One awake mascot looks around, at most this often, for this long. */
 const LOOK_EVERY_MS = [9000, 16000] as const;
 const LOOK_MS = 4400;
 
@@ -29,10 +30,10 @@ function resting(): boolean {
   );
 }
 
-/** The mascots that may move their eyes: on screen, awake, not held still. */
-function awake(): SVGElement[] {
+/** The mascots that may move their eyes: on screen, with them open, not held still. */
+function open(): SVGElement[] {
   const all = document.querySelectorAll<SVGElement>(
-    'svg[data-mood]:not([data-mood="sleeping"]):not([data-still])',
+    'svg[data-mood]:not([data-mood="idle"], [data-mood="sleeping"], [data-still])',
   );
   return [...all].filter((svg) => {
     const box = svg.getBoundingClientRect();
@@ -55,7 +56,7 @@ export function startEyeMoments(random: () => number = Math.random): () => void 
     if (resting()) {
       return;
     }
-    const mascots = awake();
+    const mascots = open();
     for (const svg of mascots) {
       if (random() < TICK_MS / BLINK_EVERY_MS) {
         const tired = svg.getAttribute("data-mood") === "tired";
@@ -63,9 +64,9 @@ export function startEyeMoments(random: () => number = Math.random): () => void 
       }
     }
     const now = performance.now();
-    const idle = mascots.filter((svg) => svg.getAttribute("data-mood") === "idle");
-    if (now >= nextLook && idle.length > 0) {
-      const svg = idle[Math.floor(random() * idle.length)] as SVGElement;
+    const awake = mascots.filter((svg) => svg.getAttribute("data-mood") === "awake");
+    if (now >= nextLook && awake.length > 0) {
+      const svg = awake[Math.floor(random() * awake.length)] as SVGElement;
       moment(svg, "data-look", 0, LOOK_MS);
       const [least, most] = LOOK_EVERY_MS;
       nextLook = now + least + random() * (most - least);

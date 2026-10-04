@@ -1,5 +1,6 @@
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
+import moodRules from "../../mascot.css?raw";
 import cheerFrames from "../../mascot-cheer.css?raw";
 import flameFrames from "../../mascot-flame.css?raw";
 import { BOTLOFT_COLOR, BotAvatar, CHEER_MS } from "./BotAvatar";
@@ -52,18 +53,29 @@ describe("mascot", () => {
     expect(commands(OUTLINE).match(/M/g)).toHaveLength(2);
   });
 
-  test("every flame frame keeps the commands of the outline, so it morphs", () => {
+  test("every flame shape keeps the commands of the outline, so it morphs", () => {
     const frames = [...flameFrames.matchAll(/d: path\(\s*"([^"]+)"/g)].map(
       (match) => match[1] ?? "",
     );
-    expect(frames.length).toBeGreaterThan(30);
+    expect(frames.length).toBeGreaterThan(15);
     for (const frame of frames) {
       expect(commands(frame)).toBe(commands(OUTLINE));
     }
   });
 
+  test("only a working bot's mascot moves on and on", () => {
+    const forever = [...moodRules.matchAll(/([^{}]+)\{[^{}]*infinite[^{}]*\}/g)].map((rule) =>
+      (rule[1] ?? "").trim(),
+    );
+    expect(forever).toEqual([
+      '[data-mood="working"] .avatar-fire',
+      '[data-mood="working"] .avatar-spark',
+    ]);
+    expect(flameFrames).not.toContain("infinite");
+  });
+
   test("the eyes glance together, and the shading keeps its holes", () => {
-    const { container } = render(<BotAvatar color="#ff7a59" mood="idle" />);
+    const { container } = render(<BotAvatar color="#ff7a59" mood="awake" />);
     expect(container.querySelectorAll(".avatar-look .avatar-eye")).toHaveLength(2);
     const shades = container.querySelectorAll("[filter] path");
     expect(shades).toHaveLength(SHADES.length);
@@ -114,6 +126,8 @@ describe("mascot", () => {
       expect(cheering()).toBe(true);
       act(() => vi.advanceTimersByTime(CHEER_MS));
       expect(cheering()).toBe(false);
+      // Done cheering, it falls asleep.
+      expect(container.querySelector("svg")?.hasAttribute("data-sleep")).toBe(true);
 
       rerender(<BotAvatar color="#ff7a59" mood="waiting" />);
       rerender(<BotAvatar color="#ff7a59" mood="idle" />);
@@ -179,20 +193,17 @@ describe("ListAvatar", () => {
     paused: false,
   });
 
-  test("a sleeping bot keeps its look but does not move; an idle or working one moves", () => {
+  test("shows the bot's mood: idle, stopped or working", () => {
     const { container, rerender } = render(
       <ListAvatar bot={bot("idle")} crewPaused={false} size={32} />,
     );
     const svg = () => container.querySelector("svg") as SVGElement;
     expect(svg().dataset.mood).toBe("idle");
-    expect(svg().hasAttribute("data-still")).toBe(false);
 
     rerender(<ListAvatar bot={bot("offline")} crewPaused={false} size={32} />);
     expect(svg().dataset.mood).toBe("sleeping");
-    expect(svg().hasAttribute("data-still")).toBe(true);
 
     rerender(<ListAvatar bot={bot("busy")} crewPaused={false} size={32} />);
     expect(svg().dataset.mood).toBe("working");
-    expect(svg().hasAttribute("data-still")).toBe(false);
   });
 });

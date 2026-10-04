@@ -8,14 +8,16 @@
 // square of the app icon, for Botloft itself (the title bar, messages from
 // the daemon), in the icon's own color.
 //
-// Given a `mood`, the mascot comes alive (mascot.css): its flame burns,
-// gently when idle, glancing around now and then, and wildly, throwing
-// embers, while it works; it hops
-// while it waits for the owner, burns low with heavy eyes when tired and
-// sleeps with its eyes shut while paused. On top of the mood it makes short
-// gestures once (mascotMoments.ts): it cheers when it finishes, wakes when it
-// comes back, pops in when its bot was just created, and glances at the bot
-// it talks to (useGlance.ts). Without a mood it stays still, as in the chat
+// Given a `mood`, the mascot comes alive (mascot.css): its flame burns
+// wildly, throwing embers, while it works; it sleeps as a small ember with
+// its eyes shut while its bot has nothing to do, is paused or stopped; it
+// hops as it starts to wait for the owner and burns low with heavy eyes when
+// tired. Only the working flame moves on and on: everything else plays once.
+// It makes short gestures (mascotMoments.ts): it cheers when it finishes
+// and falls asleep, wakes when it has something to do, pops in when its bot
+// was just created, and glances at the bot it talks to (useGlance.ts).
+// Awake, as on the pages that are not a bot's, it stands with its eyes open
+// and blinks now and then. Without a mood it stays still, as in the chat
 // history.
 
 import { type CSSProperties, useId, useMemo, useRef } from "react";
@@ -37,7 +39,11 @@ import { MOMENT_MS, useArrive, useMoment } from "./mascotMoments";
 import { retint } from "./retint";
 import { useGlance } from "./useGlance";
 
-export type Mood = "idle" | "working" | "waiting" | "tired" | "sleeping";
+/**
+ * `idle` is a bot with nothing to do: it sleeps, as a `sleeping` (paused
+ * or stopped) one does. `awake` is a mascot that is no bot's.
+ */
+export type Mood = "awake" | "idle" | "working" | "waiting" | "tired" | "sleeping";
 
 /** Botloft's own mascot, as on the app icon: the color that shows the drawing as drawn. */
 export const BOTLOFT_COLOR = "#FF7A59";
@@ -152,6 +158,7 @@ export function BotAvatar({
       data-bot={botId}
       data-cheer={moment === "cheer" || undefined}
       data-wake={(moment === "wake" && !arrive) || undefined}
+      data-sleep={moment === "sleep" || undefined}
       data-arrive={(mood && arrive) || undefined}
       data-glance={glance ? "" : undefined}
       style={style}
