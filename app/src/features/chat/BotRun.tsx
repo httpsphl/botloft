@@ -15,7 +15,7 @@ import { Markdown } from "./Markdown";
 import { runParts, splitDraft } from "./rows";
 import { SharedFiles } from "./SharedFiles";
 import { isSharedFiles } from "./shared";
-import { ToolLines } from "./ToolLines";
+import { ToolGroup } from "./ToolGroup";
 
 export interface Live {
   /** Text of the reply being written. */
@@ -108,6 +108,12 @@ function BotRunView({
   live?: Live | undefined;
 }) {
   const first = items[0];
+  const parts = runParts(items);
+  // The bot is still on the last group of calls until it writes or stops.
+  const busy = Boolean(live?.working && !live.draft);
+  const tail = parts.at(-1)?.[0];
+  // Its line already says it is working.
+  const onCalls = tail?.body.kind === "tool" && !isSharedFiles(tail);
   return (
     // A turn shows up as the bot starts it, still empty; what it does then
     // arrives inside, so a run with items never animates as a whole.
@@ -123,14 +129,14 @@ function BotRunView({
             </time>
           )}
         </div>
-        {runParts(items).map((part) => {
+        {parts.map((part, index) => {
           const head = part[0] as ChatItem;
           switch (head.body.kind) {
             case "tool":
               return isSharedFiles(head) ? (
                 <SharedFiles key={head.id} item={head} botId={bot.id} bot={bot.name} />
               ) : (
-                <ToolLines key={head.id} items={part} />
+                <ToolGroup key={head.id} items={part} active={busy && index === parts.length - 1} />
               );
             case "reply":
               // It was already on screen as it was written.
@@ -158,7 +164,7 @@ function BotRunView({
           }
         })}
         {live?.draft && <Draft text={live.draft} />}
-        {live && !live.draft && live.working && <Working />}
+        {busy && !onCalls && <Working />}
       </div>
     </li>
   );

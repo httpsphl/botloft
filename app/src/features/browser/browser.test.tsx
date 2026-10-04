@@ -233,6 +233,9 @@ describe("browser panel", () => {
     });
     fake.chat.tool(scout.id, "Bash", { summary: "ls", status: "done" });
     await openScout(fake);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Took 1 step in the browser, ran 1 command" }),
+    );
     expect(screen.getAllByRole("button", { name: /Watch in browser/ })).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "Watch in browser: Open a page" }));
     expect(await screen.findByRole("complementary", { name: "Scout's browser" })).toBeDefined();

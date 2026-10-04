@@ -154,6 +154,7 @@ describe("design area", () => {
       status: "done",
     });
     await openScout(fake);
+    fireEvent.click(screen.getByRole("button", { name: "Edited 2 files" }));
     expect(screen.getAllByRole("button", { name: /Show in screens/ })).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "Show in screens: about.html" }));
     expect(await within(panel()).findByRole("button", { name: "All screens" })).toBeDefined();

@@ -38,6 +38,7 @@ const TEXT = [
   "warn",
   "danger",
   "idle-state",
+  "mention",
 ];
 
 describe.each([

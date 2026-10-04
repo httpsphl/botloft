@@ -883,7 +883,8 @@ No chat:
 - O dono fala em balões à direita; o bot, à esquerda, com markdown.
 - Embaixo da mensagem do dono, e em cada linha da timeline da crew, fica onde ela está (9.1), com ícone e texto: esperando, entregando, "Entregue" com um tique e, quando o bot começou a trabalhar nela, "Lida" com dois tiques. Os dois tiques de "Lida" ficam em azul-claro, como nos apps de mensagem, para o dono ver de relance que o bot leu; a palavra continua na cor apagada das outras linhas, e é ela que diz o estado. A cor é o token `--read` (`#1787c9` no tema claro, `#5cc4f2` no escuro): mais clara que o `--work`, que é de bot trabalhando e de mensagem sendo entregue, e com contraste de ao menos 3:1 sobre `canvas`, `panel` e `sunken` nos dois temas, o que um teste confere. O azul dos apps de mensagem (`#53bdeb`) não passa de 2,2:1 no tema claro, por isso o claro usa um tom mais fechado.
 - Mensagens de outros bots aparecem à esquerda, com o avatar e o nome de quem mandou.
-- O que o bot faz com as ferramentas aparece em linhas compactas (ícone, ferramenta, resumo e estado), agrupadas por turno, que abrem para mostrar entrada e saída.
+- Um bot citado pelo handle ("@writer") nas respostas e nas messages fica em azul-claro (token `--mention`, que ainda lê a 4,5:1) e um pouco mais forte, para não se perder no texto. E-mail, caminho e o que está em código ou link não contam.
+- O que o bot faz com as ferramentas aparece em linhas compactas (ícone, ferramenta, resumo e estado), que abrem para mostrar entrada e saída. As chamadas seguidas ficam dobradas numa linha só, com uma seta para abrir todas: enquanto o bot trabalha nelas, a linha diz a chamada em que ele está (o nome com um brilho passando e um círculo girando, sem os três pontos embaixo) e troca, subindo, a cada chamada nova; quando ele escreve, pede algo ou para, a linha vira um resumo por tipo, na ordem em que fez, com as falhas no fim ("2 passos no navegador, 1 comando rodado (1 falha)"). Uma chamada sozinha que já terminou fica na sua própria linha. Com menos movimento, o nome fica parado.
 - Pedido de aprovação é um cartão com o que o bot quer fazer e os botões Permitir e Negar.
 - Pedido para seguir com um plano (10.1) é um cartão com o plano em markdown, um campo para o que deve mudar e os botões Aprovar plano e Pedir mudanças. Respondido, vira uma linha que abre o plano de novo.
 - Anexos aparecem como miniatura (imagem) ou cartão com nome, tipo e tamanho.
@@ -1196,7 +1197,7 @@ Sem jargão (15.2): o dono não vê "cron", "overlap" nem "timezone" no caminho 
   - "Se a anterior ainda não terminou": pular ou esperar a vez;
   - "Se o computador estava desligado na hora": rodar quando ligar, ou pular;
   - "Avançado": expressão cron.
-- No chat, a message da rotina aparece com a etiqueta "Rotina · <nome>".
+- No chat, a message da rotina aparece só com a etiqueta "Rotina · <nome>" e uma seta; o texto que a rotina manda fica dobrado até o dono abrir.
 - Na página da crew, uma aba com as rotinas de todos os bots dela.
 - Uma execução `failed` entra na marca da barra de tarefas (15.2) até o dono abrir o bot. O app guarda quando o dono abriu cada bot (`localStorage`, `botloft.seen`); um bot aberto não marca.
 - O store carrega `routines.list` a cada conexão e segue `routine.changed` e `routine.run`.

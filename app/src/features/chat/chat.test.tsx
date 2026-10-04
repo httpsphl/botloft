@@ -113,8 +113,10 @@ describe("chat", () => {
       fake.chat.turn(scout.id);
       fake.setBotState(scout.id, "idle");
     });
-    expect(within(line).getByLabelText("Done")).toBeDefined();
-    fireEvent.click(line);
+    // Done, the call is a line of its own again.
+    const ran = within(chat()).getByRole("button", { name: /Run a command/ });
+    expect(within(ran).getByLabelText("Done")).toBeDefined();
+    fireEvent.click(ran);
     expect(within(chat()).getByText("12 passed")).toBeDefined();
     expect(within(chat()).getByText("Command")).toBeDefined();
     expect(within(chat()).getByText("npm test")).toBeDefined();

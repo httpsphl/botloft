@@ -175,7 +175,14 @@ describe("routines", () => {
       void fake.call("routines.runNow", { routineId: id as string });
     });
     openTab("Chat");
-    expect(await screen.findByText("Routine · Morning summary")).toBeDefined();
+    // Only its name, until the owner opens what it asks.
+    const tag = await screen.findByRole("button", { name: "Routine · Morning summary" });
+    const prompt = fake.routines.routines.get(id as string)?.prompt as string;
+    const chat = screen.getByRole("list", { name: "Messages" });
+    expect(within(chat).queryByText(prompt)).toBeNull();
+    fireEvent.click(tag);
+    expect(tag.getAttribute("aria-expanded")).toBe("true");
+    expect(within(chat).getByText(prompt)).toBeDefined();
   });
 
   test("the crew's page lists every bot's routines", async () => {

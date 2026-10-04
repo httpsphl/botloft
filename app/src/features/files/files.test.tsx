@@ -118,6 +118,9 @@ describe("files panel", () => {
     fake.chat.tool(scout.id, "Bash", { summary: "ls", status: "done" });
     await openScout(fake);
     expect(screen.queryByRole("complementary", { name: "Files from Scout" })).toBeNull();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edited 2 files, ran 1 command (1 failed)" }),
+    );
     // Only a call that changed a file, and worked, has the button.
     expect(screen.getAllByRole("button", { name: /Show in files/ })).toHaveLength(1);
 

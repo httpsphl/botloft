@@ -46,6 +46,7 @@ export const chat: Messages["chat"] = {
     task: "Tarefa",
     result: "Resultado",
     goneBot: "Um bot que não está mais na equipe",
+    routine: "Mostrar o que a rotina pede",
   },
   run: {
     working: "Trabalhando",
@@ -67,6 +68,17 @@ export const chat: Messages["chat"] = {
     error: "Erro",
     command: "Comando",
     commandCut: "Este comando é longo demais para aparecer inteiro.",
+    group: {
+      command: (n: number) => (n === 1 ? "1 comando rodado" : `${n} comandos rodados`),
+      read: (n: number) => (n === 1 ? "1 arquivo lido" : `${n} arquivos lidos`),
+      edit: (n: number) => (n === 1 ? "1 arquivo editado" : `${n} arquivos editados`),
+      search: (n: number) => (n === 1 ? "1 busca nos arquivos" : `${n} buscas nos arquivos`),
+      web: (n: number) => (n === 1 ? "1 página da web lida" : `${n} páginas da web lidas`),
+      browser: (n: number) => (n === 1 ? "1 passo no navegador" : `${n} passos no navegador`),
+      message: (n: number) => (n === 1 ? "1 mensagem enviada" : `${n} mensagens enviadas`),
+      other: (n: number) => (n === 1 ? "1 ferramenta usada" : `${n} ferramentas usadas`),
+      failed: (n: number) => (n === 1 ? "1 falha" : `${n} falhas`),
+    },
   },
   approval: {
     asks: (bot: string, action: string) => `${bot} pede para ${action}`,

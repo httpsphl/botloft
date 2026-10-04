@@ -14,6 +14,7 @@
 @import "./color.css";
 @import "./files.css";
 @import "./search.css";
+@import "./activity.css";
 @import "./motion-less.css";
 @import "./paused.css";
 @import "./offscreen.css";
@@ -42,6 +43,9 @@
   /* The check marks of a message the bot has read: a lighter blue than
      --work, still 3:1 or more on canvas, panel and sunken in both themes. */
   --read: #1787c9;
+  /* A bot named in what bots write ("@writer"): a light blue that still
+     reads at 4.5:1, since it colors words. */
+  --mention: #0e6aa0;
   /* The thin edge around a bot's avatar, so light colors hold their shape. */
   --avatar-edge: rgb(0 0 0 / 0.2);
   /* Under menus, pickers and dialogs. */
@@ -70,6 +74,7 @@
   --danger: #ff6d60;
   --idle-state: #8c8c86;
   --read: #5cc4f2;
+  --mention: #5cc4f2;
   --avatar-edge: rgb(255 255 255 / 0.14);
   --lift: rgb(0 0 0 / 0.5);
   --scrim: rgb(0 0 0 / 0.6);
@@ -269,6 +274,11 @@
   .chat-md th {
     background: var(--sunken);
     font-weight: 600;
+  }
+
+  .chat-mention {
+    color: var(--mention);
+    font-weight: 500;
   }
 
   .chat-md input[type="checkbox"] {

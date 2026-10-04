@@ -10,6 +10,7 @@ import remarkGfm from "remark-gfm";
 import { useT } from "../../i18n";
 import { useHost } from "../../store/context";
 import { attempt } from "../../ui/toast";
+import { remarkMentions } from "./mentions";
 
 function isWeb(href: string | undefined): href is string {
   return href !== undefined && /^https?:\/\/\S+$/i.test(href);
@@ -55,6 +56,8 @@ function Picture({ src, alt }: { src: string | Blob | undefined; alt: string | u
   );
 }
 
+const plugins = [remarkGfm, remarkMentions];
+
 const components: Components = {
   a: ({ href, children }) => <Link href={href}>{children}</Link>,
   img: ({ src, alt }) => <Picture src={src} alt={alt} />,
@@ -70,7 +73,7 @@ export const Markdown = memo(function Markdown({
 }) {
   return (
     <div className={`chat-md ${streaming ? "is-streaming" : ""}`} data-selectable>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+      <ReactMarkdown remarkPlugins={plugins} components={components}>
         {text}
       </ReactMarkdown>
     </div>
