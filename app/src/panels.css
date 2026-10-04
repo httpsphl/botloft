@@ -1,31 +1,32 @@
-/* Side panels slide (spec 15.1, panelMotion.ts): the panel widens from the
-   window's right edge, or from the width of the panel it replaces, while
-   its content, already at its full width, comes in with it, and the chat
-   narrows smoothly instead of jumping. Closing runs it back to the edge.
-   Reduced motion makes both instant (motion.css). */
+/* Side panels slide (spec 15.1, panelMotion.ts): the chat takes its new
+   width at once, and the panel, already at its full width, comes in from
+   the window's right edge, or from the width of the panel it replaces.
+   Closing, it leaves the chat its room at once and slides back out over
+   it. Only a transform moves, so the chat is laid out once, not on every
+   frame. Reduced motion makes both instant (motion.css). */
 
 @keyframes panel-open {
   from {
-    width: var(--panel-from, 0px);
-    min-width: var(--panel-from, 0px);
+    transform: translateX(max(0px, calc(100% - var(--panel-from, 0px))));
   }
 }
 
 @keyframes panel-close {
   to {
-    width: 0;
-    min-width: 0;
-    border-left-width: 0;
+    transform: translateX(100%);
   }
 }
 
 .panel-opening {
-  overflow: hidden;
   animation: panel-open 460ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
+/* Out of the flow, on the right edge of the chat and its panel. */
 .panel-closing {
-  overflow: hidden;
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  z-index: 20;
   pointer-events: none;
   animation: panel-close 360ms cubic-bezier(0.4, 0, 0.6, 1) both;
 }

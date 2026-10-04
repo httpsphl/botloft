@@ -1,12 +1,32 @@
-/* Hiding the crews and bots (spec 15.1, sidebarToggle.tsx): the list keeps
-   its width and slides out under the left edge while the chat widens.
-   Reduced motion makes it instant (motion.css). */
+/* Hiding the crews and bots (spec 15.1, sidebarToggle.tsx): the room for
+   the list changes at once, and the list slides out under the left edge
+   (or back in) above the chat. Only a transform moves, so the chat is laid
+   out once, not on every frame. Reduced motion makes it instant
+   (motion.css). */
 
 .sidebar-slot {
+  position: relative;
   width: 18rem;
-  transition: width 320ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-slot[data-open="false"] {
   width: 0;
+}
+
+.sidebar-slide {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  z-index: 20;
+  display: flex;
+  transition: transform 320ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Hidden once it is out of sight, so it is not drawn off screen. */
+.sidebar-slot[data-open="false"] > .sidebar-slide {
+  transform: translateX(-100%);
+  visibility: hidden;
+  transition:
+    transform 320ms cubic-bezier(0.4, 0, 0.2, 1),
+    visibility 0s 320ms;
 }
