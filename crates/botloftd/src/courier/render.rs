@@ -30,6 +30,9 @@ pub(super) struct Context<'a> {
     pub routine: Option<&'a RoutineContext>,
     /// For the owner's answer to a question: its id and text (spec 23.4).
     pub question: Option<(&'a str, &'a str)>,
+    /// For the owner's message: the reactions it takes along, emoji and
+    /// quote (spec 8.9).
+    pub reactions: &'a [(String, String)],
 }
 
 pub(super) struct Rendered {
@@ -48,10 +51,11 @@ pub(super) fn render(message: &Message, context: &Context<'_>, now: i64) -> Rend
                 Some(reply) => envelope::reply(&reply.text, &body),
                 None => body,
             };
-            match context.question {
+            let text = match context.question {
                 Some((id, question)) => envelope::answer(id, question, &body),
                 None => body,
-            }
+            };
+            envelope::with_reactions(context.reactions, &text)
         }
         SenderKind::Bot => {
             let from = match context.sender_handle {
@@ -174,6 +178,7 @@ mod tests {
             workspace: dir.path(),
             routine: None,
             question: None,
+            reactions: &[],
         };
         let owner = render(&message(SenderKind::Owner, "Ship it"), &context, 0);
         let line = parse(&owner);
@@ -200,6 +205,7 @@ mod tests {
             workspace: dir.path(),
             routine: None,
             question: None,
+            reactions: &[],
         };
         let mut owner = message(SenderKind::Owner, "Make it yearly");
         owner.reply_to = Some(MessageReply {
@@ -244,6 +250,7 @@ Make it yearly"
             workspace: dir.path(),
             routine: None,
             question: None,
+            reactions: &[],
         };
         let line = parse(&render(&owner, &context, 0));
         let content = line["message"]["content"].as_array().expect("blocks");

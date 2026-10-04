@@ -94,6 +94,14 @@ export const chat: Messages["chat"] = {
     cancel: "Cancelar a resposta",
     jump: "Mostrar a mensagem respondida",
   },
+  react: {
+    action: "Reagir",
+    to: (bot) => `Reagir ao que ${bot} escreveu`,
+    remove: "Tirar a reação",
+    waiting: (bot) => `${bot} vê junto com sua próxima mensagem`,
+    seen: (bot) => `${bot} viu`,
+    failed: "Não foi possível salvar a reação",
+  },
   approval: {
     asks: (bot: string, action: string) => `${bot} pede para ${action}`,
     wants: (bot: string, action: string) => `${bot} quer ${action}`,

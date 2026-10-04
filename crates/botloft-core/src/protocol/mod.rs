@@ -59,6 +59,7 @@ mod messaging;
 mod methods;
 mod model;
 mod questions;
+mod reactions;
 mod routines;
 mod rules;
 mod screens;
@@ -75,6 +76,7 @@ pub use messaging::*;
 pub use methods::*;
 pub use model::*;
 pub use questions::*;
+pub use reactions::*;
 pub use routines::*;
 pub use rules::*;
 pub use screens::*;
@@ -148,6 +150,8 @@ pub mod method {
     pub const QUESTIONS_LIST: &str = "questions.list";
     pub const QUESTIONS_ANSWER: &str = "questions.answer";
     pub const QUESTIONS_DISMISS: &str = "questions.dismiss";
+    pub const REACTIONS_LIST: &str = "reactions.list";
+    pub const REACTIONS_SET: &str = "reactions.set";
     pub const SETTINGS_GET: &str = "settings.get";
     pub const SETTINGS_UPDATE: &str = "settings.update";
     pub const USAGE_TOKENS: &str = "usage.tokens";
@@ -176,6 +180,7 @@ pub mod notification {
     pub const BROWSER_FRAME: &str = "browser.frame";
     pub const SCREEN_DRAFT: &str = "screen.draft";
     pub const QUESTION_CHANGED: &str = "question.changed";
+    pub const REACTION_CHANGED: &str = "reaction.changed";
 }
 
 /// Error codes: the standard JSON-RPC ones plus the daemon's (spec 11.4).

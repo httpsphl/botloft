@@ -7,7 +7,7 @@ use std::time::Instant;
 use botloft_core::protocol::{
     AccountUsage, Bot, BotContextChanged, BotDeleted, BotRules, BotStateChanged, BrowserAction,
     BrowserState, ChatDelta, ChatItemChanged, Crew, CrewDeleted, Delivery, FolderRecycled, Message,
-    Question, Routine, RoutineRun, ScreenDraft, Task,
+    Question, ReactionChanged, Routine, RoutineRun, ScreenDraft, Task,
 };
 use botloft_store::Store;
 use tokio::runtime::{Handle, RuntimeFlavor};
@@ -52,6 +52,7 @@ pub enum Event {
     BrowserAction(BrowserAction),
     ScreenDraft(ScreenDraft),
     QuestionChanged(Question),
+    ReactionChanged(ReactionChanged),
 }
 
 /// Events buffered per connection before a slow client is dropped.

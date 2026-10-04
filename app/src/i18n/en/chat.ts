@@ -103,6 +103,15 @@ export const chat = {
     cancel: "Cancel the reply",
     jump: "Show what this replies to",
   },
+  /** The owner's reactions to the bot's replies (spec 8.9). */
+  react: {
+    action: "React",
+    to: (bot: string) => `React to what ${bot} wrote`,
+    remove: "Take the reaction off",
+    waiting: (bot: string) => `${bot} sees it with your next message`,
+    seen: (bot: string) => `${bot} saw it`,
+    failed: "Could not save the reaction",
+  },
   approval: {
     asks: (bot: string, action: string) => `${bot} asks to ${action}`,
     wants: (bot: string, action: string) => `${bot} wants to ${action}`,

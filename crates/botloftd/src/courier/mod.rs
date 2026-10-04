@@ -214,6 +214,11 @@ fn prepare(daemon: &Daemon, store: &Store, delivery: &Delivery) -> Result<Step, 
     };
     let routine = context::routine(store, &message)?;
     let question = context::question(store, &message)?;
+    let reactions = store
+        .reactions_sent_in(&message.id)?
+        .into_iter()
+        .map(|(reaction, quote)| (reaction.emoji, quote))
+        .collect();
     Ok(Step::Send(Box::new(Draft {
         workspace: daemon.paths.bot_workspace(&crew.slug, &bot.slug),
         message,
@@ -222,6 +227,7 @@ fn prepare(daemon: &Daemon, store: &Store, delivery: &Delivery) -> Result<Step, 
         task,
         routine,
         question,
+        reactions,
     })))
 }
 
@@ -235,6 +241,8 @@ struct Draft {
     routine: Option<context::RoutineContext>,
     /// The question an answer is for: its id and text.
     question: Option<(String, String)>,
+    /// The owner's reactions it takes to the bot: emoji and quote.
+    reactions: Vec<(String, String)>,
 }
 
 impl Draft {
@@ -250,6 +258,7 @@ impl Draft {
                 .question
                 .as_ref()
                 .map(|(id, text)| (id.as_str(), text.as_str())),
+            reactions: &self.reactions,
         };
         render(&self.message, &context, now)
     }

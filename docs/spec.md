@@ -435,6 +435,16 @@ O dono procura palavras em todas as conversas: o que ele mandou, o que outros bo
 
 **No app.** "Buscar", no topo da barra lateral (ou Ctrl+K), abre a busca no meio da janela: um campo, a escolha de uma equipe ou de todas, e os resultados conforme o dono escreve, cada um com o rosto e o nome do bot, a equipe, a hora, quem escreveu (o dono, outro bot, o Botloft ou o próprio bot) e o trecho com as palavras em destaque. "Mostrar mais" traz os anteriores. Um clique abre o chat do bot nesse ponto, com o item em destaque por um instante. A busca guarda o que foi digitado enquanto o app está aberto, e o texto volta selecionado, pronto para uma busca nova. Sem nada achado: "Nada encontrado".
 
+### 8.9 Reações
+
+O dono reage a uma fala do bot (item `reply`) com um emoji, sem gastar um turno: a reação não acorda o bot. Ela espera e vai junto com a próxima message do dono para esse bot.
+
+- Uma reação por fala, de uma lista fixa (`REACTIONS`, exportada para o app): 👍 ❤️ 😂 🎉 🙏 👀. Outro emoji troca a reação; `null` a tira.
+- `reactions.set {botId, itemId, emoji}` confere que o item é uma fala do bot (`not_found` se não é do chat dele, `validation` se não é `reply` ou se o emoji não está na lista) e guarda a reação com a fala citada numa linha só, cortada em 120 caracteres. Devolve a reação, ou `null` quando tirou. `reactions.list {botId}` devolve as reações do bot.
+- Toda message do dono para o bot (`messages.send` e a resposta a uma pergunta, 23.4) leva as reações que esperam, na mesma transação em que é gravada: cada uma ganha `sentIn` com o id da message. O bot lê uma linha por reação antes do resto (9.3): `Reacted 👍 to: "<fala citada>"`. Trocar uma reação que já foi faz ela esperar de novo; tirar uma que já foi não avisa o bot.
+- `reaction.changed {botId, itemId, reaction}` avisa o app de toda reação posta, trocada, enviada ou tirada (`reaction: null`).
+- **No app** (15.3): na fala do bot, ao lado do botão de responder, o botão de reagir abre os seis emojis numa pílula. A reação fica embaixo da fala, com "<bot> vê junto com sua próxima mensagem" enquanto espera e "<bot> viu" depois que foi. Um clique nela, ou no mesmo emoji de novo, tira.
+
 ## 9. Mensagens e entrega
 
 ### 9.1 Fluxo
@@ -478,7 +488,7 @@ A resposta sai no stdout como `{"type":"control_response","response":{"subtype":
 
 ### 9.3 Texto que o bot recebe
 
-A mensagem do **dono** vai como ele escreveu, sem envelope: é o usuário da sessão falando, com a autoridade de quem digita. A resposta a uma pergunta do bot vem depois de uma linha que cita a pergunta (23.4).
+A mensagem do **dono** vai como ele escreveu, sem envelope: é o usuário da sessão falando, com a autoridade de quem digita. A resposta a uma pergunta do bot vem depois de uma linha que cita a pergunta (23.4). As reações que esperavam (8.9) vêm antes de tudo, uma por linha.
 
 **Responder a algo do chat.** O dono pode responder a uma fala do bot (item `reply`) ou a uma message que ele recebeu (item `inbound`) no chat desse bot: `messages.send` leva `replyTo` com o id do item. O daemon confere que o item é do mesmo bot e tem texto (senão, `not_found` ou `validation`) e guarda na message `replyTo {itemId, text}`, com o texto numa linha só e cortado em 300 caracteres, como estava na hora. O bot recebe a citação antes das palavras do dono:
 
@@ -666,6 +676,8 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `questions.list` | `status?` (`open` se ausente) | `Question[]` de bots e crews ativos, da mais nova à mais velha (23.5) |
 | `questions.answer` | `questionId, answer` | `Question`; a resposta vai ao bot como message do dono (23.3) |
 | `questions.dismiss` | `questionId` | `Question`; fecha sem avisar o bot (23.3) |
+| `reactions.list` | `botId` | `Reaction[]` (8.9) |
+| `reactions.set` | `botId, itemId, emoji` (`null` tira) | `Reaction` ou `null` (8.9) |
 | `settings.get` | | `Settings`: `startWithWindows`, `keepAwake` e `approvalWaitMinutes`, como estão no `config.toml` (6) |
 | `usage.tokens` | `since` (ms Unix, não negativo) | `BotTokens[]`: `botId`, `name`, `color`, `crew` (nome da equipe), `archived`, `turns` e `tokens` somados (8.7) |
 | `settings.update` | `startWithWindows?, keepAwake?, approvalWaitMinutes?` (1 a 1440) | `Settings`; grava o que veio e aplica na hora (6, 14). Se a tarefa não pode mudar, nada é gravado e volta um erro |
@@ -674,7 +686,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 
 ### 11.3 Notificações do servidor
 
-`bot.state`, `bot.changed`, `bot.context` (8.6), `bot.rules` (10.1), `bot.deleted`, `crew.changed`, `crew.deleted`, `folder.recycled` (7.6), `chat.item`, `chat.delta`, `message.created`, `delivery.changed`, `task.changed`, das rotinas `routine.changed` e `routine.run` (20.8), e do navegador `browser.changed`, `browser.action` e, só para quem assiste, `browser.frame` (21.7), e das telas `screen.draft` (22.3), e das perguntas `question.changed` (23.5).
+`bot.state`, `bot.changed`, `bot.context` (8.6), `bot.rules` (10.1), `bot.deleted`, `crew.changed`, `crew.deleted`, `folder.recycled` (7.6), `chat.item`, `chat.delta`, `message.created`, `delivery.changed`, `task.changed`, das rotinas `routine.changed` e `routine.run` (20.8), e do navegador `browser.changed`, `browser.action` e, só para quem assiste, `browser.frame` (21.7), e das telas `screen.draft` (22.3), e das perguntas `question.changed` (23.5), e das reações `reaction.changed` (8.9).
 
 ### 11.4 Erros
 
@@ -690,7 +702,7 @@ Além desses, os códigos padrão do JSON-RPC: `-32700` (JSON inválido), `-3260
 
 ## 12. Dados (SQLite)
 
-Pragmas: `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON`, `busy_timeout=5000`, `temp_store=MEMORY`, cache de 16 MB e `PRAGMA optimize` ao abrir. Com WAL, `NORMAL` não corrompe o banco; uma queda de energia pode perder os últimos commits, mas nenhum commit espera o disco (com `FULL`, cada item de chat pagava um flush no Windows). As consultas quentes passam pelo cache de statements do rusqlite, e toda coluna que aponta para outra tabela tem índice: as tabelas nunca encolhem, e sem índice a exclusão varre a tabela filha uma vez por linha apagada. Migrations numeradas em `botloft-store/migrations/NNNN_nome.sql`, versão em `PRAGMA user_version`. Tempo em milissegundos Unix (`INTEGER`). Arquivamento é lógico (`archived_at`). Exclusão (7.6) apaga as linhas: as chaves estrangeiras não têm `ON DELETE`, então o daemon apaga ou solta, na ordem e numa transação só, tudo que aponta para o bot (`questions`, `approvals`, `chat_items`, `browser_sites`, `allow_rules`, `routine_runs`, `attachments`, `deliveries`, as `messages` recebidas, `routines`, `tasks`), e zera `messages.from_bot_id`, `messages.task_id`, `tasks.origin_task_id` e `crews.lead_bot_id` onde apontavam para o que saiu. Uma crew sai depois dos bots dela.
+Pragmas: `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON`, `busy_timeout=5000`, `temp_store=MEMORY`, cache de 16 MB e `PRAGMA optimize` ao abrir. Com WAL, `NORMAL` não corrompe o banco; uma queda de energia pode perder os últimos commits, mas nenhum commit espera o disco (com `FULL`, cada item de chat pagava um flush no Windows). As consultas quentes passam pelo cache de statements do rusqlite, e toda coluna que aponta para outra tabela tem índice: as tabelas nunca encolhem, e sem índice a exclusão varre a tabela filha uma vez por linha apagada. Migrations numeradas em `botloft-store/migrations/NNNN_nome.sql`, versão em `PRAGMA user_version`. Tempo em milissegundos Unix (`INTEGER`). Arquivamento é lógico (`archived_at`). Exclusão (7.6) apaga as linhas: as chaves estrangeiras não têm `ON DELETE`, então o daemon apaga ou solta, na ordem e numa transação só, tudo que aponta para o bot (`questions`, `reactions`, `approvals`, `chat_items`, `browser_sites`, `allow_rules`, `routine_runs`, `attachments`, `deliveries`, as `messages` recebidas, `routines`, `tasks`), e zera `messages.from_bot_id`, `messages.task_id`, `tasks.origin_task_id` e `crews.lead_bot_id` onde apontavam para o que saiu. Uma crew sai depois dos bots dela.
 
 | Tabela | Colunas principais |
 |---|---|
@@ -707,6 +719,7 @@ Pragmas: `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON`, `busy_time
 | `browser_sites` | `bot_id, host, allowed_at`: sites que o dono deixou o bot usar no navegador (21.5) |
 | `allow_rules` | `id (rul_), bot_id, tool_name, kind, value, created_at`, única por `(bot_id, tool_name, kind, value)`: o que o dono permitiu de vez para o bot (10.1) |
 | `questions` | seção 23.7; `messages` ganha `question_id` |
+| `reactions` | `item_id` (chave, item `reply`), `bot_id`, `emoji`, `quote`, `created_at`, `sent_in` (a message que a levou ao bot; nula enquanto espera). Sai com o bot, antes dos itens e das messages (7.6) |
 | `chat_search` | índice FTS5 do texto de `chat_items`, pela view `chat_text`, mantido por triggers (8.8) |
 
 Índices mínimos: `deliveries(state, next_attempt_at)`, `messages(crew_id, created_at)`, `tasks(assignee_bot_id, status)`, `bots(crew_id)`, `chat_items(bot_id, id)`, `chat_items(created_at) WHERE kind = 'turn'` (8.7), `attachments(message_id)`.

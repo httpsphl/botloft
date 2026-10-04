@@ -918,6 +918,40 @@ export type QuestionsAnswerParams = { questionId: QuestionId, answer: string, };
 
 export type QuestionIdParams = { questionId: QuestionId, };
 
+/** The emoji the owner can react with (spec 8.9). */
+export const REACTIONS = ["👍", "❤️", "😂", "🎉", "🙏", "👀"] as const;
+
+export type Reaction = { botId: BotId, 
+/**
+ * The bot's reply it is on.
+ */
+itemId: ChatItemId, 
+/**
+ * One of [`REACTIONS`].
+ */
+emoji: string, 
+/**
+ * Unix time in milliseconds.
+ */
+createdAt: number, 
+/**
+ * The owner's message that took it to the bot; `null` while it waits
+ * for one.
+ */
+sentIn: MessageId | null, };
+
+export type ReactionsListParams = { botId: BotId, };
+
+/**
+ * Puts the owner's reaction on a reply, or takes it off with `null`.
+ */
+export type ReactionsSetParams = { botId: BotId, itemId: ChatItemId, emoji: string | null, };
+
+/**
+ * A reaction was put, changed, sent or taken off (`reaction` is `null`).
+ */
+export type ReactionChanged = { botId: BotId, itemId: ChatItemId, reaction: Reaction | null, };
+
 export type TurnItem = { durationMs: number, 
 /**
  * Tokens the turn used (spec 8.7); `null` when Claude Code did not say
@@ -1433,6 +1467,8 @@ export interface RpcMethods {
   "questions.list": { params: QuestionsListParams; result: Array<Question> };
   "questions.answer": { params: QuestionsAnswerParams; result: Question };
   "questions.dismiss": { params: QuestionIdParams; result: Question };
+  "reactions.list": { params: ReactionsListParams; result: Array<Reaction> };
+  "reactions.set": { params: ReactionsSetParams; result: Reaction | null };
   "chat.search": { params: ChatSearchParams; result: Array<SearchHit> };
   "browser.list": { params: undefined; result: Array<BrowserState> };
   "browser.watch": { params: BrowserWatchParams; result: BrowserView };
@@ -1466,6 +1502,7 @@ export interface RpcNotifications {
   "routine.changed": Routine;
   "routine.run": RoutineRun;
   "question.changed": Question;
+  "reaction.changed": ReactionChanged;
   "bot.rules": BotRules;
   "browser.changed": BrowserState;
   "browser.action": BrowserAction;

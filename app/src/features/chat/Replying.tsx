@@ -8,6 +8,7 @@ import { useT } from "../../i18n";
 import { plainText } from "../../lib/plainText";
 import type { ChatItemId, MessageReply } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
+import { ReactButton, ReactionMark } from "./Reactions";
 
 /** What the owner is replying to, while they write. */
 export interface ReplyTarget {
@@ -20,14 +21,20 @@ export interface ReplyTarget {
 /** Starts a reply; absent where the chat cannot be written to. */
 export const StartReply = createContext<((target: ReplyTarget) => void) | null>(null);
 
-/** Wraps what can be replied to, with the button that shows on hover. */
+/**
+ * Wraps what can be replied to, with the buttons that show on hover: reply,
+ * and for the bot's own replies, react (spec 8.9).
+ */
 export function Repliable({
   target,
+  react = false,
   className = "",
   children,
 }: {
   target: ReplyTarget;
-  /** A bubble narrows it to its own width, for the button to sit on its corner. */
+  /** The bot's own reply: the owner can react to it too. */
+  react?: boolean;
+  /** A bubble narrows it to its own width, for the buttons to sit on its corner. */
   className?: string;
   children: ReactNode;
 }) {
@@ -39,15 +46,19 @@ export function Repliable({
   return (
     <div className={`group/reply relative ${className}`}>
       {children}
-      <button
-        type="button"
-        title={t.action}
-        aria-label={t.to(target.who)}
-        onClick={() => start(target)}
-        className="absolute -top-2 right-0 grid size-7 place-items-center rounded-lg border border-line bg-panel text-muted opacity-0 shadow-sm transition-[opacity,color] hover:text-ink focus-visible:opacity-100 group-hover/reply:opacity-100"
-      >
-        <CornerUpLeft aria-hidden size={15} />
-      </button>
+      {react && <ReactionMark itemId={target.itemId} bot={target.who} />}
+      <div className="absolute -top-2 right-0 flex rounded-lg border border-line bg-panel opacity-0 shadow-sm transition-opacity focus-within:opacity-100 group-hover/reply:opacity-100">
+        {react && <ReactButton itemId={target.itemId} bot={target.who} />}
+        <button
+          type="button"
+          title={t.action}
+          aria-label={t.to(target.who)}
+          onClick={() => start(target)}
+          className="grid size-7 place-items-center rounded-lg text-muted transition-colors hover:text-ink"
+        >
+          <CornerUpLeft aria-hidden size={15} />
+        </button>
+      </div>
     </div>
   );
 }

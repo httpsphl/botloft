@@ -165,6 +165,7 @@ function BotRunView({
                 <Repliable
                   key={head.id}
                   target={{ itemId: head.id, who: bot.name, text: head.body.text }}
+                  react
                 >
                   <Markdown text={head.body.text} />
                 </Repliable>
