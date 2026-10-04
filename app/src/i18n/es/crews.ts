@@ -55,6 +55,7 @@ export const crews: Messages["crews"] = {
     moreActions: "Más acciones del equipo",
     folder: (path: string) => `Trabaja en ${path}`,
     openFolder: "Abrir carpeta de trabajo",
+    openFolderHint: "Haz clic para abrirla",
     changeFolder: "Cambiar carpeta de trabajo…",
     moveTitle: (crew: string) => `¿Mover ${crew} a otra carpeta?`,
     moveBody: (path: string) =>
