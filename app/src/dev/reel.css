@@ -1,0 +1,55 @@
+/* The mascot reel (Reel.tsx, dev only). The row slides with an ease that
+   starts and stops softly; the bot coming to the middle grows into it and
+   lands squashed, then springs back. */
+
+.reel {
+  --gap: calc(var(--hero) * 1.1);
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #050505;
+}
+
+.reel-place {
+  position: absolute;
+  left: 50%;
+  top: 54%;
+  width: var(--hero);
+  height: var(--hero);
+  margin: calc(var(--hero) / -2);
+  transform: translateX(calc(var(--across) * var(--gap))) scale(0.46);
+  transition:
+    transform 280ms cubic-bezier(0.65, 0, 0.25, 1),
+    opacity 280ms ease-out;
+}
+
+.reel-place[data-center] {
+  transform: translateX(0) scale(1);
+}
+
+.reel-place[data-out] {
+  opacity: 0;
+}
+
+.reel-land {
+  transform-origin: 50% 100%;
+}
+
+.reel-place[data-center] .reel-land {
+  animation: reel-land 560ms 180ms both;
+}
+
+@keyframes reel-land {
+  0% {
+    transform: scale(1, 1);
+  }
+  30% {
+    transform: scale(1.12, 0.88);
+  }
+  62% {
+    transform: scale(0.96, 1.05);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}

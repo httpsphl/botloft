@@ -31,22 +31,27 @@ async function props(): Promise<{ host: Host; connect: Connect }> {
   throw new Error("Botloft runs inside its desktop app");
 }
 
-props().then(({ host, connect: open }) => {
-  // Before the first paint, so the window never flashes at the small size
-  // nor moves when the owner asked for less motion.
-  host.setZoom(currentZoom()).catch(() => {});
-  if (prefs.lessMotion.get()) {
-    document.documentElement.dataset.motion = "less";
-  }
-  watchVisibility();
-  // Opened at sign-in, the window stays hidden until the owner opens it.
-  host.launchedAtSignIn().then(
-    (hidden) => hidden && !document.hasFocus() && markHidden(true),
-    () => {},
-  );
-  createRoot(root).render(
-    <StrictMode>
-      <App host={host} connect={open} />
-    </StrictMode>,
-  );
-});
+// The mascot reel (dev/Reel.tsx), a page to record videos from.
+if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("reel")) {
+  import("./dev/Reel").then(({ Reel }) => createRoot(root).render(<Reel />));
+} else {
+  props().then(({ host, connect: open }) => {
+    // Before the first paint, so the window never flashes at the small size
+    // nor moves when the owner asked for less motion.
+    host.setZoom(currentZoom()).catch(() => {});
+    if (prefs.lessMotion.get()) {
+      document.documentElement.dataset.motion = "less";
+    }
+    watchVisibility();
+    // Opened at sign-in, the window stays hidden until the owner opens it.
+    host.launchedAtSignIn().then(
+      (hidden) => hidden && !document.hasFocus() && markHidden(true),
+      () => {},
+    );
+    createRoot(root).render(
+      <StrictMode>
+        <App host={host} connect={open} />
+      </StrictMode>,
+    );
+  });
+}

@@ -45,6 +45,7 @@ pnpm check        # tsc --noEmit + biome check + vitest run
 pnpm bundle       # instalador NSIS com o sidecar (spec 15.4), em target\release\bundle\nsis
 pnpm bundle:setup # tela de instalação com esse NSIS dentro (spec 15.7), em target\release\bundle\setup
 pnpm local        # compila em release e troca o app e o botloftd do Botloft instalado, sem instalador; `pnpm local --restore` volta o anterior
+pnpm reel         # grava o carrossel dos mascotes (?reel, com o pnpm dev rodando) em .dev/reel/reel.mp4; --blur, --seconds, --size, --url
 ```
 
 O `pnpm local` usa os dados reais (`%LOCALAPPDATA%\Botloft`), não os de dev. As migrations novas rodam no banco real, e um daemon mais antigo deixa de abrir esse banco. O atualizador continua oferecendo releases de versão maior.
