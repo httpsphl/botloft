@@ -869,6 +869,59 @@ export type BotDesktop = { botId: BotId,
  */
 grants: Array<DesktopGrant>, };
 
+/**
+ * The window a bot is using on the owner's desktop.
+ */
+export type DesktopWindow = { id: number, title: string, 
+/**
+ * The app's name for people.
+ */
+app: string, };
+
+/**
+ * What a bot does on the owner's desktop, for its panel (spec 24.9): the
+ * params of `desktop.changed`.
+ */
+export type DesktopState = { botId: BotId, 
+/**
+ * The window it read or acted in last.
+ */
+window: DesktopWindow | null, 
+/**
+ * What it did last, in English, as its tool said ("Clicked button
+ * \"Save\"."); `null` after only reading.
+ */
+action: string | null, 
+/**
+ * When it last read or acted, Unix ms.
+ */
+at: number | null, 
+/**
+ * The owner stopped it (spec 24.9): its desktop tools refuse until
+ * they let it go on.
+ */
+stopped: boolean, };
+
+/**
+ * A picture of the window a bot is using, for whoever watches its panel.
+ */
+export type DesktopFrame = { botId: BotId, 
+/**
+ * JPEG, base64.
+ */
+data: string, width: number, height: number, };
+
+/**
+ * The result of `desktop.watch`: the bot's state and, when it uses a
+ * window, its picture now.
+ */
+export type DesktopView = { state: DesktopState, frame: DesktopFrame | null, };
+
+/**
+ * `desktop.watch`, `desktop.stop` and `desktop.resume`.
+ */
+export type DesktopBotParams = { botId: BotId, };
+
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
 /**
  * What the bot says the command is for, as in `ToolItem`. The bot
@@ -1551,6 +1604,10 @@ export interface RpcMethods {
   "rules.delete": { params: RuleIdParams; result: BotRules };
   "desktop.grants": { params: DesktopGrantsParams; result: Array<DesktopGrant> };
   "desktop.revoke": { params: DesktopGrantIdParams; result: BotDesktop };
+  "desktop.watch": { params: DesktopBotParams; result: DesktopView };
+  "desktop.unwatch": { params: undefined; result: null };
+  "desktop.stop": { params: DesktopBotParams; result: DesktopState };
+  "desktop.resume": { params: DesktopBotParams; result: DesktopState };
   "routines.list": { params: RoutinesListParams; result: Array<Routine> };
   "routines.create": { params: RoutinesCreateParams; result: Routine };
   "routines.update": { params: RoutinesUpdateParams; result: Routine };
@@ -1600,6 +1657,8 @@ export interface RpcNotifications {
   "reaction.changed": ReactionChanged;
   "bot.rules": BotRules;
   "bot.desktop": BotDesktop;
+  "desktop.changed": DesktopState;
+  "desktop.frame": DesktopFrame;
   "browser.changed": BrowserState;
   "browser.action": BrowserAction;
   "browser.frame": BrowserFrame;

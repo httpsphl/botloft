@@ -1653,7 +1653,7 @@ Tabela `questions`: `id, crew_id, bot_id, chat_item_id, text, options (JSON), st
 
 ## 24. Desktop
 
-Status: **D1 e D2 implementados** (24.12). É o item 10 da seção 18. Decisões e riscos em `docs/adr/0002-desktop-use.md`.
+Status: **D1 e D2 implementados; D3 em andamento** (24.12): o daemon já guarda o que cada bot faz no desktop, manda a foto ao vivo, para e deixa continuar, e tem o atalho; falta o painel no app. É o item 10 da seção 18. Decisões e riscos em `docs/adr/0002-desktop-use.md`.
 
 ### 24.1 O que é
 
@@ -1755,8 +1755,11 @@ No servidor `botloft` (11), como as do navegador.
 
 ### 24.9 App
 
-- **Painel "Desktop"** ao lado do chat, no mesmo dock do navegador, terminal e arquivos (15.1): a foto ao vivo da janela em que o bot está agindo (`PrintWindow` a cada mudança, no máximo 5 por segundo, só enquanto o painel está aberto), o nome do app, e a linha do que ele acabou de fazer. Um botão **Parar** encerra o que o bot faz no desktop na hora.
-- **Parar tudo**: um atalho global, `Ctrl+Alt+End`, que o daemon registra (`RegisterHotKey`), para qualquer ação de desktop de qualquer bot, mesmo com o app fechado.
+- **Painel "Desktop"** ao lado do chat, no mesmo dock do navegador, terminal e arquivos (15.1): a foto ao vivo da janela que o bot leu ou em que agiu por último, o nome do app e o título da janela, e a linha do que ele acabou de fazer. Um botão **Parar** para o bot no desktop; parado, o painel diz isso e oferece **Deixar continuar**.
+- **O que o daemon guarda** (`DesktopState`, em memória, por bot): a janela (`id`, título, app), a última ação como a tool disse (`Clicked button "Save".`; nada depois de só ler), quando foi, e se o dono o parou. Cada leitura, foto ou ação o atualiza e sai a notificação `desktop.changed` para todos os apps.
+- **Foto ao vivo:** `desktop.watch {botId}` devolve o estado e a foto mais nova (`DesktopView`) e, enquanto alguma conexão assiste aquele bot, o daemon fotografa a janela dele quatro vezes por segundo (`PrintWindow`, como `desktop_screenshot`) e manda `desktop.frame` só quando a foto mudou, só para quem assiste, como os quadros do navegador (21.7): um app lento recebe a mais nova. Quando a última conexão para (`desktop.unwatch`, outro `desktop.watch` ou a conexão caindo), as fotos param.
+- **Parar:** `desktop.stop {botId}` marca o bot como parado e `desktop.resume {botId}` o deixa continuar; os dois devolvem o `DesktopState`. Parado, toda tool `desktop_*` dele recusa, de novo depois de esperar o dono ou a vez no desktop, com o aviso de que o dono o parou e que ele deve contar no chat o que fazia. Uma ação já em andamento termina (ela dura no máximo 5 s, 24.5). Parado fica até o dono deixar continuar. Isso vive na memória: um daemon que reinicia começa com ninguém parado.
+- **Parar tudo:** o atalho global `Ctrl+Alt+End`, que o daemon registra ao subir (`RegisterHotKey` num thread com fila própria, `MOD_NOREPEAT`), para todos os bots no desktop, mesmo com o app fechado. Se outro programa já tem o atalho (outro daemon do Botloft, de dev, por exemplo), o daemon avisa no log e segue sem ele.
 - O cartão de permissão no chat (24.2) diz "<bot> quer ver <app>" com o ícone de tela, o porquê do bot ("<bot> diz: ..."), o caminho do executável e o que ver deixa fazer (ler as janelas do app e fotografá-las com o dono no computador, nunca senhas, e onde tirar). Respondido, vira uma linha: "<bot> pode ver <app>", "<bot> não pode ver <app>" com a nota, ou sem resposta. As tools `desktop_*` aparecem no chat com o ícone de tela e o porquê como resumo.
 
 ### 24.10 Permissões no app
@@ -1784,7 +1787,7 @@ No servidor `botloft` (11), como as do navegador.
 |---|---|---|
 | **D1** Ver | `desktop_grants`, permissões pelo chat (app, Ver), o que nunca é liberado, `desktop_windows`, `desktop_look`, `desktop_screenshot` de uma janela, a seção Desktop nas configurações do bot | unidade; Windows de verdade com uma janela de teste própria (Win32 com botões e campos, inclusive de senha) |
 | **D2** Mexer | nível Mexer, `desktop_click`, `desktop_type`, `desktop_select`, `desktop_scroll` por acessibilidade, uma ação por vez | a janela de teste e o Bloco de Notas |
-| **D3** Painel | o painel "Desktop" ao vivo, Parar, o atalho global | app com FakeBotloft; o atalho no Windows de verdade |
+| **D3** Painel | o painel "Desktop" ao vivo, Parar, o atalho global | o daemon com uma janela de verdade (foto ao vivo, parar, deixar continuar, parar todos); app com FakeBotloft; o atalho apertado de verdade, à mão |
 | **D4** Mouse e teclado | a opção, `SendInput`, `desktop_press`, `desktop_click_at`, o dono assumindo pelo gancho, o aviso na tela | a janela de teste; o dono simulado por entrada não injetada |
 | **D5** Sem você | a opção, a tela de riscos, o aviso na volta, a regra dos 5 minutos, tela bloqueada | unidade; teste manual com a tela bloqueada |
 | **D6** Desktop inteiro | o alcance, a foto da tela com as janelas bloqueadas cobertas | a janela de teste e uma bloqueada |

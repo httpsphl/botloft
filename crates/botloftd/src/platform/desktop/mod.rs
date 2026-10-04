@@ -126,6 +126,20 @@ pub fn windows() -> Result<Vec<Window>, DesktopError> {
     }
 }
 
+/// Calls `stop` each time the owner presses Ctrl+Alt+End, from now on
+/// (spec 24.9). Refused when another program holds the shortcut.
+pub fn on_stop_key(stop: impl Fn() + Send + 'static) -> Result<(), DesktopError> {
+    #[cfg(windows)]
+    {
+        windows::on_stop_key(stop)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = stop;
+        Err(DesktopError::Unavailable)
+    }
+}
+
 /// How long ago the owner last used the mouse or keyboard (spec 24.8);
 /// `None` where that cannot be known.
 pub fn owner_idle() -> Option<std::time::Duration> {

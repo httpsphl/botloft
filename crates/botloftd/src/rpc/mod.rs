@@ -1,24 +1,26 @@
 //! The app's connection: one WebSocket per client, JSON-RPC 2.0 over text
 //! frames (spec 11). The first request must be `session.hello`.
 
+mod desktop_watch;
 mod dispatch;
 pub mod jsonrpc;
+mod notify;
 mod watching;
 
 use std::sync::Arc;
 use std::time::Duration;
 
 use axum::extract::ws::{Message, WebSocket};
-use botloft_core::protocol::{
-    HelloParams, HelloResult, PROTOCOL_VERSION, error_code, method, notification,
-};
+use botloft_core::protocol::{HelloParams, HelloResult, PROTOCOL_VERSION, error_code, method};
 use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
 use serde_json::Value;
 use tokio::sync::{broadcast, mpsc, watch};
 use tracing::{debug, warn};
 
+use self::desktop_watch::DesktopWatch;
 use self::jsonrpc::RpcError;
+use self::notify::to_notification;
 use self::watching::Watch;
 use crate::state::{Daemon, Event};
 
@@ -140,10 +142,11 @@ async fn run(
     daemon: &Arc<Daemon>,
 ) {
     let mut watch = Watch::default();
+    let mut desktop = DesktopWatch::default();
     loop {
         let frame = tokio::select! {
             message = stream.next() => match message {
-                Some(Ok(Message::Text(text))) => match route(daemon, &text, &mut watch, frames) {
+                Some(Ok(Message::Text(text))) => match route(daemon, &text, &mut watch, &mut desktop, frames) {
                     Routed::Reply(frame) => frame,
                     Routed::InOrder(request) => answer(daemon, request).await,
                     Routed::Aside(request) => {
@@ -164,6 +167,10 @@ async fn run(
                 Err(broadcast::error::RecvError::Closed) => return,
             },
             frame = watch.next_frame() => {
+                frames.send_replace(frame);
+                None
+            }
+            frame = desktop.next_frame() => {
                 frames.send_replace(frame);
                 None
             }
@@ -201,6 +208,7 @@ fn route(
     daemon: &Arc<Daemon>,
     text: &str,
     watch: &mut Watch,
+    desktop: &mut DesktopWatch,
     frames: &watch::Sender<Option<String>>,
 ) -> Routed {
     let request = match jsonrpc::parse(text) {
@@ -228,6 +236,11 @@ fn route(
         | method::BROWSER_SWITCH_TAB
         | method::BROWSER_OPEN
         | method::BROWSER_TEACH => watch.request(daemon, &request.method, request.params),
+        // So is watching a bot's desktop panel (spec 24.9).
+        method::DESKTOP_WATCH | method::DESKTOP_UNWATCH => {
+            frames.send_replace(None);
+            desktop.request(daemon, &request.method, request.params)
+        }
         // A window of its own outlives the request (spec 21.11).
         method::BROWSER_WINDOW => watch.window(daemon, request.params),
         name if ASIDE.contains(&name) => return Routed::Aside(request),
@@ -269,32 +282,5 @@ fn reply(id: &Value, result: Result<Value, RpcError>) -> String {
     match result {
         Ok(value) => jsonrpc::success(id, value),
         Err(err) => jsonrpc::failure(id, &err),
-    }
-}
-
-fn to_notification(event: &Event) -> String {
-    use jsonrpc::notification as note;
-    match event {
-        Event::CrewChanged(crew) => note(notification::CREW_CHANGED, crew),
-        Event::CrewDeleted(crew) => note(notification::CREW_DELETED, crew),
-        Event::BotChanged(bot) => note(notification::BOT_CHANGED, bot),
-        Event::BotDeleted(bot) => note(notification::BOT_DELETED, bot),
-        Event::FolderRecycled(folder) => note(notification::FOLDER_RECYCLED, folder),
-        Event::BotState(state) => note(notification::BOT_STATE, state),
-        Event::BotContext(context) => note(notification::BOT_CONTEXT, context),
-        Event::BotRules(rules) => note(notification::BOT_RULES, rules),
-        Event::BotDesktop(desktop) => note(notification::BOT_DESKTOP, desktop),
-        Event::ChatItem(item) => note(notification::CHAT_ITEM, item),
-        Event::ChatDelta(delta) => note(notification::CHAT_DELTA, delta),
-        Event::MessageCreated(message) => note(notification::MESSAGE_CREATED, message),
-        Event::DeliveryChanged(delivery) => note(notification::DELIVERY_CHANGED, delivery),
-        Event::TaskChanged(task) => note(notification::TASK_CHANGED, task),
-        Event::RoutineChanged(routine) => note(notification::ROUTINE_CHANGED, routine),
-        Event::RoutineRun(run) => note(notification::ROUTINE_RUN, run),
-        Event::BrowserChanged(state) => note(notification::BROWSER_CHANGED, state),
-        Event::BrowserAction(action) => note(notification::BROWSER_ACTION, action),
-        Event::ScreenDraft(draft) => note(notification::SCREEN_DRAFT, draft),
-        Event::QuestionChanged(question) => note(notification::QUESTION_CHANGED, question),
-        Event::ReactionChanged(change) => note(notification::REACTION_CHANGED, change),
     }
 }

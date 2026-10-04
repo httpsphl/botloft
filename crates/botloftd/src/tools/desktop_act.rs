@@ -8,7 +8,9 @@ use std::time::Duration;
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{DesktopGrant, DesktopLevel};
 
+use super::desktop::used;
 use super::desktop_grant::{blocking, describe, granted, heading};
+use crate::desktop::STOPPED;
 use crate::platform::desktop::{
     self as platform, Acted, Action, Control, DesktopError, Window, by_reference, render,
 };
@@ -73,6 +75,10 @@ pub(super) async fn act(
     )
     .await?;
     let _turn = daemon.desktop.turn().await;
+    // The owner may have stopped it while it waited.
+    if daemon.desktop.activity.stopped(bot) {
+        return Err(STOPPED.to_owned());
+    }
     let (id, target, action) = (window.id, control.runtime_id.clone(), ask.action.clone());
     let acted = blocking(move || platform::act(id, &target, &action)).await?;
     tokio::time::sleep(SETTLE).await;
@@ -86,6 +92,7 @@ pub(super) async fn act(
     let (text, next) = render(&controls, 0);
     daemon.desktop.keep(bot, id, controls);
     let mut answer = done(&ask.action, &control);
+    used(daemon, bot, &window, Some(answer.clone()));
     if acted == Acted::Waiting {
         answer.push_str(
             " The app did not answer in time: it may be showing a dialog. Call desktop_windows \

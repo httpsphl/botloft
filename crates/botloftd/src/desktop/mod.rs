@@ -1,6 +1,13 @@
 //! The owner's desktop as the bots use it (spec 24): one action at a time
-//! across every bot, whether the owner is there to see it, and each bot's
-//! last reading, whose refs its actions name.
+//! across every bot, whether the owner is there to see it, each bot's last
+//! reading, whose refs its actions name, and what each bot does there, for
+//! its panel, live.
+
+mod activity;
+mod screen;
+
+pub use activity::{Activity, STOPPED};
+pub use screen::DesktopWatching;
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -8,8 +15,10 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use botloft_core::ids::BotId;
+use botloft_core::protocol::DesktopView;
 use tokio::sync::MutexGuard;
 
+use self::screen::Screens;
 use crate::platform::desktop::Control;
 
 /// How long the owner may go without touching the computer and still count
@@ -34,6 +43,8 @@ pub struct Desktop {
     /// Held for each desktop action: the cursor is one.
     turn: tokio::sync::Mutex<()>,
     idle: Mutex<OwnerIdle>,
+    pub activity: Arc<Activity>,
+    screens: Arc<Screens>,
 }
 
 /// Why the bot may not use the desktop now.
@@ -68,6 +79,8 @@ impl Desktop {
             readings: Mutex::new(HashMap::new()),
             turn: tokio::sync::Mutex::new(()),
             idle: Mutex::new(idle),
+            activity: Arc::default(),
+            screens: Arc::default(),
         }
     }
 
@@ -117,6 +130,19 @@ impl Desktop {
             .unwrap_or_else(PoisonError::into_inner)
             .get(bot)
             .cloned()
+    }
+
+    /// Starts watching the window the bot is using (spec 24.9).
+    pub fn watch(&self, bot: &BotId) -> DesktopWatching {
+        self.screens.watch(bot, &self.activity)
+    }
+
+    /// The bot's state and the newest picture, for a panel that opens.
+    pub fn view(&self, bot: &BotId) -> DesktopView {
+        DesktopView {
+            state: self.activity.state(bot),
+            frame: self.screens.now(bot),
+        }
     }
 
     /// Waits for the desktop to be free; it is the caller's until dropped.

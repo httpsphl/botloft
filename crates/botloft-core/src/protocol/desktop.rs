@@ -107,3 +107,63 @@ pub struct BotDesktop {
     /// Oldest first.
     pub grants: Vec<DesktopGrant>,
 }
+
+/// The window a bot is using on the owner's desktop.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct DesktopWindow {
+    pub id: u64,
+    pub title: String,
+    /// The app's name for people.
+    pub app: String,
+}
+
+/// What a bot does on the owner's desktop, for its panel (spec 24.9): the
+/// params of `desktop.changed`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct DesktopState {
+    pub bot_id: BotId,
+    /// The window it read or acted in last.
+    pub window: Option<DesktopWindow>,
+    /// What it did last, in English, as its tool said ("Clicked button
+    /// \"Save\"."); `null` after only reading.
+    pub action: Option<String>,
+    /// When it last read or acted, Unix ms.
+    pub at: Option<i64>,
+    /// The owner stopped it (spec 24.9): its desktop tools refuse until
+    /// they let it go on.
+    pub stopped: bool,
+}
+
+/// A picture of the window a bot is using, for whoever watches its panel.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct DesktopFrame {
+    pub bot_id: BotId,
+    /// JPEG, base64.
+    pub data: String,
+    pub width: u32,
+    pub height: u32,
+}
+
+/// The result of `desktop.watch`: the bot's state and, when it uses a
+/// window, its picture now.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct DesktopView {
+    pub state: DesktopState,
+    pub frame: Option<DesktopFrame>,
+}
+
+/// `desktop.watch`, `desktop.stop` and `desktop.resume`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct DesktopBotParams {
+    pub bot_id: BotId,
+}
