@@ -1,21 +1,21 @@
 //! The desktop tools (spec 24.6): the bot lists the owner's windows, reads
-//! one through its accessibility tree or takes its picture. Each app asks
-//! the owner first (spec 24.2), what is never granted stays out (24.3), and
-//! the owner must be at their computer (24.8).
+//! one through its accessibility tree or takes its picture, and clicks,
+//! types, chooses and scrolls in it. Each app asks the owner first, to see
+//! and then to use it (spec 24.2); what is never granted stays out (24.3),
+//! and the owner must be at their computer (24.8).
 
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64;
-use botloft_core::chat::DESKTOP_TOOL;
 use botloft_core::ids::BotId;
-use botloft_core::protocol::{DesktopGrant, DesktopLevel};
+use botloft_core::protocol::DesktopLevel;
 use serde_json::{Value, json};
 use tracing::debug;
 
 use super::calls::explain;
-use super::desktop_list::{covering, list};
-use crate::approvals::{self, Answer};
-use crate::platform::desktop::{self as platform, DesktopError, Window, never, render};
-use crate::service::desktop::changed;
+use super::desktop_act::{Ask, act};
+use super::desktop_grant::{blocking, granted, heading};
+use super::desktop_list::list;
+use crate::platform::desktop::{self as platform, Action, Scroll, render};
 use crate::state::Daemon;
 
 pub(super) const PREFIX: &str = "desktop_";
@@ -31,6 +31,16 @@ enum Tool {
         window: u64,
         why: String,
     },
+    Act(Ask),
+}
+
+/// The text argument `name`, trimmed, if it is there.
+fn text(arguments: &Value, name: &str) -> Option<String> {
+    arguments[name]
+        .as_str()
+        .map(str::trim)
+        .filter(|text| !text.is_empty())
+        .map(str::to_owned)
 }
 
 impl Tool {
@@ -41,12 +51,18 @@ impl Tool {
                 .ok_or_else(|| "Say which window, by its number from desktop_windows.".to_owned())
         };
         let why = || {
-            arguments["why"]
-                .as_str()
-                .map(str::trim)
-                .filter(|why| !why.is_empty())
-                .map(str::to_owned)
+            text(arguments, "why")
                 .ok_or_else(|| "Say why you need it, in one short sentence.".to_owned())
+        };
+        let acting = |action: Action| -> Result<Self, String> {
+            let reference = text(arguments, "ref").ok_or_else(|| {
+                "Say which control, by its ref from your last reading, like \"d12\".".to_owned()
+            })?;
+            Ok(Self::Act(Ask {
+                reference,
+                action,
+                why: text(arguments, "why"),
+            }))
         };
         Ok(match name.strip_prefix(PREFIX) {
             Some("windows") => Self::Windows,
@@ -59,6 +75,23 @@ impl Tool {
                 window: window()?,
                 why: why()?,
             },
+            Some("click") => acting(Action::Click)?,
+            // The text as given: spaces may matter in a field.
+            Some("type") => acting(Action::Type(
+                arguments["text"]
+                    .as_str()
+                    .ok_or("Say the text to type.")?
+                    .to_owned(),
+            ))?,
+            Some("select") => acting(Action::Select(
+                text(arguments, "option").ok_or("Say the option to choose, by its text.")?,
+            ))?,
+            Some("scroll") => acting(Action::Scroll(match arguments["to"].as_str() {
+                Some("up") => Scroll::Up,
+                Some("top") => Scroll::Top,
+                Some("bottom") => Scroll::Bottom,
+                _ => Scroll::Down,
+            }))?,
             _ => return Err(format!("There is no tool {name}.")),
         })
     }
@@ -102,31 +135,6 @@ pub(super) async fn call(
     }
 }
 
-fn describe(err: &DesktopError) -> String {
-    match err {
-        DesktopError::Unavailable => {
-            "Using the owner's desktop is not available on this system yet.".to_owned()
-        }
-        DesktopError::Gone => {
-            "That window is not open anymore. Call desktop_windows to see what is open.".to_owned()
-        }
-        DesktopError::Minimized => "That window is minimized, so there is nothing to see in it. \
-            Ask the owner to bring it back if you need it."
-            .to_owned(),
-        DesktopError::System(why) => format!("Windows could not do it: {why}"),
-    }
-}
-
-/// Runs a platform call off the async threads: they reach other processes.
-async fn blocking<T: Send + 'static>(
-    work: impl FnOnce() -> Result<T, DesktopError> + Send + 'static,
-) -> Result<T, String> {
-    match tokio::task::spawn_blocking(work).await {
-        Ok(result) => result.map_err(|err| describe(&err)),
-        Err(_) => Err("Botloft could not reach the desktop.".to_owned()),
-    }
-}
-
 async fn run(daemon: &Daemon, bot: &BotId, generation: u64, tool: Tool) -> Result<Reply, String> {
     daemon
         .desktop
@@ -137,14 +145,26 @@ async fn run(daemon: &Daemon, bot: &BotId, generation: u64, tool: Tool) -> Resul
         .store()
         .desktop_grants(bot)
         .map_err(|err| explain(err.into()))?;
+    let see = DesktopLevel::See;
     match tool {
         Tool::Windows => Ok(Reply::Text(list(&windows, &grants))),
         Tool::Look { window, from, why } => {
-            let window = granted(daemon, bot, generation, &windows, &grants, window, &why).await?;
+            let window = granted(
+                daemon,
+                bot,
+                generation,
+                &windows,
+                &grants,
+                window,
+                Some(&why),
+                see,
+            )
+            .await?;
             let _turn = daemon.desktop.turn().await;
             let id = window.id;
             let controls = blocking(move || platform::read(id)).await?;
             let (text, next) = render(&controls, from);
+            daemon.desktop.keep(bot, id, controls);
             let mut reading = format!("{}\n{text}", heading(&window));
             if let Some(next) = next {
                 reading.push_str(&format!(
@@ -154,7 +174,17 @@ async fn run(daemon: &Daemon, bot: &BotId, generation: u64, tool: Tool) -> Resul
             Ok(Reply::Text(reading))
         }
         Tool::Screenshot { window, why } => {
-            let window = granted(daemon, bot, generation, &windows, &grants, window, &why).await?;
+            let window = granted(
+                daemon,
+                bot,
+                generation,
+                &windows,
+                &grants,
+                window,
+                Some(&why),
+                see,
+            )
+            .await?;
             let _turn = daemon.desktop.turn().await;
             let id = window.id;
             let picture = blocking(move || platform::picture(id)).await?;
@@ -166,75 +196,8 @@ async fn run(daemon: &Daemon, bot: &BotId, generation: u64, tool: Tool) -> Resul
                 heading(&window),
             ))
         }
-    }
-}
-
-fn heading(window: &Window) -> String {
-    format!(
-        "Window {}: \"{}\" ({})",
-        window.id, window.title, window.app.name
-    )
-}
-
-/// The window `id`, once the bot may see its app: asks the owner the first
-/// time (spec 24.2).
-async fn granted(
-    daemon: &Daemon,
-    bot: &BotId,
-    generation: u64,
-    windows: &[Window],
-    grants: &[DesktopGrant],
-    id: u64,
-    why: &str,
-) -> Result<Window, String> {
-    let window = windows
-        .iter()
-        .find(|window| window.id == id)
-        .cloned()
-        .ok_or_else(|| describe(&DesktopError::Gone))?;
-    if let Some(never) = never(&window) {
-        return Err(format!(
-            "You may never use that window: {}. Ask the owner if you need something there.",
-            never.why()
-        ));
-    }
-    if covering(grants, &window, DesktopLevel::See).is_some() {
-        return Ok(window);
-    }
-    let app = &window.app;
-    let path = app.path.to_string_lossy().into_owned();
-    let input = json!({
-        "app": app.name,
-        "path": path,
-        "level": DesktopLevel::See.as_str(),
-        "why": why,
-    });
-    match approvals::ask(daemon, bot, generation, DESKTOP_TOOL, &input, "").await {
-        Some(Answer::Allowed { .. }) => {
-            daemon
-                .store()
-                .grant_desktop_app(
-                    bot,
-                    &path,
-                    &app.name,
-                    DesktopLevel::See,
-                    daemon.clock.now_ms(),
-                )
-                .map_err(|err| explain(err.into()))?;
-            changed(daemon, bot).map_err(explain)?;
-            Ok(window)
-        }
-        Some(Answer::Denied { note }) => {
-            let said = note.map_or_else(String::new, |note| format!(" They said: {note}"));
-            Err(format!(
-                "The owner did not let you see {}.{said} Do without it or ask them.",
-                app.name
-            ))
-        }
-        Some(Answer::Expired) => Err(format!(
-            "The owner did not answer about {} in time. Try again later or do without it.",
-            app.name
-        )),
-        None => Err("Botloft could not ask the owner.".to_owned()),
+        Tool::Act(ask) => act(daemon, bot, generation, &windows, &grants, ask)
+            .await
+            .map(Reply::Text),
     }
 }

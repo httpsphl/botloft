@@ -55,6 +55,23 @@ describe("the desktop", () => {
     expect(await screen.findByText("Scout can see Notepad")).toBeDefined();
   });
 
+  test("a request to use an app says what using it means", async () => {
+    const { fake, scout } = await openScout();
+    act(() => {
+      fake.chat.ask(
+        scout.id,
+        "mcp__botloft__desktop",
+        "Notepad",
+        JSON.stringify({ app: "Notepad", path: NOTEPAD, level: "act", why: "To save the list" }),
+      );
+    });
+    const card = screen.getByRole("region", { name: "Scout asks to use Notepad" });
+    expect(within(card).getByText(/without moving your mouse/)).toBeDefined();
+    expect(within(card).getByText(/Never in password fields/)).toBeDefined();
+    fireEvent.click(within(card).getByRole("button", { name: "Deny" }));
+    expect(await screen.findByText("Scout may not use Notepad")).toBeDefined();
+  });
+
   test("the bot's details list what it may see on the desktop, and it can be taken back", async () => {
     const { fake, scout } = await openScout();
     fireEvent.click(screen.getByRole("button", { name: /^Show details/ }));

@@ -1,11 +1,16 @@
 //! The owner's desktop as the bots use it (spec 24): one action at a time
-//! across every bot, and whether the owner is there to see it.
+//! across every bot, whether the owner is there to see it, and each bot's
+//! last reading, whose refs its actions name.
 
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
+use botloft_core::ids::BotId;
 use tokio::sync::MutexGuard;
+
+use crate::platform::desktop::Control;
 
 /// How long the owner may go without touching the computer and still count
 /// as there (spec 24.8).
@@ -15,9 +20,17 @@ pub const AWAY_AFTER: Duration = Duration::from_secs(5 * 60);
 /// that cannot be known.
 pub type OwnerIdle = Arc<dyn Fn() -> Option<Duration> + Send + Sync>;
 
+/// A bot's last reading of a window: its refs are indexes in `controls`.
+#[derive(Debug, Clone)]
+pub struct Reading {
+    pub window: u64,
+    pub controls: Vec<Control>,
+}
+
 pub struct Desktop {
     /// App connections that said hello, open now.
     apps: AtomicUsize,
+    readings: Mutex<HashMap<BotId, Reading>>,
     /// Held for each desktop action: the cursor is one.
     turn: tokio::sync::Mutex<()>,
     idle: Mutex<OwnerIdle>,
@@ -52,6 +65,7 @@ impl Desktop {
     pub fn new(idle: OwnerIdle) -> Self {
         Self {
             apps: AtomicUsize::new(0),
+            readings: Mutex::new(HashMap::new()),
             turn: tokio::sync::Mutex::new(()),
             idle: Mutex::new(idle),
         }
@@ -86,6 +100,23 @@ impl Desktop {
             Some(idle) if idle <= AWAY_AFTER => Ok(()),
             _ => Err(Away::Idle),
         }
+    }
+
+    /// Keeps `controls` as the bot's last reading of `window`.
+    pub fn keep(&self, bot: &BotId, window: u64, controls: Vec<Control>) {
+        self.readings
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(bot.clone(), Reading { window, controls });
+    }
+
+    /// The bot's last reading, if it read a window.
+    pub fn reading(&self, bot: &BotId) -> Option<Reading> {
+        self.readings
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .get(bot)
+            .cloned()
     }
 
     /// Waits for the desktop to be free; it is the caller's until dropped.

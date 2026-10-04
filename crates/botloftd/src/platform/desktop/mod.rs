@@ -64,6 +64,52 @@ pub enum DesktopError {
     Minimized,
     #[error("Windows could not do it: {0}")]
     System(String),
+    /// The control a reading named is not in the window anymore.
+    #[error("that control is not in the window anymore")]
+    NotThere,
+    /// The control does not take that action through accessibility.
+    #[error("that control cannot be {0} through accessibility")]
+    Cannot(&'static str),
+    /// A password field: the owner types there, never a bot (spec 24.3).
+    #[error("that is a password field")]
+    Password,
+    /// A field that cannot be changed.
+    #[error("that field cannot be changed")]
+    ReadOnly,
+    /// No option with that text in the list.
+    #[error("there is no option {0:?} there")]
+    NoOption(String),
+}
+
+/// What a bot does to a control through accessibility (spec 24.5).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Action {
+    /// Invokes a button or link, ticks a box, picks an item, opens or
+    /// closes what expands.
+    Click,
+    /// Replaces a field's text.
+    Type(String),
+    /// Picks the option with this text in a list or combo box.
+    Select(String),
+    Scroll(Scroll),
+}
+
+/// Where `Action::Scroll` goes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Scroll {
+    Down,
+    Up,
+    Top,
+    Bottom,
+}
+
+/// How an action went.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Acted {
+    Done,
+    /// The app did not answer in time: it may be showing a dialog, or still
+    /// busy with it.
+    Waiting,
 }
 
 /// The windows open on the owner's desktop: shown ones, minimized too,
@@ -103,6 +149,21 @@ pub fn read(id: u64) -> Result<Vec<Control>, DesktopError> {
     #[cfg(not(windows))]
     {
         let _ = id;
+        Err(DesktopError::Unavailable)
+    }
+}
+
+/// Does `action` to the control `target` (its `RuntimeId`, from a reading)
+/// in window `id`, through accessibility, without the owner's mouse or
+/// keyboard (spec 24.5).
+pub fn act(id: u64, target: &[i32], action: &Action) -> Result<Acted, DesktopError> {
+    #[cfg(windows)]
+    {
+        windows::act(id, target, action)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (id, target, action);
         Err(DesktopError::Unavailable)
     }
 }
