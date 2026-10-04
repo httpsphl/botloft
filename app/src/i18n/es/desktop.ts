@@ -32,7 +32,7 @@ export const desktop: Messages["desktop"] = {
     emptyBody:
       "Cuando lea o use una ventana de una app que permitiste, la ventana aparece aquí, en vivo.",
     shortcut:
-      "Ctrl+Alt+Fin detiene a todos los bots en tu escritorio, incluso con Botloft cerrado.",
+      "Ctrl+Alt+Esc detiene a todos los bots en tu escritorio, incluso con Botloft cerrado.",
     waiting: "Esperando la imagen…",
     read: "Leyó la ventana",
     click: (target) => `Hizo clic en "${target}"`,

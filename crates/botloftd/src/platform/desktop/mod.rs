@@ -150,7 +150,7 @@ pub fn windows() -> Result<Vec<Window>, DesktopError> {
     }
 }
 
-/// Calls `stop` each time the owner presses Ctrl+Alt+End, from now on
+/// Calls `stop` each time the owner presses Ctrl+Alt+Esc, from now on
 /// (spec 24.9). Refused when another program holds the shortcut.
 pub fn on_stop_key(stop: impl Fn() + Send + 'static) -> Result<(), DesktopError> {
     #[cfg(windows)]
