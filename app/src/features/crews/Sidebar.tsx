@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { useShallow } from "zustand/react/shallow";
 import { type Messages, useT } from "../../i18n";
 import { when } from "../../lib/format";
+import { plainText } from "../../lib/plainText";
 import type { Activity, Bot, Crew } from "../../lib/protocol.gen";
 import { activityOf, botsOf, crewList } from "../../store/app";
 import { useApp } from "../../store/context";
@@ -207,17 +208,21 @@ const Conversation = memo(function Conversation({ bot, crew }: { bot: Bot; crew:
   );
 });
 
-/** The conversation-list line, worded here from what the daemon sends. */
-/** The line in the owner's language: the daemon sends no wording. */
+/**
+ * The conversation-list line, worded here in the owner's language from what
+ * the daemon sends (it sends no wording). What someone wrote shows as plain
+ * words: the chat renders its Markdown, a line would show the marks raw. A
+ * command or a path keeps its own characters.
+ */
 function activityText(activity: Activity, t: Messages): string {
   const { text, tool } = activity;
   switch (activity.kind) {
     case "owner":
-      return t.crews.sidebar.fromOwner(text);
+      return t.crews.sidebar.fromOwner(plainText(text));
     case "approval":
       return t.crews.sidebar.awaitingApproval(tool ? toolAction(tool, t.tools) : text);
     case "question":
-      return t.questions.activity(text);
+      return t.questions.activity(plainText(text));
     case "tool": {
       if (!tool) {
         return text;
@@ -226,6 +231,6 @@ function activityText(activity: Activity, t: Messages): string {
       return text ? `${title} · ${text}` : title;
     }
     default:
-      return text;
+      return plainText(text);
   }
 }
