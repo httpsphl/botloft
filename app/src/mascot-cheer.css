@@ -1,0 +1,98 @@
+/* The mascot cheers once when the bot finishes what it was doing
+   (BotAvatar.tsx sets data-cheer for CHEER_MS, spec 15.3): it crouches,
+   jumps up stretched, lands squashed and settles, while its eyes turn into
+   two arcs smiling up and come back open with a blink. Every frame ends at
+   rest, so less motion, which cuts the animation to its end, shows nothing. */
+
+@layer components {
+  .avatar-happy {
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+  }
+
+  [data-mood="idle"][data-cheer] .avatar-hop {
+    animation: cheer-hop 1.2s both;
+  }
+
+  [data-mood="idle"][data-cheer] .avatar-eye {
+    animation: cheer-open 1.2s both;
+  }
+
+  [data-mood="idle"][data-cheer] .avatar-happy {
+    animation: cheer-smile 1.2s both;
+  }
+
+  [data-mood="idle"][data-cheer] .avatar-look {
+    animation: none;
+  }
+}
+
+/* Up eases out, the fall eases in, and the landing gives a little. */
+@keyframes cheer-hop {
+  0% {
+    transform: translateY(0) scale(1, 1);
+    animation-timing-function: ease-in-out;
+  }
+  12% {
+    transform: translateY(0) scale(1.1, 0.9);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  30% {
+    transform: translateY(-16%) scale(0.93, 1.08);
+    animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.4);
+  }
+  46% {
+    transform: translateY(0) scale(1.1, 0.9);
+    animation-timing-function: ease-out;
+  }
+  58% {
+    transform: translateY(-3%) scale(0.97, 1.03);
+    animation-timing-function: ease-in-out;
+  }
+  70%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+}
+
+/* The open eyes give way to the smile, then open again from the middle. */
+@keyframes cheer-open {
+  0%,
+  20% {
+    opacity: 1;
+    clip-path: inset(0);
+  }
+  24%,
+  84% {
+    opacity: 0;
+    clip-path: inset(50% 0);
+  }
+  92%,
+  100% {
+    opacity: 1;
+    clip-path: inset(0);
+  }
+}
+
+@keyframes cheer-smile {
+  0%,
+  20% {
+    opacity: 0;
+    transform: scale(1, 0.4);
+  }
+  24% {
+    opacity: 1;
+    transform: scale(1, 0.4);
+  }
+  32%,
+  82% {
+    opacity: 1;
+    transform: scale(1, 1);
+  }
+  86%,
+  100% {
+    opacity: 0;
+    transform: scale(1, 1);
+  }
+}

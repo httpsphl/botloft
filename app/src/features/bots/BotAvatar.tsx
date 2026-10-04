@@ -12,10 +12,11 @@
 // gently when idle, glancing around now and then, and wildly, throwing
 // embers, while it works; it hops
 // while it waits for the owner, burns low with heavy eyes when tired and
-// sleeps with its eyes shut while paused. Without one it stays still, as in
+// sleeps with its eyes shut while paused. When it finishes what it was
+// doing, it cheers once (mascot-cheer.css). Without one it stays still, as in
 // the chat history.
 
-import { type CSSProperties, useId, useMemo } from "react";
+import { type CSSProperties, useEffect, useId, useMemo, useState } from "react";
 import type { Bot } from "../../lib/protocol.gen";
 import {
   BODY,
@@ -55,6 +56,28 @@ export function moodOf(bot: Pick<Bot, "state" | "paused">, crewPaused = false): 
   }
 }
 
+/** How long the mascot cheers when its bot finishes, as in mascot-cheer.css. */
+export const CHEER_MS = 1200;
+
+/**
+ * Whether the mascot cheers now: from the moment its mood goes from working
+ * to idle, for CHEER_MS. One that shows up idle does not.
+ */
+function useCheer(mood: Mood | undefined): boolean {
+  const [last, setLast] = useState(mood);
+  const [cheer, setCheer] = useState(false);
+  if (mood !== last) {
+    setLast(mood);
+    setCheer(last === "working" && mood === "idle");
+  }
+  useEffect(() => {
+    if (!cheer) return;
+    const timer = setTimeout(() => setCheer(false), CHEER_MS);
+    return () => clearTimeout(timer);
+  }, [cheer]);
+  return cheer;
+}
+
 /** A delay from the color, so a crew's mascots do not blink together. */
 function blinkDelay(color: string): string {
   let hash = 0;
@@ -71,6 +94,18 @@ function glintsOn(eye: Ellipse): Ellipse[] {
 }
 
 const rotate = ({ x, y, turn }: Ellipse) => `rotate(${turn} ${x} ${y})`;
+
+/**
+ * How far the face leans, in degrees: the line through the two eyes, the
+ * right one sitting higher. Shut and smiling eyes lean with it.
+ */
+function tiltOf(eyes: readonly Ellipse[]): number {
+  const [left, right] = eyes;
+  if (!left || !right) return 0;
+  return (Math.atan2(right.y - left.y, right.x - left.x) * 180) / Math.PI;
+}
+
+const TILT = tiltOf(EYES);
 
 export function BotAvatar({
   color,
@@ -99,6 +134,7 @@ export function BotAvatar({
     }),
     [color],
   );
+  const cheer = useCheer(mood);
   const style = mood ? ({ "--blink-delay": blinkDelay(color) } as CSSProperties) : undefined;
   const box = framed ? [CENTER.x - 500, CENTER.y - 470, 1000, 1000] : VIEW_BOX;
   return (
@@ -110,6 +146,7 @@ export function BotAvatar({
       className={`shrink-0 overflow-visible ${framed ? "rounded-lg bg-[#0b0b0b]" : ""}`}
       data-mood={mood}
       data-still={still || undefined}
+      data-cheer={cheer || undefined}
       style={style}
     >
       <defs>
@@ -175,7 +212,10 @@ export function BotAvatar({
   );
 }
 
-/** One eye: open with its glints, or shut into a soft arc while asleep. */
+/**
+ * One eye: open with its glints, shut into a soft arc while asleep, or
+ * bent up into a smile while the mascot cheers.
+ */
 function Eye({ eye, side, fill }: { eye: Ellipse; side: "l" | "r"; fill: string }) {
   const { x, y, rx, ry } = eye;
   return (
@@ -196,14 +236,26 @@ function Eye({ eye, side, fill }: { eye: Ellipse; side: "l" | "r"; fill: string 
           ))}
         </g>
       </g>
-      <path
-        className="avatar-closed"
-        d={`M${x - rx * 0.8} ${y - 6}Q${x} ${y + ry * 0.62} ${x + rx * 0.8} ${y - 6}`}
-        fill="none"
-        stroke="#2a0d05"
-        strokeWidth={22}
-        strokeLinecap="round"
-      />
+      {/* The arcs lean in a group of their own: the smile's CSS transform
+          would replace a transform set on the path itself. */}
+      <g transform={`rotate(${TILT} ${x} ${y})`}>
+        <path
+          className="avatar-closed"
+          d={`M${x - rx * 0.8} ${y - 6}Q${x} ${y + ry * 0.62} ${x + rx * 0.8} ${y - 6}`}
+          fill="none"
+          stroke="#2a0d05"
+          strokeWidth={22}
+          strokeLinecap="round"
+        />
+        <path
+          className="avatar-happy"
+          d={`M${x - rx * 0.78} ${y + ry * 0.3}Q${x} ${y - ry * 1.3} ${x + rx * 0.78} ${y + ry * 0.3}`}
+          fill="none"
+          stroke="#2a0d05"
+          strokeWidth={22}
+          strokeLinecap="round"
+        />
+      </g>
     </g>
   );
 }

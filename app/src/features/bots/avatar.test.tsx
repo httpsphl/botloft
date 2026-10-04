@@ -1,7 +1,8 @@
-import { cleanup, render } from "@testing-library/react";
-import { afterEach, describe, expect, test } from "vitest";
+import { act, cleanup, render } from "@testing-library/react";
+import { afterEach, describe, expect, test, vi } from "vitest";
+import cheerFrames from "../../mascot-cheer.css?raw";
 import flameFrames from "../../mascot-flame.css?raw";
-import { BOTLOFT_COLOR, BotAvatar, ListAvatar } from "./BotAvatar";
+import { BOTLOFT_COLOR, BotAvatar, CHEER_MS, ListAvatar } from "./BotAvatar";
 import { BotStateBadge } from "./BotStateBadge";
 import { BODY, DRAWN_IN, OUTLINE, SHADES } from "./mascotArt";
 import { retint, toHex, toHsl } from "./retint";
@@ -96,6 +97,48 @@ describe("mascot", () => {
 
     rerender(<BotAvatar color="#ff7a59" />);
     expect(svg()?.dataset.mood).toBeUndefined();
+  });
+
+  test("cheers once when its bot finishes, not when it shows up idle", () => {
+    vi.useFakeTimers();
+    try {
+      const { container, rerender } = render(<BotAvatar color="#ff7a59" mood="idle" />);
+      const cheering = () => container.querySelector("svg")?.hasAttribute("data-cheer");
+      expect(container.querySelectorAll(".avatar-happy")).toHaveLength(2);
+      expect(cheering()).toBe(false);
+
+      rerender(<BotAvatar color="#ff7a59" mood="working" />);
+      expect(cheering()).toBe(false);
+      rerender(<BotAvatar color="#ff7a59" mood="idle" />);
+      expect(cheering()).toBe(true);
+      act(() => vi.advanceTimersByTime(CHEER_MS));
+      expect(cheering()).toBe(false);
+
+      rerender(<BotAvatar color="#ff7a59" mood="waiting" />);
+      rerender(<BotAvatar color="#ff7a59" mood="idle" />);
+      expect(cheering()).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("shut and smiling eyes lean with the line through the open ones", () => {
+    const { container } = render(<BotAvatar color="#ff7a59" mood="sleeping" />);
+    for (const arc of container.querySelectorAll(".avatar-closed, .avatar-happy")) {
+      const turn = arc.parentElement?.getAttribute("transform")?.match(/^rotate\((-?[\d.]+) /);
+      expect(Number(turn?.[1])).toBeCloseTo(-14.3, 0);
+    }
+  });
+
+  test("the cheer ends at rest, so less motion shows none of it", () => {
+    const end = (name: string) =>
+      cheerFrames
+        .match(new RegExp(`@keyframes ${name} \\{([\\s\\S]*?)\\n\\}`))?.[1]
+        ?.split(/100% \{/)
+        .at(-1);
+    expect(end("cheer-hop")).toContain("transform: translateY(0) scale(1, 1);");
+    expect(end("cheer-open")).toMatch(/opacity: 1;\s*clip-path: inset\(0\);/);
+    expect(end("cheer-smile")).toContain("opacity: 0;");
   });
 
   test("framed sits on the icon square without the thin edge", () => {
