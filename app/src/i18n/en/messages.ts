@@ -3,6 +3,14 @@
 // waiting or not delivered, never a "lease" or a "dead letter".
 
 export const messages = {
+  /** Bots calling each other, live. */
+  calls: {
+    label: "Bots calling each other",
+    /** Before the call, for screen readers: the mascots show it. */
+    caller: (bot: string) => `${bot}:`,
+    calling: (bot: string) => `Calling ${bot}`,
+    picked: (bot: string) => `${bot} picked it up`,
+  },
   composer: {
     messageTo: "Message to",
     recipient: "Recipient",

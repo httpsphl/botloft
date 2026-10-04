@@ -22,6 +22,7 @@ import { Menu } from "../../ui/Menu";
 import { type Tab, Tabs, tabId } from "../../ui/Tabs";
 import { attempt } from "../../ui/toast";
 import { BotDialog } from "../bots/BotDialog";
+import { CallPills, useLiveCalls } from "../messages/CallPills";
 import { Composer } from "../messages/Composer";
 import { Timeline } from "../messages/Timeline";
 import { CrewRoutines } from "../routines/RoutineList";
@@ -40,6 +41,7 @@ export function CrewView({ crew }: { crew: Crew }) {
   const host = useHost();
   const putCrew = useApp((state) => state.putCrew);
   const bots = useApp(useShallow((state) => botsOf(state, crew.id)));
+  const calls = useLiveCalls((call) => call.crewId === crew.id, crew.id);
   const [open, setOpen] = useState<Open>(null);
   const [pane, setPane] = useState<Pane>("bots");
   const close = () => setOpen(null);
@@ -86,6 +88,7 @@ export function CrewView({ crew }: { crew: Crew }) {
             </button>
           </p>
         </div>
+        <CallPills calls={calls} className="max-w-[45%] justify-end" />
         <Button variant="primary" icon={Plus} onClick={() => setOpen("bot")}>
           {t.crews.newBot}
         </Button>
