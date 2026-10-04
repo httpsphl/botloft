@@ -122,6 +122,14 @@ describe("mascot", () => {
     }
   });
 
+  test("shut and smiling eyes lean with the line through the open ones", () => {
+    const { container } = render(<BotAvatar color="#ff7a59" mood="sleeping" />);
+    for (const arc of container.querySelectorAll(".avatar-closed, .avatar-happy")) {
+      const turn = arc.parentElement?.getAttribute("transform")?.match(/^rotate\((-?[\d.]+) /);
+      expect(Number(turn?.[1])).toBeCloseTo(-14.3, 0);
+    }
+  });
+
   test("the cheer ends at rest, so less motion shows none of it", () => {
     const end = (name: string) =>
       cheerFrames

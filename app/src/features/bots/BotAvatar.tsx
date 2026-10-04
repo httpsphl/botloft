@@ -95,6 +95,18 @@ function glintsOn(eye: Ellipse): Ellipse[] {
 
 const rotate = ({ x, y, turn }: Ellipse) => `rotate(${turn} ${x} ${y})`;
 
+/**
+ * How far the face leans, in degrees: the line through the two eyes, the
+ * right one sitting higher. Shut and smiling eyes lean with it.
+ */
+function tiltOf(eyes: readonly Ellipse[]): number {
+  const [left, right] = eyes;
+  if (!left || !right) return 0;
+  return (Math.atan2(right.y - left.y, right.x - left.x) * 180) / Math.PI;
+}
+
+const TILT = tiltOf(EYES);
+
 export function BotAvatar({
   color,
   size = 28,
@@ -224,22 +236,26 @@ function Eye({ eye, side, fill }: { eye: Ellipse; side: "l" | "r"; fill: string 
           ))}
         </g>
       </g>
-      <path
-        className="avatar-closed"
-        d={`M${x - rx * 0.8} ${y - 6}Q${x} ${y + ry * 0.62} ${x + rx * 0.8} ${y - 6}`}
-        fill="none"
-        stroke="#2a0d05"
-        strokeWidth={22}
-        strokeLinecap="round"
-      />
-      <path
-        className="avatar-happy"
-        d={`M${x - rx * 0.78} ${y + ry * 0.3}Q${x} ${y - ry * 1.3} ${x + rx * 0.78} ${y + ry * 0.3}`}
-        fill="none"
-        stroke="#2a0d05"
-        strokeWidth={22}
-        strokeLinecap="round"
-      />
+      {/* The arcs lean in a group of their own: the smile's CSS transform
+          would replace a transform set on the path itself. */}
+      <g transform={`rotate(${TILT} ${x} ${y})`}>
+        <path
+          className="avatar-closed"
+          d={`M${x - rx * 0.8} ${y - 6}Q${x} ${y + ry * 0.62} ${x + rx * 0.8} ${y - 6}`}
+          fill="none"
+          stroke="#2a0d05"
+          strokeWidth={22}
+          strokeLinecap="round"
+        />
+        <path
+          className="avatar-happy"
+          d={`M${x - rx * 0.78} ${y + ry * 0.3}Q${x} ${y - ry * 1.3} ${x + rx * 0.78} ${y + ry * 0.3}`}
+          fill="none"
+          stroke="#2a0d05"
+          strokeWidth={22}
+          strokeLinecap="round"
+        />
+      </g>
     </g>
   );
 }
