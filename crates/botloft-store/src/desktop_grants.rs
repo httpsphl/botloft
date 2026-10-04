@@ -80,6 +80,36 @@ impl Store {
         Ok(grants)
     }
 
+    /// Lets the bot use the owner's real mouse and keyboard in the grant's
+    /// reach, or not (spec 24.7); the bot the grant belongs to, or `None`
+    /// if there is no such grant.
+    pub fn set_desktop_real_input(
+        &self,
+        grant: &DesktopGrantId,
+        on: bool,
+    ) -> Result<Option<BotId>> {
+        Ok(self
+            .conn
+            .query_row(
+                "UPDATE desktop_grants SET real_input = ?2 WHERE id = ?1 RETURNING bot_id",
+                params![grant.as_str(), on],
+                |row| parse_column(row, 0),
+            )
+            .optional()?)
+    }
+
+    /// The bot a grant belongs to, if the grant is there.
+    pub fn desktop_grants_of(&self, grant: &DesktopGrantId) -> Result<Option<BotId>> {
+        Ok(self
+            .conn
+            .query_row(
+                "SELECT bot_id FROM desktop_grants WHERE id = ?1",
+                [grant.as_str()],
+                |row| parse_column(row, 0),
+            )
+            .optional()?)
+    }
+
     /// Takes a grant away; the bot it belonged to, or `None` if there was
     /// none.
     pub fn revoke_desktop_grant(&self, grant: &DesktopGrantId) -> Result<Option<BotId>> {
@@ -132,6 +162,32 @@ mod tests {
     }
 
     #[test]
+    fn the_real_mouse_and_keyboard_are_an_option_of_the_grant() {
+        let fx = Fixture::new();
+        let scout = &fx.bots[0].id;
+        let grant = fx
+            .store
+            .grant_desktop_app(scout, EXCEL, "Microsoft Excel", DesktopLevel::Act, 10)
+            .expect("grant");
+        assert_eq!(
+            fx.store
+                .set_desktop_real_input(&grant.id, true)
+                .expect("on"),
+            Some(scout.clone())
+        );
+        assert!(fx.store.desktop_grants(scout).expect("grants")[0].real_input);
+        // Asking for the app again keeps the option.
+        fx.store
+            .grant_desktop_app(scout, EXCEL, "Microsoft Excel", DesktopLevel::See, 20)
+            .expect("again");
+        assert!(fx.store.desktop_grants(scout).expect("grants")[0].real_input);
+        fx.store
+            .set_desktop_real_input(&grant.id, false)
+            .expect("off");
+        assert!(!fx.store.desktop_grants(scout).expect("grants")[0].real_input);
+    }
+
+    #[test]
     fn a_grant_can_be_taken_away() {
         let fx = Fixture::new();
         let scout = &fx.bots[0].id;
@@ -148,5 +204,11 @@ mod tests {
             None
         );
         assert!(fx.store.desktop_grants(scout).expect("grants").is_empty());
+        assert_eq!(
+            fx.store
+                .set_desktop_real_input(&grant.id, true)
+                .expect("gone"),
+            None
+        );
     }
 }

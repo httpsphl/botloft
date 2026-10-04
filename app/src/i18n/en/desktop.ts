@@ -41,6 +41,7 @@ export const desktop = {
     select: (option: string) => `Chose "${option}"`,
     scroll: (target: string) => `Scrolled "${target}"`,
     scrollSomething: "Scrolled",
+    press: (keys: string) => `Pressed ${keys}`,
     showInPanel: "Watch on the desktop panel",
     close: "Close",
   },

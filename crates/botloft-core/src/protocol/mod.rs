@@ -125,6 +125,7 @@ pub mod method {
     pub const RULES_DELETE: &str = "rules.delete";
     pub const DESKTOP_GRANTS: &str = "desktop.grants";
     pub const DESKTOP_REVOKE: &str = "desktop.revoke";
+    pub const DESKTOP_SET_OPTIONS: &str = "desktop.setOptions";
     pub const DESKTOP_WATCH: &str = "desktop.watch";
     pub const DESKTOP_UNWATCH: &str = "desktop.unwatch";
     pub const DESKTOP_STOP: &str = "desktop.stop";

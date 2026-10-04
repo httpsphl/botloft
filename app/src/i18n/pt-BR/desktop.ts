@@ -41,6 +41,7 @@ export const desktop: Messages["desktop"] = {
     select: (option) => `Escolheu "${option}"`,
     scroll: (target) => `Rolou "${target}"`,
     scrollSomething: "Rolou",
+    press: (keys) => `Apertou ${keys}`,
     showInPanel: "Ver no painel do desktop",
     close: "Fechar",
   },

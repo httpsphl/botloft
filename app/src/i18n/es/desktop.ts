@@ -42,6 +42,7 @@ export const desktop: Messages["desktop"] = {
     select: (option) => `Eligió "${option}"`,
     scroll: (target) => `Desplazó "${target}"`,
     scrollSomething: "Desplazó",
+    press: (keys) => `Presionó ${keys}`,
     showInPanel: "Ver en el panel del escritorio",
     close: "Cerrar",
   },

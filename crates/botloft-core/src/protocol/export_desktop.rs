@@ -11,6 +11,7 @@ pub(super) fn decls(out: &mut Out) {
     out.decl::<DesktopGrant>();
     out.decl::<DesktopGrantsParams>();
     out.decl::<DesktopGrantIdParams>();
+    out.decl::<DesktopOptionsParams>();
     out.decl::<BotDesktop>();
     out.decl::<DesktopWindow>();
     out.decl::<DesktopActionKind>();
@@ -30,6 +31,11 @@ pub(super) fn methods(out: &mut Out) {
     out.method(
         method::DESKTOP_REVOKE,
         &out.name::<DesktopGrantIdParams>(),
+        &out.name::<BotDesktop>(),
+    );
+    out.method(
+        method::DESKTOP_SET_OPTIONS,
+        &out.name::<DesktopOptionsParams>(),
         &out.name::<BotDesktop>(),
     );
     let bot = out.name::<DesktopBotParams>();
