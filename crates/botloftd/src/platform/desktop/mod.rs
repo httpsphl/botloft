@@ -1,8 +1,10 @@
 //! The owner's desktop (spec 24): the windows open on their screen, which
-//! app each one is from, what is never granted, and a picture of a window.
+//! app each one is from, what is never granted, a window read through its
+//! accessibility tree, and a picture of a window.
 //! Only on Windows; elsewhere every call says the desktop is not there.
 
 mod blocked;
+mod read;
 // Only Windows takes pictures; the tests run everywhere.
 #[cfg_attr(not(windows), allow(dead_code))]
 mod shrink;
@@ -12,6 +14,7 @@ mod windows;
 use std::path::PathBuf;
 
 pub use blocked::{Never, never};
+pub use read::{Control, LINES_MAX, by_reference, reference, render};
 
 /// The largest picture of a window the bot gets, in logical pixels (24.4).
 pub const PICTURE_MAX: (u32, u32) = (1600, 1200);
@@ -73,6 +76,20 @@ pub fn windows() -> Result<Vec<Window>, DesktopError> {
     }
     #[cfg(not(windows))]
     {
+        Err(DesktopError::Unavailable)
+    }
+}
+
+/// The controls of window `id` through its accessibility tree, in the
+/// order they sit in it, the ones shown on screen (spec 24.5).
+pub fn read(id: u64) -> Result<Vec<Control>, DesktopError> {
+    #[cfg(windows)]
+    {
+        windows::read(id)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = id;
         Err(DesktopError::Unavailable)
     }
 }

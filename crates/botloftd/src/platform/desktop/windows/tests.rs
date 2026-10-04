@@ -10,13 +10,15 @@ use windows::Win32::Foundation::{COLORREF, HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::Graphics::Gdi::{CreateSolidBrush, HBRUSH};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, DispatchMessageW, GetMessageW, MSG,
-    PostMessageW, PostQuitMessage, RegisterClassW, SW_MINIMIZE, ShowWindow, TranslateMessage,
-    WINDOW_EX_STYLE, WM_CLOSE, WM_DESTROY, WNDCLASSW, WS_OVERLAPPEDWINDOW, WS_VISIBLE,
+    BM_SETCHECK, BS_AUTOCHECKBOX, BS_PUSHBUTTON, CW_USEDEFAULT, CreateWindowExW, DefWindowProcW,
+    DispatchMessageW, ES_PASSWORD, GetMessageW, HMENU, MSG, PostMessageW, PostQuitMessage,
+    RegisterClassW, SW_MINIMIZE, SendMessageW, ShowWindow, TranslateMessage, WINDOW_EX_STYLE,
+    WINDOW_STYLE, WM_CLOSE, WM_DESTROY, WNDCLASSW, WS_BORDER, WS_CHILD, WS_OVERLAPPEDWINDOW,
+    WS_VISIBLE,
 };
 use windows::core::{PCWSTR, w};
 
-use super::super::{DesktopError, never, windows as listed};
+use super::super::{DesktopError, never, read, render, windows as listed};
 use super::capture;
 
 const CLASS: PCWSTR = w!("BotloftDesktopTest");
@@ -34,6 +36,53 @@ unsafe extern "system" fn procedure(
     }
     // SAFETY: everything else as Windows does by default.
     unsafe { DefWindowProcW(hwnd, message, wparam, lparam) }
+}
+
+/// A button, a field with text, a password field and a ticked check box,
+/// on the left of the window: its middle stays red.
+///
+/// # Safety
+///
+/// `parent` is a window of this thread.
+unsafe fn controls(parent: HWND) {
+    let child = |class: PCWSTR, text: PCWSTR, style: u32, top: i32, width: i32| {
+        // SAFETY: a child of `parent`, on its thread.
+        unsafe {
+            CreateWindowExW(
+                WINDOW_EX_STYLE::default(),
+                class,
+                text,
+                WS_CHILD | WS_VISIBLE | WINDOW_STYLE(style),
+                10,
+                top,
+                width,
+                24,
+                Some(parent),
+                Some(HMENU(std::ptr::null_mut())),
+                None,
+                None,
+            )
+            .expect("a control")
+        }
+    };
+    child(w!("BUTTON"), w!("Save"), BS_PUSHBUTTON as u32, 10, 120);
+    child(w!("EDIT"), w!("hello"), WS_BORDER.0, 40, 160);
+    child(
+        w!("EDIT"),
+        w!("secret"),
+        WS_BORDER.0 | ES_PASSWORD as u32,
+        70,
+        160,
+    );
+    let check = child(
+        w!("BUTTON"),
+        w!("Remember"),
+        BS_AUTOCHECKBOX as u32,
+        100,
+        160,
+    );
+    // SAFETY: ticks our own check box.
+    unsafe { SendMessageW(check, BM_SETCHECK, Some(WPARAM(1)), None) };
 }
 
 /// A red window of the test's own, on a thread with its message loop.
@@ -79,6 +128,7 @@ impl TestWindow {
                     None,
                 )
                 .expect("create the window");
+                controls(hwnd);
                 sent.send(hwnd.0 as usize as u64).expect("send");
                 let mut message = MSG::default();
                 while GetMessageW(&mut message, None, 0, 0).as_bool() {
@@ -177,4 +227,26 @@ fn a_minimized_window_is_listed_but_has_nothing_to_see_and_a_closed_one_is_gone(
             .iter()
             .all(|found| found.id != id)
     );
+}
+
+#[test]
+fn a_window_reads_as_its_controls_and_never_shows_a_password() {
+    let window = TestWindow::open("Botloft desktop test: read");
+    let controls = read(window.id).expect("read");
+    let (text, next) = render(&controls, 0);
+    assert_eq!(next, None);
+    assert!(text.contains(r#"button "Save""#), "{text}");
+    assert!(text.contains(r#"= "hello""#), "{text}");
+    assert!(text.contains(r#"check box "Remember" (checked)"#), "{text}");
+    assert!(text.contains("the owner types it"), "{text}");
+    assert!(!text.contains("secret"), "{text}");
+    let field = controls
+        .iter()
+        .find(|control| control.value.as_deref() == Some("hello"))
+        .expect("the field");
+    assert!(!field.runtime_id.is_empty());
+    // A window that closed has nothing to read.
+    let id = window.id;
+    drop(window);
+    assert!(read(id).is_err());
 }
