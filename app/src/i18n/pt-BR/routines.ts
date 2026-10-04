@@ -34,6 +34,18 @@ export const routines: Messages["routines"] = {
         ? "A última vez foi pulada: o computador estava desligado"
         : `${count} vezes foram puladas: o computador estava desligado`,
   },
+  page: {
+    title: "Rotinas",
+    lead: "O que seus bots fazem sozinhos, em todas as equipes.",
+    upcoming: "Próximas",
+    watching: "Vigiando",
+    showMore: (count) => `Mostrar mais ${count}`,
+    showLess: "Mostrar menos",
+    of: (bot) => `Rotinas de ${bot}`,
+    emptyTitle: "Nenhuma rotina ainda",
+    emptyBody:
+      "Uma rotina faz um bot trabalhar sozinho em horários marcados. Peça a um bot no chat, ou abra a aba Rotinas de um bot.",
+  },
   when: {
     everyDay: (time: string) => `Todo dia às ${time}`,
     weekdays: (time: string) => `Dias úteis às ${time}`,

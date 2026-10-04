@@ -1,7 +1,7 @@
-// The pages at the top of the sidebar: the search (spec 8.8) and the
-// question box (spec 23.6).
+// The pages at the top of the sidebar: the search (spec 8.8), the
+// question box (spec 23.6) and every routine (spec 20.9).
 
-import { MessageCircleQuestion, Search } from "lucide-react";
+import { AlarmClock, MessageCircleQuestion, Search } from "lucide-react";
 import { useT } from "../../i18n";
 import { useApp } from "../../store/context";
 import { openQuestions } from "../../store/questions";
@@ -56,6 +56,30 @@ export function QuestionsEntry() {
         />
         <span className="min-w-0 flex-1 truncate font-medium">{words.label}</span>
         {count > 0 && <CountBadge tone="warn" count={count} label={words.open(count)} />}
+      </button>
+    </div>
+  );
+}
+
+/** Every routine of every bot (spec 20.9), shown once there is one. */
+export function RoutinesEntry() {
+  const t = useT();
+  const any = useApp((state) => Object.keys(state.routines).length > 0);
+  const open = useApp((state) => state.page === "routines");
+  const openPage = useApp((state) => state.openPage);
+  if (!any && !open) {
+    return null;
+  }
+  return (
+    <div className="shrink-0 px-2">
+      <button
+        type="button"
+        aria-current={open ? "page" : undefined}
+        onClick={() => openPage("routines")}
+        className={`${row} gap-2.5 px-2.5 py-1.5 text-sm ${open ? "bg-sunken text-ink" : "text-ink-soft"}`}
+      >
+        <AlarmClock aria-hidden size={16} className="text-muted" />
+        <span className="min-w-0 flex-1 truncate font-medium">{t.routines.page.title}</span>
       </button>
     </div>
   );

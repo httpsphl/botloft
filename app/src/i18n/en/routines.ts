@@ -32,6 +32,19 @@ export const routines = {
         ? "Last time was skipped: the computer was off"
         : `${count} times were skipped: the computer was off`,
   },
+  /** Every routine of every bot, a page of the sidebar. */
+  page: {
+    title: "Routines",
+    lead: "What your bots do on their own, in every crew.",
+    upcoming: "Coming up",
+    watching: "Keeping watch",
+    showMore: (count: number) => `Show ${count} more`,
+    showLess: "Show fewer",
+    of: (bot: string) => `${bot}'s routines`,
+    emptyTitle: "No routines yet",
+    emptyBody:
+      "A routine makes a bot work on its own at set times. Ask a bot in the chat, or open a bot's Routines tab.",
+  },
   when: {
     everyDay: (time: string) => `Every day at ${time}`,
     weekdays: (time: string) => `Weekdays at ${time}`,

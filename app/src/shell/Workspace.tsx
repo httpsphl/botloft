@@ -13,6 +13,7 @@ import { ClaudeCodeHelp } from "../features/onboarding/ClaudeCodeHelp";
 import { SignInButton } from "../features/onboarding/SignIn";
 import { Welcome } from "../features/onboarding/Welcome";
 import { QuestionBox } from "../features/questions/QuestionBox";
+import { RoutinesPage } from "../features/routines/RoutinesPage";
 import { SearchPage } from "../features/search/SearchPage";
 import { useSearchKey } from "../features/search/searchKey";
 import { UpdateButton } from "../features/updates/UpdateButton";
@@ -120,6 +121,8 @@ function Selection() {
     view = <QuestionBox />;
   } else if (page === "search") {
     view = <SearchPage />;
+  } else if (page === "routines") {
+    view = <RoutinesPage />;
   } else if (crew && bot) {
     view = <BotView bot={bot} crew={crew} />;
   } else if (crew) {
@@ -148,7 +151,11 @@ function Breadcrumb() {
       <>
         <ChevronRight aria-hidden size={14} className="text-muted" />
         <span className="truncate text-ink-soft">
-          {page === "questions" ? t.questions.box.label : t.search.label}
+          {page === "questions"
+            ? t.questions.box.label
+            : page === "routines"
+              ? t.routines.page.title
+              : t.search.label}
         </span>
       </>
     );
