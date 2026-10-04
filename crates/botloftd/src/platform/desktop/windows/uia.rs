@@ -13,7 +13,8 @@ use windows::Win32::System::Com::{
 use windows::Win32::System::Variant::VARIANT;
 use windows::Win32::UI::Accessibility::{
     CUIAutomation, IUIAutomation, IUIAutomation2, IUIAutomationCacheRequest,
-    IUIAutomationCondition, IUIAutomationElement, TreeScope_Children, UIA_ControlTypePropertyId,
+    IUIAutomationCondition, IUIAutomationElement, TreeScope_Children,
+    UIA_BoundingRectanglePropertyId, UIA_ControlTypePropertyId,
     UIA_ExpandCollapseExpandCollapseStatePropertyId, UIA_IsEnabledPropertyId,
     UIA_IsOffscreenPropertyId, UIA_IsPasswordPropertyId, UIA_IsValuePatternAvailablePropertyId,
     UIA_NamePropertyId, UIA_PROPERTY_ID, UIA_RuntimeIdPropertyId,
@@ -25,6 +26,9 @@ use super::super::DesktopError;
 use super::super::read::Control;
 use super::handle;
 use super::uia_control::{control, kind_of};
+use windows::Win32::UI::HiDpi::{
+    DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, SetThreadDpiAwarenessContext,
+};
 use windows::core::Interface;
 
 /// The most controls one walk gathers, how deep it goes and how long it
@@ -36,7 +40,7 @@ const WALK_MAX: Duration = Duration::from_secs(15);
 /// busy with a dialog, or stuck, would otherwise hold the call for long.
 const CALL_MS: u32 = 5000;
 
-const PROPERTIES: [UIA_PROPERTY_ID; 11] = [
+const PROPERTIES: [UIA_PROPERTY_ID; 12] = [
     UIA_NamePropertyId,
     UIA_ControlTypePropertyId,
     UIA_IsPasswordPropertyId,
@@ -48,6 +52,7 @@ const PROPERTIES: [UIA_PROPERTY_ID; 11] = [
     UIA_ExpandCollapseExpandCollapseStatePropertyId,
     UIA_SelectionItemIsSelectedPropertyId,
     UIA_RuntimeIdPropertyId,
+    UIA_BoundingRectanglePropertyId,
 ];
 
 /// COM on this thread while it lives, multithreaded, as UI Automation
@@ -95,6 +100,9 @@ pub(super) struct Session {
 impl Session {
     pub(super) fn start() -> Result<Self, DesktopError> {
         let one = ONE.lock().unwrap_or_else(PoisonError::into_inner);
+        // Places in real pixels, as the real mouse needs them.
+        // SAFETY: changes only this thread's DPI awareness.
+        unsafe { SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
         let com = Com::start();
         // SAFETY: COM calls on interfaces made here, on this thread.
         unsafe {

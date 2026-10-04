@@ -7,7 +7,11 @@ mod act;
 mod act_tests;
 mod capture;
 mod input;
+mod owner;
 mod process;
+mod real;
+#[cfg(test)]
+mod real_tests;
 mod stop_key;
 #[cfg(test)]
 mod test_window;
@@ -32,6 +36,7 @@ use windows::core::{BOOL, w};
 pub use act::act;
 pub use capture::capture;
 pub use input::owner_idle;
+pub use real::{click as real_click, press as real_press, type_text as real_type};
 pub use stop_key::on_stop_key;
 pub use uia::read;
 

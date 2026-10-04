@@ -4,6 +4,7 @@
 //! Only on Windows; elsewhere every call says the desktop is not there.
 
 mod blocked;
+pub mod keys;
 mod read;
 // Only Windows takes pictures; the tests run everywhere.
 #[cfg_attr(not(windows), allow(dead_code))]
@@ -79,6 +80,29 @@ pub enum DesktopError {
     /// No option with that text in the list.
     #[error("there is no option {0:?} there")]
     NoOption(String),
+    /// The owner moved the mouse or pressed a key while the bot used them.
+    #[error("the owner took over the mouse and keyboard")]
+    OwnerTookOver,
+    /// Windows would not bring the app's window to the front, or another
+    /// window came over it.
+    #[error("the app's window is not in front")]
+    NotInFront,
+    /// Another window covers the point to click.
+    #[error("another window covers that point")]
+    Covered,
+    /// The screen is locked, or Windows refused the input.
+    #[error("the screen is locked or takes no input now")]
+    Locked,
+}
+
+/// Where a real click lands.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Spot {
+    /// In real screen pixels, as accessibility gives a control's place.
+    Screen { x: i32, y: i32 },
+    /// In the window's frame, as fractions of its width and height, as a
+    /// point on its picture.
+    Window { x: f64, y: f64 },
 }
 
 /// What a bot does to a control through accessibility (spec 24.5).
@@ -178,6 +202,46 @@ pub fn act(id: u64, target: &[i32], action: &Action) -> Result<Acted, DesktopErr
     #[cfg(not(windows))]
     {
         let _ = (id, target, action);
+        Err(DesktopError::Unavailable)
+    }
+}
+
+/// Clicks `spot` in window `id` with the owner's real mouse, the window
+/// brought to the front first (spec 24.7). Stops when the owner moves.
+pub fn real_click(id: u64, spot: Spot) -> Result<(), DesktopError> {
+    #[cfg(windows)]
+    {
+        windows::real_click(id, spot)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (id, spot);
+        Err(DesktopError::Unavailable)
+    }
+}
+
+/// Types `text` where window `id` has its focus, with the real keyboard.
+pub fn real_type(id: u64, text: &str) -> Result<(), DesktopError> {
+    #[cfg(windows)]
+    {
+        windows::real_type(id, text)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (id, text);
+        Err(DesktopError::Unavailable)
+    }
+}
+
+/// Presses `keys` in window `id` with the real keyboard.
+pub fn real_press(id: u64, keys: &keys::Keys) -> Result<(), DesktopError> {
+    #[cfg(windows)]
+    {
+        windows::real_press(id, keys)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (id, keys);
         Err(DesktopError::Unavailable)
     }
 }

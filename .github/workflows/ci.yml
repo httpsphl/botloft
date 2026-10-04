@@ -27,7 +27,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
+      # The runner has nobody at its desktop: the bots' real mouse and
+      # keyboard may be tested there (spec 24.7), never on a developer's.
       - run: cargo test --workspace
+        env:
+          BOTLOFT_REAL_INPUT_TESTS: "1"
       - name: Generated TypeScript bindings are up to date
         run: git diff --exit-code -- app/src/lib/protocol.gen.ts
 
