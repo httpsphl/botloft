@@ -20,6 +20,7 @@ pub(super) fn decls(out: &mut Out) {
     out.decl::<DesktopFrame>();
     out.decl::<DesktopView>();
     out.decl::<DesktopBotParams>();
+    out.decl::<DesktopAwayUse>();
 }
 
 pub(super) fn methods(out: &mut Out) {
@@ -44,6 +45,9 @@ pub(super) fn methods(out: &mut Out) {
     let state = out.name::<DesktopState>();
     out.method(method::DESKTOP_STOP, &bot, &state);
     out.method(method::DESKTOP_RESUME, &bot, &state);
+    let away = out.name::<Vec<DesktopAwayUse>>();
+    out.method(method::DESKTOP_AWAY_USES, "undefined", &away);
+    out.method(method::DESKTOP_DISMISS_AWAY, "undefined", "null");
 }
 
 pub(super) fn notifications(out: &mut Out) {
@@ -57,4 +61,6 @@ pub(super) fn notifications(out: &mut Out) {
     );
     let frame = out.name::<DesktopFrame>();
     let _ = writeln!(out.text, "  \"{}\": {frame};", notification::DESKTOP_FRAME);
+    let away = out.name::<Vec<DesktopAwayUse>>();
+    let _ = writeln!(out.text, "  \"{}\": {away};", notification::DESKTOP_AWAY);
 }

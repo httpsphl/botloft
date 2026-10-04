@@ -8,7 +8,9 @@ import type { FakeBotloft, Handlers } from "./fake";
 import { notFound } from "./fakeRules";
 import type {
   BotId,
+  ChatItemId,
   DesktopAction,
+  DesktopAwayUse,
   DesktopFrame,
   DesktopGrant,
   DesktopLevel,
@@ -22,6 +24,8 @@ export class FakeDesktop {
   readonly grants: DesktopGrant[] = [];
   private readonly states = new Map<BotId, DesktopState>();
   private readonly frames = new Map<BotId, DesktopFrame>();
+  /** What bots did while the owner was away. */
+  away: DesktopAwayUse[] = [];
   /** The bot whose panel the app watches, if any. */
   watching: BotId | null = null;
 
@@ -79,6 +83,17 @@ export class FakeDesktop {
     return this.set(botId, { window, action, at: this.fake.now });
   }
 
+  /** The bot used `app` while the owner was away (spec 24.8). */
+  usedAway(botId: BotId, app: string, itemId: ChatItemId | null = null): void {
+    const same = this.away.find((used) => used.botId === botId && used.app === app);
+    if (same) {
+      same.until = this.fake.now;
+    } else {
+      this.away.push({ botId, app, from: this.fake.now, until: this.fake.now, itemId });
+    }
+    this.fake.emit({ name: "desktop.away", params: [...this.away] });
+  }
+
   /** A new picture of the bot's window: sent while its panel watches. */
   paint(botId: BotId, data: string, width = 800, height = 600): void {
     const frame = { botId, data, width, height };
@@ -104,13 +119,20 @@ export class FakeDesktop {
         this.changed(grant.botId);
         return { botId: grant.botId, grants: this.of(grant.botId) };
       },
-      "desktop.setOptions": ({ grantId, realInput }) => {
+      "desktop.setOptions": ({ grantId, realInput, unattended, acceptedRisks }) => {
         const grant = this.grants.find((each) => each.id === grantId);
         if (!grant) {
           throw notFound(`desktop grant ${grantId}`);
         }
+        if (unattended && !acceptedRisks) {
+          throw new Error("use while the owner is away needs the risks accepted first");
+        }
         if (realInput !== undefined) {
           grant.realInput = realInput;
+        }
+        if (unattended !== undefined) {
+          grant.unattended = unattended;
+          grant.acceptedRisksAt = unattended ? this.fake.now : grant.acceptedRisksAt;
         }
         this.changed(grant.botId);
         return { botId: grant.botId, grants: this.of(grant.botId) };
@@ -131,6 +153,12 @@ export class FakeDesktop {
       "desktop.resume": ({ botId }) => {
         this.fake.bot(botId);
         return this.set(botId, { stopped: false });
+      },
+      "desktop.awayUses": () => this.away,
+      "desktop.dismissAway": () => {
+        this.away = [];
+        this.fake.emit({ name: "desktop.away", params: [] });
+        return null;
       },
     };
   }

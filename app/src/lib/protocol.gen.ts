@@ -876,7 +876,17 @@ export type DesktopOptionsParams = { grantId: DesktopGrantId,
 /**
  * The bot may use the real mouse and keyboard there (spec 24.7).
  */
-realInput?: boolean, };
+realInput?: boolean, 
+/**
+ * The bot may use the grant's reach while the owner is away (spec
+ * 24.8); turning it on needs `acceptedRisks`.
+ */
+unattended?: boolean, 
+/**
+ * The owner checked "I understand the risks" on the risks screen
+ * (spec 24.10).
+ */
+acceptedRisks?: boolean, };
 
 /**
  * A bot's grants after one changed: the result of `desktop.revoke` and
@@ -955,6 +965,26 @@ export type DesktopView = { state: DesktopState, frame: DesktopFrame | null, };
  * `desktop.watch`, `desktop.stop` and `desktop.resume`.
  */
 export type DesktopBotParams = { botId: BotId, };
+
+/**
+ * A bot used an app while the owner was away (spec 24.8): what the app
+ * tells them when they are back, until they dismiss it. The result of
+ * `desktop.awayUses` and the params of `desktop.away` are a list of these.
+ */
+export type DesktopAwayUse = { botId: BotId, 
+/**
+ * The app's name for people.
+ */
+app: string, 
+/**
+ * The first and the last use, Unix ms.
+ */
+from: number, until: number, 
+/**
+ * The newest item of the bot's chat at the first use, to open the chat
+ * there.
+ */
+itemId: ChatItemId | null, };
 
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
 /**
@@ -1644,6 +1674,8 @@ export interface RpcMethods {
   "desktop.unwatch": { params: undefined; result: null };
   "desktop.stop": { params: DesktopBotParams; result: DesktopState };
   "desktop.resume": { params: DesktopBotParams; result: DesktopState };
+  "desktop.awayUses": { params: undefined; result: Array<DesktopAwayUse> };
+  "desktop.dismissAway": { params: undefined; result: null };
   "routines.list": { params: RoutinesListParams; result: Array<Routine> };
   "routines.create": { params: RoutinesCreateParams; result: Routine };
   "routines.update": { params: RoutinesUpdateParams; result: Routine };
@@ -1695,6 +1727,7 @@ export interface RpcNotifications {
   "bot.desktop": BotDesktop;
   "desktop.changed": DesktopState;
   "desktop.frame": DesktopFrame;
+  "desktop.away": Array<DesktopAwayUse>;
   "browser.changed": BrowserState;
   "browser.action": BrowserAction;
   "browser.frame": BrowserFrame;

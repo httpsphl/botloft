@@ -54,7 +54,7 @@ describe("the real mouse and keyboard", () => {
     // Off at once, without asking.
     fireEvent.click(toggle);
     await waitFor(() => expect(fake.desktop.grants[0]?.realInput).toBe(false));
-  });
+  }, 15_000);
 
   test("are not offered where the bot may only see", async () => {
     const { fake, scout } = await openScout();

@@ -98,6 +98,28 @@ impl Store {
             .optional()?)
     }
 
+    /// Lets the bot use the grant's reach while the owner is away, or not
+    /// (spec 24.8). Turning it on keeps `now` as when the owner accepted
+    /// the risks (spec 24.10); the bot the grant belongs to, or `None` if
+    /// there is no such grant.
+    pub fn set_desktop_unattended(
+        &self,
+        grant: &DesktopGrantId,
+        on: bool,
+        now: i64,
+    ) -> Result<Option<BotId>> {
+        Ok(self
+            .conn
+            .query_row(
+                "UPDATE desktop_grants SET unattended = ?2, \
+                 accepted_risks_at = CASE WHEN ?2 THEN ?3 ELSE accepted_risks_at END \
+                 WHERE id = ?1 RETURNING bot_id",
+                params![grant.as_str(), on, now],
+                |row| parse_column(row, 0),
+            )
+            .optional()?)
+    }
+
     /// The bot a grant belongs to, if the grant is there.
     pub fn desktop_grants_of(&self, grant: &DesktopGrantId) -> Result<Option<BotId>> {
         Ok(self
@@ -185,6 +207,32 @@ mod tests {
             .set_desktop_real_input(&grant.id, false)
             .expect("off");
         assert!(!fx.store.desktop_grants(scout).expect("grants")[0].real_input);
+    }
+
+    #[test]
+    fn use_while_away_keeps_when_the_risks_were_accepted() {
+        let fx = Fixture::new();
+        let scout = &fx.bots[0].id;
+        let grant = fx
+            .store
+            .grant_desktop_app(scout, EXCEL, "Microsoft Excel", DesktopLevel::See, 10)
+            .expect("grant");
+        assert_eq!(
+            fx.store
+                .set_desktop_unattended(&grant.id, true, 50)
+                .expect("on"),
+            Some(scout.clone())
+        );
+        let on = &fx.store.desktop_grants(scout).expect("grants")[0];
+        assert!(on.unattended);
+        assert_eq!(on.accepted_risks_at, Some(50));
+        // Turning it off keeps when they accepted.
+        fx.store
+            .set_desktop_unattended(&grant.id, false, 60)
+            .expect("off");
+        let off = &fx.store.desktop_grants(scout).expect("grants")[0];
+        assert!(!off.unattended);
+        assert_eq!(off.accepted_risks_at, Some(50));
     }
 
     #[test]

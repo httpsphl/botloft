@@ -131,6 +131,8 @@ pub mod method {
     pub const DESKTOP_UNWATCH: &str = "desktop.unwatch";
     pub const DESKTOP_STOP: &str = "desktop.stop";
     pub const DESKTOP_RESUME: &str = "desktop.resume";
+    pub const DESKTOP_AWAY_USES: &str = "desktop.awayUses";
+    pub const DESKTOP_DISMISS_AWAY: &str = "desktop.dismissAway";
     pub const MESSAGES_SEND: &str = "messages.send";
     pub const MESSAGES_LIST: &str = "messages.list";
     pub const ATTACHMENTS_READ: &str = "attachments.read";
@@ -182,6 +184,8 @@ pub mod notification {
     pub const BOT_RULES: &str = "bot.rules";
     pub const BOT_DESKTOP: &str = "bot.desktop";
     pub const DESKTOP_CHANGED: &str = "desktop.changed";
+    /// What bots did while the owner was away, whenever it changes.
+    pub const DESKTOP_AWAY: &str = "desktop.away";
     /// Only to the connection watching that bot's desktop panel (spec 24.9).
     pub const DESKTOP_FRAME: &str = "desktop.frame";
     pub const CHAT_ITEM: &str = "chat.item";

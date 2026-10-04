@@ -2,7 +2,8 @@
 //! one through its accessibility tree or takes its picture, and clicks,
 //! types, chooses and scrolls in it. Each app asks the owner first, to see
 //! and then to use it (spec 24.2); what is never granted stays out (24.3),
-//! and the owner must be at their computer (24.8).
+//! and the owner must be at their computer, unless the grant lets the bot
+//! work while they are away (24.8).
 
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64;
@@ -14,7 +15,7 @@ use tracing::debug;
 use super::calls::explain;
 use super::desktop_act::{Ask, act, answered};
 use super::desktop_grant::{blocking, granted, heading};
-use super::desktop_list::list;
+use super::desktop_list::{in_reach, list};
 use super::desktop_real::{click_at, press};
 use crate::desktop::STOPPED;
 use crate::platform::desktop::Window;
@@ -176,10 +177,6 @@ async fn run(daemon: &Daemon, bot: &BotId, generation: u64, tool: Tool) -> Resul
     if daemon.desktop.activity.stopped(bot) {
         return Err(STOPPED.to_owned());
     }
-    daemon
-        .desktop
-        .owner_here()
-        .map_err(|away| away.why().to_owned())?;
     let windows = blocking(platform::windows).await?;
     let grants = daemon
         .store()
@@ -187,7 +184,7 @@ async fn run(daemon: &Daemon, bot: &BotId, generation: u64, tool: Tool) -> Resul
         .map_err(|err| explain(err.into()))?;
     let see = DesktopLevel::See;
     match tool {
-        Tool::Windows => Ok(Reply::Text(list(&windows, &grants))),
+        Tool::Windows => Ok(Reply::Text(list(&windows, &in_reach(daemon, grants)?))),
         Tool::Look { window, from, why } => {
             let window = granted(
                 daemon,

@@ -65,5 +65,23 @@ export const desktop: Messages["desktop"] = {
     ],
     realConfirm: "Ligar",
     cancel: "Cancelar",
+    away: "Sem você na frente",
+    awayTitle: (bot, app) => `Deixar ${bot} trabalhar no ${app} sem você na frente?`,
+    awayRisks: (bot, app) => [
+      `${bot} vê tudo o que estiver aberto no ${app}, inclusive dados pessoais, e-mails, conversas e dados de clientes.`,
+      `${bot} pode errar: apagar, enviar ou mudar algo no app como se fosse você.`,
+      `Um texto num app ou numa mensagem pode tentar enganar ${bot} para fazer outra coisa.`,
+      "Sem você na frente, ninguém vê na hora. Você vê depois, no chat, e o Botloft avisa quando você voltar.",
+      "Nunca, nem assim: o próprio Botloft, apps rodando como administrador, terminais e caixas de comando, o Gerenciador de Tarefas, gerenciadores de senha e campos de senha.",
+    ],
+    awayUnderstood: "Entendi os riscos",
+    awayConfirm: "Ligar",
+  },
+  away: {
+    label: "Enquanto você estava fora",
+    used: (bot, app) => `${bot} usou o ${app} enquanto você estava fora`,
+    open: "Ver no chat",
+    dismiss: "Entendi",
+    dismissFailed: "Não foi possível esconder",
   },
 };

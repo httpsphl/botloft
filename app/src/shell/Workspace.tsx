@@ -8,6 +8,7 @@ import { BotView } from "../features/bots/BotView";
 import { CrewsOverview } from "../features/crews/CrewsOverview";
 import { CrewView } from "../features/crews/CrewView";
 import { Sidebar } from "../features/crews/Sidebar";
+import { AwayNotice } from "../features/desktop/AwayNotice";
 import { useLocaleToDaemon } from "../features/desktop/useLocaleToDaemon";
 import { FailedDeliveries } from "../features/messages/FailedDeliveries";
 import { ClaudeCodeHelp } from "../features/onboarding/ClaudeCodeHelp";
@@ -91,6 +92,7 @@ export function Workspace() {
               </div>
             )
           )}
+          <AwayNotice />
           <Selection />
         </main>
       </div>

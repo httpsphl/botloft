@@ -8,8 +8,8 @@ use std::time::Instant;
 use botloft_core::protocol::{
     AccountUsage, Bot, BotContextChanged, BotDeleted, BotDesktop, BotRules, BotStateChanged,
     BrowserAction, BrowserState, ChatDelta, ChatItemChanged, Crew, CrewDeleted, Delivery,
-    DesktopState, FolderRecycled, Message, Question, ReactionChanged, Routine, RoutineRun,
-    ScreenDraft, Task,
+    DesktopAwayUse, DesktopState, FolderRecycled, Message, Question, ReactionChanged, Routine,
+    RoutineRun, ScreenDraft, Task,
 };
 use botloft_store::Store;
 use tokio::runtime::{Handle, RuntimeFlavor};
@@ -45,6 +45,7 @@ pub enum Event {
     BotRules(BotRules),
     BotDesktop(BotDesktop),
     DesktopChanged(DesktopState),
+    DesktopAway(Vec<DesktopAwayUse>),
     ChatItem(ChatItemChanged),
     ChatDelta(ChatDelta),
     MessageCreated(Message),

@@ -6,8 +6,8 @@
 
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{
-    BotDesktop, DesktopBotParams, DesktopGrant, DesktopGrantIdParams, DesktopGrantsParams,
-    DesktopOptionsParams, DesktopState,
+    BotDesktop, DesktopAwayUse, DesktopBotParams, DesktopGrant, DesktopGrantIdParams,
+    DesktopGrantsParams, DesktopOptionsParams, DesktopState,
 };
 use tracing::{info, warn};
 
@@ -22,21 +22,40 @@ pub fn grants(daemon: &Daemon, params: DesktopGrantsParams) -> ApiResult<Vec<Des
     Ok(store.desktop_grants(&params.bot_id)?)
 }
 
-/// Changes a grant's options: the real mouse and keyboard.
+/// Changes a grant's options: the real mouse and keyboard, and use while
+/// the owner is away, which only goes on with the risks accepted (spec
+/// 24.10).
 pub fn set_options(daemon: &Daemon, params: DesktopOptionsParams) -> ApiResult<BotDesktop> {
-    let Some(on) = params.real_input else {
-        let store = daemon.store();
-        let grant = store
-            .desktop_grants_of(&params.grant_id)?
-            .ok_or_else(|| ApiError::NotFound(format!("desktop grant {}", params.grant_id)))?;
-        drop(store);
-        return changed(daemon, &grant);
-    };
-    let bot_id = daemon
-        .store()
-        .set_desktop_real_input(&params.grant_id, on)?
+    if params.unattended == Some(true) && params.accepted_risks != Some(true) {
+        return Err(ApiError::Conflict(
+            "use while the owner is away needs the risks accepted first".to_owned(),
+        ));
+    }
+    let store = daemon.store();
+    let bot_id = store
+        .desktop_grants_of(&params.grant_id)?
         .ok_or_else(|| ApiError::NotFound(format!("desktop grant {}", params.grant_id)))?;
+    if let Some(on) = params.real_input {
+        store.set_desktop_real_input(&params.grant_id, on)?;
+    }
+    if let Some(on) = params.unattended {
+        store.set_desktop_unattended(&params.grant_id, on, daemon.clock.now_ms())?;
+        info!(on, "use of the desktop while the owner is away changed");
+    }
+    drop(store);
     changed(daemon, &bot_id)
+}
+
+/// What bots did while the owner was away, for the app to tell them.
+pub fn away_uses(daemon: &Daemon) -> ApiResult<Vec<DesktopAwayUse>> {
+    Ok(daemon.desktop.away.list())
+}
+
+/// The owner saw what bots did while they were away.
+pub fn dismiss_away(daemon: &Daemon) -> ApiResult<()> {
+    daemon.desktop.away.clear();
+    daemon.emit(Event::DesktopAway(Vec::new()));
+    Ok(())
 }
 
 /// Takes a grant away: the bot asks for that again.
