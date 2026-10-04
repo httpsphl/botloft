@@ -3,7 +3,7 @@
 // end they name the task and make it a routine, or send it for the bot to
 // remember.
 
-import { AlarmClock, GraduationCap, Send, X } from "lucide-react";
+import { AlarmClock, Send, X } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { useT } from "../../i18n";
 import type { Bot, BrowserState, LessonStep } from "../../lib/protocol.gen";
@@ -57,18 +57,11 @@ export function useLesson(bot: Pick<Bot, "id">, state: BrowserState | null): Les
   };
 }
 
-/** Under the owner's pill: start a lesson, or the one being given, live. */
-export function LessonArea({ bot, lesson }: { bot: Bot; lesson: Lesson }) {
+/** Under the owner's pill: the lesson being given, live. */
+export function LessonArea({ lesson }: { lesson: Lesson }) {
   const t = useT().browser.lesson;
   if (lesson.steps === null) {
-    return (
-      <div className="mt-2 flex flex-col items-center gap-1 text-center">
-        <Button size="sm" icon={GraduationCap} onClick={() => void lesson.start()}>
-          {t.teach}
-        </Button>
-        <p className="max-w-md text-muted text-xs">{t.teachWhy(bot.name)}</p>
-      </div>
-    );
+    return null;
   }
   return (
     <section
@@ -79,10 +72,11 @@ export function LessonArea({ bot, lesson }: { bot: Bot; lesson: Lesson }) {
         <span aria-hidden className="live-dot" />
         {t.recording}
       </p>
+      {/* A fixed height: steps coming in never resize the page above. */}
       {lesson.steps.length === 0 ? (
-        <p className="text-muted text-xs">{t.empty}</p>
+        <p className="h-16 text-muted text-xs">{t.empty}</p>
       ) : (
-        <ol className="flex max-h-40 flex-col gap-1 overflow-y-auto text-ink-soft text-xs">
+        <ol className="flex h-16 flex-col gap-1 overflow-y-auto text-ink-soft text-xs">
           {lesson.steps.map((step, index) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: steps only grow at the end
             <li key={index} className="animate-rise">

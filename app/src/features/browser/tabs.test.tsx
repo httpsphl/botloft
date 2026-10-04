@@ -87,6 +87,8 @@ describe("the tabs of the bot's browser", () => {
     await openPanel(fake, scout.id);
     fireEvent.click(within(panel()).getByRole("button", { name: "Take control" }));
     expect(await within(panel()).findByText("You are in control")).toBeDefined();
+    // Folded with the rest of what the owner should know.
+    fireEvent.click(within(panel()).getByRole("button", { name: "How it works" }));
     expect(within(panel()).getByText("Scout goes on in the tab you leave open.")).toBeDefined();
 
     fireEvent.click(tab("Rye · Example, example.com"));
