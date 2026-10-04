@@ -31,7 +31,7 @@ export const desktop = {
     stoppedBody: (bot: string) => `${bot} cannot read or use your apps until you let it go on.`,
     emptyTitle: (bot: string) => `${bot} has not used your desktop yet`,
     emptyBody: "When it reads or uses a window of an app you allowed, the window shows here, live.",
-    shortcut: "Ctrl+Alt+End stops every bot on your desktop, even with Botloft closed.",
+    shortcut: "Ctrl+Alt+Esc stops every bot on your desktop, even with Botloft closed.",
     waiting: "Waiting for the picture…",
     read: "Read the window",
     click: (target: string) => `Clicked "${target}"`,

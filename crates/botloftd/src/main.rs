@@ -137,7 +137,7 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
     });
     // No bot process survived the last run, so nobody waits for these.
     approvals::expire_all(&daemon);
-    // Ctrl+Alt+End stops every bot on the desktop, app open or not (spec 24.9).
+    // Ctrl+Alt+Esc stops every bot on the desktop, app open or not (spec 24.9).
     let stopping = Arc::clone(&daemon);
     match platform::desktop::on_stop_key(move || botloftd::service::desktop::stop_all(&stopping)) {
         Ok(()) | Err(platform::desktop::DesktopError::Unavailable) => {}
