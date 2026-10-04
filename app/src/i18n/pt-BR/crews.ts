@@ -6,6 +6,7 @@ export const crews: Messages["crews"] = {
   rename: "Renomear",
   paused: "Pausada",
   sidebar: {
+    menuOf: (crew) => `Ações de ${crew}`,
     label: "Equipes",
     noMessages: "Nenhuma mensagem ainda",
     fromOwner: (text: string) => `Você: ${text}`,
