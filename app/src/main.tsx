@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import packageJson from "../package.json";
 import { App } from "./App";
+import { startEyeMoments } from "./features/bots/eyeMoments";
 import type { Connect } from "./features/onboarding/link";
 import { connect, rpcUrl } from "./lib/client";
 import type { Host } from "./lib/host";
@@ -43,6 +44,8 @@ if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("reel
       document.documentElement.dataset.motion = "less";
     }
     watchVisibility();
+    // The mascots blink and look around in moments, not forever.
+    startEyeMoments();
     // Opened at sign-in, the window stays hidden until the owner opens it.
     host.launchedAtSignIn().then(
       (hidden) => hidden && !document.hasFocus() && markHidden(true),
