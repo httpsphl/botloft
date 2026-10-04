@@ -241,25 +241,12 @@
   }
 }
 
-/* Switching bots or crews: the main pane fades out and the new one rises
-   in; the rest of the window stays put (ui/motion.ts). */
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation: none;
-}
-
-::view-transition-old(main-pane) {
-  animation: 110ms ease-out both view-out;
-}
-
-::view-transition-new(main-pane) {
-  animation: 240ms var(--ease-out) both view-in;
-}
-
-@keyframes view-out {
-  to {
-    opacity: 0;
-  }
+/* Switching bots or crews: the new main pane rises in; the rest of the
+   window stays put (shell/Workspace.tsx). A plain animation, not a view
+   transition: as one ended, WebView2 painted a mascot without its clip
+   for a few frames, an orange square. */
+.pane-rise {
+  animation: view-in 240ms var(--ease-out) backwards;
 }
 
 @keyframes view-in {
@@ -278,12 +265,6 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-  }
-
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*) {
-    animation: none !important;
   }
 
   /* A still stretch would read as a broken line: light up all of it. */

@@ -23,7 +23,6 @@ import type {
   Task,
   TaskId,
 } from "../lib/protocol.gen";
-import { viewTransition } from "../ui/motion";
 import { withQuestion } from "./questions";
 import { loadMarked, loadSeen, loadSeenSince, seenActions, withReply } from "./seen";
 
@@ -149,7 +148,7 @@ export function createAppStore(api: BotloftApi): AppStore {
       const change = { selectedCrewId: bot.crewId, selectedBotId: botId, page: null, focus };
       if (get().selectedBotId !== botId || get().page) {
         get().markSeen(botId);
-        viewTransition(() => set(change));
+        set(change);
       } else if (focus) {
         set({ focus });
       }
@@ -180,16 +179,14 @@ export function createAppStore(api: BotloftApi): AppStore {
       selectCrew: (crewId) => {
         const { selectedCrewId, selectedBotId, page } = get();
         if (selectedCrewId !== crewId || selectedBotId !== null || page) {
-          viewTransition(() =>
-            set({ selectedCrewId: crewId, selectedBotId: null, page: null, focus: null }),
-          );
+          set({ selectedCrewId: crewId, selectedBotId: null, page: null, focus: null });
         }
       },
       selectBot: (botId) => openBot(botId, null),
       openAt: (botId, itemId) => openBot(botId, { botId, itemId }),
       openPage: (page) => {
         if (get().page !== page) {
-          viewTransition(() => set({ page, selectedCrewId: null, selectedBotId: null }));
+          set({ page, selectedCrewId: null, selectedBotId: null });
         }
       },
       ...seenActions(get, set),

@@ -3,7 +3,6 @@ import { afterEach, describe, expect, test } from "vitest";
 import { FakeBotloft } from "../../lib/fake";
 import { prefs, resetPrefs } from "../../shell/prefs";
 import { crewOpened, openBot, renderApp } from "../../test/app";
-import { reducedMotion } from "../../ui/motion";
 
 afterEach(() => {
   cleanup();
@@ -68,10 +67,9 @@ describe("the app's own choices", () => {
   test("less motion stills the window", async () => {
     renderApp(new FakeBotloft());
     const dialog = await openSettings("Appearance");
-    expect(reducedMotion()).toBe(false);
+    expect(document.documentElement.dataset.motion).toBeUndefined();
     fireEvent.click(within(dialog).getByRole("switch", { name: "Less motion" }));
     expect(document.documentElement.dataset.motion).toBe("less");
-    expect(reducedMotion()).toBe(true);
     fireEvent.click(within(dialog).getByRole("switch", { name: "Less motion" }));
     expect(document.documentElement.dataset.motion).toBeUndefined();
   });

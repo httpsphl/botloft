@@ -1,15 +1,11 @@
 import { act, cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 import { moodOf } from "../features/bots/BotAvatar";
 import { FakeBotloft } from "../lib/fake";
 import { crewOpened, openBot, renderApp } from "../test/app";
-import { SeenSince, useArrival, viewTransition } from "./motion";
+import { SeenSince, useArrival } from "./motion";
 
-afterEach(() => {
-  cleanup();
-  vi.unstubAllGlobals();
-  Reflect.deleteProperty(document, "startViewTransition");
-});
+afterEach(cleanup);
 
 describe("the mascot's mood", () => {
   test("follows what the bot does", () => {
@@ -65,29 +61,22 @@ describe("arrivals", () => {
   });
 });
 
-describe("view transitions", () => {
-  test("run the change at once where the webview has none", () => {
-    const update = vi.fn();
-    viewTransition(update);
-    expect(update).toHaveBeenCalledOnce();
-  });
-
-  test("go through the webview's transition when it has one", () => {
-    const start = vi.fn((run: () => void) => run());
-    Object.assign(document, { startViewTransition: start });
-    const update = vi.fn();
-    viewTransition(update);
-    expect(start).toHaveBeenCalledOnce();
-    expect(update).toHaveBeenCalledOnce();
-  });
-
-  test("skip the transition when Windows asks for less motion", () => {
-    const start = vi.fn((run: () => void) => run());
-    Object.assign(document, { startViewTransition: start });
-    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("reduce") }));
-    const update = vi.fn();
-    viewTransition(update);
-    expect(start).not.toHaveBeenCalled();
-    expect(update).toHaveBeenCalledOnce();
+describe("switching views", () => {
+  test("the new bot's pane rises in, and the window around it stays", async () => {
+    const fake = new FakeBotloft();
+    const ops = fake.addCrew("Ops");
+    for (const name of ["Scout", "Writer"]) {
+      fake.setBotState(fake.addBot(ops.id, name, "Works").id, "idle");
+    }
+    renderApp(fake);
+    await crewOpened("Ops");
+    openBot("Scout");
+    const pane = () => screen.getByRole("main").lastElementChild as HTMLElement;
+    const scout = pane();
+    expect(scout.className).toContain("pane-rise");
+    openBot("Writer");
+    await screen.findByLabelText("Message to Writer");
+    expect(pane()).not.toBe(scout);
+    expect(pane().className).toContain("pane-rise");
   });
 });
