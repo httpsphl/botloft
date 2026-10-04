@@ -11,6 +11,7 @@ import { FakeConversation } from "./fakeConversation";
 import { crewHandlers } from "./fakeCrews";
 import { FakeFiles } from "./fakeFiles";
 import { FakeQuestions } from "./fakeQuestions";
+import { FakeReactions } from "./fakeReactions";
 import { FakeRoutines } from "./fakeRoutines";
 import { conflict, invalid, notFound, slugify } from "./fakeRules";
 import { FakeScreens } from "./fakeScreens";
@@ -77,6 +78,7 @@ export class FakeBotloft implements BotloftApi {
   readonly browser = new FakeBrowser(this);
   readonly screens = new FakeScreens(this);
   readonly questions = new FakeQuestions(this);
+  readonly reactions = new FakeReactions(this);
   /** Clock for created and updated times. */
   now = Date.now();
   closed = false;
@@ -261,6 +263,7 @@ export class FakeBotloft implements BotloftApi {
     ...this.screens.handlers(),
     ...this.routines.handlers(),
     ...this.questions.handlers(),
+    ...this.reactions.handlers(),
     ...usageHandlers(this),
     ...searchHandlers(this),
   };

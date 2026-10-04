@@ -14,6 +14,8 @@ const DELETE_BOT: &[&str] = &[
     "UPDATE messages SET question_id = NULL \
      WHERE question_id IN (SELECT id FROM questions WHERE bot_id = ?1)",
     "DELETE FROM questions WHERE bot_id = ?1",
+    // Reactions point at chat items and at the messages that took them.
+    "DELETE FROM reactions WHERE bot_id = ?1",
     "DELETE FROM approvals WHERE bot_id = ?1",
     "DELETE FROM chat_items WHERE bot_id = ?1",
     "DELETE FROM browser_sites WHERE bot_id = ?1",

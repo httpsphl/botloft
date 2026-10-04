@@ -10,7 +10,7 @@ use botloft_core::protocol::{
 use botloft_core::{chat, validate};
 use botloft_store::{MessageFilter, Store};
 
-use super::{ApiError, ApiResult, attachments, bots, crews};
+use super::{ApiError, ApiResult, attachments, bots, crews, reactions};
 use crate::chat::items;
 use crate::state::{Daemon, Event};
 
@@ -97,7 +97,9 @@ pub(crate) fn post(
 ) -> ApiResult<Message> {
     let delivery = pending_delivery(&message);
     let item = store.insert_message(&message, &delivery, task.as_ref())?;
+    let reactions = reactions::sent_with(store, &message)?;
     announce(daemon, task, &message, delivery, item);
+    reactions::announce_sent(daemon, reactions);
     Ok(message)
 }
 

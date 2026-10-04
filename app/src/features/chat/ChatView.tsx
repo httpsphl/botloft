@@ -25,6 +25,7 @@ import { BotRun, type Live } from "./BotRun";
 import { ChatComposer } from "./ChatComposer";
 import { InboundRow } from "./InboundRow";
 import { NoticeRow } from "./NoticeRow";
+import { ReactionsOf, useReactions } from "./Reactions";
 import { type ReplyTarget, StartReply } from "./Replying";
 import { chatRows, rowHas } from "./rows";
 import { useChat } from "./useChat";
@@ -58,6 +59,7 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
   /** What the owner's next message replies to (spec 9.3). */
   const [replying, setReplying] = useState<ReplyTarget | null>(null);
   const cancelReply = useCallback(() => setReplying(null), []);
+  const reactions = useReactions(bot.id);
   // What was there when the owner opened this chat stays still; what
   // arrives while they look animates in.
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new bot is a new chat
@@ -215,15 +217,17 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
             </div>
           )}
           <StartReply.Provider value={setReplying}>
-            <SeenSince.Provider value={openedAt}>
-              <ol
-                ref={listRef}
-                aria-label={t.chat.view.messages}
-                className="offscreen-rows flex flex-col gap-6"
-              >
-                {list}
-              </ol>
-            </SeenSince.Provider>
+            <ReactionsOf.Provider value={reactions}>
+              <SeenSince.Provider value={openedAt}>
+                <ol
+                  ref={listRef}
+                  aria-label={t.chat.view.messages}
+                  className="offscreen-rows flex flex-col gap-6"
+                >
+                  {list}
+                </ol>
+              </SeenSince.Provider>
+            </ReactionsOf.Provider>
           </StartReply.Provider>
         </div>
       </div>

@@ -290,5 +290,6 @@ fn to_notification(event: &Event) -> String {
         Event::BrowserAction(action) => note(notification::BROWSER_ACTION, action),
         Event::ScreenDraft(draft) => note(notification::SCREEN_DRAFT, draft),
         Event::QuestionChanged(question) => note(notification::QUESTION_CHANGED, question),
+        Event::ReactionChanged(change) => note(notification::REACTION_CHANGED, change),
     }
 }

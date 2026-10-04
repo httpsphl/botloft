@@ -221,6 +221,10 @@ export class FakeConversation {
     this.fake.emit({ name: "message.created", params: message });
     this.fake.emit({ name: "delivery.changed", params: delivery });
     this.fake.chat.add(message.toBotId, { kind: "inbound", message });
+    // Every message of the owner takes the reactions waiting (spec 8.9).
+    if (message.fromKind === "owner") {
+      this.fake.reactions.sendWith(message.toBotId, message.id);
+    }
     return delivery;
   }
 

@@ -18,6 +18,8 @@ use crate::ids::{
 mod browser;
 #[path = "export_questions.rs"]
 mod questions;
+#[path = "export_reactions.rs"]
+mod reactions;
 #[path = "export_routines.rs"]
 mod routines;
 #[path = "export_rules.rs"]
@@ -176,6 +178,7 @@ fn export_bindings() {
     out.decl::<ApprovalItem>();
     usage::decls(&mut out);
     questions::decls(&mut out);
+    reactions::decls(&mut out);
     out.decl::<TurnItem>();
     out.decl::<NoticeItem>();
     out.decl::<ChatBody>();
@@ -337,6 +340,7 @@ fn export_bindings() {
     rules::methods(&mut out);
     routines::methods(&mut out);
     questions::methods(&mut out);
+    reactions::methods(&mut out);
     search::methods(&mut out);
     browser::methods(&mut out);
     out.text.push_str("}\n\n");
@@ -383,6 +387,7 @@ fn export_bindings() {
     session::notifications(&mut out);
     routines::notifications(&mut out);
     questions::notifications(&mut out);
+    reactions::notifications(&mut out);
     rules::notifications(&mut out);
     browser::notifications(&mut out);
     out.text.push_str("}\n\n");

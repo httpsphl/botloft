@@ -156,6 +156,31 @@ pub fn reply(quote: &str, body: &str) -> String {
     )
 }
 
+/// Longest part of a reply quoted with a reaction to it, in characters.
+pub const QUOTED_REACTION_MAX_CHARS: usize = 120;
+
+/// The owner's reactions since their last message (spec 8.9), one line
+/// each, above what that message says. Each is an emoji and the reply it
+/// is on, already quoted on one line.
+pub fn with_reactions(reactions: &[(String, String)], text: &str) -> String {
+    if reactions.is_empty() {
+        return text.to_owned();
+    }
+    let lines: Vec<String> = reactions
+        .iter()
+        .map(|(emoji, quote)| format!("Reacted {emoji} to: \"{quote}\""))
+        .collect();
+    format!(
+        "{}
+
+{text}",
+        lines.join(
+            "
+"
+        )
+    )
+}
+
 /// Time left until `deadline_ms`, rounded for a reader who does not know
 /// the current time.
 pub fn due(deadline_ms: i64, now_ms: i64) -> String {
@@ -243,6 +268,22 @@ mod tests {
 
 Then send the yearly quote."
         );
+    }
+
+    #[test]
+    fn reactions_go_above_the_owner_words_one_line_each() {
+        let reactions = [
+            ("👍".to_owned(), "Acme signs annual.".to_owned()),
+            ("🎉".to_owned(), "All tests pass.".to_owned()),
+        ];
+        assert_eq!(
+            with_reactions(&reactions, "Next?"),
+            "Reacted 👍 to: \"Acme signs annual.\"
+Reacted 🎉 to: \"All tests pass.\"
+
+Next?"
+        );
+        assert_eq!(with_reactions(&[], "Next?"), "Next?");
     }
 
     #[test]

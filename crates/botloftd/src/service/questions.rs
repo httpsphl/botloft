@@ -11,7 +11,7 @@ use botloft_core::protocol::{
 use botloft_core::validate;
 use botloft_store::Store;
 
-use super::{ApiError, ApiResult, bots, messages};
+use super::{ApiError, ApiResult, bots, messages, reactions};
 use crate::chat::items;
 use crate::state::{Daemon, Event};
 
@@ -134,9 +134,11 @@ pub fn answer(daemon: &Daemon, params: QuestionsAnswerParams) -> ApiResult<Quest
     let answered = store
         .answer_question(&question.id, &message, &delivery)?
         .ok_or_else(|| already_closed(&question.id))?;
+    let reactions = reactions::sent_with(&store, &message)?;
     drop(store);
     items::changed(daemon, answered.question_item);
     messages::announce(daemon, None, &message, delivery, answered.answer_item);
+    reactions::announce_sent(daemon, reactions);
     daemon.emit(Event::QuestionChanged(answered.question.clone()));
     Ok(answered.question)
 }

@@ -6,7 +6,7 @@ use botloft_core::ids::{
     AttachmentId, BotId, ChatItemId, CrewId, MessageId, QuestionId, RoutineId, TaskId,
 };
 use botloft_core::protocol::{
-    Attachment, ChatBody, ChatItem, Delivery, InboundItem, Message, MessageReply, Task,
+    Attachment, ChatBody, ChatItem, Delivery, InboundItem, Message, MessageReply, SenderKind, Task,
 };
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
@@ -147,6 +147,10 @@ impl Store {
             )?;
         }
         Self::insert_delivery_in(conn, delivery)?;
+        // Every message of the owner takes the reactions waiting for one.
+        if message.from_kind == SenderKind::Owner {
+            Self::send_reactions_in(conn, &message.to_bot_id, &message.id)?;
+        }
         let item = ChatItem {
             id: ChatItemId::generate(),
             bot_id: message.to_bot_id.clone(),

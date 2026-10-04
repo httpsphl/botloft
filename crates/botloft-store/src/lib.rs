@@ -17,6 +17,7 @@ mod migrate;
 #[cfg(test)]
 mod plans;
 mod questions;
+mod reactions;
 mod routine_runs;
 mod routines;
 mod search;
