@@ -51,6 +51,10 @@ export const tools = {
     browser_screenshot: "Look at the screen",
     browser_close: "Close the browser",
     browser_ask_owner: "Ask for your hand",
+    desktop: "See an app",
+    desktop_windows: "See your windows",
+    desktop_look: "Read a window",
+    desktop_screenshot: "Look at a window",
   },
   /** Where `browser_scroll` went. */
   scroll: { down: "down", up: "up", top: "to the top", bottom: "to the end" },

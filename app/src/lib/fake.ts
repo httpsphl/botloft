@@ -9,6 +9,7 @@ import { FakeBrowser } from "./fakeBrowser";
 import { FakeChat } from "./fakeChat";
 import { FakeConversation } from "./fakeConversation";
 import { crewHandlers } from "./fakeCrews";
+import { FakeDesktop } from "./fakeDesktop";
 import { FakeFiles } from "./fakeFiles";
 import { FakeLesson } from "./fakeLesson";
 import { FakeQuestions } from "./fakeQuestions";
@@ -73,6 +74,7 @@ export class FakeBotloft implements BotloftApi {
   readonly calls: { method: Method; params: unknown }[] = [];
   readonly chat = new FakeChat(this);
   readonly allow = new FakeAllow(this);
+  readonly desktop = new FakeDesktop(this);
   readonly conversation = new FakeConversation(this);
   readonly routines = new FakeRoutines(this);
   readonly files = new FakeFiles(this);
@@ -259,6 +261,7 @@ export class FakeBotloft implements BotloftApi {
     ...botHandlers(this),
     ...this.chat.handlers(),
     ...this.allow.handlers(),
+    ...this.desktop.handlers(),
     ...this.conversation.handlers(),
     ...this.files.handlers(),
     ...this.browser.handlers(),

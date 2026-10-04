@@ -76,6 +76,12 @@ export type RuleId = string;
 export type QuestionId = string;
 
 /**
+ * Identifies what the owner let a bot see or do on their desktop
+ * (spec 24.2).
+ */
+export type DesktopGrantId = string;
+
+/**
  * A group of bots that can message each other and share a folder.
  */
 export type Crew = { id: CrewId, name: string, 
@@ -810,6 +816,59 @@ export type BotRules = { botId: BotId,
  */
 rules: Array<AllowRule>, };
 
+/**
+ * What a grant reaches.
+ */
+export type DesktopScope = "app" | "desktop";
+
+/**
+ * What a grant lets the bot do: see, or see and act.
+ */
+export type DesktopLevel = "see" | "act";
+
+/**
+ * A grant of a bot on the owner's desktop.
+ */
+export type DesktopGrant = { id: DesktopGrantId, botId: BotId, scope: DesktopScope, 
+/**
+ * The executable, for an `app` grant.
+ */
+appPath: string | null, 
+/**
+ * The app's name for people ("Microsoft Excel"), for an `app` grant.
+ */
+appName: string | null, level: DesktopLevel, 
+/**
+ * The bot may use the owner's real mouse and keyboard (spec 24.7).
+ */
+realInput: boolean, 
+/**
+ * The bot may use it while the owner is away (spec 24.8).
+ */
+unattended: boolean, 
+/**
+ * When the owner accepted the risks screen (spec 24.10), Unix ms.
+ */
+acceptedRisksAt: number | null, 
+/**
+ * Unix time in milliseconds.
+ */
+createdAt: number, };
+
+export type DesktopGrantsParams = { botId: BotId, };
+
+export type DesktopGrantIdParams = { grantId: DesktopGrantId, };
+
+/**
+ * A bot's grants after one changed: the result of `desktop.revoke` and
+ * the params of the `bot.desktop` notification.
+ */
+export type BotDesktop = { botId: BotId, 
+/**
+ * Oldest first.
+ */
+grants: Array<DesktopGrant>, };
+
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
 /**
  * What the bot says the command is for, as in `ToolItem`. The bot
@@ -1490,6 +1549,8 @@ export interface RpcMethods {
   "usage.tokens": { params: UsageTokensParams; result: Array<BotTokens> };
   "rules.list": { params: RulesListParams; result: Array<AllowRule> };
   "rules.delete": { params: RuleIdParams; result: BotRules };
+  "desktop.grants": { params: DesktopGrantsParams; result: Array<DesktopGrant> };
+  "desktop.revoke": { params: DesktopGrantIdParams; result: BotDesktop };
   "routines.list": { params: RoutinesListParams; result: Array<Routine> };
   "routines.create": { params: RoutinesCreateParams; result: Routine };
   "routines.update": { params: RoutinesUpdateParams; result: Routine };
@@ -1538,6 +1599,7 @@ export interface RpcNotifications {
   "question.changed": Question;
   "reaction.changed": ReactionChanged;
   "bot.rules": BotRules;
+  "bot.desktop": BotDesktop;
   "browser.changed": BrowserState;
   "browser.action": BrowserAction;
   "browser.frame": BrowserFrame;

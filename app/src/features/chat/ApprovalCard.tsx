@@ -9,6 +9,7 @@ import { NoteInput, RequestCard, SettledLine } from "../../ui/ChatCard";
 import { Details } from "../../ui/Details";
 import { HELP_TOOL, HelpCard } from "../browser/HelpCard";
 import { SITE_TOOL, SiteCard } from "../browser/SiteCard";
+import { DESKTOP_TOOL, DesktopCard } from "../desktop/DesktopCard";
 import {
   CHANGE_ROUTINE_TOOL,
   DELETE_ROUTINE_TOOL,
@@ -74,6 +75,8 @@ export function ApprovalCard({ approval, bot }: { approval: ApprovalItem; bot: B
       return <RoutineDeleteCard approval={approval} bot={bot} />;
     case SITE_TOOL:
       return <SiteCard approval={approval} bot={bot} />;
+    case DESKTOP_TOOL:
+      return <DesktopCard approval={approval} bot={bot} />;
     case HELP_TOOL:
       return <HelpCard approval={approval} bot={bot} />;
     default:

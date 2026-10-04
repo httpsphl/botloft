@@ -12,6 +12,7 @@ mod chat;
 mod crews;
 mod delete;
 mod deliveries;
+mod desktop_grants;
 mod messages;
 mod migrate;
 #[cfg(test)]

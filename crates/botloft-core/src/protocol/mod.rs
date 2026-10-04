@@ -52,6 +52,7 @@ macro_rules! text_enum {
 mod browser;
 mod browser_input;
 mod chat;
+mod desktop;
 #[cfg(test)]
 mod export;
 mod files;
@@ -72,6 +73,7 @@ mod usage;
 pub use browser::*;
 pub use browser_input::*;
 pub use chat::*;
+pub use desktop::*;
 pub use files::*;
 pub use lesson::*;
 pub use messaging::*;
@@ -121,6 +123,8 @@ pub mod method {
     pub const APPROVALS_ANSWER: &str = "approvals.answer";
     pub const RULES_LIST: &str = "rules.list";
     pub const RULES_DELETE: &str = "rules.delete";
+    pub const DESKTOP_GRANTS: &str = "desktop.grants";
+    pub const DESKTOP_REVOKE: &str = "desktop.revoke";
     pub const MESSAGES_SEND: &str = "messages.send";
     pub const MESSAGES_LIST: &str = "messages.list";
     pub const ATTACHMENTS_READ: &str = "attachments.read";
@@ -170,6 +174,7 @@ pub mod notification {
     pub const BOT_STATE: &str = "bot.state";
     pub const BOT_CONTEXT: &str = "bot.context";
     pub const BOT_RULES: &str = "bot.rules";
+    pub const BOT_DESKTOP: &str = "bot.desktop";
     pub const CHAT_ITEM: &str = "chat.item";
     pub const CHAT_DELTA: &str = "chat.delta";
     pub const MESSAGE_CREATED: &str = "message.created";

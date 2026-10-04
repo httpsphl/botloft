@@ -14,6 +14,9 @@ mod browser_reply;
 mod browser_sites;
 mod calls;
 mod catalog;
+mod desktop;
+mod desktop_catalog;
+mod desktop_list;
 mod era;
 mod question;
 mod routine;
@@ -48,7 +51,8 @@ const INSTRUCTIONS: &str = "Tools to work with your Botloft crew: see who is in 
     or tasks to other bots, report the result of tasks assigned to you and, for the crew's chief, \
     suggest new bots. schedule_routine asks the owner for work at set times. ask_owner asks the owner a question without waiting; the answer arrives later as a message. send_signal tells the crew something happened, and the routines waiting for it run. share_file shows the \
     owner files you made, as cards in the chat they can open and save. The browser_ tools drive your own web browser, which the owner can watch \
-    live and take over when you ask with browser_ask_owner. The owner writes to you directly; messages from other bots and from Botloft start with \
+    live and take over when you ask with browser_ask_owner. The desktop_ tools read the apps open on \
+    the owner's own computer, app by app as the owner allows. The owner writes to you directly; messages from other bots and from Botloft start with \
     [botloft].";
 
 /// A JSON-RPC error with the HTTP status it goes out with.
@@ -153,6 +157,12 @@ pub async fn handle(
         Ok(era) if called(&request).is_some_and(|name| name.starts_with(browser_args::PREFIX)) => {
             let name = called(&request).unwrap_or_default().to_owned();
             let result = browser::call(&daemon, &bot, generation, &name, arguments(&request)).await;
+            Ok(decorate(era, &request, result))
+        }
+        // They read the owner's desktop and may wait for the owner (spec 24.2).
+        Ok(era) if called(&request).is_some_and(|name| name.starts_with(desktop::PREFIX)) => {
+            let name = called(&request).unwrap_or_default().to_owned();
+            let result = desktop::call(&daemon, &bot, generation, &name, arguments(&request)).await;
             Ok(decorate(era, &request, result))
         }
         Ok(era) => answer(&daemon, &bot, era, &request),
