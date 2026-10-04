@@ -8,17 +8,19 @@ import {
   Power,
   RotateCw,
 } from "lucide-react";
+import { useState } from "react";
 import { type Messages, t, useT } from "../../i18n";
 import type { Bot, BotState } from "../../lib/protocol.gen";
 import { TONES, type Tone as ToneName } from "../../ui/tone";
-import { ReadyIcon, type StateIcon, WorkingIcon } from "./StateIcons";
+import { type StateIcon, WorkingIcon } from "./StateIcons";
 
 type Tone = Exclude<ToneName, "accent">;
 
 export interface StateView {
   label: string;
   tone: Tone;
-  icon: StateIcon;
+  /** None for idle: a bot doing nothing is free, which needs no badge. */
+  icon: StateIcon | null;
   spin?: boolean;
   /** One sentence on what the state means for the owner. */
   hint: string;
@@ -30,7 +32,7 @@ type Look = Omit<StateView, "label" | "hint">;
 const looks: Record<BotState, Look> = {
   offline: { tone: "quiet", icon: Power },
   launching: { tone: "work", icon: LoaderCircle, spin: true },
-  idle: { tone: "ok", icon: ReadyIcon },
+  idle: { tone: "ok", icon: null },
   busy: { tone: "work", icon: WorkingIcon },
   needs_approval: { tone: "warn", icon: Hand },
   rate_limited: { tone: "warn", icon: Hourglass },
@@ -70,10 +72,19 @@ export function BotStateBadge({
   const messages = useT();
   const view = stateView(bot, crewPaused, messages);
   const Icon = view.icon;
+  // The badge fades in when a bot leaves idle in front of the owner; one
+  // that was already there when the list opened shows still.
+  const [wasShown, setWasShown] = useState(Icon !== null);
+  const [entering, setEntering] = useState(false);
+  if ((Icon !== null) !== wasShown) {
+    setWasShown(Icon !== null);
+    setEntering(Icon !== null);
+  }
+  if (!Icon) return null;
   return (
     <span
       title={view.hint}
-      className={`inline-flex shrink-0 items-center gap-1 font-medium transition-colors duration-300 ${compact ? "text-xs" : "text-sm"} ${TONES[view.tone].text}`}
+      className={`inline-flex shrink-0 items-center gap-1 font-medium transition-colors duration-300 ${compact ? "text-xs" : "text-sm"} ${TONES[view.tone].text} ${entering ? "animate-fade" : ""}`}
     >
       <Icon
         aria-hidden

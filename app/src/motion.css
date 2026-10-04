@@ -111,25 +111,12 @@
 }
 
 @layer components {
-  /* The state icons of "Ready" and "Working" (features/bots/StateIcons.tsx):
-     two rings spread from the dot, one after the other; a bright stretch
-     runs along the pulse line. The mascot has its own file (mascot.css). */
-  .state-ring,
+  /* The state icon of "Working" (features/bots/StateIcons.tsx): a bright
+     stretch runs along the pulse line. The mascot has its own file
+     (mascot.css). */
   .state-trace {
     transform-box: fill-box;
     transform-origin: 50%;
-  }
-
-  .state-ring {
-    opacity: 0;
-    animation: ring 2.6s var(--ease-out) infinite;
-  }
-
-  .state-ring-late {
-    animation-delay: 1.3s;
-  }
-
-  .state-trace {
     stroke-dasharray: 26 74;
     animation: trace 1.5s linear infinite;
   }
@@ -159,17 +146,6 @@
 
   details[open]::details-content {
     block-size: auto;
-  }
-}
-
-@keyframes ring {
-  from {
-    opacity: 0.6;
-    transform: scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: scale(2);
   }
 }
 

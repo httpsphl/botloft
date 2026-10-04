@@ -106,14 +106,25 @@ describe("mascot", () => {
 });
 
 describe("state badge", () => {
-  test("ready pulses and working runs its line", () => {
+  test("idle shows nothing and working runs its line", () => {
     const { container, rerender } = render(
       <BotStateBadge bot={{ state: "idle", paused: false }} />,
     );
-    expect(container.querySelectorAll(".state-ring")).toHaveLength(2);
+    expect(container.textContent).toBe("");
 
     rerender(<BotStateBadge bot={{ state: "busy", paused: false }} />);
     expect(container.querySelector(".state-trace")?.getAttribute("pathLength")).toBe("100");
+  });
+
+  test("fades in when the bot starts working, not when it was already working", () => {
+    const { container, rerender } = render(
+      <BotStateBadge bot={{ state: "busy", paused: false }} />,
+    );
+    expect(container.querySelector(".animate-fade")).toBeNull();
+
+    rerender(<BotStateBadge bot={{ state: "idle", paused: false }} />);
+    rerender(<BotStateBadge bot={{ state: "busy", paused: false }} />);
+    expect(container.querySelector(".animate-fade")).not.toBeNull();
   });
 });
 
