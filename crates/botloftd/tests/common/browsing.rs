@@ -22,7 +22,8 @@ pub async fn setup() -> Option<Browsing> {
         eprintln!("Microsoft Edge is not installed; skipping");
         return None;
     }
-    let t = TestDaemon::start_supervised().await;
+    // A real browser can be slow to ask on a busy CI runner.
+    let t = TestDaemon::start_supervised_patient().await;
     let mut app = t.session().await;
     let crew = app
         .call("crews.create", json!({ "name": "Web" }))

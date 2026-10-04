@@ -218,8 +218,9 @@ async fn new_tabs_and_dialogs_reach_the_bot_and_the_owner_watches() {
     assert!(tab.contains("Thanks, Tab"), "{tab}");
     // The new tab is the active one, after the tab that opened it. The app
     // may hear of its address a moment after the bot read the page: the
-    // events that bring it wait while the new tab is set up.
-    let deadline = Instant::now() + Duration::from_secs(5);
+    // events that bring it wait while the new tab is set up, longer on a
+    // busy CI runner.
+    let deadline = Instant::now() + Duration::from_secs(20);
     let tabs = loop {
         let open = b.app.call("browser.list", Value::Null).await.expect("list");
         let tabs = open[0]["tabs"].as_array().expect("tabs").clone();

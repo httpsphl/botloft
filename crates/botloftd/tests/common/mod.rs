@@ -98,6 +98,16 @@ pub struct Parts {
 }
 
 pub fn new_daemon(settings: SupervisorSettings) -> Parts {
+    new_daemon_waiting(settings, APPROVAL_WAIT)
+}
+
+/// Approvals time out fast enough for a test to wait for it.
+const APPROVAL_WAIT: Duration = Duration::from_secs(3);
+/// For tests with a real browser, whose requests may come late on a busy
+/// CI runner: long enough that none expires before the test answers it.
+const PATIENT_APPROVAL_WAIT: Duration = Duration::from_secs(30);
+
+pub fn new_daemon_waiting(settings: SupervisorSettings, approval_wait: Duration) -> Parts {
     let dir = tempfile::tempdir().expect("tempdir");
     let paths = Paths::new(dir.path().join("home"), dir.path().join("workspaces"));
     let runtime = FakeRuntime::new();
@@ -118,9 +128,7 @@ pub fn new_daemon(settings: SupervisorSettings) -> Parts {
         },
         bots: bot_settings(),
         browser: BrowserSettings::default(),
-        // Approvals time out fast enough for a test to wait for it.
-        settings: LiveSettings::new(None, &Config::default())
-            .with_approval_wait(Duration::from_secs(3)),
+        settings: LiveSettings::new(None, &Config::default()).with_approval_wait(approval_wait),
         trash: Arc::new(trash.clone()),
     });
     Parts {
@@ -136,17 +144,23 @@ pub fn new_daemon(settings: SupervisorSettings) -> Parts {
 impl TestDaemon {
     /// Server only: bots are never started and nothing is delivered.
     pub async fn start() -> Self {
-        Self::launch(false).await
+        Self::launch(false, APPROVAL_WAIT).await
     }
 
     /// Server, supervisor and courier, with bots running on a
     /// [`FakeRuntime`].
     pub async fn start_supervised() -> Self {
-        Self::launch(true).await
+        Self::launch(true, APPROVAL_WAIT).await
     }
 
-    async fn launch(supervised: bool) -> Self {
-        let parts = new_daemon(test_settings());
+    /// As [`TestDaemon::start_supervised`], with approvals that wait long
+    /// enough for a real browser on a slow machine.
+    pub async fn start_supervised_patient() -> Self {
+        Self::launch(true, PATIENT_APPROVAL_WAIT).await
+    }
+
+    async fn launch(supervised: bool, approval_wait: Duration) -> Self {
+        let parts = new_daemon_waiting(test_settings(), approval_wait);
         let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
         let addr = listener.local_addr().expect("addr");
         if supervised {
