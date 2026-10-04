@@ -22,6 +22,17 @@ fn with_value(window: &TestWindow, value: &str) -> Control {
         .unwrap_or_else(|| panic!("no control with the value {value:?}"))
 }
 
+/// Whether `done` comes true within two seconds.
+fn soon(done: impl Fn() -> bool) -> bool {
+    for _ in 0..20 {
+        if done() {
+            return true;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+    done()
+}
+
 fn title(window: &TestWindow) -> String {
     listed()
         .expect("windows")
@@ -84,12 +95,19 @@ fn an_option_is_chosen_and_a_long_list_scrolls() {
         .expect("the combo box");
     let large = Action::Select("Large".to_owned());
     act(window.id, &size.runtime_id, &large).expect("choose");
-    let chosen = read(window.id)
-        .expect("read")
-        .into_iter()
-        .find(|control| control.kind == "combo box")
-        .expect("the combo box");
-    assert_eq!(chosen.value.as_deref(), Some("Large"));
+    // The window takes the choice a moment later, as the tool waits for.
+    let chosen = || {
+        read(window.id)
+            .ok()?
+            .into_iter()
+            .find(|control| control.kind == "combo box")
+            .and_then(|control| control.value)
+    };
+    assert!(
+        soon(|| chosen().as_deref() == Some("Large")),
+        "{:?}",
+        chosen()
+    );
     let none = Action::Select("Huge".to_owned());
     assert!(matches!(
         act(window.id, &size.runtime_id, &none),
@@ -110,7 +128,7 @@ fn an_option_is_chosen_and_a_long_list_scrolls() {
         .find(|control| control.kind == "list")
         .expect("the list");
     act(window.id, &list.runtime_id, &Action::Scroll(Scroll::Bottom)).expect("scroll");
-    assert!(shown(&last), "scrolled to its end");
+    assert!(soon(|| shown(&last)), "scrolled to its end");
 }
 
 #[test]

@@ -22,7 +22,7 @@ use botloftd::trash::RecycleBin;
 use botloftd::{approvals, autostart, keep_awake, logging, routines, secrets, server};
 use clap::{Parser, Subcommand};
 use tokio::net::TcpListener;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 #[derive(Parser)]
 #[command(name = "botloftd", version, about = "Botloft daemon")]
@@ -137,6 +137,12 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
     });
     // No bot process survived the last run, so nobody waits for these.
     approvals::expire_all(&daemon);
+    // Ctrl+Alt+End stops every bot on the desktop, app open or not (spec 24.9).
+    let stopping = Arc::clone(&daemon);
+    match platform::desktop::on_stop_key(move || botloftd::service::desktop::stop_all(&stopping)) {
+        Ok(()) | Err(platform::desktop::DesktopError::Unavailable) => {}
+        Err(err) => warn!("the shortcut that stops bots on the desktop is not available: {err}"),
+    }
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()

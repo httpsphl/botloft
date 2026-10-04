@@ -7,7 +7,7 @@
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use botloft_core::ids::BotId;
-use botloft_core::protocol::DesktopLevel;
+use botloft_core::protocol::{DesktopAction, DesktopLevel};
 use serde_json::{Value, json};
 use tracing::debug;
 
@@ -15,8 +15,10 @@ use super::calls::explain;
 use super::desktop_act::{Ask, act};
 use super::desktop_grant::{blocking, granted, heading};
 use super::desktop_list::list;
+use crate::desktop::STOPPED;
+use crate::platform::desktop::Window;
 use crate::platform::desktop::{self as platform, Action, Scroll, render};
-use crate::state::Daemon;
+use crate::state::{Daemon, Event};
 
 pub(super) const PREFIX: &str = "desktop_";
 
@@ -136,6 +138,9 @@ pub(super) async fn call(
 }
 
 async fn run(daemon: &Daemon, bot: &BotId, generation: u64, tool: Tool) -> Result<Reply, String> {
+    if daemon.desktop.activity.stopped(bot) {
+        return Err(STOPPED.to_owned());
+    }
     daemon
         .desktop
         .owner_here()
@@ -161,10 +166,14 @@ async fn run(daemon: &Daemon, bot: &BotId, generation: u64, tool: Tool) -> Resul
             )
             .await?;
             let _turn = daemon.desktop.turn().await;
+            if daemon.desktop.activity.stopped(bot) {
+                return Err(STOPPED.to_owned());
+            }
             let id = window.id;
             let controls = blocking(move || platform::read(id)).await?;
             let (text, next) = render(&controls, from);
             daemon.desktop.keep(bot, id, controls);
+            used(daemon, bot, &window, None);
             let mut reading = format!("{}\n{text}", heading(&window));
             if let Some(next) = next {
                 reading.push_str(&format!(
@@ -186,8 +195,12 @@ async fn run(daemon: &Daemon, bot: &BotId, generation: u64, tool: Tool) -> Resul
             )
             .await?;
             let _turn = daemon.desktop.turn().await;
+            if daemon.desktop.activity.stopped(bot) {
+                return Err(STOPPED.to_owned());
+            }
             let id = window.id;
             let picture = blocking(move || platform::picture(id)).await?;
+            used(daemon, bot, &window, None);
             if picture.jpeg.is_empty() {
                 return Err("The picture of that window came out empty.".to_owned());
             }
@@ -200,4 +213,11 @@ async fn run(daemon: &Daemon, bot: &BotId, generation: u64, tool: Tool) -> Resul
             .await
             .map(Reply::Text),
     }
+}
+
+/// The bot read or acted in `window`: its panel shows it (spec 24.9).
+pub(super) fn used(daemon: &Daemon, bot: &BotId, window: &Window, action: Option<DesktopAction>) {
+    let now = daemon.clock.now_ms();
+    let state = daemon.desktop.activity.used(bot, window, action, now);
+    daemon.emit(Event::DesktopChanged(state));
 }

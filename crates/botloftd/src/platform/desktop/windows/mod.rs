@@ -8,6 +8,7 @@ mod act_tests;
 mod capture;
 mod input;
 mod process;
+mod stop_key;
 #[cfg(test)]
 mod test_window;
 #[cfg(test)]
@@ -31,6 +32,7 @@ use windows::core::{BOOL, w};
 pub use act::act;
 pub use capture::capture;
 pub use input::owner_idle;
+pub use stop_key::on_stop_key;
 pub use uia::read;
 
 use super::{App, DesktopError, Window};

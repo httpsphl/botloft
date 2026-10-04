@@ -4,23 +4,20 @@
 
 use windows::Win32::System::Variant::VARIANT;
 use windows::Win32::UI::Accessibility::{
-    ExpandCollapseState_Collapsed, IUIAutomation2, IUIAutomationElement,
-    IUIAutomationExpandCollapsePattern, IUIAutomationInvokePattern,
-    IUIAutomationLegacyIAccessiblePattern, IUIAutomationScrollItemPattern,
-    IUIAutomationScrollPattern, IUIAutomationSelectionItemPattern, IUIAutomationTogglePattern,
-    IUIAutomationValuePattern, ScrollAmount_LargeDecrement, ScrollAmount_LargeIncrement,
-    ScrollAmount_NoAmount, TreeScope_Descendants, UIA_ExpandCollapsePatternId, UIA_InvokePatternId,
-    UIA_LegacyIAccessiblePatternId, UIA_NamePropertyId, UIA_ScrollItemPatternId,
-    UIA_ScrollPatternId, UIA_SelectionItemPatternId, UIA_TogglePatternId, UIA_ValuePatternId,
+    ExpandCollapseState_Collapsed, IUIAutomationElement, IUIAutomationExpandCollapsePattern,
+    IUIAutomationInvokePattern, IUIAutomationLegacyIAccessiblePattern,
+    IUIAutomationScrollItemPattern, IUIAutomationScrollPattern, IUIAutomationSelectionItemPattern,
+    IUIAutomationTogglePattern, IUIAutomationValuePattern, ScrollAmount_LargeDecrement,
+    ScrollAmount_LargeIncrement, ScrollAmount_NoAmount, TreeScope_Descendants,
+    UIA_ExpandCollapsePatternId, UIA_InvokePatternId, UIA_LegacyIAccessiblePatternId,
+    UIA_NamePropertyId, UIA_ScrollItemPatternId, UIA_ScrollPatternId, UIA_SelectionItemPatternId,
+    UIA_TogglePatternId, UIA_ValuePatternId,
 };
 use windows::core::{BSTR, Interface};
 
 use super::super::{Acted, Action, DesktopError, Scroll};
 use super::uia::{Session, system};
 
-/// How long a call into the app may take: one that opens a dialog may not
-/// come back until the dialog closes.
-const TRANSACTION_MS: u32 = 5000;
 /// UI Automation's "the app took too long".
 const TIMEOUT: windows::core::HRESULT = windows::core::HRESULT(0x8013_1505_u32 as i32);
 /// "No scroll" for one direction of `SetScrollPercent`.
@@ -28,10 +25,6 @@ const NO_SCROLL: f64 = -1.0;
 
 pub fn act(id: u64, target: &[i32], action: &Action) -> Result<Acted, DesktopError> {
     let session = Session::start()?;
-    // SAFETY: a COM call on this session's interface.
-    if let Ok(quick) = session.automation.cast::<IUIAutomation2>() {
-        let _ = unsafe { quick.SetTransactionTimeout(TRANSACTION_MS) };
-    }
     let (element, control) = session.find(id, target)?;
     if control.password {
         return Err(DesktopError::Password);
