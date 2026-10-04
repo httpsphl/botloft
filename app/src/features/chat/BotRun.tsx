@@ -3,15 +3,18 @@
 // also shows the reply being written.
 
 import { CircleAlert } from "lucide-react";
-import { memo, type ReactNode } from "react";
+import { memo, type ReactNode, useMemo } from "react";
 import { useT } from "../../i18n";
 import { duration, tokens, usedTokens, when } from "../../lib/format";
 import type { Bot, ChatItem, TurnItem } from "../../lib/protocol.gen";
+import { useApp } from "../../store/context";
 import { useArrival } from "../../ui/motion";
 import { BotAvatar, moodOf } from "../bots/BotAvatar";
 import { QuestionCard } from "../questions/QuestionCard";
 import { ApprovalCard } from "./ApprovalCard";
 import { Markdown } from "./Markdown";
+import { MemoryNote } from "./MemoryNote";
+import { memoryOf, memoryPlaces } from "./memory";
 import { runParts, splitDraft } from "./rows";
 import { SharedFiles } from "./SharedFiles";
 import { isSharedFiles } from "./shared";
@@ -108,12 +111,15 @@ function BotRunView({
   live?: Live | undefined;
 }) {
   const first = items[0];
-  const parts = runParts(items);
+  const crew = useApp((state) => state.crews[bot.crewId]);
+  const places = useMemo(() => memoryPlaces(bot, crew), [bot, crew]);
+  const memory = (item: ChatItem) => memoryOf(item, places, bot.workspace);
+  const parts = runParts(items, (item) => memory(item) !== null);
   // The bot is still on the last group of calls until it writes or stops.
   const busy = Boolean(live?.working && !live.draft);
   const tail = parts.at(-1)?.[0];
   // Its line already says it is working.
-  const onCalls = tail?.body.kind === "tool" && !isSharedFiles(tail);
+  const onCalls = tail?.body.kind === "tool" && !isSharedFiles(tail) && !memory(tail);
   return (
     // A turn shows up as the bot starts it, still empty; what it does then
     // arrives inside, so a run with items never animates as a whole.
@@ -132,12 +138,26 @@ function BotRunView({
         {parts.map((part, index) => {
           const head = part[0] as ChatItem;
           switch (head.body.kind) {
-            case "tool":
+            case "tool": {
+              const owner = memory(head);
+              if (owner) {
+                return (
+                  <MemoryNote
+                    key={head.id}
+                    tool={head.body}
+                    createdAt={head.createdAt}
+                    owner={owner}
+                    name={owner === "bot" ? bot.name : (crew?.name ?? "")}
+                    color={owner === "bot" ? bot.color : undefined}
+                  />
+                );
+              }
               return isSharedFiles(head) ? (
                 <SharedFiles key={head.id} item={head} botId={bot.id} bot={bot.name} />
               ) : (
                 <ToolGroup key={head.id} items={part} active={busy && index === parts.length - 1} />
               );
+            }
             case "reply":
               // It was already on screen as it was written.
               return <Markdown key={head.id} text={head.body.text} />;
