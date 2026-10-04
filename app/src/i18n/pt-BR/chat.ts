@@ -80,6 +80,13 @@ export const chat: Messages["chat"] = {
       failed: (n: number) => (n === 1 ? "1 falha" : `${n} falhas`),
     },
   },
+  memory: {
+    bot: "Atualizou a memória de",
+    crew: "Atualizou a memória da equipe",
+    file: "memória",
+    changed: "O que mudou",
+    now: "Agora a memória diz:",
+  },
   approval: {
     asks: (bot: string, action: string) => `${bot} pede para ${action}`,
     wants: (bot: string, action: string) => `${bot} quer ${action}`,

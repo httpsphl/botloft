@@ -112,6 +112,16 @@ export function seedChats(fake: FakeBotloft, crew: Crew): void {
   chat.finish(shared, JSON.stringify({ shown: [report, papers] }));
   at(92);
   chat.reply(crew.scout, SUMMARY);
+  const memory = chat.tool(crew.scout, "Edit", {
+    summary: "CLAUDE.md",
+    file: `${fake.bot(crew.scout).workspace}\\CLAUDE.md`,
+    input: JSON.stringify({
+      old_string: "## The owner\n- Reads summaries on Monday",
+      new_string:
+        "## The owner\n- Reads summaries on Monday\n- Wants the chart checked against the papers\n- Prefers tables to long lists",
+    }),
+  });
+  chat.finish(memory, "The file has been updated.");
   const handoff = chat.tool(crew.scout, "mcp__botloft__send_message", {
     summary: "@writer",
     input: JSON.stringify({ to: "writer", kind: "task", body: "Turn week-39.md into the report" }),

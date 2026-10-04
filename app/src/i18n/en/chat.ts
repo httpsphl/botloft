@@ -87,6 +87,14 @@ export const chat = {
       failed: (n: number) => `${n} failed`,
     },
   },
+  /** A bot wrote down what it learned (spec 15.3), before the name. */
+  memory: {
+    bot: "Updated memory for",
+    crew: "Updated crew memory for",
+    file: "memory",
+    changed: "What changed",
+    now: "The memory now says:",
+  },
   approval: {
     asks: (bot: string, action: string) => `${bot} asks to ${action}`,
     wants: (bot: string, action: string) => `${bot} wants to ${action}`,

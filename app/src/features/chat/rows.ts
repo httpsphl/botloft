@@ -79,13 +79,18 @@ function isLine(item: ChatItem | undefined): boolean {
 
 /**
  * Splits a run into replies, approvals, shared files and turns alone, and
- * tool calls together.
+ * tool calls together. `alone` keeps other calls out of the group, such as
+ * an edit to the bot's memory.
  */
-export function runParts(items: ChatItem[]): ChatItem[][] {
+export function runParts(
+  items: ChatItem[],
+  alone: (item: ChatItem) => boolean = () => false,
+): ChatItem[][] {
   const parts: ChatItem[][] = [];
+  const line = (item: ChatItem | undefined) => isLine(item) && !(item && alone(item));
   for (const item of items) {
     const last = parts.at(-1);
-    if (last && isLine(item) && isLine(last[0])) {
+    if (last && line(item) && line(last[0])) {
       last.push(item);
     } else {
       parts.push([item]);
