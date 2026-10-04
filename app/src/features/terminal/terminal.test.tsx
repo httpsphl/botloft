@@ -63,7 +63,8 @@ describe("the bot's terminal", () => {
     expect(dock("Terminal").getAttribute("aria-current")).toBe("page");
 
     fireEvent.click(dock("Browser"));
-    expect(panel("Scout's browser")).toBeDefined();
+    // It replaces the terminal in place: its content fades up, nothing slides in.
+    expect(panel("Scout's browser").className).toContain("panel-swapped");
     fireEvent.click(dock("Files"));
     expect(panel("Files from Scout")).toBeDefined();
     expect(dock("Files").getAttribute("aria-current")).toBe("page");

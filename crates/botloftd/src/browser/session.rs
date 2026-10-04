@@ -16,7 +16,7 @@ use tracing::debug;
 use super::cdp::Cdp;
 use super::events::pump;
 use super::launch::{self, BrowserProcess};
-use super::viewport::{MAX_HEIGHT, Viewport, WIDTH};
+use super::viewport::{MAX_HEIGHT, MAX_WIDTH, Viewport};
 use super::{BrowserError, agent};
 
 /// Most tabs a browser keeps; past this, the one active longest ago closes.
@@ -253,7 +253,7 @@ impl Session {
         let result = if on {
             // Frames come the size of the page, however tall it is.
             let params = json!({
-                "format": "jpeg", "quality": 60, "maxWidth": WIDTH, "maxHeight": MAX_HEIGHT,
+                "format": "jpeg", "quality": 60, "maxWidth": MAX_WIDTH, "maxHeight": MAX_HEIGHT,
             });
             self.cdp
                 .call(Some(session), "Page.startScreencast", params)

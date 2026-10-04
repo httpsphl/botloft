@@ -7,11 +7,12 @@ import { LoaderCircle, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useT } from "../../i18n";
 import type { Bot, ToolItem } from "../../lib/protocol.gen";
+import { useApi } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { SidePanel } from "../../ui/SidePanel";
 import { commandOf, isCommand } from "../chat/command";
 import { useChat } from "../chat/useChat";
-import { ComputerDock } from "./ComputerDock";
+import { ComputerFooter } from "./ComputerDock";
 
 function Command({ tool }: { tool: ToolItem }) {
   const t = useT().terminal;
@@ -45,14 +46,27 @@ function Command({ tool }: { tool: ToolItem }) {
   );
 }
 
+/**
+ * The commands each terminal showed last, so coming back to it (from the
+ * dock) shows them at once while the chat loads again.
+ */
+const lastShown = new WeakMap<object, Map<string, { id: string; tool: ToolItem }[]>>();
+
 export function TerminalPanel({ bot, onClose }: { bot: Bot; onClose(): void }) {
   const t = useT().terminal;
   const chat = useChat(bot.id);
-  const commands = chat.items.flatMap((item) =>
+  const api = useApi();
+  const shown = lastShown.get(api) ?? new Map<string, { id: string; tool: ToolItem }[]>();
+  lastShown.set(api, shown);
+  const loaded = chat.items.flatMap((item) =>
     item.body.kind === "tool" && isCommand(item.body.name)
       ? [{ id: item.id, tool: item.body }]
       : [],
   );
+  const commands = chat.loading && loaded.length === 0 ? (shown.get(bot.id) ?? []) : loaded;
+  if (!chat.loading) {
+    shown.set(bot.id, loaded);
+  }
   const screen = useRef<HTMLDivElement>(null);
   const last = commands.at(-1);
   // Follows the newest command, as a terminal does.
@@ -65,14 +79,14 @@ export function TerminalPanel({ bot, onClose }: { bot: Bot; onClose(): void }) {
   }, [last?.id, last?.tool.status]);
 
   return (
-    <SidePanel label={t.panel(bot.name)} name="terminal" defaultWidth={560}>
+    <SidePanel label={t.panel(bot.name)} name="computer" defaultWidth={600}>
       <header className="flex h-11 shrink-0 items-center justify-between border-line border-b pr-1.5 pl-4">
         <h2 className="font-semibold text-sm">{t.heading}</h2>
         <Button variant="ghost" size="sm" icon={X} label={t.close} onClick={onClose} />
       </header>
       <div className="flex min-h-0 flex-1 flex-col p-3">
         <div
-          className="bot-stage flex min-h-0 flex-1 flex-col gap-3 p-3.5"
+          className="bot-stage flex min-h-0 flex-1 flex-col p-2.5"
           style={{ "--bot": bot.color } as React.CSSProperties}
         >
           <div className="terminal-window flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl">
@@ -102,9 +116,9 @@ export function TerminalPanel({ bot, onClose }: { bot: Bot; onClose(): void }) {
               )}
             </div>
           </div>
-          <ComputerDock />
         </div>
       </div>
+      <ComputerFooter />
     </SidePanel>
   );
 }

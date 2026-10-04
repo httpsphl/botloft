@@ -70,24 +70,25 @@ async fn the_page_takes_the_shape_of_the_panel_while_the_owner_watches() {
     );
     answer_site(&mut b.app, true, None).await;
     let page = opening.await.expect("task").expect("page");
-    assert!(page.contains("Window: 1280 x 1671"), "{page}");
-    let frame = frame_of(&mut b.app, 1671).await;
-    assert_eq!(frame["width"], 1280);
+    // A narrow panel: the desktop layout's width, in the panel's shape.
+    assert!(page.contains("Window: 800 x 1044"), "{page}");
+    let frame = frame_of(&mut b.app, 1044).await;
+    assert_eq!(frame["width"], 800);
 
     // The panel changes: the page follows, and so do the frames.
     b.app
-        .call("browser.resize", room(640, 400))
+        .call("browser.resize", room(1000, 400))
         .await
         .expect("resize");
-    until_window(&mut b, "1280 x 800").await;
-    frame_of(&mut b.app, 800).await;
+    until_window(&mut b, "1000 x 600").await;
+    frame_of(&mut b.app, 600).await;
 
     // The owner's points go as far as the page does now.
     b.app
-        .call("browser.resize", room(640, 700))
+        .call("browser.resize", room(1000, 1400))
         .await
         .expect("resize");
-    until_window(&mut b, "1280 x 1400").await;
+    until_window(&mut b, "1000 x 1400").await;
     frame_of(&mut b.app, 1400).await;
     b.app
         .call("browser.take", json!({ "botId": id }))

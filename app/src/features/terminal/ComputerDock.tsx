@@ -1,5 +1,7 @@
 // The dock of a bot's computer (spec 15.1): its browser, its terminal and
-// its files, one click apart, at the foot of each of those panels.
+// its files, one click apart, at the foot of each of those panels. The
+// three share one width (`computer`), so moving between them only changes
+// what is inside.
 
 import { Folder, Globe, type LucideIcon, SquareTerminal } from "lucide-react";
 import { createContext, useContext } from "react";
@@ -16,6 +18,22 @@ const PLACES: { place: Place; icon: LucideIcon }[] = [
   { place: "terminal", icon: SquareTerminal },
   { place: "files", icon: Folder },
 ];
+
+/**
+ * The dock as the foot of a panel: the same place in the browser, the
+ * terminal and the files, so it stays still while the panel above changes.
+ */
+export function ComputerFooter() {
+  const dock = useContext(Dock);
+  if (!dock) {
+    return null;
+  }
+  return (
+    <div data-steady className="shrink-0 border-line border-t py-2">
+      <ComputerDock />
+    </div>
+  );
+}
 
 export function ComputerDock({ className = "" }: { className?: string }) {
   const t = useT().terminal.dock;

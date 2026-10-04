@@ -10,10 +10,11 @@ export interface PageSize {
 
 export const PAGE: PageSize = { width: 1280, height: 800 };
 
-/** The page for a panel with `width` by `height` of room. */
+/** The page for a panel with `width` by `height` of room, as the daemon fits it. */
 export function fitting(width: number, height: number): PageSize {
-  const tall = Math.floor((PAGE.width * height) / width);
-  return { width: PAGE.width, height: Math.min(2000, Math.max(600, tall)) };
+  const wide = Math.min(1600, Math.max(800, width));
+  const tall = Math.floor((wide * height) / Math.max(1, width));
+  return { width: wide, height: Math.min(2000, Math.max(600, tall)) };
 }
 
 /**
