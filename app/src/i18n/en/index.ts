@@ -7,6 +7,7 @@ import { browser } from "./browser";
 import { chat } from "./chat";
 import { common } from "./common";
 import { crews } from "./crews";
+import { desktop } from "./desktop";
 import { files } from "./files";
 import { messages } from "./messages";
 import { onboarding } from "./onboarding";
@@ -31,6 +32,7 @@ export const en = {
   browser,
   chat,
   crews,
+  desktop,
   files,
   messages,
   questions,

@@ -8,6 +8,7 @@ import type { Bot, Crew } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { SidePanel } from "../../ui/SidePanel";
+import { DesktopGrants } from "../desktop/DesktopGrants";
 import { SignInButton } from "../onboarding/SignIn";
 import { AllowRules } from "./AllowRules";
 import type { stateView } from "./BotStateBadge";
@@ -77,6 +78,7 @@ export function Details({ bot, onClose }: { bot: Bot; onClose(): void }) {
           </dd>
         </div>
         <AllowRules bot={bot} />
+        <DesktopGrants bot={bot} />
       </dl>
     </SidePanel>
   );

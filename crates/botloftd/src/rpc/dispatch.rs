@@ -8,8 +8,8 @@ use serde_json::Value;
 use super::jsonrpc::{RpcError, empty_params};
 use crate::approvals;
 use crate::service::{
-    self, ApiResult, archive, attachments, bots, chat, crews, delete, deliveries, files, lead,
-    messages, models, modes, questions, reactions, routines, rules, screens, settings, tasks,
+    self, ApiResult, archive, attachments, bots, chat, crews, delete, deliveries, desktop, files,
+    lead, messages, models, modes, questions, reactions, routines, rules, screens, settings, tasks,
     usage,
 };
 use crate::state::Daemon;
@@ -49,6 +49,8 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::APPROVALS_ANSWER => reply(approvals::answer(daemon, parse(params)?)),
         method::RULES_LIST => reply(rules::list(daemon, parse(params)?)),
         method::RULES_DELETE => reply(rules::delete(daemon, parse(params)?)),
+        method::DESKTOP_GRANTS => reply(desktop::grants(daemon, parse(params)?)),
+        method::DESKTOP_REVOKE => reply(desktop::revoke(daemon, parse(params)?)),
         method::MESSAGES_SEND => reply(messages::send(daemon, parse(params)?)),
         method::MESSAGES_LIST => reply(messages::list(daemon, parse(params)?)),
         method::ATTACHMENTS_READ => reply(attachments::read(daemon, parse(params)?)),

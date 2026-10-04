@@ -3,6 +3,7 @@
 //! administrator.
 
 mod capture;
+mod input;
 mod process;
 #[cfg(test)]
 mod tests;
@@ -22,6 +23,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use windows::core::{BOOL, w};
 
 pub use capture::capture;
+pub use input::owner_idle;
 pub use uia::read;
 
 use super::{App, DesktopError, Window};

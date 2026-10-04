@@ -15,6 +15,7 @@ import { seedCalls } from "./seedCalls";
 import { seedChats } from "./seedChats";
 import { seedChief } from "./seedChief";
 import { seedContext } from "./seedContext";
+import { seedDesktop } from "./seedDesktop";
 import { seedHands } from "./seedHands";
 import { activeTab, drawPage } from "./seedPage";
 import { seedQuestions } from "./seedQuestions";
@@ -132,6 +133,7 @@ function seed(fake: FakeBotloft): void {
   fake.browser.paint(analyst.id, (size) => drawPage(activeTab(fake, analyst.id), size));
   fake.browser.rest(analyst.id);
   seedScreens(fake, research.id);
+  seedDesktop(fake, { scout: scout.id, analyst: analyst.id });
   seedHands(fake, research.id);
   seedCalls(fake, { writer: writer.id, reviewer: reviewer.id });
   const ops = fake.addCrew("Ops");

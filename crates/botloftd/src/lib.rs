@@ -10,6 +10,7 @@ pub mod clock;
 pub mod config;
 pub mod context;
 pub mod courier;
+pub mod desktop;
 pub mod keep_awake;
 pub mod logging;
 pub mod paths;

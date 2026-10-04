@@ -1653,7 +1653,7 @@ Tabela `questions`: `id, crew_id, bot_id, chat_item_id, text, options (JSON), st
 
 ## 24. Desktop
 
-Status: **desenho** (24.12). É o item 10 da seção 18. Decisões e riscos em `docs/adr/0002-desktop-use.md`.
+Status: **D1 implementado** (24.12). É o item 10 da seção 18. Decisões e riscos em `docs/adr/0002-desktop-use.md`.
 
 ### 24.1 O que é
 
@@ -1676,7 +1676,7 @@ Cada permissão é de um bot. Ela tem um **alcance**, um **nível** e duas opç�
 - **Mouse e teclado de verdade** (opção de "Mexer", desligada de início): quando a acessibilidade não alcança, o bot move o cursor do dono e digita como se fosse ele (24.7). O dono liga à parte, sabendo que nesse modo o cursor e o teclado são do bot enquanto ele age.
 - **Sem você na frente** (opção, desligada de início): o bot pode ver e mexer no alcance mesmo quando o dono não está olhando, numa rotina de madrugada por exemplo (24.8). Só liga depois de uma tela que explica os riscos e de o dono marcar que entendeu (24.10).
 
-**Como pede.** Na primeira vez que o bot tenta ver ou mexer num app sem permissão, a tool espera o dono pelo caminho das aprovações (10.1), como os sites do navegador (21.5): "<bot> quer ver o Excel" ou "<bot> quer mexer no Excel", com `toolName: "mcp__botloft__desktop"`, entrada `{app, level, why}` e o porquê que o bot deu. O cartão oferece "Só desta vez", "Permitir" (grava) e "Recusar". O desktop inteiro não se pede pelo chat: só o dono o dá, nas permissões do bot (24.10). Sem resposta no prazo, a tool volta com erro.
+**Como pede.** Na primeira vez que o bot tenta ver ou mexer num app sem permissão, a tool espera o dono pelo caminho das aprovações (10.1), como os sites do navegador (21.5): "<bot> quer ver o Excel" ou "<bot> quer mexer no Excel", com `toolName: "mcp__botloft__desktop"`, entrada `{app, path, level, why}` e o porquê que o bot deu (`why` é obrigatório nas tools que pedem). O cartão oferece "Permitir", que grava a permissão, e "Recusar", com a nota do dono para o bot. Permitir de novo um app já liberado só sobe o nível (de Ver para Mexer), nunca desce. O desktop inteiro não se pede pelo chat: só o dono o dá, nas permissões do bot (24.10). Sem resposta no prazo, a tool volta com erro.
 
 **Modo do bot.** Ao contrário do navegador, os modos `auto` e `bypass_permissions` (7.4) **não** liberam o desktop: o desktop é do dono, não do bot. Sem permissão gravada, sempre pergunta.
 
@@ -1723,8 +1723,8 @@ No servidor `botloft` (11), como as do navegador.
 | Tool | Entrada | O que faz |
 |---|---|---|
 | `desktop_windows` | | as janelas abertas: as do alcance com título e `window` (id), as outras só pelo nome do app |
-| `desktop_look` | `window`, `from?` | lê a janela (24.5) |
-| `desktop_screenshot` | `window?` | a foto da janela; sem `window`, a do desktop inteiro (só com esse alcance) |
+| `desktop_look` | `window`, `why`, `from?` | lê a janela (24.5) |
+| `desktop_screenshot` | `window`, `why` | a foto da janela; a do desktop inteiro vem com esse alcance (D6) |
 | `desktop_click` | `ref` | clica no controle (24.5) |
 | `desktop_type` | `ref`, `text`, `submit?` | troca o texto do campo; com `submit`, aperta Enter (só com teclado de verdade) |
 | `desktop_select` | `ref`, `option` | escolhe uma opção pelo texto |
@@ -1745,7 +1745,7 @@ No servidor `botloft` (11), como as do navegador.
 
 ### 24.8 Sem você na frente
 
-- Só no alcance de uma permissão com "Sem você na frente" ligado (24.2). Sem isso, as tools `desktop_*` só agem enquanto o app do Botloft está aberto e o dono mexeu no computador nos últimos 5 minutos (`GetLastInputInfo`, sem contar a entrada injetada pelo próprio bot); senão respondem que o dono não está e que é preciso ligar a opção.
+- Só no alcance de uma permissão com "Sem você na frente" ligado (24.2). Sem isso, as tools `desktop_*` só agem enquanto o app do Botloft está aberto (alguma conexão que passou do `session.hello`) e o dono mexeu no computador nos últimos 5 minutos (`GetLastInputInfo`; a partir do D4, sem contar a entrada injetada pelo próprio bot); senão respondem que o dono não está e que é preciso ligar a opção.
 - Com a tela bloqueada, ver e mexer por acessibilidade continuam, se o Windows deixar (19); mouse e teclado, não (24.7).
 - Tudo o que o bot fez sem o dono fica no chat como sempre, e o app avisa na volta: "<bot> usou o Excel enquanto você estava fora", com o link para o trecho do chat.
 
@@ -1753,11 +1753,11 @@ No servidor `botloft` (11), como as do navegador.
 
 - **Painel "Desktop"** ao lado do chat, no mesmo dock do navegador, terminal e arquivos (15.1): a foto ao vivo da janela em que o bot está agindo (`PrintWindow` a cada mudança, no máximo 5 por segundo, só enquanto o painel está aberto), o nome do app, e a linha do que ele acabou de fazer. Um botão **Parar** encerra o que o bot faz no desktop na hora.
 - **Parar tudo**: um atalho global, `Ctrl+Alt+End`, que o daemon registra (`RegisterHotKey`), para qualquer ação de desktop de qualquer bot, mesmo com o app fechado.
-- O cartão de permissão no chat (24.2) mostra o ícone e o nome do app, o nível pedido, o porquê do bot e o que aquele nível deixa fazer.
+- O cartão de permissão no chat (24.2) diz "<bot> quer ver <app>" com o ícone de tela, o porquê do bot ("<bot> diz: ..."), o caminho do executável e o que ver deixa fazer (ler as janelas do app e fotografá-las com o dono no computador, nunca senhas, e onde tirar). Respondido, vira uma linha: "<bot> pode ver <app>", "<bot> não pode ver <app>" com a nota, ou sem resposta. As tools `desktop_*` aparecem no chat com o ícone de tela e o porquê como resumo.
 
 ### 24.10 Permissões no app
 
-- Em "Configurações do bot", uma seção **Desktop** lista as permissões: o app (ou "Desktop inteiro"), Ver ou Mexer, e as opções. Cada uma com **Tirar**.
+- Nos detalhes do bot ("Sobre <bot>"), a seção **Seu desktop** lista as permissões: o app (ou "O desktop inteiro"), o caminho do executável, Pode ver ou Pode ver e usar, e as opções. Cada uma com um X que tira a permissão; o bot pede de novo na próxima vez. Sem nenhuma, a seção diz que o bot pede no chat na primeira vez que precisar.
 - **Dar o desktop inteiro** e **ligar "Sem você na frente"** abrem uma tela de riscos, em palavras simples, antes de gravar:
   - o bot vê tudo o que estiver aberto no alcance, inclusive dados pessoais, e-mails, conversas e dados de clientes;
   - ele pode errar: apagar, enviar ou mudar algo no app como se fosse você;
@@ -1771,6 +1771,7 @@ No servidor `botloft` (11), como as do navegador.
 
 - Tabela `desktop_grants`: `id`, `bot_id`, `scope` (`app` ou `desktop`), `app_path` e `app_name` (só em `app`), `level` (`see` ou `act`), `real_input` (bool), `unattended` (bool), `accepted_risks_at` (ms Unix, quando aceitou a tela de riscos), `created_at`.
 - Excluir o bot apaga as permissões dele.
+- **Protocolo** (11): `desktop.grants {botId}` lista as permissões do bot, da mais antiga; `desktop.revoke {grantId}` tira uma e devolve as que ficam (`BotDesktop`). A notificação `bot.desktop` (`BotDesktop`) sai a cada permissão dada ou tirada. IDs com o prefixo `dsk_`.
 - Nada do que o bot viu fica gravado fora do chat: as fotos vão para o bot e para o painel, e não para o disco. O log nunca guarda texto lido de janelas nem fotos (13).
 
 ### 24.12 Marcos
