@@ -1,70 +1,36 @@
-import {
-  Archive,
-  Ellipsis,
-  Folder,
-  FolderInput,
-  FolderOpen,
-  Pause,
-  Pencil,
-  Play,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { Ellipsis, Folder, Plus } from "lucide-react";
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useT } from "../../i18n";
 import type { Crew } from "../../lib/protocol.gen";
 import { botsOf } from "../../store/app";
-import { useApi, useApp, useHost } from "../../store/context";
+import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
-import { Confirm } from "../../ui/Confirm";
 import { Menu } from "../../ui/Menu";
 import { type Tab, Tabs, tabId } from "../../ui/Tabs";
-import { attempt } from "../../ui/toast";
-import { BotDialog } from "../bots/BotDialog";
 import { CallPills, useLiveCalls } from "../messages/CallPills";
 import { Composer } from "../messages/Composer";
 import { Timeline } from "../messages/Timeline";
 import { CrewRoutines } from "../routines/RoutineList";
 import { TaskList } from "../tasks/TaskList";
 import { CrewBots } from "./CrewBots";
-import { CrewDialog } from "./CrewDialog";
-import { DeleteCrew } from "./DeleteCrew";
+import { useCrewActions } from "./crewActions";
 
-type Open = "bot" | "rename" | "archive" | "delete" | { move: string } | null;
 type Pane = "bots" | "timeline" | "tasks" | "routines";
 
 export function CrewView({ crew }: { crew: Crew }) {
   const t = useT();
   const words = t.crews.view;
-  const api = useApi();
-  const host = useHost();
-  const putCrew = useApp((state) => state.putCrew);
   const bots = useApp(useShallow((state) => botsOf(state, crew.id)));
   const calls = useLiveCalls((call) => call.crewId === crew.id, crew.id);
-  const [open, setOpen] = useState<Open>(null);
+  const actions = useCrewActions(crew);
   const [pane, setPane] = useState<Pane>("bots");
-  const close = () => setOpen(null);
   const tabs: Tab<Pane>[] = [
     { id: "bots", label: words.tabs.bots },
     { id: "timeline", label: words.tabs.timeline },
     { id: "tasks", label: words.tabs.tasks },
     { id: "routines", label: t.routines.tab },
   ];
-
-  const openFolder = () => attempt(words.failed.openFolder, () => host.openPath(crew.workFolder));
-  const pickFolder = () =>
-    attempt(words.failed.changeFolder, async () => {
-      const folder = await host.pickFolder(t.crews.dialog.pickTitle, crew.workFolder);
-      if (folder && folder !== crew.workFolder) {
-        setOpen({ move: folder });
-      }
-    });
-
-  const setPaused = (paused: boolean) =>
-    attempt(paused ? words.failed.pause : words.failed.resume, async () =>
-      putCrew(await api.call("crews.setPaused", { crewId: crew.id, paused })),
-    );
 
   return (
     <section aria-label={crew.name} className="flex min-h-0 flex-1 flex-col">
@@ -79,7 +45,7 @@ export function CrewView({ crew }: { crew: Crew }) {
             {/* Only the icon: the path is in its tooltip, and a click opens it. */}
             <button
               type="button"
-              onClick={openFolder}
+              onClick={actions.openFolder}
               title={`${words.folder(crew.workFolder)}
 ${words.openFolderHint}`}
               aria-label={`${words.openFolder}: ${crew.workFolder}`}
@@ -90,34 +56,13 @@ ${words.openFolderHint}`}
           </p>
         </div>
         <CallPills calls={calls} className="max-w-[45%] justify-end" />
-        <Button variant="primary" icon={Plus} onClick={() => setOpen("bot")}>
-          {t.crews.newBot}
+        <Button variant="primary" icon={Plus} onClick={actions.newBot.onSelect}>
+          {actions.newBot.label}
         </Button>
-        {crew.paused ? (
-          <Button icon={Play} onClick={() => setPaused(false)}>
-            {words.resume}
-          </Button>
-        ) : (
-          <Button icon={Pause} onClick={() => setPaused(true)}>
-            {words.pause}
-          </Button>
-        )}
-        <Menu
-          label={words.moreActions}
-          icon={Ellipsis}
-          items={[
-            { label: t.crews.rename, icon: Pencil, onSelect: () => setOpen("rename") },
-            { label: words.openFolder, icon: FolderOpen, onSelect: openFolder },
-            { label: words.changeFolder, icon: FolderInput, onSelect: pickFolder },
-            {
-              label: words.archive,
-              icon: Archive,
-              danger: true,
-              onSelect: () => setOpen("archive"),
-            },
-            { label: words.delete, icon: Trash2, danger: true, onSelect: () => setOpen("delete") },
-          ]}
-        />
+        <Button icon={actions.pause.icon} onClick={actions.pause.onSelect}>
+          {actions.pause.label}
+        </Button>
+        <Menu label={words.moreActions} icon={Ellipsis} items={actions.items} />
       </header>
 
       <Tabs<Pane> label={words.tabs.label} tabs={tabs} value={pane} onChange={setPane} />
@@ -127,7 +72,7 @@ ${words.openFolderHint}`}
           aria-labelledby={tabId("bots")}
           className="min-h-0 flex-1 overflow-y-auto p-5"
         >
-          <CrewBots crew={crew} bots={bots} onNewBot={() => setOpen("bot")} />
+          <CrewBots crew={crew} bots={bots} onNewBot={actions.newBot.onSelect} />
         </div>
       )}
       {pane === "timeline" && (
@@ -163,39 +108,7 @@ ${words.openFolderHint}`}
         </div>
       )}
 
-      {open === "bot" && <BotDialog crewId={crew.id} onClose={close} />}
-      {open === "rename" && <CrewDialog crew={crew} onClose={close} />}
-      {typeof open === "object" && open !== null && (
-        <Confirm
-          title={words.moveTitle(crew.name)}
-          confirmLabel={words.move}
-          onClose={close}
-          onConfirm={() =>
-            attempt(words.failed.changeFolder, async () =>
-              putCrew(
-                await api.call("crews.setWorkFolder", { crewId: crew.id, workFolder: open.move }),
-              ),
-            )
-          }
-        >
-          {words.moveBody(open.move)}
-        </Confirm>
-      )}
-      {open === "archive" && (
-        <Confirm
-          title={words.archiveTitle(crew.name)}
-          confirmLabel={words.archive}
-          onClose={close}
-          onConfirm={() =>
-            attempt(words.failed.archive, async () =>
-              putCrew(await api.call("crews.archive", { crewId: crew.id })),
-            )
-          }
-        >
-          {words.archiveBody(bots.length)}
-        </Confirm>
-      )}
-      {open === "delete" && <DeleteCrew crew={crew} bots={bots.length} onClose={close} />}
+      {actions.dialogs}
     </section>
   );
 }

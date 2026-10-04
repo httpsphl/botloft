@@ -20,6 +20,7 @@ import { ListAvatar } from "../bots/ListAvatar";
 import { toolAction, toolTitle } from "../chat/toolNames";
 import { CrewDialog } from "./CrewDialog";
 import { setAllCollapsed, setCollapsed, useCollapsed, useCollapsedSet } from "./collapsed";
+import { useCrewActions } from "./crewActions";
 import { row } from "./SidebarPages";
 
 /** Crews as sections and their bots as conversations (spec 15.1). */
@@ -81,6 +82,10 @@ function CrewEntry({ crew }: { crew: Crew }) {
   const selectCrew = useApp((state) => state.selectCrew);
   const openBotId = useApp((state) => state.selectedBotId);
   const collapsed = useCollapsed(crew.id);
+  // A right-click opens the crew's menu, the same as on its page.
+  const actions = useCrewActions(crew);
+  const [menuAt, setMenuAt] = useState<Point | null>(null);
+  const closeMenu = useCallback(() => setMenuAt(null), []);
   // Folded, the open conversation still shows, and a dot tells a bot waits.
   const shown = collapsed ? bots.filter((bot) => bot.id === openBotId) : bots;
   const waiting =
@@ -108,7 +113,11 @@ function CrewEntry({ crew }: { crew: Crew }) {
           type="button"
           aria-current={selected ? "page" : undefined}
           onClick={() => selectCrew(crew.id)}
-          className={`${row} h-8 gap-2 pr-2.5 pl-8 font-semibold text-sm ${selected ? "bg-sunken" : ""}`}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            setMenuAt(menuPoint(event));
+          }}
+          className={`${row} h-8 gap-2 pr-2.5 pl-8 font-semibold text-sm ${selected || menuAt ? "bg-sunken" : ""}`}
         >
           <span className="min-w-0 flex-1 truncate">{crew.name}</span>
           {waiting && (
@@ -128,6 +137,16 @@ function CrewEntry({ crew }: { crew: Crew }) {
           )}
         </button>
       </div>
+      {menuAt && (
+        <ContextMenu
+          label={words.menuOf(crew.name)}
+          items={[actions.newBot, actions.pause, ...actions.items]}
+          at={menuAt}
+          onClose={closeMenu}
+        />
+      )}
+      {/* Outside the list: a dialog is not part of the navigation. */}
+      {actions.dialogs && createPortal(actions.dialogs, document.body)}
       <ul>
         {shown.map((bot) => (
           <Conversation key={bot.id} bot={bot} crew={crew} />

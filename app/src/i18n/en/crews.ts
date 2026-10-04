@@ -7,6 +7,8 @@ export const crews = {
   rename: "Rename",
   paused: "Paused",
   sidebar: {
+    /** The right-click menu of a crew in the list. */
+    menuOf: (crew: string) => `Actions for ${crew}`,
     label: "Crews",
     noMessages: "No messages yet",
     /** The conversation-list line for what the owner wrote. */
