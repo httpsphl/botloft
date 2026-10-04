@@ -39,8 +39,8 @@ export default defineConfig(({ mode }) => ({
   test: {
     environment: "jsdom",
     include: ["src/**/*.test.{ts,tsx}"],
-    // The mascot test reads the flame and cheer frames as text, and the
+    // The mascot test reads the flame and moment frames as text, and the
     // messages test the color tokens; other CSS stays empty.
-    css: { include: [/mascot-(flame|cheer)\.css/, /src\/index\.css/] },
+    css: { include: [/mascot-(flame|cheer|wake|glance)\.css/, /src\/index\.css/] },
   },
 }));

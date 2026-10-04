@@ -2,8 +2,9 @@ import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import cheerFrames from "../../mascot-cheer.css?raw";
 import flameFrames from "../../mascot-flame.css?raw";
-import { BOTLOFT_COLOR, BotAvatar, CHEER_MS, ListAvatar } from "./BotAvatar";
+import { BOTLOFT_COLOR, BotAvatar, CHEER_MS } from "./BotAvatar";
 import { BotStateBadge } from "./BotStateBadge";
+import { ListAvatar } from "./ListAvatar";
 import { BODY, DRAWN_IN, OUTLINE, SHADES } from "./mascotArt";
 import { retint, toHex, toHsl } from "./retint";
 

@@ -12,12 +12,14 @@
 // gently when idle, glancing around now and then, and wildly, throwing
 // embers, while it works; it hops
 // while it waits for the owner, burns low with heavy eyes when tired and
-// sleeps with its eyes shut while paused. When it finishes what it was
-// doing, it cheers once (mascot-cheer.css). Without one it stays still, as in
-// the chat history.
+// sleeps with its eyes shut while paused. On top of the mood it makes short
+// gestures once (mascotMoments.ts): it cheers when it finishes, wakes when it
+// comes back, pops in when its bot was just created, and glances at the bot
+// it talks to (useGlance.ts). Without a mood it stays still, as in the chat
+// history.
 
-import { type CSSProperties, useEffect, useId, useMemo, useState } from "react";
-import type { Bot } from "../../lib/protocol.gen";
+import { type CSSProperties, useId, useMemo, useRef } from "react";
+import type { Bot, BotId } from "../../lib/protocol.gen";
 import {
   BODY,
   CENTER,
@@ -31,7 +33,9 @@ import {
   SPARKS,
   VIEW_BOX,
 } from "./mascotArt";
+import { MOMENT_MS, useArrive, useMoment } from "./mascotMoments";
 import { retint } from "./retint";
+import { useGlance } from "./useGlance";
 
 export type Mood = "idle" | "working" | "waiting" | "tired" | "sleeping";
 
@@ -57,26 +61,7 @@ export function moodOf(bot: Pick<Bot, "state" | "paused">, crewPaused = false): 
 }
 
 /** How long the mascot cheers when its bot finishes, as in mascot-cheer.css. */
-export const CHEER_MS = 1200;
-
-/**
- * Whether the mascot cheers now: from the moment its mood goes from working
- * to idle, for CHEER_MS. One that shows up idle does not.
- */
-function useCheer(mood: Mood | undefined): boolean {
-  const [last, setLast] = useState(mood);
-  const [cheer, setCheer] = useState(false);
-  if (mood !== last) {
-    setLast(mood);
-    setCheer(last === "working" && mood === "idle");
-  }
-  useEffect(() => {
-    if (!cheer) return;
-    const timer = setTimeout(() => setCheer(false), CHEER_MS);
-    return () => clearTimeout(timer);
-  }, [cheer]);
-  return cheer;
-}
+export const CHEER_MS = MOMENT_MS.cheer;
 
 /** A delay from the color, so a crew's mascots do not blink together. */
 function blinkDelay(color: string): string {
@@ -113,6 +98,9 @@ export function BotAvatar({
   framed = false,
   mood,
   still = false,
+  botId,
+  arriving = false,
+  starting = false,
 }: {
   color: string;
   size?: number;
@@ -120,6 +108,12 @@ export function BotAvatar({
   mood?: Mood | undefined;
   /** Shows the mood without moving. */
   still?: boolean;
+  /** Whose mascot this is, so it can glance at the bots it talks to. */
+  botId?: BotId | undefined;
+  /** Pops in: its bot was just created. */
+  arriving?: boolean;
+  /** Its bot is starting up: done, it does not cheer as for finished work. */
+  starting?: boolean;
 }) {
   // Every avatar on the page needs its own clip, blur and gradients.
   const unique = useId().replace(/[^\w-]/g, "");
@@ -134,11 +128,20 @@ export function BotAvatar({
     }),
     [color],
   );
-  const cheer = useCheer(mood);
-  const style = mood ? ({ "--blink-delay": blinkDelay(color) } as CSSProperties) : undefined;
+  const svg = useRef<SVGSVGElement>(null);
+  const moment = useMoment(mood, starting);
+  const arrive = useArrive(arriving);
+  const glance = useGlance(mood && !still ? botId : undefined, svg);
+  const style = mood
+    ? ({
+        "--blink-delay": blinkDelay(color),
+        ...(glance && { "--glance-x": `${glance.x}px`, "--glance-y": `${glance.y}px` }),
+      } as CSSProperties)
+    : undefined;
   const box = framed ? [CENTER.x - 500, CENTER.y - 470, 1000, 1000] : VIEW_BOX;
   return (
     <svg
+      ref={svg}
       aria-hidden
       width={size}
       height={size}
@@ -146,7 +149,11 @@ export function BotAvatar({
       className={`shrink-0 overflow-visible ${framed ? "rounded-lg bg-[#0b0b0b]" : ""}`}
       data-mood={mood}
       data-still={still || undefined}
-      data-cheer={cheer || undefined}
+      data-bot={botId}
+      data-cheer={moment === "cheer" || undefined}
+      data-wake={(moment === "wake" && !arrive) || undefined}
+      data-arrive={(mood && arrive) || undefined}
+      data-glance={glance ? "" : undefined}
       style={style}
     >
       <defs>
@@ -258,25 +265,4 @@ function Eye({ eye, side, fill }: { eye: Ellipse; side: "l" | "r"; fill: string 
       </g>
     </g>
   );
-}
-
-/**
- * A bot's mascot in a list (the sidebar, a crew's cards): it moves while
- * the bot is awake, idle too, since the owner reads an idle bot by its
- * slow flame and glances. A sleeping one keeps its look but does not
- * move: a morphing flame repaints every frame, and a stopped bot has
- * nothing to show.
- */
-export function ListAvatar({
-  bot,
-  crewPaused,
-  size,
-}: {
-  bot: Pick<Bot, "color" | "state" | "paused">;
-  crewPaused: boolean;
-  size: number;
-}) {
-  const mood = moodOf(bot, crewPaused);
-  const still = mood === "sleeping";
-  return <BotAvatar color={bot.color} size={size} mood={mood} still={still} />;
 }

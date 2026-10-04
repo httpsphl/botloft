@@ -77,7 +77,13 @@ export function BotHeader({
   return (
     // In a narrow window the handle gives way first, then the button labels.
     <header className="@container flex items-center gap-3 border-line border-b px-5 py-2.5">
-      <BotAvatar color={bot.color} size={36} mood={moodOf(bot, crew.paused)} />
+      <BotAvatar
+        color={bot.color}
+        size={36}
+        mood={moodOf(bot, crew.paused)}
+        botId={bot.id}
+        starting={bot.state === "launching"}
+      />
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
           <h1 className="truncate font-semibold text-lg tracking-tight">{bot.name}</h1>

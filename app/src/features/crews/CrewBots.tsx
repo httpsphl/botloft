@@ -3,9 +3,9 @@ import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
-import { ListAvatar } from "../bots/BotAvatar";
 import { BotStateBadge } from "../bots/BotStateBadge";
 import { ChiefBadge, isChief } from "../bots/ChiefBadge";
+import { ListAvatar } from "../bots/ListAvatar";
 
 /** The crew's bots as cards; a card opens the bot. */
 export function CrewBots({ crew, bots, onNewBot }: { crew: Crew; bots: Bot[]; onNewBot(): void }) {

@@ -1,0 +1,117 @@
+/* The mascot coming in (mascotMoments.ts, spec 15.3). It wakes when its bot
+   comes back from paused or stopped: the small ember grows up into the
+   flame, stretching past it and settling, while the shut eyes give way to
+   open ones that open halfway, close once more and open for good. A bot just
+   created pops in: the mascot grows from a dot, lands squashed, springs up
+   and settles, opening its eyes. Every frame ends at rest, so less motion
+   shows nothing. */
+
+@layer components {
+  [data-mood][data-wake] .avatar-hop {
+    animation: wake-up 800ms both;
+  }
+
+  [data-mood][data-wake] .avatar-eye {
+    animation: wake-open 800ms both;
+  }
+
+  [data-mood][data-wake] .avatar-closed {
+    animation: wake-shut 800ms both;
+  }
+
+  svg[data-arrive] {
+    transform-origin: 50% 100%;
+    animation: arrive-pop 700ms both;
+  }
+
+  [data-mood][data-arrive] .avatar-eye {
+    animation: arrive-open 700ms both;
+  }
+}
+
+@keyframes wake-up {
+  0% {
+    transform: scale(0.8, 0.62);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  40% {
+    transform: scale(0.95, 1.1);
+    animation-timing-function: ease-in-out;
+  }
+  62% {
+    transform: scale(1.04, 0.95);
+  }
+  80% {
+    transform: scale(0.99, 1.01);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
+
+/* Halfway open, a heavy blink, then wide awake. */
+@keyframes wake-open {
+  0%,
+  30% {
+    opacity: 0;
+    clip-path: inset(50% 0);
+  }
+  48% {
+    opacity: 1;
+    clip-path: inset(28% 0);
+  }
+  60% {
+    opacity: 1;
+    clip-path: inset(46% 0);
+  }
+  78%,
+  100% {
+    opacity: 1;
+    clip-path: inset(0);
+  }
+}
+
+@keyframes wake-shut {
+  0%,
+  28% {
+    opacity: 1;
+  }
+  34%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes arrive-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.2, 0.2);
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.3, 1);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1.12, 0.88);
+    animation-timing-function: ease-in-out;
+  }
+  58% {
+    transform: scale(0.95, 1.06);
+  }
+  78% {
+    transform: scale(1.02, 0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1, 1);
+  }
+}
+
+@keyframes arrive-open {
+  0%,
+  40% {
+    clip-path: inset(50% 0);
+  }
+  60%,
+  100% {
+    clip-path: inset(0);
+  }
+}
