@@ -55,6 +55,7 @@ mod chat;
 #[cfg(test)]
 mod export;
 mod files;
+mod lesson;
 mod messaging;
 mod methods;
 mod model;
@@ -72,6 +73,7 @@ pub use browser::*;
 pub use browser_input::*;
 pub use chat::*;
 pub use files::*;
+pub use lesson::*;
 pub use messaging::*;
 pub use methods::*;
 pub use model::*;
@@ -146,6 +148,7 @@ pub mod method {
     pub const BROWSER_SWITCH_TAB: &str = "browser.switchTab";
     pub const BROWSER_OPEN: &str = "browser.open";
     pub const BROWSER_WINDOW: &str = "browser.window";
+    pub const BROWSER_TEACH: &str = "browser.teach";
     pub const SCREENS_LIST: &str = "screens.list";
     pub const QUESTIONS_LIST: &str = "questions.list";
     pub const QUESTIONS_ANSWER: &str = "questions.answer";

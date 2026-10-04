@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::BrowserControl;
+use super::{BrowserControl, LessonStep};
 use crate::ids::BotId;
 
 /// Where a bot's browser is.
@@ -59,6 +59,10 @@ pub struct BrowserState {
     /// site refuses a browser a program drives (spec 21.11). It is
     /// `closed` meanwhile, and the bot's tools wait.
     pub window: bool,
+    /// The steps of the lesson the owner is giving, while they teach the
+    /// bot a task (spec 21.13); `null` when nobody teaches.
+    #[serde(default)]
+    pub lesson: Option<Vec<LessonStep>>,
     /// Unix time in milliseconds.
     pub updated_at: i64,
 }
@@ -77,6 +81,7 @@ impl BrowserState {
             resting: false,
             ask: None,
             window: false,
+            lesson: None,
             updated_at: now,
         }
     }

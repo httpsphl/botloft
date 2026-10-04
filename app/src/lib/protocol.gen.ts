@@ -1233,6 +1233,23 @@ title: string, url: string,
  */
 active: boolean, };
 
+export type LessonStepKind = "open" | "click" | "type" | "press";
+
+export type LessonStep = { kind: LessonStepKind, 
+/**
+ * The address for `open`, the element's name for `click` and `type`,
+ * the key for `press`; at most 80 characters.
+ */
+label: string, 
+/**
+ * The element's role (`button`, `link`, `textbox`...), when it has one.
+ */
+role: string | null, 
+/**
+ * Typing in a password field: the bot asks the owner to type it.
+ */
+secret: boolean, };
+
 export type BrowserState = { botId: BotId, status: BrowserStatus, 
 /**
  * The active tab's address.
@@ -1269,6 +1286,11 @@ ask: string | null,
  * `closed` meanwhile, and the bot's tools wait.
  */
 window: boolean, 
+/**
+ * The steps of the lesson the owner is giving, while they teach the
+ * bot a task (spec 21.13); `null` when nobody teaches.
+ */
+lesson: Array<LessonStep> | null, 
 /**
  * Unix time in milliseconds.
  */
@@ -1355,6 +1377,11 @@ export type BrowserTabParams = { botId: BotId, tabId: string, };
  * `browser.open`: the address the owner typed for the active tab.
  */
 export type BrowserOpenParams = { botId: BotId, url: string, };
+
+/**
+ * Starts or ends a lesson in the browser the connection has in its hands.
+ */
+export type BrowserTeachParams = { botId: BotId, on: boolean, };
 
 /**
  * The device a screen is drawn for.
@@ -1477,6 +1504,7 @@ export interface RpcMethods {
   "browser.take": { params: BrowserControlParams; result: BrowserState };
   "browser.release": { params: BrowserControlParams; result: BrowserState };
   "browser.window": { params: BrowserControlParams; result: BrowserState };
+  "browser.teach": { params: BrowserTeachParams; result: Array<LessonStep> };
   "browser.input": { params: BrowserInputParams; result: null };
   "browser.reload": { params: BrowserControlParams; result: null };
   "browser.newTab": { params: BrowserControlParams; result: null };

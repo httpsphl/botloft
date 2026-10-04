@@ -15,14 +15,21 @@ import { blankForm, formOf, type RoutineForm, scheduleOf } from "./form";
 import { MoreOptions } from "./MoreOptions";
 import { ScheduleFields } from "./ScheduleFields";
 
-type Props = { bot: Bot; onClose(): void } & ({ routine?: undefined } | { routine: Routine });
+type Props = {
+  bot: Bot;
+  onClose(): void;
+  /** A new routine's name and request, already written (a lesson, spec 21.13). */
+  start?: { name: string; prompt: string };
+} & ({ routine?: undefined } | { routine: Routine });
 
-export function RoutineDialog({ bot, routine, onClose }: Props) {
+export function RoutineDialog({ bot, routine, start, onClose }: Props) {
   const t = useT();
   const d = t.routines.dialog;
   const api = useApi();
   const putRoutine = useApp((state) => state.putRoutine);
-  const [form, setForm] = useState<RoutineForm>(() => (routine ? formOf(routine) : blankForm()));
+  const [form, setForm] = useState<RoutineForm>(() =>
+    routine ? formOf(routine) : { ...blankForm(), ...start },
+  );
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const change = (patch: Partial<RoutineForm>) => setForm((current) => ({ ...current, ...patch }));

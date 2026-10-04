@@ -4,13 +4,14 @@
 // it, what the owner should know, and a window of its own for sites that
 // refuse to sign in here (spec 21.11).
 
-import { Check, ChevronDown, Hand, Keyboard, MousePointerClick } from "lucide-react";
+import { Check, ChevronDown, GraduationCap, Hand, Keyboard, MousePointerClick } from "lucide-react";
 import { useState } from "react";
 import { useT } from "../../i18n";
 import type { Bot } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { BotAvatar, moodOf } from "../bots/BotAvatar";
+import type { Lesson } from "./Lesson";
 import type { Hands } from "./useHands";
 import { WindowButton } from "./WindowBar";
 
@@ -43,9 +44,20 @@ export function AskCallout({ bot, task, hands }: { bot: Bot; task: string; hands
  * Who is in control, hanging from the bottom of the live screen: the bot,
  * with the button to take it, or the owner, with the one to give it back.
  */
-export function ControlPill({ bot, hands }: { bot: Bot; hands: Hands }) {
-  const t = useT().browser.hands;
+export function ControlPill({
+  bot,
+  hands,
+  lesson,
+}: {
+  bot: Bot;
+  hands: Hands;
+  /** While the owner teaches, the pill ends the lesson first (spec 21.13). */
+  lesson?: Lesson;
+}) {
+  const words = useT().browser;
+  const t = words.hands;
   const held = hands.held;
+  const teaching = held && lesson?.steps != null;
   return (
     <div
       role="status"
@@ -64,12 +76,14 @@ export function ControlPill({ bot, hands }: { bot: Bot; hands: Hands }) {
       <Button
         variant={held ? "primary" : "secondary"}
         size="sm"
-        icon={held ? Check : Hand}
+        icon={teaching ? GraduationCap : held ? Check : Hand}
         disabled={hands.busy}
-        onClick={() => void (held ? hands.release() : hands.take())}
+        onClick={() => void (teaching ? lesson?.finish() : held ? hands.release() : hands.take())}
         className="min-w-0 shrink! rounded-full! px-3!"
       >
-        <span className="truncate">{held ? t.giveBack(bot.name) : t.take}</span>
+        <span className="truncate">
+          {teaching ? words.lesson.finish : held ? t.giveBack(bot.name) : t.take}
+        </span>
       </Button>
     </div>
   );

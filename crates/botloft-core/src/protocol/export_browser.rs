@@ -9,6 +9,8 @@ pub(super) fn decls(out: &mut Out) {
     out.decl::<BrowserStatus>();
     out.decl::<BrowserControl>();
     out.decl::<BrowserTab>();
+    out.decl::<LessonStepKind>();
+    out.decl::<LessonStep>();
     out.decl::<BrowserState>();
     out.decl::<BrowserFrame>();
     out.decl::<BrowserActionKind>();
@@ -23,6 +25,7 @@ pub(super) fn decls(out: &mut Out) {
     out.decl::<BrowserInputParams>();
     out.decl::<BrowserTabParams>();
     out.decl::<BrowserOpenParams>();
+    out.decl::<BrowserTeachParams>();
     out.decl::<ScreenDevice>();
     out.decl::<Screen>();
     out.decl::<ScreensListParams>();
@@ -51,6 +54,11 @@ pub(super) fn methods(out: &mut Out) {
     out.method(method::BROWSER_TAKE, &control, &state);
     out.method(method::BROWSER_RELEASE, &control, &state);
     out.method(method::BROWSER_WINDOW, &control, &state);
+    out.method(
+        method::BROWSER_TEACH,
+        &out.name::<BrowserTeachParams>(),
+        &out.name::<Vec<LessonStep>>(),
+    );
     out.method(
         method::BROWSER_INPUT,
         &out.name::<BrowserInputParams>(),

@@ -1377,6 +1377,7 @@ Esqueceu a senha? [e5 link "Recuperar acesso"]
 | `browser.switchTab` | `botId`, `tabId` | `null`: essa aba vira a ativa. Só da conexão que controla; aba que não existe mais é `not_found` |
 | `browser.open` | `botId`, `url` | `null`: leva a aba ativa a um endereço `http` ou `https`; sem esquema, vale `https://`. Só da conexão que controla; o que não é endereço da web é `validation` |
 | `browser.window` | `botId` | `BrowserState`: abre o navegador numa janela própria, para o dono entrar numa conta (21.11). Da conexão que assiste esse bot; tira o controle dela, se o tinha. Já aberto numa janela, ou sem navegador no computador, é `conflict` |
+| `browser.teach` | `botId`, `on` | `LessonStep[]`: começa uma lição (21.13), com o primeiro passo, ou termina e devolve os passos. Só da conexão que controla |
 
 - O que muda o navegador responde assim que o pedido é aceito; o resultado chega em `browser.changed` e nos quadros.
 - `BrowserState`: `botId`, `status` (`closed`, `starting`, `open`, `failed`), `url`, `title` e `loading` (da aba ativa), `tabs` (as abas abertas, na ordem em que abriram: `BrowserTab {id, title, url, active}`, com `id` opaco), `error` (por que não abriu, em `failed`), `control` (`bot` ou `owner`, 21.10), `resting` (o navegador descansa, 21.2), `ask` (o que o bot pediu ao dono com `browser_ask_owner`, enquanto o pedido está aberto), `window` (aberto numa janela própria, 21.11: o estado é `closed` e `control` é `owner`) e `updatedAt`. `browser.list` traz também os `closed` com `window`.
@@ -1475,7 +1476,24 @@ O login do Google, e o de outros sites que olham mais que o user agent e `naviga
 | **N3.2** Abas e recarregar | a lista de abas em `BrowserState`, `browser.reload`, `browser.newTab`, `browser.switchTab`, `browser.open`, o aviso ao bot quando o dono troca de aba, as abas e o botão de recarregar no painel, o endereço que o dono digita, textos nos três idiomas, testes com o Edge real | pelo app, o dono vê as abas que o bot abriu, recarrega a página, assume, abre uma aba nova num endereço, troca de aba e devolve; o bot lê que a aba mudou antes de agir |
 | **N3.3** Descanso | o navegador descansa quando o turno do bot termina e acorda quando é usado, `resting` em `BrowserState`, fechar por falta de uso mesmo com o painel aberto, a etiqueta "Em descanso", textos nos três idiomas, testes com o Edge real | com um bot real parado numa página que se mexe, o Edge dele não gasta processador; o bot volta a usar a página sem perder nada |
 | **N3.4** Janela de verdade | `browser.window`, `window` em `BrowserState`, o Edge com janela no perfil do bot, a espera das tools e do pedido de ajuda, o botão e a faixa no painel, textos nos três idiomas | com o Claude Code real, o dono entra numa conta do Google do bot pela janela, fecha, e o bot abre o Gmail já dentro da conta |
+| **N3.5** Ensinar uma tarefa | `browser.teach`, `lesson` em `BrowserState`, a leitura do que o dono faz em `actions.js`, o texto da lição, a faixa e o diálogo no painel, textos nos três idiomas, teste com o Edge real | 21.13 |
 | **N4** Telas | o bot desenhando telas (HTML) que aparecem lado a lado numa área de design, atualizadas enquanto ele escreve | seção 22 |
+
+### 21.13 Ensinar uma tarefa (N3.5)
+
+O dono mostra ao bot, uma vez, como fazer uma tarefa no navegador dele; o que fez vira passos, e os passos viram uma rotina (20) ou uma message para o bot guardar na memória.
+
+- **Só nas mãos do dono.** Com o navegador no controle do dono (21.10), "Ensinar uma tarefa" embaixo da pílula chama `browser.teach {botId, on: true}`. A lição começa com um passo `open` com o endereço da aba ativa. `browser.teach {on: false}` a termina e devolve os passos. Devolver o navegador, fechar a conexão ou o navegador fechar descartam a lição.
+- **O que vira passo.** Cada coisa que o dono faz passa pela fila de 21.10; com uma lição aberta, o daemon lê a página antes de ela chegar lá, pelo script do mundo isolado (21.6, `actions.js`), que devolve só o papel, o nome e se é um campo de senha:
+  - um clique (botão esquerdo, não o segundo de um clique duplo) vira `click` com o nome do elemento com papel mais próximo do ponto (`at(x, y)`); sem nada com papel ali, não vira passo;
+  - teclas de texto, Backspace e texto colado ou composto viram `type` com o nome do campo que tem o foco (`focused()`), um passo por campo enquanto o dono escreve nele; o campo de senha marca `secret`;
+  - Enter, Escape e Tab sem Ctrl, Alt ou Meta viram `press`;
+  - um endereço que o dono digita (`browser.open`) vira `open`.
+- **O que nunca é guardado.** O que o dono digita, cola ou escolhe: o script não lê valor de campo. Um endereço guarda só o esquema, o site e o caminho, sem usuário e senha, query e fragmento, onde viajam tokens e dados pessoais. O rótulo de cada passo tem no máximo 80 caracteres, e uma lição, 100 passos. Os passos ficam só em memória, em `BrowserState.lesson`, e não vão para o log.
+- **No app.** Embaixo da pílula, "Ensinar uma tarefa" e a explicação de que o bot guarda cada passo, nunca o que é digitado. Gravando, uma faixa "Gravando a lição" mostra os passos ao vivo, numerados, com "Cancelar"; o botão da pílula vira "Terminar a lição". Terminada, um diálogo pede o nome da tarefa e mostra os passos, cada um com um X para tirar, e oferece:
+  - **Fazer virar rotina…**: abre o diálogo de rotina nova (20.9) com o nome e o pedido já escritos: a lição em palavras e "Faça isso agora.";
+  - **Mandar para <bot> guardar**: manda ao bot, como message do dono, a lição em palavras e o pedido de guardá-la na memória (5.1) para fazer quando o dono pedir.
+- **A lição em palavras** é montada pelo app, no idioma do dono, e pode ser editada na rotina: "Como fazer "<nome>" no navegador, do jeito que eu mostrei:", os passos numerados ("Abra <endereço>", "Clique em "<nome>"", "Escreva em "<campo>"", "Escreva a senha em "<campo>": peça para eu digitar", "Aperte Enter") e, se houve texto digitado, que o dono não mostra o quê: o bot usa o que a tarefa pede ou pergunta. Senhas, o bot pede com `browser_ask_owner` (21.10).
 
 ## 22. Telas
 

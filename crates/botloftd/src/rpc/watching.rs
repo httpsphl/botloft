@@ -9,7 +9,8 @@ use std::sync::Arc;
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{
     ApprovalsAnswerParams, BrowserControlParams, BrowserInputParams, BrowserOpenParams,
-    BrowserResizeParams, BrowserTabParams, BrowserWatchParams, error_code, method, notification,
+    BrowserResizeParams, BrowserTabParams, BrowserTeachParams, BrowserWatchParams, error_code,
+    method, notification,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -47,6 +48,7 @@ impl Watch {
             method::BROWSER_NEW_TAB => return self.new_tab(&parse(params)?),
             method::BROWSER_SWITCH_TAB => return self.switch_tab(&parse(params)?),
             method::BROWSER_OPEN => return self.open(&parse(params)?),
+            method::BROWSER_TEACH => return self.teach(&parse(params)?),
             _ => {}
         }
         // Stop the one before, even if the new one is refused; the hands
@@ -188,6 +190,16 @@ impl Watch {
         made(self.hands(&params.bot_id)?.open(&params.url))
     }
 
+    /// Starts or ends a lesson (spec 21.13), with the browser in this
+    /// connection's hands.
+    fn teach(&self, params: &BrowserTeachParams) -> Result<Value, RpcError> {
+        let steps = self
+            .hands(&params.bot_id)?
+            .teach(params.on)
+            .map_err(refused)?;
+        to_value(&steps)
+    }
+
     /// The watched browser's next frame, as a notification. Never resolves
     /// while nothing is watched.
     pub(super) async fn next_frame(&mut self) -> Option<String> {
@@ -220,12 +232,17 @@ fn helped(daemon: &Daemon, bot: &BotId) {
 
 /// What the owner did is on its way to the browser, or why it is not.
 fn made(queued: Result<(), InputError>) -> Result<Value, RpcError> {
-    queued.map_err(|err| match err {
+    queued.map_err(refused)?;
+    Ok(Value::Null)
+}
+
+fn refused(err: InputError) -> RpcError {
+    match err {
         InputError::Invalid | InputError::Address => ApiError::validation(err.to_string()),
         InputError::NoTab => ApiError::NotFound(err.to_string()),
         InputError::NotHeld | InputError::Closed => ApiError::Conflict(err.to_string()),
-    })?;
-    Ok(Value::Null)
+    }
+    .into()
 }
 
 fn to_value(value: &impl Serialize) -> Result<Value, RpcError> {

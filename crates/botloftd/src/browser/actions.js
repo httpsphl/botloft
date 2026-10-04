@@ -1,6 +1,8 @@
 // What a bot does on the page (spec 21.4), beside the page reader: where to
 // click an element, getting a text field ready for typing, choosing an
-// option and scrolling to an end. `reader.js` hands in its helpers.
+// option and scrolling to an end; and, for a lesson (spec 21.13), what is
+// at a point and which field has the focus. `reader.js` hands in its
+// helpers.
 ({ get, clean, styleOf, roleOf, nameOf, token, isTextField, next }) => {
   // The element's box in the top page's coordinates, through same-site frames.
   const topRect = (el) => {
@@ -90,5 +92,25 @@
     return { top: window.scrollY };
   };
 
-  return { point, prepareType, select, scrollEnd };
+  // What the owner acts on while teaching a task (spec 21.13): the nearest
+  // element with a role, by its name. Never what a field holds.
+  const meaning = (el) => {
+    let shown = el;
+    while (shown && !roleOf(shown, styleOf(shown), "auto")) shown = shown.parentElement;
+    if (!shown) return { none: true };
+    return {
+      role: roleOf(shown, styleOf(shown), "auto"),
+      label: clean(nameOf(shown), 80),
+      secret:
+        shown.localName === "input" && (shown.getAttribute("type") || "").toLowerCase() === "password",
+    };
+  };
+  const at = (x, y) => meaning(document.elementFromPoint(x, y));
+  const focused = () => {
+    let el = document.activeElement;
+    while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
+    return el && el !== document.body && isTextField(el) ? meaning(el) : { none: true };
+  };
+
+  return { point, prepareType, select, scrollEnd, at, focused };
 }
