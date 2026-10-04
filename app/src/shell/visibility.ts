@@ -36,11 +36,25 @@ export function onVisibility(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
+/**
+ * Whether the window has the focus: while the owner works in another app,
+ * the mascots stand still (paused.css), so a Botloft left open in the
+ * background costs next to nothing.
+ */
+function focusChanged(): void {
+  document.documentElement.toggleAttribute("data-blurred", !document.hasFocus());
+}
+
 /** Starts following the window; once, before the app renders. */
 export function watchVisibility(): void {
   document.addEventListener("visibilitychange", changed);
-  window.addEventListener("focus", () => markHidden(false));
+  window.addEventListener("focus", () => {
+    markHidden(false);
+    focusChanged();
+  });
+  window.addEventListener("blur", focusChanged);
   changed();
+  focusChanged();
 }
 
 export function useWindowVisible(): boolean {

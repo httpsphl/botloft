@@ -29,6 +29,16 @@ describe("window visibility", () => {
     expect(document.documentElement.hasAttribute("data-hidden")).toBe(false);
   });
 
+  test("the mascots stand still while another app has the focus", () => {
+    const focus = vi.spyOn(document, "hasFocus").mockReturnValue(false);
+    window.dispatchEvent(new Event("blur"));
+    expect(document.documentElement.hasAttribute("data-blurred")).toBe(true);
+    focus.mockReturnValue(true);
+    window.dispatchEvent(new Event("focus"));
+    expect(document.documentElement.hasAttribute("data-blurred")).toBe(false);
+    focus.mockRestore();
+  });
+
   test("the status is not polled while the window is hidden, and is read when it comes back", async () => {
     vi.useFakeTimers();
     const fake = new FakeBotloft();
