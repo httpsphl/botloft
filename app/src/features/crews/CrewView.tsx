@@ -76,15 +76,16 @@ export function CrewView({ crew }: { crew: Crew }) {
               {words.bots(bots.length)}
               {crew.paused && ` · ${words.pausedNote}`}
             </span>
-            <span aria-hidden>·</span>
+            {/* Only the icon: the path is in its tooltip, and a click opens it. */}
             <button
               type="button"
               onClick={openFolder}
-              title={words.openFolder}
-              className="flex min-w-0 items-center gap-1 rounded-lg px-1 hover:bg-sunken hover:text-ink"
+              title={`${words.folder(crew.workFolder)}
+${words.openFolderHint}`}
+              aria-label={`${words.openFolder}: ${crew.workFolder}`}
+              className="grid size-6 shrink-0 place-items-center rounded-lg hover:bg-sunken hover:text-ink"
             >
-              <Folder aria-hidden size={13} className="shrink-0" />
-              <span className="truncate">{words.folder(crew.workFolder)}</span>
+              <Folder aria-hidden size={14} />
             </button>
           </p>
         </div>

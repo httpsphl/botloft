@@ -62,6 +62,7 @@ export const crews = {
     moreActions: "More crew actions",
     folder: (path: string) => `Works in ${path}`,
     openFolder: "Open work folder",
+    openFolderHint: "Click to open it",
     changeFolder: "Change work folder…",
     moveTitle: (crew: string) => `Move ${crew} to another folder?`,
     moveBody: (path: string) =>

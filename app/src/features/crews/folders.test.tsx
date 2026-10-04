@@ -63,7 +63,12 @@ describe("work folders", () => {
     renderApp(fake, host);
     await crewOpened("Ops");
 
-    fireEvent.click(screen.getByRole("button", { name: /^Works in / }));
+    // Only the icon: the path is in the tooltip.
+    const folder = screen.getByRole("button", { name: `Open work folder: ${ops.workFolder}` });
+    expect(folder.textContent).toBe("");
+    expect(folder.title).toBe(`Works in ${ops.workFolder}
+Click to open it`);
+    fireEvent.click(folder);
     expect(host.opened).toEqual([ops.workFolder]);
 
     host.nextFolder = PROJECT;
@@ -74,7 +79,9 @@ describe("work folders", () => {
     expect(within(confirm).getByText(/restarts when it finishes/)).toBeDefined();
     fireEvent.click(within(confirm).getByRole("button", { name: "Move" }));
 
-    expect(await screen.findByText(`Works in ${PROJECT}`)).toBeDefined();
+    expect(
+      await screen.findByRole("button", { name: `Open work folder: ${PROJECT}` }),
+    ).toBeDefined();
     const move = fake.calls.find((call) => call.method === "crews.setWorkFolder");
     expect(move?.params).toEqual({ crewId: ops.id, workFolder: PROJECT });
   });
