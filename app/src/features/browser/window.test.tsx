@@ -29,6 +29,9 @@ const panel = () => screen.getByRole("complementary", { name: "Scout's browser" 
 describe("the browser in a window of its own", () => {
   test("opens for signing in, says the bot waits, and goes back when the window closes", async () => {
     const { fake, scout } = await openScout();
+    // Why is folded until the owner asks.
+    expect(within(panel()).queryByText(/like Google/)).toBeNull();
+    fireEvent.click(within(panel()).getByRole("button", { name: "How it works" }));
     expect(within(panel()).getByText(/like Google/)).toBeDefined();
     fireEvent.click(within(panel()).getByRole("button", { name: "Sign in in a window" }));
 
@@ -49,6 +52,7 @@ describe("the browser in a window of its own", () => {
     await openScout();
     fireEvent.click(within(panel()).getByRole("button", { name: "Take control" }));
     expect(await within(panel()).findByText("You are in control")).toBeDefined();
+    fireEvent.click(within(panel()).getByRole("button", { name: "How it works" }));
     expect(within(panel()).getByText(/won't let you sign in here\?/)).toBeDefined();
     expect(within(panel()).getByRole("button", { name: "Sign in in a window" })).toBeDefined();
   });

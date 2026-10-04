@@ -68,6 +68,8 @@ export const browser: Messages["browser"] = {
   },
   hands: {
     take: "Tomar el control",
+    botHas: (bot) => `${bot} tiene el control`,
+    howItWorks: "Cómo funciona",
     takeWhy: (bot) => `Para entrar en una cuenta o pasar un captcha. ${bot} espera mientras tanto.`,
     takeFailed: "No se pudo tomar el navegador",
     holding: "Tienes el control",

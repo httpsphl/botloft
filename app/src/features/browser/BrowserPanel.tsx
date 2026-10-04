@@ -5,7 +5,7 @@
 // or open it in a window of its own to sign in (spec 21.11).
 
 import { Globe, LoaderCircle, Maximize2, Minimize2, Moon, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import type { Bot } from "../../lib/protocol.gen";
 import { SYSTEM } from "../../lib/system";
@@ -17,7 +17,7 @@ import { EmptyState } from "../../ui/EmptyState";
 import { SidePanel } from "../../ui/SidePanel";
 import { BotAvatar } from "../bots/BotAvatar";
 import { AddressBar } from "./AddressBar";
-import { AskCallout, HeldBar, TakeBar } from "./HandsBars";
+import { AskCallout, ControlPill, HeldNotes, TakeNotes } from "./HandsBars";
 import { HandsLayer } from "./HandsLayer";
 import { LiveView, useCaption } from "./LiveView";
 import { TabStrip } from "./TabStrip";
@@ -28,8 +28,14 @@ import { WindowBar } from "./WindowBar";
 
 /** Around the page in the panel, in px. */
 const PAD = 12;
-/** Kept under the page, for what the bot just did and the button to take it. */
-const UNDER = 80;
+/**
+ * The bot's color around the page, in px: on the sides and top, and below,
+ * where the pill that says who is in control hangs over its edge.
+ */
+const STAGE = 14;
+const STAGE_BOTTOM = 30;
+/** Kept under the page, for the pill and what the bot just did. */
+const UNDER = 56;
 
 export function BrowserPanel({
   bot,
@@ -58,8 +64,8 @@ export function BrowserPanel({
   // Notices that come and go are not counted: they never resize the page.
   const [inside, body] = useRoom();
   const room = inside && {
-    width: inside.width - 2 * PAD,
-    height: inside.height - 2 * PAD - UNDER,
+    width: inside.width - 2 * PAD - 2 * STAGE,
+    height: inside.height - 2 * PAD - STAGE - STAGE_BOTTOM - UNDER,
   };
   useFitPage(bot, room, watched);
   // A new tab is blank: the owner says where it goes.
@@ -118,7 +124,7 @@ export function BrowserPanel({
       )}
       <div
         ref={body}
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto"
+        className="@container flex min-h-0 flex-1 flex-col overflow-y-auto"
         style={{ padding: PAD }}
       >
         {windowed && <WindowBar bot={bot} />}
@@ -139,47 +145,57 @@ export function BrowserPanel({
         ) : (
           <>
             {live && ask && !hands.held && <AskCallout bot={bot} task={ask} hands={hands} />}
-            {hands.held && (
-              <HeldBar
-                bot={bot}
-                task={ask}
-                tabs={state?.tabs.length ?? 0}
-                focused={focused}
-                hands={hands}
-              />
-            )}
-            <div className="min-h-40 flex-1" style={{ containerType: "size" }}>
-              <div className="relative">
-                <LiveView
-                  bot={bot}
-                  frame={frame}
-                  action={action}
-                  dim={status === "closed"}
-                  held={hands.held}
-                >
-                  {hands.held && frame && (
-                    <HandsLayer
-                      label={t.hands.screen(bot.name)}
-                      keysLabel={t.hands.typing}
-                      width={frame.width}
-                      height={frame.height}
-                      send={hands.send}
-                      onFocus={setFocused}
+            <div
+              className="bot-stage flex min-h-40 flex-1 flex-col"
+              data-dim={status === "closed" || undefined}
+              style={
+                {
+                  "--bot": bot.color,
+                  padding: `${STAGE}px ${STAGE}px ${STAGE_BOTTOM}px`,
+                } as CSSProperties
+              }
+            >
+              <div
+                className="grid min-h-0 flex-1 place-items-center"
+                style={{ containerType: "size" }}
+              >
+                <div className="relative">
+                  <LiveView
+                    bot={bot}
+                    frame={frame}
+                    action={action}
+                    dim={status === "closed"}
+                    held={hands.held}
+                  >
+                    {hands.held && frame && (
+                      <HandsLayer
+                        label={t.hands.screen(bot.name)}
+                        keysLabel={t.hands.typing}
+                        width={frame.width}
+                        height={frame.height}
+                        send={hands.send}
+                        onFocus={setFocused}
+                      />
+                    )}
+                  </LiveView>
+                  {(status !== "open" || !frame) && (
+                    <Overlay
+                      busy={status === "starting" || status === "open"}
+                      title={
+                        windowed ? t.window.title : status === "closed" ? t.closed : t.starting
+                      }
+                      body={status === "closed" && !windowed ? t.closedBody : null}
                     />
                   )}
-                </LiveView>
-                {(status !== "open" || !frame) && (
-                  <Overlay
-                    busy={status === "starting" || status === "open"}
-                    title={windowed ? t.window.title : status === "closed" ? t.closed : t.starting}
-                    body={status === "closed" && !windowed ? t.closedBody : null}
-                  />
-                )}
+                </div>
               </div>
             </div>
+            {(hands.held || (live && !ask)) && (
+              <ControlPill key={String(hands.held)} bot={bot} hands={hands} />
+            )}
             {status === "open" && !hands.held && (
               // Its place is kept while empty, so the page never moves for it.
-              <p aria-live="polite" className="mt-3 h-5 text-ink-soft text-sm">
+              <p aria-live="polite" className="mt-2 flex h-5 justify-center text-ink-soft text-sm">
                 {caption && (
                   <span key={action?.at} className="flex animate-rise items-center gap-2">
                     <BotAvatar color={bot.color} size={18} mood="working" />
@@ -188,7 +204,16 @@ export function BrowserPanel({
                 )}
               </p>
             )}
-            {live && !hands.held && !ask && <TakeBar bot={bot} hands={hands} />}
+            {hands.held && (
+              <HeldNotes
+                bot={bot}
+                task={ask}
+                tabs={state?.tabs.length ?? 0}
+                focused={focused}
+                hands={hands}
+              />
+            )}
+            {live && !hands.held && !ask && <TakeNotes bot={bot} hands={hands} />}
           </>
         )}
       </div>

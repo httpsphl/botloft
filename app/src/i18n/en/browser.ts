@@ -67,6 +67,10 @@ export const browser = {
   },
   hands: {
     take: "Take control",
+    /** In the pill under the live screen while the bot has the browser. */
+    botHas: (bot: string) => `${bot} is in control`,
+    /** Opens why to take the browser, folded under the pill. */
+    howItWorks: "How it works",
     takeWhy: (bot: string) =>
       `To sign in to an account or get past a captcha. ${bot} waits meanwhile.`,
     takeFailed: "Could not take the browser",

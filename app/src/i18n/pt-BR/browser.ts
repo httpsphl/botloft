@@ -69,6 +69,8 @@ export const browser: Messages["browser"] = {
   },
   hands: {
     take: "Assumir o controle",
+    botHas: (bot) => `${bot} está no controle`,
+    howItWorks: "Como funciona",
     takeWhy: (bot) =>
       `Para entrar numa conta ou passar de um captcha. ${bot} espera enquanto isso.`,
     takeFailed: "Não foi possível assumir o navegador",
