@@ -11,6 +11,7 @@ import { useArrival } from "../../ui/motion";
 import { BOTLOFT_COLOR, BotAvatar } from "../bots/BotAvatar";
 import { DeliveryStatus } from "../messages/DeliveryStatus";
 import { AttachmentList } from "./AttachmentList";
+import { Mentions } from "./mentions";
 
 function Time({ at }: { at: number }) {
   return (
@@ -31,7 +32,7 @@ function OwnerMessage({ message, bot }: { message: Message; bot: Bot }) {
           className="max-w-[36rem] whitespace-pre-wrap break-words rounded-2xl rounded-br-md bg-sunken px-4 py-2.5 leading-relaxed"
           data-selectable
         >
-          {message.body}
+          <Mentions text={message.body} />
         </p>
       )}
       <div className="flex items-center gap-2">
@@ -121,7 +122,7 @@ function OtherMessage({ message }: { message: Message }) {
             className={`mt-1 max-w-[36rem] ${routine ? "animate-rise" : ""} whitespace-pre-wrap break-words rounded-2xl rounded-tl-md border border-line bg-panel px-4 py-2.5 leading-relaxed ${system ? "text-ink-soft" : ""}`}
             data-selectable
           >
-            {message.body}
+            <Mentions text={message.body} />
           </p>
         )}
         {delivery && delivery.state !== "sent" && (
