@@ -41,6 +41,11 @@ export function useApi(): BotloftApi {
   return required(useContext(ApiContext), "BotloftApi");
 }
 
+/** The API where there is one: a mascot also shows outside the app (Setup). */
+export function useOptionalApi(): BotloftApi | null {
+  return useContext(ApiContext);
+}
+
 export function useApp<T>(selector: (state: AppState) => T): T {
   return useStore(required(useContext(StoreContext), "AppStore"), selector);
 }
