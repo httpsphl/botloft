@@ -1,4 +1,5 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { PanelClosing, PanelRestored } from "./panelMotion";
 import { SidePanel } from "./SidePanel";
@@ -101,6 +102,13 @@ describe("side panel motion", () => {
     expect(screen.queryByRole("complementary")).toBeNull();
     ends(aside, "panel-close");
     expect(closed).toHaveBeenCalled();
+  });
+
+  test("mounted again in strict mode, it still slides from the edge", () => {
+    const { container } = render(<StrictMode>{panel()}</StrictMode>);
+    const aside = container.querySelector("aside") as HTMLElement;
+    expect(aside.className).toContain("panel-opening");
+    expect(aside.style.getPropertyValue("--panel-from")).toBe("0px");
   });
 
   test("a panel replacing another starts from that one's width", () => {

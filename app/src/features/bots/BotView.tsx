@@ -181,7 +181,8 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
       />
       <Notices bot={bot} crew={crew} view={view} />
       <Tabs<Pane> label={bot.name} tabs={tabs} value={pane} onChange={setPane} />
-      <div className="flex min-h-0 flex-1">
+      {/* A panel slides out over the chat, and is cut at the window's edge. */}
+      <div className="relative flex min-h-0 flex-1 overflow-x-clip">
         <div role="tabpanel" aria-labelledby={tabId(pane)} className="flex min-h-0 min-w-0 flex-1">
           {pane === "chat" ? (
             <ShowFile.Provider value={showFile}>
