@@ -8,3 +8,12 @@
   animation-play-state: paused !important;
 }
 /* biome-ignore-end lint/complexity/noImportantStyles: a hidden window must pause every animation, inline ones included */
+
+/* The owner works in another app (shell/visibility.ts): the mascots and the
+   working trace, drawn by the CPU on every frame, stand still. Spinners,
+   live dots and what arrives keep moving: they are cheap and say something
+   happens. */
+:root[data-blurred] [data-mood] *,
+:root[data-blurred] .state-trace {
+  animation-play-state: paused;
+}
