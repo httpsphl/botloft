@@ -89,12 +89,13 @@ const DIALOG: &str = "#32770";
 
 /// Why `window` is never granted, if it is not.
 pub fn never(window: &Window) -> Option<Never> {
-    let file = window
-        .app
-        .path
-        .file_name()
-        .map(|name| name.to_string_lossy().to_lowercase())
-        .unwrap_or_default();
+    // By hand: a Windows path read on another system has no separators.
+    let path = window.app.path.to_string_lossy().to_lowercase();
+    let file = path
+        .rsplit(['\\', '/'])
+        .next()
+        .unwrap_or_default()
+        .to_owned();
     let named = |list: &[&str]| list.contains(&file.as_str());
     if named(BOTLOFT) {
         return Some(Never::Botloft);
