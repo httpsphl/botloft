@@ -52,6 +52,10 @@ export const tools: Messages["tools"] = {
     browser_screenshot: "Mirar la pantalla",
     browser_close: "Cerrar el navegador",
     browser_ask_owner: "Pedir tu ayuda",
+    desktop: "Ver una app",
+    desktop_windows: "Ver tus ventanas",
+    desktop_look: "Leer una ventana",
+    desktop_screenshot: "Mirar una ventana",
   },
   scroll: {
     down: "hacia abajo",

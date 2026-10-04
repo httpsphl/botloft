@@ -17,6 +17,7 @@ import {
   ListTodo,
   LoaderCircle,
   type LucideIcon,
+  Monitor,
   Send,
   SquareTerminal,
   UserPlus,
@@ -60,9 +61,15 @@ const ICONS: Record<string, LucideIcon> = {
   browser_ask_owner: Hand,
 };
 
-/** The browser tools share the globe (spec 21.4). */
+/** The browser tools share the globe (spec 21.4), the desktop's the screen (24.6). */
 function iconOf(label: string): LucideIcon {
-  return ICONS[label] ?? (label.startsWith("browser_") ? Globe : Wrench);
+  if (ICONS[label]) {
+    return ICONS[label];
+  }
+  if (label.startsWith("browser_")) {
+    return Globe;
+  }
+  return label.startsWith("desktop_") ? Monitor : Wrench;
 }
 
 /** JSON indented for reading; anything else as it came. */

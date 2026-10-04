@@ -1653,7 +1653,7 @@ Tabela `questions`: `id, crew_id, bot_id, chat_item_id, text, options (JSON), st
 
 ## 24. Desktop
 
-Status: **D1 em andamento** (24.12): o daemon já lista as janelas, lê e fotografa uma janela e pede ao dono app por app; falta o app (o cartão do pedido e as permissões nas configurações do bot). É o item 10 da seção 18. Decisões e riscos em `docs/adr/0002-desktop-use.md`.
+Status: **D1 implementado** (24.12). É o item 10 da seção 18. Decisões e riscos em `docs/adr/0002-desktop-use.md`.
 
 ### 24.1 O que é
 
@@ -1753,11 +1753,11 @@ No servidor `botloft` (11), como as do navegador.
 
 - **Painel "Desktop"** ao lado do chat, no mesmo dock do navegador, terminal e arquivos (15.1): a foto ao vivo da janela em que o bot está agindo (`PrintWindow` a cada mudança, no máximo 5 por segundo, só enquanto o painel está aberto), o nome do app, e a linha do que ele acabou de fazer. Um botão **Parar** encerra o que o bot faz no desktop na hora.
 - **Parar tudo**: um atalho global, `Ctrl+Alt+End`, que o daemon registra (`RegisterHotKey`), para qualquer ação de desktop de qualquer bot, mesmo com o app fechado.
-- O cartão de permissão no chat (24.2) mostra o ícone e o nome do app, o nível pedido, o porquê do bot e o que aquele nível deixa fazer.
+- O cartão de permissão no chat (24.2) diz "<bot> quer ver <app>" com o ícone de tela, o porquê do bot ("<bot> diz: ..."), o caminho do executável e o que ver deixa fazer (ler as janelas do app e fotografá-las com o dono no computador, nunca senhas, e onde tirar). Respondido, vira uma linha: "<bot> pode ver <app>", "<bot> não pode ver <app>" com a nota, ou sem resposta. As tools `desktop_*` aparecem no chat com o ícone de tela e o porquê como resumo.
 
 ### 24.10 Permissões no app
 
-- Em "Configurações do bot", uma seção **Desktop** lista as permissões: o app (ou "Desktop inteiro"), Ver ou Mexer, e as opções. Cada uma com **Tirar**.
+- Nos detalhes do bot ("Sobre <bot>"), a seção **Seu desktop** lista as permissões: o app (ou "O desktop inteiro"), o caminho do executável, Pode ver ou Pode ver e usar, e as opções. Cada uma com um X que tira a permissão; o bot pede de novo na próxima vez. Sem nenhuma, a seção diz que o bot pede no chat na primeira vez que precisar.
 - **Dar o desktop inteiro** e **ligar "Sem você na frente"** abrem uma tela de riscos, em palavras simples, antes de gravar:
   - o bot vê tudo o que estiver aberto no alcance, inclusive dados pessoais, e-mails, conversas e dados de clientes;
   - ele pode errar: apagar, enviar ou mudar algo no app como se fosse você;
