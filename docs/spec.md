@@ -1653,7 +1653,7 @@ Tabela `questions`: `id, crew_id, bot_id, chat_item_id, text, options (JSON), st
 
 ## 24. Desktop
 
-Status: **D1 e D2 implementados; D3 em andamento** (24.12): o daemon já guarda o que cada bot faz no desktop, manda a foto ao vivo, para e deixa continuar, e tem o atalho; falta o painel no app. É o item 10 da seção 18. Decisões e riscos em `docs/adr/0002-desktop-use.md`.
+Status: **D1, D2 e D3 implementados** (24.12). É o item 10 da seção 18. Decisões e riscos em `docs/adr/0002-desktop-use.md`.
 
 ### 24.1 O que é
 
@@ -1760,7 +1760,7 @@ No servidor `botloft` (11), como as do navegador.
 
 ### 24.9 App
 
-- **Painel "Desktop"** ao lado do chat, no mesmo dock do navegador, terminal e arquivos (15.1): a foto ao vivo da janela que o bot leu ou em que agiu por último, o nome do app e o título da janela, e a linha do que ele acabou de fazer. Um botão **Parar** para o bot no desktop; parado, o painel diz isso e oferece **Deixar continuar**.
+- **Painel "Desktop"** ao lado do chat, o quarto lugar do dock do computador do bot (navegador, terminal, arquivos e desktop, 15.1), com a mesma largura: a foto ao vivo da janela que o bot leu ou em que agiu por último, sobre a mesa na cor do bot, o nome do app e o título da janela, e a linha do que ele acabou de fazer, no idioma do dono ("Clicou em "Save"", "Escreveu em "Nome"", "Escolheu "Large"", "Leu a janela"). No cabeçalho, "Ao vivo" com a foto chegando e **Parar**; parado, o selo "Parado" e um aviso com **Deixar continuar**. Sem janela ainda, o painel explica que ela aparece ali quando o bot ler ou usar um app liberado. Embaixo, a dica do atalho Ctrl+Alt+End. As linhas das tools `desktop_*` no chat têm o botão de tela que abre o painel, como as do navegador abrem o dele.
 - **O que o daemon guarda** (`DesktopState`, em memória, por bot): a janela (`id`, título, app), a última ação (`DesktopAction`: clicar, escrever, escolher ou rolar, o nome do controle e a opção escolhida; nada depois de só ler), que o app diz no idioma do dono, quando foi, e se o dono o parou. Cada leitura, foto ou ação o atualiza e sai a notificação `desktop.changed` para todos os apps.
 - **Foto ao vivo:** `desktop.watch {botId}` devolve o estado e a foto mais nova (`DesktopView`) e, enquanto alguma conexão assiste aquele bot, o daemon fotografa a janela dele quatro vezes por segundo (`PrintWindow`, como `desktop_screenshot`) e manda `desktop.frame` só quando a foto mudou, só para quem assiste, como os quadros do navegador (21.7): um app lento recebe a mais nova. Quando a última conexão para (`desktop.unwatch`, outro `desktop.watch` ou a conexão caindo), as fotos param.
 - **Parar:** `desktop.stop {botId}` marca o bot como parado e `desktop.resume {botId}` o deixa continuar; os dois devolvem o `DesktopState`. Parado, toda tool `desktop_*` dele recusa, de novo depois de esperar o dono ou a vez no desktop, com o aviso de que o dono o parou e que ele deve contar no chat o que fazia. Uma ação já em andamento termina (ela dura no máximo 5 s, 24.5). Parado fica até o dono deixar continuar. Isso vive na memória: um daemon que reinicia começa com ninguém parado.

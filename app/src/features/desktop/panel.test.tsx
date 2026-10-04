@@ -1,0 +1,71 @@
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, describe, expect, test } from "vitest";
+import { FakeBotloft } from "../../lib/fake";
+import { crewOpened, openBot, renderApp } from "../../test/app";
+
+afterEach(cleanup);
+
+async function openScout() {
+  const fake = new FakeBotloft();
+  const ops = fake.addCrew("Ops");
+  const scout = fake.addBot(ops.id, "Scout", "Finds sources");
+  fake.setBotState(scout.id, "idle");
+  fake.chat.tool(scout.id, "mcp__botloft__desktop_look", {
+    summary: "To read the list",
+    status: "done",
+  });
+  renderApp(fake);
+  await crewOpened("Ops");
+  openBot("Scout");
+  await screen.findByRole("list", { name: "Messages" });
+  return { fake, scout };
+}
+
+const panel = () => screen.getByRole("complementary", { name: "Scout's desktop" });
+const NOTES = { id: 42, title: "Shopping list - Notepad", app: "Notepad" };
+
+describe("the desktop panel", () => {
+  test("opens from a desktop tool in the chat and shows the window the bot uses, live", async () => {
+    const { fake, scout } = await openScout();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Watch on the desktop panel: Read a window" }),
+    );
+    expect(await within(panel()).findByText("Scout has not used your desktop yet")).toBeDefined();
+    expect(fake.desktop.watching).toBe(scout.id);
+
+    act(() => {
+      fake.desktop.use(scout.id, NOTES, { kind: "click", target: "Save", option: null });
+    });
+    expect(await within(panel()).findByText("Shopping list - Notepad")).toBeDefined();
+    expect(within(panel()).getByText('Clicked "Save"')).toBeDefined();
+    expect(within(panel()).getByText("Waiting for the picture…")).toBeDefined();
+
+    act(() => {
+      fake.desktop.paint(scout.id, "AAAA");
+    });
+    const picture = await within(panel()).findByRole("img", { name: "Shopping list - Notepad" });
+    expect(picture.getAttribute("src")).toBe("data:image/jpeg;base64,AAAA");
+    expect(within(panel()).getByText("Live")).toBeDefined();
+
+    // Closed, nobody watches.
+    fireEvent.click(within(panel()).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(fake.desktop.watching).toBeNull());
+  });
+
+  test("stops the bot on the desktop and lets it go on", async () => {
+    const { fake, scout } = await openScout();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Watch on the desktop panel: Read a window" }),
+    );
+    act(() => {
+      fake.desktop.use(scout.id, NOTES);
+    });
+    expect(await within(panel()).findByText("Read the window")).toBeDefined();
+    fireEvent.click(within(panel()).getByRole("button", { name: "Stop" }));
+    expect(await within(panel()).findByText("You stopped Scout on your desktop")).toBeDefined();
+    expect(fake.desktop.state(scout.id).stopped).toBe(true);
+    fireEvent.click(within(panel()).getByRole("button", { name: "Let it go on" }));
+    await waitFor(() => expect(fake.desktop.state(scout.id).stopped).toBe(false));
+    expect(within(panel()).queryByText("You stopped Scout on your desktop")).toBeNull();
+  });
+});

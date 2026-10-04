@@ -14,5 +14,6 @@ export const terminal: Messages["terminal"] = {
     browser: "Navegador",
     terminal: "Terminal",
     files: "Archivos",
+    desktop: "Escritorio",
   },
 };
