@@ -875,7 +875,7 @@ Movimento: o app se mexe para parecer vivo, sem atrapalhar o trabalho. Animaçõ
 - **Chegadas:** o que chega enquanto o dono olha entra subindo e aparecendo: mensagens, ferramentas, pedidos, avisos e bots novos na barra lateral. O que já estava lá quando ele abriu o chat (ou o app) aparece parado, e páginas antigas carregadas em cima não se mexem. A resposta já aparece enquanto é escrita, então não anima de novo ao terminar.
 - **Trabalhando:** os três pontos pulam em sequência; o texto sendo escrito tem um cursor piscando no fim; a mão de "Precisa de aprovação" acena; um pedido pendente pulsa uma vez ao aparecer. No estado do bot, o ponto de "Disponível" solta dois anéis, um depois do outro, e na linha de "Trabalhando" corre um trecho aceso (`StateIcons.tsx`); com menos movimento, a linha fica inteira acesa.
 - **Trocar de bot ou de crew:** o painel principal some rápido e o novo sobe (View Transitions do webview); a barra lateral fica onde está.
-- **Superfícies:** menus e seletores abrem a partir de onde estão presos; diálogos aparecem com o fundo escurecendo; avisos entram deslizando; `<details>` abre deslizando; a linha da aba selecionada desliza até a nova; as barras de uso enchem ao abrir; botões afundam um pouco ao clicar; o mascote da tela de boas-vindas e do chat vazio flutua.
+- **Superfícies:** menus e seletores abrem a partir de onde estão presos; diálogos aparecem com o fundo escurecendo e, fechados de qualquer jeito (X, Esc, Cancelar, Salvar), somem esmaecendo e encolhendo um pouco (150 ms); avisos entram deslizando; `<details>` abre deslizando; a linha da aba selecionada desliza até a nova; as barras de uso enchem ao abrir; botões afundam um pouco ao clicar; o mascote da tela de boas-vindas e do chat vazio flutua.
 
 No chat:
 
