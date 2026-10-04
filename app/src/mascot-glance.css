@@ -1,10 +1,11 @@
 /* Bots look at each other when they talk (useGlance.ts, spec 15.3): the
    eyes turn toward the other bot's mascot (--glance-x, --glance-y), hold
-   there for a moment and come back. A sleeping mascot keeps its eyes shut.
+   there for a moment and come back. A sleeping mascot, idle too, keeps its
+   eyes shut.
    The glance ends where it started, so less motion shows nothing. */
 
 @layer components {
-  [data-mood]:not([data-mood="sleeping"])[data-glance] .avatar-look {
+  [data-mood]:not([data-mood="idle"], [data-mood="sleeping"])[data-glance] .avatar-look {
     animation: glance 1.6s both;
   }
 }

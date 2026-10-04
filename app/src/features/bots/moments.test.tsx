@@ -3,6 +3,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { FakeBotloft } from "../../lib/fake";
 import type { BotId, Message, MessageId } from "../../lib/protocol.gen";
 import glanceFrames from "../../mascot-glance.css?raw";
+import sleepFrames from "../../mascot-sleep.css?raw";
 import wakeFrames from "../../mascot-wake.css?raw";
 import { crewOpened, renderApp } from "../../test/app";
 import { APP_OPENED } from "../../ui/motion";
@@ -30,6 +31,33 @@ describe("moments", () => {
     expect(svgOf(container).hasAttribute("data-wake")).toBe(true);
     act(() => vi.advanceTimersByTime(MOMENT_MS.wake));
     expect(svgOf(container).hasAttribute("data-wake")).toBe(false);
+  });
+
+  test("falls asleep once when it has nothing left to do", () => {
+    vi.useFakeTimers();
+    const { container, rerender } = render(<BotAvatar color="#5ec8ff" mood="working" starting />);
+    const sleeping = () => svgOf(container).hasAttribute("data-sleep");
+    rerender(<BotAvatar color="#5ec8ff" mood="idle" />);
+    expect(sleeping()).toBe(true);
+    act(() => vi.advanceTimersByTime(MOMENT_MS.sleep));
+    expect(sleeping()).toBe(false);
+
+    // Paused while it had nothing to do, it was asleep already.
+    rerender(<BotAvatar color="#5ec8ff" mood="sleeping" />);
+    expect(sleeping()).toBe(false);
+    expect(svgOf(container).hasAttribute("data-wake")).toBe(false);
+  });
+
+  test("turned back on, it wakes, then goes back to sleep with nothing to do", () => {
+    vi.useFakeTimers();
+    const { container, rerender } = render(<BotAvatar color="#5ec8ff" mood="sleeping" />);
+    rerender(<BotAvatar color="#5ec8ff" mood="idle" />);
+    expect(svgOf(container).hasAttribute("data-wake")).toBe(true);
+    act(() => vi.advanceTimersByTime(MOMENT_MS.wake));
+    expect(svgOf(container).hasAttribute("data-wake")).toBe(false);
+    expect(svgOf(container).hasAttribute("data-sleep")).toBe(true);
+    act(() => vi.advanceTimersByTime(MOMENT_MS.sleep));
+    expect(svgOf(container).hasAttribute("data-sleep")).toBe(false);
   });
 
   test("does not cheer when it only finished starting up", () => {
@@ -96,6 +124,10 @@ describe("moments", () => {
     expect(end(wakeFrames, "arrive-pop")).toMatch(/opacity: 1;\s*transform: scale\(1, 1\);/);
     expect(end(wakeFrames, "arrive-open")).toContain("clip-path: inset(0);");
     expect(end(glanceFrames, "glance")).toContain("transform: translate(0, 0);");
+    // Falling asleep ends asleep: the eyes shut into the arcs.
+    expect(end(sleepFrames, "sleep-slump")).toContain("transform: scale(1, 1);");
+    expect(end(sleepFrames, "sleep-shut")).toContain("opacity: 0;");
+    expect(end(sleepFrames, "sleep-arcs")).toContain("opacity: 1;");
   });
 });
 

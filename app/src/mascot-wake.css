@@ -1,10 +1,11 @@
 /* The mascot coming in (mascotMoments.ts, spec 15.3). It wakes when its bot
-   comes back from paused or stopped: the small ember grows up into the
-   flame, stretching past it and settling, while the shut eyes give way to
-   open ones that open halfway, close once more and open for good. A bot just
-   created pops in: the mascot grows from a dot, lands squashed, springs up
-   and settles, opening its eyes. Every frame ends at rest, so less motion
-   shows nothing. */
+   has something to do or comes back from paused or stopped: the small ember
+   grows up into the flame (the `d` transition in mascot.css), stretching
+   past it and settling, while the shut eyes give way to open ones that open
+   halfway, close once more and open for good. A bot just created pops in:
+   the mascot grows from a dot, lands squashed, springs up and settles,
+   opening its eyes unless it arrives asleep. Every frame ends at rest, so
+   less motion shows nothing. */
 
 @layer components {
   [data-mood][data-wake] .avatar-hop {
@@ -24,7 +25,7 @@
     animation: arrive-pop 700ms both;
   }
 
-  [data-mood][data-arrive] .avatar-eye {
+  [data-mood]:not([data-mood="idle"], [data-mood="sleeping"])[data-arrive] .avatar-eye {
     animation: arrive-open 700ms both;
   }
 }

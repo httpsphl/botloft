@@ -26,7 +26,7 @@ export function EmptyState({
       }`}
     >
       <span className="relative">
-        <BotAvatar color={color} size={44} mood="idle" />
+        <BotAvatar color={color} size={44} mood="awake" />
         {Icon && (
           <Icon
             aria-hidden

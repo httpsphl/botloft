@@ -69,7 +69,7 @@ export function Welcome() {
     <main className="min-h-0 flex-1 overflow-y-auto p-8">
       <div className="mx-auto max-w-xl">
         <span className="mb-3 inline-block animate-float">
-          <BotAvatar color="#ff7a59" size={56} mood="idle" />
+          <BotAvatar color="#ff7a59" size={56} mood="awake" />
         </span>
         <h1 className="font-semibold text-2xl tracking-tight">{w.title}</h1>
         <p className="mt-1 text-ink-soft leading-relaxed">{w.intro}</p>

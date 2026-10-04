@@ -1,11 +1,12 @@
 /* The mascot (features/bots/BotAvatar.tsx, spec 15.3). Its mood follows
-   what the bot does, on top of the state's own icon and label: the flame
-   burns (its outline morphs, and the clipped shading follows it), the eyes
-   blink by closing from top and bottom and glance around now and then while
-   idle, as in the poses of the drawing, embers float off the top while it
-   works, it hops while it waits for the owner, burns low with heavy eyes
-   when tired, and sleeps as a small ember with its eyes shut. Less motion
-   (motion.css) stops all of it on the plain outline. */
+   what the bot does, on top of the state's own icon and label. Only a
+   working bot's flame burns on and on, throwing embers; every other mood
+   holds still, and the mascot moves only in moments that play once: from
+   one mood to the next the flame morphs into its new shape, and the eyes
+   blink and glance around when eyeMoments.ts picks. A bot with nothing to
+   do sleeps as a paused or stopped one does, a small ember with its eyes
+   shut; one waiting for the owner hops as it starts to wait; a tired one
+   burns low with heavy eyes. Less motion (motion.css) stops all of it. */
 
 @layer components {
   .avatar-hop,
@@ -17,6 +18,11 @@
 
   .avatar-hop {
     transform-origin: 50% 100%;
+  }
+
+  /* Once, from one mood's shape to the next (mascot-flame.css). */
+  .avatar-fire {
+    transition: d 800ms ease-in-out;
   }
 
   .avatar-eye {
@@ -33,9 +39,14 @@
     transition: opacity 320ms var(--ease-out);
   }
 
-  [data-mood="sleeping"] .avatar-eye {
+  /* Asleep, unless a moment shows it awake (mascotMoments.ts). */
+  :is([data-mood="idle"], [data-mood="sleeping"]):not([data-cheer], [data-wake]) .avatar-eye {
     opacity: 0;
     animation: none;
+  }
+
+  :is([data-mood="idle"], [data-mood="sleeping"]):not([data-cheer], [data-wake]) .avatar-closed {
+    opacity: 1;
   }
 
   /* The eyes move only in moments eyeMoments.ts picks: an animation that
@@ -44,12 +55,7 @@
     animation: eye-blink 260ms;
   }
 
-  [data-mood="idle"] .avatar-fire {
-    animation: fire-idle 3.6s linear infinite;
-    animation-delay: var(--blink-delay, 0s);
-  }
-
-  [data-mood="idle"][data-look] .avatar-look {
+  [data-mood="awake"][data-look] .avatar-look {
     animation: eye-look 4.4s ease-in-out;
   }
 
@@ -58,20 +64,8 @@
     animation-delay: var(--blink-delay, 0s);
   }
 
-  [data-mood="waiting"] .avatar-fire {
-    animation: fire-waiting 1.8s linear infinite;
-  }
-
-  [data-mood="tired"] .avatar-fire {
-    animation: fire-tired 5.2s linear infinite;
-  }
-
-  [data-mood="sleeping"] .avatar-fire {
-    animation: fire-sleeping 6s linear infinite;
-  }
-
   [data-mood="waiting"] .avatar-hop {
-    animation: hop 2.6s var(--ease-out) infinite;
+    animation: hop 2.6s var(--ease-out);
   }
 
   /* Heavy lids, slanting down to the outside, that droop in the moments
@@ -96,23 +90,16 @@
     transform: translateY(12px);
   }
 
-  [data-mood="sleeping"] .avatar-closed {
-    opacity: 1;
-  }
-
   [data-mood="working"] .avatar-spark {
     animation: spark 1.5s ease-out infinite;
     animation-delay: var(--spark-delay, 0s);
   }
 
-  /* In a list, a sleeping bot keeps its look (shut eyes, low flame) but
-     does not move: a morphing clip path repaints every frame, one per
-     mascot on screen. */
+  /* On a page of crews, the faces show their mood without moving. */
   [data-mood][data-still] * {
     animation: none;
   }
 }
-
 @keyframes eye-blink {
   0%,
   100% {

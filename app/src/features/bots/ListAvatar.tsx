@@ -6,13 +6,7 @@ import type { Bot } from "../../lib/protocol.gen";
 import { APP_OPENED } from "../../ui/motion";
 import { BotAvatar, moodOf } from "./BotAvatar";
 
-/**
- * A bot's mascot in a list (the sidebar, a crew's cards): it moves while
- * the bot is awake, idle too, since the owner reads an idle bot by its
- * slow flame and glances. A sleeping one keeps its look but does not
- * move: a morphing flame repaints every frame, and a stopped bot has
- * nothing to show.
- */
+/** A bot's mascot in a list (the sidebar, a crew's cards). */
 export function ListAvatar({
   bot,
   crewPaused,
@@ -22,8 +16,6 @@ export function ListAvatar({
   crewPaused: boolean;
   size: number;
 }) {
-  const mood = moodOf(bot, crewPaused);
-  const still = mood === "sleeping";
   // A bot created a moment ago, while the app was open, pops in.
   const [arriving] = useState(
     () =>
@@ -35,8 +27,7 @@ export function ListAvatar({
     <BotAvatar
       color={bot.color}
       size={size}
-      mood={mood}
-      still={still}
+      mood={moodOf(bot, crewPaused)}
       botId={bot.id}
       arriving={arriving}
       starting={bot.state === "launching"}
