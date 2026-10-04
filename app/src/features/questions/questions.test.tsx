@@ -34,7 +34,7 @@ describe("questions to the owner", () => {
     expect(within(card).getByText("client").tagName).toBe("STRONG");
     // The card stands for the call; no tool line repeats it.
     expect(within(chat).queryByText("Ask you a question")).toBeNull();
-    expect(within(sidebar()).getByText("Question: Which **client** first?")).toBeDefined();
+    expect(within(sidebar()).getByText("Question: Which client first?")).toBeDefined();
 
     fireEvent.click(within(card).getByRole("button", { name: "Globex" }));
     await within(chat).findByText("You answered");
