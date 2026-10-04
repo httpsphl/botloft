@@ -17,6 +17,8 @@ mod catalog;
 mod era;
 mod question;
 mod routine;
+mod routine_catalog;
+mod routine_change;
 mod share;
 mod signal;
 mod suggest;
@@ -34,6 +36,7 @@ use tracing::debug;
 
 use self::era::{Era, LEGACY, era, supported};
 pub(crate) use self::routine::check_changed as check_changed_routine;
+pub(crate) use self::routine_change::check_changed as check_changed_routine_change;
 use crate::approvals;
 use crate::rpc::jsonrpc::{self, Request};
 use crate::state::Daemon;
@@ -134,6 +137,16 @@ pub async fn handle(
         }
         Ok(era) if called(&request) == Some(catalog::SCHEDULE_ROUTINE) => {
             let result = routine::schedule(&daemon, &bot, generation, arguments(&request)).await;
+            Ok(decorate(era, &request, result))
+        }
+        Ok(era) if called(&request) == Some(routine_change::CHANGE_ROUTINE) => {
+            let args = arguments(&request);
+            let result = routine_change::change(&daemon, &bot, generation, args).await;
+            Ok(decorate(era, &request, result))
+        }
+        Ok(era) if called(&request) == Some(routine_change::DELETE_ROUTINE) => {
+            let args = arguments(&request);
+            let result = routine_change::delete(&daemon, &bot, generation, args).await;
             Ok(decorate(era, &request, result))
         }
         // They act in a browser and may wait for the owner (spec 21.5).

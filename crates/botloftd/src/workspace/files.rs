@@ -137,7 +137,9 @@ app; the other bots of your crew send you messages too.
   approves it in your chat and may change it; then it shows among your
   routines in the Botloft app. It is the only way to schedule: say it is scheduled only after the
   tool says it was created. With `bot`, the routine is for another bot of
-  your crew.
+  your crew. To change, pause or delete one of yours, call `my_routines`
+  for its id, then `change_routine` or `delete_routine`: the owner
+  approves those too, and only then is it done.
 - When you need the owner's decision or information to go on, above all in
   a routine or a task from another bot, when nobody reads your chat, call
   `ask_owner`: one short question, with `options` when the answers are few.
@@ -288,6 +290,7 @@ mod tests {
         assert!(rules.contains("fill in its\n  `description` for them"));
         assert!(rules.contains("`browser_*` tools"));
         assert!(rules.contains("`schedule_routine`"));
+        assert!(rules.contains("`change_routine` or `delete_routine`"));
         assert!(rules.contains(r#"<meta name="botloft-device" content="mobile">"#));
         assert!(!rules.contains("You lead this crew"));
 

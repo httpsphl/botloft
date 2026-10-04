@@ -30,10 +30,21 @@ pub fn tools() -> Value {
             super::signal::tool(),
         ]
         .into_iter()
+        .chain(super::routine_catalog::tools())
         .chain(super::browser_catalog::tools());
         list.splice(at..at, more);
     }
     tools
+}
+
+/// The schedule's schema, as `schedule_routine` takes it, for the tools
+/// that change a routine.
+pub(super) fn schedule_schema() -> Value {
+    crew_tools()
+        .as_array()
+        .and_then(|tools| tools.iter().find(|tool| tool["name"] == SCHEDULE_ROUTINE))
+        .map(|tool| tool["inputSchema"]["properties"]["schedule"].clone())
+        .unwrap_or_default()
 }
 
 fn crew_tools() -> Value {

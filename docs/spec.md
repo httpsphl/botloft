@@ -1255,7 +1255,10 @@ Pedido para fazer algo em horário marcado ("confere o e-mail todo dia às 8"), 
 - **Resposta ao bot:** criada, o id, o que ficou gravado (o dono pode ter mudado), o fuso e a próxima vez na hora local, e o lembrete de que ela está na aba Rotinas. Negada ou sem resposta, que nada foi agendado e que não deve dizer que foi.
 - **Bot em `bypass_permissions`:** cria na hora, sem cartão (13).
 - **Regras do bot** (5.1): trabalho em horário marcado é `schedule_routine`; é a única forma de agendar, e o bot só diz que agendou depois que a tool diz que criou.
-- Mudar, pausar e apagar rotinas continua sendo só do dono, pelo app.
+- **Mudar e apagar as próprias rotinas.** O bot vê as dele com `my_routines` (id, nome, pedido, quando, fuso, se está ligada e a próxima vez, sem pedir nada) e pede ao dono, que decide no chat:
+  - `change_routine {routine_id, ...}` com só o que muda (nome, pedido, `schedule`, fuso, `overlap`, `missed`, ou `enabled` para desligar ou ligar). O daemon confere, como em `routines.create`, e um pedido impossível ou sem mudança volta como erro, sem cartão. O cartão (`toolName: "mcp__botloft__change_routine"`, entrada `{name, before, after}`) mostra o que muda, antes riscado e depois, e o pedido novo dobrado; "Ajustar antes de permitir" abre os campos do editor (20.9) e o interruptor de ligada, já com o depois. "Mudar rotina" permite (com `input`, a rotina como o dono deixou, conferida antes de fechar); "Agora não" nega com nota.
+  - `delete_routine {routine_id, reason?}` (motivo até 500 caracteres). O cartão (`mcp__botloft__delete_routine`) mostra o nome, quando roda e o motivo; "Apagar rotina" arquiva, "Manter" nega com nota.
+  - Só rotinas do próprio bot: a de outro bot é tratada como inexistente. Respondido, o bot lê a rotina como ficou, ou que nada mudou e que não deve dizer que mudou. Bot em `bypass_permissions` muda e apaga na hora, sem cartão. Pausar continua no app também, como sempre.
 
 ### 20.13 Sinais entre bots
 

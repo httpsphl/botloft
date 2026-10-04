@@ -54,6 +54,9 @@ const ICONS: Record<string, LucideIcon> = {
   send_message: Send,
   suggest_bot: UserPlus,
   schedule_routine: AlarmClock,
+  my_routines: AlarmClock,
+  change_routine: AlarmClock,
+  delete_routine: AlarmClock,
   browser_ask_owner: Hand,
 };
 
