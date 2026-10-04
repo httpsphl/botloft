@@ -38,11 +38,20 @@ fn a_real_click_and_real_typing_reach_the_window() {
     let window = TestWindow::open("Botloft desktop test: real");
     let field = find(&window, |control| control.value.as_deref() == Some("hello"));
     real_click(window.id, center(&field)).expect("click the field");
-    real_press(window.id, &parse("Ctrl+A").expect("keys")).expect("select all");
+    // Ctrl+A is not in every classic field; from the start to the end is.
+    real_press(window.id, &parse("Ctrl+Home").expect("keys")).expect("to the start");
+    real_press(window.id, &parse("Ctrl+Shift+End").expect("keys")).expect("select to the end");
     real_type(window.id, "typed for real").expect("type");
-    find(&window, |control| {
-        control.value.as_deref() == Some("typed for real")
-    });
+    std::thread::sleep(std::time::Duration::from_millis(200));
+    let values: Vec<Option<String>> = read(window.id)
+        .expect("read")
+        .into_iter()
+        .map(|control| control.value)
+        .collect();
+    assert!(
+        values.contains(&Some("typed for real".to_owned())),
+        "{values:?}"
+    );
 
     let save = find(&window, |control| control.name == "Save");
     real_click(window.id, center(&save)).expect("click Save");
