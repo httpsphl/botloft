@@ -1,7 +1,8 @@
 import { X } from "lucide-react";
-import { type ReactNode, useEffect, useId } from "react";
+import { type ReactNode, useEffect, useId, useLayoutEffect, useRef } from "react";
 import { useT } from "../i18n";
 import { Button } from "./Button";
+import { exitDialog } from "./dialogExit";
 
 interface DialogProps {
   title: string;
@@ -12,10 +13,18 @@ interface DialogProps {
   width?: "md" | "lg";
 }
 
-/** A modal panel. Escape and the close button call `onClose`. */
+/**
+ * A modal panel. Escape and the close button call `onClose`. It pops in,
+ * and fades out however its owner closes it (dialogExit.ts).
+ */
 export function Dialog({ title, onClose, children, footer, width = "md" }: DialogProps) {
   const t = useT();
   const titleId = useId();
+  const backdrop = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const node = backdrop.current;
+    return () => exitDialog(node);
+  }, []);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -28,7 +37,10 @@ export function Dialog({ title, onClose, children, footer, width = "md" }: Dialo
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-40 grid animate-fade place-items-center bg-scrim p-6">
+    <div
+      ref={backdrop}
+      className="fixed inset-0 z-40 grid animate-fade place-items-center bg-scrim p-6"
+    >
       <div
         role="dialog"
         aria-modal="true"

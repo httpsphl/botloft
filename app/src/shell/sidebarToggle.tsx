@@ -49,13 +49,8 @@ export function SidebarSlot({ children }: { children: ReactNode }) {
   const open = usePref(prefs.sidebar);
   useSidebarKey();
   return (
-    <div
-      inert={!open}
-      aria-hidden={!open}
-      data-open={open}
-      className="sidebar-slot flex shrink-0 overflow-hidden"
-    >
-      {children}
+    <div inert={!open} aria-hidden={!open} data-open={open} className="sidebar-slot shrink-0">
+      <div className="sidebar-slide">{children}</div>
     </div>
   );
 }

@@ -60,9 +60,6 @@ export function SidePanel({
   const panel = useRef<HTMLElement>(null);
   const drag = useRef<{ x: number; width: number; scale: number } | null>(null);
   const { motion, from, ended } = usePanelMotion(panel, width);
-  // While it slides, the content keeps its full width and is cut at the
-  // moving edge, so it comes and goes without reflowing.
-  const sliding = motion !== "open";
 
   const set = (next: number, keep = false) => {
     const clamped = clamp(next);
@@ -149,12 +146,7 @@ export function SidePanel({
       >
         <span className="absolute inset-y-0 left-[3px] w-0.5 bg-transparent transition-colors group-hover:bg-line-strong group-focus-visible:bg-work group-active:bg-work" />
       </div>
-      <div
-        className="flex min-h-0 flex-1 flex-col"
-        style={sliding && !expanded ? { width, alignSelf: "flex-start" } : undefined}
-      >
-        {children}
-      </div>
+      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
     </aside>
   );
 }
