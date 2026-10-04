@@ -29,8 +29,11 @@ export const PanelClosing = createContext<{ closed(): void } | null>(null);
  */
 export const PanelRestored = createContext(false);
 
-/** The panel that just went away without sliding: another replaces it. */
-let replaced: { width: number; at: number } | null = null;
+/**
+ * The panel that just went away without sliding: another replaces it. Not
+ * the same one mounted again (React's strict mode in dev does that).
+ */
+let replaced: { width: number; at: number; panel: RefObject<HTMLElement | null> } | null = null;
 
 export type Motion = "opening" | "open" | "closing";
 
@@ -46,7 +49,7 @@ export function usePanelMotion(panel: RefObject<HTMLElement | null>, width: numb
   // Before the first paint: start from the panel this one replaces, and
   // leave this one's width for the next when it goes the same way.
   useLayoutEffect(() => {
-    if (replaced && performance.now() - replaced.at < SWITCH_MS) {
+    if (replaced && replaced.panel !== panel && performance.now() - replaced.at < SWITCH_MS) {
       setFrom(replaced.width);
     }
     replaced = null;
@@ -54,7 +57,7 @@ export function usePanelMotion(panel: RefObject<HTMLElement | null>, width: numb
     return () => {
       if (now.current.motion !== "closing") {
         const shown = element.current?.offsetWidth || now.current.width;
-        replaced = { width: shown, at: performance.now() };
+        replaced = { width: shown, at: performance.now(), panel: element };
       }
     };
   }, [panel]);
