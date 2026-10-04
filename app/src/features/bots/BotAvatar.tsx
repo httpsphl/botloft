@@ -100,6 +100,7 @@ export function BotAvatar({
   still = false,
   botId,
   arriving = false,
+  starting = false,
 }: {
   color: string;
   size?: number;
@@ -111,6 +112,8 @@ export function BotAvatar({
   botId?: BotId | undefined;
   /** Pops in: its bot was just created. */
   arriving?: boolean;
+  /** Its bot is starting up: done, it does not cheer as for finished work. */
+  starting?: boolean;
 }) {
   // Every avatar on the page needs its own clip, blur and gradients.
   const unique = useId().replace(/[^\w-]/g, "");
@@ -126,7 +129,7 @@ export function BotAvatar({
     [color],
   );
   const svg = useRef<SVGSVGElement>(null);
-  const moment = useMoment(mood);
+  const moment = useMoment(mood, starting);
   const arrive = useArrive(arriving);
   const glance = useGlance(mood && !still ? botId : undefined, svg);
   const style = mood
@@ -148,7 +151,7 @@ export function BotAvatar({
       data-still={still || undefined}
       data-bot={botId}
       data-cheer={moment === "cheer" || undefined}
-      data-wake={moment === "wake" || undefined}
+      data-wake={(moment === "wake" && !arrive) || undefined}
       data-arrive={(mood && arrive) || undefined}
       data-glance={glance ? "" : undefined}
       style={style}

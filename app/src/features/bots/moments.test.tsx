@@ -32,6 +32,37 @@ describe("moments", () => {
     expect(svgOf(container).hasAttribute("data-wake")).toBe(false);
   });
 
+  test("does not cheer when it only finished starting up", () => {
+    const { container, rerender } = render(<BotAvatar color="#5ec8ff" mood="working" starting />);
+    rerender(<BotAvatar color="#5ec8ff" mood="idle" />);
+    expect(svgOf(container).hasAttribute("data-cheer")).toBe(false);
+
+    // Started, then worked: finishing that work is worth a cheer.
+    rerender(<BotAvatar color="#5ec8ff" mood="working" starting />);
+    rerender(<BotAvatar color="#5ec8ff" mood="working" />);
+    rerender(<BotAvatar color="#5ec8ff" mood="idle" />);
+    expect(svgOf(container).hasAttribute("data-cheer")).toBe(true);
+  });
+
+  test("a new bot that starts up while it pops in does not wake on top of it", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(APP_OPENED + 60_000);
+    const created = { id: "bot_new" as BotId, color: "#9be564", paused: false };
+    const createdAt = APP_OPENED + 59_000;
+    const { container, rerender } = render(
+      <ListAvatar bot={{ ...created, state: "offline", createdAt }} crewPaused={false} size={32} />,
+    );
+    rerender(
+      <ListAvatar
+        bot={{ ...created, state: "launching", createdAt }}
+        crewPaused={false}
+        size={32}
+      />,
+    );
+    expect(svgOf(container).hasAttribute("data-arrive")).toBe(true);
+    expect(svgOf(container).hasAttribute("data-wake")).toBe(false);
+  });
+
   test("a bot created a moment ago pops in once; an older one does not", () => {
     vi.useFakeTimers();
     vi.setSystemTime(APP_OPENED + 60_000);

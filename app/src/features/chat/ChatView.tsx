@@ -194,7 +194,13 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
           {chat.items.length === 0 && !chat.loading && !chat.error && !live && (
             <div className="flex flex-col items-center gap-3 py-16 text-center">
               <span className="animate-float">
-                <BotAvatar color={bot.color} size={56} mood={moodOf(bot, stopped)} botId={bot.id} />
+                <BotAvatar
+                  color={bot.color}
+                  size={56}
+                  mood={moodOf(bot, stopped)}
+                  botId={bot.id}
+                  starting={bot.state === "launching"}
+                />
               </span>
               <p className="font-semibold text-base">{t.chat.view.emptyTitle(bot.name)}</p>
               {bot.role && <p className="max-w-md text-ink-soft text-sm">{bot.role}</p>}

@@ -39,6 +39,7 @@ export function ListAvatar({
       still={still}
       botId={bot.id}
       arriving={arriving}
+      starting={bot.state === "launching"}
     />
   );
 }

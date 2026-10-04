@@ -16,10 +16,19 @@ export const MOMENT_MS: Record<Moment, number> = { cheer: 1200, wake: 800 };
 /** How long a new bot's mascot pops in, as in mascot-wake.css. */
 export const ARRIVE_MS = 700;
 
-/** The moment a change of mood calls for, if any. */
-function momentOf(last: Mood | undefined, mood: Mood | undefined): Moment | null {
-  if (last === "working" && mood === "idle") return "cheer";
-  if (last === "sleeping" && mood !== undefined && mood !== "sleeping") return "wake";
+interface Seen {
+  mood: Mood | undefined;
+  /** The bot was starting up (launching), which also shows as working. */
+  starting: boolean;
+}
+
+/**
+ * The moment a change of mood calls for, if any. Only a bot that finished
+ * real work cheers: one that just finished starting up does not.
+ */
+function momentOf(last: Seen, mood: Mood | undefined): Moment | null {
+  if (last.mood === "working" && !last.starting && mood === "idle") return "cheer";
+  if (last.mood === "sleeping" && mood !== undefined && mood !== "sleeping") return "wake";
   return null;
 }
 
@@ -27,12 +36,12 @@ function momentOf(last: Mood | undefined, mood: Mood | undefined): Moment | null
  * The moment the mascot is in now: from the change of mood that calls for
  * it, for as long as it lasts. One that shows up in a mood makes none.
  */
-export function useMoment(mood: Mood | undefined): Moment | null {
-  const [last, setLast] = useState(mood);
+export function useMoment(mood: Mood | undefined, starting = false): Moment | null {
+  const [last, setLast] = useState<Seen>({ mood, starting });
   const [moment, setMoment] = useState<Moment | null>(null);
-  if (mood !== last) {
-    setLast(mood);
-    setMoment(momentOf(last, mood));
+  if (mood !== last.mood || starting !== last.starting) {
+    setLast({ mood, starting });
+    if (mood !== last.mood) setMoment(momentOf(last, mood));
   }
   useEffect(() => {
     if (!moment) return;
