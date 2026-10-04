@@ -122,7 +122,11 @@ export function SidePanel({
         } as CSSProperties
       }
       className={`relative flex shrink-0 flex-col border-line border-l bg-panel ${
-        motion === "opening" ? "panel-opening" : motion === "closing" ? "panel-closing" : ""
+        motion === "opening"
+          ? `panel-opening ${from > 0 ? "panel-swapped" : ""}`
+          : motion === "closing"
+            ? "panel-closing"
+            : ""
       }`}
       onAnimationEnd={ended}
     >

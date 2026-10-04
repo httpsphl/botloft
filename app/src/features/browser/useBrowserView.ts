@@ -2,7 +2,7 @@
 // asks for its live frames and hears what the bot does, and stops asking
 // when the panel closes. The browser's state itself lives in the store.
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Bot, BrowserAction, BrowserFrame } from "../../lib/protocol.gen";
 import { useApi, useApp } from "../../store/context";
 
@@ -15,17 +15,44 @@ export interface BrowserView {
   watched: boolean;
 }
 
+/**
+ * The newest picture of each bot's page, so the panel opening again (from
+ * the dock) shows it at once while the watch starts again.
+ */
+const lastFrames = new WeakMap<object, Map<string, BrowserFrame>>();
+
+function framesOf(api: object): Map<string, BrowserFrame> {
+  let frames = lastFrames.get(api);
+  if (!frames) {
+    frames = new Map();
+    lastFrames.set(api, frames);
+  }
+  return frames;
+}
+
 export function useBrowserView(bot: Bot, watching: boolean): BrowserView {
   const api = useApi();
   const connected = useApp((state) => state.connection.kind === "open");
   const putBrowser = useApp((state) => state.putBrowser);
-  const [frame, setFrame] = useState<BrowserFrame | null>(null);
+  const frames = framesOf(api);
+  const [frame, setShown] = useState<BrowserFrame | null>(() => frames.get(bot.id) ?? null);
+  const setFrame = useCallback(
+    (next: BrowserFrame | null | ((current: BrowserFrame | null) => BrowserFrame | null)) =>
+      setShown((current) => {
+        const value = typeof next === "function" ? next(current) : next;
+        if (value) {
+          frames.set(value.botId, value);
+        }
+        return value;
+      }),
+    [frames],
+  );
   const [action, setAction] = useState<BrowserAction | null>(null);
   const [watched, setWatched] = useState(false);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: another bot's page is not this bot's
   useEffect(() => {
-    setFrame(null);
+    setFrame(frames.get(bot.id) ?? null);
     setAction(null);
   }, [bot.id]);
 
@@ -59,7 +86,7 @@ export function useBrowserView(bot: Bot, watching: boolean): BrowserView {
       unsubscribe();
       api.call("browser.unwatch").catch(() => {});
     };
-  }, [api, bot.id, watching, connected, putBrowser]);
+  }, [api, bot.id, watching, connected, putBrowser, setFrame]);
 
   return { frame, action, watched };
 }

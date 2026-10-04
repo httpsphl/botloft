@@ -74,7 +74,7 @@ describe("browser panel", () => {
   test("gives the page the shape of the room the panel has, and shows it as large as fits", async () => {
     const { fake, scout } = crew();
     fake.browser.open(scout.id, "https://example.com/", "Example");
-    // The panel under its address row, as the app measures it: 508 by 624
+    // The panel under its address row, as the app measures it: 516 by 688
     // for the page, once what goes around and under it is set aside.
     vi.spyOn(Element.prototype, "clientWidth", "get").mockReturnValue(560);
     vi.spyOn(Element.prototype, "clientHeight", "get").mockReturnValue(804);
@@ -82,9 +82,9 @@ describe("browser panel", () => {
     fireEvent.click(toggle());
     const resized = () =>
       fake.calls.filter((call) => call.method === "browser.resize").map((call) => call.params);
-    await waitFor(() => expect(resized()).toEqual([{ botId: scout.id, width: 508, height: 624 }]));
-    // As wide as ever, and as tall as the room's shape asks.
-    expect(fake.browser.size(scout.id)).toEqual({ width: 1280, height: 1572 });
+    await waitFor(() => expect(resized()).toEqual([{ botId: scout.id, width: 516, height: 688 }]));
+    // A narrow room keeps the desktop layout's width, in the room's shape.
+    expect(fake.browser.size(scout.id)).toEqual({ width: 800, height: 1066 });
 
     act(() => {
       fake.browser.frame(scout.id, "AAAA");
@@ -92,7 +92,7 @@ describe("browser panel", () => {
     // The bot's cursor lands where it acted on the taller page.
     const screenshot = within(panel()).getByRole("figure", { name: "What Scout sees" });
     act(() => {
-      fake.browser.act(scout.id, "click", { x: 640, y: 1572, label: "More" });
+      fake.browser.act(scout.id, "click", { x: 400, y: 1066, label: "More" });
     });
     const cursor = screenshot.querySelector(".bot-cursor") as HTMLElement;
     expect(cursor.style.top).toBe("100%");

@@ -279,7 +279,7 @@ mod tests {
         assert!(!fits(&mouse(f64::NAN, 10.0)));
         assert!(!fits(&mouse(10.0, 900.0)));
         // A taller page takes points further down.
-        let tall = Viewport::fitting(640, 700);
+        let tall = Viewport::fitting(640, 1000);
         assert!(super::fits(&mouse(10.0, 900.0), tall));
         let long = BrowserInput::Text {
             text: "x".repeat(TEXT_MAX + 1),

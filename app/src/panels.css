@@ -21,6 +21,20 @@
   animation: panel-open 460ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
+/* One panel replacing another (the dock, or a header button while one is
+   open): it does not slide in again, its content fades up in place. The
+   dock at its foot stays still. */
+@keyframes panel-swap {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.panel-swapped > :not([data-steady]):not([role="separator"]) {
+  animation: panel-swap 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
 /* Out of the flow, on the right edge of the chat and its panel. */
 .panel-closing {
   position: absolute;

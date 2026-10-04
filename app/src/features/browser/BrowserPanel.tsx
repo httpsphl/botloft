@@ -16,7 +16,7 @@ import { Callout } from "../../ui/Callout";
 import { EmptyState } from "../../ui/EmptyState";
 import { SidePanel } from "../../ui/SidePanel";
 import { BotAvatar } from "../bots/BotAvatar";
-import { ComputerDock } from "../terminal/ComputerDock";
+import { ComputerFooter } from "../terminal/ComputerDock";
 import { AddressBar } from "./AddressBar";
 import { AskCallout, ControlPill, HeldNotes, TakeNotes } from "./HandsBars";
 import { HandsLayer } from "./HandsLayer";
@@ -34,12 +34,10 @@ const PAD = 12;
  * The bot's color around the page, in px: on the sides and top, and below,
  * where the pill that says who is in control hangs over its edge.
  */
-const STAGE = 14;
-const STAGE_BOTTOM = 30;
+const STAGE = 10;
+const STAGE_BOTTOM = 26;
 /** Kept under the page, for the pill and what the bot just did. */
 const UNDER = 56;
-/** The dock of the bot's computer, on the desk under the page. */
-const DOCK = 56;
 
 export function BrowserPanel({
   bot,
@@ -70,7 +68,7 @@ export function BrowserPanel({
   const [inside, body] = useRoom();
   const room = inside && {
     width: inside.width - 2 * PAD - 2 * STAGE,
-    height: inside.height - 2 * PAD - STAGE - STAGE_BOTTOM - UNDER - DOCK,
+    height: inside.height - 2 * PAD - STAGE - STAGE_BOTTOM - UNDER,
   };
   useFitPage(bot, room, watched);
   // A new tab is blank: the owner says where it goes.
@@ -92,7 +90,7 @@ export function BrowserPanel({
   }, [take, watched, status, hands.held, hands.take]);
 
   return (
-    <SidePanel label={t.panel(bot.name)} name="browser" defaultWidth={560} expanded={expanded}>
+    <SidePanel label={t.panel(bot.name)} name="computer" defaultWidth={600} expanded={expanded}>
       <header className="flex h-11 shrink-0 items-center justify-between border-line border-b pr-1.5 pl-4">
         <h2 className="flex items-center gap-2 font-semibold text-sm">
           {t.heading}
@@ -146,12 +144,7 @@ export function BrowserPanel({
             )}
           </Callout>
         ) : status === "closed" && !frame ? (
-          !windowed && (
-            <>
-              <Empty bot={bot} />
-              <ComputerDock className="mt-auto" />
-            </>
-          )
+          !windowed && <Empty bot={bot} />
         ) : (
           <>
             {live && ask && !hands.held && <AskCallout bot={bot} task={ask} hands={hands} />}
@@ -199,7 +192,6 @@ export function BrowserPanel({
                   )}
                 </div>
               </div>
-              <ComputerDock className="mt-3" />
             </div>
             {(hands.held || (live && !ask)) && (
               <ControlPill key={String(hands.held)} bot={bot} hands={hands} lesson={lesson} />
@@ -229,6 +221,7 @@ export function BrowserPanel({
           </>
         )}
       </div>
+      <ComputerFooter />
       {lesson.done && <LessonDialog bot={bot} lesson={lesson} />}
     </SidePanel>
   );

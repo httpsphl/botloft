@@ -11,7 +11,7 @@ import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { EmptyState } from "../../ui/EmptyState";
 import { SidePanel } from "../../ui/SidePanel";
-import { ComputerDock } from "../terminal/ComputerDock";
+import { ComputerFooter } from "../terminal/ComputerDock";
 import { FilePreview } from "./FilePreview";
 import { fileKind, kindIcon } from "./kinds";
 import type { BotFiles } from "./useBotFiles";
@@ -42,7 +42,7 @@ export function FilesPanel({
     (described?.path === path ? described : undefined);
 
   return (
-    <SidePanel label={t.panel(bot.name)} name="files" defaultWidth={416}>
+    <SidePanel label={t.panel(bot.name)} name="computer" defaultWidth={600}>
       <header className="flex h-11 shrink-0 items-center justify-between border-line border-b pr-1.5 pl-4">
         <h2 className="font-semibold text-sm">{t.heading}</h2>
         <div className="flex items-center gap-0.5">
@@ -63,9 +63,7 @@ export function FilesPanel({
       ) : (
         <List bot={bot} data={data} since={since} onOpen={onPath} />
       )}
-      <div className="shrink-0 border-line border-t py-2">
-        <ComputerDock />
-      </div>
+      <ComputerFooter />
     </SidePanel>
   );
 }
