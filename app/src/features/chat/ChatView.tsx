@@ -20,6 +20,7 @@ import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { SeenSince } from "../../ui/motion";
 import { BotAvatar, moodOf } from "../bots/BotAvatar";
+import { CallPills, useLiveCalls } from "../messages/CallPills";
 import { BotRun, type Live } from "./BotRun";
 import { ChatComposer } from "./ChatComposer";
 import { InboundRow } from "./InboundRow";
@@ -39,6 +40,8 @@ const hasFiles = (event: DragEvent) => event.dataTransfer.types.includes("Files"
 
 /** Skips the renders of the view around it; the text being written re-renders only the last run. */
 export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
+  // The bots this one is calling, over the end of its chat (spec 15.3).
+  const calls = useLiveCalls((call) => call.fromBotId === bot.id, bot.id);
   const t = useT();
   const focus = useApp((state) => (state.focus?.botId === bot.id ? state.focus.itemId : null));
   const chat = useChat(bot.id, focus);
@@ -218,7 +221,12 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
           </SeenSince.Provider>
         </div>
       </div>
-      <div className="w-full">
+      <div className="relative w-full">
+        {/* Floats over the chat's end, so nothing moves when it comes. */}
+        <CallPills
+          calls={calls}
+          className="absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 justify-center"
+        />
         {/* Keyed by bot: each one has its own draft (spec 15.1). */}
         <ChatComposer key={bot.id} bot={bot} files={files} stopped={stopped} onSent={onSent} />
       </div>

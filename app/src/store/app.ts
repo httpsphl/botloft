@@ -23,6 +23,7 @@ import type {
   Task,
   TaskId,
 } from "../lib/protocol.gen";
+import { type Call, withCall } from "./calls";
 import { withQuestion } from "./questions";
 import { loadMarked, loadSeen, loadSeenSince, seenActions, withReply } from "./seen";
 
@@ -50,6 +51,8 @@ export interface AppState {
    * updated ones and every dead one, then every change.
    */
   deliveries: Record<MessageId, Delivery>;
+  /** Messages bots sent each other since the app connected (`calls.ts`). */
+  calls: Record<MessageId, Call>;
   tasks: Record<TaskId, Task>;
   /** Every routine that is not archived (spec 20), then every change. */
   routines: Record<RoutineId, Routine>;
@@ -163,6 +166,7 @@ export function createAppStore(api: BotloftApi): AppStore {
       bots: {},
       activity: {},
       deliveries: {},
+      calls: {},
       tasks: {},
       routines: {},
       browsers: {},
@@ -252,6 +256,7 @@ function withoutBots(state: AppState, botIds: BotId[]): Partial<AppState> {
     browsers: kept(state.browsers, (browser) => !gone.has(browser.botId)),
     questions: kept(state.questions, (question) => !gone.has(question.botId)),
     deliveries: kept(state.deliveries, (delivery) => !gone.has(delivery.botId)),
+    calls: kept(state.calls, (call) => !gone.has(call.fromBotId) && !gone.has(call.toBotId)),
     tasks: kept(
       state.tasks,
       (task) => !gone.has(task.requesterBotId) && !gone.has(task.assigneeBotId),
@@ -311,6 +316,8 @@ export function applyEvent(state: AppState, event: ServerEvent): Partial<AppStat
         replyAt: withReply(state.replyAt, item.botId, reply),
       };
     }
+    case "message.created":
+      return withCall(state, event.params);
     case "delivery.changed":
       return { deliveries: { ...state.deliveries, [event.params.messageId]: event.params } };
     case "task.changed":

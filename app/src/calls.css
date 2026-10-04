@@ -1,0 +1,12 @@
+/* Bots calling each other (spec 15.3): the two mascots of a call sit in
+   round badges, the second over the first, so the pair reads at a glance. */
+
+.call-avatar {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--sunken);
+  box-shadow: 0 0 0 2px var(--panel);
+}

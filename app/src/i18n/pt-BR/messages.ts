@@ -1,6 +1,12 @@
 import type { Messages } from "../en";
 
 export const messages: Messages["messages"] = {
+  calls: {
+    label: "Bots chamando uns aos outros",
+    caller: (bot) => `${bot}:`,
+    calling: (bot) => `Chamando ${bot}`,
+    picked: (bot) => `${bot} atendeu`,
+  },
   composer: {
     messageTo: "Mensagem para",
     recipient: "Destinatário",

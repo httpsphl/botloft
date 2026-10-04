@@ -11,6 +11,7 @@ import { FakeHost } from "../lib/fakeHost";
 import type { Host } from "../lib/host";
 import { PROTOCOL_VERSION } from "../lib/protocol.gen";
 import { seedBrowser } from "./seedBrowser";
+import { seedCalls } from "./seedCalls";
 import { seedChats } from "./seedChats";
 import { seedChief } from "./seedChief";
 import { seedContext } from "./seedContext";
@@ -132,6 +133,7 @@ function seed(fake: FakeBotloft): void {
   fake.browser.rest(analyst.id);
   seedScreens(fake, research.id);
   seedHands(fake, research.id);
+  seedCalls(fake, { writer: writer.id, reviewer: reviewer.id });
   const ops = fake.addCrew("Ops");
   const deploy = fake.addBot(ops.id, "Deploy", "Ships the site on Fridays");
   const watcher = fake.addBot(ops.id, "Watcher", "Keeps an eye on the error log");
