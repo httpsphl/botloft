@@ -71,6 +71,20 @@ export const chat = {
     error: "Error",
     command: "Command",
     commandCut: "This command is too long to show in full.",
+    /** A finished group of calls in one line: "Ran 4 commands, read 2 files". */
+    group: {
+      command: (n: number) => (n === 1 ? "ran 1 command" : `ran ${n} commands`),
+      read: (n: number) => (n === 1 ? "read 1 file" : `read ${n} files`),
+      edit: (n: number) => (n === 1 ? "edited 1 file" : `edited ${n} files`),
+      search: (n: number) =>
+        n === 1 ? "searched the files once" : `searched the files ${n} times`,
+      web: (n: number) => (n === 1 ? "read 1 web page" : `read ${n} web pages`),
+      browser: (n: number) =>
+        n === 1 ? "took 1 step in the browser" : `took ${n} steps in the browser`,
+      message: (n: number) => (n === 1 ? "sent 1 message" : `sent ${n} messages`),
+      other: (n: number) => (n === 1 ? "used 1 tool" : `used ${n} tools`),
+      failed: (n: number) => `${n} failed`,
+    },
   },
   approval: {
     asks: (bot: string, action: string) => `${bot} asks to ${action}`,

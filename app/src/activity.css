@@ -1,0 +1,40 @@
+/* What a bot is doing right now (features/chat/ToolGroup.tsx): a light
+   sweeps across the name of the call it is on. */
+
+.activity-shine {
+  background:
+    linear-gradient(
+      90deg,
+      var(--muted) 0%,
+      var(--muted) 35%,
+      var(--ink) 50%,
+      var(--muted) 65%,
+      var(--muted) 100%
+    )
+    0 0 / 250% 100%;
+  background-clip: text;
+  color: transparent;
+  animation: activity-shine 2.2s linear infinite;
+}
+
+@keyframes activity-shine {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0% 0;
+  }
+}
+
+/* Without motion, the name stands still in plain ink. */
+@media (prefers-reduced-motion: reduce) {
+  .activity-shine {
+    background: none;
+    color: var(--ink);
+  }
+}
+
+:root[data-motion="less"] .activity-shine {
+  background: none;
+  color: var(--ink);
+}
