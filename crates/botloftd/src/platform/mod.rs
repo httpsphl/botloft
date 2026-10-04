@@ -1,6 +1,7 @@
 //! Everything that talks to the operating system directly. The rest of the
 //! daemon calls these functions and never Win32.
 
+pub mod desktop;
 #[cfg(unix)]
 mod unix;
 #[cfg(windows)]
