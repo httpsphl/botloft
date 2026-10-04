@@ -1,6 +1,6 @@
 # Botloft
 
-Workspace desktop Windows-first e open-source para rodar bots Claude Code sempre ligados que colaboram entre si. Daemon Rust (`botloftd`) + app Tauri v2 + React.
+Workspace desktop Windows-first, com código público sob a FSL (vira Apache 2.0 após dois anos), para rodar bots Claude Code sempre ligados que colaboram entre si. Daemon Rust (`botloftd`) + app Tauri v2 + React.
 
 ## Fonte de verdade
 
