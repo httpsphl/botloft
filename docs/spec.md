@@ -1045,6 +1045,7 @@ M2 a M4 foram entregues com ConPTY, terminal com replay, inbox por named pipe e 
 7. Sinais entre bots disparando rotinas. Feito (20.13).
 8. Suporte Linux/macOS. Em fatias: (1) CI com Ubuntu e macOS para o daemon; (2) runtime do bot (grupo de processos, ambiente, `claude`, navegador); (3) iniciar com o sistema (`systemd --user`, LaunchAgent); (4) app; (5) empacotamento e release. Feitas: 1 a 5 (14.1, 15.2, 15.4 a 15.6). O macOS sai sem notarização (sem conta Apple Developer por enquanto).
 9. Navegador dos bots, com o dono assistindo ao vivo. Desenho na seção 21.
+10. Bots vendo e usando os apps abertos no desktop do dono, com permissões por app ou do desktop inteiro. Desenho na seção 24 e em `docs/adr/0002-desktop-use.md`.
 
 ## 19. Pontos a verificar na versão alvo do Claude Code
 
@@ -1104,6 +1105,10 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28; esf
 | CLAUDE.md do dono nos bots | 5, 7.5 | Confirmado (`memory`, `settings-reference`): o Claude Code carrega `CLAUDE.md`, `CLAUDE.local.md` e `.claude/CLAUDE.md` do cwd e de toda pasta acima dele; `claudeMdExcludes` pula arquivos por caminho absoluto ou glob, vale em qualquer camada de settings e também para `AGENTS.md`; o `CLAUDE.md` gerenciado não pode ser excluído. **Testado com 2.1.284** (`-p --setting-sources project,local`, `memoryFiles` do `get_context_usage`, numa pasta de teste dentro de `%USERPROFILE%`). Sem a setting: o `%USERPROFILE%\.claude\CLAUDE.md` do dono entra como `Project`, e de cada pasta acima entram `CLAUDE.md`, `CLAUDE.local.md`, `.claude/CLAUDE.md` e `.claude/rules/` com as subpastas; as skills são só as embutidas. Forma do padrão: `C:/Users/...` e `C:\Users\...` casam, também misturadas; `/c/Users/...` e `//c/Users/...` não casam; a comparação diferencia maiúsculas, até na letra do drive, e o Claude Code monta os caminhos com o cwd como o recebeu (um cwd em minúsculas aparece em minúsculas). Numa pasta chamada `odd (x) [y] {z}`, o caminho exato de um arquivo ainda casa, mas `.../.claude/rules/**` não; com `?` no lugar de cada um desses seis caracteres, casa. Espaço, acento e ``!+@#$%^&',;=~`` casam como estão. O `AGENTS.md` de uma pasta acima só entra com `instructionFiles: claude-md-and-agents-md` (os bots sempre têm `CLAUDE.md`), e o padrão o tira. `--add-dir` carrega `CLAUDE.md` e `.claude/rules/` só da própria pasta: os das pastas acima de uma pasta de trabalho escolhida não entram, com ou sem a setting. **Pelo daemon de dev** (workspaces dentro de `%USERPROFILE%`, com `CLAUDE.md` de teste em cada pasta acima; Haiku): com o `settings.json` gerado, `memoryFiles` e o próprio bot listaram só o `CLAUDE.md` da pasta da crew, o do bot, as regras e o da `shared\` | feito |
 | Memória automática do Claude Code nos bots | 7.5 | Confirmado (`memory`, `settings-reference`): ligada por padrão; o Claude Code grava `MEMORY.md` e um arquivo por nota em `%USERPROFILE%\.claude\projects\<projeto>\memory\` e carrega o índice em toda sessão; `<projeto>` vem do repositório git ou, fora de um, do caminho do cwd; `autoMemoryEnabled: false` vale em qualquer settings. **Testado com 2.1.284** (`-p --setting-sources project,local`, Haiku): ligada também assim, com cerca de 3 mil tokens a mais no prompt de sistema (6457 contra 3495). A pasta `memory\` é criada quando a sessão sobe. Pedido para lembrar de uma coisa, o bot gravou a nota e o `MEMORY.md` nessa pasta, fora do workspace, sem pedido de permissão no modo `default`, e não tocou no `CLAUDE.md` dele. O nome de `<projeto>` é o caminho com `-` no lugar de tudo que não é letra nem número (`C--Users-ana-Botloft-site-revisor`); por essa regra `site-web\dev` e `site\web-dev` dariam a mesma pasta (não testado). Com o cwd dentro de um repositório git, a sessão carregou como `AutoMem` o `MEMORY.md` que o Claude Code guarda para o dono naquele repositório. Com `autoMemoryEnabled: false` no `settings.json` do projeto, o prompt encolhe e nada disso é carregado, nem dentro do repositório. **Pelo daemon de dev** (Haiku, "Aceitar edições"): pedido para lembrar, o bot editou o `CLAUDE.md` do workspace, e nenhuma pasta `memory\` foi criada. Mover a memória automática para dentro do workspace (`autoMemoryDirectory`) não foi testado | feito |
 | Telas no WebView2 do app | 22.5 | Não visto: a CSP do Tauri com `frame-src http://127.0.0.1:*` e as telas carregando no `iframe` | manual (PR): `pnpm tauri dev`, pedir uma página HTML a um bot e ver a área de design |
+| UI Automation com a tela bloqueada | 24.8 | **A verificar** (Windows 11): ler a árvore e usar `Invoke` e `Value` numa janela comum com a sessão bloqueada | D5 |
+| `PrintWindow` com `PW_RENDERFULLCONTENT` | 24.4 | **A verificar**: foto de janelas comuns, de apps com GPU (Chromium, Electron) e com a tela bloqueada | D1, D5 |
+| `SetForegroundWindow` vindo do daemon | 24.7 | **A verificar**: o daemon roda como tarefa de logon, sem janela; o Windows pode recusar trazer outra janela para a frente | D4 |
+| Entrada do dono no gancho de baixo nível | 24.7 | **A verificar**: `LLMHF_INJECTED` e `LLKHF_INJECTED` separam a entrada do `SendInput` da do dono | D4 |
 
 Itens do runtime anterior (ConPTY, hooks em exec form, `crossSessionInbound`, linha de auth do inbox, diálogo de confiança, `ESC[6n` do ConPTY, consultas do terminal no replay) foram verificados no M2–M4 e deixaram de se aplicar com a ADR 0001; o histórico está no git e na ADR.
 
@@ -1645,3 +1650,136 @@ Tabela `questions`: `id, crew_id, bot_id, chat_item_id, text, options (JSON), st
 |---|---|---|
 | **P1** Perguntas no daemon | migration, tool `ask_owner`, item `question`, `questions.list`, `questions.answer`, `questions.dismiss`, `question.changed`, a resposta como message, regras do bot, exclusão, testes com `FakeRuntime` | com `FakeRuntime`, um bot pergunta, a tool volta na hora, o dono responde e o bot recebe a resposta pelo stdin com a pergunta citada |
 | **P2** App | cartão no chat, caixa de perguntas na barra lateral, marca de espera, textos nos três idiomas | com o Claude Code real, um bot pergunta, o dono responde pela caixa e o bot continua o trabalho com a resposta |
+
+## 24. Desktop
+
+Status: **desenho** (24.12). É o item 10 da seção 18. Decisões e riscos em `docs/adr/0002-desktop-use.md`.
+
+### 24.1 O que é
+
+O bot vê e usa os aplicativos abertos na tela do dono: lê uma planilha no Excel, preenche um formulário num sistema que não tem site, confere uma janela de um programa antigo. O navegador (21) é dele, isolado; o desktop é do dono, com as contas, os arquivos e as janelas dele. Por isso tudo aqui começa fechado e só abre com uma permissão dada pelo dono, com o que ela deixa fazer escrito na tela.
+
+- **Só no Windows** por enquanto. Fora dele, as tools `desktop_*` respondem que o desktop ainda não está disponível nesse sistema. Todo o código que fala com o Windows fica em `crates/botloftd/src/platform/desktop/` (CLAUDE.md).
+- **No daemon**, como o navegador: o daemon roda na sessão do dono (a tarefa agendada de logon, 14), então enxerga as janelas dele. O app só assiste e dá as permissões.
+- O bot usa o desktop pelas tools `desktop_*` do MCP (24.6). Tudo o que ele faz aparece no chat como qualquer tool, e ao vivo num painel "Desktop" no app (24.9).
+
+### 24.2 Permissões
+
+Cada permissão é de um bot. Ela tem um **alcance**, um **nível** e duas opções.
+
+- **Alcance**, escolhido pelo dono:
+  - **Um app**: as janelas de um programa, identificado pelo executável (caminho completo e nome do produto da versão do arquivo, por exemplo `C:\Program Files\Microsoft Office\root\Office16\EXCEL.EXE`, "Microsoft Excel"). Um executável com o mesmo nome em outra pasta é outro app.
+  - **O desktop inteiro**: todas as janelas de todos os apps, menos as que nunca são liberadas (24.3).
+- **Nível**, separado (o dono libera um, depois o outro):
+  - **Ver**: o bot lista as janelas do alcance, lê o que há nelas (a árvore de acessibilidade, 24.5) e tira fotos delas.
+  - **Mexer**: além de ver, clica, digita, escolhe e rola por acessibilidade (24.5). Pede "Ver" antes.
+- **Mouse e teclado de verdade** (opção de "Mexer", desligada de início): quando a acessibilidade não alcança, o bot move o cursor do dono e digita como se fosse ele (24.7). O dono liga à parte, sabendo que nesse modo o cursor e o teclado são do bot enquanto ele age.
+- **Sem você na frente** (opção, desligada de início): o bot pode ver e mexer no alcance mesmo quando o dono não está olhando, numa rotina de madrugada por exemplo (24.8). Só liga depois de uma tela que explica os riscos e de o dono marcar que entendeu (24.10).
+
+**Como pede.** Na primeira vez que o bot tenta ver ou mexer num app sem permissão, a tool espera o dono pelo caminho das aprovações (10.1), como os sites do navegador (21.5): "<bot> quer ver o Excel" ou "<bot> quer mexer no Excel", com `toolName: "mcp__botloft__desktop"`, entrada `{app, level, why}` e o porquê que o bot deu. O cartão oferece "Só desta vez", "Permitir" (grava) e "Recusar". O desktop inteiro não se pede pelo chat: só o dono o dá, nas permissões do bot (24.10). Sem resposta no prazo, a tool volta com erro.
+
+**Modo do bot.** Ao contrário do navegador, os modos `auto` e `bypass_permissions` (7.4) **não** liberam o desktop: o desktop é do dono, não do bot. Sem permissão gravada, sempre pergunta.
+
+**Tirar.** O dono tira qualquer permissão a qualquer hora (24.10). Pausar o bot ou a crew para tudo o que ele fazia no desktop na hora.
+
+### 24.3 O que nunca é liberado
+
+Nem com o desktop inteiro, nem com o dono pedindo:
+
+- O próprio Botloft (o app e qualquer janela do daemon): um bot não aprova a si mesmo.
+- Janelas de processos com nível de integridade maior que o do daemon (rodando como administrador): o Windows já recusa a entrada (UIPI); o bot também não as vê.
+- A área de trabalho segura (UAC, Ctrl+Alt+Del, tela de bloqueio): o Windows não deixa, e o daemon nem tenta.
+- Terminais e caixas de comando: Prompt de Comando, PowerShell, Windows Terminal, a caixa "Executar" (Win+R), o Editor do Registro, o Agendador de Tarefas. Digitar num terminal passaria por cima das regras de permissão do bot para comandos (10.1); para isso o bot já tem as tools dele.
+- Gerenciadores de senha e cofres: Gerenciador de Credenciais, Segurança do Windows, 1Password, Bitwarden, KeePass, KeePassXC, LastPass, Dashlane.
+- Campos de senha (`IsPassword` da acessibilidade) em qualquer app: o bot não lê o valor e não digita neles. A tool diz que ali é com o dono.
+
+A lista fica no código (`platform/desktop/blocked.rs`), com testes, e entra na tela de riscos (24.10) para o dono saber.
+
+### 24.4 O que o bot vê
+
+- **Janelas**: as de nível superior, visíveis ou minimizadas, com dono (não ferramentas nem janelas sem título). De um app fora do alcance, o bot vê só o nome do app, nunca o título da janela: um título diz o assunto de um e-mail ou o nome de um arquivo.
+- **Foto de uma janela**: `PrintWindow` com `PW_RENDERFULLCONTENT`, que pega a janela mesmo atrás de outras, só a janela, sem o que estiver por cima dela. Uma janela minimizada não tem o que fotografar: a tool diz isso.
+- **Foto do desktop inteiro** (só com esse alcance): a tela toda, com as janelas que nunca são liberadas (24.3) cobertas de preto.
+- **Tamanho**: a foto vai ao bot no tamanho da janela em pixels lógicos (sem a escala do Windows), até 1600 × 1200, reduzida mantendo a proporção. JPEG, qualidade 70, como `browser_screenshot`.
+
+### 24.5 Acessibilidade (UI Automation)
+
+O bot lê e usa as janelas pela **UI Automation** do Windows (`IUIAutomation`, COM), a mesma que os leitores de tela usam. Ela funciona com a janela atrás de outras, sem mexer no cursor do dono.
+
+- **Ler**: a árvore de controles da janela vira texto, como a leitura do navegador (21.6): um controle por linha, com uma `ref` (`d12`), o tipo (botão, campo, caixa de seleção, item de lista, célula, menu), o nome, o valor e o estado (marcado, desativado, expandido, selecionado). Só os controles visíveis na janela, até 600 linhas; `from` continua de onde parou. O valor de campo de senha nunca aparece.
+- **Agir**, pelos padrões da UI Automation:
+  - clicar: `Invoke`, senão `Toggle`, senão `SelectionItem.Select`, senão `ExpandCollapse`;
+  - digitar: `Value.SetValue` (troca o texto; o bot lê o que ficou);
+  - escolher numa lista: `ExpandCollapse` e `SelectionItem` do item pelo nome;
+  - rolar: `Scroll` ou `ScrollItem.ScrollIntoView`.
+- Sem o padrão que a ação pede, a tool explica o que faltou. Com mouse e teclado de verdade ligados (24.7), ela faz a ação com eles; sem, diz que precisaria deles.
+- Depois de agir, a tool espera a janela sossegar (eventos de estrutura parados por 300 ms, até 3 s) e devolve a leitura de novo, como o navegador.
+- As `ref` valem até a próxima leitura daquela janela. Uma `ref` que sumiu é erro que o bot corrige lendo de novo.
+
+### 24.6 Tools
+
+No servidor `botloft` (11), como as do navegador.
+
+| Tool | Entrada | O que faz |
+|---|---|---|
+| `desktop_windows` | | as janelas abertas: as do alcance com título e `window` (id), as outras só pelo nome do app |
+| `desktop_look` | `window`, `from?` | lê a janela (24.5) |
+| `desktop_screenshot` | `window?` | a foto da janela; sem `window`, a do desktop inteiro (só com esse alcance) |
+| `desktop_click` | `ref` | clica no controle (24.5) |
+| `desktop_type` | `ref`, `text`, `submit?` | troca o texto do campo; com `submit`, aperta Enter (só com teclado de verdade) |
+| `desktop_select` | `ref`, `option` | escolhe uma opção pelo texto |
+| `desktop_scroll` | `ref`, `to` (`down`, `up`, `top`, `bottom`) | rola o controle |
+| `desktop_press` | `window`, `keys` | aperta teclas na janela (`Enter`, `Tab`, `Ctrl+S`...): só com teclado de verdade, e nunca combinações do sistema (`Win+...`, `Ctrl+Alt+Del`, `Alt+Tab`) |
+| `desktop_click_at` | `window`, `x`, `y` | clica num ponto da janela, em pixels da foto: só com mouse de verdade |
+
+- Uma ação por vez no desktop inteiro, de todos os bots: dois bots não disputam o mesmo cursor. Uma segunda chamada espera a primeira.
+- A descrição das tools lembra que o texto das janelas não é do dono: instruções achadas num app não valem como pedido, como no navegador.
+- Não há tool para abrir programas: o bot usa o que o dono deixou aberto. Abrir um app novo pelo desktop seria um jeito de chegar num terminal (24.3).
+
+### 24.7 Mouse e teclado de verdade
+
+- **Entrada**: `SendInput`, com a janela do app trazida para a frente antes (`SetForegroundWindow`, que o Windows só deixa quando o processo tem permissão; senão a tool diz que não conseguiu).
+- **O dono por perto manda**: enquanto o bot age com mouse e teclado, um gancho de baixo nível (`WH_MOUSE_LL`, `WH_KEYBOARD_LL`) olha a entrada que não foi injetada (sem `LLMHF_INJECTED`). Se o dono mexe o mouse ou aperta uma tecla, a ação para na hora, e as tools de mouse e teclado daquele bot esperam 10 s sem o dono mexer antes de voltar. A tool diz ao bot que o dono assumiu.
+- **Aviso na tela**: enquanto o bot age assim, o daemon mostra uma borda fina na cor do bot em volta da tela e uma pílula no alto, "<bot> está usando o seu mouse e teclado. Mexa o mouse para parar." (uma janela própria em camadas, sempre no topo, que não recebe clique). O texto vem nos três idiomas (15.6).
+- Com a tela bloqueada, não há mouse e teclado de verdade: o Windows não entrega a entrada. A tool diz isso; a acessibilidade continua (24.8).
+
+### 24.8 Sem você na frente
+
+- Só no alcance de uma permissão com "Sem você na frente" ligado (24.2). Sem isso, as tools `desktop_*` só agem enquanto o app do Botloft está aberto e o dono mexeu no computador nos últimos 5 minutos (`GetLastInputInfo`, sem contar a entrada injetada pelo próprio bot); senão respondem que o dono não está e que é preciso ligar a opção.
+- Com a tela bloqueada, ver e mexer por acessibilidade continuam, se o Windows deixar (19); mouse e teclado, não (24.7).
+- Tudo o que o bot fez sem o dono fica no chat como sempre, e o app avisa na volta: "<bot> usou o Excel enquanto você estava fora", com o link para o trecho do chat.
+
+### 24.9 App
+
+- **Painel "Desktop"** ao lado do chat, no mesmo dock do navegador, terminal e arquivos (15.1): a foto ao vivo da janela em que o bot está agindo (`PrintWindow` a cada mudança, no máximo 5 por segundo, só enquanto o painel está aberto), o nome do app, e a linha do que ele acabou de fazer. Um botão **Parar** encerra o que o bot faz no desktop na hora.
+- **Parar tudo**: um atalho global, `Ctrl+Alt+End`, que o daemon registra (`RegisterHotKey`), para qualquer ação de desktop de qualquer bot, mesmo com o app fechado.
+- O cartão de permissão no chat (24.2) mostra o ícone e o nome do app, o nível pedido, o porquê do bot e o que aquele nível deixa fazer.
+
+### 24.10 Permissões no app
+
+- Em "Configurações do bot", uma seção **Desktop** lista as permissões: o app (ou "Desktop inteiro"), Ver ou Mexer, e as opções. Cada uma com **Tirar**.
+- **Dar o desktop inteiro** e **ligar "Sem você na frente"** abrem uma tela de riscos, em palavras simples, antes de gravar:
+  - o bot vê tudo o que estiver aberto no alcance, inclusive dados pessoais, e-mails, conversas e dados de clientes;
+  - ele pode errar: apagar, enviar ou mudar algo no app como se fosse você;
+  - um texto num app ou numa mensagem pode tentar enganar o bot para fazer outra coisa;
+  - sem você na frente, ninguém vê na hora; você vê depois, no chat;
+  - o que nunca é liberado (24.3).
+  O botão de confirmar só acende depois de o dono marcar "Entendi os riscos". A data em que ele aceitou fica gravada com a permissão.
+- Mouse e teclado de verdade também mostram o que muda (o cursor fica com o bot enquanto ele age, e como parar).
+
+### 24.11 Dados
+
+- Tabela `desktop_grants`: `id`, `bot_id`, `scope` (`app` ou `desktop`), `app_path` e `app_name` (só em `app`), `level` (`see` ou `act`), `real_input` (bool), `unattended` (bool), `accepted_risks_at` (ms Unix, quando aceitou a tela de riscos), `created_at`.
+- Excluir o bot apaga as permissões dele.
+- Nada do que o bot viu fica gravado fora do chat: as fotos vão para o bot e para o painel, e não para o disco. O log nunca guarda texto lido de janelas nem fotos (13).
+
+### 24.12 Marcos
+
+| Marco | O que entra | Teste |
+|---|---|---|
+| **D1** Ver | `desktop_grants`, permissões pelo chat (app, Ver), o que nunca é liberado, `desktop_windows`, `desktop_look`, `desktop_screenshot` de uma janela, a seção Desktop nas configurações do bot | unidade; Windows de verdade com uma janela de teste própria (Win32 com botões e campos, inclusive de senha) |
+| **D2** Mexer | nível Mexer, `desktop_click`, `desktop_type`, `desktop_select`, `desktop_scroll` por acessibilidade, uma ação por vez | a janela de teste e o Bloco de Notas |
+| **D3** Painel | o painel "Desktop" ao vivo, Parar, o atalho global | app com FakeBotloft; o atalho no Windows de verdade |
+| **D4** Mouse e teclado | a opção, `SendInput`, `desktop_press`, `desktop_click_at`, o dono assumindo pelo gancho, o aviso na tela | a janela de teste; o dono simulado por entrada não injetada |
+| **D5** Sem você | a opção, a tela de riscos, o aviso na volta, a regra dos 5 minutos, tela bloqueada | unidade; teste manual com a tela bloqueada |
+| **D6** Desktop inteiro | o alcance, a foto da tela com as janelas bloqueadas cobertas | a janela de teste e uma bloqueada |
