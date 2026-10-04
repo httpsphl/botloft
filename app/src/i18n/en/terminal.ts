@@ -16,5 +16,6 @@ export const terminal = {
     browser: "Browser",
     terminal: "Terminal",
     files: "Files",
+    desktop: "Desktop",
   },
 };

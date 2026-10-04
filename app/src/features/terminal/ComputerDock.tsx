@@ -1,14 +1,14 @@
-// The dock of a bot's computer (spec 15.1): its browser, its terminal and
-// its files, one click apart, at the foot of each of those panels. The
-// three share one width (`computer`), so moving between them only changes
-// what is inside.
+// The dock of a bot's computer (spec 15.1): its browser, its terminal, its
+// files and the owner's desktop as the bot uses it (spec 24.9), one click
+// apart, at the foot of each of those panels. They share one width
+// (`computer`), so moving between them only changes what is inside.
 
-import { Folder, Globe, type LucideIcon, SquareTerminal } from "lucide-react";
+import { Folder, Globe, type LucideIcon, Monitor, SquareTerminal } from "lucide-react";
 import { createContext, useContext } from "react";
 import { useT } from "../../i18n";
 import type { BotPanel } from "../../store/app";
 
-type Place = Extract<BotPanel, "browser" | "terminal" | "files">;
+type Place = Extract<BotPanel, "browser" | "terminal" | "files" | "desktop">;
 
 /** The panel open and how to open another; absent outside a bot's view. */
 export const Dock = createContext<{ open: BotPanel | null; pick(place: Place): void } | null>(null);
@@ -17,11 +17,13 @@ const PLACES: { place: Place; icon: LucideIcon }[] = [
   { place: "browser", icon: Globe },
   { place: "terminal", icon: SquareTerminal },
   { place: "files", icon: Folder },
+  { place: "desktop", icon: Monitor },
 ];
 
 /**
  * The dock as the foot of a panel: the same place in the browser, the
- * terminal and the files, so it stays still while the panel above changes.
+ * terminal, the files and the desktop, so it stays still while the panel
+ * above changes.
  */
 export function ComputerFooter() {
   const dock = useContext(Dock);

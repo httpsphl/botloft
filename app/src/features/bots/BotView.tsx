@@ -11,6 +11,8 @@ import { useStable } from "../../ui/useStable";
 import { BrowserPanel } from "../browser/BrowserPanel";
 import { ShowBrowser } from "../browser/showBrowser";
 import { ChatView } from "../chat/ChatView";
+import { DesktopPanel } from "../desktop/DesktopPanel";
+import { ShowDesktop } from "../desktop/showDesktop";
 import { FilesPanel } from "../files/FilesPanel";
 import { ShowFile } from "../files/showFile";
 import { useBotFiles } from "../files/useBotFiles";
@@ -134,14 +136,22 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
     }
     setSide("terminal");
   });
+  const showDesktop = useStable(() => {
+    if (filesOpen) {
+      seen();
+    }
+    setSide("desktop");
+  });
   // The dock of the bot's computer: browser, terminal and files.
   const dock = {
     open: side,
-    pick: (place: "browser" | "terminal" | "files") => {
+    pick: (place: "browser" | "terminal" | "files" | "desktop") => {
       if (place === "browser") {
         showBrowser();
       } else if (place === "terminal") {
         showTerminal();
+      } else if (place === "desktop") {
+        showDesktop();
       } else if (!filesOpen) {
         toggleFiles();
       }
@@ -184,7 +194,9 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
               <ShowBrowser.Provider value={showBrowser}>
                 <ShowScreen.Provider value={showScreen}>
                   <ShowTerminal.Provider value={showTerminal}>
-                    <ChatView bot={bot} stopped={bot.paused || crew.paused} />
+                    <ShowDesktop.Provider value={showDesktop}>
+                      <ChatView bot={bot} stopped={bot.paused || crew.paused} />
+                    </ShowDesktop.Provider>
                   </ShowTerminal.Provider>
                 </ShowScreen.Provider>
               </ShowBrowser.Provider>
@@ -221,6 +233,7 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
                 />
               )}
               {beside === "terminal" && <TerminalPanel bot={bot} onClose={() => setSide(null)} />}
+              {beside === "desktop" && <DesktopPanel bot={bot} onClose={() => setSide(null)} />}
             </PanelClosing.Provider>
           </PanelRestored.Provider>
         </Dock.Provider>

@@ -30,6 +30,7 @@ import { useT } from "../../i18n";
 import type { ChatItem, ToolItem } from "../../lib/protocol.gen";
 import { useArrival } from "../../ui/motion";
 import { isBrowserTool, ShowBrowser } from "../browser/showBrowser";
+import { isDesktopTool, ShowDesktop } from "../desktop/showDesktop";
 import { ShowFile } from "../files/showFile";
 import { isScreenFile, ShowScreen } from "../screens/showScreen";
 import { ShowTerminal } from "../terminal/showTerminal";
@@ -106,6 +107,7 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
   const showBrowser = useContext(ShowBrowser);
   const showScreen = useContext(ShowScreen);
   const showTerminal = useContext(ShowTerminal);
+  const showDesktop = useContext(ShowDesktop);
   const arrival = useArrival(createdAt);
   const title = toolTitle(tool.name, t.tools);
   // A command reads in the bot's own words, when it gave them; the command
@@ -171,6 +173,17 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
             className="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-sunken hover:text-ink"
           >
             <SquareTerminal aria-hidden size={14} />
+          </button>
+        )}
+        {showDesktop && isDesktopTool(tool.name) && (
+          <button
+            type="button"
+            title={t.desktop.panel.showInPanel}
+            aria-label={`${t.desktop.panel.showInPanel}: ${title}`}
+            onClick={() => showDesktop()}
+            className="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-sunken hover:text-ink"
+          >
+            <Monitor aria-hidden size={14} />
           </button>
         )}
         {showBrowser && isBrowserTool(tool.name) && (
