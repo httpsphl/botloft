@@ -9,7 +9,9 @@ mod prompt;
 use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard};
 
-use botloft_core::chat::{ROUTINE_TOOL, SUGGEST_TOOL, clip, tool_input_max, tool_summary};
+use botloft_core::chat::{
+    CHANGE_ROUTINE_TOOL, ROUTINE_TOOL, SUGGEST_TOOL, clip, tool_input_max, tool_summary,
+};
 use botloft_core::command::tool_explanation;
 use botloft_core::ids::{ApprovalId, BotId, ChatItemId};
 use botloft_core::protocol::{
@@ -158,6 +160,9 @@ pub fn answer(daemon: &Daemon, params: ApprovalsAnswerParams) -> ApiResult<Appro
         }
         Some(input) if params.allow && existing.approval.tool_name == ROUTINE_TOOL => Some(
             crate::tools::check_changed_routine(daemon, &existing.approval.input, &input)?,
+        ),
+        Some(input) if params.allow && existing.approval.tool_name == CHANGE_ROUTINE_TOOL => Some(
+            crate::tools::check_changed_routine_change(daemon, &existing.approval.input, &input)?,
         ),
         _ => None,
     };

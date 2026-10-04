@@ -9,6 +9,12 @@ import { NoteInput, RequestCard, SettledLine } from "../../ui/ChatCard";
 import { Details } from "../../ui/Details";
 import { HELP_TOOL, HelpCard } from "../browser/HelpCard";
 import { SITE_TOOL, SiteCard } from "../browser/SiteCard";
+import {
+  CHANGE_ROUTINE_TOOL,
+  DELETE_ROUTINE_TOOL,
+  RoutineChangeCard,
+  RoutineDeleteCard,
+} from "../routines/RoutineChangeCard";
 import { ROUTINE_TOOL, RoutineRequestCard } from "../routines/RoutineRequestCard";
 import { commandOf, isCommand } from "./command";
 import { PLAN_TOOL, PlanCard } from "./PlanCard";
@@ -62,6 +68,10 @@ export function ApprovalCard({ approval, bot }: { approval: ApprovalItem; bot: B
       return <SuggestionCard approval={approval} bot={bot} />;
     case ROUTINE_TOOL:
       return <RoutineRequestCard approval={approval} bot={bot} />;
+    case CHANGE_ROUTINE_TOOL:
+      return <RoutineChangeCard approval={approval} bot={bot} />;
+    case DELETE_ROUTINE_TOOL:
+      return <RoutineDeleteCard approval={approval} bot={bot} />;
     case SITE_TOOL:
       return <SiteCard approval={approval} bot={bot} />;
     case HELP_TOOL:

@@ -17,6 +17,7 @@ use tracing::warn;
 use super::Failure;
 use super::catalog::{COMPLETE_TASK, CREW_ROSTER, MY_TASKS, SEND_MESSAGE};
 use super::question::{self, ASK_OWNER};
+use super::routine_change;
 use super::share::{self, SHARE_FILE};
 use super::signal::{self, SEND_SIGNAL};
 use crate::service::tasks::{self, BotMessage};
@@ -42,6 +43,7 @@ pub(super) fn call(daemon: &Daemon, bot: &BotId, params: &Value) -> Result<Value
         SHARE_FILE => parse(arguments).and_then(|args| share::share(daemon, bot, args)),
         ASK_OWNER => parse(arguments).and_then(|args| question::ask(daemon, bot, args)),
         SEND_SIGNAL => parse(arguments).and_then(|args| signal::send(daemon, bot, args)),
+        routine_change::MY_ROUTINES => routine_change::mine(daemon, bot),
         other => return Err(invalid(&format!("Unknown tool: {other}"))),
     };
     Ok(tool_result(outcome))
