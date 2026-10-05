@@ -27,11 +27,24 @@ const PREVIEW_MAX_BYTES: u64 = 20 * 1024 * 1024;
 /// Generated for the bot by the daemon: not something it made for the owner.
 const WORKSPACE_SKIP: [&str; 2] = ["attachments", "CLAUDE.md"];
 
-/// Where a bot's files live, and what it wrote by name.
+/// Where a bot's files live, what it wrote by name, and where its writes
+/// never count: Botloft's data and the other crews' folders (spec 7.5).
 struct Places {
     work: PathBuf,
     workspace: PathBuf,
     written: Vec<String>,
+    fenced: Vec<PathBuf>,
+}
+
+impl Places {
+    /// A file the bot wrote, unless it is behind a fence.
+    fn wrote(&self, path: &Path) -> bool {
+        !self
+            .fenced
+            .iter()
+            .filter_map(|folder| folder.canonicalize().ok())
+            .any(|folder| path.starts_with(folder))
+    }
 }
 
 fn places(daemon: &Daemon, bot_id: &BotId) -> ApiResult<(BotRecord, Places)> {
@@ -39,11 +52,13 @@ fn places(daemon: &Daemon, bot_id: &BotId) -> ApiResult<(BotRecord, Places)> {
     let bot = bots::find(&store, bot_id)?;
     let crew = crews::find(&store, &bot.crew_id)?;
     let written = store.written_files(&bot.id, WRITTEN_MAX)?;
+    let crews = store.crews(true)?;
     drop(store);
     let places = Places {
         work: daemon.paths.work_folder(&crew),
         workspace: daemon.paths.bot_workspace(&crew.slug, &bot.slug),
         written,
+        fenced: crate::workspace::fences(&daemon.paths, &crew, &crews),
     };
     Ok((bot, places))
 }
@@ -74,6 +89,7 @@ pub fn list(daemon: &Daemon, params: FilesListParams) -> ApiResult<Vec<BotFile>>
         let path = PathBuf::from(path);
         if let Ok(meta) = std::fs::metadata(&path)
             && meta.is_file()
+            && path.canonicalize().is_ok_and(|real| places.wrote(&real))
         {
             found.entry(key(&path)).or_insert_with(|| Found {
                 size: meta.len(),
@@ -141,7 +157,8 @@ fn reach(places: &Places, asked: &Path) -> Result<(PathBuf, std::fs::Metadata), 
         .written
         .iter()
         .filter_map(|file| Path::new(file).canonicalize().ok())
-        .any(|file| file == path);
+        .any(|file| file == path)
+        && places.wrote(&path);
     if !asked.is_absolute() || !(inside || written) {
         return Err(Refused::Outside);
     }

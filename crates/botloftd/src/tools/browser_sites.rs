@@ -13,6 +13,15 @@ use crate::approvals::{self, Answer};
 use crate::browser::{Session, sites};
 use crate::state::Daemon;
 
+const CONTROL_PORT: &str = "That address is the control port of a browser Botloft runs, which no \
+    page may open, in any mode.";
+
+/// Whether `url` is the DevTools port of a bot's browser, its own or
+/// another crew's (spec 21.5).
+fn control_port(daemon: &Daemon, url: &str) -> bool {
+    sites::loopback_port(url).is_some_and(|port| daemon.browsers.devtools_ports().contains(&port))
+}
+
 /// Whether the bot may use `site`, asking the owner the first time when
 /// its mode asks first (spec 21.5).
 pub(super) async fn allowed(
@@ -23,6 +32,9 @@ pub(super) async fn allowed(
     site: &str,
     url: &str,
 ) -> Result<(), String> {
+    if control_port(daemon, url) {
+        return Err(CONTROL_PORT.to_owned());
+    }
     if matches!(
         bot.mode,
         PermissionMode::Auto | PermissionMode::BypassPermissions
@@ -70,6 +82,10 @@ pub(super) async fn page_allowed(
 ) -> Result<(), String> {
     if sites::is_file(url) {
         return outside_file(session, bot, url).await;
+    }
+    if control_port(daemon, url) {
+        let _ = session.open("about:blank").await;
+        return Err(format!("{CONTROL_PORT} It was closed."));
     }
     match sites::site_of(url) {
         Some(site) => allowed(daemon, id, generation, bot, &site, url).await,

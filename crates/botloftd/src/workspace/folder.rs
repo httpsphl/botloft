@@ -5,11 +5,14 @@
 use std::io;
 use std::path::{Component, Path, PathBuf};
 
+use botloft_core::protocol::Crew;
+
 use crate::paths::Paths;
 
-/// Checks `input` and creates the folder if it is missing. The error is a
-/// sentence for the owner.
-pub fn choose(paths: &Paths, input: &str) -> Result<PathBuf, String> {
+/// Checks `input` for the crew with folder `slug` and creates the folder if
+/// it is missing. `others` are the other crews, archived ones too: their
+/// folders stay on disk. The error is a sentence for the owner.
+pub fn choose(paths: &Paths, slug: &str, others: &[Crew], input: &str) -> Result<PathBuf, String> {
     let input = input.trim();
     if input.is_empty() {
         return Err("the work folder must not be empty".to_owned());
@@ -30,6 +33,22 @@ pub fn choose(paths: &Paths, input: &str) -> Result<PathBuf, String> {
     }
     if contains(&path, &paths.workspaces_root) {
         return Err("the work folder cannot contain the folders of every bot".to_owned());
+    }
+    // Inside the bots' folders, only in the crew's own.
+    if contains(&paths.workspaces_root, &path) && !contains(&paths.crew_dir(slug), &path) {
+        return Err("the work folder cannot be inside another crew's folder".to_owned());
+    }
+    for other in others {
+        let mut theirs = vec![paths.crew_dir(&other.slug)];
+        if other.work_folder_chosen {
+            theirs.push(PathBuf::from(&other.work_folder));
+        }
+        if theirs.iter().any(|folder| overlaps(&path, folder)) {
+            return Err(format!(
+                "the crew {} already works in that folder or one around it: each crew needs                  a folder of its own",
+                other.name
+            ));
+        }
     }
     create(&path).map_err(|err| format!("could not create the work folder: {err}"))?;
     Ok(path)
@@ -67,7 +86,7 @@ pub(crate) fn contains(outer: &Path, inner: &Path) -> bool {
     inner.len() >= outer.len() && inner[..outer.len()] == outer[..]
 }
 
-fn overlaps(a: &Path, b: &Path) -> bool {
+pub(crate) fn overlaps(a: &Path, b: &Path) -> bool {
     contains(a, b) || contains(b, a)
 }
 
@@ -83,7 +102,13 @@ mod tests {
     fn a_folder_of_the_owner_is_created_and_kept() {
         let dir = tempfile::tempdir().expect("tempdir");
         let wanted = dir.path().join("Projects").join("Site");
-        let chosen = choose(&paths(dir.path()), wanted.to_str().expect("utf-8")).expect("chosen");
+        let chosen = choose(
+            &paths(dir.path()),
+            "site",
+            &[],
+            wanted.to_str().expect("utf-8"),
+        )
+        .expect("chosen");
         assert_eq!(chosen, wanted);
         assert!(wanted.is_dir());
     }
@@ -101,18 +126,60 @@ mod tests {
             dir.path().display().to_string(),
         ];
         for input in refused {
-            assert!(choose(&paths, &input).is_err(), "{input:?} was accepted");
+            assert!(
+                choose(&paths, "site", &[], &input).is_err(),
+                "{input:?} was accepted"
+            );
         }
         let root = dir.path().ancestors().last().expect("root");
-        assert!(choose(&paths, root.to_str().expect("utf-8")).is_err());
+        assert!(choose(&paths, "site", &[], root.to_str().expect("utf-8")).is_err());
+    }
+
+    fn crew(name: &str, work_folder: Option<&Path>) -> Crew {
+        Crew {
+            id: botloft_core::ids::CrewId::generate(),
+            name: name.to_owned(),
+            slug: name.to_lowercase(),
+            work_folder: work_folder
+                .map(|f| f.display().to_string())
+                .unwrap_or_default(),
+            work_folder_chosen: work_folder.is_some(),
+            lead_bot_id: None,
+            paused: false,
+            created_at: 0,
+            archived_at: None,
+        }
     }
 
     #[test]
-    fn a_folder_inside_the_crew_folders_is_fine() {
+    fn a_folder_inside_the_crews_own_folder_is_fine() {
         let dir = tempfile::tempdir().expect("tempdir");
         let paths = paths(dir.path());
         let inside = paths.workspaces_root.join("site").join("out");
-        assert!(choose(&paths, inside.to_str().expect("utf-8")).is_ok());
+        assert!(choose(&paths, "site", &[], inside.to_str().expect("utf-8")).is_ok());
+    }
+
+    #[test]
+    fn another_crews_folders_are_refused() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let paths = paths(dir.path());
+        let shop = dir.path().join("Projects").join("Shop");
+        let others = [crew("Blog", None), crew("Store", Some(&shop))];
+        let refused = [
+            paths.workspaces_root.join("blog").join("out"),
+            paths.workspaces_root.join("newcrew"),
+            shop.join("images"),
+            dir.path().join("Projects"),
+        ];
+        for input in refused {
+            let input = input.display().to_string();
+            assert!(
+                choose(&paths, "site", &others, &input).is_err(),
+                "{input:?} was accepted"
+            );
+        }
+        let apart = dir.path().join("Projects").join("Site");
+        assert!(choose(&paths, "site", &others, apart.to_str().expect("utf-8")).is_ok());
     }
 
     #[cfg(windows)]

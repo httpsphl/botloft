@@ -140,3 +140,17 @@ fn what_the_owner_types_opens_only_as_a_web_address() {
     assert_eq!(open("https://"), None);
     assert_eq!(open(""), None);
 }
+
+#[test]
+fn loopback_addresses_give_their_port() {
+    assert_eq!(loopback_port("http://127.0.0.1:9222/json/list"), Some(9222));
+    assert_eq!(loopback_port("http://LOCALHOST:3000"), Some(3000));
+    assert_eq!(loopback_port("http://a@127.1.2.3:4000/"), Some(4000));
+    assert_eq!(loopback_port("http://[::1]:9222"), Some(9222));
+    assert_eq!(loopback_port("http://0.0.0.0:80"), Some(80));
+    assert_eq!(loopback_port("https://app.localhost/x"), Some(443));
+    assert_eq!(loopback_port("http://localhost"), Some(80));
+    assert_eq!(loopback_port("http://example.com:9222"), None);
+    assert_eq!(loopback_port("http://127.0.0.1.example.com:9222"), None);
+    assert_eq!(loopback_port("file:///C:/x.html"), None);
+}
