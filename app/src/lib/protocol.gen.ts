@@ -82,6 +82,11 @@ export type QuestionId = string;
 export type DesktopGrantId = string;
 
 /**
+ * Identifies a connected tool, an MCP server of the owner (spec 25).
+ */
+export type McpServerId = string;
+
+/**
  * Identifies what the owner let a bot reach in another crew (spec 10.4).
  */
 export type CrewAccessId = string;
@@ -1008,6 +1013,76 @@ export type DesktopWholeParams = { botId: BotId, level: DesktopLevel,
 acceptedRisks: boolean, };
 
 /**
+ * How Claude Code reaches the server.
+ */
+export type McpKind = "stdio" | "http";
+
+/**
+ * A registered server, without its secrets: the values of headers and
+ * environment variables stay in `secrets\mcp` (spec 25.2), and only their
+ * names come here.
+ */
+export type McpServer = { id: McpServerId, name: string, 
+/**
+ * The name Claude Code puts in the tools: `mcp__<slug>__<tool>`.
+ */
+slug: string, kind: McpKind, 
+/**
+ * `http` only.
+ */
+url: string | null, 
+/**
+ * `stdio` only.
+ */
+command: string | null, args: Array<string>, 
+/**
+ * Names of the headers (`http`); their values are secret.
+ */
+headerNames: Array<string>, 
+/**
+ * Names of the environment variables (`stdio`); their values are secret.
+ */
+envNames: Array<string>, 
+/**
+ * What the server is for, in the owner's words. Goes into the rules of
+ * the bots that use it (spec 25.3).
+ */
+description: string, createdAt: number, };
+
+/**
+ * The servers a bot uses.
+ */
+export type BotMcp = { botId: BotId, serverIds: Array<McpServerId>, };
+
+/**
+ * Every server and who uses it: the result of `mcp.servers` and the params
+ * of the `mcp.servers` notification.
+ */
+export type McpOverview = { 
+/**
+ * Oldest first.
+ */
+servers: Array<McpServer>, 
+/**
+ * Only the bots that use some server.
+ */
+bots: Array<BotMcp>, };
+
+/**
+ * Registers a server, or changes one when `server_id` is set. The header
+ * and variable values are the secrets: when changing a server, an empty
+ * value keeps the one already stored under that name.
+ */
+export type McpSaveParams = { serverId: McpServerId | null, name: string, kind: McpKind, url: string | null, command: string | null, args: Array<string>, headers: { [key in string]: string }, env: { [key in string]: string }, description: string, };
+
+export type McpServerIdParams = { serverId: McpServerId, };
+
+/**
+ * Replaces the servers a bot uses.
+ */
+export type BotMcpSetParams = { botId: BotId, serverIds: Array<McpServerId>, };
+
+/**
  * One lasting access: the whole crew, or one bot of it.
  */
 export type CrewAccess = { id: CrewAccessId, 
@@ -1780,6 +1855,10 @@ export interface RpcMethods {
   "desktop.resume": { params: DesktopBotParams; result: DesktopState };
   "desktop.awayUses": { params: undefined; result: Array<DesktopAwayUse> };
   "desktop.dismissAway": { params: undefined; result: null };
+  "mcp.servers": { params: undefined; result: McpOverview };
+  "mcp.save": { params: McpSaveParams; result: McpOverview };
+  "mcp.delete": { params: McpServerIdParams; result: McpOverview };
+  "bot.mcp.set": { params: BotMcpSetParams; result: BotMcp };
   "crewAccess.list": { params: CrewAccessListParams; result: Array<CrewAccess> };
   "crewAccess.revoke": { params: CrewAccessIdParams; result: Array<CrewAccess> };
   "backup.export": { params: BackupExportParams; result: BackupExported };
@@ -1839,6 +1918,8 @@ export interface RpcNotifications {
   "desktop.changed": DesktopState;
   "desktop.frame": DesktopFrame;
   "desktop.away": Array<DesktopAwayUse>;
+  "mcp.servers": McpOverview;
+  "bot.mcp": BotMcp;
   "browser.changed": BrowserState;
   "browser.action": BrowserAction;
   "browser.frame": BrowserFrame;
