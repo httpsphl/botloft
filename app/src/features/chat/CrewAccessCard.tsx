@@ -129,7 +129,13 @@ export function CrewAccessCard({ approval, bot }: { approval: ApprovalItem; bot:
         <ul className="flex flex-col gap-1">
           {(asked.access ?? []).map((kind) => (
             <li key={kind} className="text-ink-soft">
-              {kind === "talk" ? w.talk(target ? target : crew) : kind}
+              {kind === "talk"
+                ? w.talk(target ?? crew)
+                : kind === "read"
+                  ? w.read(target ?? crew)
+                  : kind === "edit"
+                    ? w.edit(target ?? crew)
+                    : kind}
             </li>
           ))}
         </ul>

@@ -17,9 +17,9 @@ use tracing::warn;
 use super::Failure;
 use super::catalog::{COMPLETE_TASK, CREW_ROSTER, MY_TASKS, SEND_MESSAGE};
 use super::question::{self, ASK_OWNER};
-use super::routine_change;
 use super::share::{self, SHARE_FILE};
 use super::signal::{self, SEND_SIGNAL};
+use super::{crew_reach, routine_change};
 use crate::service::tasks::{self, BotMessage};
 use crate::service::{ApiError, bots, lead};
 use crate::state::Daemon;
@@ -35,20 +35,27 @@ pub(super) fn call(daemon: &Daemon, bot: &BotId, params: &Value) -> Result<Value
         .get("arguments")
         .cloned()
         .unwrap_or_else(|| json!({}));
-    let outcome = match name {
-        CREW_ROSTER => parse(arguments).and_then(|args: RosterArgs| match args.crew {
-            Some(crew) => super::crew_access::roster(daemon, bot, &crew).map_err(explain),
-            None => roster(daemon, bot),
-        }),
-        SEND_MESSAGE => parse(arguments).and_then(|args| send(daemon, bot, args)),
-        COMPLETE_TASK => parse(arguments).and_then(|args| complete(daemon, bot, args)),
-        MY_TASKS => parse(arguments).and_then(|args| my_tasks(daemon, bot, args)),
-        SHARE_FILE => parse(arguments).and_then(|args| share::share(daemon, bot, args)),
-        ASK_OWNER => parse(arguments).and_then(|args| question::ask(daemon, bot, args)),
-        SEND_SIGNAL => parse(arguments).and_then(|args| signal::send(daemon, bot, args)),
-        routine_change::MY_ROUTINES => routine_change::mine(daemon, bot),
-        other => return Err(invalid(&format!("Unknown tool: {other}"))),
-    };
+    let outcome =
+        match name {
+            CREW_ROSTER => parse(arguments).and_then(|args: RosterArgs| match args.crew {
+                Some(crew) => super::crew_reach::roster(daemon, bot, &crew).map_err(explain),
+                None => roster(daemon, bot),
+            }),
+            SEND_MESSAGE => parse(arguments).and_then(|args| send(daemon, bot, args)),
+            COMPLETE_TASK => parse(arguments).and_then(|args| complete(daemon, bot, args)),
+            MY_TASKS => parse(arguments).and_then(|args| my_tasks(daemon, bot, args)),
+            SHARE_FILE => parse(arguments).and_then(|args| share::share(daemon, bot, args)),
+            ASK_OWNER => parse(arguments).and_then(|args| question::ask(daemon, bot, args)),
+            SEND_SIGNAL => parse(arguments).and_then(|args| signal::send(daemon, bot, args)),
+            routine_change::MY_ROUTINES => routine_change::mine(daemon, bot),
+            crew_reach::CREW_FILES => parse(arguments)
+                .and_then(|args| crew_reach::files(daemon, bot, args).map_err(explain)),
+            crew_reach::READ_CREW_FILE => parse(arguments)
+                .and_then(|args| crew_reach::read(daemon, bot, args).map_err(explain)),
+            crew_reach::WRITE_CREW_FILE => parse(arguments)
+                .and_then(|args| crew_reach::write(daemon, bot, args).map_err(explain)),
+            other => return Err(invalid(&format!("Unknown tool: {other}"))),
+        };
     Ok(tool_result(outcome))
 }
 

@@ -8,21 +8,43 @@ use std::sync::{Mutex, PoisonError};
 
 use botloft_core::ids::{BotId, CrewId};
 use botloft_core::protocol::{Crew, CrewAccess, CrewAccessIdParams, CrewAccessListParams};
-use botloft_store::{BotRecord, Store};
+use botloft_store::{AccessKinds, BotRecord, Store};
 
 use super::{ApiError, ApiResult};
 use crate::state::Daemon;
 
-/// What a bot may reach in another crew: the whole crew, or one bot of it.
+/// What a bot needs to do in another crew.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Need {
+    Talk,
+    Read,
+    Edit,
+}
+
+impl Need {
+    /// Whether `kinds` allows it. Editing files includes reading them.
+    fn met_by(self, kinds: AccessKinds) -> bool {
+        match self {
+            Self::Talk => kinds.talk,
+            Self::Read => kinds.read || kinds.edit,
+            Self::Edit => kinds.edit,
+        }
+    }
+}
+
+/// What a bot may reach in another crew: the whole crew, or one bot of it,
+/// and what it may do there.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Reach {
     pub crew: CrewId,
     pub target: Option<BotId>,
+    pub kinds: AccessKinds,
 }
 
 impl Reach {
-    fn covers(&self, crew: &CrewId, bot: Option<&BotId>) -> bool {
+    fn covers(&self, crew: &CrewId, bot: Option<&BotId>, need: Need) -> bool {
         self.crew == *crew
+            && need.met_by(self.kinds)
             && match (&self.target, bot) {
                 (None, _) => true,
                 (Some(target), Some(bot)) => target == bot,
@@ -41,8 +63,12 @@ impl TurnAccess {
     pub fn allow(&self, bot: &BotId, reach: Reach) {
         let mut turns = self.turns.lock().unwrap_or_else(PoisonError::into_inner);
         let list = turns.entry(bot.clone()).or_default();
-        if !list.contains(&reach) {
-            list.push(reach);
+        match list
+            .iter_mut()
+            .find(|had| had.crew == reach.crew && had.target == reach.target)
+        {
+            Some(had) => had.kinds = had.kinds.with(reach.kinds),
+            None => list.push(reach),
         }
     }
 
@@ -55,12 +81,12 @@ impl TurnAccess {
             .remove(bot);
     }
 
-    fn covers(&self, bot: &BotId, crew: &CrewId, target: Option<&BotId>) -> bool {
+    fn covers(&self, bot: &BotId, crew: &CrewId, target: Option<&BotId>, need: Need) -> bool {
         self.turns
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .get(bot)
-            .is_some_and(|list| list.iter().any(|reach| reach.covers(crew, target)))
+            .is_some_and(|list| list.iter().any(|reach| reach.covers(crew, target, need)))
     }
 }
 
@@ -99,31 +125,35 @@ fn described(store: &Store, bot: &BotId) -> ApiResult<Vec<CrewAccess>> {
                 crew_name: crew_name.unwrap_or_default(),
                 target_bot_id: access.target_bot_id,
                 target_name,
+                talk: access.kinds.talk,
+                read: access.kinds.read || access.kinds.edit,
+                edit: access.kinds.edit,
                 created_at: access.created_at,
             })
         })
         .collect()
 }
 
-/// Whether `bot` may talk with `target` of `crew` (or, with `None`, see
-/// the crew's roster), for good or for this turn.
+/// Whether `bot` may do `need` with `target` of `crew` (with `None`, with
+/// the whole crew), for good or for this turn.
 pub(crate) fn reaches(
     daemon: &Daemon,
     store: &Store,
     bot: &BotId,
     crew: &CrewId,
     target: Option<&BotId>,
+    need: Need,
 ) -> ApiResult<bool> {
-    if daemon.crew_access.covers(bot, crew, target) {
+    if daemon.crew_access.covers(bot, crew, target, need) {
         return Ok(true);
     }
     Ok(store.crew_access(bot)?.iter().any(|access| {
-        access.talk
-            && Reach {
-                crew: access.crew_id.clone(),
-                target: access.target_bot_id.clone(),
-            }
-            .covers(crew, target)
+        Reach {
+            crew: access.crew_id.clone(),
+            target: access.target_bot_id.clone(),
+            kinds: access.kinds,
+        }
+        .covers(crew, target, need)
     }))
 }
 
@@ -141,9 +171,21 @@ pub(crate) fn may_talk(
     to: &BotRecord,
 ) -> ApiResult<bool> {
     let since = daemon.clock.now_ms() - ANSWER_WINDOW_MS;
-    Ok(reaches(daemon, store, &from.id, &to.crew_id, Some(&to.id))?
-        || reaches(daemon, store, &to.id, &from.crew_id, Some(&from.id))?
-        || store.wrote_to_since(&to.id, &from.id, since)?)
+    Ok(reaches(
+        daemon,
+        store,
+        &from.id,
+        &to.crew_id,
+        Some(&to.id),
+        Need::Talk,
+    )? || reaches(
+        daemon,
+        store,
+        &to.id,
+        &from.crew_id,
+        Some(&from.id),
+        Need::Talk,
+    )? || store.wrote_to_since(&to.id, &from.id, since)?)
 }
 
 /// Another active crew, by its name or folder name, case aside. The
@@ -174,36 +216,54 @@ mod tests {
     fn a_crew_reach_covers_its_bots_and_a_bot_reach_only_that_bot() {
         let (crew, other) = (CrewId::generate(), CrewId::generate());
         let (writer, editor) = (BotId::generate(), BotId::generate());
+        let talk = AccessKinds {
+            talk: true,
+            ..AccessKinds::default()
+        };
         let whole = Reach {
             crew: crew.clone(),
             target: None,
+            kinds: talk,
         };
-        assert!(whole.covers(&crew, Some(&writer)));
-        assert!(whole.covers(&crew, None));
-        assert!(!whole.covers(&other, Some(&writer)));
+        assert!(whole.covers(&crew, Some(&writer), Need::Talk));
+        assert!(whole.covers(&crew, None, Need::Talk));
+        assert!(!whole.covers(&other, Some(&writer), Need::Talk));
+        assert!(!whole.covers(&crew, Some(&writer), Need::Read));
         let one = Reach {
             crew: crew.clone(),
             target: Some(writer.clone()),
+            kinds: AccessKinds {
+                edit: true,
+                ..AccessKinds::default()
+            },
         };
-        assert!(one.covers(&crew, Some(&writer)));
-        assert!(!one.covers(&crew, Some(&editor)));
-        assert!(!one.covers(&crew, None));
+        assert!(one.covers(&crew, Some(&writer), Need::Read));
+        assert!(one.covers(&crew, Some(&writer), Need::Edit));
+        assert!(!one.covers(&crew, Some(&writer), Need::Talk));
+        assert!(!one.covers(&crew, Some(&editor), Need::Read));
+        assert!(!one.covers(&crew, None, Need::Read));
     }
 
     #[test]
     fn access_for_the_turn_goes_when_it_ends() {
         let access = TurnAccess::default();
         let (bot, crew) = (BotId::generate(), CrewId::generate());
-        access.allow(
-            &bot,
-            Reach {
-                crew: crew.clone(),
-                target: None,
+        let reach = |talk, read| Reach {
+            crew: crew.clone(),
+            target: None,
+            kinds: AccessKinds {
+                talk,
+                read,
+                edit: false,
             },
-        );
-        assert!(access.covers(&bot, &crew, None));
-        assert!(!access.covers(&BotId::generate(), &crew, None));
+        };
+        access.allow(&bot, reach(true, false));
+        access.allow(&bot, reach(false, true));
+        assert!(access.covers(&bot, &crew, None, Need::Talk));
+        assert!(access.covers(&bot, &crew, None, Need::Read));
+        assert!(!access.covers(&bot, &crew, None, Need::Edit));
+        assert!(!access.covers(&BotId::generate(), &crew, None, Need::Talk));
         access.end_turn(&bot);
-        assert!(!access.covers(&bot, &crew, None));
+        assert!(!access.covers(&bot, &crew, None, Need::Talk));
     }
 }

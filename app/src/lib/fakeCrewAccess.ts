@@ -15,7 +15,12 @@ export class FakeCrewAccess {
   constructor(private readonly fake: FakeBotloft) {}
 
   /** `bot` may reach `crewName` for good, or only `target` in it. */
-  add(bot: BotId, crewName: string, target?: { id: BotId; name: string }): CrewAccess {
+  add(
+    bot: BotId,
+    crewName: string,
+    target?: { id: BotId; name: string },
+    kinds: { talk?: boolean; read?: boolean; edit?: boolean } = { talk: true },
+  ): CrewAccess {
     const access: CrewAccess = {
       id: `cxa_${this.next++}`,
       botId: bot,
@@ -23,6 +28,9 @@ export class FakeCrewAccess {
       crewName,
       targetBotId: target?.id ?? null,
       targetName: target?.name ?? null,
+      talk: kinds.talk ?? false,
+      read: (kinds.read ?? false) || (kinds.edit ?? false),
+      edit: kinds.edit ?? false,
       createdAt: this.fake.now,
     };
     this.list.push(access);

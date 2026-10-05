@@ -310,6 +310,8 @@ export const chat: Messages["chat"] = {
     titleCrew: (bot, crew) => `${bot} quer acessar a equipe ${crew}`,
     titleBot: (bot, other, crew) => `${bot} quer acessar ${other}, da equipe ${crew}`,
     talk: (whom) => `Conversar com ${whom}: ver quem está lá e mandar mensagens e tarefas`,
+    read: (whom) => `Ler os arquivos de ${whom} e da pasta de trabalho`,
+    edit: (whom) => `Mudar e criar arquivos de ${whom} e da pasta de trabalho`,
     why: (bot) => `Por quê, segundo ${bot}:`,
     explain: "As equipes não se enxergam. Só agora vale até o bot terminar esta vez.",
     once: "Só agora",

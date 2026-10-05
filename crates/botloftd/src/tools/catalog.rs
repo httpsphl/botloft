@@ -32,6 +32,7 @@ pub fn tools() -> Value {
         .into_iter()
         .chain(super::routine_catalog::tools())
         .chain([super::bot_change::tool(), super::crew_access::tool()])
+        .chain(super::crew_reach::tools())
         .chain(super::browser_catalog::tools())
         .chain(super::desktop_catalog::tools());
         list.splice(at..at, more);

@@ -2,6 +2,7 @@
 //! previews. They are in the crew's work folder or the bot's own folder, or
 //! wherever the bot's `Write`/`Edit` calls put them.
 
+mod foreign;
 mod scan;
 
 use std::collections::HashMap;
@@ -13,6 +14,9 @@ use botloft_core::ids::BotId;
 use botloft_core::protocol::{BotFile, FileData, FilesListParams, FilesReadParams};
 use botloft_store::BotRecord;
 
+pub(crate) use self::foreign::{
+    listed as foreign_files, readable as foreign_readable, writable as foreign_writable,
+};
 pub(crate) use self::scan::media_type;
 use self::scan::{Found, Root, key, keys, millis, walk};
 use super::{ApiError, ApiResult, bots, crews};

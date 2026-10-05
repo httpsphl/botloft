@@ -36,7 +36,7 @@ use rusqlite::{Connection, Row, ffi};
 
 pub use approvals::ApprovalRecord;
 pub use bots::BotRecord;
-pub use crew_access::CrewAccessRecord;
+pub use crew_access::{AccessKinds, CrewAccessRecord};
 pub use deliveries::DeliveryOutcome;
 pub use messages::MessageFilter;
 pub use migrate::LATEST_VERSION;

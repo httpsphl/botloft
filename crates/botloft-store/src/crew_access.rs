@@ -6,6 +6,28 @@ use rusqlite::{OptionalExtension, Row, params};
 
 use crate::{Result, Store, parse_column};
 
+/// What a bot may do in another crew. Editing files includes reading them.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct AccessKinds {
+    /// Talking with its bots: roster, messages and tasks.
+    pub talk: bool,
+    /// Listing and reading their files.
+    pub read: bool,
+    /// Changing and adding files.
+    pub edit: bool,
+}
+
+impl AccessKinds {
+    /// Everything either one allows.
+    pub fn with(self, other: Self) -> Self {
+        Self {
+            talk: self.talk || other.talk,
+            read: self.read || other.read,
+            edit: self.edit || other.edit,
+        }
+    }
+}
+
 /// A bot's lasting access to another crew, or to one bot of it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CrewAccessRecord {
@@ -15,12 +37,11 @@ pub struct CrewAccessRecord {
     pub crew_id: CrewId,
     /// One bot of the crew; `None` for the whole crew.
     pub target_bot_id: Option<BotId>,
-    /// Talking with its bots: roster, messages and tasks.
-    pub talk: bool,
+    pub kinds: AccessKinds,
     pub created_at: i64,
 }
 
-const COLUMNS: &str = "id, bot_id, crew_id, target_bot_id, talk, created_at";
+const COLUMNS: &str = "id, bot_id, crew_id, target_bot_id, talk, read, edit, created_at";
 
 fn from_row(row: &Row<'_>) -> rusqlite::Result<CrewAccessRecord> {
     let target: Option<String> = row.get(3)?;
@@ -32,8 +53,12 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<CrewAccessRecord> {
             Some(_) => Some(parse_column(row, 3)?),
             None => None,
         },
-        talk: row.get(4)?,
-        created_at: row.get(5)?,
+        kinds: AccessKinds {
+            talk: row.get(4)?,
+            read: row.get(5)?,
+            edit: row.get(6)?,
+        },
+        created_at: row.get(7)?,
     })
 }
 
@@ -45,20 +70,24 @@ impl Store {
         bot: &BotId,
         crew: &CrewId,
         target: Option<&BotId>,
-        talk: bool,
+        kinds: AccessKinds,
         now: i64,
     ) -> Result<()> {
         self.conn.execute(
-            "INSERT INTO crew_access (id, bot_id, crew_id, target_bot_id, talk, created_at) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6) \
+            "INSERT INTO crew_access \
+             (id, bot_id, crew_id, target_bot_id, talk, read, edit, created_at) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8) \
              ON CONFLICT (bot_id, crew_id, coalesce(target_bot_id, '')) DO UPDATE SET \
-             talk = talk OR excluded.talk",
+             talk = talk OR excluded.talk, read = read OR excluded.read, \
+             edit = edit OR excluded.edit",
             params![
                 CrewAccessId::generate().as_str(),
                 bot.as_str(),
                 crew.as_str(),
                 target.map(BotId::as_str),
-                talk,
+                kinds.talk,
+                kinds.read,
+                kinds.edit,
                 now,
             ],
         )?;
@@ -95,7 +124,14 @@ impl Store {
 mod tests {
     use botloft_core::ids::CrewId;
 
+    use super::AccessKinds;
     use crate::tests::Fixture;
+
+    const TALK: AccessKinds = AccessKinds {
+        talk: true,
+        read: false,
+        edit: false,
+    };
 
     #[test]
     fn access_is_kept_per_bot_and_reach_and_only_grows() {
@@ -110,19 +146,26 @@ mod tests {
             })
             .expect("blog");
         fx.store
-            .grant_crew_access(scout, &blog, Some(writer), true, 10)
+            .grant_crew_access(scout, &blog, Some(writer), TALK, 10)
             .expect("bot");
         fx.store
-            .grant_crew_access(scout, &blog, None, false, 20)
+            .grant_crew_access(scout, &blog, None, AccessKinds::default(), 20)
             .expect("crew");
         fx.store
-            .grant_crew_access(scout, &blog, None, true, 30)
+            .grant_crew_access(scout, &blog, None, TALK, 30)
             .expect("crew again");
+        let edit = AccessKinds {
+            edit: true,
+            ..AccessKinds::default()
+        };
+        fx.store
+            .grant_crew_access(scout, &blog, None, edit, 40)
+            .expect("and files");
         let access = fx.store.crew_access(scout).expect("list");
         assert_eq!(access.len(), 2);
         assert_eq!(access[0].target_bot_id.as_ref(), Some(writer));
         assert!(access[1].target_bot_id.is_none());
-        assert!(access[1].talk);
+        assert!(access[1].kinds.talk && access[1].kinds.edit && !access[1].kinds.read);
         assert_eq!(access[1].created_at, 20);
         assert!(fx.store.crew_access(writer).expect("none").is_empty());
 

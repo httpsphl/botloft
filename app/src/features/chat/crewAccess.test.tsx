@@ -28,7 +28,7 @@ const request = (bot: string | null) =>
     crew: "Blog",
     bot,
     handle: bot?.toLowerCase() ?? null,
-    access: ["talk"],
+    access: ["talk", "read"],
     why: "To get this week's post.",
   });
 
@@ -42,6 +42,7 @@ describe("a bot asking to reach another crew", () => {
       name: "Scout wants to reach Writer, of the crew Blog",
     });
     expect(within(card).getByText(/^Talk with Writer/)).toBeDefined();
+    expect(within(card).getByText("Read the files of Writer and of its work folder")).toBeDefined();
     expect(within(card).getByText("To get this week's post.")).toBeDefined();
     expect(within(card).getByRole("button", { name: "Only now" })).toBeDefined();
     expect(within(card).getByRole("button", { name: "Always the crew Blog" })).toBeDefined();
@@ -67,11 +68,13 @@ describe("a bot asking to reach another crew", () => {
   test("lasting access shows in the bot's details and can be taken back", async () => {
     const { fake, scout } = await openScout();
     fake.crewAccess.add(scout.id, "Blog");
-    fake.crewAccess.add(scout.id, "Shop", { id: "bot_clerk", name: "Clerk" });
+    fake.crewAccess.add(scout.id, "Shop", { id: "bot_clerk", name: "Clerk" }, { edit: true });
     fireEvent.click(screen.getByRole("button", { name: /^Show details/ }));
     const details = screen.getByRole("complementary", { name: "About Scout" });
     expect(await within(details).findByText("The whole crew Blog")).toBeDefined();
     expect(within(details).getByText("Clerk, of the crew Shop")).toBeDefined();
+    expect(within(details).getByText("talk")).toBeDefined();
+    expect(within(details).getByText("edit files")).toBeDefined();
     fireEvent.click(
       within(details).getByRole("button", { name: "Take back: The whole crew Blog" }),
     );
