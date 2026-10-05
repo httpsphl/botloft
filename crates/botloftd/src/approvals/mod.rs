@@ -15,7 +15,7 @@ use botloft_core::chat::{
 use botloft_core::command::tool_explanation;
 use botloft_core::ids::{ApprovalId, BotId, ChatItemId};
 use botloft_core::protocol::{
-    AllowScope, Approval, ApprovalItem, ApprovalStatus, ApprovalsAnswerParams, ChatBody,
+    AllowScope, Approval, ApprovalItem, ApprovalStatus, ApprovalsAnswerParams, ChatBody, ChatItem,
 };
 use botloft_store::ApprovalRecord;
 use serde_json::Value;
@@ -103,12 +103,7 @@ pub(crate) async fn ask_with(
     tool_use_id: &str,
     opened: impl FnOnce(&ApprovalId),
 ) -> Option<Answer> {
-    let pending = open(daemon, bot, tool_name, input, tool_use_id)?;
-    let (answer, waiting) = oneshot::channel();
-    daemon
-        .approvals
-        .lock()
-        .insert(pending.record.approval.id.clone(), answer);
+    let (pending, waiting) = open(daemon, bot, tool_name, input, tool_use_id)?;
     opened(&pending.record.approval.id);
     daemon.supervisor.approval_opened(bot, generation);
     let mut guard = Guard {
@@ -220,14 +215,15 @@ struct Pending {
     record: ApprovalRecord,
 }
 
-/// Saves the request and puts it in the chat.
+/// Saves the request, waits for its answer and puts it in the chat, in
+/// that order: the owner may answer as soon as the chat shows it.
 fn open(
     daemon: &Daemon,
     bot: &BotId,
     tool_name: &str,
     input: &Value,
     tool_use_id: &str,
-) -> Option<Pending> {
+) -> Option<(Pending, oneshot::Receiver<Decision>)> {
     let now = daemon.clock.now_ms();
     let approval = Approval {
         id: ApprovalId::generate(),
@@ -245,17 +241,35 @@ fn open(
         tool_explanation(tool_name, input),
         always::scope_of(tool_name, input),
     );
-    let item = items::add(daemon, bot, ChatBody::Approval(shown))?;
+    let item = ChatItem {
+        id: ChatItemId::generate(),
+        bot_id: bot.clone(),
+        body: ChatBody::Approval(shown),
+        created_at: now,
+        updated_at: now,
+    };
     let record = ApprovalRecord {
         approval,
-        chat_item_id: item.id,
+        chat_item_id: item.id.clone(),
         tool_use_id: tool_use_id.to_owned(),
     };
-    if let Err(err) = daemon.store().insert_approval(&record) {
-        warn!(bot = %bot, "could not save an approval: {err}");
-        return None;
+    {
+        let store = daemon.store();
+        let saved = store
+            .insert_chat_item(&item)
+            .and_then(|()| store.insert_approval(&record));
+        if let Err(err) = saved {
+            warn!(bot = %bot, "could not save an approval: {err}");
+            return None;
+        }
     }
-    Some(Pending { record })
+    let (answer, waiting) = oneshot::channel();
+    daemon
+        .approvals
+        .lock()
+        .insert(record.approval.id.clone(), answer);
+    items::announce(daemon, item);
+    Some((Pending { record }, waiting))
 }
 
 fn item_of(

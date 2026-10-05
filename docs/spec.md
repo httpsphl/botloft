@@ -576,7 +576,7 @@ Endereçamento só dentro da crew. Bot não enxerga bots nem tasks de outras cre
 
 Com `--permission-prompt-tool mcp__botloft__permission_prompt`, toda ferramenta que precisaria de permissão chama a tool `permission_prompt`. A entrada é `{tool_name, input, tool_use_id}` (documentado; visto com 2.1.284).
 
-1. O daemon grava uma `approval` (`pending`) e o item `approval` no chat, e passa o bot para `needs_approval`.
+1. O daemon grava uma `approval` (`pending`) e o item `approval` no chat, e passa o bot para `needs_approval`. A ordem importa: grava o item e o pedido, passa a esperar a resposta e só então avisa o app (`chat.item`). Avisando antes, um app rápido respondia a um pedido que ainda não estava no banco (`not found`, visto no CI do Linux), ou a resposta chegava antes da espera e o bot só a ouvia quando o pedido expirava.
 2. A chamada HTTP fica aberta até o dono responder (`approvals.answer {approvalId, allow, note?}`) ou até `approval_timeout_minutes`, que o dono escolhe nas Configurações (15 min a 8 h no app; o daemon aceita de 1 min a 1 dia). O `timeout` do `mcp.json` (10) só é lido quando o Claude Code inicia: aumentada a espera, cada bot reinicia quando nada estiver em andamento; diminuída, o daemon responde antes e nada reinicia.
 3. Resposta ao Claude Code, em texto JSON:
    - Permitir: `{"behavior":"allow","updatedInput":<input original>}`.
