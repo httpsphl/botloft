@@ -16,6 +16,7 @@ use crate::{context, service};
 /// Request ids start with what was asked, so the answer says what it is.
 const SETTINGS: &str = "botloft-settings-";
 const CONTEXT: &str = "botloft-context-";
+const MCP: &str = "botloft-mcp-";
 
 static NEXT: AtomicU64 = AtomicU64::new(1);
 
@@ -39,6 +40,12 @@ pub(crate) fn context_request() -> Bytes {
     request(CONTEXT, "get_context_usage")
 }
 
+/// Asks whether each connected tool of the bot's process is reachable
+/// (spec 25.5).
+pub(crate) fn mcp_request() -> Bytes {
+    request(MCP, "mcp_status")
+}
+
 /// A `control_response` from the bot's process. A request this Claude Code
 /// does not know fails, and what it would have told stays unknown.
 pub(super) fn answered(daemon: &Daemon, bot: &BotId, event: &Value) {
@@ -53,5 +60,7 @@ pub(super) fn answered(daemon: &Daemon, bot: &BotId, event: &Value) {
         service::models::applied(daemon, bot, &body["applied"]);
     } else if id.starts_with(CONTEXT) {
         context::answered(daemon, bot, body);
+    } else if id.starts_with(MCP) {
+        service::mcp_state::reported(daemon, bot, &body["mcpServers"]);
     }
 }

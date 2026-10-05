@@ -124,6 +124,8 @@ pub struct Daemon {
     pub costs: crate::service::plan::CostMeter,
     pub trash: Arc<dyn Trash>,
     pub contexts: Contexts,
+    /// How each bot's connected tools stand since it started (spec 25.5).
+    pub mcp_states: crate::service::mcp_state::McpStates,
     /// Time for everything stored or compared with stored times.
     pub clock: Arc<dyn Clock>,
     store: Mutex<Store>,
@@ -164,6 +166,7 @@ impl Daemon {
             costs: Default::default(),
             trash: options.trash,
             contexts: Contexts::default(),
+            mcp_states: Default::default(),
             clock: options.clock,
             paths: options.paths,
             port: options.port,

@@ -7,13 +7,14 @@ use std::io;
 
 use botloft_core::ids::{BotId, McpServerId};
 use botloft_core::protocol::{
-    BotMcp, BotMcpSetParams, McpKind, McpOverview, McpSaveParams, McpServer, McpServerIdParams,
+    BotMcp, BotMcpSetParams, BotRules, McpKind, McpOverview, McpSaveParams, McpServer,
+    McpServerIdParams,
 };
 use botloft_core::validate;
 use botloft_store::{BotRecord, Store};
 use tracing::{info, warn};
 
-use super::{ApiError, ApiResult, bots};
+use super::{ApiError, ApiResult, bots, mcp_state};
 use crate::mcp_secrets::{self, McpSecrets};
 use crate::state::{Daemon, Event};
 use crate::workspace;
@@ -24,15 +25,38 @@ const MAX_ENTRIES: usize = 32;
 const MAX_TEXT: usize = 2000;
 const MAX_VALUE: usize = 8000;
 
-fn overview_of(store: &Store) -> ApiResult<McpOverview> {
+fn overview_of(daemon: &Daemon, store: &Store) -> ApiResult<McpOverview> {
+    let mut bots = store.mcp_links()?;
+    for link in &mut bots {
+        mcp_state::fill(daemon, link);
+    }
     Ok(McpOverview {
         servers: store.mcp_servers()?,
-        bots: store.mcp_links()?,
+        bots,
     })
 }
 
 pub fn overview(daemon: &Daemon) -> ApiResult<McpOverview> {
-    overview_of(&daemon.store())
+    overview_of(daemon, &daemon.store())
+}
+
+/// A tool that goes away, or comes back under another name, is not the one
+/// the owner allowed for good (spec 25.4): the rules for its name go.
+fn forget_allowed(daemon: &Daemon, slug: &str) {
+    let store = daemon.store();
+    let bots = match store.delete_mcp_allow_rules(slug) {
+        Ok(bots) => bots,
+        Err(err) => {
+            warn!("could not forget what bots were allowed to call: {err}");
+            return;
+        }
+    };
+    for bot_id in bots {
+        match store.allow_rules(&bot_id) {
+            Ok(rules) => daemon.emit(Event::BotRules(BotRules { bot_id, rules })),
+            Err(err) => warn!(bot = %bot_id, "could not read the allow rules: {err}"),
+        }
+    }
 }
 
 /// Rewrites the rules of `bot` with the tools it has now.
@@ -206,7 +230,7 @@ fn applied(daemon: &Daemon, bots: &[BotId]) -> ApiResult<McpOverview> {
             Err(err) => return Err(err),
         }
     }
-    let overview = overview_of(&store)?;
+    let overview = overview_of(daemon, &store)?;
     drop(store);
     daemon.emit(Event::McpServers(overview.clone()));
     Ok(overview)
@@ -214,20 +238,21 @@ fn applied(daemon: &Daemon, bots: &[BotId]) -> ApiResult<McpOverview> {
 
 pub fn save(daemon: &Daemon, params: McpSaveParams) -> ApiResult<McpOverview> {
     let secrets_dir = daemon.paths.secrets();
-    let users = {
+    let (users, renamed_from) = {
         let store = daemon.store();
-        let (id, created_at, old) = match &params.server_id {
+        let (id, created_at, old, old_slug) = match &params.server_id {
             Some(id) => {
                 let old = store
                     .mcp_server(id)?
                     .ok_or_else(|| ApiError::NotFound(format!("tool {id}")))?;
                 let stored = mcp_secrets::load(&secrets_dir, id).map_err(ApiError::Workspace)?;
-                (id.clone(), old.created_at, stored)
+                (id.clone(), old.created_at, stored, Some(old.slug))
             }
             None => (
                 McpServerId::generate(),
                 daemon.clock.now_ms(),
                 McpSecrets::default(),
+                None,
             ),
         };
         let (server, secrets) = build(&params, id, created_at, &old)?;
@@ -242,21 +267,31 @@ pub fn save(daemon: &Daemon, params: McpSaveParams) -> ApiResult<McpOverview> {
             kind = server.kind.as_str(),
             "the owner saved a connected tool"
         );
-        store
+        let users = store
             .mcp_links()?
             .into_iter()
             .filter(|link| link.server_ids.contains(&server.id))
             .map(|link| link.bot_id)
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>>();
+        (users, old_slug.filter(|slug| *slug != server.slug))
     };
+    if let Some(slug) = renamed_from {
+        forget_allowed(daemon, &slug);
+    }
     applied(daemon, &users)
 }
 
 pub fn delete(daemon: &Daemon, params: McpServerIdParams) -> ApiResult<McpOverview> {
+    let slug = daemon
+        .store()
+        .mcp_server(&params.server_id)?
+        .ok_or_else(|| ApiError::NotFound(format!("tool {}", params.server_id)))?
+        .slug;
     let users = daemon
         .store()
         .delete_mcp_server(&params.server_id)?
         .ok_or_else(|| ApiError::NotFound(format!("tool {}", params.server_id)))?;
+    forget_allowed(daemon, &slug);
     if let Err(err) = mcp_secrets::remove(&daemon.paths.secrets(), &params.server_id) {
         warn!("could not remove the secrets of a deleted tool: {err}");
     }
@@ -278,7 +313,9 @@ pub fn set_bot(daemon: &Daemon, params: BotMcpSetParams) -> ApiResult<BotMcp> {
             }
         }
         store.set_bot_mcp_servers(&params.bot_id, &ids)?;
-        store.bot_mcp(&params.bot_id)?
+        let mut result = store.bot_mcp(&params.bot_id)?;
+        mcp_state::fill(daemon, &mut result);
+        result
     };
     applied(daemon, std::slice::from_ref(&params.bot_id))?;
     daemon.emit(Event::BotMcp(result.clone()));

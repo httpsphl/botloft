@@ -125,6 +125,11 @@ impl Supervisor {
         for ask in [control::settings_request(), control::context_request()] {
             let _ = process.control.write(ask);
         }
+        // Each connected tool says whether it came up (spec 25.5).
+        crate::service::mcp_state::forget(daemon, &bot.id);
+        if launch.connected {
+            let _ = process.control.write(control::mcp_request());
+        }
         context::process_started(daemon, &bot.id, launch.resumed);
         // A new conversation is on disk only once it has a turn (spec
         // 7.3); the one it takes the place of is left behind.

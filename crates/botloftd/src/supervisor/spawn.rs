@@ -96,6 +96,8 @@ impl Supervisor {
 pub(super) struct Launch {
     pub token_hash: String,
     pub resumed: bool,
+    /// Whether the bot starts with connected tools (spec 25).
+    pub connected: bool,
 }
 
 /// Command line and environment of spec 7.4, with a fresh bot token.
@@ -199,6 +201,7 @@ pub(super) fn launch_spec(
         Launch {
             token_hash: TokenHash::of(&token).to_hex(),
             resumed,
+            connected: !servers.is_empty(),
         },
     ))
 }
