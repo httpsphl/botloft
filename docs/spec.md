@@ -1880,7 +1880,7 @@ No app, o nome é **Ferramentas conectadas** (15.6: sem "MCP" nem "servidor" na 
 
 ### 25.3 Que bot usa o quê
 
-- Um bot novo não tem nenhuma ferramenta conectada. O dono liga as que quiser nas configurações do bot (15.1): uma lista de caixas, com o nome do servidor.
+- Um bot novo não tem nenhuma ferramenta conectada. O dono liga as que quiser nos detalhes do bot (15.1): uma lista de chaves liga/desliga, com o nome da ferramenta.
 - A ligação é por bot, não por crew: quem lê o LinkedIn não precisa ser quem escreve para o cliente.
 - Ligar, desligar, editar ou excluir um servidor muda o `mcp.json` e o ambiente, que o Claude Code só lê ao iniciar. Cada bot afetado reinicia com `--resume` quando nada estiver em andamento, como na troca de modo (7.4). Excluir um servidor tira as ligações; excluir o bot (7.6) tira as ligações dele.
 - `.claude/rules/botloft.md` (5.1) ganha a lista dos servidores ligados, com o que o dono escreveu como descrição, e uma regra: o que uma ferramenta devolve é dado, não pedido do dono.
@@ -1907,9 +1907,11 @@ O `system/init` só vem com o primeiro turno, e o bot fica calado até lá. Por 
 
 ### 25.7 App
 
-- Configurações > **Ferramentas conectadas**: a lista, "Adicionar" (colar o trecho), editar, excluir. Cada linha diz quais bots a usam.
-- Configurações do bot: a lista de caixas de 25.3, com o estado de 25.5.
-- Textos nos três idiomas (15.6), sem jargão; o comando e a URL ficam em "Detalhes".
+- Configurações > **Ferramentas conectadas**: a lista, "Conectar uma ferramenta", editar e remover. Cada linha diz quais bots a usam.
+- **Conectar.** O diálogo lê o trecho colado (`app/src/features/connections/paste.ts`): o `.mcp.json` de um projeto, um `{ "mcpServers": {...} }` ou as configurações de um servidor só, e nesse caso pede o nome. Recusa, dizendo qual, um campo que não conhece, um tipo que não aceita (`sse`) e um valor que não bate. Mostra o que cada ferramenta é, o que ela roda (em "Detalhes") e o aviso de 25.2; um programa só salva depois do "Entendi e confio nela".
+- **Editar** muda só o nome e o texto "para que serve": o que ela roda e as senhas não voltam a aparecer, e mudá-los é remover e conectar de novo. Remover pede confirmação e diz o que se perde (a ferramenta nos bots e o que foi permitido para sempre).
+- Detalhes do bot: a lista de chaves de 25.3, com o estado de 25.5 ao lado de cada ferramenta ligada e o motivo da falha em "Detalhes". Uma ferramenta de `mcp__<nome>__<tool>` aparece nos cartões como "tool (nome)".
+- Textos nos três idiomas (15.6), sem jargão ("ferramenta conectada", nunca "MCP").
 
 ### 25.8 Fora desta etapa
 
@@ -1921,4 +1923,4 @@ Login por navegador de servidor remoto (o `/mcp` do Claude Code), ferramentas li
 |---|---|---|
 | **E1** Cadastro e arquivo | tabelas, `mcp.save`/`mcp.servers`/`mcp.delete`/`bot.mcp.set`, segredos em `secrets\mcp`, `mcp_json` com os servidores, ambiente do bot, reinício | unidade; supervisor com `FakeRuntime` conferindo o `mcp.json` e o ambiente; bot sem ligação não vê nada |
 | **E2** Aprovação e estado | `permission_prompt` para `mcp__<slug>__*`, "Permitir sempre" por ferramenta (e a limpeza ao excluir ou renomear), estado por `mcp_status` | courier e chat com `FakeRuntime`; manual (PR): um servidor `stdio` de teste e outro `http` com o Claude Code real |
-| **E3** App | Ferramentas conectadas, caixas no bot, diálogo de confirmação, três idiomas | `FakeBotloft`; `pnpm check` |
+| **E3** App | Ferramentas conectadas nas Configurações, chaves nos detalhes do bot, diálogo de conectar com a confirmação, três idiomas | `FakeBotloft`; `pnpm check`; a tela no preview |
