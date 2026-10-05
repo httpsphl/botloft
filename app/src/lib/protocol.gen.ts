@@ -1107,7 +1107,12 @@ archived: boolean,
 /**
  * Turns that reported tokens.
  */
-turns: number, tokens: TokenUsage, };
+turns: number, tokens: TokenUsage, 
+/**
+ * About how much of the weekly plan the bot used in the period, 0 to
+ * 1; `null` until Botloft has learned it (spec 8.7).
+ */
+planShare: number | null, };
 
 export type QuestionStatus = "open" | "answered" | "dismissed";
 

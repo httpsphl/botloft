@@ -329,6 +329,7 @@ fn a_deleted_crew_takes_its_bots_and_leaves_other_crews_alone() {
         "allow_rules",
         "desktop_grants",
         "crew_access",
+        "turn_costs",
     ] {
         assert_eq!(count(&fx.store, table), 0, "{table}");
     }

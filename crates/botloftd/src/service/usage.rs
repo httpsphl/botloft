@@ -10,5 +10,12 @@ pub fn tokens(daemon: &Daemon, params: UsageTokensParams) -> ApiResult<Vec<BotTo
     if params.since < 0 {
         return Err(ApiError::validation("since must not be negative"));
     }
-    Ok(daemon.store().turn_tokens(params.since)?)
+    let store = daemon.store();
+    let mut bots = store.turn_tokens(params.since)?;
+    if let Some(shares) = super::plan::shares(&store, params.since, daemon.clock.now_ms()) {
+        for bot in &mut bots {
+            bot.plan_share = Some(shares.get(&bot.bot_id).copied().unwrap_or_default());
+        }
+    }
+    Ok(bots)
 }

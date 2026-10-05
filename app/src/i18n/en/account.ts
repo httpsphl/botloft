@@ -28,11 +28,17 @@ export const account = {
     limited: "Limit reached. Your bots wait until it resets.",
     updated: (relative: string) => `Updated ${relative}`,
     tokens: {
-      title: "Tokens by bot",
+      title: "Use by bot",
       intro:
-        "Tokens are the pieces of text a bot reads and writes. The count adds the text read and the replies written.",
+        "How much of your weekly plan each bot used, and the tokens behind it: the pieces of text a bot reads and writes.",
       period: "Period",
-      periods: { today: "Today", week: "7 days", month: "30 days", all: "All time" },
+      periods: {
+        hour: "Last hour",
+        today: "Today",
+        week: "7 days",
+        month: "30 days",
+        all: "All time",
+      },
       empty: "No bot worked in this period.",
       failed: "Could not load the tokens",
       archived: "archived",
@@ -40,6 +46,12 @@ export const account = {
       detail: (crew: string | null, times: number) =>
         `${crew === null ? "" : `${crew} · `}Worked ${times === 1 ? "once" : `${times} times`}`,
       total: "All bots",
+      share: (percent: string) => `≈ ${percent} of the week`,
+      tokensUsed: (count: string) => `${count} tokens`,
+      estimate:
+        "≈ Estimated: Botloft learns how much of your plan the bots' work takes from how the weekly plan rises while they work. What you use outside Botloft also raises it, so the bots may show a little more than they used.",
+      learning:
+        "Each bot's share of your weekly plan shows up once the plan has gone up a few points while the bots work. Until then, the tokens.",
     },
   },
   settings: {

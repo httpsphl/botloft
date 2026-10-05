@@ -16,6 +16,7 @@ mod deliveries;
 mod desktop_grants;
 mod messages;
 mod migrate;
+mod plan;
 #[cfg(test)]
 mod plans;
 mod questions;
@@ -40,6 +41,7 @@ pub use crew_access::{AccessKinds, CrewAccessRecord};
 pub use deliveries::DeliveryOutcome;
 pub use messages::MessageFilter;
 pub use migrate::LATEST_VERSION;
+pub use plan::PlanReading;
 pub use questions::{Answered, QuestionRecord};
 pub use search::{Found, SearchFilter, fts_query};
 pub use tasks::TaskFilter;

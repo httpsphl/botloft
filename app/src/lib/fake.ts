@@ -89,6 +89,8 @@ export class FakeBotloft implements BotloftApi {
   readonly lesson = new FakeLesson(this);
   /** Clock for created and updated times. */
   now = Date.now();
+  /** Plan share per token for `usage.tokens`; `null`, not learned yet. */
+  planSharePerToken: number | null = null;
   closed = false;
   private state: ConnectionState = { kind: "open", daemonVersion: "0.1.0" };
   private readonly listeners = new Set<(event: ServerEvent) => void>();

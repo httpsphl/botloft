@@ -118,6 +118,8 @@ pub struct Daemon {
     pub desktop: Desktop,
     /// Other crews a bot may reach for its current turn (spec 10.4).
     pub crew_access: crate::service::crew_access::TurnAccess,
+    /// What each bot's process had cost by its last turn (spec 8.7).
+    pub costs: crate::service::plan::CostMeter,
     pub trash: Arc<dyn Trash>,
     pub contexts: Contexts,
     /// Time for everything stored or compared with stored times.
@@ -157,6 +159,7 @@ impl Daemon {
             screens: Screens::default(),
             desktop: Desktop::new(options.owner_idle),
             crew_access: Default::default(),
+            costs: Default::default(),
             trash: options.trash,
             contexts: Contexts::default(),
             clock: options.clock,

@@ -15,6 +15,7 @@ pub mod lead;
 pub mod messages;
 pub mod models;
 pub mod modes;
+pub mod plan;
 pub mod questions;
 pub mod reactions;
 pub mod routines;

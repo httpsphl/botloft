@@ -45,7 +45,7 @@ pub struct UsageTokensParams {
 }
 
 /// One bot's tokens since the time asked for.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct BotTokens {
@@ -59,4 +59,7 @@ pub struct BotTokens {
     /// Turns that reported tokens.
     pub turns: u32,
     pub tokens: TokenUsage,
+    /// About how much of the weekly plan the bot used in the period, 0 to
+    /// 1; `null` until Botloft has learned it (spec 8.7).
+    pub plan_share: Option<f64>,
 }

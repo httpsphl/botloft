@@ -28,11 +28,17 @@ export const account: Messages["account"] = {
     limited: "Limite atingido. Seus bots esperam até ele renovar.",
     updated: (relative: string) => `Atualizado ${relative}`,
     tokens: {
-      title: "Tokens por bot",
+      title: "Uso por bot",
       intro:
-        "Tokens são os pedaços de texto que um bot lê e escreve. A conta soma o texto lido e as respostas escritas.",
+        "Quanto do seu plano semanal cada bot usou, e os tokens por trás disso: os pedaços de texto que um bot lê e escreve.",
       period: "Período",
-      periods: { today: "Hoje", week: "7 dias", month: "30 dias", all: "Tudo" },
+      periods: {
+        hour: "Última hora",
+        today: "Hoje",
+        week: "7 dias",
+        month: "30 dias",
+        all: "Tudo",
+      },
       empty: "Nenhum bot trabalhou nesse período.",
       failed: "Não deu para carregar os tokens",
       archived: "arquivado",
@@ -40,6 +46,12 @@ export const account: Messages["account"] = {
       detail: (crew: string | null, times: number) =>
         `${crew === null ? "" : `${crew} · `}Trabalhou ${times === 1 ? "1 vez" : `${times} vezes`}`,
       total: "Todos os bots",
+      share: (percent) => `≈ ${percent} da semana`,
+      tokensUsed: (count) => `${count} tokens`,
+      estimate:
+        "≈ Estimativa: o Botloft aprende quanto do seu plano o trabalho dos bots consome pelo quanto o plano semanal sobe enquanto eles trabalham. O que você usa fora do Botloft também faz o plano subir, então os bots podem aparecer com um pouco mais do que usaram.",
+      learning:
+        "A parte de cada bot no seu plano semanal aparece depois que o plano subir alguns pontos com os bots trabalhando. Até lá, os tokens.",
     },
   },
   settings: {

@@ -57,8 +57,10 @@ fn crew_tools() -> Value {
             "title": "Crew roster",
             "description": "Lists the other bots of your crew with their handle, name, role and \
                 current state (idle, busy, offline...). Use it to find who can help and the \
-                handle to send a message to. With `crew`, the bots of another crew you were \
-                let in to (ask_crew_access).",
+                handle to send a message to. Each bot also shows its model, effort and \
+                `week_plan_percent`: about how much of the owner's weekly plan it used in the \
+                last 7 days (null until Botloft has learned it). With `crew`, the bots of another \
+                crew you were let in to (ask_crew_access).",
             "inputSchema": {
                 "type": "object",
                 "properties": {

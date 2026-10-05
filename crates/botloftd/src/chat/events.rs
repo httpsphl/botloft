@@ -209,6 +209,7 @@ fn result(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
         daemon.supervisor.session_missing(bot, generation);
         return;
     }
+    crate::service::plan::turn_ended(daemon, bot, generation, event);
     let reloaded = context::reloaded(daemon, bot);
     let failed = event["is_error"].as_bool() == Some(true);
     let error = failed.then(|| {
