@@ -36,6 +36,7 @@ export const tools = {
     my_routines: "See my routines",
     change_routine: "Change a routine",
     delete_routine: "Delete a routine",
+    change_bot: "Change a bot",
     share_file: "Share a file",
     ask_owner: "Ask you a question",
     browser: "Use a site",

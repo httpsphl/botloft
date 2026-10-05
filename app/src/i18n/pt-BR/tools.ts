@@ -36,6 +36,7 @@ export const tools: Messages["tools"] = {
     my_routines: "Ver minhas rotinas",
     change_routine: "Mudar uma rotina",
     delete_routine: "Apagar uma rotina",
+    change_bot: "Mudar um bot",
     share_file: "Compartilhar um arquivo",
     ask_owner: "Fazer uma pergunta a você",
     browser: "Usar um site",

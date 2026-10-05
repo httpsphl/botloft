@@ -20,6 +20,9 @@ pub const ROUTINE_TOOL: &str = "mcp__botloft__schedule_routine";
 pub const CHANGE_ROUTINE_TOOL: &str = "mcp__botloft__change_routine";
 /// A bot asking the owner to delete one of its routines (spec 20.12).
 pub const DELETE_ROUTINE_TOOL: &str = "mcp__botloft__delete_routine";
+/// A bot asking to rename or change itself, or the chief another bot
+/// (spec 10.3).
+pub const CHANGE_BOT_TOOL: &str = "mcp__botloft__change_bot";
 /// A bot asking to use its browser on a site (spec 21.5). Not a tool the
 /// model calls: the daemon opens this request from inside the `browser_*`
 /// tools.
@@ -67,7 +70,7 @@ pub fn one_line(text: &str, max: usize) -> String {
 pub fn tool_input_max(tool: &str) -> usize {
     match tool {
         PLAN_TOOL => PLAN_INPUT_MAX,
-        SUGGEST_TOOL | ROUTINE_TOOL | CHANGE_ROUTINE_TOOL => SUGGESTION_INPUT_MAX,
+        SUGGEST_TOOL | ROUTINE_TOOL | CHANGE_ROUTINE_TOOL | CHANGE_BOT_TOOL => SUGGESTION_INPUT_MAX,
         tool if is_command(tool) => COMMAND_INPUT_MAX,
         _ => TOOL_INPUT_MAX,
     }
@@ -110,9 +113,8 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
         "mcp__botloft__send_message" => {
             field(input, "to").map(|to| format!("@{}", to.trim_start_matches('@')))
         }
-        SUGGEST_TOOL | ROUTINE_TOOL | CHANGE_ROUTINE_TOOL | DELETE_ROUTINE_TOOL => {
-            field(input, "name").map(str::to_owned)
-        }
+        SUGGEST_TOOL | ROUTINE_TOOL | CHANGE_ROUTINE_TOOL | DELETE_ROUTINE_TOOL
+        | CHANGE_BOT_TOOL => field(input, "name").map(str::to_owned),
         BROWSER_SITE_TOOL => field(input, "site").map(str::to_owned),
         DESKTOP_TOOL => field(input, "app").map(str::to_owned),
         "mcp__botloft__desktop_look" | "mcp__botloft__desktop_screenshot" => {

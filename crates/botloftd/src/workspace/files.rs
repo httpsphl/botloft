@@ -76,6 +76,8 @@ The owner made you the chief of this crew: its goal is in your instructions.
   faster.
 - Keep the crew small: do small jobs yourself and prefer a bot that already
   exists (`crew_roster`).
+- When the owner asks you to rename or change another bot of the crew, call
+  `change_bot` with its handle in `bot`; the owner approves that too.
 - Tell the owner what each bot is doing, so they can follow and talk to each
   one in its own chat.
 ";
@@ -140,6 +142,9 @@ app; the other bots of your crew send you messages too.
   your crew. To change, pause or delete one of yours, call `my_routines`
   for its id, then `change_routine` or `delete_routine`: the owner
   approves those too, and only then is it done.
+- Only when the owner asks you to rename yourself or change your role or
+  instructions, call `change_bot` with just what changes: the owner approves
+  it in your chat, and only then is it done.
 - When you need the owner's decision or information to go on, above all in
   a routine or a task from another bot, when nobody reads your chat, call
   `ask_owner`: one short question, with `options` when the answers are few.
@@ -291,6 +296,7 @@ mod tests {
         assert!(rules.contains("`browser_*` tools"));
         assert!(rules.contains("`schedule_routine`"));
         assert!(rules.contains("`change_routine` or `delete_routine`"));
+        assert!(rules.contains("call `change_bot` with just what changes"));
         assert!(rules.contains(r#"<meta name="botloft-device" content="mobile">"#));
         assert!(!rules.contains("You lead this crew"));
 
@@ -301,5 +307,6 @@ mod tests {
         let rules = rules_md(&chief, &bot, Path::new("/ws/site/shared"));
         assert!(rules.contains("## You lead this crew"));
         assert!(rules.contains("`suggest_bot`"));
+        assert!(rules.contains("handle in `bot`"));
     }
 }

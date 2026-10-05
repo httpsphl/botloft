@@ -17,6 +17,7 @@ import {
   RoutineDeleteCard,
 } from "../routines/RoutineChangeCard";
 import { ROUTINE_TOOL, RoutineRequestCard } from "../routines/RoutineRequestCard";
+import { BotChangeCard, CHANGE_BOT_TOOL } from "./BotChangeCard";
 import { commandOf, isCommand } from "./command";
 import { PLAN_TOOL, PlanCard } from "./PlanCard";
 import { SUGGEST_TOOL, SuggestionCard } from "./SuggestionCard";
@@ -73,6 +74,8 @@ export function ApprovalCard({ approval, bot }: { approval: ApprovalItem; bot: B
       return <RoutineChangeCard approval={approval} bot={bot} />;
     case DELETE_ROUTINE_TOOL:
       return <RoutineDeleteCard approval={approval} bot={bot} />;
+    case CHANGE_BOT_TOOL:
+      return <BotChangeCard approval={approval} bot={bot} />;
     case SITE_TOOL:
       return <SiteCard approval={approval} bot={bot} />;
     case DESKTOP_TOOL:

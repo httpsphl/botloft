@@ -6,6 +6,7 @@
 //! Claude Code tries `server/discover` first and falls back to
 //! `initialize` when that fails, so both paths lead to the same tools.
 
+mod bot_change;
 mod browser;
 mod browser_args;
 mod browser_catalog;
@@ -133,7 +134,7 @@ pub async fn handle(
         return StatusCode::ACCEPTED.into_response();
     };
     let answered = match era(&headers, &request) {
-        // They hold the request until the owner answers (spec 10.1, 10.2, 20.12).
+        // They hold the request until the owner answers (spec 10.1, 10.2, 10.3, 20.12).
         Ok(era) if called(&request) == Some(catalog::PERMISSION_PROMPT) => {
             permission(&daemon, &bot, generation, &request)
                 .await
@@ -155,6 +156,11 @@ pub async fn handle(
         Ok(era) if called(&request) == Some(routine_change::DELETE_ROUTINE) => {
             let args = arguments(&request);
             let result = routine_change::delete(&daemon, &bot, generation, args).await;
+            Ok(decorate(era, &request, result))
+        }
+        Ok(era) if called(&request) == Some(bot_change::CHANGE_BOT) => {
+            let args = arguments(&request);
+            let result = bot_change::change(&daemon, &bot, generation, args).await;
             Ok(decorate(era, &request, result))
         }
         // They act in a browser and may wait for the owner (spec 21.5).
