@@ -22,6 +22,14 @@ pub struct PlanReading {
 }
 
 impl Store {
+    /// A consistent copy of the whole database at `path`, which must not
+    /// exist yet (spec 14.2).
+    pub fn snapshot_to(&self, path: &std::path::Path) -> Result<()> {
+        self.conn
+            .execute("VACUUM INTO ?1", [path.to_string_lossy().as_ref()])?;
+        Ok(())
+    }
+
     /// What one turn of `bot` cost at `at`.
     pub fn add_turn_cost(&self, bot: &BotId, at: i64, cost: f64) -> Result<()> {
         self.conn.execute(

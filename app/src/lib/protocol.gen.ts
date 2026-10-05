@@ -1040,6 +1040,45 @@ export type CrewAccessListParams = { botId: BotId, };
 
 export type CrewAccessIdParams = { accessId: CrewAccessId, };
 
+export type BackupCrew = { name: string, 
+/**
+ * The crew's bots, archived ones aside.
+ */
+bots: Array<string>, 
+/**
+ * A work folder the owner chose outside Botloft's folders: not in the
+ * backup.
+ */
+workFolder: string | null, };
+
+/**
+ * What a backup holds, as its manifest says.
+ */
+export type BackupManifest = { 
+/**
+ * The archive's layout version.
+ */
+format: number, 
+/**
+ * Unix time in milliseconds.
+ */
+createdAt: number, 
+/**
+ * The Botloft version that made it.
+ */
+version: string, crews: Array<BackupCrew>, };
+
+export type BackupExportParams = { passphrase: string, };
+
+/**
+ * A backup written and ready for the owner to save elsewhere.
+ */
+export type BackupExported = { path: string, 
+/**
+ * Bytes.
+ */
+size: number, manifest: BackupManifest, };
+
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
 /**
  * What the bot says the command is for, as in `ToolItem`. The bot
@@ -1738,6 +1777,7 @@ export interface RpcMethods {
   "desktop.dismissAway": { params: undefined; result: null };
   "crewAccess.list": { params: CrewAccessListParams; result: Array<CrewAccess> };
   "crewAccess.revoke": { params: CrewAccessIdParams; result: Array<CrewAccess> };
+  "backup.export": { params: BackupExportParams; result: BackupExported };
   "routines.list": { params: RoutinesListParams; result: Array<Routine> };
   "routines.create": { params: RoutinesCreateParams; result: Routine };
   "routines.update": { params: RoutinesUpdateParams; result: Routine };
