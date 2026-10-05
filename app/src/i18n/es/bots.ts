@@ -128,5 +128,12 @@ export const bots: Messages["bots"] = {
       `Nada todavía. Cuando ${bot} pida algo, "Permitir siempre" lo pone aquí.`,
     alwaysRemove: (what: string) => `Volver a preguntar: ${what}`,
     alwaysRemoveFailed: "No se pudo quitar",
+    crews: "Otros equipos",
+    crewsNone: (bot) =>
+      `${bot} solo llega a su propio equipo. Cuando pida otro, "Siempre" lo pone aquí.`,
+    crewsWhole: (crew) => `Todo el equipo ${crew}`,
+    crewsBot: (bot, crew) => `${bot}, del equipo ${crew}`,
+    crewsRemove: (what) => `Quitar el acceso: ${what}`,
+    crewsRemoveFailed: "No se pudo quitar el acceso",
   },
 };

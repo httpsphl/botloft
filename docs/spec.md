@@ -639,6 +639,7 @@ Crews não se enxergam (7.5, 10). Quando o dono pede, um bot pode pedir para alc
 - **Resposta:** Negar, ou permitir com `approvals.answer` e `input` `{"scope": ...}`: `once` (só agora, o padrão sem `input`), `bot` (sempre, só o bot pedido; recusado se o pedido era a crew) ou `crew` (sempre, a crew inteira). "Só agora" fica em memória e vale até o fim da vez do bot (o `result` do turno ou o fim do processo). "Sempre" vai para a tabela `crew_access` (bot, crew, bot alvo ou nenhum, `talk`), que guarda o que já tinha e soma o novo; apagar o bot, o alvo ou a crew apaga a linha.
 - **Com acesso:** `crew_roster` com `crew` lista só os bots de lá que o bot alcança; `send_message` com `crew` manda nota ou task a um deles. Um bot fora de alcance e um que não existe dão o mesmo erro, que manda pedir com `ask_crew_access`.
 - **Resposta do outro lado:** o bot que recebe pode responder a quem escreveu sem pedir: a quem tem acesso a ele, ou a um bot de outra crew que lhe escreveu nas últimas 24 horas (bots conversam em vezes; a resposta costuma chegar depois que a vez com acesso acabou). `complete_task` não depende de acesso: só o designado completa a task.
+- **No app:** o cartão diz "<bot> quer acessar a equipe <crew>" ou "<bot> quer acessar <bot>, da equipe <crew>", o que o bot quer lá ("Conversar com ...: ver quem está lá e mandar mensagens e tarefas") e o porquê, com Só agora, Sempre <bot> (só num pedido de um bot), Sempre a equipe <crew> e Negar, e o campo para dizer por que não. A resposta guarda, no lugar da entrada, o pedido com `scope`, e o cartão respondido diz por quanto tempo. Nos detalhes do bot, "Outras equipes" lista o que ele alcança sempre (`crewAccess.list`), com um botão para tirar cada um (`crewAccess.revoke`); a lista é lida de novo quando um pedido desses é respondido. IDs com o prefixo `cxa_`.
 - **Onde fica:** a mensagem e a task entre crews são da crew de quem recebe, e o resultado e o aviso de prazo, da crew de quem pediu. Assim cada crew só guarda o que é para os bots dela, e apagar uma crew não deixa nada pendurado. `my_tasks` mostra um bot de outra crew como "writer of crew Blog".
 
 ## 11. Protocolo do app (JSON-RPC 2.0 sobre WebSocket)
@@ -682,9 +683,11 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `bots.delete` | `botId, recycleFolder?` | `{botId, crewId}`; exclui o bot, ativo ou arquivado; com `recycleFolder`, a pasta dele vai depois para a Lixeira (7.6) |
 | `chat.history` | `botId, before?, limit?` ou `botId, until` | `ChatItem[]`, mais novo primeiro; `limit` de 1 a 200, 50 se ausente; `until`: do item até o mais novo, até 1 000 (8.8) |
 | `chat.search` | `query, botId?, crewId?, before?, limit?` | `SearchHit[]`: itens com todas as palavras, mais novo primeiro, com um trecho em destaque (8.8) |
-| `approvals.answer` | `approvalId, allow, note?, input?, always?` (`input`: a sugestão de bot como o dono a deixou, 10.2; `always`: com `allow`, grava o `always` do pedido como regra do bot, 10.1) | `Approval` |
+| `approvals.answer` | `approvalId, allow, note?, input?, always?` (`input`: a sugestão de bot como o dono a deixou, 10.2, ou `{"scope": ...}` de um pedido de outra crew, 10.4; `always`: com `allow`, grava o `always` do pedido como regra do bot, 10.1) | `Approval` |
 | `rules.list` | `botId` | `AllowRule[]`: o que o bot faz sem perguntar, da regra mais antiga à mais nova (10.1) |
 | `rules.delete` | `ruleId` | `{botId, rules}`: as regras que ficaram; o bot volta a perguntar pelo que saiu (10.1) |
+| `crewAccess.list` | `botId` | `CrewAccess[]`: as outras crews, ou bots delas, que o bot alcança sempre (`crewName`, `targetBotId` e `targetName`, nulos para a crew inteira), da mais antiga (10.4) |
+| `crewAccess.revoke` | `accessId` | `CrewAccess[]`: tira uma e devolve as que ficam (10.4) |
 | `messages.send` | `botId, body, attachments?` (`[{name, mediaType, data}]`, data em base64), `replyTo?` (id de um item do chat do bot, 9.3) | `Message` |
 | `messages.list` | `crewId?, botId?, before?, limit?` | `Message[]` |
 | `attachments.read` | `attachmentId` | `{mediaType, data}`, data em base64 (9.5) |

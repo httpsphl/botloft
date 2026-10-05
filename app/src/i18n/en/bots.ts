@@ -130,5 +130,12 @@ export const bots = {
       `Nothing yet. When ${bot} asks for something, "Always allow" puts it here.`,
     alwaysRemove: (what: string) => `Ask again: ${what}`,
     alwaysRemoveFailed: "Could not remove it",
+    crews: "Other crews",
+    crewsNone: (bot: string) =>
+      `${bot} reaches only its own crew. When it asks for another one, "Always" puts it here.`,
+    crewsWhole: (crew: string) => `The whole crew ${crew}`,
+    crewsBot: (bot: string, crew: string) => `${bot}, of the crew ${crew}`,
+    crewsRemove: (what: string) => `Take back: ${what}`,
+    crewsRemoveFailed: "Could not take it back",
   },
 };

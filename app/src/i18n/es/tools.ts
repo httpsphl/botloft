@@ -38,6 +38,7 @@ export const tools: Messages["tools"] = {
     change_routine: "Cambiar una rutina",
     delete_routine: "Borrar una rutina",
     change_bot: "Cambiar un bot",
+    ask_crew_access: "Acceder a otro equipo",
     share_file: "Compartir un archivo",
     ask_owner: "Hacerte una pregunta",
     browser: "Usar un sitio",

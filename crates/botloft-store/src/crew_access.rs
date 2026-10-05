@@ -2,7 +2,7 @@
 //! good (spec 10.4).
 
 use botloft_core::ids::{BotId, CrewAccessId, CrewId};
-use rusqlite::{Row, params};
+use rusqlite::{OptionalExtension, Row, params};
 
 use crate::{Result, Store, parse_column};
 
@@ -76,12 +76,18 @@ impl Store {
         Ok(rows)
     }
 
-    /// Takes the access back; `false` if there was none with that id.
-    pub fn revoke_crew_access(&self, id: &CrewAccessId) -> Result<bool> {
-        Ok(self
+    /// Takes the access back. The bot that had it, or `None` if there was
+    /// none with that id.
+    pub fn revoke_crew_access(&self, id: &CrewAccessId) -> Result<Option<BotId>> {
+        let bot: Option<String> = self
             .conn
-            .execute("DELETE FROM crew_access WHERE id = ?1", [id.as_str()])?
-            > 0)
+            .query_row(
+                "DELETE FROM crew_access WHERE id = ?1 RETURNING bot_id",
+                [id.as_str()],
+                |row| row.get(0),
+            )
+            .optional()?;
+        Ok(bot.and_then(|bot| bot.parse().ok()))
     }
 }
 
@@ -120,8 +126,14 @@ mod tests {
         assert_eq!(access[1].created_at, 20);
         assert!(fx.store.crew_access(writer).expect("none").is_empty());
 
-        assert!(fx.store.revoke_crew_access(&access[0].id).expect("revoke"));
-        assert!(!fx.store.revoke_crew_access(&access[0].id).expect("again"));
+        let revoked = fx.store.revoke_crew_access(&access[0].id).expect("revoke");
+        assert_eq!(revoked.as_ref(), Some(scout));
+        assert!(
+            fx.store
+                .revoke_crew_access(&access[0].id)
+                .expect("again")
+                .is_none()
+        );
         assert_eq!(fx.store.crew_access(scout).expect("list").len(), 1);
     }
 }
