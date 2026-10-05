@@ -173,6 +173,7 @@ export const account = {
     deleteArchivedOne: (name: string) => `Delete ${name}`,
     about: "About",
     backup: "Backup",
+    tools: "Connected tools",
     claudeCode: (version: string) => `Claude Code ${version}`,
     botloft: (version: string) => `Botloft ${version}`,
     checkUpdates: "Check for updates",

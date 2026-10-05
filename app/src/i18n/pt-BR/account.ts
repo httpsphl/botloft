@@ -172,6 +172,7 @@ export const account: Messages["account"] = {
     deleteArchivedOne: (name: string) => `Excluir ${name}`,
     about: "Sobre",
     backup: "Cópia de segurança",
+    tools: "Ferramentas conectadas",
     claudeCode: (version: string) => `Claude Code ${version}`,
     botloft: (version: string) => `Botloft ${version}`,
     checkUpdates: "Procurar atualizações",

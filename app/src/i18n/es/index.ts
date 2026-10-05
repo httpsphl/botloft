@@ -7,6 +7,7 @@ import { bots } from "./bots";
 import { browser } from "./browser";
 import { chat } from "./chat";
 import { common } from "./common";
+import { connections } from "./connections";
 import { crews } from "./crews";
 import { desktop } from "./desktop";
 import { files } from "./files";
@@ -32,6 +33,7 @@ export const es: Messages = {
   bots,
   browser,
   chat,
+  connections,
   crews,
   desktop,
   files,
