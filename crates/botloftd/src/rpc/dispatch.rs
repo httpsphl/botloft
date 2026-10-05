@@ -58,6 +58,7 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::DESKTOP_REVOKE => reply(desktop::revoke(daemon, parse(params)?)),
         method::DESKTOP_STOP => reply(desktop::stop(daemon, parse(params)?)),
         method::DESKTOP_SET_OPTIONS => reply(desktop::set_options(daemon, parse(params)?)),
+        method::DESKTOP_GRANT_WHOLE => reply(desktop::grant_whole(daemon, parse(params)?)),
         method::DESKTOP_AWAY_USES => reply(desktop::away_uses(daemon)),
         method::DESKTOP_DISMISS_AWAY => reply(desktop::dismiss_away(daemon)),
         method::DESKTOP_RESUME => reply(desktop::resume(daemon, parse(params)?)),

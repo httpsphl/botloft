@@ -8,19 +8,19 @@
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use botloft_core::ids::BotId;
-use botloft_core::protocol::{DesktopAction, DesktopLevel};
+use botloft_core::protocol::DesktopLevel;
 use serde_json::{Value, json};
 use tracing::debug;
 
 use super::calls::explain;
 use super::desktop_act::{Ask, act, answered};
-use super::desktop_grant::{blocking, granted, heading};
+use super::desktop_grant::{blocking, granted, heading, used};
 use super::desktop_list::{in_reach, list};
 use super::desktop_real::{click_at, press};
+use super::desktop_screen::whole;
 use crate::desktop::STOPPED;
-use crate::platform::desktop::Window;
 use crate::platform::desktop::{self as platform, Action, Scroll, render};
-use crate::state::{Daemon, Event};
+use crate::state::Daemon;
 
 pub(super) const PREFIX: &str = "desktop_";
 
@@ -31,8 +31,9 @@ enum Tool {
         from: usize,
         why: String,
     },
+    /// A window's picture, or the whole screen's without one (D6).
     Screenshot {
-        window: u64,
+        window: Option<u64>,
         why: String,
     },
     Act(Ask),
@@ -90,7 +91,7 @@ impl Tool {
                 why: why()?,
             },
             Some("screenshot") => Self::Screenshot {
-                window: window()?,
+                window: arguments["window"].as_u64(),
                 why: why()?,
             },
             Some("click") => acting(Action::Click)?,
@@ -215,6 +216,11 @@ async fn run(daemon: &Daemon, bot: &BotId, generation: u64, tool: Tool) -> Resul
             Ok(Reply::Text(reading))
         }
         Tool::Screenshot { window, why } => {
+            let Some(window) = window else {
+                return whole(daemon, bot, &grants)
+                    .await
+                    .map(|(data, text)| Reply::Picture(data, text));
+            };
             let window = granted(
                 daemon,
                 bot,
@@ -286,11 +292,4 @@ async fn run(daemon: &Daemon, bot: &BotId, generation: u64, tool: Tool) -> Resul
             .await
             .map(Reply::Text),
     }
-}
-
-/// The bot read or acted in `window`: its panel shows it (spec 24.9).
-pub(super) fn used(daemon: &Daemon, bot: &BotId, window: &Window, action: Option<DesktopAction>) {
-    let now = daemon.clock.now_ms();
-    let state = daemon.desktop.activity.used(bot, window, action, now);
-    daemon.emit(Event::DesktopChanged(state));
 }

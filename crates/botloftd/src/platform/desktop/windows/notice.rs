@@ -22,9 +22,9 @@ use windows::Win32::UI::HiDpi::{
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DispatchMessageW, GetMessageW, HWND_TOPMOST, LWA_COLORKEY,
     MSG, PostMessageW, RegisterClassW, SW_HIDE, SW_SHOWNOACTIVATE, SWP_NOACTIVATE,
-    SetLayeredWindowAttributes, SetWindowPos, ShowWindow, TranslateMessage, WM_APP, WM_PAINT,
-    WNDCLASSW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_EX_TRANSPARENT,
-    WS_POPUP,
+    SetLayeredWindowAttributes, SetWindowDisplayAffinity, SetWindowPos, ShowWindow,
+    TranslateMessage, WDA_EXCLUDEFROMCAPTURE, WM_APP, WM_PAINT, WNDCLASSW, WS_EX_LAYERED,
+    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_EX_TRANSPARENT, WS_POPUP,
 };
 use windows::core::{PCWSTR, w};
 
@@ -103,6 +103,8 @@ fn run(made: &Sender<Option<isize>>) {
             return;
         };
         let _ = SetLayeredWindowAttributes(hwnd, SEE_THROUGH, 255, LWA_COLORKEY);
+        // Never in a picture of the whole screen (spec 24.4).
+        let _ = SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE);
         let _ = made.send(Some(hwnd.0 as isize));
         let mut message = MSG::default();
         while GetMessageW(&mut message, None, 0, 0).as_bool() {

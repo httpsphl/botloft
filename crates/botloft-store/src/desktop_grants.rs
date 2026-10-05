@@ -69,6 +69,36 @@ impl Store {
         )?)
     }
 
+    /// Gives `bot` the whole desktop at `level` (spec 24.2), the owner
+    /// having accepted the risks at `now` (spec 24.10); a grant of it
+    /// already there takes the new level and keeps its options.
+    pub fn grant_desktop_whole(
+        &self,
+        bot: &BotId,
+        level: DesktopLevel,
+        now: i64,
+    ) -> Result<DesktopGrant> {
+        self.conn.execute(
+            "INSERT INTO desktop_grants (id, bot_id, scope, level, accepted_risks_at, created_at) \
+             VALUES (?1, ?2, 'desktop', ?3, ?4, ?4) \
+             ON CONFLICT (bot_id, scope, lower(coalesce(app_path, ''))) DO UPDATE SET \
+             level = excluded.level, accepted_risks_at = excluded.accepted_risks_at",
+            params![
+                DesktopGrantId::generate().as_str(),
+                bot.as_str(),
+                level.as_str(),
+                now,
+            ],
+        )?;
+        Ok(self.conn.query_row(
+            &format!(
+                "SELECT {COLUMNS} FROM desktop_grants WHERE bot_id = ?1 AND scope = 'desktop'"
+            ),
+            [bot.as_str()],
+            from_row,
+        )?)
+    }
+
     /// The grants of `bot`, oldest first.
     pub fn desktop_grants(&self, bot: &BotId) -> Result<Vec<DesktopGrant>> {
         let mut statement = self.conn.prepare_cached(&format!(
@@ -233,6 +263,36 @@ mod tests {
         let off = &fx.store.desktop_grants(scout).expect("grants")[0];
         assert!(!off.unattended);
         assert_eq!(off.accepted_risks_at, Some(50));
+    }
+
+    #[test]
+    fn the_whole_desktop_is_one_grant_whose_level_the_owner_sets() {
+        let fx = Fixture::new();
+        let scout = &fx.bots[0].id;
+        let see = fx
+            .store
+            .grant_desktop_whole(scout, DesktopLevel::Act, 10)
+            .expect("whole");
+        assert_eq!(see.scope, DesktopScope::Desktop);
+        assert_eq!((see.app_path.clone(), see.app_name.clone()), (None, None));
+        assert_eq!(see.accepted_risks_at, Some(10));
+        fx.store
+            .set_desktop_real_input(&see.id, true)
+            .expect("real");
+        // Given again, it can go down and keeps its options.
+        let again = fx
+            .store
+            .grant_desktop_whole(scout, DesktopLevel::See, 20)
+            .expect("again");
+        assert_eq!(again.id, see.id);
+        assert_eq!(again.level, DesktopLevel::See);
+        assert!(again.real_input);
+        assert_eq!(again.accepted_risks_at, Some(20));
+        // An app grant is another one.
+        fx.store
+            .grant_desktop_app(scout, EXCEL, "Microsoft Excel", DesktopLevel::See, 30)
+            .expect("app");
+        assert_eq!(fx.store.desktop_grants(scout).expect("grants").len(), 2);
     }
 
     #[test]

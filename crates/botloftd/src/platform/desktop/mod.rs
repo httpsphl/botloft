@@ -7,6 +7,7 @@ mod blocked;
 pub mod keys;
 mod overlay;
 mod read;
+mod screen;
 // Only Windows takes pictures; the tests run everywhere.
 #[cfg_attr(not(windows), allow(dead_code))]
 mod shrink;
@@ -18,6 +19,7 @@ use std::path::PathBuf;
 pub use blocked::{Never, never};
 pub use overlay::{ScreenCursor, notice_hide, notice_show, outline_hide, outline_show};
 pub use read::{Control, LINES_MAX, by_reference, reference, render};
+pub use screen::{cover, screen_picture};
 
 /// The largest picture of a window the bot gets, in logical pixels (24.4).
 pub const PICTURE_MAX: (u32, u32) = (1600, 1200);

@@ -10,8 +10,7 @@ use std::time::Duration;
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{DesktopAction, DesktopActionKind, DesktopGrant, DesktopLevel};
 
-use super::desktop::used;
-use super::desktop_grant::{blocking, describe, granted, heading};
+use super::desktop_grant::{blocking, describe, granted, heading, used};
 use super::desktop_real::{enter, instead, needs_real, real_allowed};
 use crate::desktop::STOPPED;
 use crate::platform::desktop::{

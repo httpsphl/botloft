@@ -4,7 +4,7 @@
 
 use botloft_core::chat::DESKTOP_TOOL;
 use botloft_core::ids::BotId;
-use botloft_core::protocol::{DesktopGrant, DesktopLevel};
+use botloft_core::protocol::{DesktopAction, DesktopGrant, DesktopLevel};
 use serde_json::json;
 
 use super::calls::explain;
@@ -81,9 +81,9 @@ fn verb(level: DesktopLevel) -> &'static str {
     }
 }
 
-/// The bot used `window` with the owner away: the app tells them when they
+/// The bot used `app` with the owner away: the app tells them when they
 /// are back, with the chat where it began.
-fn used_away(daemon: &Daemon, bot: &BotId, window: &Window) {
+pub(super) fn used_away(daemon: &Daemon, bot: &BotId, app: &str) {
     let item = daemon
         .store()
         .chat_history(bot, None, 1)
@@ -91,7 +91,7 @@ fn used_away(daemon: &Daemon, bot: &BotId, window: &Window) {
         .and_then(|items| items.into_iter().next())
         .map(|item| item.id);
     let now = daemon.clock.now_ms();
-    let uses = daemon.desktop.away.record(bot, &window.app.name, now, item);
+    let uses = daemon.desktop.away.record(bot, app, now, item);
     daemon.emit(Event::DesktopAway(uses));
 }
 
@@ -125,7 +125,7 @@ pub(super) async fn granted(
         if !covering(grants, &window, level).is_some_and(|grant| grant.unattended) {
             return Err(away.why().to_owned());
         }
-        used_away(daemon, bot, &window);
+        used_away(daemon, bot, &window.app.name);
         return Ok(window);
     }
     if covering(grants, &window, level).is_some() {
@@ -170,4 +170,11 @@ pub(super) async fn granted(
         )),
         None => Err("Botloft could not ask the owner.".to_owned()),
     }
+}
+
+/// The bot read or acted in `window`: its panel shows it (spec 24.9).
+pub(super) fn used(daemon: &Daemon, bot: &BotId, window: &Window, action: Option<DesktopAction>) {
+    let now = daemon.clock.now_ms();
+    let state = daemon.desktop.activity.used(bot, window, action, now);
+    daemon.emit(Event::DesktopChanged(state));
 }

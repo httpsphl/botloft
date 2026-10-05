@@ -81,15 +81,21 @@ pub(super) fn tools() -> Vec<Value> {
                 "Shows you a picture of one window on the owner's computer, only that window, \
                  even behind others: for what its text does not tell, like a chart or a \
                  layout. Prefer desktop_look, which costs you less. A minimized window has \
-                 nothing to show. {ASKS} {UNTRUSTED}"
+                 nothing to show. Without window, the owner's whole screen, only if they gave \
+                 you their whole desktop, with the windows you may never use covered. {ASKS} \
+                 {UNTRUSTED}"
             ),
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "window": window(),
+                    "window": {
+                        "type": "integer",
+                        "description": "The window's number from desktop_windows; leave it \
+                            out for the owner's whole screen.",
+                    },
                     "why": why(),
                 },
-                "required": ["window", "why"],
+                "required": ["why"],
                 "additionalProperties": false,
             },
             "annotations": { "readOnlyHint": true },

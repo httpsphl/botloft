@@ -992,6 +992,16 @@ from: number, until: number,
  */
 itemId: ChatItemId | null, };
 
+/**
+ * `desktop.grantWhole`: the owner gives the bot the whole desktop (spec
+ * 24.10), never asked for in the chat.
+ */
+export type DesktopWholeParams = { botId: BotId, level: DesktopLevel, 
+/**
+ * The owner checked "I understand the risks"; without it, refused.
+ */
+acceptedRisks: boolean, };
+
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
 /**
  * What the bot says the command is for, as in `ToolItem`. The bot
@@ -1676,6 +1686,7 @@ export interface RpcMethods {
   "desktop.grants": { params: DesktopGrantsParams; result: Array<DesktopGrant> };
   "desktop.revoke": { params: DesktopGrantIdParams; result: BotDesktop };
   "desktop.setOptions": { params: DesktopOptionsParams; result: BotDesktop };
+  "desktop.grantWhole": { params: DesktopWholeParams; result: BotDesktop };
   "desktop.watch": { params: DesktopBotParams; result: DesktopView };
   "desktop.unwatch": { params: undefined; result: null };
   "desktop.stop": { params: DesktopBotParams; result: DesktopState };

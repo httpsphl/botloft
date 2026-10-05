@@ -21,6 +21,7 @@ pub(super) fn decls(out: &mut Out) {
     out.decl::<DesktopView>();
     out.decl::<DesktopBotParams>();
     out.decl::<DesktopAwayUse>();
+    out.decl::<DesktopWholeParams>();
 }
 
 pub(super) fn methods(out: &mut Out) {
@@ -37,6 +38,11 @@ pub(super) fn methods(out: &mut Out) {
     out.method(
         method::DESKTOP_SET_OPTIONS,
         &out.name::<DesktopOptionsParams>(),
+        &out.name::<BotDesktop>(),
+    );
+    out.method(
+        method::DESKTOP_GRANT_WHOLE,
+        &out.name::<DesktopWholeParams>(),
         &out.name::<BotDesktop>(),
     );
     let bot = out.name::<DesktopBotParams>();
