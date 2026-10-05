@@ -17,7 +17,7 @@ export class FakeMcp {
   overview(): McpOverview {
     const bots: BotMcp[] = [...this.uses]
       .filter(([, serverIds]) => serverIds.length > 0)
-      .map(([botId, serverIds]) => ({ botId, serverIds: [...serverIds] }));
+      .map(([botId, serverIds]) => ({ botId, serverIds: [...serverIds], states: [] }));
     return { servers: structuredClone(this.servers), bots };
   }
 
@@ -89,7 +89,7 @@ export class FakeMcp {
         }
         const unique = [...new Set(serverIds)];
         this.uses.set(botId, unique);
-        const bot: BotMcp = { botId, serverIds: unique };
+        const bot: BotMcp = { botId, serverIds: unique, states: [] };
         this.fake.emit({ name: "bot.mcp", params: bot });
         this.changed();
         return bot;
