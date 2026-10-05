@@ -1,5 +1,6 @@
 // The fake daemon's tokens per bot (spec 8.7), summed from the `turn` items
-// of the fake chats, as the daemon sums its stored ones.
+// of the fake chats, as the daemon sums its stored ones. The share of the
+// plan is the tokens times `planSharePerToken`, once a test sets it.
 
 import type { FakeBotloft, Handlers } from "./fake";
 import { usedTokens } from "./format";
@@ -24,6 +25,7 @@ export function usageHandlers(fake: FakeBotloft): Pick<Handlers, "usage.tokens">
             archived: bot.archivedAt !== null,
             turns: 0,
             tokens: { input: 0, cacheWrite: 0, reloaded: 0, cacheRead: 0, output: 0 },
+            planShare: null,
           };
           byBot.set(bot.id, entry);
         }
@@ -36,6 +38,10 @@ export function usageHandlers(fake: FakeBotloft): Pick<Handlers, "usage.tokens">
           cacheRead: entry.tokens.cacheRead + cacheRead,
           output: entry.tokens.output + output,
         };
+      }
+      const rate = fake.planSharePerToken;
+      for (const entry of byBot.values()) {
+        entry.planShare = rate === null ? null : usedTokens(entry.tokens) * rate;
       }
       return [...byBot.values()].sort(
         (a, b) =>

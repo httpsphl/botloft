@@ -45,6 +45,7 @@ impl Store {
                     cache_read: count(row, 7)?,
                     output: count(row, 8)?,
                 },
+                plan_share: None,
             })
         })?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)

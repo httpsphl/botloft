@@ -4,6 +4,7 @@ import { App } from "../../App";
 import type { Client } from "../../lib/client";
 import { FakeBotloft } from "../../lib/fake";
 import { FakeHost } from "../../lib/fakeHost";
+import { planPercent } from "../../lib/format";
 import { periodStart } from "./TokensByBot";
 
 afterEach(cleanup);
@@ -30,7 +31,7 @@ describe("tokens by bot", () => {
     fake.chat.turn(writer.id);
 
     const dialog = await openUsage(fake);
-    const list = await within(dialog).findByRole("list", { name: "Tokens by bot" });
+    const list = await within(dialog).findByRole("list", { name: "Use by bot" });
     const rows = within(list).getAllByRole("listitem");
     // Each turn: 12 new, 1,800 into the cache and 640 written count; 24,000 reread do not.
     expect(rows.map((row) => row.textContent)).toEqual([
@@ -59,7 +60,7 @@ describe("tokens by bot", () => {
     fake.chat.turn(scout.id);
 
     const dialog = await openUsage(fake);
-    const list = await within(dialog).findByRole("list", { name: "Tokens by bot" });
+    const list = await within(dialog).findByRole("list", { name: "Use by bot" });
     expect(
       within(list)
         .getAllByRole("listitem")
@@ -75,7 +76,7 @@ describe("tokens by bot", () => {
     fake.chat.turn(fake.addBot(news.id, "Scout", "Finds stories").id);
 
     const dialog = await openUsage(fake);
-    const list = await within(dialog).findByRole("list", { name: "Tokens by bot" });
+    const list = await within(dialog).findByRole("list", { name: "Use by bot" });
     expect(
       within(list)
         .getAllByRole("listitem")
@@ -97,5 +98,40 @@ describe("tokens by bot", () => {
     expect(periodStart("today", now)).toBe(new Date(2026, 8, 30).getTime());
     expect(periodStart("week", now)).toBe(now - 7 * 86_400_000);
     expect(periodStart("all", now)).toBe(0);
+  });
+});
+
+describe("each bot's share of the weekly plan", () => {
+  test("shows once learned, with the tokens beside it, and says it is an estimate", async () => {
+    const fake = new FakeBotloft();
+    const ops = fake.addCrew("Ops");
+    const scout = fake.addBot(ops.id, "Scout", "Finds sources");
+    fake.chat.turn(scout.id);
+    fake.chat.turn(scout.id);
+    // 4,904 tokens at 0.000001 each: 0.49% of the week.
+    fake.planSharePerToken = 0.000_001;
+
+    const dialog = await openUsage(fake);
+    const list = await within(dialog).findByRole("list", { name: "Use by bot" });
+    expect(within(list).getByRole("listitem").textContent).toBe(
+      "Scout≈ 0.5% of the weekOps · Worked 2 times · 4.9k tokens",
+    );
+    expect(dialog.textContent).toContain("≈ Estimated:");
+    fireEvent.click(within(dialog).getByRole("radio", { name: "Last hour" }));
+    expect(await within(dialog).findByText("≈ 0.5% of the week")).toBeDefined();
+  });
+
+  test("until learned, the tokens and a note that the share comes later", async () => {
+    const fake = new FakeBotloft();
+    fake.chat.turn(fake.addBot(fake.addCrew("Ops").id, "Scout", "Finds sources").id);
+    const dialog = await openUsage(fake);
+    expect(await within(dialog).findByText(/shows up once the plan has gone up/)).toBeDefined();
+  });
+
+  test("a share reads as a short percentage", () => {
+    expect(planPercent(0.045)).toBe("4.5%");
+    expect(planPercent(0.123)).toBe("12%");
+    expect(planPercent(0.0000001)).toBe("<0.1%");
+    expect(planPercent(0)).toBe("0%");
   });
 });

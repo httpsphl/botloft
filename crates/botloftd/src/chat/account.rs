@@ -101,11 +101,13 @@ pub(super) fn rate_limit(daemon: &Daemon, bot: &BotId, generation: u64, event: &
     let status = info["status"].as_str().unwrap_or("unknown").to_owned();
     let resets_at = seconds(&info["resetsAt"]);
     let limited = !status.starts_with("allowed");
+    let now = daemon.clock.now_ms();
+    crate::service::plan::observed(daemon, &windows, now);
     daemon.set_usage(AccountUsage {
         status,
         resets_at,
         windows,
-        observed_at: daemon.clock.now_ms(),
+        observed_at: now,
     });
     if limited {
         let until = resets_at.unwrap_or_else(|| daemon.clock.now_ms() + DEFAULT_LIMIT_MS);

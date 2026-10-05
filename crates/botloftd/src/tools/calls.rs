@@ -107,6 +107,8 @@ fn roster(daemon: &Daemon, bot: &BotId) -> Outcome {
         crew_id: Some(crew.id.clone()),
     };
     let crew_bots = bots::list(daemon, list).map_err(explain)?;
+    let now = daemon.clock.now_ms();
+    let week = crate::service::plan::shares(&daemon.store(), now - 7 * 86_400_000, now);
     let others: Vec<_> = crew_bots
         .iter()
         .filter(|other| other.id != me.id)
@@ -118,6 +120,10 @@ fn roster(daemon: &Daemon, bot: &BotId) -> Outcome {
                 "state": other.state,
                 "model": other.model,
                 "effort": other.effort,
+                "week_plan_percent": week.as_ref().map(|shares| {
+                    let share = shares.get(&other.id).copied().unwrap_or_default();
+                    (share * 10_000.0).round() / 100.0
+                }),
                 "chief": lead::is_lead(&crew, &other.id),
             })
         })

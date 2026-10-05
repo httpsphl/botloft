@@ -93,6 +93,18 @@ export function fileSize(bytes: number): string {
 }
 
 /** Tokens as the owner reads them: "850", "24.3k", "556k", "1M", "1.2M". */
+/** A share of the plan, 0 to 1, as a percentage: "4.5%", "<0.1%". */
+export function planPercent(share: number): string {
+  const percent = share * 100;
+  if (percent <= 0) {
+    return `${decimal(0, 0)}%`;
+  }
+  if (percent < 0.05) {
+    return `<${decimal(0.1, 1)}%`;
+  }
+  return `${decimal(percent, percent < 10 ? 1 : 0)}%`;
+}
+
 export function tokens(count: number): string {
   if (count < 1000) {
     return String(count);
