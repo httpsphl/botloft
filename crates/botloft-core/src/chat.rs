@@ -23,6 +23,8 @@ pub const DELETE_ROUTINE_TOOL: &str = "mcp__botloft__delete_routine";
 /// A bot asking to rename or change itself, or the chief another bot
 /// (spec 10.3).
 pub const CHANGE_BOT_TOOL: &str = "mcp__botloft__change_bot";
+/// A bot asking to reach another crew (spec 10.4).
+pub const CREW_ACCESS_TOOL: &str = "mcp__botloft__ask_crew_access";
 /// A bot asking to use its browser on a site (spec 21.5). Not a tool the
 /// model calls: the daemon opens this request from inside the `browser_*`
 /// tools.
@@ -116,6 +118,7 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
         SUGGEST_TOOL | ROUTINE_TOOL | CHANGE_ROUTINE_TOOL | DELETE_ROUTINE_TOOL
         | CHANGE_BOT_TOOL => field(input, "name").map(str::to_owned),
         BROWSER_SITE_TOOL => field(input, "site").map(str::to_owned),
+        CREW_ACCESS_TOOL => field(input, "crew").map(str::to_owned),
         DESKTOP_TOOL => field(input, "app").map(str::to_owned),
         "mcp__botloft__desktop_look" | "mcp__botloft__desktop_screenshot" => {
             field(input, "why").map(str::to_owned)

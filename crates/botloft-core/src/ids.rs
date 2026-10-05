@@ -121,6 +121,10 @@ prefixed_id!(
     /// (spec 24.2).
     DesktopGrantId, "desktop grant", "dsk_"
 );
+prefixed_id!(
+    /// Identifies what the owner let a bot reach in another crew (spec 10.4).
+    CrewAccessId, "crew access", "cxa_"
+);
 
 /// A random version 4 UUID, for Claude Code session ids and the uuid of
 /// each message written to a bot (spec 7.3, 9.2).

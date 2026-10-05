@@ -10,7 +10,8 @@ use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard};
 
 use botloft_core::chat::{
-    CHANGE_ROUTINE_TOOL, ROUTINE_TOOL, SUGGEST_TOOL, clip, tool_input_max, tool_summary,
+    CHANGE_ROUTINE_TOOL, CREW_ACCESS_TOOL, ROUTINE_TOOL, SUGGEST_TOOL, clip, tool_input_max,
+    tool_summary,
 };
 use botloft_core::command::tool_explanation;
 use botloft_core::ids::{ApprovalId, BotId, ChatItemId};
@@ -146,7 +147,8 @@ pub fn answer(daemon: &Daemon, params: ApprovalsAnswerParams) -> ApiResult<Appro
         .approval(&params.approval_id)?
         .ok_or_else(|| ApiError::NotFound(format!("approval {}", params.approval_id)))?;
     // Only a bot or routine suggestion can be changed before it is allowed
-    // (spec 10.2, 20.12).
+    // (spec 10.2, 20.12); a request to reach another crew says for how long
+    // (10.4).
     let input = match params.input {
         Some(input) if params.allow && existing.approval.tool_name == SUGGEST_TOOL => {
             let value: Value = serde_json::from_str(&input)
@@ -158,6 +160,9 @@ pub fn answer(daemon: &Daemon, params: ApprovalsAnswerParams) -> ApiResult<Appro
         ),
         Some(input) if params.allow && existing.approval.tool_name == CHANGE_ROUTINE_TOOL => Some(
             crate::tools::check_changed_routine_change(daemon, &existing.approval.input, &input)?,
+        ),
+        Some(input) if params.allow && existing.approval.tool_name == CREW_ACCESS_TOOL => Some(
+            crate::tools::check_crew_access_answer(&existing.approval.input, &input)?,
         ),
         _ => None,
     };

@@ -209,9 +209,17 @@ fn prepare(daemon: &Daemon, store: &Store, delivery: &Delivery) -> Result<Step, 
         None => None,
     };
     let sender = match (&message.from_kind, &message.from_bot_id) {
-        (SenderKind::Bot, Some(id)) => store.bot(id)?.map(|sender| sender.handle),
+        (SenderKind::Bot, Some(id)) => store.bot(id)?,
         _ => None,
     };
+    // A bot of another crew says which one, to be answered there.
+    let sender_crew = match &sender {
+        Some(sender) if sender.crew_id != bot.crew_id => {
+            store.crew(&sender.crew_id)?.map(|crew| crew.name)
+        }
+        _ => None,
+    };
+    let sender = sender.map(|sender| sender.handle);
     let routine = context::routine(store, &message)?;
     let question = context::question(store, &message)?;
     let reactions = store
@@ -224,6 +232,7 @@ fn prepare(daemon: &Daemon, store: &Store, delivery: &Delivery) -> Result<Step, 
         message,
         crew_name: crew.name,
         sender_handle: sender,
+        sender_crew,
         task,
         routine,
         question,
@@ -236,6 +245,7 @@ struct Draft {
     message: Message,
     crew_name: String,
     sender_handle: Option<String>,
+    sender_crew: Option<String>,
     task: Option<Task>,
     workspace: PathBuf,
     routine: Option<context::RoutineContext>,
@@ -251,6 +261,7 @@ impl Draft {
         let context = Context {
             crew_name: &self.crew_name,
             sender_handle: self.sender_handle.as_deref(),
+            sender_crew: self.sender_crew.as_deref(),
             task: self.task.as_ref(),
             workspace: &self.workspace,
             routine: self.routine.as_ref(),

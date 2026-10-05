@@ -9,6 +9,7 @@ mod approvals;
 mod bots;
 mod browser_sites;
 mod chat;
+mod crew_access;
 mod crews;
 mod delete;
 mod deliveries;
@@ -35,6 +36,7 @@ use rusqlite::{Connection, Row, ffi};
 
 pub use approvals::ApprovalRecord;
 pub use bots::BotRecord;
+pub use crew_access::CrewAccessRecord;
 pub use deliveries::DeliveryOutcome;
 pub use messages::MessageFilter;
 pub use migrate::LATEST_VERSION;

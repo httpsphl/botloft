@@ -15,6 +15,7 @@ mod browser_reply;
 mod browser_sites;
 mod calls;
 mod catalog;
+mod crew_access;
 mod desktop;
 mod desktop_act;
 mod desktop_catalog;
@@ -42,6 +43,7 @@ use botloft_core::protocol::error_code;
 use serde_json::{Value, json};
 use tracing::debug;
 
+pub(crate) use self::crew_access::check_answer as check_crew_access_answer;
 use self::era::{Era, LEGACY, era, supported};
 pub(crate) use self::routine::check_changed as check_changed_routine;
 pub(crate) use self::routine_change::check_changed as check_changed_routine_change;
@@ -156,6 +158,11 @@ pub async fn handle(
         Ok(era) if called(&request) == Some(routine_change::DELETE_ROUTINE) => {
             let args = arguments(&request);
             let result = routine_change::delete(&daemon, &bot, generation, args).await;
+            Ok(decorate(era, &request, result))
+        }
+        Ok(era) if called(&request) == Some(crew_access::ASK_CREW_ACCESS) => {
+            let args = arguments(&request);
+            let result = crew_access::ask(&daemon, &bot, generation, args).await;
             Ok(decorate(era, &request, result))
         }
         Ok(era) if called(&request) == Some(bot_change::CHANGE_BOT) => {

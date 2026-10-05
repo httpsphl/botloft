@@ -28,9 +28,11 @@ pub(crate) fn expire_overdue(daemon: &Daemon, store: &Store, now: i64) {
 
 fn expire(daemon: &Daemon, store: &Store, task: &Task, now: i64) -> ApiResult<()> {
     let assignee = bots::find(store, &task.assignee_bot_id)?.handle;
+    // The requester may be in another crew (spec 10.4): the notice is in its.
+    let requester = bots::find(store, &task.requester_bot_id)?;
     let notice = Message {
         id: MessageId::generate(),
-        crew_id: task.crew_id.clone(),
+        crew_id: requester.crew_id,
         from_kind: SenderKind::System,
         from_bot_id: None,
         to_bot_id: task.requester_bot_id.clone(),

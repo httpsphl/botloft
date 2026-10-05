@@ -88,6 +88,7 @@ impl Supervisor {
         routines::process_ended(daemon, bot);
         context::process_ended(daemon, bot);
         crate::screens::turn_ended(daemon, bot);
+        daemon.crew_access.end_turn(bot);
         self.wake();
     }
 }
