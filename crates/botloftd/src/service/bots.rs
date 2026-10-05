@@ -114,7 +114,9 @@ pub(crate) fn insert(
         created_at: now_ms(),
         archived_at: None,
     };
-    workspace::prepare_bot(daemon.workspace_env(), crew, &record).map_err(ApiError::Workspace)?;
+    let crews = store.crews(true)?;
+    workspace::prepare_bot(daemon.workspace_env(), crew, &crews, &record)
+        .map_err(ApiError::Workspace)?;
     store.insert_bot(&record)?;
     Ok(record)
 }

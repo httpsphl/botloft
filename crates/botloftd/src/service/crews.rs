@@ -32,7 +32,7 @@ pub fn create(daemon: &Daemon, params: CrewsCreateParams) -> ApiResult<Crew> {
     let chosen = params
         .work_folder
         .as_deref()
-        .map(|input| choose_folder(daemon, input))
+        .map(|input| choose_folder(daemon, &store, &slug, None, input))
         .transpose()?;
 
     let lead = params
@@ -85,13 +85,13 @@ pub fn rename(daemon: &Daemon, params: CrewsRenameParams) -> ApiResult<Crew> {
 /// Moves the crew to another work folder, or back to `shared`. Each bot
 /// restarts to reach it once nothing is in progress (spec 7.4).
 pub fn set_work_folder(daemon: &Daemon, params: CrewsSetWorkFolderParams) -> ApiResult<Crew> {
+    let store = daemon.store();
+    let mut crew = active(&store, &params.crew_id)?;
     let chosen = params
         .work_folder
         .as_deref()
-        .map(|input| choose_folder(daemon, input))
+        .map(|input| choose_folder(daemon, &store, &crew.slug, Some(&crew.id), input))
         .transpose()?;
-    let store = daemon.store();
-    let mut crew = active(&store, &params.crew_id)?;
     if crew.work_folder_chosen == chosen.is_some()
         && chosen
             .as_deref()
@@ -176,8 +176,22 @@ pub(crate) fn changed(daemon: &Daemon, crew: Crew) -> Crew {
     crew
 }
 
-fn choose_folder(daemon: &Daemon, input: &str) -> ApiResult<String> {
-    let path = workspace::folder::choose(&daemon.paths, input).map_err(ApiError::validation)?;
+/// A work folder of the crew `slug` (`id` once it exists), apart from every
+/// other crew's folders.
+fn choose_folder(
+    daemon: &Daemon,
+    store: &Store,
+    slug: &str,
+    id: Option<&CrewId>,
+    input: &str,
+) -> ApiResult<String> {
+    let others: Vec<Crew> = store
+        .crews(true)?
+        .into_iter()
+        .filter(|crew| Some(&crew.id) != id)
+        .collect();
+    let path = workspace::folder::choose(&daemon.paths, slug, &others, input)
+        .map_err(ApiError::validation)?;
     Ok(path.display().to_string())
 }
 

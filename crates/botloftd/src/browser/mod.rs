@@ -161,6 +161,12 @@ impl Browsers {
         }
     }
 
+    /// The DevTools ports of the bots' browsers, read from every profile:
+    /// no page may open them (spec 21.5). A stale file only adds a port.
+    pub fn devtools_ports(&self) -> Vec<u16> {
+        launch::ports_in(&self.profiles)
+    }
+
     fn slot<'a>(&self, slots: &'a mut HashMap<BotId, Slot>, bot: &BotId) -> &'a mut Slot {
         slots.entry(bot.clone()).or_insert_with(|| Slot {
             calls: Arc::default(),

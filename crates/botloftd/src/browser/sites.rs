@@ -107,6 +107,44 @@ pub fn site_of(url: &str) -> Option<String> {
     (!host.is_empty()).then(|| host.to_owned())
 }
 
+/// The port of a loopback address (`localhost`, `127.x.x.x`, `[::1]` or
+/// `0.0.0.0`), or the scheme's own when none is written. `None` for any
+/// other address.
+pub fn loopback_port(url: &str) -> Option<u16> {
+    let lower = url.to_ascii_lowercase();
+    let (rest, default) = match lower.strip_prefix("https://") {
+        Some(rest) => (rest, 443),
+        None => (lower.strip_prefix("http://")?, 80),
+    };
+    let authority = rest.split(['/', '?', '#']).next()?;
+    let host_port = authority.rsplit('@').next()?;
+    let (host, port) = match host_port.strip_prefix('[') {
+        Some(v6) => {
+            let (host, after) = v6.split_once(']')?;
+            (host, after.strip_prefix(':'))
+        }
+        None => match host_port.split_once(':') {
+            Some((host, port)) => (host, Some(port)),
+            None => (host_port, None),
+        },
+    };
+    let host = host.trim_end_matches('.');
+    let loopback = host == "localhost"
+        || host.ends_with(".localhost")
+        || host == "::1"
+        || host == "0.0.0.0"
+        || host
+            .parse::<std::net::Ipv4Addr>()
+            .is_ok_and(|ip| ip.is_loopback());
+    if !loopback {
+        return None;
+    }
+    match port {
+        None | Some("") => Some(default),
+        Some(port) => port.parse().ok(),
+    }
+}
+
 /// Whether allowing `allowed` also allows `site`.
 pub fn covers(allowed: &str, site: &str) -> bool {
     site == allowed

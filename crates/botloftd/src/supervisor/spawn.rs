@@ -107,7 +107,8 @@ pub(super) fn launch_spec(
     session: Option<&str>,
 ) -> io::Result<(SpawnSpec, Launch)> {
     // settings.json and the rules are rewritten on every start.
-    let workspace = workspace::prepare_bot(daemon.workspace_env(), crew, bot)?;
+    let crews = daemon.store().crews(true).map_err(io::Error::other)?;
+    let workspace = workspace::prepare_bot(daemon.workspace_env(), crew, &crews, bot)?;
     let token = secrets::random_token()?;
     let (session, resumed) = match session {
         Some(session) => (session.to_owned(), true),

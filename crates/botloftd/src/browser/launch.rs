@@ -226,6 +226,20 @@ fn log_text(line: &str) -> String {
     text.trim().to_owned()
 }
 
+/// The DevTools port written in each profile under `profiles`.
+pub(super) fn ports_in(profiles: &Path) -> Vec<u16> {
+    let Ok(profiles) = std::fs::read_dir(profiles) else {
+        return Vec::new();
+    };
+    profiles
+        .flatten()
+        .filter_map(|profile| {
+            let text = std::fs::read_to_string(profile.path().join(PORT_FILE)).ok()?;
+            text.lines().next()?.trim().parse().ok()
+        })
+        .collect()
+}
+
 /// `DevToolsActivePort` holds the port and the browser's WebSocket path, one
 /// per line. The file may be read half-written.
 fn devtools_url(text: &str) -> Option<String> {
@@ -239,6 +253,23 @@ fn devtools_url(text: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn every_profile_gives_its_port() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        for (bot, text) in [
+            ("bot_a", "9222\n/devtools/browser/a\n"),
+            ("bot_b", "61000\n"),
+        ] {
+            std::fs::create_dir(dir.path().join(bot)).expect("profile");
+            std::fs::write(dir.path().join(bot).join(PORT_FILE), text).expect("port");
+        }
+        std::fs::create_dir(dir.path().join("bot_c")).expect("no port yet");
+        let mut ports = ports_in(dir.path());
+        ports.sort_unstable();
+        assert_eq!(ports, [9222, 61000]);
+        assert!(ports_in(&dir.path().join("missing")).is_empty());
+    }
 
     #[test]
     fn reads_the_port_file() {

@@ -1,6 +1,6 @@
 //! Contents of the files the daemon generates in a bot's workspace.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use botloft_core::protocol::Crew;
@@ -15,14 +15,19 @@ use crate::paths::permission_rule_path;
 const MCP_TIMEOUT_MARGIN: Duration = Duration::from_secs(120);
 
 /// `.claude/settings.json` (spec 7.5): keeps the bot out of the daemon's
-/// secrets, and the owner's own Claude Code memory out of the bot. Deny
-/// rules apply even in a folder nobody trusted.
-pub fn settings_json(botloft_home: &Path, crew_dir: &Path) -> Value {
+/// secrets, out of `fenced` (Botloft's data and the other crews' folders,
+/// see `fences`) and the owner's own Claude Code memory out of the bot.
+/// Deny rules apply even in a folder nobody trusted, and in every mode.
+pub fn settings_json(botloft_home: &Path, crew_dir: &Path, fenced: &[PathBuf]) -> Value {
     let secrets = permission_rule_path(&botloft_home.join("secrets"));
+    let mut deny = vec![format!("Read({secrets}/**)")];
+    for folder in fenced {
+        let folder = permission_rule_path(folder);
+        deny.push(format!("Read({folder}/**)"));
+        deny.push(format!("Edit({folder}/**)"));
+    }
     json!({
-        "permissions": {
-            "deny": [format!("Read({secrets}/**)")],
-        },
+        "permissions": { "deny": deny },
         // Instruction files above the crew's folder are the owner's.
         "claudeMdExcludes": memory::excludes_above(crew_dir),
         // The bot's memory is the `CLAUDE.md` in its folder. Claude Code's
@@ -215,18 +220,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn settings_deny_the_secrets_folder_and_nothing_else() {
+    fn settings_deny_the_secrets_and_the_fenced_folders() {
         let home = Path::new(r"C:\Users\ana\AppData\Local\Botloft");
-        let settings = settings_json(home, Path::new("/ws/site"));
+        let settings = settings_json(home, Path::new("/ws/site"), &[]);
         assert_eq!(
             settings["permissions"],
             json!({ "deny": ["Read(//c/Users/ana/AppData/Local/Botloft/secrets/**)"] })
+        );
+        let blog = PathBuf::from("C:/Users/ana/Botloft/blog");
+        let settings = settings_json(home, Path::new("/ws/site"), &[blog]);
+        assert_eq!(
+            settings["permissions"]["deny"],
+            json!([
+                "Read(//c/Users/ana/AppData/Local/Botloft/secrets/**)",
+                "Read(//c/Users/ana/Botloft/blog/**)",
+                "Edit(//c/Users/ana/Botloft/blog/**)",
+            ])
         );
     }
 
     #[test]
     fn settings_keep_the_owners_memory_out_of_the_bot() {
-        let settings = settings_json(Path::new("/data"), Path::new("/ws/site"));
+        let settings = settings_json(Path::new("/data"), Path::new("/ws/site"), &[]);
         assert_eq!(
             settings["claudeMdExcludes"],
             json!(memory::excludes_above(Path::new("/ws/site")))
