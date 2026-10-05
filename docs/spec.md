@@ -809,6 +809,16 @@ Em fatias (18, item 8). O que já vale fora do Windows:
 | Não suspender | Como no Windows, enquanto houver bot `busy` e `keep_awake = true`, mas com um processo auxiliar que segura o pedido enquanto vive: `caffeinate -i -w <pid do daemon>` no macOS; no Linux, `systemd-inhibit --what=idle --mode=block` com um `sh` que espera o daemon sumir (`kill -0` a cada 5 s). Os dois impedem só a suspensão por inatividade, não a pedida pelo dono (tampa, Suspender). O auxiliar sai quando o daemon morre, então uma queda não deixa o computador acordado. Um auxiliar que sai em 200 ms (sem logind, num contêiner) vira erro no log, e o daemon segue |
 | Lixeira | Ainda não: avisa que só existe no Windows |
 
+### 14.2 Cópia de segurança
+
+Formatar o computador ou perder a pasta do Botloft não pode levar as equipes junto. O dono exporta tudo para um arquivo `.botloft`, protegido com uma senha dele, e importa esse arquivo em outro computador ou depois de reinstalar. É o mesmo arquivo que um backup na nuvem vai enviar: o servidor guardaria só bytes que não consegue ler.
+
+- **O que vai:** uma cópia consistente do banco (`VACUUM INTO`): equipes, bots, conversas, rotinas, regras de "permitir sempre", acessos entre equipes e o uso. E a pasta de cada equipe em `workspaces_root`, arquivadas inclusive: a memória (`CLAUDE.md`) e as regras de cada bot, os anexos e a `shared`. Vai também um `manifest.json` com o formato (1), a data, a versão do Botloft e as equipes, com os nomes dos bots.
+- **O que fica:** o que o Botloft escreve de novo a cada início (`.botloft\` e `.claude\settings.json` de cada bot, 7.5); os segredos, os logs e os perfis dos navegadores dos bots, que estão na pasta de dados e não em `workspaces_root`; e as pastas de trabalho que o dono escolheu fora do Botloft (5), que são dele. O manifesto lista essas pastas, para a importação avisar. O login do Claude também é de cada computador e se faz de novo.
+- **Lacre:** o arquivo começa com `BOTLOFTBAK`, um byte de versão (1), o sal do Argon2id (16 bytes), os custos (64 MiB, 3 passadas, 1 faixa, em `u32` little-endian) e o nonce (19 bytes). Depois vem o zip, em blocos de 64 KiB cifrados com XChaCha20-Poly1305 na construção STREAM (contador big-endian de 32 bits e marca do último bloco), com a chave de 32 bytes que o Argon2id tira da senha. Senha errada, arquivo cortado ou blocos trocados não abrem, e nada de um bloco que não abre é escrito. A senha tem ao menos 8 caracteres e nunca é guardada nem vai para o log: quem a perde perde a cópia.
+- **Exportar:** `backup.export {passphrase}` fecha a cópia em `<home>\exports\botloft-AAAA-MM-DD-HHMM.botloft` (só a mais nova fica ali) e devolve `{path, size, manifest}`. O app então oferece "Salvar como…" (`save_file_as`, 15.2) para o dono guardar onde quiser. Os erros que o dono resolve vêm com `reason` (20.8): `short_passphrase`, `wrong_passphrase`, `not_a_backup` e `newer_backup`.
+- **Importar** e a tela no app vêm nas próximas partes.
+
 ## 15. App desktop
 
 ### 15.1 Estrutura

@@ -49,6 +49,7 @@ macro_rules! text_enum {
     };
 }
 
+mod backup;
 mod browser;
 mod browser_input;
 mod chat;
@@ -71,6 +72,7 @@ mod session;
 mod settings;
 mod usage;
 
+pub use backup::*;
 pub use browser::*;
 pub use browser_input::*;
 pub use chat::*;
@@ -126,6 +128,7 @@ pub mod method {
     pub const APPROVALS_ANSWER: &str = "approvals.answer";
     pub const RULES_LIST: &str = "rules.list";
     pub const RULES_DELETE: &str = "rules.delete";
+    pub const BACKUP_EXPORT: &str = "backup.export";
     pub const CREW_ACCESS_LIST: &str = "crewAccess.list";
     pub const CREW_ACCESS_REVOKE: &str = "crewAccess.revoke";
     pub const DESKTOP_GRANTS: &str = "desktop.grants";

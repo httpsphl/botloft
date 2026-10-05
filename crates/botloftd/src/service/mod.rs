@@ -3,6 +3,7 @@
 
 pub mod archive;
 pub mod attachments;
+pub mod backup;
 pub mod bots;
 pub mod chat;
 pub mod crew_access;
