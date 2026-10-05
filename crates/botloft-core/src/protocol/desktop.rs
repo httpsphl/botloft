@@ -173,7 +173,7 @@ pub enum DesktopActionKind {
     Press,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct DesktopAction {
@@ -182,11 +182,16 @@ pub struct DesktopAction {
     pub target: String,
     /// The option chosen, for `select`.
     pub option: Option<String>,
+    /// Where in the window, as fractions of its width and height from its
+    /// top left corner, when the action has a point: for the bot's cursor
+    /// on its panel.
+    pub x: Option<f64>,
+    pub y: Option<f64>,
 }
 
 /// What a bot does on the owner's desktop, for its panel (spec 24.9): the
 /// params of `desktop.changed`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct DesktopState {
@@ -216,7 +221,7 @@ pub struct DesktopFrame {
 
 /// The result of `desktop.watch`: the bot's state and, when it uses a
 /// window, its picture now.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct DesktopView {

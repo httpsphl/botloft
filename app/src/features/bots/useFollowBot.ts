@@ -1,7 +1,9 @@
 // The panel beside the chat follows what the bot starts doing (spec 15.1),
 // so the owner sees it happen: its browser starting or a request for a
 // hand opens the browser (spec 21.8), and a screen it starts writing opens
-// the design area (spec 22.5), whatever panel was open. Each opens once per
+// the design area (spec 22.5), and the bot starting to use the owner's
+// desktop after a pause opens the desktop panel (spec 24.9), whatever panel
+// was open. Each opens once per
 // start; closing it leaves the button's dot. When the browser goes to rest
 // (spec 21.2) its panel closes, and it opens again once the bot wakes it.
 // The browser in the owner's hands is never taken away. The owner can turn this off in Settings
@@ -12,9 +14,12 @@
 import { useEffect, useRef } from "react";
 import type { Bot } from "../../lib/protocol.gen";
 import { prefs } from "../../shell/prefs";
-import { useApp } from "../../store/context";
+import { useApi, useApp } from "../../store/context";
 
-export type Followed = "browser" | "screens";
+export type Followed = "browser" | "screens" | "desktop";
+
+/** A use of the desktop this long after the last one starts a new run. */
+const DESKTOP_PAUSE = 2 * 60_000;
 
 export function useFollowBot({
   bot,
@@ -41,6 +46,10 @@ export function useFollowBot({
   // behind its button, a request for a hand does not.
   const before = useRef<{ browsing: boolean; asking: boolean } | null>(null);
   const drawn = useRef(new Set<string>());
+  const api = useApi();
+  // The latest of what the desktop listener needs, without listening anew.
+  const now = useRef({ side, held, open });
+  now.current = { side, held, open };
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: another bot starts afresh
   useEffect(() => {
@@ -75,4 +84,26 @@ export function useFollowBot({
     }
     open("screens");
   }, [bot.id, writing]);
+
+  useEffect(() => {
+    let last: number | null = null;
+    return api.subscribe((event) => {
+      if (event.name !== "desktop.changed" || event.params.botId !== bot.id) {
+        return;
+      }
+      const { at, window, stopped } = event.params;
+      if (at === null || !window || stopped || at === last) {
+        return;
+      }
+      const was = last;
+      last = at;
+      if (was !== null && at - was < DESKTOP_PAUSE) {
+        return;
+      }
+      const { side, held, open } = now.current;
+      if (side !== "desktop" && !held && prefs.followBot.get()) {
+        open("desktop");
+      }
+    });
+  }, [api, bot.id]);
 }

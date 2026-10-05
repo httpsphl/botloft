@@ -6,7 +6,7 @@
 mod common;
 
 use common::browsing::{call, pending_approval};
-use common::desktop::{TITLE, TestWindow, reading, setup};
+use common::desktop::{TITLE, TestWindow, reading, ref_in, setup};
 use serde_json::json;
 
 #[tokio::test(flavor = "multi_thread")]
@@ -30,7 +30,7 @@ async fn the_panel_shows_the_window_the_bot_uses_and_its_pictures() {
     let asked = pending_approval(&mut s.app).await;
     let allow = json!({ "approvalId": asked["approvalId"], "allow": true });
     s.app.call("approvals.answer", allow).await.expect("answer");
-    looking.await.expect("task").expect("reading");
+    let text = looking.await.expect("task").expect("reading");
 
     // The panel hears which window, and its picture follows.
     let changed = s.app.notification("desktop.changed").await;
@@ -39,6 +39,25 @@ async fn the_panel_shows_the_window_the_bot_uses_and_its_pictures() {
     let frame = s.app.notification("desktop.frame").await;
     assert_eq!(frame["botId"], s.bot["id"]);
     assert!(frame["data"].as_str().is_some_and(|data| data.len() > 100));
+
+    // A click says where it was in the window, for the bot's cursor: the
+    // Save button is near the top left.
+    let save = ref_in(&text, r#"button "Save""#);
+    let click = json!({ "ref": save, "why": "To save the visit" });
+    let clicking = call(&s.mcp, "desktop_click", click);
+    let asked = pending_approval(&mut s.app).await;
+    let allow = json!({ "approvalId": asked["approvalId"], "allow": true });
+    s.app.call("approvals.answer", allow).await.expect("answer");
+    clicking.await.expect("task").expect("clicked");
+    let clicked = loop {
+        let changed = s.app.notification("desktop.changed").await;
+        if changed["action"]["kind"] == "click" {
+            break changed;
+        }
+    };
+    let (x, y) = (&clicked["action"]["x"], &clicked["action"]["y"]);
+    assert!(x.as_f64().is_some_and(|x| x > 0.0 && x < 0.5), "{clicked}");
+    assert!(y.as_f64().is_some_and(|y| y > 0.0 && y < 0.5), "{clicked}");
 
     s.app
         .call("desktop.unwatch", serde_json::Value::Null)

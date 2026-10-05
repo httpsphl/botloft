@@ -57,7 +57,22 @@ fn shown(action: &Action, control: &Control) -> DesktopAction {
         kind,
         target: control.name.clone(),
         option,
+        x: None,
+        y: None,
     }
+}
+
+/// The middle of a control's place, as fractions of the window's `frame`;
+/// nothing when it has no place or lies outside the window.
+fn point(rect: Option<[i32; 4]>, frame: [i32; 4]) -> Option<(f64, f64)> {
+    let [left, top, width, height] = rect?;
+    let [frame_left, frame_top, frame_width, frame_height] = frame;
+    if frame_width <= 0 || frame_height <= 0 {
+        return None;
+    }
+    let x = f64::from(left + width / 2 - frame_left) / f64::from(frame_width);
+    let y = f64::from(top + height / 2 - frame_top) / f64::from(frame_height);
+    ((0.0..=1.0).contains(&x) && (0.0..=1.0).contains(&y)).then_some((x, y))
 }
 
 /// The window read again after an action, with `said` first: kept as the
@@ -170,6 +185,24 @@ pub(super) async fn act(
         enter(daemon, bot, &window).await?;
         said.push_str(" Pressed Enter.");
     }
-    let action = shown(&ask.action, &control);
+    let mut action = shown(&ask.action, &control);
+    let id = window.id;
+    if let Ok(frame) = blocking(move || platform::frame(id)).await {
+        (action.x, action.y) = point(control.rect, frame).unzip();
+    }
     answered(daemon, bot, window, said, action).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::point;
+
+    #[test]
+    fn a_controls_point_is_its_middle_within_the_window() {
+        let frame = [100, 50, 400, 200];
+        assert_eq!(point(Some([200, 100, 20, 10]), frame), Some((0.275, 0.275)));
+        assert_eq!(point(Some([600, 100, 20, 10]), frame), None, "outside");
+        assert_eq!(point(None, frame), None);
+        assert_eq!(point(Some([200, 100, 20, 10]), [0, 0, 0, 0]), None);
+    }
 }

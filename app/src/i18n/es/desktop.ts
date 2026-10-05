@@ -19,6 +19,7 @@ export const desktop: Messages["desktop"] = {
   },
   panel: {
     label: (bot) => `Escritorio de ${bot}`,
+    screen: (bot, app) => `${app}, como lo ve ${bot}`,
     heading: "Escritorio",
     live: "En vivo",
     stoppedBadge: "Detenido",

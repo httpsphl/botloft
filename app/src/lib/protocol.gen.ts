@@ -921,7 +921,13 @@ target: string,
 /**
  * The option chosen, for `select`.
  */
-option: string | null, };
+option: string | null, 
+/**
+ * Where in the window, as fractions of its width and height from its
+ * top left corner, when the action has a point: for the bot's cursor
+ * on its panel.
+ */
+x: number | null, y: number | null, };
 
 /**
  * What a bot does on the owner's desktop, for its panel (spec 24.9): the

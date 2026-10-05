@@ -35,7 +35,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use windows::core::{BOOL, w};
 
 pub use act::act;
-pub use capture::capture;
+pub use capture::{capture, frame};
 pub use input::owner_idle;
 pub use notice::{hide as notice_hide, show as notice_show};
 pub use real::{click as real_click, press as real_press, type_text as real_type};

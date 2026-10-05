@@ -5,7 +5,7 @@
 import { Monitor, Play, Square, X } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useT } from "../../i18n";
-import type { Bot, DesktopAction } from "../../lib/protocol.gen";
+import type { Bot, DesktopAction, DesktopFrame, DesktopState } from "../../lib/protocol.gen";
 import { useApi } from "../../store/context";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
@@ -14,6 +14,7 @@ import { EmptyState } from "../../ui/EmptyState";
 import { SidePanel } from "../../ui/SidePanel";
 import { attempt } from "../../ui/toast";
 import { BotAvatar } from "../bots/BotAvatar";
+import { LiveView, type StageAction } from "../browser/LiveView";
 import { ComputerFooter } from "../terminal/ComputerDock";
 import { useDesktopView } from "./useDesktopView";
 
@@ -37,6 +38,20 @@ export function actionText(action: DesktopAction | null, t: Words): string {
     case "press":
       return t.press(action.option ?? "");
   }
+}
+
+/** The bot's last action at its point in the picture, for its cursor. */
+function pointed(state: DesktopState | null, frame: DesktopFrame): StageAction | null {
+  const action = state?.action;
+  if (!action || state?.at == null) {
+    return null;
+  }
+  return {
+    kind: action.kind,
+    x: action.x === null ? null : action.x * frame.width,
+    y: action.y === null ? null : action.y * frame.height,
+    at: state.at,
+  };
 }
 
 export function DesktopPanel({ bot, onClose }: { bot: Bot; onClose(): void }) {
@@ -102,19 +117,28 @@ export function DesktopPanel({ bot, onClose }: { bot: Bot; onClose(): void }) {
               </span>
             </p>
             <div
-              className="bot-stage grid min-h-40 flex-1 place-items-center p-2.5"
+              className="bot-stage flex min-h-40 flex-1 flex-col p-2.5"
               style={{ "--bot": bot.color } as CSSProperties}
             >
-              {frame ? (
-                <img
-                  src={`data:image/jpeg;base64,${frame.data}`}
-                  alt={window.title}
-                  draggable={false}
-                  className="max-h-full max-w-full select-none rounded-lg object-contain shadow-lift"
-                />
-              ) : (
-                <p className="text-sm text-white/80">{t.waiting}</p>
-              )}
+              <div
+                className="grid min-h-0 flex-1 place-items-center"
+                style={{ containerType: "size" }}
+              >
+                {frame ? (
+                  <div className="relative">
+                    <LiveView
+                      bot={bot}
+                      frame={frame}
+                      action={pointed(state, frame)}
+                      label={t.screen(bot.name, window.app)}
+                      alt={window.title}
+                      held={stopped}
+                    />
+                  </div>
+                ) : (
+                  <p className="text-sm text-white/80">{t.waiting}</p>
+                )}
+              </div>
             </div>
             <p aria-live="polite" className="flex items-center gap-2 text-ink-soft text-sm">
               <BotAvatar color={bot.color} size={18} mood={stopped ? "sleeping" : "working"} />
