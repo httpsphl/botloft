@@ -161,6 +161,8 @@ pub mod method {
     pub const BROWSER_OPEN: &str = "browser.open";
     pub const BROWSER_WINDOW: &str = "browser.window";
     pub const BROWSER_TEACH: &str = "browser.teach";
+    /// The owner opens the bot's closed browser for themselves.
+    pub const BROWSER_START: &str = "browser.start";
     pub const SCREENS_LIST: &str = "screens.list";
     pub const QUESTIONS_LIST: &str = "questions.list";
     pub const QUESTIONS_ANSWER: &str = "questions.answer";

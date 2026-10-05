@@ -32,6 +32,10 @@ export const browser = {
   starting: "Opening the browser…",
   closed: "Browser closed",
   closedBody: "It opens again when the bot needs it. Logins stay.",
+  openForMe: "Open it for me",
+  openForMeWhy: (bot: string) =>
+    `To see what ${bot} left open and use it yourself. ${bot} is not woken or told; give it back when you are done and it rests again.`,
+  openForMeFailed: "Could not open the browser",
   failedTitle: "The browser couldn't open",
   failedBody: (system: string): string =>
     system === "Windows"

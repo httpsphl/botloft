@@ -56,7 +56,7 @@ fn working(state: BotState) -> bool {
     matches!(state, BotState::Busy | BotState::NeedsApproval)
 }
 
-fn want(daemon: &Daemon, bot: &BotId) -> Want {
+pub fn want(daemon: &Daemon, bot: &BotId) -> Want {
     let store = daemon.store();
     let Ok(record) = bots::find(&store, bot) else {
         return Want::Forget;

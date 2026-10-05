@@ -4,8 +4,8 @@
 // The owner can take it into their own hands and give it back (spec 21.10),
 // or open it in a window of its own to sign in (spec 21.11).
 
-import { Globe, LoaderCircle, Maximize2, Minimize2, Moon, X } from "lucide-react";
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { Globe, Hand, LoaderCircle, Maximize2, Minimize2, Moon, X } from "lucide-react";
+import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
 import { useT } from "../../i18n";
 import type { Bot } from "../../lib/protocol.gen";
 import { SYSTEM } from "../../lib/system";
@@ -24,7 +24,7 @@ import { LessonArea, LessonDialog, useLesson } from "./Lesson";
 import { LiveView, useCaption } from "./LiveView";
 import { TabStrip } from "./TabStrip";
 import { useBrowserView } from "./useBrowserView";
-import { useHands } from "./useHands";
+import { type Hands, useHands } from "./useHands";
 import { useFitPage, useRoom } from "./useRoom";
 import { WindowBar } from "./WindowBar";
 
@@ -138,7 +138,12 @@ export function BrowserPanel({
             )}
           </Callout>
         ) : status === "closed" && !frame ? (
-          !windowed && <Empty bot={bot} />
+          !windowed && (
+            <>
+              <Empty bot={bot} />
+              <OpenForMe bot={bot} hands={hands} />
+            </>
+          )
         ) : (
           <>
             {live && ask && !hands.held && <AskCallout bot={bot} task={ask} hands={hands} />}
@@ -178,12 +183,20 @@ export function BrowserPanel({
                   </LiveView>
                   {(status !== "open" || !frame) && (
                     <Overlay
-                      busy={status === "starting" || status === "open"}
+                      busy={status === "starting" || status === "open" || hands.opening}
                       title={
-                        windowed ? t.window.title : status === "closed" ? t.closed : t.starting
+                        windowed
+                          ? t.window.title
+                          : status === "closed" && !hands.opening
+                            ? t.closed
+                            : t.starting
                       }
                       body={status === "closed" && !windowed ? t.closedBody : null}
-                    />
+                    >
+                      {status === "closed" && !windowed && !hands.opening && (
+                        <OpenForMe bot={bot} hands={hands} />
+                      )}
+                    </Overlay>
                   )}
                 </div>
               </div>
@@ -223,7 +236,17 @@ export function BrowserPanel({
   );
 }
 
-function Overlay({ busy, title, body }: { busy: boolean; title: string; body: string | null }) {
+function Overlay({
+  busy,
+  title,
+  body,
+  children,
+}: {
+  busy: boolean;
+  title: string;
+  body: string | null;
+  children?: ReactNode;
+}) {
   return (
     <div className="absolute inset-0 grid place-items-center rounded-xl">
       <div className="flex animate-fade flex-col items-center gap-1.5 rounded-xl bg-panel/90 px-4 py-3 text-center shadow-lift">
@@ -232,7 +255,27 @@ function Overlay({ busy, title, body }: { busy: boolean; title: string; body: st
           {title}
         </p>
         {body && <p className="max-w-64 text-muted text-xs">{body}</p>}
+        {children}
       </div>
+    </div>
+  );
+}
+
+/** The owner opens the closed browser for themselves (spec 21.10). */
+function OpenForMe({ bot, hands }: { bot: Bot; hands: Hands }) {
+  const t = useT().browser;
+  return (
+    <div className="mt-1.5 flex flex-col items-center gap-1.5">
+      <Button
+        variant="primary"
+        size="sm"
+        icon={Hand}
+        disabled={hands.opening}
+        onClick={() => void hands.start()}
+      >
+        {t.openForMe}
+      </Button>
+      <p className="max-w-72 text-center text-muted text-xs">{t.openForMeWhy(bot.name)}</p>
     </div>
   );
 }

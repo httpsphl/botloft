@@ -33,6 +33,10 @@ export const browser: Messages["browser"] = {
   starting: "Abriendo el navegador…",
   closed: "Navegador cerrado",
   closedBody: "Se abre de nuevo cuando el bot lo necesite. Las sesiones iniciadas siguen.",
+  openForMe: "Abrirlo para mí",
+  openForMeWhy: (bot) =>
+    `Para ver lo que ${bot} dejó abierto y usarlo tú mismo. ${bot} no se despierta ni se entera; devuélvelo cuando termines y el navegador vuelve a descansar.`,
+  openForMeFailed: "No se pudo abrir el navegador",
   failedTitle: "El navegador no se abrió",
   failedBody: (system: string) =>
     system === "Windows"

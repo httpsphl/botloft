@@ -4,7 +4,7 @@
 // Events go out in order and without waiting for each other: the daemon
 // queues them for the page.
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useT } from "../../i18n";
 import type { Bot, BrowserInput, BrowserState } from "../../lib/protocol.gen";
 import { useApi, useApp } from "../../store/context";
@@ -24,6 +24,10 @@ export interface Hands {
   switchTab(tabId: string): Promise<boolean>;
   /** Takes the active tab to the address the owner typed. */
   open(url: string): Promise<boolean>;
+  /** Opens the closed browser for the owner, and takes it once open. */
+  start(): Promise<void>;
+  /** Waiting for the browser opened for the owner. */
+  opening: boolean;
 }
 
 export function useHands(bot: Pick<Bot, "id">, state: BrowserState | null): Hands {
@@ -79,6 +83,27 @@ export function useHands(bot: Pick<Bot, "id">, state: BrowserState | null): Hand
     [api, botId, t.goFailed],
   );
 
+  // Opened for the owner (spec 21.10), it is theirs as soon as it is up.
+  const [opening, setOpening] = useState(false);
+  const start = useCallback(async () => {
+    const asked = await attempt(t.openForMeFailed, async () => {
+      putBrowser(await api.call("browser.start", { botId }));
+    });
+    setOpening(asked);
+  }, [api, botId, putBrowser, t.openForMeFailed]);
+  const status = state?.status;
+  useEffect(() => {
+    if (!opening) {
+      return;
+    }
+    if (status === "open") {
+      setOpening(false);
+      void take();
+    } else if (status === "failed") {
+      setOpening(false);
+    }
+  }, [opening, status, take]);
+
   return {
     held: state?.status === "open" && state.control === "owner",
     busy,
@@ -89,5 +114,7 @@ export function useHands(bot: Pick<Bot, "id">, state: BrowserState | null): Hand
     newTab,
     switchTab,
     open,
+    start,
+    opening,
   };
 }
