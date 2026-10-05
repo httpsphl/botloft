@@ -2,8 +2,9 @@
 // so the owner sees it happen: its browser starting or a request for a
 // hand opens the browser (spec 21.8), and a screen it starts writing opens
 // the design area (spec 22.5), and the bot starting to use the owner's
-// desktop after a pause opens the desktop panel (spec 24.9), whatever panel
-// was open. Each opens once per
+// desktop after a pause (a desktop tool starting in the chat, or the daemon
+// saying it used a window) opens the desktop panel (spec 24.9), whatever
+// panel was open. Each opens once per
 // start; closing it leaves the button's dot. When the browser goes to rest
 // (spec 21.2) its panel closes, and it opens again once the bot wakes it.
 // The browser in the owner's hands is never taken away. The owner can turn this off in Settings
@@ -15,6 +16,7 @@ import { useEffect, useRef } from "react";
 import type { Bot } from "../../lib/protocol.gen";
 import { prefs } from "../../shell/prefs";
 import { useApi, useApp } from "../../store/context";
+import { isDesktopTool } from "../desktop/showDesktop";
 
 export type Followed = "browser" | "screens" | "desktop";
 
@@ -87,22 +89,33 @@ export function useFollowBot({
 
   useEffect(() => {
     let last: number | null = null;
-    return api.subscribe((event) => {
-      if (event.name !== "desktop.changed" || event.params.botId !== bot.id) {
-        return;
-      }
-      const { at, window, stopped } = event.params;
-      if (at === null || !window || stopped || at === last) {
+    // A use of the desktop: a desktop tool starting in the chat, or the
+    // daemon saying the bot read or acted in a window.
+    const used = (at: number) => {
+      if (at === last) {
         return;
       }
       const was = last;
       last = at;
-      if (was !== null && at - was < DESKTOP_PAUSE) {
+      if (was !== null && Math.abs(at - was) < DESKTOP_PAUSE) {
         return;
       }
       const { side, held, open } = now.current;
       if (side !== "desktop" && !held && prefs.followBot.get()) {
         open("desktop");
+      }
+    };
+    return api.subscribe((event) => {
+      if (event.name === "chat.item" && event.params.item.botId === bot.id) {
+        const { body, createdAt } = event.params.item;
+        if (body.kind === "tool" && body.status === "running" && isDesktopTool(body.name)) {
+          used(createdAt);
+        }
+      } else if (event.name === "desktop.changed" && event.params.botId === bot.id) {
+        const { at, window, stopped } = event.params;
+        if (at !== null && window && !stopped) {
+          used(at);
+        }
       }
     });
   }, [api, bot.id]);

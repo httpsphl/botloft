@@ -11,6 +11,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::w;
 
+use super::super::ScreenCursor;
 use super::test_window::TestWindow;
 use super::{capture, handle, outline};
 
@@ -63,6 +64,17 @@ fn the_outline_goes_around_the_window_and_follows_it() {
     let above = unsafe { GetWindow(app, GW_HWNDPREV) }.ok();
     assert_eq!(above, outline_window(), "right above the app");
 
+    // The bot clicks: its cursor is drawn, and the outline goes on.
+    let cursor = ScreenCursor {
+        x: 0.5,
+        y: 0.5,
+        click: true,
+        typing: false,
+        name: "Scout".to_owned(),
+        at: 1,
+    };
+    outline::show(window.id, (0x5E, 0xC8, 0xFF), Some(cursor.clone()));
+
     // The window moves; the outline follows on the next show.
     // SAFETY: moves the test's own window.
     let _ = unsafe {
@@ -77,7 +89,7 @@ fn the_outline_goes_around_the_window_and_follows_it() {
         )
     };
     let moved = capture::frame(window.id).expect("frame");
-    outline::show(window.id, (0x5E, 0xC8, 0xFF), None);
+    outline::show(window.id, (0x5E, 0xC8, 0xFF), Some(cursor));
     soon("moved along", || around(moved, place()));
 
     // SAFETY: minimizes and restores the test's own window.
