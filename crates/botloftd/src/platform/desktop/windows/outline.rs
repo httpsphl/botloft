@@ -19,12 +19,12 @@ use windows::Win32::UI::HiDpi::{
     DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, GetDpiForWindow, SetThreadDpiAwarenessContext,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, DispatchMessageW, GW_HWNDPREV, GetClientRect, GetMessageW,
-    GetWindow, HWND_TOP, IsIconic, IsWindow, IsWindowVisible, KillTimer, LWA_COLORKEY, MSG,
-    PostMessageW, RegisterClassW, SW_HIDE, SW_SHOWNOACTIVATE, SWP_NOACTIVATE,
-    SetLayeredWindowAttributes, SetTimer, SetWindowDisplayAffinity, SetWindowPos, ShowWindow,
-    TranslateMessage, WDA_EXCLUDEFROMCAPTURE, WM_APP, WM_PAINT, WM_TIMER, WNDCLASSW, WS_EX_LAYERED,
-    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_POPUP,
+    CreateWindowExW, DefWindowProcW, DisableProcessWindowsGhosting, DispatchMessageW, GW_HWNDPREV,
+    GetClientRect, GetMessageW, GetWindow, HWND_TOP, IsIconic, IsWindow, IsWindowVisible,
+    KillTimer, LWA_COLORKEY, MSG, PostMessageW, RegisterClassW, SW_HIDE, SW_SHOWNOACTIVATE,
+    SWP_NOACTIVATE, SetLayeredWindowAttributes, SetTimer, SetWindowDisplayAffinity, SetWindowPos,
+    ShowWindow, TranslateMessage, WDA_EXCLUDEFROMCAPTURE, WM_APP, WM_PAINT, WM_TIMER, WNDCLASSW,
+    WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_POPUP,
 };
 use windows::core::{PCWSTR, w};
 
@@ -80,6 +80,9 @@ fn run(made: &Sender<Option<isize>>) {
     // SAFETY: a window class, a window and its message loop, on this thread.
     unsafe {
         SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+        // A busy outline must never turn into Windows' gray "not
+        // responding" ghost over the owner's screen.
+        DisableProcessWindowsGhosting();
         let Ok(module) = GetModuleHandleW(None) else {
             let _ = made.send(None);
             return;

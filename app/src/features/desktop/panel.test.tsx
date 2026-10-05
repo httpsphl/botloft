@@ -124,4 +124,14 @@ describe("the desktop panel", () => {
       within(options).getByRole("switch", { name: "While you are away: Notepad" }),
     ).toBeDefined();
   });
+
+  test("opens as soon as a desktop tool starts in the chat", async () => {
+    const { fake, scout } = await openScout();
+    expect(screen.queryByRole("complementary", { name: "Scout's desktop" })).toBeNull();
+    act(() => {
+      fake.now += 3 * 60_000;
+      fake.chat.tool(scout.id, "mcp__botloft__desktop_windows", { status: "running" });
+    });
+    expect(await within(panel()).findByText("Scout has not used your desktop yet")).toBeDefined();
+  });
 });

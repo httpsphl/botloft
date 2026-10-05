@@ -77,16 +77,23 @@ pub(super) fn follow(cursor: Option<&ScreenCursor>) -> bool {
             click: cursor.click,
         });
     }
-    moving(now)
+    // With the lock held: taking it again here would wait forever.
+    still(motion.as_ref(), now)
+}
+
+fn still(motion: Option<&Motion>, now: Instant) -> bool {
+    motion.is_some_and(|motion| now.duration_since(motion.started) < GLIDE + RIPPLE)
 }
 
 /// Whether the cursor still glides or its ring still grows.
 pub(super) fn moving(now: Instant) -> bool {
-    MOTION
-        .lock()
-        .unwrap_or_else(PoisonError::into_inner)
-        .as_ref()
-        .is_some_and(|motion| now.duration_since(motion.started) < GLIDE + RIPPLE)
+    still(
+        MOTION
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .as_ref(),
+        now,
+    )
 }
 
 fn colorref((red, green, blue): (u8, u8, u8)) -> COLORREF {
@@ -197,6 +204,28 @@ pub(super) unsafe fn paint(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_new_action_sets_the_cursor_off_without_waiting_on_itself() {
+        let cursor = ScreenCursor {
+            x: 0.5,
+            y: 0.5,
+            click: true,
+            typing: false,
+            name: "Scout".to_owned(),
+            at: 1,
+        };
+        let (done, finished) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let moving = follow(Some(&cursor));
+            let _ = done.send(moving);
+        });
+        let moving = finished
+            .recv_timeout(Duration::from_secs(2))
+            .expect("follow came back");
+        assert!(moving, "it glides");
+        assert!(!follow(None), "and goes");
+    }
 
     #[test]
     fn the_cursor_glides_and_lands_where_the_bot_acted() {
