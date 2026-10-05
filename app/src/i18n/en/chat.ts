@@ -319,6 +319,22 @@ export const chat = {
     declined: (name: string) => `You kept the routine ${name}`,
     expired: (name: string) => `Deleting ${name} was not answered in time`,
   },
+  /** A bot asking to rename or change itself, or the chief another bot (spec 10.3). */
+  botChange: {
+    titleSelf: (bot: string) => `${bot} wants to change how it is set up`,
+    titleOther: (bot: string, other: string) => `${bot} wants to change ${other}`,
+    reason: (bot: string) => `Why, says ${bot}:`,
+    newInstructions: "See the new instructions",
+    explain: "The new role and instructions count from the bot's next start.",
+    apply: "Change",
+    decline: "Not now",
+    noteLabel: (bot: string) => `What to tell ${bot} if you say no`,
+    notePlaceholder: (bot: string) => `If you say no, tell ${bot} why (optional)`,
+    failed: "Could not send the answer",
+    done: (name: string) => `You changed ${name}`,
+    declined: (name: string) => `You kept ${name} as it was`,
+    expired: (name: string) => `The change to ${name} was not answered in time`,
+  },
   plan: {
     ready: (bot: string) => `${bot} made a plan and wants to go ahead`,
     noteLabel: (bot: string) => `What ${bot} should change in the plan`,

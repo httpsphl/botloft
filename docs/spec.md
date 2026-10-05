@@ -561,6 +561,7 @@ Transporte: Streamable HTTP, só POST e resposta `application/json`, sem sessão
 | `my_tasks` | `role?` (`assigned`, `requested`) | tasks `open` e `expired`: id, de, para, status, prazo relativo, hops e o pedido original |
 | `suggest_bot` | `name`, `role`, `instructions` (até 8 000 caracteres), `model?`, `reason` (até 1 000) | `created` e, criado, `handle`, `name`, `role`, `model` e um lembrete para mandar a primeira task; recusado ou sem resposta, o porquê (10.2). Só o chefe |
 | `schedule_routine` | `name`, `prompt` (até 8 000 caracteres), `schedule` (como em 20.2), `bot?` (handle de outro bot da crew) | `created` e, criada, `routine_id`, nome, pedido, horário, fuso e a próxima vez; recusada ou sem resposta, o aviso de que nada foi agendado (20.12) |
+| `change_bot` | `bot?` (handle de outro bot da crew, só o chefe), `name?`, `role?`, `instructions?` (até 8 000 caracteres), `reason?` (até 1 000) | `done` e, mudado, `handle`, `name`, `role` e quando vale; recusado ou sem resposta, o aviso de que nada mudou (10.3) |
 | `share_file` | `files` (1 a 10 caminhos, absolutos ou relativos à pasta do bot) | `shown` (um `BotFile` por arquivo, 8.4) e um lembrete de que o dono vê cada um como cartão no chat; um arquivo fora das pastas do bot e não escrito por ele, ou que não existe, recusa a chamada inteira e diz qual e por quê |
 | `send_signal` | `name`, `note?` (até 2 000 caracteres) | o aviso normalizado e, para cada rotina da crew que o espera, se rodou e por que não (20.13) |
 | `ask_owner` | `question` (até 2 000 caracteres), `options?` (2 a 5, até 100 caracteres cada) | `question_id` e o lembrete de que a resposta chega depois, como mensagem; a tool não espera (23.2) |
@@ -618,6 +619,15 @@ Toda crew nova nasce com um **chefe**: `crews.create` com `lead` cria a crew e e
 - **Resposta:** permitir cria o bot na crew do chefe, com modo Manual e o modelo sugerido. O dono pode mudar nome, papel, modelo e instruções antes: `approvals.answer` leva `input`, o JSON da sugestão como ele deixou, que substitui a entrada gravada (o cartão mostra o que foi criado); `input` só vale para sugestões de bot e pedidos de rotina (20.12). Negar volta ao chefe com a nota do dono, e nada é criado. Sem resposta no prazo, o chefe lê que pode sugerir de novo depois. O bot novo sobe na hora e aparece na barra lateral, com o próprio chat; o resultado da tool lembra o chefe de mandar a primeira task.
 - **Chefe em `bypass_permissions`:** a sugestão cria o bot na hora, sem cartão, como tudo o que esse modo faz sem perguntar (13). O resultado diz ao chefe que foi criado sem pedir.
 - Bots criados assim são bots comuns: o dono conversa, muda, pausa e arquiva cada um como qualquer outro.
+
+### 10.3 Bots que se mudam
+
+Quando o dono pede, um bot pode mudar o próprio nome, papel ou instruções, e o chefe pode mudar os de outro bot da crew, com `change_bot`. As regras de todo bot dizem para usar só quando o dono pedir; as do chefe, que ele pode nomear outro bot em `bot`.
+
+- **Quem e qual:** sem `bot` (ou com o próprio handle), muda quem chama. Com outro handle, só o chefe; os outros recebem um erro que manda pedir ao chefe. O handle é procurado só na crew de quem chama: um bot de outra crew é "nenhum bot da sua crew".
+- **Antes de perguntar:** o daemon confere os campos como `bots.update` (nome livre na crew, papel numa linha, instruções até 8 000 caracteres) e recusa um pedido que não muda nada.
+- **Aprovação:** um pedido no chat de quem chama, `toolName: "mcp__botloft__change_bot"`, com entrada `bot_id`, `handle`, `name` (o nome atual, também o resumo), `before`, `after` (nome, papel e instruções) e `reason`. O cartão diz "<bot> quer mudar <outro>" ou "<bot> quer mudar a própria configuração", mostra nome e papel antes e depois, as instruções novas atrás de uma seta e o porquê, com Mudar, Agora não e o campo para dizer por que não. O dono não ajusta o pedido no cartão; pode mudar o bot depois nos detalhes.
+- **Resposta:** permitir confere de novo e aplica como `bots.update`: o nome e o handle mudam na hora; papel e instruções valem a partir do próximo início do bot, como quando o dono os edita. Recusado ou sem resposta, nada muda, e o resultado diz isso ao bot. Quem chama em `bypass_permissions` muda sem perguntar.
 
 ## 11. Protocolo do app (JSON-RPC 2.0 sobre WebSocket)
 
