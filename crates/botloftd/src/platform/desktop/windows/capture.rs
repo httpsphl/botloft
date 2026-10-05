@@ -70,6 +70,32 @@ fn system(what: &str) -> DesktopError {
     DesktopError::System(what.to_owned())
 }
 
+/// Where window `id`'s frame is on the screen, in real pixels, as the
+/// controls' places are: left, top, width and height.
+pub fn frame(id: u64) -> Result<[i32; 4], DesktopError> {
+    let hwnd = handle(id);
+    let _real = RealPixels::new();
+    let mut frame = RECT::default();
+    // SAFETY: `frame` is a valid out-pointer.
+    unsafe { GetWindowRect(hwnd, &mut frame) }.map_err(|_| DesktopError::Gone)?;
+    // SAFETY: `frame` is a RECT of the size given. Without DWM the window
+    // rectangle is the frame.
+    let _ = unsafe {
+        DwmGetWindowAttribute(
+            hwnd,
+            DWMWA_EXTENDED_FRAME_BOUNDS,
+            std::ptr::from_mut(&mut frame).cast::<c_void>(),
+            size_of::<RECT>() as u32,
+        )
+    };
+    Ok([
+        frame.left,
+        frame.top,
+        frame.right - frame.left,
+        frame.bottom - frame.top,
+    ])
+}
+
 /// The window `id`'s pixels as RGB, its width and height, and the display
 /// scale it is on (1.5 at 150%).
 pub fn capture(id: u64) -> Result<(Vec<u8>, u32, u32, f64), DesktopError> {

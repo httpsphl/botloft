@@ -73,6 +73,8 @@ pub(super) async fn press(
         kind: DesktopActionKind::Press,
         target: String::new(),
         option: Some(text.trim().to_owned()),
+        x: None,
+        y: None,
     })
 }
 
@@ -99,16 +101,16 @@ pub(super) async fn click_at(
             "That point is outside the picture, which is {width} by {height}."
         ));
     }
-    let spot = platform::Spot::Window {
-        x: x / f64::from(width),
-        y: y / f64::from(height),
-    };
+    let (x, y) = (x / f64::from(width), y / f64::from(height));
+    let spot = platform::Spot::Window { x, y };
     let id = window.id;
     with_real_hands(daemon, bot, id, move || platform::real_click(id, spot)).await?;
     Ok(DesktopAction {
         kind: DesktopActionKind::Click,
         target: String::new(),
         option: None,
+        x: Some(x),
+        y: Some(y),
     })
 }
 

@@ -121,15 +121,6 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
       setTakeBrowser((count) => count + 1);
     }
   });
-  // The panel follows what the bot starts doing (spec 15.1), over the one
-  // that came back too.
-  useFollowBot({
-    bot,
-    side,
-    writing: screens.writing,
-    open: (panel) => (panel === "browser" ? showBrowser() : showScreen(null)),
-    close: (panel) => side === panel && setSide(null),
-  });
   const showTerminal = useStable(() => {
     if (filesOpen) {
       seen();
@@ -141,6 +132,23 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
       seen();
     }
     setSide("desktop");
+  });
+  // The panel follows what the bot starts doing (spec 15.1), over the one
+  // that came back too.
+  useFollowBot({
+    bot,
+    side,
+    writing: screens.writing,
+    open: (panel) => {
+      if (panel === "browser") {
+        showBrowser();
+      } else if (panel === "desktop") {
+        showDesktop();
+      } else {
+        showScreen(null);
+      }
+    },
+    close: (panel) => side === panel && setSide(null),
   });
   // The dock of the bot's computer: browser, terminal and files.
   const dock = {

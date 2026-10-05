@@ -246,6 +246,20 @@ pub fn real_press(id: u64, keys: &keys::Keys) -> Result<(), DesktopError> {
     }
 }
 
+/// Where window `id`'s frame is on the screen, in real pixels: left, top,
+/// width and height.
+pub fn frame(id: u64) -> Result<[i32; 4], DesktopError> {
+    #[cfg(windows)]
+    {
+        windows::frame(id)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = id;
+        Err(DesktopError::Unavailable)
+    }
+}
+
 /// Shows the notice that a bot uses the real mouse and keyboard: `text`
 /// in a pill, a border in `color` around the monitor of window `over`
 /// (spec 24.7).

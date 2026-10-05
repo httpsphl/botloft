@@ -108,6 +108,8 @@ mod tests {
             kind: botloft_core::protocol::DesktopActionKind::Click,
             target: "Save".to_owned(),
             option: None,
+            x: Some(0.5),
+            y: Some(0.25),
         };
         let used = activity.used(&bot, &window, Some(click), 9);
         assert_eq!(activity.window(&bot), Some(7));

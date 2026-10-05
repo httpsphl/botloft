@@ -34,7 +34,13 @@ function drawNotepad(): string {
 
 export function seedDesktop(fake: FakeBotloft, bots: { scout: BotId; analyst: BotId }) {
   fake.desktop.grant(bots.scout, "C:\\Windows\\notepad.exe", "Notepad");
-  fake.desktop.use(bots.scout, NOTES, { kind: "click", target: "Save", option: null });
+  fake.desktop.use(bots.scout, NOTES, {
+    kind: "click",
+    target: "Save",
+    option: null,
+    x: 0.1,
+    y: 0.12,
+  });
   fake.desktop.paint(bots.scout, drawNotepad(), 760, 480);
   fake.chat.tool(bots.scout, "mcp__botloft__desktop_click", {
     summary: "To save the list",

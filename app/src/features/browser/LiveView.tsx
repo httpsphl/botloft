@@ -1,17 +1,33 @@
 // The bot's screen, live (spec 21.8): the newest picture of its active
 // tab, as large as fits the panel, with its cursor gliding to each point it
-// acts on, a ring where it clicks, and a line about what it just did.
+// acts on, a ring where it clicks, and a line about what it just did. The
+// desktop panel shows the owner's window the same way (spec 24.9).
 
 import { type ReactNode, useEffect, useState } from "react";
 import { useT } from "../../i18n";
-import type { Bot, BrowserAction, BrowserFrame } from "../../lib/protocol.gen";
+import type { Bot, BrowserAction } from "../../lib/protocol.gen";
 import { BotCursor } from "../bots/BotCursor";
 
 /** The page until a picture says its size. */
 const PAGE = { width: 1280, height: 800 };
 
+/** A picture on the stage: a JPEG, base64, and its size. */
+export interface StageFrame {
+  data: string;
+  width: number;
+  height: number;
+}
+
+/** What the bot did, at a point in the picture's pixels when it has one. */
+export interface StageAction {
+  kind: string;
+  x: number | null;
+  y: number | null;
+  at: number;
+}
+
 /** Where on the screen, in percent, an action happened. */
-function spot(action: BrowserAction | null, frame: BrowserFrame | null) {
+function spot(action: StageAction | null, frame: StageFrame | null) {
   if (!action || action.x === null || action.y === null) {
     return null;
   }
@@ -52,13 +68,19 @@ export function LiveView({
   bot,
   frame,
   action,
+  label,
+  alt = "",
   dim = false,
   held = false,
   children,
 }: {
   bot: Bot;
-  frame: BrowserFrame | null;
-  action: BrowserAction | null;
+  frame: StageFrame | null;
+  action: StageAction | null;
+  /** What the stage is, for screen readers; the bot's browser by default. */
+  label?: string;
+  /** The picture's own name, when it has one. */
+  alt?: string;
   /** The browser closed: the last picture stays, faded. */
   dim?: boolean;
   /** The owner has it (spec 21.10): the bot's cursor steps aside. */
@@ -81,7 +103,7 @@ export function LiveView({
 
   return (
     <figure
-      aria-label={t.browser.screen(bot.name)}
+      aria-label={label ?? t.browser.screen(bot.name)}
       className={`relative mx-auto my-0 overflow-hidden rounded-xl border bg-canvas shadow-sm transition-[border-color,box-shadow] duration-200 ${
         held ? "border-accent ring-2 ring-accent/35" : "border-line"
       }`}
@@ -94,7 +116,7 @@ export function LiveView({
       {frame && (
         <img
           src={`data:image/jpeg;base64,${frame.data}`}
-          alt=""
+          alt={alt}
           draggable={false}
           className={`absolute inset-0 h-full w-full select-none object-contain transition-[opacity,filter] duration-500 ${
             dim ? "opacity-40 grayscale" : ""

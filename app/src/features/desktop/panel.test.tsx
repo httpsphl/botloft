@@ -34,7 +34,13 @@ describe("the desktop panel", () => {
     expect(fake.desktop.watching).toBe(scout.id);
 
     act(() => {
-      fake.desktop.use(scout.id, NOTES, { kind: "click", target: "Save", option: null });
+      fake.desktop.use(scout.id, NOTES, {
+        kind: "click",
+        target: "Save",
+        option: null,
+        x: 0.5,
+        y: 0.25,
+      });
     });
     expect(await within(panel()).findByText("Shopping list - Notepad")).toBeDefined();
     expect(within(panel()).getByText('Clicked "Save"')).toBeDefined();
@@ -46,6 +52,13 @@ describe("the desktop panel", () => {
     const picture = await within(panel()).findByRole("img", { name: "Shopping list - Notepad" });
     expect(picture.getAttribute("src")).toBe("data:image/jpeg;base64,AAAA");
     expect(within(panel()).getByText("Live")).toBeDefined();
+
+    // The bot's cursor lands where it clicked, with a ring.
+    const stage = within(panel()).getByRole("figure", { name: "Notepad, as Scout sees it" });
+    const cursor = stage.querySelector(".bot-cursor") as HTMLElement;
+    expect(cursor.style.left).toBe("50%");
+    expect(cursor.style.top).toBe("25%");
+    expect(stage.querySelector(".browser-ripple")).not.toBeNull();
 
     // Closed, nobody watches.
     fireEvent.click(within(panel()).getByRole("button", { name: "Close" }));
@@ -67,5 +80,32 @@ describe("the desktop panel", () => {
     fireEvent.click(within(panel()).getByRole("button", { name: "Let it go on" }));
     await waitFor(() => expect(fake.desktop.state(scout.id).stopped).toBe(false));
     expect(within(panel()).queryByText("You stopped Scout on your desktop")).toBeNull();
+  });
+
+  test("opens by itself when the bot starts using the desktop, once per run", async () => {
+    const { fake, scout } = await openScout();
+    expect(screen.queryByRole("complementary", { name: "Scout's desktop" })).toBeNull();
+    act(() => {
+      fake.desktop.use(scout.id, NOTES);
+    });
+    expect(await within(panel()).findByText("Shopping list - Notepad")).toBeDefined();
+
+    // Closed, the next action of the same run leaves it closed.
+    fireEvent.click(within(panel()).getByRole("button", { name: "Close" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("complementary", { name: "Scout's desktop" })).toBeNull(),
+    );
+    act(() => {
+      fake.now += 5_000;
+      fake.desktop.use(scout.id, NOTES);
+    });
+    expect(screen.queryByRole("complementary", { name: "Scout's desktop" })).toBeNull();
+
+    // After a pause, a new run opens it again.
+    act(() => {
+      fake.now += 3 * 60_000;
+      fake.desktop.use(scout.id, NOTES);
+    });
+    expect(await within(panel()).findByText("Shopping list - Notepad")).toBeDefined();
   });
 });
