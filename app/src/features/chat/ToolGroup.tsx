@@ -7,14 +7,16 @@ import { ChevronRight, LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { useT } from "../../i18n";
 import type { ChatItem, ToolItem } from "../../lib/protocol.gen";
+import { ReadThumb, useReadImage } from "./readImage";
 import { ToolLines } from "./ToolLines";
 import { toolDetail, toolTitle } from "./toolNames";
 import { toolSummary } from "./toolSummary";
 
 /** The call the bot is on, swapped in as the next one starts. */
-function Now({ tool }: { tool: ToolItem }) {
+function Now({ tool, botId }: { tool: ToolItem; botId: string }) {
   const t = useT();
   const detail = tool.explanation || toolDetail(tool, t.tools);
+  const picture = useReadImage(botId, tool);
   return (
     <span className="flex min-w-0 animate-rise items-center gap-2">
       <LoaderCircle
@@ -31,6 +33,7 @@ function Now({ tool }: { tool: ToolItem }) {
           {detail}
         </span>
       )}
+      <ReadThumb source={picture} name={detail} />
     </span>
   );
 }
@@ -39,7 +42,7 @@ export function ToolGroup({ items, active }: { items: ChatItem[]; active: boolea
   const t = useT();
   const [open, setOpen] = useState(false);
   const calls = items.flatMap((item) =>
-    item.body.kind === "tool" ? [{ id: item.id, tool: item.body }] : [],
+    item.body.kind === "tool" ? [{ id: item.id, botId: item.botId, tool: item.body }] : [],
   );
   const now = calls.at(-1);
   // One finished call is already a single line.
@@ -55,7 +58,7 @@ export function ToolGroup({ items, active }: { items: ChatItem[]; active: boolea
         className="flex min-w-0 max-w-full items-center gap-2 self-start rounded-lg px-1.5 py-1 text-left text-muted text-sm transition-colors hover:bg-sunken hover:text-ink"
       >
         {active ? (
-          <Now key={now.id} tool={now.tool} />
+          <Now key={now.id} tool={now.tool} botId={now.botId} />
         ) : (
           <span className="min-w-0 truncate">
             {toolSummary(
