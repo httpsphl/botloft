@@ -287,3 +287,31 @@ async fn the_owner_moves_the_chief_and_an_archived_chief_leaves_none() {
     let crews = c.app.call("crews.list", json!({})).await.expect("crews");
     assert_eq!(crews[0]["leadBotId"], Value::Null);
 }
+
+#[tokio::test]
+async fn a_suggested_bot_starts_with_the_effort_suggested() {
+    let mut c = crew_with_chief().await;
+    let mut asked = designer();
+    asked["effort"] = json!("loud");
+    let refused = suggest(&c.mcp, asked.clone()).await.expect("task");
+    assert!(refused.expect_err("bad effort").contains("effort must be"));
+
+    asked["effort"] = json!("low");
+    let waiting = suggest(&c.mcp, asked);
+    let request = pending_suggestion(&mut c.app).await;
+    c.app
+        .call(
+            "approvals.answer",
+            json!({ "approvalId": request["approvalId"], "allow": true }),
+        )
+        .await
+        .expect("answer");
+    let created = waiting.await.expect("task").expect("created");
+    assert_eq!(created["effort"], "low");
+    let designer = crew_bots(&mut c)
+        .await
+        .into_iter()
+        .find(|bot| bot["name"] == "Designer")
+        .expect("designer");
+    assert_eq!(designer["effort"], "low");
+}

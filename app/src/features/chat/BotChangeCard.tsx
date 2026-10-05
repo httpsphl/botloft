@@ -6,7 +6,7 @@ import { Ban, Check, TimerOff, UserPen } from "lucide-react";
 import { useState } from "react";
 import { useT } from "../../i18n";
 import { errorText } from "../../lib/api";
-import type { ApprovalItem, Bot } from "../../lib/protocol.gen";
+import type { ApprovalItem, Bot, BotEffort, BotModel } from "../../lib/protocol.gen";
 import { useApi } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { NoteArea, SectionCard, SettledLine } from "../../ui/ChatCard";
@@ -17,6 +17,9 @@ interface Profile {
   name: string;
   role: string;
   instructions: string;
+  /** Absent in a request from before models and efforts could change. */
+  model?: BotModel;
+  effort?: BotEffort;
 }
 
 interface Asked {
@@ -78,6 +81,15 @@ export function BotChangeCard({ approval, bot }: { approval: ApprovalItem; bot: 
   const rows: [string, string, string][] = [];
   if (before.name !== after.name) rows.push([d.name, before.name, after.name]);
   if (before.role !== after.role) rows.push([d.role, before.role, after.role]);
+  const model = (name: BotModel) => t.chat.model.names[name];
+  const effort = (level: BotEffort) =>
+    level === "default" ? t.chat.effort.recommended : t.chat.effort.names[level];
+  if (before.model && after.model && before.model !== after.model) {
+    rows.push([t.chat.model.title, model(before.model), model(after.model)]);
+  }
+  if (before.effort && after.effort && before.effort !== after.effort) {
+    rows.push([t.chat.effort.title, effort(before.effort), effort(after.effort)]);
+  }
   const self = asked.bot_id === bot.id;
   return (
     <SectionCard

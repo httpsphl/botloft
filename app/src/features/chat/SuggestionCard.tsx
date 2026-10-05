@@ -5,7 +5,7 @@
 import { Ban, Check, TimerOff, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { useT } from "../../i18n";
-import type { ApprovalItem, Bot, BotModel } from "../../lib/protocol.gen";
+import type { ApprovalItem, Bot, BotEffort, BotModel } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
 import { NoteArea, SectionCard, SettledLine } from "../../ui/ChatCard";
 import { SelectField, TextArea, TextField } from "../../ui/Field";
@@ -14,12 +14,14 @@ import { useAnswer } from "./useAnswer";
 export const SUGGEST_TOOL = "mcp__botloft__suggest_bot";
 
 const MODELS: BotModel[] = ["default", "fable", "opus", "sonnet", "haiku"];
+const EFFORTS: BotEffort[] = ["default", "low", "medium", "high", "xhigh", "max"];
 
 interface Suggestion {
   name: string;
   role: string;
   instructions: string;
   model?: BotModel;
+  effort?: BotEffort;
   reason: string;
 }
 
@@ -32,6 +34,7 @@ export function suggestionOf(input: string): Suggestion {
       role: parsed.role ?? "",
       instructions: parsed.instructions ?? "",
       ...(parsed.model && { model: parsed.model }),
+      ...(parsed.effort && { effort: parsed.effort }),
       reason: parsed.reason ?? "",
     };
   } catch {
@@ -52,6 +55,8 @@ export function SuggestionCard({ approval, bot }: { approval: ApprovalItem; bot:
     return <Answered approval={approval} />;
   }
   const changed = JSON.stringify(edited) !== JSON.stringify(asked);
+  const effortName = (level: BotEffort) =>
+    level === "default" ? t.chat.effort.recommended : t.chat.effort.names[level];
   const set = (field: keyof Suggestion) => (value: string) =>
     setEdited((current) => ({ ...current, [field]: value }));
 
@@ -91,17 +96,23 @@ export function SuggestionCard({ approval, bot }: { approval: ApprovalItem; bot:
             {asked.reason}
           </p>
         )}
-        <div className="grid grid-cols-[1fr_12rem] gap-3">
-          <TextField
-            label={s.name}
-            value={edited.name}
-            onChange={(event) => set("name")(event.target.value)}
-          />
+        <TextField
+          label={s.name}
+          value={edited.name}
+          onChange={(event) => set("name")(event.target.value)}
+        />
+        <div className="grid grid-cols-2 gap-3">
           <SelectField
             label={s.model}
             value={edited.model ?? "default"}
             onChange={(event) => set("model")(event.target.value)}
             options={MODELS.map((value) => ({ value, label: t.chat.model.names[value] }))}
+          />
+          <SelectField
+            label={t.chat.effort.title}
+            value={edited.effort ?? "default"}
+            onChange={(event) => set("effort")(event.target.value)}
+            options={EFFORTS.map((value) => ({ value, label: effortName(value) }))}
           />
         </div>
         <TextField
@@ -145,6 +156,12 @@ function Answered({ approval }: { approval: ApprovalItem }) {
           <dd>{suggestion.role}</dd>
           <dt className="text-muted">{s.model}</dt>
           <dd>{t.chat.model.names[suggestion.model ?? "default"]}</dd>
+          {suggestion.effort && suggestion.effort !== "default" && (
+            <>
+              <dt className="text-muted">{t.chat.effort.title}</dt>
+              <dd>{t.chat.effort.names[suggestion.effort]}</dd>
+            </>
+          )}
           <dt className="text-muted">{s.instructions}</dt>
           <dd className="whitespace-pre-wrap">{suggestion.instructions}</dd>
         </dl>

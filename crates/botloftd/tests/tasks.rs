@@ -185,7 +185,8 @@ async fn mistakes_come_back_as_tool_errors() {
     assert_eq!(roster["you"], "lead");
     assert_eq!(
         roster["bots"],
-        json!([{ "handle": "writer", "name": "Writer", "role": "Writer role", "state": "idle", "chief": false }])
+        json!([{ "handle": "writer", "name": "Writer", "role": "Writer role", "state": "idle",
+            "model": "default", "effort": "default", "chief": false }])
     );
 
     let err = |out: Result<Value, String>| out.expect_err("refused");

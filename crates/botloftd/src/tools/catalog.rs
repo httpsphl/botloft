@@ -189,6 +189,13 @@ fn crew_tools() -> Value {
                             work; \"opus\" or \"fable\" for the hardest reasoning. The owner's \
                             plan default when absent.",
                     },
+                    "effort": {
+                        "type": "string",
+                        "enum": ["default", "low", "medium", "high", "xhigh", "max"],
+                        "description": "How much the bot thinks before it answers: \"low\" for \
+                            quick, simple work, higher for hard problems. Its model's own level \
+                            when absent.",
+                    },
                     "reason": {
                         "type": "string",
                         "maxLength": REASON_MAX,

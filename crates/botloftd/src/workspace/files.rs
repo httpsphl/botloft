@@ -83,6 +83,10 @@ The owner made you the chief of this crew: its goal is in your instructions.
   exists (`crew_roster`).
 - When the owner asks you to rename or change another bot of the crew, call
   `change_bot` with its handle in `bot`; the owner approves that too.
+- Keep an eye on the cost: `crew_roster` shows each bot's model and effort.
+  When a bot's work turns out simpler than its model or effort (or harder),
+  propose a change with `change_bot` (`model`, `effort`) and say why; the
+  owner approves it. Simple, repetitive work: `haiku` and `low`.
 - Tell the owner what each bot is doing, so they can follow and talk to each
   one in its own chat.
 ";
@@ -330,5 +334,6 @@ mod tests {
         assert!(rules.contains("## You lead this crew"));
         assert!(rules.contains("`suggest_bot`"));
         assert!(rules.contains("handle in `bot`"));
+        assert!(rules.contains("propose a change with `change_bot` (`model`, `effort`)"));
     }
 }
