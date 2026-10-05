@@ -6,7 +6,13 @@ import { CHANGE_BOT_TOOL } from "./BotChangeCard";
 
 afterEach(cleanup);
 
-const WRITER = { name: "Writer", role: "Writes posts", instructions: "Short sentences." };
+const WRITER = {
+  name: "Writer",
+  role: "Writes posts",
+  instructions: "Short sentences.",
+  model: "sonnet",
+  effort: "default",
+};
 
 async function openChief() {
   const fake = new FakeBotloft();
@@ -37,13 +43,23 @@ describe("a bot asking to change a bot", () => {
           bot_id: "bot_writer",
           name: "Writer",
           before: WRITER,
-          after: { ...WRITER, name: "Editor", instructions: "Edit, do not write." },
+          after: {
+            ...WRITER,
+            name: "Editor",
+            instructions: "Edit, do not write.",
+            model: "haiku",
+            effort: "low",
+          },
           reason: "The owner asked for it.",
         }),
       );
     });
     const card = screen.getByRole("region", { name: "Chief wants to change Writer" });
     expect(within(card).getByText("Editor")).toBeDefined();
+    expect(within(card).getByText("Sonnet")).toBeDefined();
+    expect(within(card).getByText("Haiku")).toBeDefined();
+    expect(within(card).getByText("Recommended")).toBeDefined();
+    expect(within(card).getByText("Low")).toBeDefined();
     expect(within(card).queryByText("Writes posts")).toBeNull();
     expect(within(card).getByText("See the new instructions")).toBeDefined();
     expect(within(card).getByText("The owner asked for it.")).toBeDefined();

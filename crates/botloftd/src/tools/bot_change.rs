@@ -1,12 +1,15 @@
 //! `change_bot` (spec 10.3): a bot asks the owner to rename itself or change
-//! its role or instructions, and the crew's chief may ask the same for any
-//! bot of its crew. Only bots of the caller's crew can be named. The owner
+//! its role, instructions, model or effort, and the crew's chief may ask the
+//! same for any bot of its crew. Only bots of the caller's crew can be named. The owner
 //! approves or declines in the caller's chat and the call waits, like
 //! `change_routine`; a bot that bypasses permissions does it at once.
 
 use botloft_core::chat::CHANGE_BOT_TOOL;
 use botloft_core::ids::BotId;
-use botloft_core::protocol::{Bot, BotsUpdateParams, PermissionMode};
+use botloft_core::protocol::{
+    Bot, BotEffort, BotModel, BotsSetEffortParams, BotsSetModelParams, BotsUpdateParams,
+    PermissionMode,
+};
 use botloft_core::{slug, validate};
 use botloft_store::BotRecord;
 use serde::{Deserialize, Serialize};
@@ -15,7 +18,7 @@ use serde_json::{Value, json};
 use super::calls::{explain, parse, tool_result};
 use super::suggest::{INSTRUCTIONS_MAX, REASON_MAX};
 use crate::approvals::{self, Answer};
-use crate::service::{ApiError, ApiResult, bots, lead};
+use crate::service::{ApiError, ApiResult, bots, lead, models};
 use crate::state::Daemon;
 
 pub const CHANGE_BOT: &str = "change_bot";
@@ -27,6 +30,8 @@ struct Args {
     name: Option<String>,
     role: Option<String>,
     instructions: Option<String>,
+    model: Option<String>,
+    effort: Option<String>,
     reason: Option<String>,
 }
 
@@ -36,6 +41,8 @@ struct Profile {
     name: String,
     role: String,
     instructions: String,
+    model: BotModel,
+    effort: BotEffort,
 }
 
 impl Profile {
@@ -44,6 +51,8 @@ impl Profile {
             name: record.name.clone(),
             role: record.role.clone(),
             instructions: record.instructions.clone(),
+            model: record.model,
+            effort: record.effort,
         }
     }
 }
@@ -52,10 +61,12 @@ pub(super) fn tool() -> Value {
     json!({
         "name": CHANGE_BOT,
         "title": "Change a bot",
-        "description": "Asks the owner to rename you or change your role or instructions, \
-            when the owner wants that. The crew's chief may name another bot of its crew with \
-            `bot`. Give only what changes. The owner approves or declines it in your chat; the \
-            call waits for that. Say it changed only after the tool says it did.",
+        "description": "Asks the owner to rename you or change your role, instructions, model \
+            or effort, when the owner wants that. The crew's chief may name another bot of its \
+            crew with `bot`, and may propose a cheaper or stronger model or effort for a bot by \
+            the work it does (crew_roster shows each bot's). Give only what changes. The owner \
+            approves or declines it in your chat; the call waits for that. Say it changed only \
+            after the tool says it did.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -79,6 +90,20 @@ pub(super) fn tool() -> Value {
                     "maxLength": INSTRUCTIONS_MAX,
                     "description": "The whole new instructions, written to the bot. They \
                         replace the old ones.",
+                },
+                "model": {
+                    "type": "string",
+                    "enum": ["default", "fable", "opus", "sonnet", "haiku"],
+                    "description": "\"haiku\" for simple, repetitive work; \"sonnet\" for most \
+                        work; \"opus\" or \"fable\" for the hardest reasoning; \"default\" for \
+                        the owner's plan default.",
+                },
+                "effort": {
+                    "type": "string",
+                    "enum": ["default", "low", "medium", "high", "xhigh", "max"],
+                    "description": "How much the bot thinks before it answers: \"low\" for \
+                        quick, simple work, higher for hard problems; \"default\" for its \
+                        model's own level. Higher uses more of the owner's plan.",
                 },
                 "reason": {
                     "type": "string",
@@ -144,11 +169,27 @@ fn after(daemon: &Daemon, record: &BotRecord, args: &Args) -> ApiResult<Profile>
         }
         next.instructions = validate::instructions(instructions)?;
     }
+    if let Some(model) = &args.model {
+        next.model = model.parse().map_err(|_| {
+            ApiError::validation(
+                "model must be \"default\", \"fable\", \"opus\", \"sonnet\" or \"haiku\"",
+            )
+        })?;
+    }
+    if let Some(effort) = &args.effort {
+        next.effort = effort.parse().map_err(|_| {
+            ApiError::validation(
+                "effort must be \"default\", \"low\", \"medium\", \"high\", \"xhigh\" or \"max\"",
+            )
+        })?;
+    }
     Ok(next)
 }
 
-fn apply(daemon: &Daemon, id: &BotId, next: &Profile) -> ApiResult<Bot> {
-    bots::update(
+/// Makes the change. A new model or effort restarts the bot once nothing is
+/// in progress (spec 7.4).
+fn apply(daemon: &Daemon, id: &BotId, before: &Profile, next: &Profile) -> ApiResult<Bot> {
+    let mut bot = bots::update(
         daemon,
         BotsUpdateParams {
             bot_id: id.clone(),
@@ -157,7 +198,26 @@ fn apply(daemon: &Daemon, id: &BotId, next: &Profile) -> ApiResult<Bot> {
             instructions: Some(next.instructions.clone()),
             color: None,
         },
-    )
+    )?;
+    if next.model != before.model {
+        bot = models::set_model(
+            daemon,
+            BotsSetModelParams {
+                bot_id: id.clone(),
+                model: next.model,
+            },
+        )?;
+    }
+    if next.effort != before.effort {
+        bot = models::set_effort(
+            daemon,
+            BotsSetEffortParams {
+                bot_id: id.clone(),
+                effort: next.effort,
+            },
+        )?;
+    }
+    Ok(bot)
 }
 
 async fn run(
@@ -185,7 +245,7 @@ async fn run(
         .map_err(explain)?
         .permission_mode;
     if mode == PermissionMode::BypassPermissions {
-        let bot = apply(daemon, &record.id, &next).map_err(explain)?;
+        let bot = apply(daemon, &record.id, &before, &next).map_err(explain)?;
         return Ok(done(
             &bot,
             caller,
@@ -204,7 +264,7 @@ async fn run(
         Some(Answer::Allowed { .. }) => {
             // Checked again: the crew may have changed while the owner read it.
             let next = after(daemon, &record, &args).map_err(explain)?;
-            let bot = apply(daemon, &record.id, &next).map_err(explain)?;
+            let bot = apply(daemon, &record.id, &before, &next).map_err(explain)?;
             Ok(done(&bot, caller, "The owner approved the change."))
         }
         Some(Answer::Denied { note }) => {
@@ -225,16 +285,19 @@ async fn run(
 
 fn done(bot: &Bot, caller: &BotId, how: &str) -> Value {
     let when = if bot.id == *caller {
-        "Your new instructions and role take effect when you next start; your name and \
-         handle already changed."
+        "Your new instructions, role, model and effort take effect when you next start, once \
+         this turn ends; your name and handle already changed."
     } else {
-        "The bot reads its new instructions and role when it next starts."
+        "The bot runs with its new instructions, role, model and effort when it next starts, \
+         once nothing is in progress."
     };
     json!({
         "done": true,
         "handle": bot.handle,
         "name": bot.name,
         "role": bot.role,
+        "model": bot.model,
+        "effort": bot.effort,
         "note": format!("{how} The bot is now @{} ({}). {when}", bot.handle, bot.name),
     })
 }

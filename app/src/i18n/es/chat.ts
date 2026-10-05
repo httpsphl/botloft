@@ -335,7 +335,8 @@ export const chat: Messages["chat"] = {
     titleOther: (bot, other) => `${bot} quiere cambiar a ${other}`,
     reason: (bot) => `Por qué, según ${bot}:`,
     newInstructions: "Ver las instrucciones nuevas",
-    explain: "El rol y las instrucciones nuevas cuentan desde el próximo inicio del bot.",
+    explain:
+      "El rol, las instrucciones, el modelo y el esfuerzo nuevos cuentan desde el próximo inicio del bot, cuando termine lo que está haciendo.",
     apply: "Cambiar",
     decline: "Ahora no",
     noteLabel: (bot) => `Qué decirle a ${bot} si dices que no`,

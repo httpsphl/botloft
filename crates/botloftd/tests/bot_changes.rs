@@ -190,3 +190,43 @@ async fn only_the_chief_names_another_bot_and_only_of_its_crew() {
         .expect("task");
     assert!(refused.expect_err("same").contains("already"));
 }
+
+#[tokio::test]
+async fn the_chief_lowers_a_bots_model_and_effort_once_the_owner_allows_it() {
+    let mut c = crew().await;
+    let roster = c
+        .lead_mcp
+        .tool("crew_roster", json!({}))
+        .await
+        .expect("roster");
+    assert_eq!(roster["bots"][0]["model"], "default");
+    assert_eq!(roster["bots"][0]["effort"], "default");
+
+    let refused = call(&c.lead_mcp, json!({ "bot": "writer", "effort": "tiny" }))
+        .await
+        .expect("task");
+    assert!(refused.expect_err("bad effort").contains("effort must be"));
+
+    let waiting = call(
+        &c.lead_mcp,
+        json!({ "bot": "writer", "model": "haiku", "effort": "low", "reason": "Simple work." }),
+    );
+    let asked = pending(&mut c.app).await;
+    let input: Value = serde_json::from_str(asked["input"].as_str().expect("input")).expect("json");
+    assert_eq!(input["before"]["model"], "default");
+    assert_eq!(input["after"]["model"], "haiku");
+    assert_eq!(input["after"]["effort"], "low");
+    c.app
+        .call(
+            "approvals.answer",
+            json!({ "approvalId": asked["approvalId"], "allow": true }),
+        )
+        .await
+        .expect("answer");
+    let done = waiting.await.expect("task").expect("changed");
+    assert_eq!(done["model"], "haiku");
+    let now = bot(&mut c.app, &c.writer).await;
+    assert_eq!(now["model"], "haiku");
+    assert_eq!(now["effort"], "low");
+    assert_eq!(now["name"], "Writer");
+}

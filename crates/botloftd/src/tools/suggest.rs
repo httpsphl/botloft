@@ -5,14 +5,14 @@
 
 use botloft_core::chat::SUGGEST_TOOL;
 use botloft_core::ids::BotId;
-use botloft_core::protocol::{Bot, BotModel, PermissionMode};
+use botloft_core::protocol::{Bot, BotEffort, BotModel, BotsSetEffortParams, PermissionMode};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use super::calls::{explain, parse, tool_result};
 use crate::approvals::{self, Answer};
 use crate::service::bots::{self, NewBot};
-use crate::service::lead;
+use crate::service::{lead, models};
 use crate::state::Daemon;
 
 /// Longest instructions a chief may write for a new bot, in characters.
@@ -29,6 +29,8 @@ struct Suggestion {
     instructions: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     model: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    effort: Option<String>,
     reason: String,
 }
 
@@ -55,7 +57,7 @@ async fn run(
         .map_err(explain)?
         .permission_mode;
     if mode == PermissionMode::BypassPermissions {
-        let created = lead::create_suggested(daemon, bot, new).map_err(explain)?;
+        let created = create(daemon, bot, new, &suggestion)?;
         return Ok(created_note(
             &created,
             "You bypass permissions, so it was created without asking the owner.",
@@ -65,7 +67,7 @@ async fn run(
     let input = serde_json::to_value(&suggestion).map_err(|err| err.to_string())?;
     match approvals::ask(daemon, bot, generation, SUGGEST_TOOL, &input, "").await {
         Some(Answer::Allowed { input: None }) => {
-            let created = lead::create_suggested(daemon, bot, new).map_err(explain)?;
+            let created = create(daemon, bot, new, &suggestion)?;
             Ok(created_note(&created, "The owner approved it."))
         }
         Some(Answer::Allowed {
@@ -73,11 +75,11 @@ async fn run(
         }) => {
             let changed: Suggestion = serde_json::from_str(&changed)
                 .map_err(|err| format!("the owner's changes could not be read: {err}"))?;
-            let created = lead::create_suggested(daemon, bot, check(&changed)?).map_err(explain)?;
+            let created = create(daemon, bot, check(&changed)?, &changed)?;
             Ok(created_note(
                 &created,
-                "The owner changed the suggestion before approving it: read the name, role \
-                 and model above.",
+                "The owner changed the suggestion before approving it: read the name, role, \
+                 model and effort above.",
             ))
         }
         Some(Answer::Denied { note }) => {
@@ -99,9 +101,42 @@ async fn run(
     }
 }
 
+/// Creates the bot, then sets the effort it was suggested with.
+fn create(
+    daemon: &Daemon,
+    lead_bot: &BotId,
+    new: NewBot,
+    suggestion: &Suggestion,
+) -> Result<Bot, String> {
+    let effort = effort_of(suggestion)?;
+    let created = lead::create_suggested(daemon, lead_bot, new).map_err(explain)?;
+    if effort == BotEffort::Default {
+        return Ok(created);
+    }
+    models::set_effort(
+        daemon,
+        BotsSetEffortParams {
+            bot_id: created.id,
+            effort,
+        },
+    )
+    .map_err(explain)
+}
+
+fn effort_of(suggestion: &Suggestion) -> Result<BotEffort, String> {
+    match suggestion.effort.as_deref() {
+        None => Ok(BotEffort::Default),
+        Some(effort) => effort.parse().map_err(|_| {
+            "effort must be \"default\", \"low\", \"medium\", \"high\", \"xhigh\" or \"max\""
+                .to_owned()
+        }),
+    }
+}
+
 /// The suggestion as a new bot, with the limits of this tool on top of a
 /// bot's own.
 fn check(suggestion: &Suggestion) -> Result<NewBot, String> {
+    effort_of(suggestion)?;
     if suggestion.instructions.chars().count() > INSTRUCTIONS_MAX {
         return Err(format!(
             "instructions must be at most {INSTRUCTIONS_MAX} characters"
@@ -136,6 +171,7 @@ fn created_note(bot: &Bot, how: &str) -> Value {
         "name": bot.name,
         "role": bot.role,
         "model": bot.model,
+        "effort": bot.effort,
         "note": format!(
             "{how} @{} is starting now. Give it work with send_message(to: \"{}\", kind: \"task\").",
             bot.handle, bot.handle

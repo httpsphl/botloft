@@ -349,7 +349,8 @@ export const chat = {
     titleOther: (bot: string, other: string) => `${bot} wants to change ${other}`,
     reason: (bot: string) => `Why, says ${bot}:`,
     newInstructions: "See the new instructions",
-    explain: "The new role and instructions count from the bot's next start.",
+    explain:
+      "The new role, instructions, model and effort count from the bot's next start, once it finishes what it's doing.",
     apply: "Change",
     decline: "Not now",
     noteLabel: (bot: string) => `What to tell ${bot} if you say no`,

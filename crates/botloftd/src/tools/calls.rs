@@ -116,6 +116,8 @@ fn roster(daemon: &Daemon, bot: &BotId) -> Outcome {
                 "name": other.name,
                 "role": other.role,
                 "state": other.state,
+                "model": other.model,
+                "effort": other.effort,
                 "chief": lead::is_lead(&crew, &other.id),
             })
         })
