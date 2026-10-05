@@ -115,7 +115,7 @@ pub(crate) fn insert(
         archived_at: None,
     };
     let crews = store.crews(true)?;
-    workspace::prepare_bot(daemon.workspace_env(), crew, &crews, &record)
+    workspace::prepare_bot(daemon.workspace_env(), crew, &crews, &record, &[])
         .map_err(ApiError::Workspace)?;
     store.insert_bot(&record)?;
     Ok(record)
@@ -140,7 +140,7 @@ pub fn update(daemon: &Daemon, params: BotsUpdateParams) -> ApiResult<Bot> {
     }
     // Rules first: if the disk write fails, nothing is saved. A running bot
     // reads them at its next start.
-    workspace::write_rules(&daemon.paths, &crew, &record).map_err(ApiError::Workspace)?;
+    super::mcp::write_rules(daemon, &store, &crew, &record).map_err(ApiError::Workspace)?;
     store.update_bot(&record)?;
     Ok(changed(daemon, &store, &crew, record))
 }

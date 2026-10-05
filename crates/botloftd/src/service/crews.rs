@@ -75,7 +75,7 @@ pub fn rename(daemon: &Daemon, params: CrewsRenameParams) -> ApiResult<Crew> {
 
     // The crew name appears in every bot's rules file.
     for bot in store.bots(Some(&crew.id), false)? {
-        if let Err(err) = workspace::write_rules(&daemon.paths, &crew, &bot) {
+        if let Err(err) = super::mcp::write_rules(daemon, &store, &crew, &bot) {
             warn!(bot = %bot.id, "could not refresh the bot rules after a crew rename: {err}");
         }
     }
@@ -107,7 +107,7 @@ pub fn set_work_folder(daemon: &Daemon, params: CrewsSetWorkFolderParams) -> Api
     let bots = store.bots(Some(&crew.id), false)?;
     drop(store);
     for bot in &bots {
-        if let Err(err) = workspace::write_rules(&daemon.paths, &crew, bot) {
+        if let Err(err) = super::mcp::write_rules(daemon, &daemon.store(), &crew, bot) {
             warn!(bot = %bot.id, "could not refresh the bot rules after a folder change: {err}");
         }
         daemon.supervisor.launch_settings_changed(&bot.id);

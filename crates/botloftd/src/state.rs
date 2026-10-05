@@ -6,10 +6,10 @@ use std::sync::{Arc, Mutex, MutexGuard, TryLockError};
 use std::time::Instant;
 
 use botloft_core::protocol::{
-    AccountUsage, Bot, BotContextChanged, BotDeleted, BotDesktop, BotRules, BotStateChanged,
-    BrowserAction, BrowserState, ChatDelta, ChatItemChanged, Crew, CrewDeleted, Delivery,
-    DesktopAwayUse, DesktopState, FolderRecycled, Message, Question, ReactionChanged, Routine,
-    RoutineRun, ScreenDraft, Task,
+    AccountUsage, Bot, BotContextChanged, BotDeleted, BotDesktop, BotMcp, BotRules,
+    BotStateChanged, BrowserAction, BrowserState, ChatDelta, ChatItemChanged, Crew, CrewDeleted,
+    Delivery, DesktopAwayUse, DesktopState, FolderRecycled, McpOverview, Message, Question,
+    ReactionChanged, Routine, RoutineRun, ScreenDraft, Task,
 };
 use botloft_store::Store;
 use tokio::runtime::{Handle, RuntimeFlavor};
@@ -44,6 +44,8 @@ pub enum Event {
     BotContext(BotContextChanged),
     BotRules(BotRules),
     BotDesktop(BotDesktop),
+    McpServers(McpOverview),
+    BotMcp(BotMcp),
     DesktopChanged(DesktopState),
     DesktopAway(Vec<DesktopAwayUse>),
     ChatItem(ChatItemChanged),

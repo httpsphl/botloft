@@ -19,7 +19,7 @@ use crate::runtime::claude::Claude;
 use crate::runtime::{ProcessEvent, SpawnSpec};
 use crate::secrets::{self, TokenHash};
 use crate::state::Daemon;
-use crate::{approvals, context, courier, routines, workspace};
+use crate::{approvals, context, courier, mcp_secrets, routines, workspace};
 
 /// Tools the bot uses without asking: its crew tools (spec 7.4).
 const ALLOWED_TOOLS: &str = "mcp__botloft";
@@ -109,7 +109,11 @@ pub(super) fn launch_spec(
 ) -> io::Result<(SpawnSpec, Launch)> {
     // settings.json and the rules are rewritten on every start.
     let crews = daemon.store().crews(true).map_err(io::Error::other)?;
-    let workspace = workspace::prepare_bot(daemon.workspace_env(), crew, &crews, bot)?;
+    let servers = daemon
+        .store()
+        .bot_mcp_servers(&bot.id)
+        .map_err(io::Error::other)?;
+    let workspace = workspace::prepare_bot(daemon.workspace_env(), crew, &crews, bot, &servers)?;
     let token = secrets::random_token()?;
     let (session, resumed) = match session {
         Some(session) => (session.to_owned(), true),
@@ -179,6 +183,10 @@ pub(super) fn launch_spec(
     ] {
         env.push((OsString::from(name), value));
     }
+
+    // The values of the headers and variables of the bot's connected tools,
+    // which its `mcp.json` expands (spec 25.2).
+    env.extend(mcp_secrets::environment(&daemon.paths.secrets(), &servers)?);
 
     let spec = SpawnSpec {
         program: claude.path.clone(),
