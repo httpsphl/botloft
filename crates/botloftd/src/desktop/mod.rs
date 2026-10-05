@@ -6,6 +6,7 @@
 mod activity;
 mod away;
 pub mod notice;
+pub mod outline;
 mod screen;
 
 pub use activity::{Activity, STOPPED};
