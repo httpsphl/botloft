@@ -1079,6 +1079,11 @@ export type BackupExported = { path: string,
  */
 size: number, manifest: BackupManifest, };
 
+/**
+ * `backup.stage`: a backup file the owner picked, and its passphrase.
+ */
+export type BackupStageParams = { path: string, passphrase: string, };
+
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
 /**
  * What the bot says the command is for, as in `ToolItem`. The bot
@@ -1778,6 +1783,9 @@ export interface RpcMethods {
   "crewAccess.list": { params: CrewAccessListParams; result: Array<CrewAccess> };
   "crewAccess.revoke": { params: CrewAccessIdParams; result: Array<CrewAccess> };
   "backup.export": { params: BackupExportParams; result: BackupExported };
+  "backup.stage": { params: BackupStageParams; result: BackupManifest };
+  "backup.confirm": { params: undefined; result: null };
+  "backup.cancel": { params: undefined; result: null };
   "routines.list": { params: RoutinesListParams; result: Array<Routine> };
   "routines.create": { params: RoutinesCreateParams; result: Routine };
   "routines.update": { params: RoutinesUpdateParams; result: Routine };

@@ -129,6 +129,9 @@ pub mod method {
     pub const RULES_LIST: &str = "rules.list";
     pub const RULES_DELETE: &str = "rules.delete";
     pub const BACKUP_EXPORT: &str = "backup.export";
+    pub const BACKUP_STAGE: &str = "backup.stage";
+    pub const BACKUP_CONFIRM: &str = "backup.confirm";
+    pub const BACKUP_CANCEL: &str = "backup.cancel";
     pub const CREW_ACCESS_LIST: &str = "crewAccess.list";
     pub const CREW_ACCESS_REVOKE: &str = "crewAccess.revoke";
     pub const DESKTOP_GRANTS: &str = "desktop.grants";
