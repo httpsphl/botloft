@@ -142,6 +142,15 @@ export function tauriHost(): Host {
       });
       return typeof picked === "string" ? picked : null;
     },
+    pickFile: async (title, kind, extensions) => {
+      const picked = await open({
+        directory: false,
+        multiple: false,
+        title,
+        filters: [{ name: kind, extensions }],
+      });
+      return typeof picked === "string" ? picked : null;
+    },
     openUrl: (url) => invoke<void>("open_url", { url }),
     window: {
       minimize: () => window.minimize(),
