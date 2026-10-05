@@ -12,7 +12,7 @@ import { RealInput } from "./RealInput";
 import { Unattended } from "./Unattended";
 
 /** The bot's grants, read when shown and kept current by `bot.desktop`. */
-function useDesktopGrants(botId: Bot["id"]): DesktopGrant[] | null {
+export function useDesktopGrants(botId: Bot["id"]): DesktopGrant[] | null {
   const api = useApi();
   const [grants, setGrants] = useState<DesktopGrant[] | null>(null);
   useEffect(() => {

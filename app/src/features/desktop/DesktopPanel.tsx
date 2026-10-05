@@ -16,6 +16,7 @@ import { attempt } from "../../ui/toast";
 import { BotAvatar } from "../bots/BotAvatar";
 import { LiveView, type StageAction } from "../browser/LiveView";
 import { ComputerFooter } from "../terminal/ComputerDock";
+import { AppOptions } from "./AppOptions";
 import { useDesktopView } from "./useDesktopView";
 
 type Words = ReturnType<typeof useT>["desktop"]["panel"];
@@ -144,6 +145,7 @@ export function DesktopPanel({ bot, onClose }: { bot: Bot; onClose(): void }) {
               <BotAvatar color={bot.color} size={18} mood={stopped ? "sleeping" : "working"} />
               <span className="truncate">{actionText(state?.action ?? null, t)}</span>
             </p>
+            <AppOptions bot={bot} app={window.app} />
           </>
         )}
         <p className="mt-auto text-muted text-xs">{t.shortcut}</p>
