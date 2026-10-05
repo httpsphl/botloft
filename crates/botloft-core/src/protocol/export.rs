@@ -11,7 +11,7 @@ use super::*;
 use crate::avatar::PALETTE;
 use crate::ids::{
     ApprovalId, AttachmentId, BotId, ChatItemId, CrewAccessId, CrewId, DeliveryId, DesktopGrantId,
-    MessageId, QuestionId, RoutineId, RoutineRunId, RuleId, TaskId,
+    McpServerId, MessageId, QuestionId, RoutineId, RoutineRunId, RuleId, TaskId,
 };
 
 #[path = "export_backup.rs"]
@@ -22,6 +22,8 @@ mod browser;
 mod crew_access;
 #[path = "export_desktop.rs"]
 mod desktop;
+#[path = "export_mcp.rs"]
+mod mcp;
 #[path = "export_questions.rs"]
 mod questions;
 #[path = "export_reactions.rs"]
@@ -114,6 +116,7 @@ fn export_bindings() {
     out.decl::<RuleId>();
     out.decl::<QuestionId>();
     out.decl::<DesktopGrantId>();
+    out.decl::<McpServerId>();
     out.decl::<CrewAccessId>();
     out.decl::<Crew>();
     out.decl::<BotState>();
@@ -185,6 +188,7 @@ fn export_bindings() {
     out.decl::<ToolItem>();
     rules::decls(&mut out);
     desktop::decls(&mut out);
+    mcp::decls(&mut out);
     crew_access::decls(&mut out);
     backup::decls(&mut out);
     out.decl::<ApprovalItem>();
@@ -356,6 +360,7 @@ fn export_bindings() {
     usage::methods(&mut out);
     rules::methods(&mut out);
     desktop::methods(&mut out);
+    mcp::methods(&mut out);
     crew_access::methods(&mut out);
     backup::methods(&mut out);
     routines::methods(&mut out);
@@ -410,6 +415,7 @@ fn export_bindings() {
     reactions::notifications(&mut out);
     rules::notifications(&mut out);
     desktop::notifications(&mut out);
+    mcp::notifications(&mut out);
     browser::notifications(&mut out);
     out.text.push_str("}\n\n");
 

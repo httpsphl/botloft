@@ -13,6 +13,8 @@ pub mod deliveries;
 pub mod desktop;
 pub mod files;
 pub mod lead;
+pub mod mcp;
+pub mod mcp_state;
 pub mod messages;
 pub mod models;
 pub mod modes;

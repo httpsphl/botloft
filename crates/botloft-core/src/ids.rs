@@ -122,6 +122,10 @@ prefixed_id!(
     DesktopGrantId, "desktop grant", "dsk_"
 );
 prefixed_id!(
+    /// Identifies a connected tool, an MCP server of the owner (spec 25).
+    McpServerId, "MCP server", "msv_"
+);
+prefixed_id!(
     /// Identifies what the owner let a bot reach in another crew (spec 10.4).
     CrewAccessId, "crew access", "cxa_"
 );

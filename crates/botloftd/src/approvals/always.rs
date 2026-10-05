@@ -37,6 +37,11 @@ pub(crate) fn scope_of(tool: &str, input: &Value) -> Option<AllowScope> {
         }
         "NotebookEdit" => (AllowKind::File, field("notebook_path")?.to_owned()),
         "WebSearch" => (AllowKind::Tool, String::new()),
+        // One tool of one connected server (spec 25.4); the tools of
+        // Botloft itself never ask.
+        tool if tool.starts_with("mcp__") && !tool.starts_with("mcp__botloft__") => {
+            (AllowKind::Tool, tool.to_owned())
+        }
         _ => return None,
     };
     Some(AllowScope {
@@ -105,6 +110,26 @@ mod tests {
     use serde_json::json;
 
     use super::*;
+
+    #[test]
+    fn a_tool_of_a_connected_server_is_allowed_one_tool_at_a_time() {
+        let scope = scope_of("mcp__linkedin__search_people", &json!({ "q": "x" }));
+        assert_eq!(
+            scope.map(|scope| (scope.kind, scope.value)),
+            Some((AllowKind::Tool, "mcp__linkedin__search_people".to_owned()))
+        );
+        let rule = |tool: &str| AllowScope {
+            tool_name: tool.into(),
+            kind: AllowKind::Tool,
+            value: tool.into(),
+        };
+        assert!(!covers(
+            &rule("mcp__linkedin__search_people"),
+            &rule("mcp__linkedin__send_message")
+        ));
+        // Botloft's own tools never ask, so there is nothing to allow.
+        assert_eq!(scope_of("mcp__botloft__send_message", &json!({})), None);
+    }
 
     #[test]
     fn commands_sites_files_and_searches_can_be_allowed_for_good() {

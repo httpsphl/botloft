@@ -20,6 +20,7 @@ const DELETE_BOT: &[&str] = &[
     "DELETE FROM chat_items WHERE bot_id = ?1",
     "DELETE FROM browser_sites WHERE bot_id = ?1",
     "DELETE FROM desktop_grants WHERE bot_id = ?1",
+    "DELETE FROM bot_mcp_servers WHERE bot_id = ?1",
     "DELETE FROM turn_costs WHERE bot_id = ?1",
     "DELETE FROM crew_access WHERE bot_id = ?1 OR target_bot_id = ?1",
     "DELETE FROM allow_rules WHERE bot_id = ?1",

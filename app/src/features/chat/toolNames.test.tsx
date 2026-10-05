@@ -20,8 +20,11 @@ describe("tool names", () => {
     expect(toolTitle("mcp__botloft__browser_open", ptBR.tools)).toBe("Abrir uma página");
     expect(toolTitle("Bash", ptBR.tools)).toBe("Rodar um comando");
     expect(toolAction("Write", ptBR.tools)).toBe("escrever um arquivo");
-    // One with no name here keeps its own.
-    expect(toolTitle("mcp__other__frobnicate", en.tools)).toBe("frobnicate");
+    // A tool of the owner's own is named with the tool it belongs to.
+    expect(toolTitle("mcp__other__frobnicate", en.tools)).toBe("frobnicate (other)");
+    expect(toolTitle("mcp__linkedin__search_people", en.tools)).toBe("search people (linkedin)");
+    // One with no name here and no tool to belong to keeps its own.
+    expect(toolTitle("Frobnicate", en.tools)).toBe("Frobnicate");
     expect(toolAction("mcp__other__frobnicate", ptBR.tools)).toBe("usar frobnicate");
     expect(toolTitle("constructor", en.tools)).toBe("constructor");
   });

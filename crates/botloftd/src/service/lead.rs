@@ -9,7 +9,6 @@ use tracing::{info, warn};
 use super::bots::{self, NewBot};
 use super::{ApiError, ApiResult, crews};
 use crate::state::Daemon;
-use crate::workspace;
 
 pub(crate) fn is_lead(crew: &Crew, bot: &BotId) -> bool {
     crew.lead_bot_id.as_ref() == Some(bot)
@@ -54,7 +53,7 @@ pub fn set_lead(daemon: &Daemon, params: CrewsSetLeadParams) -> ApiResult<Crew> 
     for id in &touched {
         match store.bot(id) {
             Ok(Some(record)) if record.archived_at.is_none() => {
-                if let Err(err) = workspace::write_rules(&daemon.paths, &crew, &record) {
+                if let Err(err) = super::mcp::write_rules(daemon, &store, &crew, &record) {
                     warn!(bot = %id, "could not refresh the rules of a chief: {err}");
                 }
             }

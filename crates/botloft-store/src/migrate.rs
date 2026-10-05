@@ -30,6 +30,7 @@ const MIGRATIONS: &[(u32, &str)] = &[
     (21, include_str!("../migrations/0021_crew_access.sql")),
     (22, include_str!("../migrations/0022_crew_access_files.sql")),
     (23, include_str!("../migrations/0023_plan_share.sql")),
+    (24, include_str!("../migrations/0024_mcp_servers.sql")),
 ];
 
 /// Schema version after every migration has run.

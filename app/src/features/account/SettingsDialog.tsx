@@ -11,11 +11,13 @@ import {
   type LucideIcon,
   MessageSquare,
   Palette,
+  Plug,
   SlidersHorizontal,
 } from "lucide-react";
 import { useId, useState } from "react";
 import { useT } from "../../i18n";
 import { Dialog } from "../../ui/Dialog";
+import { ConnectedToolsSettings } from "../connections/ConnectedToolsSettings";
 import { AboutSettings } from "./AboutSettings";
 import { AlertsSettings } from "./AlertsSettings";
 import { AppearanceSettings } from "./AppearanceSettings";
@@ -24,7 +26,15 @@ import { BackupSettings } from "./BackupSettings";
 import { ChatSettings } from "./ChatSettings";
 import { GeneralSettings } from "./GeneralSettings";
 
-type Page = "general" | "chat" | "alerts" | "appearance" | "archived" | "backup" | "about";
+type Page =
+  | "general"
+  | "chat"
+  | "alerts"
+  | "appearance"
+  | "archived"
+  | "tools"
+  | "backup"
+  | "about";
 
 const PAGES: { id: Page; icon: LucideIcon }[] = [
   { id: "general", icon: SlidersHorizontal },
@@ -32,6 +42,7 @@ const PAGES: { id: Page; icon: LucideIcon }[] = [
   { id: "alerts", icon: Bell },
   { id: "appearance", icon: Palette },
   { id: "archived", icon: Archive },
+  { id: "tools", icon: Plug },
   { id: "backup", icon: DatabaseBackup },
   { id: "about", icon: Info },
 ];
@@ -61,7 +72,7 @@ export function SettingsDialog({ onClose }: { onClose(): void }) {
                 aria-selected={selected}
                 aria-controls={`${id}-panel`}
                 onClick={() => setPage(each)}
-                className={`flex h-8 items-center gap-2 rounded-lg px-2.5 text-left font-medium text-sm transition-colors ${
+                className={`flex min-h-8 items-center gap-2 rounded-lg px-2.5 py-1 text-left font-medium text-sm transition-colors ${
                   selected ? "bg-sunken text-ink" : "text-ink-soft hover:bg-sunken hover:text-ink"
                 }`}
               >
@@ -82,6 +93,7 @@ export function SettingsDialog({ onClose }: { onClose(): void }) {
           {page === "alerts" && <AlertsSettings />}
           {page === "appearance" && <AppearanceSettings />}
           {page === "archived" && <ArchivedSettings />}
+          {page === "tools" && <ConnectedToolsSettings />}
           {page === "backup" && <BackupSettings />}
           {page === "about" && <AboutSettings />}
         </div>

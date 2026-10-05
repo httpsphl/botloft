@@ -59,6 +59,7 @@ mod desktop;
 mod export;
 mod files;
 mod lesson;
+mod mcp;
 mod messaging;
 mod methods;
 mod model;
@@ -80,6 +81,7 @@ pub use crew_access::*;
 pub use desktop::*;
 pub use files::*;
 pub use lesson::*;
+pub use mcp::*;
 pub use messaging::*;
 pub use methods::*;
 pub use model::*;
@@ -134,6 +136,10 @@ pub mod method {
     pub const BACKUP_CANCEL: &str = "backup.cancel";
     pub const CREW_ACCESS_LIST: &str = "crewAccess.list";
     pub const CREW_ACCESS_REVOKE: &str = "crewAccess.revoke";
+    pub const MCP_SERVERS: &str = "mcp.servers";
+    pub const MCP_SAVE: &str = "mcp.save";
+    pub const MCP_DELETE: &str = "mcp.delete";
+    pub const BOT_MCP_SET: &str = "bot.mcp.set";
     pub const DESKTOP_GRANTS: &str = "desktop.grants";
     pub const DESKTOP_REVOKE: &str = "desktop.revoke";
     pub const DESKTOP_SET_OPTIONS: &str = "desktop.setOptions";
@@ -196,6 +202,8 @@ pub mod notification {
     pub const BOT_CONTEXT: &str = "bot.context";
     pub const BOT_RULES: &str = "bot.rules";
     pub const BOT_DESKTOP: &str = "bot.desktop";
+    pub const MCP_SERVERS: &str = "mcp.servers";
+    pub const BOT_MCP: &str = "bot.mcp";
     pub const DESKTOP_CHANGED: &str = "desktop.changed";
     /// What bots did while the owner was away, whenever it changes.
     pub const DESKTOP_AWAY: &str = "desktop.away";

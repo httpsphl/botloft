@@ -2,6 +2,7 @@
 //! idempotent: running it again refreshes the generated files and keeps the
 //! bot's own `CLAUDE.md`.
 
+mod connected;
 mod files;
 pub mod folder;
 mod memory;
@@ -10,10 +11,12 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use botloft_core::protocol::Crew;
+use botloft_core::protocol::{Crew, McpServer};
 use botloft_store::BotRecord;
 
 use crate::paths::Paths;
+
+pub use connected::connected_var;
 
 /// What generated files need to know about the running daemon.
 #[derive(Debug, Clone, Copy)]
@@ -61,12 +64,14 @@ pub fn fences(paths: &Paths, crew: &Crew, crews: &[Crew]) -> Vec<PathBuf> {
 }
 
 /// Creates the workspace and writes every generated file. `crews` are all
-/// the crews, for `fences`. Returns the path.
+/// the crews, for `fences`, and `servers` the connected tools of the bot
+/// (spec 25). Returns the path.
 pub fn prepare_bot(
     env: WorkspaceEnv<'_>,
     crew: &Crew,
     crews: &[Crew],
     bot: &BotRecord,
+    servers: &[McpServer],
 ) -> io::Result<PathBuf> {
     prepare_crew(env.paths, crew)?;
     let dir = env.paths.bot_workspace(&crew.slug, &bot.slug);
@@ -85,20 +90,25 @@ pub fn prepare_bot(
             &fences(env.paths, crew, crews),
         ),
     )?;
-    write_json(
-        &dir.join(".botloft").join("mcp.json"),
-        &files::mcp_json(env.port, env.approval_timeout),
-    )?;
-    write_rules(env.paths, crew, bot)?;
+    let mut mcp = files::mcp_json(env.port, env.approval_timeout);
+    connected::add_to(&mut mcp, servers);
+    write_json(&dir.join(".botloft").join("mcp.json"), &mcp)?;
+    write_rules(env.paths, crew, bot, servers)?;
     Ok(dir)
 }
 
 /// Rewrites `.claude/rules/botloft.md` after the bot or its crew changed.
-pub fn write_rules(paths: &Paths, crew: &Crew, bot: &BotRecord) -> io::Result<()> {
+pub fn write_rules(
+    paths: &Paths,
+    crew: &Crew,
+    bot: &BotRecord,
+    servers: &[McpServer],
+) -> io::Result<()> {
     let dir = paths.bot_workspace(&crew.slug, &bot.slug);
     let rules_dir = dir.join(".claude").join("rules");
     std::fs::create_dir_all(&rules_dir)?;
-    let text = files::rules_md(crew, bot, &paths.work_folder(crew));
+    let mut text = files::rules_md(crew, bot, &paths.work_folder(crew));
+    text.push_str(&connected::rules_section(servers));
     write_atomic(&rules_dir.join("botloft.md"), text.as_bytes())
 }
 
@@ -167,7 +177,7 @@ mod tests {
             port: 45710,
             approval_timeout: Duration::from_secs(3600),
         };
-        let ws = prepare_bot(env, &crew, &[], &bot).expect("prepare");
+        let ws = prepare_bot(env, &crew, &[], &bot, &[]).expect("prepare");
 
         assert_eq!(ws, paths.bot_workspace("site", "writer"));
         assert!(paths.shared_dir("site").is_dir());
@@ -204,12 +214,12 @@ mod tests {
             port: 45710,
             approval_timeout: Duration::from_secs(3600),
         };
-        let ws = prepare_bot(env, &crew, &[], &bot).expect("prepare");
+        let ws = prepare_bot(env, &crew, &[], &bot, &[]).expect("prepare");
         std::fs::write(ws.join("CLAUDE.md"), "my notes").expect("edit memory");
 
         bot.name = "Lead Writer".to_owned();
         bot.handle = "lead-writer".to_owned();
-        prepare_bot(env, &crew, &[], &bot).expect("prepare again");
+        prepare_bot(env, &crew, &[], &bot, &[]).expect("prepare again");
 
         let memory = std::fs::read_to_string(ws.join("CLAUDE.md")).expect("memory");
         assert_eq!(memory, "my notes");

@@ -7,6 +7,15 @@ import type { Messages } from "../../i18n/en";
 
 type Words = Messages["tools"];
 
+/** A tool of the owner's, `mcp__<slug>__<tool>`, as "tool name (slug)". */
+function connected(name: string): string | null {
+  const [prefix, slug, ...tool] = name.split("__");
+  if (prefix !== "mcp" || !slug || slug === "botloft" || tool.length === 0) {
+    return null;
+  }
+  return `${tool.join("__").replaceAll("_", " ")} (${slug})`;
+}
+
 /** `mcp__botloft__send_message` is `send_message`; built-ins keep theirs. */
 export function toolKey(name: string): string {
   return name.split("__").at(-1) ?? name;
@@ -19,7 +28,7 @@ function known(key: string, t: Words): string | undefined {
 /** The tool as a title: "Send a message"; an unknown one, by its name. */
 export function toolTitle(name: string, t: Words): string {
   const key = toolKey(name);
-  return known(key, t) ?? key;
+  return known(key, t) ?? connected(name) ?? key;
 }
 
 /** The tool inside a sentence: "wants to send a message". */
