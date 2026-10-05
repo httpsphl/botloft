@@ -319,6 +319,28 @@ export const chat = {
     declined: (name: string) => `You kept the routine ${name}`,
     expired: (name: string) => `Deleting ${name} was not answered in time`,
   },
+  /** A bot asking to reach another crew, or one bot of it (spec 10.4). */
+  crewAccess: {
+    titleCrew: (bot: string, crew: string) => `${bot} wants to reach the crew ${crew}`,
+    titleBot: (bot: string, other: string, crew: string) =>
+      `${bot} wants to reach ${other}, of the crew ${crew}`,
+    talk: (whom: string) => `Talk with ${whom}: see who is there and send messages and tasks`,
+    why: (bot: string) => `Why, says ${bot}:`,
+    explain: "Crews do not see each other. Only now lasts until the bot ends this turn.",
+    once: "Only now",
+    alwaysBot: (other: string) => `Always ${other}`,
+    alwaysCrew: (crew: string) => `Always the crew ${crew}`,
+    decline: "Deny",
+    noteLabel: (bot: string) => `What to tell ${bot} if you deny it`,
+    notePlaceholder: (bot: string) => `If you deny it, tell ${bot} why (optional)`,
+    failed: "Could not send the answer",
+    doneOnce: (bot: string, crew: string) => `You let ${bot} reach ${crew} only now`,
+    doneBot: (bot: string, other: string, crew: string) =>
+      `You let ${bot} always reach ${other}, of ${crew}`,
+    doneCrew: (bot: string, crew: string) => `You let ${bot} always reach the crew ${crew}`,
+    declined: (bot: string, crew: string) => `You did not let ${bot} reach ${crew}`,
+    expired: (crew: string) => `The request to reach ${crew} was not answered in time`,
+  },
   /** A bot asking to rename or change itself, or the chief another bot (spec 10.3). */
   botChange: {
     titleSelf: (bot: string) => `${bot} wants to change how it is set up`,

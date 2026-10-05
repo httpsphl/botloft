@@ -82,6 +82,11 @@ export type QuestionId = string;
 export type DesktopGrantId = string;
 
 /**
+ * Identifies what the owner let a bot reach in another crew (spec 10.4).
+ */
+export type CrewAccessId = string;
+
+/**
  * A group of bots that can message each other and share a folder.
  */
 export type Crew = { id: CrewId, name: string, 
@@ -1002,6 +1007,27 @@ export type DesktopWholeParams = { botId: BotId, level: DesktopLevel,
  */
 acceptedRisks: boolean, };
 
+/**
+ * One lasting access: the whole crew, or one bot of it.
+ */
+export type CrewAccess = { id: CrewAccessId, 
+/**
+ * The bot that may reach.
+ */
+botId: BotId, crewId: CrewId, crewName: string, 
+/**
+ * One bot of the crew; `null` for the whole crew.
+ */
+targetBotId: BotId | null, targetName: string | null, 
+/**
+ * Unix time in milliseconds.
+ */
+createdAt: number, };
+
+export type CrewAccessListParams = { botId: BotId, };
+
+export type CrewAccessIdParams = { accessId: CrewAccessId, };
+
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
 /**
  * What the bot says the command is for, as in `ToolItem`. The bot
@@ -1693,6 +1719,8 @@ export interface RpcMethods {
   "desktop.resume": { params: DesktopBotParams; result: DesktopState };
   "desktop.awayUses": { params: undefined; result: Array<DesktopAwayUse> };
   "desktop.dismissAway": { params: undefined; result: null };
+  "crewAccess.list": { params: CrewAccessListParams; result: Array<CrewAccess> };
+  "crewAccess.revoke": { params: CrewAccessIdParams; result: Array<CrewAccess> };
   "routines.list": { params: RoutinesListParams; result: Array<Routine> };
   "routines.create": { params: RoutinesCreateParams; result: Routine };
   "routines.update": { params: RoutinesUpdateParams; result: Routine };

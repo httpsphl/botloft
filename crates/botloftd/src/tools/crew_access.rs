@@ -34,7 +34,7 @@ struct Args {
 }
 
 /// How long the owner allowed it, as `approvals.answer` sends it back.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, serde::Serialize)]
 #[serde(rename_all = "snake_case")]
 enum Scope {
     /// Until the bot's turn ends.
@@ -288,5 +288,8 @@ pub(crate) fn check_answer(asked: &str, answer: &str) -> ApiResult<String> {
             "the bot asked for the whole crew: allow it now or for the crew",
         ));
     }
-    Ok(answer.to_owned())
+    // Kept in place of the request: the request, with how long.
+    let mut kept = asked;
+    kept["scope"] = serde_json::to_value(answered.scope).unwrap_or_default();
+    Ok(kept.to_string())
 }

@@ -12,6 +12,7 @@ import { DesktopGrants } from "../desktop/DesktopGrants";
 import { SignInButton } from "../onboarding/SignIn";
 import { AllowRules } from "./AllowRules";
 import type { stateView } from "./BotStateBadge";
+import { CrewAccessList } from "./CrewAccessList";
 
 export function Notices({
   bot,
@@ -78,6 +79,7 @@ export function Details({ bot, onClose }: { bot: Bot; onClose(): void }) {
           </dd>
         </div>
         <AllowRules bot={bot} />
+        <CrewAccessList bot={bot} />
         <DesktopGrants bot={bot} />
       </dl>
     </SidePanel>

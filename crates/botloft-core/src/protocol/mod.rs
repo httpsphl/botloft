@@ -52,6 +52,7 @@ macro_rules! text_enum {
 mod browser;
 mod browser_input;
 mod chat;
+mod crew_access;
 mod desktop;
 #[cfg(test)]
 mod export;
@@ -73,6 +74,7 @@ mod usage;
 pub use browser::*;
 pub use browser_input::*;
 pub use chat::*;
+pub use crew_access::*;
 pub use desktop::*;
 pub use files::*;
 pub use lesson::*;
@@ -124,6 +126,8 @@ pub mod method {
     pub const APPROVALS_ANSWER: &str = "approvals.answer";
     pub const RULES_LIST: &str = "rules.list";
     pub const RULES_DELETE: &str = "rules.delete";
+    pub const CREW_ACCESS_LIST: &str = "crewAccess.list";
+    pub const CREW_ACCESS_REVOKE: &str = "crewAccess.revoke";
     pub const DESKTOP_GRANTS: &str = "desktop.grants";
     pub const DESKTOP_REVOKE: &str = "desktop.revoke";
     pub const DESKTOP_SET_OPTIONS: &str = "desktop.setOptions";

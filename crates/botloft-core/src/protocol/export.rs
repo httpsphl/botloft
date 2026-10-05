@@ -10,12 +10,14 @@ use ts_rs::{Config, TS};
 use super::*;
 use crate::avatar::PALETTE;
 use crate::ids::{
-    ApprovalId, AttachmentId, BotId, ChatItemId, CrewId, DeliveryId, DesktopGrantId, MessageId,
-    QuestionId, RoutineId, RoutineRunId, RuleId, TaskId,
+    ApprovalId, AttachmentId, BotId, ChatItemId, CrewAccessId, CrewId, DeliveryId, DesktopGrantId,
+    MessageId, QuestionId, RoutineId, RoutineRunId, RuleId, TaskId,
 };
 
 #[path = "export_browser.rs"]
 mod browser;
+#[path = "export_crew_access.rs"]
+mod crew_access;
 #[path = "export_desktop.rs"]
 mod desktop;
 #[path = "export_questions.rs"]
@@ -110,6 +112,7 @@ fn export_bindings() {
     out.decl::<RuleId>();
     out.decl::<QuestionId>();
     out.decl::<DesktopGrantId>();
+    out.decl::<CrewAccessId>();
     out.decl::<Crew>();
     out.decl::<BotState>();
     out.decl::<PermissionMode>();
@@ -180,6 +183,7 @@ fn export_bindings() {
     out.decl::<ToolItem>();
     rules::decls(&mut out);
     desktop::decls(&mut out);
+    crew_access::decls(&mut out);
     out.decl::<ApprovalItem>();
     usage::decls(&mut out);
     questions::decls(&mut out);
@@ -349,6 +353,7 @@ fn export_bindings() {
     usage::methods(&mut out);
     rules::methods(&mut out);
     desktop::methods(&mut out);
+    crew_access::methods(&mut out);
     routines::methods(&mut out);
     questions::methods(&mut out);
     reactions::methods(&mut out);

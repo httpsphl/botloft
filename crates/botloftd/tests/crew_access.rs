@@ -184,6 +184,23 @@ async fn always_for_the_crew_lasts_and_a_task_comes_back() {
     assert!(c.app.call("approvals.answer", wrong).await.is_err());
     answer(&mut c.app, &asked, Some("crew")).await;
     waiting.await.expect("task").expect("allowed");
+    let settled = c
+        .app
+        .call("chat.history", json!({ "botId": c.scout["id"] }))
+        .await
+        .expect("history");
+    let kept = settled
+        .as_array()
+        .expect("items")
+        .iter()
+        .find(|item| item["body"]["kind"] == "approval")
+        .expect("approval")["body"]["input"]
+        .as_str()
+        .expect("input")
+        .to_owned();
+    let kept: Value = serde_json::from_str(&kept).expect("json");
+    assert_eq!(kept["crew"], "Blog");
+    assert_eq!(kept["scope"], "crew");
 
     let scout: BotId = c.scout["id"].as_str().expect("id").parse().expect("bot id");
     c.t.daemon.crew_access.end_turn(&scout);
@@ -225,4 +242,25 @@ async fn always_for_the_crew_lasts_and_a_task_comes_back() {
     .expect("task")
     .expect("already");
     assert!(again["note"].as_str().expect("note").contains("already"));
+
+    // The owner sees it in the scout's details and takes it back.
+    let listed = c
+        .app
+        .call("crewAccess.list", json!({ "botId": c.scout["id"] }))
+        .await
+        .expect("list");
+    assert_eq!(listed[0]["crewName"], "Blog");
+    assert_eq!(listed[0]["targetBotId"], Value::Null);
+    let left = c
+        .app
+        .call("crewAccess.revoke", json!({ "accessId": listed[0]["id"] }))
+        .await
+        .expect("revoke");
+    assert_eq!(left, json!([]));
+    let closed = c
+        .scout_mcp
+        .tool("send_message", note("editor", "Hi"))
+        .await
+        .expect_err("taken back");
+    assert!(closed.contains("cannot reach"), "{closed}");
 }

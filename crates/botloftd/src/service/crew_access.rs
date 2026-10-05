@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::sync::{Mutex, PoisonError};
 
 use botloft_core::ids::{BotId, CrewId};
-use botloft_core::protocol::Crew;
+use botloft_core::protocol::{Crew, CrewAccess, CrewAccessIdParams, CrewAccessListParams};
 use botloft_store::{BotRecord, Store};
 
 use super::{ApiError, ApiResult};
@@ -62,6 +62,47 @@ impl TurnAccess {
             .get(bot)
             .is_some_and(|list| list.iter().any(|reach| reach.covers(crew, target)))
     }
+}
+
+/// `crewAccess.list`: what the bot may reach in other crews for good.
+pub fn list(daemon: &Daemon, params: CrewAccessListParams) -> ApiResult<Vec<CrewAccess>> {
+    let store = daemon.store();
+    if store.bot(&params.bot_id)?.is_none() {
+        return Err(ApiError::NotFound(format!("bot {}", params.bot_id)));
+    }
+    described(&store, &params.bot_id)
+}
+
+/// `crewAccess.revoke`: takes one back. The bot's list after it.
+pub fn revoke(daemon: &Daemon, params: CrewAccessIdParams) -> ApiResult<Vec<CrewAccess>> {
+    let store = daemon.store();
+    let bot = store
+        .revoke_crew_access(&params.access_id)?
+        .ok_or_else(|| ApiError::NotFound(format!("access {}", params.access_id)))?;
+    described(&store, &bot)
+}
+
+fn described(store: &Store, bot: &BotId) -> ApiResult<Vec<CrewAccess>> {
+    store
+        .crew_access(bot)?
+        .into_iter()
+        .map(|access| {
+            let crew_name = store.crew(&access.crew_id)?.map(|crew| crew.name);
+            let target_name = match &access.target_bot_id {
+                Some(target) => store.bot(target)?.map(|bot| bot.name),
+                None => None,
+            };
+            Ok(CrewAccess {
+                id: access.id,
+                bot_id: access.bot_id,
+                crew_id: access.crew_id,
+                crew_name: crew_name.unwrap_or_default(),
+                target_bot_id: access.target_bot_id,
+                target_name,
+                created_at: access.created_at,
+            })
+        })
+        .collect()
 }
 
 /// Whether `bot` may talk with `target` of `crew` (or, with `None`, see
