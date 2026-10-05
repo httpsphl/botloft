@@ -14,11 +14,12 @@ use botloft_core::protocol::{
 };
 use serde::Serialize;
 use serde_json::Value;
+use tracing::debug;
 
 use super::dispatch::parse;
 use super::jsonrpc::{self, RpcError};
 use crate::approvals;
-use crate::browser::{Hands, InputError, Watching};
+use crate::browser::{Hands, InputError, Want, Watching, want};
 use crate::service::{ApiError, bots};
 use crate::state::Daemon;
 
@@ -150,6 +151,44 @@ impl Watch {
         tokio::spawn(async move {
             if closed.await.is_ok() {
                 helped(&daemon, &bot);
+            }
+        });
+        to_value(&state)
+    }
+
+    /// Opens the bot's closed browser for the owner, on its last page,
+    /// without the bot (spec 21.10); answers at once, and the state says
+    /// when it is open, for the app to take it.
+    pub(super) fn start(
+        &mut self,
+        daemon: &Arc<Daemon>,
+        params: Option<Value>,
+    ) -> Result<Value, RpcError> {
+        let params: BrowserControlParams = parse(params)?;
+        let bot = params.bot_id;
+        if !self.watches(&bot) {
+            return Err(
+                ApiError::Conflict("watch this browser before opening it".to_owned()).into(),
+            );
+        }
+        if !matches!(want(daemon, &bot), Want::Keep | Want::Rest) {
+            return Err(ApiError::Conflict(
+                "the bot or its crew is paused: its browser stays closed".to_owned(),
+            )
+            .into());
+        }
+        let workspace = {
+            let store = daemon.store();
+            let record = bots::find(&store, &bot)?;
+            let crew = crate::service::crews::find(&store, &record.crew_id)?;
+            daemon.paths.bot_workspace(&crew.slug, &record.slug)
+        };
+        let state = daemon.browsers.view(&bot).state;
+        let daemon = Arc::clone(daemon);
+        tokio::spawn(async move {
+            let downloads = workspace.join("downloads");
+            if let Err(err) = daemon.browsers.open_for_owner(&bot, &downloads).await {
+                debug!(bot = %bot, "browser: could not open for the owner: {err}");
             }
         });
         to_value(&state)

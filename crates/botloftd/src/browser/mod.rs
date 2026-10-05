@@ -13,6 +13,7 @@ mod keys;
 mod launch;
 mod lesson;
 mod moves;
+mod owner_open;
 mod page;
 mod program;
 mod read;
@@ -46,7 +47,7 @@ pub use self::page::{Aim, Done, Scroll};
 pub use self::program::find as find_program;
 pub use self::read::{READ_MAX, Reading};
 pub use self::session::Session;
-pub use self::sweep::{Want, run};
+pub use self::sweep::{Want, run, want};
 pub use self::viewport::Viewport;
 pub use self::watch::Watching;
 pub use self::window::WindowError;
@@ -119,6 +120,8 @@ struct Slot {
     asking: Option<ApprovalId>,
     /// The owner has the profile open in a window of its own.
     window: Option<window::Window>,
+    /// The page it showed last, to open again for the owner.
+    last_url: Option<String>,
 }
 
 type Slots = Arc<Mutex<HashMap<BotId, Slot>>>;
@@ -170,6 +173,7 @@ impl Browsers {
             held: tokio::sync::watch::channel(None).0,
             asking: None,
             window: None,
+            last_url: None,
         })
     }
 

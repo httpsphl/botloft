@@ -54,6 +54,7 @@ pub(super) fn methods(out: &mut Out) {
     out.method(method::BROWSER_TAKE, &control, &state);
     out.method(method::BROWSER_RELEASE, &control, &state);
     out.method(method::BROWSER_WINDOW, &control, &state);
+    out.method(method::BROWSER_START, &control, &state);
     out.method(
         method::BROWSER_TEACH,
         &out.name::<BrowserTeachParams>(),

@@ -1702,6 +1702,7 @@ export interface RpcMethods {
   "browser.take": { params: BrowserControlParams; result: BrowserState };
   "browser.release": { params: BrowserControlParams; result: BrowserState };
   "browser.window": { params: BrowserControlParams; result: BrowserState };
+  "browser.start": { params: BrowserControlParams; result: BrowserState };
   "browser.teach": { params: BrowserTeachParams; result: Array<LessonStep> };
   "browser.input": { params: BrowserInputParams; result: null };
   "browser.reload": { params: BrowserControlParams; result: null };

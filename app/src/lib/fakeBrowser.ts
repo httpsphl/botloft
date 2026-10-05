@@ -37,6 +37,9 @@ export class FakeBrowser {
   /** Pages that answer the owner's hands, for the preview. */
   private readonly pages = new Map<BotId, (input: BrowserInput) => void>();
 
+  /** The page each browser showed when it closed, to open it again. */
+  private readonly lastUrls = new Map<BotId, string>();
+
   constructor(private readonly fake: FakeBotloft) {}
 
   state(botId: BotId): BrowserState {
@@ -101,6 +104,7 @@ export class FakeBrowser {
 
   close(botId: BotId): BrowserState {
     this.frames.delete(botId);
+    this.lastUrls.set(botId, this.state(botId).url ?? "about:blank");
     const closed = { status: "closed", loading: false, control: "bot", resting: false } as const;
     return this.setTabs(botId, [], { ...closed, ask: null });
   }
@@ -224,6 +228,7 @@ export class FakeBrowser {
     | "browser.switchTab"
     | "browser.open"
     | "browser.window"
+    | "browser.start"
   > {
     return {
       "browser.list": () =>
@@ -310,6 +315,15 @@ export class FakeBrowser {
         this.open(botId, address, new URL(address).hostname);
         this.repaint(botId);
         return null;
+      },
+      // Up a moment later, on its last page, as the daemon does it.
+      "browser.start": ({ botId }) => {
+        if (this.watching !== botId) {
+          throw conflict("watch this browser before opening it");
+        }
+        const url = this.lastUrls.get(botId) ?? "about:blank";
+        setTimeout(() => this.open(botId, url, new URL(url).hostname));
+        return this.set(botId, { status: "starting" });
       },
       "browser.window": ({ botId }) => {
         if (this.watching !== botId) {

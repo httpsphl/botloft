@@ -10,6 +10,7 @@ use botloft_core::protocol::{BrowserState, BrowserStatus};
 use tokio::sync::OwnedMutexGuard;
 use tracing::debug;
 
+use super::owner_open::remember;
 use super::session::{Hooks, PageInfo, Session};
 use super::{BrowserError, Browsers, lock, program, update, watch};
 
@@ -92,6 +93,7 @@ impl Call<'_> {
                 bot.clone(),
             );
             move |info: PageInfo| {
+                remember(&slots, &bot, info.url.as_deref());
                 update(&slots, &events, clock.as_ref(), &bot, |state| {
                     state.url = info.url;
                     state.title = info.title;

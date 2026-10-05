@@ -246,6 +246,8 @@ fn route(
         }
         // A window of its own outlives the request (spec 21.11).
         method::BROWSER_WINDOW => watch.window(daemon, request.params),
+        // The browser starting outlives the request too (spec 21.10).
+        method::BROWSER_START => watch.start(daemon, request.params),
         name if ASIDE.contains(&name) => return Routed::Aside(request),
         _ => return Routed::InOrder(request),
     };
