@@ -62,13 +62,38 @@ pub struct McpServer {
     pub created_at: i64,
 }
 
-/// The servers a bot uses.
+/// Whether Claude Code reached a server when the bot started (spec 25.5).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub enum McpState {
+    Connected,
+    Pending,
+    /// The server wants the owner to sign in first.
+    NeedsAuth,
+    Failed,
+}
+
+/// What a bot's process reported about one of its servers.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct McpServerState {
+    pub server_id: McpServerId,
+    pub state: McpState,
+    /// Why it failed, as Claude Code put it: for "Details", never the log.
+    pub error: Option<String>,
+}
+
+/// The servers a bot uses, and how they stand since it started.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct BotMcp {
     pub bot_id: BotId,
     pub server_ids: Vec<McpServerId>,
+    /// Empty until the process says; only for servers it was started with.
+    pub states: Vec<McpServerState>,
 }
 
 /// Every server and who uses it: the result of `mcp.servers` and the params

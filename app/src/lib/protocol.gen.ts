@@ -1050,9 +1050,27 @@ envNames: Array<string>,
 description: string, createdAt: number, };
 
 /**
- * The servers a bot uses.
+ * Whether Claude Code reached a server when the bot started (spec 25.5).
  */
-export type BotMcp = { botId: BotId, serverIds: Array<McpServerId>, };
+export type McpState = "connected" | "pending" | "needs_auth" | "failed";
+
+/**
+ * What a bot's process reported about one of its servers.
+ */
+export type McpServerState = { serverId: McpServerId, state: McpState, 
+/**
+ * Why it failed, as Claude Code put it: for "Details", never the log.
+ */
+error: string | null, };
+
+/**
+ * The servers a bot uses, and how they stand since it started.
+ */
+export type BotMcp = { botId: BotId, serverIds: Array<McpServerId>, 
+/**
+ * Empty until the process says; only for servers it was started with.
+ */
+states: Array<McpServerState>, };
 
 /**
  * Every server and who uses it: the result of `mcp.servers` and the params

@@ -149,6 +149,23 @@ impl Store {
         Ok((deleted > 0).then_some(bots))
     }
 
+    /// Forgets what bots were allowed for good to call on the server `slug`
+    /// (spec 25.4): a tool that comes back under the same name is not the
+    /// one that was allowed.
+    /// The bots that lost a rule.
+    pub fn delete_mcp_allow_rules(&self, slug: &str) -> Result<Vec<BotId>> {
+        let prefix = format!("mcp__{slug}__");
+        let mut statement = self.conn.prepare(
+            "DELETE FROM allow_rules WHERE substr(tool_name, 1, length(?1)) = ?1              RETURNING bot_id",
+        )?;
+        let mut bots = statement
+            .query_map([prefix], |row| parse_column::<BotId>(row, 0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        bots.sort();
+        bots.dedup();
+        Ok(bots)
+    }
+
     /// Makes `servers` the ones `bot` uses. Ids of servers that do not exist
     /// fail on the foreign key and change nothing.
     pub fn set_bot_mcp_servers(&self, bot: &BotId, servers: &[McpServerId]) -> Result<()> {
@@ -189,6 +206,7 @@ impl Store {
                 .into_iter()
                 .map(|server| server.id)
                 .collect(),
+            states: Vec::new(),
         })
     }
 
@@ -214,6 +232,7 @@ impl Store {
                 _ => links.push(BotMcp {
                     bot_id,
                     server_ids: vec![server_id],
+                    states: Vec::new(),
                 }),
             }
         }

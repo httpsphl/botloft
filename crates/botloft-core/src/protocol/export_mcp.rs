@@ -8,6 +8,8 @@ use super::Out;
 pub(super) fn decls(out: &mut Out) {
     out.decl::<McpKind>();
     out.decl::<McpServer>();
+    out.decl::<McpState>();
+    out.decl::<McpServerState>();
     out.decl::<BotMcp>();
     out.decl::<McpOverview>();
     out.decl::<McpSaveParams>();
