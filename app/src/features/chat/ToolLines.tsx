@@ -35,6 +35,7 @@ import { ShowFile } from "../files/showFile";
 import { isScreenFile, ShowScreen } from "../screens/showScreen";
 import { ShowTerminal } from "../terminal/showTerminal";
 import { commandOf, isCommand } from "./command";
+import { ReadPicture, ReadThumb, useReadImage } from "./readImage";
 import { toolDetail, toolKey, toolTitle } from "./toolNames";
 
 const ICONS: Record<string, LucideIcon> = {
@@ -100,7 +101,15 @@ function Status({ status }: { status: ToolItem["status"] }) {
   }
 }
 
-function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
+function ToolLine({
+  tool,
+  botId,
+  createdAt,
+}: {
+  tool: ToolItem;
+  botId: string;
+  createdAt: number;
+}) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const showFile = useContext(ShowFile);
@@ -109,6 +118,7 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
   const showTerminal = useContext(ShowTerminal);
   const showDesktop = useContext(ShowDesktop);
   const arrival = useArrival(createdAt);
+  const picture = useReadImage(botId, tool);
   const title = toolTitle(tool.name, t.tools);
   // A command reads in the bot's own words, when it gave them; the command
   // itself is one click away, below.
@@ -135,6 +145,7 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
           >
             {detail}
           </span>
+          <ReadThumb source={picture} name={detail} />
           <Status status={tool.status} />
           <ChevronRight
             aria-hidden
@@ -200,6 +211,7 @@ function ToolLine({ tool, createdAt }: { tool: ToolItem; createdAt: number }) {
       </div>
       {open && (
         <div className="mt-1 mb-2 ml-7 flex animate-rise flex-col gap-1.5" data-selectable>
+          <ReadPicture source={picture} name={detail} />
           <p className="text-muted text-xs">
             {command ? t.chat.tools.command : t.chat.tools.input}
           </p>
@@ -227,7 +239,7 @@ export function ToolLines({ items }: { items: ChatItem[] }) {
     <ul aria-label={t.chat.tools.label} className="-mx-1.5 flex flex-col">
       {items.map((item) =>
         item.body.kind === "tool" ? (
-          <ToolLine key={item.id} tool={item.body} createdAt={item.createdAt} />
+          <ToolLine key={item.id} tool={item.body} botId={item.botId} createdAt={item.createdAt} />
         ) : null,
       )}
     </ul>

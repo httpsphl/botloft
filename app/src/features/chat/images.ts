@@ -37,6 +37,11 @@ export function rememberImage(key: string, url: string): void {
   }
 }
 
+/** An image remembered under that key, if any. */
+export function remembered(key: string): string | undefined {
+  return cache.get(key);
+}
+
 export type ImageSource =
   | { kind: "none" }
   | { kind: "loading" }
