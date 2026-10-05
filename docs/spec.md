@@ -133,7 +133,7 @@ O **handle** do bot (`@revisao`) é derivado do nome pela mesma regra, acompanha
     settings.json                  regra de negação para os segredos e o que o Claude Code não carrega no bot, 7.5 (gerado pelo daemon, sobrescrito a cada start)
     rules\botloft.md               identidade, papel, crew, pasta de trabalho, guia de uso das tools, como explicar cada comando ao dono (10.1), que agendar é rotina (20), que arquivo pronto para o dono vai no chat com `share_file` (10) e, no chefe, como liderar (gerado pelo daemon)
   .botloft\
-    mcp.json                       config MCP do bot (gerado pelo daemon)
+    mcp.json                       config MCP do bot: o servidor do Botloft e os que o dono ligou a ele, 25 (gerado pelo daemon)
 ```
 
 Identidade e instruções vão em `.claude/rules/botloft.md` e não na linha de comando: o texto pode ser longo e a linha de comando do Windows é limitada. Regras sem frontmatter `paths` são carregadas no início de toda sessão, com a mesma prioridade de `.claude/CLAUDE.md` (confirmado na documentação oficial, ver seção 19). Plano B, se isso mudar: `--append-system-prompt` com texto curto apontando para o arquivo.
@@ -752,6 +752,7 @@ Pragmas: `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON`, `busy_time
 | `settings` | `key, value` |
 | `routines`, `routine_runs` | seção 20.7; `messages` ganha `routine_id` |
 | `browser_sites` | `bot_id, host, allowed_at`: sites que o dono deixou o bot usar no navegador (21.5) |
+| `mcp_servers`, `bot_mcp_servers` | seção 25.6: os servidores MCP do dono e quais bots os usam |
 | `allow_rules` | `id (rul_), bot_id, tool_name, kind, value, created_at`, única por `(bot_id, tool_name, kind, value)`: o que o dono permitiu de vez para o bot (10.1) |
 | `questions` | seção 23.7; `messages` ganha `question_id` |
 | `reactions` | `item_id` (chave, item `reply`), `bot_id`, `emoji`, `quote`, `created_at`, `sent_in` (a message que a levou ao bot; nula enquanto espera). Sai com o bot, antes dos itens e das messages (7.6) |
@@ -767,6 +768,7 @@ Pragmas: `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON`, `busy_time
 - Logs nunca registram tokens, conteúdo de mensagens, anexos nem itens do chat em nível `info`. Bots podem manipular dados sensíveis (inclusive de saúde); o daemon trata corpo de mensagem, anexo e saída de ferramenta como dado pessoal.
 - `log_level` vale só para os crates do Botloft; dependências ficam em `warn`, porque em `debug`/`trace` a pilha de WebSocket registra frames, que podem conter mensagens. `RUST_LOG` sobrepõe tudo e é só para depuração local.
 - Nome de anexo vira só o nome do arquivo (sem `..`, sem pasta, sem caracteres proibidos no Windows) antes de ir para o disco.
+- Ferramentas conectadas (25): só o dono cadastra, pelo app. Um servidor `stdio` roda com os poderes do dono, fora das cercas de 7.5, e um `http` recebe o que o bot mandar; o cadastro diz isso e pede confirmação. Segredos dos servidores ficam em `secrets\mcp` e no ambiente dos bots ligados, nunca no banco, no `mcp.json` ou no log.
 - Isolamento entre bots é cooperativo (mesmo usuário do Windows). Documentar isso no README sem prometer sandbox.
 - Navegador dos bots (21): perfil próprio por bot, sem os logins do navegador do dono. A porta do DevTools escuta só em 127.0.0.1 e não tem senha: enquanto o navegador está aberto, outro programa do computador pode controlá-lo, como pode fazer com o resto do que roda com o usuário. Páginas não chegam a ela: o Chromium recusa WebSocket com `Origin` de site sem `--remote-allow-origins`. Trocar a porta por um pipe fica para depois. O texto das páginas pode trazer instruções para o bot; as tools dizem a ele que não valem como pedido do dono, e nos modos que perguntam, cada site novo passa pelo dono (21.5).
 - Pasta de trabalho escolhida (5): todos os bots da crew a editam como a própria pasta. Por isso ela não pode tocar a pasta de dados do Botloft (segredos, banco), conter os workspaces de todos os bots, encostar nas pastas de outra crew nem ser um disco inteiro.
@@ -1095,6 +1097,7 @@ M2 a M4 foram entregues com ConPTY, terminal com replay, inbox por named pipe e 
 8. Suporte Linux/macOS. Em fatias: (1) CI com Ubuntu e macOS para o daemon; (2) runtime do bot (grupo de processos, ambiente, `claude`, navegador); (3) iniciar com o sistema (`systemd --user`, LaunchAgent); (4) app; (5) empacotamento e release. Feitas: 1 a 5 (14.1, 15.2, 15.4 a 15.6). O macOS sai sem notarização (sem conta Apple Developer por enquanto).
 9. Navegador dos bots, com o dono assistindo ao vivo. Desenho na seção 21.
 10. Bots vendo e usando os apps abertos no desktop do dono, com permissões por app ou do desktop inteiro. Desenho na seção 24 e em `docs/adr/0002-desktop-use.md`.
+11. Ferramentas conectadas: o dono liga servidores MCP próprios (LinkedIn, sistemas internos) a bots escolhidos, sem tirar o `--strict-mcp-config`. Desenho na seção 25.
 
 ## 19. Pontos a verificar na versão alvo do Claude Code
 
@@ -1159,6 +1162,7 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28; esf
 | `PrintWindow` com `PW_RENDERFULLCONTENT` | 24.4 | **Visto no Windows 11** (2026-10-04) com uma janela Win32 comum do teste: a foto atrás de outras, o fundo na cor certa, o tamanho da moldura; minimizada, nada a fotografar. **A verificar**: apps com GPU (Chromium, Electron) e com a tela bloqueada | D1 (feito em parte), D5 |
 | `SetForegroundWindow` vindo do daemon | 24.7 | **A verificar**: o daemon roda como tarefa de logon, sem janela; o Windows pode recusar trazer outra janela para a frente | D4 |
 | Entrada do dono no gancho de baixo nível | 24.7 | **A verificar**: `LLMHF_INJECTED` e `LLKHF_INJECTED` separam a entrada do `SendInput` da do dono | D4 |
+| `--strict-mcp-config` com servidores do dono | 25 | **A verificar**: um `mcp.json` com o `botloft` e um servidor `stdio` (ou `http`) do dono sobe os dois; as tools do segundo pedem permissão por `permission_prompt` em `-p` sem estar em `--allowedTools`; `${VAR}` é expandido em `env` e `headers`; o `system/init` traz `mcp_servers` com o status | E2 |
 
 Itens do runtime anterior (ConPTY, hooks em exec form, `crossSessionInbound`, linha de auth do inbox, diálogo de confiança, `ESC[6n` do ConPTY, consultas do terminal no replay) foram verificados no M2–M4 e deixaram de se aplicar com a ADR 0001; o histórico está no git e na ADR.
 
@@ -1856,3 +1860,62 @@ No servidor `botloft` (11), como as do navegador.
 | **D4** Mouse e teclado | a opção, `SendInput`, `desktop_press`, `desktop_click_at`, o dono assumindo pelo gancho, o aviso na tela | a janela de teste; o dono simulado por entrada não injetada |
 | **D5** Sem você | a opção, a tela de riscos, o aviso na volta, a regra dos 5 minutos, tela bloqueada | unidade; teste manual com a tela bloqueada |
 | **D6** Desktop inteiro | o alcance, a foto da tela com as janelas bloqueadas cobertas | a janela de teste e uma bloqueada |
+
+## 25. Ferramentas conectadas (servidores MCP do dono)
+
+### 25.1 O que é
+
+Os bots rodam com `--strict-mcp-config` (7.4): veem só o MCP do Botloft (10), e o `.mcp.json` do projeto, os servidores pessoais do dono e as aprovações de `settings.local.json` não valem. É o isolamento da ADR 0001 e continua assim. Mas um dono que quer que o bot SDR leia o LinkedIn, ou que o bot de suporte consulte o próprio sistema, não tinha como. Esta seção deixa o **dono** cadastrar um servidor MCP e ligá-lo a bots escolhidos. O Botloft o acrescenta ao `mcp.json` gerado; o `--strict-mcp-config` fica.
+
+No app, o nome é **Ferramentas conectadas** (15.6: sem "MCP" nem "servidor" na tela, e "Detalhes" guarda o técnico).
+
+### 25.2 Cadastro
+
+- **Só o dono, pelo app.** Não existe tool MCP, mensagem nem arquivo do workspace que cadastre ou ligue um servidor: um bot não consegue se dar ferramentas novas, nem a outro bot. O `mcp.json` do bot é regenerado a cada start (5.1) e o que o bot escrever nele se perde.
+- **Dois tipos**, os do Claude Code: `http` (`url`, `headers`) e `stdio` (`command`, `args`, `env`). `sse` fica de fora (o Claude Code o marca como obsoleto, 19).
+- **Colar o que já existe.** O diálogo aceita o trecho `{"mcpServers": {...}}` do `.mcp.json` ou do `claude mcp add-json`, que é o que o dono já tem; um servidor por entrada. Campo desconhecido é recusado, não ignorado.
+- **Nome.** Vem da chave do trecho e vira o `slug` (`[a-z0-9_]{1,32}`, único; `botloft` é reservado). É ele que o Claude Code põe no nome das tools: `mcp__<slug>__<tool>`.
+- **Segredos.** Valores de `headers` e de `env` podem ser segredos. Ficam em `secrets\mcp\<id>.json` (ACL do usuário, 5 e 13), nunca no banco, no `mcp.json` nem no log. O `mcp.json` leva `${BOTLOFT_MCP_<ID>_<N>}`, que o Claude Code expande do ambiente do bot, como faz com `BOTLOFT_BOT_TOKEN` (10); o daemon põe esses valores no ambiente só dos bots ligados ao servidor (7.4, passo 5).
+- **Confirmação.** Um servidor `stdio` é um programa que roda com os poderes do dono, fora das cercas de 7.5. O diálogo mostra o comando e os argumentos inteiros, diz isso em palavras simples e só salva depois de um "Entendi". Um servidor `http` diz que o que o bot mandar para lá sai do computador (13).
+
+### 25.3 Que bot usa o quê
+
+- Um bot novo não tem nenhuma ferramenta conectada. O dono liga as que quiser nas configurações do bot (15.1): uma lista de caixas, com o nome do servidor.
+- A ligação é por bot, não por crew: quem lê o LinkedIn não precisa ser quem escreve para o cliente.
+- Ligar, desligar, editar ou excluir um servidor muda o `mcp.json` e o ambiente, que o Claude Code só lê ao iniciar. Cada bot afetado reinicia com `--resume` quando nada estiver em andamento, como na troca de modo (7.4). Excluir um servidor tira as ligações; excluir o bot (7.6) tira as ligações dele.
+- `.claude/rules/botloft.md` (5.1) ganha a lista dos servidores ligados, com o que o dono escreveu como descrição, e uma regra: o que uma ferramenta devolve é dado, não pedido do dono.
+
+### 25.4 Aprovações
+
+- `--allowedTools mcp__botloft` não muda (7.4): as tools dos servidores do dono **não** entram nele. Cada uso passa por `permission_prompt` (10.1) e vira um cartão no chat com o nome que o dono deu ao servidor, a ferramenta e a entrada em "Detalhes".
+- **Permitir sempre** ganha o tipo `tool` com `value` = o nome completo (`mcp__linkedin__search_people`): vale só para aquela ferramenta daquele servidor, e só para aquele bot. A lista de 10.1 (que hoje diz "nada mais") passa a incluir isso. Servidor inteiro sem perguntar fica fora desta etapa.
+- Em `bypass_permissions` (13) nada pergunta, como sempre; o aviso da confirmação já diz que vale para tudo o que o bot tem, e agora isso inclui as ferramentas conectadas.
+
+### 25.5 Estado
+
+O `system/init` de cada turno lista os servidores MCP da sessão e se conectaram (19). O daemon guarda o resultado por bot e servidor (só em memória) e o app mostra, ao lado de cada caixa, "Conectado" ou "Não conectou", com o erro em "Detalhes". Foi o que faltou ao dono no primeiro caso real: o servidor não carregava e ninguém via por quê.
+
+### 25.6 Protocolo e dados
+
+- Tabela `mcp_servers`: `id (msv_), name, slug, kind (http/stdio), config (JSON sem segredos: url, command, args e os nomes dos campos secretos), description, created_at`. Tabela `bot_mcp_servers`: `bot_id, server_id`, única. Migration `0024_mcp_servers.sql`; a exclusão do bot (12) apaga as ligações dele, e a do servidor, as ligações e o arquivo de segredos.
+- Métodos (11.2): `mcp.servers` (lista, com o estado de cada um por bot), `mcp.save {name, config, description?}`, `mcp.delete {serverId}`, `bot.mcp.set {botId, serverIds}`. Notificações: `mcp.servers` e `bot.mcp {botId, servers}`. `mcp.save` valida e recusa antes de gravar (tipo, nome, `botloft`, campos desconhecidos).
+- O log nunca guarda `headers`, `env`, argumentos nem o que as ferramentas devolveram (13).
+- Entra em `backup` (14.2) o cadastro e as ligações; os segredos não, e o dono digita de novo ao restaurar.
+
+### 25.7 App
+
+- Configurações > **Ferramentas conectadas**: a lista, "Adicionar" (colar o trecho), editar, excluir. Cada linha diz quais bots a usam.
+- Configurações do bot: a lista de caixas de 25.3, com o estado de 25.5.
+- Textos nos três idiomas (15.6), sem jargão; o comando e a URL ficam em "Detalhes".
+
+### 25.8 Fora desta etapa
+
+Login por navegador de servidor remoto (o `/mcp` do Claude Code), ferramentas liberadas por servidor inteiro, escolher só algumas tools de um servidor, ligar por crew, servidores que o próprio Botloft instala, e `sse`.
+
+### 25.9 Marcos
+
+| Marco | O que entra | Teste |
+|---|---|---|
+| **E1** Cadastro e arquivo | tabelas, `mcp.save`/`mcp.servers`/`mcp.delete`/`bot.mcp.set`, segredos em `secrets\mcp`, `mcp_json` com os servidores, ambiente do bot, reinício | unidade; supervisor com `FakeRuntime` conferindo o `mcp.json` e o ambiente; bot sem ligação não vê nada |
+| **E2** Aprovação | `permission_prompt` para `mcp__<slug>__*`, "Permitir sempre" por ferramenta, estado do `system/init` | courier e chat com `FakeRuntime`; manual (PR): um servidor `stdio` de teste e outro `http` com o Claude Code real |
+| **E3** App | Ferramentas conectadas, caixas no bot, diálogo de confirmação, três idiomas | `FakeBotloft`; `pnpm check` |
