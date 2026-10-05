@@ -17,6 +17,7 @@ mod process;
 mod real;
 #[cfg(test)]
 mod real_tests;
+mod screen;
 mod stop_key;
 #[cfg(test)]
 mod test_window;
@@ -44,6 +45,7 @@ pub use input::owner_idle;
 pub use notice::{hide as notice_hide, show as notice_show};
 pub use outline::{hide as outline_hide, show as outline_show};
 pub use real::{click as real_click, press as real_press, type_text as real_type};
+pub use screen::capture_screen;
 pub use stop_key::on_stop_key;
 pub use uia::read;
 
@@ -54,6 +56,17 @@ use super::{App, DesktopError, Window};
 const FRAME_HOST: &str = "applicationframehost.exe";
 
 pub fn list() -> Result<Vec<Window>, DesktopError> {
+    gather(false)
+}
+
+/// Every window shown on the screen, of other processes: with tool windows
+/// and windows without a title too, to cover the ones never granted in a
+/// picture of the whole screen (spec 24.4).
+pub fn every_shown() -> Result<Vec<Window>, DesktopError> {
+    gather(true)
+}
+
+fn gather(all: bool) -> Result<Vec<Window>, DesktopError> {
     let mut handles: Vec<HWND> = Vec::new();
     // SAFETY: the callback only pushes into `handles`, which outlives the
     // call.
@@ -67,11 +80,15 @@ pub fn list() -> Result<Vec<Window>, DesktopError> {
     let mut apps: HashMap<PathBuf, App> = HashMap::new();
     let mut found = Vec::new();
     for hwnd in handles {
-        if !shown(hwnd) {
+        if !shown(hwnd, all) {
             continue;
         }
         let title = text(hwnd);
-        if title.trim().is_empty() {
+        if !all && title.trim().is_empty() {
+            continue;
+        }
+        // The daemon's own outline and notice stay out of every picture.
+        if all && process_id(hwnd) == std::process::id() {
             continue;
         }
         let class = class_of(hwnd);
@@ -103,15 +120,15 @@ unsafe extern "system" fn collect(hwnd: HWND, found: LPARAM) -> BOOL {
 }
 
 /// A window the owner can see on the taskbar or the screen: shown, not a
-/// tool window, and not cloaked (Store apps kept hidden, other virtual
-/// desktops).
-fn shown(hwnd: HWND) -> bool {
+/// tool window (unless `all`), and not cloaked (Store apps kept hidden,
+/// other virtual desktops).
+fn shown(hwnd: HWND, all: bool) -> bool {
     // SAFETY: plain queries on a window handle.
     unsafe {
         if !IsWindowVisible(hwnd).as_bool() {
             return false;
         }
-        if GetWindowLongPtrW(hwnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW.0 as isize != 0 {
+        if !all && GetWindowLongPtrW(hwnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW.0 as isize != 0 {
             return false;
         }
         let mut cloaked = 0u32;

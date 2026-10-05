@@ -119,6 +119,18 @@ pub struct DesktopOptionsParams {
     pub accepted_risks: Option<bool>,
 }
 
+/// `desktop.grantWhole`: the owner gives the bot the whole desktop (spec
+/// 24.10), never asked for in the chat.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct DesktopWholeParams {
+    pub bot_id: BotId,
+    pub level: DesktopLevel,
+    /// The owner checked "I understand the risks"; without it, refused.
+    pub accepted_risks: bool,
+}
+
 /// A bot used an app while the owner was away (spec 24.8): what the app
 /// tells them when they are back, until they dismiss it. The result of
 /// `desktop.awayUses` and the params of `desktop.away` are a list of these.

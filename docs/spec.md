@@ -1656,7 +1656,7 @@ Tabela `questions`: `id, crew_id, bot_id, chat_item_id, text, options (JSON), st
 
 ## 24. Desktop
 
-Status: **D1 a D5 implementados** (24.12). É o item 10 da seção 18. Decisões e riscos em `docs/adr/0002-desktop-use.md`.
+Status: **D1 a D6 implementados** (24.12). É o item 10 da seção 18. Decisões e riscos em `docs/adr/0002-desktop-use.md`.
 
 ### 24.1 O que é
 
@@ -1672,7 +1672,7 @@ Cada permissão é de um bot. Ela tem um **alcance**, um **nível** e duas opç�
 
 - **Alcance**, escolhido pelo dono:
   - **Um app**: as janelas de um programa, identificado pelo executável (caminho completo e nome do produto da versão do arquivo, por exemplo `C:\Program Files\Microsoft Office\root\Office16\EXCEL.EXE`, "Microsoft Excel"). Um executável com o mesmo nome em outra pasta é outro app.
-  - **O desktop inteiro**: todas as janelas de todos os apps, menos as que nunca são liberadas (24.3).
+  - **O desktop inteiro**: todas as janelas de todos os apps, menos as que nunca são liberadas (24.3). Uma permissão só (`scope: desktop`, sem executável), no nível que o dono escolhe, e que ele pode baixar de Ver e usar para Ver; as opções (mouse e teclado, sem você na frente) ficam. Com ela, o bot vê o título de toda janela, lê e fotografa qualquer uma sem perguntar e, no nível Ver e usar, age em qualquer uma; no nível Ver, usar um app ainda pede por ele no chat.
 - **Nível**, separado (o dono libera um, depois o outro):
   - **Ver**: o bot lista as janelas do alcance, lê o que há nelas (a árvore de acessibilidade, 24.5) e tira fotos delas.
   - **Mexer**: além de ver, clica, digita, escolhe e rola por acessibilidade (24.5). Pede "Ver" antes.
@@ -1702,7 +1702,7 @@ Os programas são reconhecidos pelo nome do executável, sem diferença de maiú
 
 - **Janelas**: as de nível superior, visíveis ou minimizadas, com dono (não ferramentas nem janelas sem título). De um app fora do alcance, o bot vê só o nome do app, nunca o título da janela: um título diz o assunto de um e-mail ou o nome de um arquivo.
 - **Foto de uma janela**: `PrintWindow` com `PW_RENDERFULLCONTENT`, que pega a janela mesmo atrás de outras, só a janela, sem o que estiver por cima dela, recortada na moldura que o DWM diz (`DWMWA_EXTENDED_FRAME_BOUNDS`), sem a borda invisível de redimensionar que o Windows deixa em volta. A medida é em pixels reais (o thread fica com DPI por monitor enquanto fotografa) e a foto é reduzida pela escala da tela da janela (`GetDpiForWindow`). Uma janela minimizada não tem o que fotografar: a tool diz isso.
-- **Foto do desktop inteiro** (só com esse alcance): a tela toda, com as janelas que nunca são liberadas (24.3) cobertas de preto.
+- **Foto do desktop inteiro** (só com esse alcance): a tela toda, com as janelas que nunca são liberadas (24.3) cobertas de preto. Todos os monitores (a tela virtual, `SM_XVIRTUALSCREEN`...), copiados da tela com `BitBlt` (`SRCCOPY | CAPTUREBLT`), como o dono vê. As janelas cobertas são todas as mostradas na tela de um processo que nunca é liberado, inclusive as sem título e as de ferramenta (uma janelinha de um gerenciador de senhas também conta), cobertas pela moldura do DWM, mesmo com outra janela por cima (o preto sobra, nunca falta). O contorno e o aviso do próprio daemon ficam fora de qualquer foto (`WDA_EXCLUDEFROMCAPTURE`). Reduzida como a de uma janela, pela escala do sistema (`GetDpiForSystem`), até 1600 × 1200. Com a tela bloqueada, a cópia falha e a tool diz isso. O painel do bot (24.9) segue a última janela, não a tela inteira.
 - **Tamanho**: a foto vai ao bot no tamanho da janela em pixels lógicos (sem a escala do Windows), até 1600 × 1200, reduzida mantendo a proporção. JPEG, qualidade 70, como `browser_screenshot`.
 
 ### 24.5 Acessibilidade (UI Automation)
@@ -1730,7 +1730,7 @@ No servidor `botloft` (11), como as do navegador.
 |---|---|---|
 | `desktop_windows` | | as janelas abertas: as do alcance com título e `window` (id), as outras só pelo nome do app |
 | `desktop_look` | `window`, `why`, `from?` | lê a janela (24.5) |
-| `desktop_screenshot` | `window`, `why` | a foto da janela; a do desktop inteiro vem com esse alcance (D6) |
+| `desktop_screenshot` | `window?`, `why` | a foto da janela; sem `window`, a da tela inteira, só com o desktop inteiro (sem ele, a tool diz que só o dono o dá); com o dono fora, só se essa permissão tiver "Sem você na frente", e o aviso na volta diz "Desktop" |
 | `desktop_click` | `ref`, `why?` | clica no controle (24.5) |
 | `desktop_type` | `ref`, `text`, `submit?`, `why?` | troca o texto do campo; com `submit`, aperta Enter depois, com o teclado de verdade (só onde ele está ligado) |
 | `desktop_select` | `ref`, `option`, `why?` | escolhe uma opção pelo texto |
@@ -1778,6 +1778,7 @@ No servidor `botloft` (11), como as do navegador.
 ### 24.10 Permissões no app
 
 - Nos detalhes do bot ("Sobre <bot>"), a seção **Seu desktop** lista as permissões: o app (ou "O desktop inteiro"), o caminho do executável, Pode ver ou Pode ver e usar, e as opções. Cada uma com um X que tira a permissão; o bot pede de novo na próxima vez. Sem nenhuma, a seção diz que o bot pede no chat na primeira vez que precisar.
+- **Dar o desktop inteiro**: um botão na seção, que abre a tela de riscos abaixo com a escolha do nível (Ver, ou Ver e usar). Gravado, ele aparece na lista como "O desktop inteiro", com o X e as opções de qualquer permissão. O app chama `desktop.grantWhole {botId, level, acceptedRisks}`, que devolve as permissões do bot (`BotDesktop`) e manda `bot.desktop`; sem `acceptedRisks: true` é `conflict`.
 - **Dar o desktop inteiro** e **ligar "Sem você na frente"** abrem uma tela de riscos, em palavras simples, antes de gravar:
   - o bot vê tudo o que estiver aberto no alcance, inclusive dados pessoais, e-mails, conversas e dados de clientes;
   - ele pode errar: apagar, enviar ou mudar algo no app como se fosse você;

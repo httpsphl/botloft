@@ -154,6 +154,34 @@ export class FakeDesktop {
         this.fake.bot(botId);
         return this.set(botId, { stopped: false });
       },
+      "desktop.grantWhole": ({ botId, level, acceptedRisks }) => {
+        this.fake.bot(botId);
+        if (!acceptedRisks) {
+          throw new Error("the whole desktop needs the risks accepted first");
+        }
+        const same = this.grants.find(
+          (grant) => grant.botId === botId && grant.scope === "desktop",
+        );
+        if (same) {
+          same.level = level;
+          same.acceptedRisksAt = this.fake.now;
+        } else {
+          this.grants.push({
+            id: this.fake.id("dsk"),
+            botId,
+            scope: "desktop",
+            appPath: null,
+            appName: null,
+            level,
+            realInput: false,
+            unattended: false,
+            acceptedRisksAt: this.fake.now,
+            createdAt: this.fake.now,
+          });
+        }
+        this.changed(botId);
+        return { botId, grants: this.of(botId) };
+      },
       "desktop.awayUses": () => this.away,
       "desktop.dismissAway": () => {
         this.away = [];

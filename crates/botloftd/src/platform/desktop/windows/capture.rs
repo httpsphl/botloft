@@ -28,10 +28,10 @@ const RENDER_FULL_CONTENT: PRINT_WINDOW_FLAGS = PRINT_WINDOW_FLAGS(2);
 const BASE_DPI: f64 = 96.0;
 
 /// Sizes in real pixels on this thread while it lives, then back.
-struct RealPixels(DPI_AWARENESS_CONTEXT);
+pub(super) struct RealPixels(DPI_AWARENESS_CONTEXT);
 
 impl RealPixels {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         // SAFETY: changes only this thread's DPI awareness, restored on drop.
         Self(unsafe { SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) })
     }
@@ -47,11 +47,11 @@ impl Drop for RealPixels {
 }
 
 /// Frees the drawing objects in the right order when it goes.
-struct Canvas {
-    screen: HDC,
-    memory: HDC,
-    bitmap: HBITMAP,
-    previous: HGDIOBJ,
+pub(super) struct Canvas {
+    pub(super) screen: HDC,
+    pub(super) memory: HDC,
+    pub(super) bitmap: HBITMAP,
+    pub(super) previous: HGDIOBJ,
 }
 
 impl Drop for Canvas {
@@ -66,7 +66,7 @@ impl Drop for Canvas {
     }
 }
 
-fn system(what: &str) -> DesktopError {
+pub(super) fn system(what: &str) -> DesktopError {
     DesktopError::System(what.to_owned())
 }
 

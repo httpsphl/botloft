@@ -7,7 +7,7 @@
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{
     BotDesktop, DesktopAwayUse, DesktopBotParams, DesktopGrant, DesktopGrantIdParams,
-    DesktopGrantsParams, DesktopOptionsParams, DesktopState,
+    DesktopGrantsParams, DesktopOptionsParams, DesktopState, DesktopWholeParams,
 };
 use tracing::{info, warn};
 
@@ -44,6 +44,25 @@ pub fn set_options(daemon: &Daemon, params: DesktopOptionsParams) -> ApiResult<B
     }
     drop(store);
     changed(daemon, &bot_id)
+}
+
+/// Gives the bot the whole desktop at a level, only with the risks
+/// accepted (spec 24.10).
+pub fn grant_whole(daemon: &Daemon, params: DesktopWholeParams) -> ApiResult<BotDesktop> {
+    if !params.accepted_risks {
+        return Err(ApiError::Conflict(
+            "the whole desktop needs the risks accepted first".to_owned(),
+        ));
+    }
+    super::bots::find(&daemon.store(), &params.bot_id)?;
+    daemon
+        .store()
+        .grant_desktop_whole(&params.bot_id, params.level, daemon.clock.now_ms())?;
+    info!(
+        level = params.level.as_str(),
+        "the owner gave a bot the whole desktop"
+    );
+    changed(daemon, &params.bot_id)
 }
 
 /// What bots did while the owner was away, for the app to tell them.

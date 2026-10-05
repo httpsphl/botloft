@@ -20,6 +20,7 @@ mod desktop_catalog;
 mod desktop_grant;
 mod desktop_list;
 mod desktop_real;
+mod desktop_screen;
 mod era;
 mod question;
 mod routine;
