@@ -108,4 +108,20 @@ describe("the desktop panel", () => {
     });
     expect(await within(panel()).findByText("Shopping list - Notepad")).toBeDefined();
   });
+
+  test("has the app's options right there, where the owner looks", async () => {
+    const { fake, scout } = await openScout();
+    act(() => {
+      fake.desktop.grant(scout.id, "C:Windows\notepad.exe", "Notepad", "act");
+      fake.desktop.use(scout.id, NOTES);
+    });
+    const options = await within(panel()).findByRole("region", { name: "Options for Notepad" });
+    const real = within(options).getByRole("switch", { name: "Real mouse and keyboard: Notepad" });
+    fireEvent.click(real);
+    fireEvent.click(screen.getByRole("button", { name: "Turn on" }));
+    await waitFor(() => expect(fake.desktop.grants[0]?.realInput).toBe(true));
+    expect(
+      within(options).getByRole("switch", { name: "While you are away: Notepad" }),
+    ).toBeDefined();
+  });
 });

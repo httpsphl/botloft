@@ -21,6 +21,7 @@ export const desktop = {
   panel: {
     label: (bot: string) => `${bot}'s desktop`,
     screen: (bot: string, app: string) => `${app}, as ${bot} sees it`,
+    options: (app: string) => `Options for ${app}`,
     heading: "Desktop",
     live: "Live",
     stoppedBadge: "Stopped",
