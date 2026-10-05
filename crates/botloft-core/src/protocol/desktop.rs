@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::ids::{BotId, DesktopGrantId};
+use crate::ids::{BotId, ChatItemId, DesktopGrantId};
 
 /// What a grant reaches.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -107,6 +107,34 @@ pub struct DesktopOptionsParams {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(test, ts(optional))]
     pub real_input: Option<bool>,
+    /// The bot may use the grant's reach while the owner is away (spec
+    /// 24.8); turning it on needs `acceptedRisks`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, ts(optional))]
+    pub unattended: Option<bool>,
+    /// The owner checked "I understand the risks" on the risks screen
+    /// (spec 24.10).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, ts(optional))]
+    pub accepted_risks: Option<bool>,
+}
+
+/// A bot used an app while the owner was away (spec 24.8): what the app
+/// tells them when they are back, until they dismiss it. The result of
+/// `desktop.awayUses` and the params of `desktop.away` are a list of these.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct DesktopAwayUse {
+    pub bot_id: BotId,
+    /// The app's name for people.
+    pub app: String,
+    /// The first and the last use, Unix ms.
+    pub from: i64,
+    pub until: i64,
+    /// The newest item of the bot's chat at the first use, to open the chat
+    /// there.
+    pub item_id: Option<ChatItemId>,
 }
 
 /// A bot's grants after one changed: the result of `desktop.revoke` and

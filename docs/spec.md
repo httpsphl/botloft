@@ -1653,7 +1653,7 @@ Tabela `questions`: `id, crew_id, bot_id, chat_item_id, text, options (JSON), st
 
 ## 24. Desktop
 
-Status: **D1, D2, D3 e D4 implementados** (24.12). É o item 10 da seção 18. Decisões e riscos em `docs/adr/0002-desktop-use.md`.
+Status: **D1 a D5 implementados** (24.12). É o item 10 da seção 18. Decisões e riscos em `docs/adr/0002-desktop-use.md`.
 
 ### 24.1 O que é
 
@@ -1758,8 +1758,9 @@ No servidor `botloft` (11), como as do navegador.
 ### 24.8 Sem você na frente
 
 - Só no alcance de uma permissão com "Sem você na frente" ligado (24.2). Sem isso, as tools `desktop_*` só agem enquanto o app do Botloft está aberto (alguma conexão que passou do `session.hello`) e o dono mexeu no computador nos últimos 5 minutos (`GetLastInputInfo`; a partir do D4, sem contar a entrada injetada pelo próprio bot); senão respondem que o dono não está e que é preciso ligar a opção.
+- A regra vale depois de achar a janela: com o dono fora, ela passa só se uma permissão com a opção ligada cobre o app no nível que a tool pede. Ninguém é perguntado sem o dono: uma permissão de ver com a opção não vira de usar enquanto ele está fora, e um app sem permissão recusa na hora. `desktop_windows` com o dono fora mostra com título só as janelas dessas permissões; sem nenhuma, recusa.
 - Com a tela bloqueada, ver e mexer por acessibilidade continuam, se o Windows deixar (19); mouse e teclado, não (24.7).
-- Tudo o que o bot fez sem o dono fica no chat como sempre, e o app avisa na volta: "<bot> usou o Excel enquanto você estava fora", com o link para o trecho do chat.
+- Tudo o que o bot fez sem o dono fica no chat como sempre, e o app avisa na volta: "<bot> usou o Excel enquanto você estava fora", com "Ver no chat", que abre o chat do bot no item mais novo de quando ele começou (`openAt`). O daemon guarda, na memória, uma linha por bot e app (`DesktopAwayUse`: o bot, o app, o primeiro e o último uso e esse item), cada uso de uma janela com o dono fora a atualiza e sai `desktop.away` com a lista toda. O app a lê ao abrir (`desktop.awayUses`) e a mostra numa faixa acima do painel principal até o dono apertar "Entendi" (`desktop.dismissAway`, que limpa a lista e manda `desktop.away` vazio). Um daemon que reinicia esquece a lista; o chat continua lá.
 
 ### 24.9 App
 
@@ -1779,7 +1780,8 @@ No servidor `botloft` (11), como as do navegador.
   - um texto num app ou numa mensagem pode tentar enganar o bot para fazer outra coisa;
   - sem você na frente, ninguém vê na hora; você vê depois, no chat;
   - o que nunca é liberado (24.3).
-  O botão de confirmar só acende depois de o dono marcar "Entendi os riscos". A data em que ele aceitou fica gravada com a permissão.
+  O botão de confirmar só acende depois de o dono marcar "Entendi os riscos"; a caixa começa desmarcada toda vez. A data em que ele aceitou fica gravada com a permissão (`accepted_risks_at`) e fica lá se ele desliga.
+- **Sem você na frente**: em cada permissão, de ver ou de usar, um interruptor, desligado de início. Ligar abre a tela de riscos acima; desligar é na hora. O app chama `desktop.setOptions {grantId, unattended, acceptedRisks}`; o daemon recusa ligar sem `acceptedRisks: true`.
 - **Mouse e teclado de verdade**: em cada permissão de usar um app, um interruptor, desligado de início (só nas de usar). Ligar abre antes um diálogo, "Deixar <bot> usar seu mouse e teclado de verdade no <app>?", que diz o que muda: quando a acessibilidade não alcança, o bot move o cursor e digita como se fosse o dono; enquanto ele age, o mouse e o teclado são dele, com o aviso na tela; mexer no mouse ou numa tecla o para na hora, e Ctrl+Alt+Esc para todos; nunca campos de senha nem teclas do Windows. Desligar é na hora. O app chama `desktop.setOptions`.
 
 ### 24.11 Dados

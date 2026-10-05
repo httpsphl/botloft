@@ -66,5 +66,23 @@ export const desktop = {
     ],
     realConfirm: "Turn on",
     cancel: "Cancel",
+    away: "While you are away",
+    awayTitle: (bot: string, app: string) => `Let ${bot} work in ${app} while you are away?`,
+    awayRisks: (bot: string, app: string) => [
+      `${bot} sees everything open in ${app}, personal data, emails, chats and client data included.`,
+      `${bot} can make mistakes: delete, send or change something in the app as if it were you.`,
+      `Text in an app or a message can try to trick ${bot} into doing something else.`,
+      "With you away, nobody watches as it happens. You see it later, in the chat, and Botloft tells you when you are back.",
+      "Never, not even then: Botloft itself, apps running as administrator, terminals and command boxes, the Task Manager, password managers and password fields.",
+    ],
+    awayUnderstood: "I understand the risks",
+    awayConfirm: "Turn on",
+  },
+  away: {
+    label: "While you were away",
+    used: (bot: string, app: string) => `${bot} used ${app} while you were away`,
+    open: "See in the chat",
+    dismiss: "Got it",
+    dismissFailed: "Could not hide it",
   },
 };

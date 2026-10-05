@@ -4,10 +4,12 @@
 //! its panel, live.
 
 mod activity;
+mod away;
 pub mod notice;
 mod screen;
 
 pub use activity::{Activity, STOPPED};
+pub use away::AwayUses;
 pub use screen::DesktopWatching;
 
 use std::collections::HashMap;
@@ -51,6 +53,8 @@ pub struct Desktop {
     turn: tokio::sync::Mutex<()>,
     idle: Mutex<OwnerIdle>,
     pub activity: Arc<Activity>,
+    /// What bots did while the owner was away (spec 24.8).
+    pub away: AwayUses,
     screens: Arc<Screens>,
     /// When the owner last took the mouse or keyboard back from a bot.
     took_over: Mutex<Option<Instant>>,
@@ -95,6 +99,7 @@ impl Desktop {
             turn: tokio::sync::Mutex::new(()),
             idle: Mutex::new(idle),
             activity: Arc::default(),
+            away: AwayUses::default(),
             screens: Arc::default(),
             took_over: Mutex::new(None),
             pictures: Mutex::new(HashMap::new()),

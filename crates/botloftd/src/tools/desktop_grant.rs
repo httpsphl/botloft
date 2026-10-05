@@ -12,7 +12,7 @@ use super::desktop_list::covering;
 use crate::approvals::{self, Answer};
 use crate::platform::desktop::{DesktopError, Window, never};
 use crate::service::desktop::changed;
-use crate::state::Daemon;
+use crate::state::{Daemon, Event};
 
 pub(super) fn describe(err: &DesktopError) -> String {
     match err {
@@ -81,6 +81,20 @@ fn verb(level: DesktopLevel) -> &'static str {
     }
 }
 
+/// The bot used `window` with the owner away: the app tells them when they
+/// are back, with the chat where it began.
+fn used_away(daemon: &Daemon, bot: &BotId, window: &Window) {
+    let item = daemon
+        .store()
+        .chat_history(bot, None, 1)
+        .ok()
+        .and_then(|items| items.into_iter().next())
+        .map(|item| item.id);
+    let now = daemon.clock.now_ms();
+    let uses = daemon.desktop.away.record(bot, &window.app.name, now, item);
+    daemon.emit(Event::DesktopAway(uses));
+}
+
 /// The window `id`, once the bot may see or act in its app (`level`):
 /// asks the owner the first time, with the bot's `why` (spec 24.2).
 #[allow(clippy::too_many_arguments)]
@@ -104,6 +118,15 @@ pub(super) async fn granted(
             "You may never use that window: {}. Ask the owner if you need something there.",
             never.why()
         ));
+    }
+    // Without the owner there, only a grant for use while they are away
+    // reaches the window, and nobody is asked (spec 24.8).
+    if let Err(away) = daemon.desktop.owner_here() {
+        if !covering(grants, &window, level).is_some_and(|grant| grant.unattended) {
+            return Err(away.why().to_owned());
+        }
+        used_away(daemon, bot, &window);
+        return Ok(window);
     }
     if covering(grants, &window, level).is_some() {
         return Ok(window);

@@ -5,9 +5,30 @@
 use botloft_core::protocol::{DesktopGrant, DesktopLevel, DesktopScope};
 
 use crate::platform::desktop::{Window, never};
+use crate::state::Daemon;
 
 fn same_path(left: &str, right: &str) -> bool {
     left.eq_ignore_ascii_case(right)
+}
+
+/// The grants whose windows the bot sees by title now: all of them with
+/// the owner there; with the owner away, only those for use while they
+/// are, and none at all is a refusal (spec 24.8).
+pub(super) fn in_reach(
+    daemon: &Daemon,
+    grants: Vec<DesktopGrant>,
+) -> Result<Vec<DesktopGrant>, String> {
+    let Err(away) = daemon.desktop.owner_here() else {
+        return Ok(grants);
+    };
+    let alone: Vec<_> = grants
+        .into_iter()
+        .filter(|grant| grant.unattended)
+        .collect();
+    if alone.is_empty() {
+        return Err(away.why().to_owned());
+    }
+    Ok(alone)
 }
 
 /// The grant of `bot` that covers `window` at `level`, if one does.

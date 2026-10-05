@@ -18,6 +18,7 @@ pub(super) fn to_notification(event: &Event) -> String {
         Event::BotRules(rules) => note(notification::BOT_RULES, rules),
         Event::BotDesktop(desktop) => note(notification::BOT_DESKTOP, desktop),
         Event::DesktopChanged(state) => note(notification::DESKTOP_CHANGED, state),
+        Event::DesktopAway(uses) => note(notification::DESKTOP_AWAY, uses),
         Event::ChatItem(item) => note(notification::CHAT_ITEM, item),
         Event::ChatDelta(delta) => note(notification::CHAT_DELTA, delta),
         Event::MessageCreated(message) => note(notification::MESSAGE_CREATED, message),
