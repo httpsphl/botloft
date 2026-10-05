@@ -129,6 +129,11 @@ export interface Host {
    * `start` if given. Resolves null if they cancel.
    */
   pickFolder(title: string, start?: string): Promise<string | null>;
+  /**
+   * Asks the owner for one file with the system's Open dialog, showing
+   * files with `extensions` under `kind`. Resolves null if they cancel.
+   */
+  pickFile(title: string, kind: string, extensions: string[]): Promise<string | null>;
   /** Opens an http(s) link in the default browser. */
   openUrl(url: string): Promise<void>;
   window: AppWindow;

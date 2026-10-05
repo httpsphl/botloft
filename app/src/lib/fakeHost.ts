@@ -33,6 +33,9 @@ export class FakeHost implements Host {
   nextFolder: string | null = null;
   /** Where each folder picker started. */
   readonly pickerStarts: (string | null)[] = [];
+  /** What `pickFile` gives next; `null`, the owner cancels. */
+  nextFile: string | null = null;
+  readonly fileFilters: string[][] = [];
   readonly installs: ("install" | "restart")[] = [];
   /** How many times the app stopped the daemon. */
   stops = 0;
@@ -180,6 +183,11 @@ export class FakeHost implements Host {
   pickFolder(_title: string, start?: string): Promise<string | null> {
     this.pickerStarts.push(start ?? null);
     return Promise.resolve(this.nextFolder);
+  }
+
+  pickFile(_title: string, _kind: string, extensions: string[]): Promise<string | null> {
+    this.fileFilters.push(extensions);
+    return Promise.resolve(this.nextFile);
   }
 
   openUrl(url: string): Promise<void> {
