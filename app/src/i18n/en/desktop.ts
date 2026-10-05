@@ -79,6 +79,18 @@ export const desktop = {
     ],
     awayUnderstood: "I understand the risks",
     awayConfirm: "Turn on",
+    giveWhole: "Give the whole desktop",
+    wholeFailed: "Could not give the whole desktop",
+    wholeTitle: (bot: string) => `Give ${bot} your whole desktop?`,
+    wholeLevel: "What it may do",
+    wholeRisks: (bot: string) => [
+      `${bot} sees every window open on your computer, personal data, emails, chats and client data included, and pictures of the whole screen.`,
+      `It reads any app without asking you first. If you choose "Can see and use", it also clicks and types in any of them.`,
+      `${bot} can make mistakes: delete, send or change something as if it were you.`,
+      `Text in an app or a message can try to trick ${bot} into doing something else.`,
+      "Never, not even then: Botloft itself, apps running as administrator, terminals and command boxes, the Task Manager, password managers and password fields. They are covered in black in its pictures.",
+    ],
+    wholeConfirm: "Give it",
   },
   away: {
     label: "While you were away",

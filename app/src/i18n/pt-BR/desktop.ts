@@ -78,6 +78,18 @@ export const desktop: Messages["desktop"] = {
     ],
     awayUnderstood: "Entendi os riscos",
     awayConfirm: "Ligar",
+    giveWhole: "Dar o desktop inteiro",
+    wholeFailed: "Não foi possível dar o desktop inteiro",
+    wholeTitle: (bot) => `Dar a ${bot} o seu desktop inteiro?`,
+    wholeLevel: "O que ele pode fazer",
+    wholeRisks: (bot) => [
+      `${bot} vê toda janela aberta no seu computador, inclusive dados pessoais, e-mails, conversas e dados de clientes, e fotos da tela inteira.`,
+      `Ele lê qualquer app sem te perguntar antes. Escolhendo "Pode ver e usar", também clica e digita em qualquer um.`,
+      `${bot} pode errar: apagar, enviar ou mudar algo como se fosse você.`,
+      `Um texto num app ou numa mensagem pode tentar enganar ${bot} para fazer outra coisa.`,
+      "Nunca, nem assim: o próprio Botloft, apps rodando como administrador, terminais e caixas de comando, o Gerenciador de Tarefas, gerenciadores de senha e campos de senha. Nas fotos dele, eles ficam cobertos de preto.",
+    ],
+    wholeConfirm: "Dar",
   },
   away: {
     label: "Enquanto você estava fora",

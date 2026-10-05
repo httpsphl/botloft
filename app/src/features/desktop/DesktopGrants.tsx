@@ -10,6 +10,7 @@ import { Button } from "../../ui/Button";
 import { attempt } from "../../ui/toast";
 import { RealInput } from "./RealInput";
 import { Unattended } from "./Unattended";
+import { WholeDesktop } from "./WholeDesktop";
 
 /** The bot's grants, read when shown and kept current by `bot.desktop`. */
 export function useDesktopGrants(botId: Bot["id"]): DesktopGrant[] | null {
@@ -88,6 +89,11 @@ export function DesktopGrants({ bot }: { bot: Bot }) {
               );
             })}
           </ul>
+        )}
+        {grants !== null && !grants.some((grant) => grant.scope === "desktop") && (
+          <div className="mt-2">
+            <WholeDesktop bot={bot} />
+          </div>
         )}
       </dd>
     </div>
