@@ -135,5 +135,6 @@ export const bots: Messages["bots"] = {
     crewsBot: (bot, crew) => `${bot}, del equipo ${crew}`,
     crewsRemove: (what) => `Quitar el acceso: ${what}`,
     crewsRemoveFailed: "No se pudo quitar el acceso",
+    crewsKinds: { talk: "hablar", read: "leer archivos", edit: "editar archivos" },
   },
 };

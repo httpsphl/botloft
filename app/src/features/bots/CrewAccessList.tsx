@@ -64,7 +64,17 @@ export function CrewAccessList({ bot }: { bot: Bot }) {
                   className="flex items-center gap-2 rounded-lg border border-line bg-sunken py-1.5 pr-1 pl-2.5"
                 >
                   <Network aria-hidden size={14} className="shrink-0 text-muted" />
-                  <span className="min-w-0 flex-1 text-xs">{what}</span>
+                  <span className="min-w-0 flex-1 text-xs">
+                    <span className="block">{what}</span>
+                    <span className="block text-ink-soft">
+                      {[
+                        access.talk && words.crewsKinds.talk,
+                        access.edit ? words.crewsKinds.edit : access.read && words.crewsKinds.read,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                  </span>
                   <Button
                     variant="ghost"
                     size="sm"

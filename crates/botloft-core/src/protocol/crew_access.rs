@@ -18,6 +18,12 @@ pub struct CrewAccess {
     /// One bot of the crew; `null` for the whole crew.
     pub target_bot_id: Option<BotId>,
     pub target_name: Option<String>,
+    /// Talking with its bots: roster, messages and tasks.
+    pub talk: bool,
+    /// Reading their files; true whenever `edit` is.
+    pub read: bool,
+    /// Changing and adding files.
+    pub edit: bool,
     /// Unix time in milliseconds.
     pub created_at: i64,
 }

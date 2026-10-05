@@ -1020,6 +1020,18 @@ botId: BotId, crewId: CrewId, crewName: string,
  */
 targetBotId: BotId | null, targetName: string | null, 
 /**
+ * Talking with its bots: roster, messages and tasks.
+ */
+talk: boolean, 
+/**
+ * Reading their files; true whenever `edit` is.
+ */
+read: boolean, 
+/**
+ * Changing and adding files.
+ */
+edit: boolean, 
+/**
  * Unix time in milliseconds.
  */
 createdAt: number, };

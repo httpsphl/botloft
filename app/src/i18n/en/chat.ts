@@ -325,6 +325,8 @@ export const chat = {
     titleBot: (bot: string, other: string, crew: string) =>
       `${bot} wants to reach ${other}, of the crew ${crew}`,
     talk: (whom: string) => `Talk with ${whom}: see who is there and send messages and tasks`,
+    read: (whom: string) => `Read the files of ${whom} and of its work folder`,
+    edit: (whom: string) => `Change and add files of ${whom} and of its work folder`,
     why: (bot: string) => `Why, says ${bot}:`,
     explain: "Crews do not see each other. Only now lasts until the bot ends this turn.",
     once: "Only now",

@@ -137,5 +137,6 @@ export const bots = {
     crewsBot: (bot: string, crew: string) => `${bot}, of the crew ${crew}`,
     crewsRemove: (what: string) => `Take back: ${what}`,
     crewsRemoveFailed: "Could not take it back",
+    crewsKinds: { talk: "talk", read: "read files", edit: "edit files" },
   },
 };
