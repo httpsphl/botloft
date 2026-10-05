@@ -8,6 +8,9 @@ mod act_tests;
 mod capture;
 mod input;
 mod notice;
+mod outline;
+#[cfg(test)]
+mod outline_tests;
 mod owner;
 mod process;
 mod real;
@@ -38,6 +41,7 @@ pub use act::act;
 pub use capture::{capture, frame};
 pub use input::owner_idle;
 pub use notice::{hide as notice_hide, show as notice_show};
+pub use outline::{hide as outline_hide, show as outline_show};
 pub use real::{click as real_click, press as real_press, type_text as real_type};
 pub use stop_key::on_stop_key;
 pub use uia::read;

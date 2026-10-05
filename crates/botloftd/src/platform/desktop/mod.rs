@@ -5,6 +5,7 @@
 
 mod blocked;
 pub mod keys;
+mod overlay;
 mod read;
 // Only Windows takes pictures; the tests run everywhere.
 #[cfg_attr(not(windows), allow(dead_code))]
@@ -15,6 +16,7 @@ mod windows;
 use std::path::PathBuf;
 
 pub use blocked::{Never, never};
+pub use overlay::{notice_hide, notice_show, outline_hide, outline_show};
 pub use read::{Control, LINES_MAX, by_reference, reference, render};
 
 /// The largest picture of a window the bot gets, in logical pixels (24.4).
@@ -258,22 +260,6 @@ pub fn frame(id: u64) -> Result<[i32; 4], DesktopError> {
         let _ = id;
         Err(DesktopError::Unavailable)
     }
-}
-
-/// Shows the notice that a bot uses the real mouse and keyboard: `text`
-/// in a pill, a border in `color` around the monitor of window `over`
-/// (spec 24.7).
-pub fn notice_show(text: &str, color: (u8, u8, u8), over: u64) {
-    #[cfg(windows)]
-    windows::notice_show(text, color, over);
-    #[cfg(not(windows))]
-    let _ = (text, color, over);
-}
-
-/// Takes the notice away.
-pub fn notice_hide() {
-    #[cfg(windows)]
-    windows::notice_hide();
 }
 
 /// A picture of the window `id`, only of it, even behind other windows, in
