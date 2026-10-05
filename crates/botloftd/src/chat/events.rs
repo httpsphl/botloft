@@ -232,6 +232,7 @@ fn result(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
     }
     routines::turn_ended(daemon, bot, failed);
     crate::screens::turn_ended(daemon, bot);
+    daemon.crew_access.end_turn(bot);
     daemon.supervisor.turn_ended(bot, generation);
 }
 

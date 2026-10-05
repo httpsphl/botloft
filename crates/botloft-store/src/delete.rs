@@ -20,6 +20,7 @@ const DELETE_BOT: &[&str] = &[
     "DELETE FROM chat_items WHERE bot_id = ?1",
     "DELETE FROM browser_sites WHERE bot_id = ?1",
     "DELETE FROM desktop_grants WHERE bot_id = ?1",
+    "DELETE FROM crew_access WHERE bot_id = ?1 OR target_bot_id = ?1",
     "DELETE FROM allow_rules WHERE bot_id = ?1",
     "DELETE FROM routine_runs WHERE routine_id IN (SELECT id FROM routines WHERE bot_id = ?1)",
     // What the bot received goes with it.
@@ -74,7 +75,9 @@ impl Store {
             delete_bot_in(&tx, bot)?;
         }
         // Every message and task of a crew is to or for one of its bots, so
-        // nothing of the crew is left to hold it.
+        // nothing of the crew is left to hold it. Other bots' access to it
+        // goes too.
+        tx.execute("DELETE FROM crew_access WHERE crew_id = ?1", [id.as_str()])?;
         let deleted = tx.execute("DELETE FROM crews WHERE id = ?1", [id.as_str()])? > 0;
         tx.commit()?;
         Ok(deleted)

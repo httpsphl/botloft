@@ -14,7 +14,7 @@ use botloft_store::{BotRecord, Store, TaskFilter};
 
 pub(crate) use self::expire::expire_overdue;
 use super::messages::{announce, pending_delivery, post};
-use super::{ApiError, ApiResult, bots, crews};
+use super::{ApiError, ApiResult, bots, crew_access, crews};
 use crate::clock;
 use crate::config::Config;
 use crate::state::Daemon;
@@ -45,8 +45,11 @@ impl TaskSettings {
 /// `send_message` as a bot calls it.
 #[derive(Debug, Clone)]
 pub struct BotMessage {
-    /// Handle of a bot in the sender's crew, with or without `@`.
+    /// Handle of a bot in the sender's crew, with or without `@`, or in
+    /// `crew`.
     pub to: String,
+    /// Another crew the owner let the sender reach (spec 10.4).
+    pub crew: Option<String>,
     pub body: String,
     pub task: bool,
     pub deadline_minutes: Option<u32>,
@@ -65,8 +68,10 @@ pub fn list(daemon: &Daemon, params: TasksListParams) -> ApiResult<Vec<Task>> {
     })?)
 }
 
-/// A note or a task from one bot to another of its crew. A task started
-/// while the sender works on another one continues that chain (spec 9.4).
+/// A note or a task from one bot to another of its crew, or of a crew the
+/// owner let it reach (spec 10.4); the message and the task belong to the
+/// recipient's crew. A task started while the sender works on another one
+/// continues that chain (spec 9.4).
 pub fn send(
     daemon: &Daemon,
     sender: &BotId,
@@ -74,8 +79,29 @@ pub fn send(
 ) -> ApiResult<(Message, Option<Task>)> {
     let body = validate::message("body", &request.body)?;
     let store = daemon.store();
-    let (crew, from) = bots::active(&store, sender)?;
-    let to = recipient(&store, &crew, &from, &request.to)?;
+    let (own, from) = bots::active(&store, sender)?;
+    let (crew, to) = match &request.crew {
+        None => {
+            let to = recipient(&store, &own, &from, &request.to)?;
+            (own, to)
+        }
+        Some(name) => {
+            let other = crew_access::other_crew(&store, &own.id, name)?;
+            let to = recipient(&store, &other, &from, &request.to)
+                .ok()
+                .filter(|to| crew_access::may_talk(daemon, &store, &from, to).unwrap_or(false));
+            // Missing or out of reach read the same.
+            let to = to.ok_or_else(|| {
+                ApiError::Conflict(format!(
+                    "you cannot reach @{} in the crew {}; if the owner wants you to, call \
+                     ask_crew_access with what you need and why",
+                    request.to.trim().trim_start_matches('@'),
+                    other.name
+                ))
+            })?;
+            (other, to)
+        }
+    };
     let now = daemon.clock.now_ms();
     let task = if request.task {
         Some(new_task(
@@ -220,9 +246,11 @@ pub fn complete(
         )));
     }
     let now = daemon.clock.now_ms();
+    // The requester may be in another crew (spec 10.4): the report is in its.
+    let requester = bots::find(&store, &task.requester_bot_id)?;
     let report = Message {
         id: MessageId::generate(),
-        crew_id: crew.id,
+        crew_id: requester.crew_id,
         from_kind: SenderKind::Bot,
         from_bot_id: Some(me.id),
         to_bot_id: task.requester_bot_id.clone(),

@@ -5,6 +5,7 @@ pub mod archive;
 pub mod attachments;
 pub mod bots;
 pub mod chat;
+pub mod crew_access;
 pub mod crews;
 pub mod delete;
 pub mod deliveries;

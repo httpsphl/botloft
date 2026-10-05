@@ -22,6 +22,8 @@ pub(super) struct Context<'a> {
     pub crew_name: &'a str,
     /// Handle of the sending bot, for bot messages.
     pub sender_handle: Option<&'a str>,
+    /// The sending bot's crew, when it is another one (spec 10.4).
+    pub sender_crew: Option<&'a str>,
     pub task: Option<&'a Task>,
     /// The recipient's workspace, where attachments were saved.
     pub workspace: &'a Path,
@@ -94,6 +96,7 @@ pub(super) fn render(message: &Message, context: &Context<'_>, now: i64) -> Rend
 fn envelope(message: &Message, context: &Context<'_>, from: Sender<'_>, now: i64) -> String {
     Envelope {
         from,
+        from_crew: context.sender_crew,
         crew: context.crew_name,
         kind: message.kind,
         task: context.task,
@@ -174,6 +177,7 @@ mod tests {
         let context = Context {
             crew_name: "Ops",
             sender_handle: Some("scout"),
+            sender_crew: None,
             task: None,
             workspace: dir.path(),
             routine: None,
@@ -201,6 +205,7 @@ mod tests {
         let context = Context {
             crew_name: "Ops",
             sender_handle: None,
+            sender_crew: None,
             task: None,
             workspace: dir.path(),
             routine: None,
@@ -246,6 +251,7 @@ Make it yearly"
         let context = Context {
             crew_name: "Ops",
             sender_handle: None,
+            sender_crew: None,
             task: None,
             workspace: dir.path(),
             routine: None,

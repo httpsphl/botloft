@@ -116,6 +116,8 @@ pub struct Daemon {
     pub browsers: Browsers,
     pub screens: Screens,
     pub desktop: Desktop,
+    /// Other crews a bot may reach for its current turn (spec 10.4).
+    pub crew_access: crate::service::crew_access::TurnAccess,
     pub trash: Arc<dyn Trash>,
     pub contexts: Contexts,
     /// Time for everything stored or compared with stored times.
@@ -154,6 +156,7 @@ impl Daemon {
             ),
             screens: Screens::default(),
             desktop: Desktop::new(options.owner_idle),
+            crew_access: Default::default(),
             trash: options.trash,
             contexts: Contexts::default(),
             clock: options.clock,

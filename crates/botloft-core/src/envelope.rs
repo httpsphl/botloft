@@ -20,6 +20,8 @@ pub enum Sender<'a> {
 #[derive(Debug, Clone, Copy)]
 pub struct Envelope<'a> {
     pub from: Sender<'a>,
+    /// The sending bot's crew, when it is not the recipient's (spec 10.4).
+    pub from_crew: Option<&'a str>,
     /// Display name of the crew.
     pub crew: &'a str,
     pub kind: MessageKind,
@@ -31,7 +33,11 @@ pub struct Envelope<'a> {
 impl Envelope<'_> {
     /// Renders the envelope as of `now_ms`, which sets the relative deadline.
     pub fn render(&self, now_ms: i64) -> String {
-        let mut header = format!("[botloft] from {} · crew {}", self.sender(), self.crew);
+        let mut header = format!("[botloft] from {}", self.sender());
+        if let Some(from_crew) = self.from_crew {
+            header.push_str(&format!(" of crew {from_crew}"));
+        }
+        header.push_str(&format!(" · crew {}", self.crew));
         if let Some(task) = self.task {
             let detail = match self.kind {
                 MessageKind::Task => {
@@ -47,7 +53,12 @@ impl Envelope<'_> {
         }
         let mut text = header;
         if let Sender::Bot { handle } = self.from {
-            text.push_str(&format!("\nReply with send_message(to: \"{handle}\")."));
+            match self.from_crew {
+                None => text.push_str(&format!("\nReply with send_message(to: \"{handle}\").")),
+                Some(from_crew) => text.push_str(&format!(
+                    "\nReply with send_message(to: \"{handle}\", crew: \"{from_crew}\")."
+                )),
+            }
             if let (MessageKind::Task, Some(task)) = (self.kind, self.task) {
                 text.push_str(&format!(
                     " When the task is done, call complete_task(task_id: \"{}\").",
@@ -225,6 +236,7 @@ mod tests {
     fn envelope<'a>(from: Sender<'a>, kind: MessageKind, task: Option<&'a Task>) -> Envelope<'a> {
         Envelope {
             from,
+            from_crew: None,
             crew: "Site",
             kind,
             task,
@@ -246,6 +258,19 @@ mod tests {
             "[botloft] from @revisor · crew Site · task tsk_01J9Z3K8M4Q7R2T5V8X1Y4Z6A0 · due in 2 h\n\
              Reply with send_message(to: \"revisor\"). When the task is done, \
              call complete_task(task_id: \"tsk_01J9Z3K8M4Q7R2T5V8X1Y4Z6A0\").\n\
+             \n\
+             Check the build.\nThanks!"
+        );
+    }
+
+    #[test]
+    fn a_bot_of_another_crew_is_answered_in_its_crew() {
+        let mut from_blog = envelope(Sender::Bot { handle: "writer" }, MessageKind::Note, None);
+        from_blog.from_crew = Some("Blog");
+        assert_eq!(
+            from_blog.render(0),
+            "[botloft] from @writer of crew Blog · crew Site\n\
+             Reply with send_message(to: \"writer\", crew: \"Blog\").\n\
              \n\
              Check the build.\nThanks!"
         );

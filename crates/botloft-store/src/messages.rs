@@ -178,6 +178,16 @@ impl Store {
         .optional()?)
     }
 
+    /// Whether `from` sent `to` a message at `since` or later.
+    pub fn wrote_to_since(&self, from: &BotId, to: &BotId, since: i64) -> Result<bool> {
+        Ok(self.conn.query_row(
+            "SELECT EXISTS (SELECT 1 FROM messages \
+             WHERE from_bot_id = ?1 AND to_bot_id = ?2 AND created_at >= ?3)",
+            params![from.as_str(), to.as_str(), since],
+            |row| row.get(0),
+        )?)
+    }
+
     pub fn message(&self, id: &MessageId) -> Result<Option<Message>> {
         let message = self
             .conn

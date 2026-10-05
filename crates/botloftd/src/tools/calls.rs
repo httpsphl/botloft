@@ -36,7 +36,10 @@ pub(super) fn call(daemon: &Daemon, bot: &BotId, params: &Value) -> Result<Value
         .cloned()
         .unwrap_or_else(|| json!({}));
     let outcome = match name {
-        CREW_ROSTER => roster(daemon, bot),
+        CREW_ROSTER => parse(arguments).and_then(|args: RosterArgs| match args.crew {
+            Some(crew) => super::crew_access::roster(daemon, bot, &crew).map_err(explain),
+            None => roster(daemon, bot),
+        }),
         SEND_MESSAGE => parse(arguments).and_then(|args| send(daemon, bot, args)),
         COMPLETE_TASK => parse(arguments).and_then(|args| complete(daemon, bot, args)),
         MY_TASKS => parse(arguments).and_then(|args| my_tasks(daemon, bot, args)),
@@ -84,6 +87,13 @@ pub(super) fn explain(err: ApiError) -> String {
     }
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RosterArgs {
+    #[serde(default)]
+    crew: Option<String>,
+}
+
 fn roster(daemon: &Daemon, bot: &BotId) -> Outcome {
     let (crew, me) = bots::active(&daemon.store(), bot).map_err(explain)?;
     let list = BotsListParams {
@@ -116,6 +126,8 @@ fn roster(daemon: &Daemon, bot: &BotId) -> Outcome {
 #[serde(deny_unknown_fields)]
 struct SendArgs {
     to: String,
+    #[serde(default)]
+    crew: Option<String>,
     body: String,
     #[serde(default)]
     kind: Option<String>,
@@ -134,6 +146,7 @@ fn send(daemon: &Daemon, bot: &BotId, args: SendArgs) -> Outcome {
     }
     let request = BotMessage {
         to: args.to,
+        crew: args.crew,
         body: args.body,
         task,
         deadline_minutes: args.deadline_minutes,
@@ -184,6 +197,17 @@ fn complete(daemon: &Daemon, bot: &BotId, args: CompleteArgs) -> Outcome {
     }))
 }
 
+/// "writer of crew Blog", for a bot outside the caller's crew.
+fn elsewhere(store: &botloft_store::Store, id: &BotId) -> String {
+    let Ok(Some(bot)) = store.bot(id) else {
+        return String::new();
+    };
+    match store.crew(&bot.crew_id) {
+        Ok(Some(crew)) => format!("{} of crew {}", bot.handle, crew.name),
+        _ => bot.handle,
+    }
+}
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct MyTasksArgs {
@@ -209,7 +233,11 @@ fn my_tasks(daemon: &Daemon, bot: &BotId, args: MyTasksArgs) -> Outcome {
         .collect();
     let now = daemon.clock.now_ms();
     let describe = |task: &Task| -> Result<Value, String> {
-        let handle = |id: &BotId| handles.get(id).cloned().unwrap_or_default();
+        // A bot of another crew (spec 10.4) is named with its crew.
+        let handle = |id: &BotId| match handles.get(id) {
+            Some(handle) => handle.clone(),
+            None => elsewhere(&store, id),
+        };
         let request = store
             .task_request(&task.id)
             .map_err(|err| explain(err.into()))?

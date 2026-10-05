@@ -31,7 +31,7 @@ pub fn tools() -> Value {
         ]
         .into_iter()
         .chain(super::routine_catalog::tools())
-        .chain([super::bot_change::tool()])
+        .chain([super::bot_change::tool(), super::crew_access::tool()])
         .chain(super::browser_catalog::tools())
         .chain(super::desktop_catalog::tools());
         list.splice(at..at, more);
@@ -56,8 +56,18 @@ fn crew_tools() -> Value {
             "title": "Crew roster",
             "description": "Lists the other bots of your crew with their handle, name, role and \
                 current state (idle, busy, offline...). Use it to find who can help and the \
-                handle to send a message to.",
-            "inputSchema": { "type": "object", "additionalProperties": false },
+                handle to send a message to. With `crew`, the bots of another crew you were \
+                let in to (ask_crew_access).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "crew": {
+                        "type": "string",
+                        "description": "Another crew's name, only once the owner let you reach it.",
+                    },
+                },
+                "additionalProperties": false,
+            },
             "annotations": { "readOnlyHint": true },
         },
         {
@@ -73,6 +83,12 @@ fn crew_tools() -> Value {
                     "to": {
                         "type": "string",
                         "description": "Handle of the bot, as crew_roster shows it (\"revisor\" or \"@revisor\").",
+                    },
+                    "crew": {
+                        "type": "string",
+                        "description": "Another crew's name, for a bot of a crew the owner let you \
+                            reach (ask_crew_access), or to answer a bot of another crew that wrote \
+                            to you. Leave it out for your own crew.",
                     },
                     "body": {
                         "type": "string",

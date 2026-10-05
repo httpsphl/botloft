@@ -508,6 +508,7 @@ Reply with send_message(to: "revisor"). When the task is done, call complete_tas
 ```
 
 - Nota de outro bot: primeira linha `[botloft] from @revisor · crew Exemplo` e só a instrução de resposta.
+- Bot de outra crew (10.4): `[botloft] from @writer of crew Blog · crew Exemplo`, e a instrução de resposta leva a crew: `send_message(to: "writer", crew: "Blog")`.
 - Resultado de task: `· result of task tsk_... · done` (ou `failed`) e a instrução de resposta.
 - Aviso do daemon (task vencida, task de um bot excluído): `from Botloft` e o texto do aviso, sem instrução.
 - Message de um bot que o dono excluiu enquanto ela esperava na fila (7.6): `from a deleted bot`, sem instrução de resposta, porque não há a quem responder.
@@ -555,12 +556,13 @@ Transporte: Streamable HTTP, só POST e resposta `application/json`, sem sessão
 
 | Tool | Entrada | Saída (JSON em texto) |
 |---|---|---|
-| `crew_roster` | nenhuma | `crew`, `you`, `you_lead`, os outros bots da crew (handle, nome, papel, estado e `chief`) e `signals`, os avisos que as rotinas da crew esperam (20.13) |
-| `send_message` | `to` (handle, com ou sem `@`), `body`, `kind?` (`note` padrão, `task`), `deadline_minutes?` (só task) | `message_id`, `task_id` e `due` (task), e um lembrete de que a resposta chega depois |
+| `crew_roster` | `crew?` (outra crew, 10.4) | `crew`, `you`, `you_lead`, os outros bots da crew (handle, nome, papel, estado e `chief`) e `signals`, os avisos que as rotinas da crew esperam (20.13). Com `crew`: o nome dela e só os bots que o bot alcança lá |
+| `send_message` | `to` (handle, com ou sem `@`), `crew?` (outra crew, 10.4), `body`, `kind?` (`note` padrão, `task`), `deadline_minutes?` (só task) | `message_id`, `task_id` e `due` (task), e um lembrete de que a resposta chega depois |
 | `complete_task` | `task_id`, `result`, `status?` (`done` padrão, `failed`) | `task_id`, `status` e quem recebe o resultado |
 | `my_tasks` | `role?` (`assigned`, `requested`) | tasks `open` e `expired`: id, de, para, status, prazo relativo, hops e o pedido original |
 | `suggest_bot` | `name`, `role`, `instructions` (até 8 000 caracteres), `model?`, `reason` (até 1 000) | `created` e, criado, `handle`, `name`, `role`, `model` e um lembrete para mandar a primeira task; recusado ou sem resposta, o porquê (10.2). Só o chefe |
 | `schedule_routine` | `name`, `prompt` (até 8 000 caracteres), `schedule` (como em 20.2), `bot?` (handle de outro bot da crew) | `created` e, criada, `routine_id`, nome, pedido, horário, fuso e a próxima vez; recusada ou sem resposta, o aviso de que nada foi agendado (20.12) |
+| `ask_crew_access` | `crew` (nome da outra crew), `bot?` (handle de um bot dela), `access` (`["talk"]`), `why` (até 1 000) | `allowed` e, permitido, como usar; recusado ou sem resposta, o porquê (10.4) |
 | `change_bot` | `bot?` (handle de outro bot da crew, só o chefe), `name?`, `role?`, `instructions?` (até 8 000 caracteres), `reason?` (até 1 000) | `done` e, mudado, `handle`, `name`, `role` e quando vale; recusado ou sem resposta, o aviso de que nada mudou (10.3) |
 | `share_file` | `files` (1 a 10 caminhos, absolutos ou relativos à pasta do bot) | `shown` (um `BotFile` por arquivo, 8.4) e um lembrete de que o dono vê cada um como cartão no chat; um arquivo fora das pastas do bot e não escrito por ele, ou que não existe, recusa a chamada inteira e diz qual e por quê |
 | `send_signal` | `name`, `note?` (até 2 000 caracteres) | o aviso normalizado e, para cada rotina da crew que o espera, se rodou e por que não (20.13) |
@@ -571,7 +573,7 @@ Transporte: Streamable HTTP, só POST e resposta `application/json`, sem sessão
 - Erro que o modelo pode corrigir (handle desconhecido, argumento inválido, limite de hops, task de outro bot) volta como resultado com `isError: true` e uma frase explicando. Só tool desconhecida ou chamada malformada vira erro JSON-RPC (`-32602`).
 - Erro interno não expõe detalhes ao bot; vai para o log.
 
-Endereçamento só dentro da crew. Bot não enxerga bots nem tasks de outras crews.
+Endereçamento só dentro da crew. Bot não enxerga bots nem tasks de outras crews, a menos que o dono deixe (10.4).
 
 ### 10.1 Aprovações
 
@@ -628,6 +630,16 @@ Quando o dono pede, um bot pode mudar o próprio nome, papel ou instruções, e 
 - **Antes de perguntar:** o daemon confere os campos como `bots.update` (nome livre na crew, papel numa linha, instruções até 8 000 caracteres) e recusa um pedido que não muda nada.
 - **Aprovação:** um pedido no chat de quem chama, `toolName: "mcp__botloft__change_bot"`, com entrada `bot_id`, `handle`, `name` (o nome atual, também o resumo), `before`, `after` (nome, papel e instruções) e `reason`. O cartão diz "<bot> quer mudar <outro>" ou "<bot> quer mudar a própria configuração", mostra nome e papel antes e depois, as instruções novas atrás de uma seta e o porquê, com Mudar, Agora não e o campo para dizer por que não. O dono não ajusta o pedido no cartão; pode mudar o bot depois nos detalhes.
 - **Resposta:** permitir confere de novo e aplica como `bots.update`: o nome e o handle mudam na hora; papel e instruções valem a partir do próximo início do bot, como quando o dono os edita. Recusado ou sem resposta, nada muda, e o resultado diz isso ao bot. Quem chama em `bypass_permissions` muda sem perguntar.
+
+### 10.4 Bots que alcançam outra crew
+
+Crews não se enxergam (7.5, 10). Quando o dono pede, um bot pode pedir para alcançar outra crew, ou um bot dela, com `ask_crew_access`: o nome da crew como o dono deu (nome ou pasta, sem diferença de maiúsculas; a própria crew dá erro), o handle do bot se for um só, o que quer (`talk`: ver os bots de lá e mandar mensagens e tasks) e por quê. Ler e editar arquivos de outra crew ficam para depois.
+
+- **Pedido:** um pedido no chat de quem pede, `toolName: "mcp__botloft__ask_crew_access"`, com entrada `crew_id`, `crew`, `bot_id`, `bot`, `handle`, `access` e `why`; o resumo é o nome da crew. A chamada espera a resposta. Um pedido do que o bot já alcança volta na hora, sem pedido. Quem está em `bypass_permissions` recebe o acesso só para a vez, sem perguntar.
+- **Resposta:** Negar, ou permitir com `approvals.answer` e `input` `{"scope": ...}`: `once` (só agora, o padrão sem `input`), `bot` (sempre, só o bot pedido; recusado se o pedido era a crew) ou `crew` (sempre, a crew inteira). "Só agora" fica em memória e vale até o fim da vez do bot (o `result` do turno ou o fim do processo). "Sempre" vai para a tabela `crew_access` (bot, crew, bot alvo ou nenhum, `talk`), que guarda o que já tinha e soma o novo; apagar o bot, o alvo ou a crew apaga a linha.
+- **Com acesso:** `crew_roster` com `crew` lista só os bots de lá que o bot alcança; `send_message` com `crew` manda nota ou task a um deles. Um bot fora de alcance e um que não existe dão o mesmo erro, que manda pedir com `ask_crew_access`.
+- **Resposta do outro lado:** o bot que recebe pode responder a quem escreveu sem pedir: a quem tem acesso a ele, ou a um bot de outra crew que lhe escreveu nas últimas 24 horas (bots conversam em vezes; a resposta costuma chegar depois que a vez com acesso acabou). `complete_task` não depende de acesso: só o designado completa a task.
+- **Onde fica:** a mensagem e a task entre crews são da crew de quem recebe, e o resultado e o aviso de prazo, da crew de quem pediu. Assim cada crew só guarda o que é para os bots dela, e apagar uma crew não deixa nada pendurado. `my_tasks` mostra um bot de outra crew como "writer of crew Blog".
 
 ## 11. Protocolo do app (JSON-RPC 2.0 sobre WebSocket)
 
