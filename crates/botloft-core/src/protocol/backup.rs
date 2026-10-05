@@ -35,6 +35,15 @@ pub struct BackupExportParams {
     pub passphrase: String,
 }
 
+/// `backup.stage`: a backup file the owner picked, and its passphrase.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BackupStageParams {
+    pub path: String,
+    pub passphrase: String,
+}
+
 /// A backup written and ready for the owner to save elsewhere.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

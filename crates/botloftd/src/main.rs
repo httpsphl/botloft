@@ -114,6 +114,14 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
 
     let owner_token = secrets::load_or_create_owner_token(&paths.secrets())
         .context("cannot prepare the owner token")?;
+    // A backup the owner confirmed replaces the data before anything opens
+    // it (14.2); what was there goes aside.
+    let stamp = jiff::Zoned::now().strftime("%Y-%m-%d-%H%M%S").to_string();
+    match botloftd::backup::restore::apply_pending(&paths, &stamp) {
+        Ok(Some(aside)) => info!(aside = %aside.display(), "a backup was restored"),
+        Ok(None) => {}
+        Err(err) => error!("could not restore the backup, so nothing changed: {err}"),
+    }
     let store = Store::open(&paths.db()).context("cannot open the database")?;
     std::fs::create_dir_all(&paths.workspaces_root)
         .with_context(|| format!("cannot create {}", paths.workspaces_root.display()))?;

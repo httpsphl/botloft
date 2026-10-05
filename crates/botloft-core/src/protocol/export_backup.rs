@@ -8,6 +8,7 @@ pub(super) fn decls(out: &mut Out) {
     out.decl::<BackupManifest>();
     out.decl::<BackupExportParams>();
     out.decl::<BackupExported>();
+    out.decl::<BackupStageParams>();
 }
 
 pub(super) fn methods(out: &mut Out) {
@@ -16,4 +17,11 @@ pub(super) fn methods(out: &mut Out) {
         &out.name::<BackupExportParams>(),
         &out.name::<BackupExported>(),
     );
+    out.method(
+        method::BACKUP_STAGE,
+        &out.name::<BackupStageParams>(),
+        &out.name::<BackupManifest>(),
+    );
+    out.method(method::BACKUP_CONFIRM, "undefined", "null");
+    out.method(method::BACKUP_CANCEL, "undefined", "null");
 }

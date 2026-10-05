@@ -2,6 +2,7 @@
 //! crew's folder, in one file sealed with a passphrase only the owner has.
 
 pub mod export;
+pub mod restore;
 pub mod seal;
 
 /// The extension of a backup file.
