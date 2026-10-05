@@ -55,7 +55,7 @@ fn around(frame: [i32; 4], rect: RECT) -> bool {
 fn the_outline_goes_around_the_window_and_follows_it() {
     let window = TestWindow::open("Botloft desktop test: outline");
     let app = handle(window.id);
-    outline::show(window.id, (0x5E, 0xC8, 0xFF));
+    outline::show(window.id, (0x5E, 0xC8, 0xFF), None);
     soon("shown", visible);
     let frame = capture::frame(window.id).expect("frame");
     soon("around the frame", || around(frame, place()));
@@ -77,15 +77,15 @@ fn the_outline_goes_around_the_window_and_follows_it() {
         )
     };
     let moved = capture::frame(window.id).expect("frame");
-    outline::show(window.id, (0x5E, 0xC8, 0xFF));
+    outline::show(window.id, (0x5E, 0xC8, 0xFF), None);
     soon("moved along", || around(moved, place()));
 
     // SAFETY: minimizes and restores the test's own window.
     let _ = unsafe { ShowWindow(app, SW_MINIMIZE) };
-    outline::show(window.id, (0x5E, 0xC8, 0xFF));
+    outline::show(window.id, (0x5E, 0xC8, 0xFF), None);
     soon("out of the way", || !visible());
     let _ = unsafe { ShowWindow(app, SW_RESTORE) };
-    outline::show(window.id, (0x5E, 0xC8, 0xFF));
+    outline::show(window.id, (0x5E, 0xC8, 0xFF), None);
     soon("back", visible);
 
     outline::hide();

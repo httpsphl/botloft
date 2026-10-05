@@ -9,6 +9,7 @@ mod capture;
 mod input;
 mod notice;
 mod outline;
+mod outline_cursor;
 #[cfg(test)]
 mod outline_tests;
 mod owner;

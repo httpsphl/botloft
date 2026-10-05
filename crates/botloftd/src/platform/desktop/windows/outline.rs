@@ -5,6 +5,7 @@
 //! top of everything: a window of the owner's over the app covers the
 //! outline too. Never in the list of windows (a tool window), never taking
 //! the focus, never in a picture of the app (`PrintWindow` is only of it).
+//! The bot's cursor is drawn in it too (`outline_cursor.rs`).
 
 use std::sync::mpsc::{self, Sender};
 use std::sync::{Mutex, OnceLock, PoisonError};
@@ -19,14 +20,21 @@ use windows::Win32::UI::HiDpi::{
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DispatchMessageW, GW_HWNDPREV, GetClientRect, GetMessageW,
-    GetWindow, HWND_TOP, IsIconic, IsWindow, IsWindowVisible, LWA_COLORKEY, MSG, PostMessageW,
-    RegisterClassW, SW_HIDE, SW_SHOWNOACTIVATE, SWP_NOACTIVATE, SetLayeredWindowAttributes,
-    SetWindowPos, ShowWindow, TranslateMessage, WM_APP, WM_PAINT, WNDCLASSW, WS_EX_LAYERED,
-    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_POPUP,
+    GetWindow, HWND_TOP, IsIconic, IsWindow, IsWindowVisible, KillTimer, LWA_COLORKEY, MSG,
+    PostMessageW, RegisterClassW, SW_HIDE, SW_SHOWNOACTIVATE, SWP_NOACTIVATE,
+    SetLayeredWindowAttributes, SetTimer, SetWindowPos, ShowWindow, TranslateMessage, WM_APP,
+    WM_PAINT, WM_TIMER, WNDCLASSW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+    WS_EX_TRANSPARENT, WS_POPUP,
 };
 use windows::core::{PCWSTR, w};
 
-use super::{capture, handle};
+use super::super::ScreenCursor;
+use super::{capture, handle, outline_cursor};
+
+/// The timer that draws the cursor while it moves.
+const MOVING: usize = 1;
+/// How often it draws then, about 60 times a second.
+const FRAME_MS: u32 = 16;
 
 /// Painted, then left out: the window's see-through color.
 const SEE_THROUGH: COLORREF = COLORREF(0x00FF_00FF);
@@ -35,11 +43,12 @@ const HIDE: u32 = WM_APP + 2;
 /// The ring's width, at 96 DPI.
 const RING: i32 = 3;
 
-/// Which window, in what color.
-#[derive(Clone, Copy, PartialEq, Eq)]
+/// Which window, in what color, with the bot's cursor where.
+#[derive(Clone, PartialEq)]
 struct Outlining {
     over: u64,
     color: (u8, u8, u8),
+    cursor: Option<ScreenCursor>,
 }
 
 static OUTLINING: Mutex<Option<Outlining>> = Mutex::new(None);
@@ -120,10 +129,26 @@ unsafe extern "system" fn procedure(
     unsafe {
         match message {
             SHOW => {
-                let outlining = *OUTLINING.lock().unwrap_or_else(PoisonError::into_inner);
+                let outlining = OUTLINING
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .clone();
                 match outlining {
-                    Some(outlining) => place(hwnd, outlining),
+                    Some(outlining) => {
+                        place(hwnd, &outlining);
+                        if outline_cursor::follow(outlining.cursor.as_ref()) {
+                            let _ = InvalidateRect(Some(hwnd), None, false);
+                            SetTimer(Some(hwnd), MOVING, FRAME_MS, None);
+                        }
+                    }
                     None => hidden(hwnd),
+                }
+                LRESULT(0)
+            }
+            WM_TIMER => {
+                let _ = InvalidateRect(Some(hwnd), None, false);
+                if !outline_cursor::moving(std::time::Instant::now()) {
+                    let _ = KillTimer(Some(hwnd), MOVING);
                 }
                 LRESULT(0)
             }
@@ -142,13 +167,14 @@ unsafe extern "system" fn procedure(
 
 unsafe fn hidden(hwnd: HWND) {
     *PLACED.lock().unwrap_or_else(PoisonError::into_inner) = None;
+    outline_cursor::follow(None);
     // SAFETY: hides this thread's own window.
     let _ = unsafe { ShowWindow(hwnd, SW_HIDE) };
 }
 
 /// Around the app's frame, right above it in the order of windows; hidden
 /// while the app is minimized, hidden or gone.
-unsafe fn place(hwnd: HWND, outlining: Outlining) {
+unsafe fn place(hwnd: HWND, outlining: &Outlining) {
     let app = handle(outlining.over);
     // SAFETY: plain queries on a window handle.
     let showing = unsafe {
@@ -188,9 +214,12 @@ unsafe fn place(hwnd: HWND, outlining: Outlining) {
 }
 
 unsafe fn paint(hwnd: HWND) {
-    let color = OUTLINING
+    let outlining = OUTLINING
         .lock()
         .unwrap_or_else(PoisonError::into_inner)
+        .clone();
+    let color = outlining
+        .as_ref()
         .map_or((0xFF, 0x7A, 0x59), |outlining| outlining.color);
     // SAFETY: painting this thread's own window between Begin and EndPaint,
     // every object made here freed before the end.
@@ -223,16 +252,33 @@ unsafe fn paint(hwnd: HWND) {
         ] {
             FillRect(dc, &edge, brush);
         }
+        if let Some(cursor) = outlining
+            .as_ref()
+            .and_then(|outlining| outlining.cursor.as_ref())
+        {
+            let dpi = GetDpiForWindow(hwnd).max(96) as i32;
+            let inside = RECT {
+                left: area.left + ring,
+                top: area.top + ring,
+                right: area.right - ring,
+                bottom: area.bottom - ring,
+            };
+            outline_cursor::paint(dc, inside, |length| length * dpi / 96, color, cursor);
+        }
         let _ = DeleteObject(brush.into());
         let _ = DeleteObject(clear.into());
         let _ = EndPaint(hwnd, &paint);
     }
 }
 
-/// Outlines window `over` in `color`, or puts the outline where the window
-/// is now.
-pub fn show(over: u64, color: (u8, u8, u8)) {
-    *OUTLINING.lock().unwrap_or_else(PoisonError::into_inner) = Some(Outlining { over, color });
+/// Outlines window `over` in `color`, with the bot's `cursor`, or puts the
+/// outline where the window is now.
+pub fn show(over: u64, color: (u8, u8, u8), cursor: Option<ScreenCursor>) {
+    *OUTLINING.lock().unwrap_or_else(PoisonError::into_inner) = Some(Outlining {
+        over,
+        color,
+        cursor,
+    });
     if let Some(hwnd) = window() {
         // SAFETY: asks the outline's own thread to place it.
         let _ = unsafe { PostMessageW(Some(hwnd), SHOW, WPARAM(0), LPARAM(0)) };

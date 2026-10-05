@@ -16,7 +16,7 @@ mod windows;
 use std::path::PathBuf;
 
 pub use blocked::{Never, never};
-pub use overlay::{notice_hide, notice_show, outline_hide, outline_show};
+pub use overlay::{ScreenCursor, notice_hide, notice_show, outline_hide, outline_show};
 pub use read::{Control, LINES_MAX, by_reference, reference, render};
 
 /// The largest picture of a window the bot gets, in logical pixels (24.4).
