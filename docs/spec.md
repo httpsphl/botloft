@@ -2030,6 +2030,19 @@ instructions = """
 | `sales-coach` | Prepara conversas de venda, faz o papel do cliente para treinar e escreve o retorno; sem pressão |
 | `pricing-analyst` | Calcula custo e margem, compara o mercado e propõe uma faixa e um teste; o dono define o preço |
 
+**Engenharia** (`code`, 8, junto com `developer`, `code-reviewer` e `qa-tester`): trabalham no código e nos sistemas do dono, sempre com as aprovações do modo Manual. As fichas dizem o que nunca fazer: rodar mudança destrutiva ou em sistema de verdade sem pedir, mexer em dado real sem cópia de segurança, pedir senha, chave ou token no chat, ou pôr segredo em código que qualquer um lê.
+
+| `id` | O que faz |
+|---|---|
+| `software-architect` | Desenha como as partes se encaixam e registra cada decisão com opções, motivos e riscos; desenha, não escreve o código do produto |
+| `frontend-developer` | Constrói telas pensando primeiro no celular, no teclado e em quem usa leitor de tela; confere num navegador de verdade |
+| `backend-developer` | Constrói APIs, regras de dados e tarefas com testes; nunca roda mudança em dado de verdade sem perguntar |
+| `mobile-developer` | Constrói apps de celular e diz o que não deu para testar sem um aparelho; nunca mexe em conta de loja nem chave de assinatura |
+| `database-engineer` | Desenha tabelas e acelera consultas medindo antes; toda mudança com cópia de segurança e jeito de desfazer, testada numa cópia |
+| `devops-engineer` | Automatiza compilação, teste e publicação com jeito de voltar atrás; pergunta antes de tocar em sistema de verdade |
+| `security-reviewer` | Revisa o código e a configuração do dono, só defensivamente e só no que é do dono; não repete segredos que acha (`effort` `high`) |
+| `data-engineer` | Constrói esteiras que coletam, limpam e conferem dados, param quando algo parece errado e mantêm os originais intactos |
+
 ### 26.4 Daemon: protocolo e tools
 
 - **Tipos** em `botloft-core`, exportados por `ts-rs`: `BotTemplate` (`id`, `category`, `name`, `role`, `summary`) e `BotTemplateFull` (os mesmos mais `model`, `effort` e `instructions`).
@@ -2054,7 +2067,7 @@ instructions = """
 
 ### 26.7 Fora desta etapa
 
-Os papéis das outras áreas (engenharia, conteúdo e pesquisa: G4, uma área por vez); finanças, jurídico e saúde, que pedem aviso de que não substituem um profissional; o dono criar, importar ou compartilhar fichas; **restaurar o padrão** de um bot criado de um modelo (pede guardar o `id` do modelo no bot, e o histórico de instruções do item 5 da seção 18 cobre melhor); marcar no catálogo o que já está na equipe; atualizar bots já criados quando uma ficha muda (eles foram personalizados); modelos de equipe inteira; indicar ferramentas conectadas por papel de forma automática.
+Os papéis das outras áreas (conteúdo e pesquisa: G4, uma área por vez); finanças, jurídico e saúde, que pedem aviso de que não substituem um profissional; o dono criar, importar ou compartilhar fichas; **restaurar o padrão** de um bot criado de um modelo (pede guardar o `id` do modelo no bot, e o histórico de instruções do item 5 da seção 18 cobre melhor); marcar no catálogo o que já está na equipe; atualizar bots já criados quando uma ficha muda (eles foram personalizados); modelos de equipe inteira; indicar ferramentas conectadas por papel de forma automática.
 
 ### 26.8 Marcos
 
@@ -2063,4 +2076,4 @@ Os papéis das outras áreas (engenharia, conteúdo e pesquisa: G4, uma área po
 | **G1** Catálogo e daemon | formato da ficha, `catalog.rs`, as 12 fichas, `catalog.list`/`get`/`add`, tipos `ts-rs` | `catalog_lint`; unidade e RPC: `catalog.add` valida como `bots.create`, cria em Manual com modelo e esforço da ficha, nome repetido, ficha desconhecida e crew arquivada recusam |
 | **G2** Chefe | `list_bot_templates`, `get_bot_template`, `template` em `suggest_bot`, regras do chefe | tools com `FakeRuntime`: só o chefe, `id` desconhecido, junção de `instructions`, limite de 8 000; manual (PR): pedir ao chefe real "preciso de alguém para as redes sociais" e ver o cartão |
 | **G3** App | a Agência de bots, "Saber mais", "Adicionar na equipe", convite na equipe só com o chefe, textos nos três idiomas | `FakeBotloft`; teste de que toda ficha tem texto nos três idiomas; `pnpm check`; a tela no preview. Manual (PR): criar cada um dos 12 com o Claude Code real e dar a cada um uma tarefa típica |
-| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia, Conteúdo e pesquisa; categorias `product` e `marketing`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
+| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito), Conteúdo e pesquisa; categorias `product` e `marketing`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |

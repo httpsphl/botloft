@@ -22,7 +22,7 @@ async fn the_catalog_lists_every_role_without_its_instructions() {
 
     let all = app.call("catalog.list", json!({})).await.expect("list");
     let all = all.as_array().expect("array");
-    assert_eq!(all.len(), 44);
+    assert_eq!(all.len(), 52);
     let ids: Vec<_> = all
         .iter()
         .filter_map(|entry| entry["id"].as_str())
@@ -45,7 +45,22 @@ async fn the_catalog_lists_every_role_without_its_instructions() {
         .iter()
         .map(|entry| entry["id"].as_str().expect("id"))
         .collect();
-    assert_eq!(code, ["developer", "code-reviewer", "qa-tester"]);
+    assert_eq!(
+        code,
+        [
+            "developer",
+            "code-reviewer",
+            "qa-tester",
+            "software-architect",
+            "frontend-developer",
+            "backend-developer",
+            "mobile-developer",
+            "database-engineer",
+            "devops-engineer",
+            "security-reviewer",
+            "data-engineer",
+        ]
+    );
 
     let product = app
         .call("catalog.list", json!({ "category": "product" }))
