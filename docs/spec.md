@@ -841,7 +841,7 @@ app/src/
   features/
     onboarding/   checagens (claude instalado e versão, daemon rodando) e instalação do serviço
     crews/        lista, criar, renomear, pausar; página da crew com timeline e tasks
-    catalog/      modelos de bot: a tela de explorar, "Saber mais" e "Adicionar na equipe" (26.5)
+    catalog/      modelos de bot: a Agência de bots, "Saber mais" e "Adicionar na equipe" (26.5)
     bots/         conversas na barra lateral, criar, editar, estado, detalhes
     chat/         conversa com o bot: itens, texto ao vivo, aprovações, compositor com anexos
     files/        painel dos arquivos que o bot fez: lista, prévia, abrir
@@ -1105,7 +1105,7 @@ M2 a M4 foram entregues com ConPTY, terminal com replay, inbox por named pipe e 
 9. Navegador dos bots, com o dono assistindo ao vivo. Desenho na seção 21.
 10. Bots vendo e usando os apps abertos no desktop do dono, com permissões por app ou do desktop inteiro. Desenho na seção 24 e em `docs/adr/0002-desktop-use.md`.
 11. Ferramentas conectadas: o dono liga servidores MCP próprios (LinkedIn, sistemas internos) a bots escolhidos, sem tirar o `--strict-mcp-config`. Desenho na seção 25.
-12. Catálogo de bots: modelos prontos de função (Designer, Pesquisador...) que o dono explora e adiciona à equipe, e que o chefe usa para sugerir bots com instruções melhores. Desenho na seção 26.
+12. Catálogo de bots: modelos prontos de função (Designer, Pesquisador...) que o dono escolhe na Agência de bots e adiciona à equipe, e que o chefe usa para sugerir bots com instruções melhores. Desenho na seção 26.
 
 ## 19. Pontos a verificar na versão alvo do Claude Code
 
@@ -1942,7 +1942,7 @@ Quem abre o Botloft pela primeira vez tem uma equipe com o chefe e mais nada, e 
 - **O dono** explora uma lista, lê o que cada bot faz e adiciona o que quiser à equipe, já com instruções boas. Depois o bot é um bot comum, que ele personaliza.
 - **O chefe** consulta o mesmo catálogo por tool e sugere o bot a partir de um modelo, com instruções melhores do que as que escreveria sozinho.
 
-O catálogo é uma lista fixa que vem dentro do app, sem rede e sem conta. Não é uma loja nem aceita contribuição do dono nesta etapa (26.7).
+No app, o nome é **Agência de bots** (inglês "Bot agency", espanhol "Agencia de bots"): um lugar onde o dono escolhe especialistas para a equipe. "Catálogo" (`catalog`) é só o nome interno, de pasta, métodos e tools (15.6: sem jargão na tela). O catálogo é uma lista fixa que vem dentro do app, sem rede e sem conta. Não é uma loja nem aceita contribuição do dono nesta etapa (26.7).
 
 **Autoria.** As fichas são escritas do zero para o Botloft, a partir do que cada função faz na prática e das tools que os nossos bots têm. Nenhum texto vem de outro projeto de agentes (CLAUDE.md, "Regra de autoria"). Se uma ficha vier a ser baseada em material externo, isso é decidido à parte e a atribuição vai para o `NOTICE`.
 
@@ -1997,7 +1997,7 @@ instructions = """
 
 ### 26.5 App
 
-- **Onde aparece.** (1) Numa equipe que só tem o chefe, a página da equipe mostra o catálogo como convite: "Quem você quer na sua equipe?". (2) Em qualquer equipe, um botão "Explorar bots" ao lado de criar bot abre a mesma tela. Ela é sempre da equipe aberta.
+- **Onde aparece.** (1) Numa equipe que só tem o chefe, a página da equipe mostra o catálogo como convite: "Quem você quer na sua equipe?". (2) Em qualquer equipe, um botão "Agência de bots" ao lado de criar bot abre a mesma tela. Ela é sempre da equipe aberta.
 - **Tela.** Uma grade de cartões, com filtro por categoria e busca por nome e resumo (no idioma do app). Cada cartão tem o nome ("Designer"), uma linha dizendo o que o bot faz, e dois botões: **Adicionar na equipe** e **Saber mais**.
 - **Saber mais** abre um painel com o texto de `catalog.ts`: o que faz, quando chamar, com quem combina e o que vale ligar (por exemplo uma ferramenta conectada). Em "Detalhes", como o resto do que é técnico (15.6), ficam as instruções do bot (somente leitura, em inglês), o modelo e o esforço: o dono pode ler o que o bot vai receber. O painel tem também o botão de adicionar.
 - **Adicionar** cria na hora, sem diálogo, com o nome do idioma do dono (se já existe na equipe, "Designer 2") por `catalog.add`. Um aviso diz que o bot entrou na equipe, com "Personalizar", que abre os detalhes do bot, onde o dono muda nome, função, instruções, modelo e o resto como em qualquer bot. O catálogo não muda, e o dono pode adicionar a mesma função de novo.
@@ -2019,4 +2019,4 @@ Mais de 12 papéis (a lista cresce depois, uma ficha por vez); o dono criar, imp
 |---|---|---|
 | **G1** Catálogo e daemon | formato da ficha, `catalog.rs`, as 12 fichas, `catalog.list`/`get`/`add`, tipos `ts-rs` | `catalog_lint`; unidade e RPC: `catalog.add` valida como `bots.create`, cria em Manual com modelo e esforço da ficha, nome repetido e crew cheia recusam |
 | **G2** Chefe | `list_bot_templates`, `get_bot_template`, `template` em `suggest_bot`, regras do chefe | tools com `FakeRuntime`: só o chefe, `id` desconhecido, junção de `instructions`, limite de 8 000; manual (PR): pedir ao chefe real "preciso de alguém para as redes sociais" e ver o cartão |
-| **G3** App | tela de explorar, "Saber mais", "Adicionar na equipe", convite na equipe só com o chefe, textos nos três idiomas | `FakeBotloft`; teste de que toda ficha tem texto nos três idiomas; `pnpm check`; a tela no preview. Manual (PR): criar cada um dos 12 com o Claude Code real e dar a cada um uma tarefa típica |
+| **G3** App | a Agência de bots, "Saber mais", "Adicionar na equipe", convite na equipe só com o chefe, textos nos três idiomas | `FakeBotloft`; teste de que toda ficha tem texto nos três idiomas; `pnpm check`; a tela no preview. Manual (PR): criar cada um dos 12 com o Claude Code real e dar a cada um uma tarefa típica |
