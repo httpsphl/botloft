@@ -19,7 +19,7 @@ use super::catalog::{COMPLETE_TASK, CREW_ROSTER, MY_TASKS, SEND_MESSAGE};
 use super::question::{self, ASK_OWNER};
 use super::share::{self, SHARE_FILE};
 use super::signal::{self, SEND_SIGNAL};
-use super::{crew_reach, routine_change};
+use super::{crew_reach, routine_change, templates};
 use crate::service::tasks::{self, BotMessage};
 use crate::service::{ApiError, bots, lead};
 use crate::state::Daemon;
@@ -48,6 +48,12 @@ pub(super) fn call(daemon: &Daemon, bot: &BotId, params: &Value) -> Result<Value
             ASK_OWNER => parse(arguments).and_then(|args| question::ask(daemon, bot, args)),
             SEND_SIGNAL => parse(arguments).and_then(|args| signal::send(daemon, bot, args)),
             routine_change::MY_ROUTINES => routine_change::mine(daemon, bot),
+            templates::LIST_BOT_TEMPLATES => {
+                parse(arguments).and_then(|args| templates::list(daemon, bot, args))
+            }
+            templates::GET_BOT_TEMPLATE => {
+                parse(arguments).and_then(|args| templates::get(daemon, bot, args))
+            }
             crew_reach::CREW_FILES => parse(arguments)
                 .and_then(|args| crew_reach::files(daemon, bot, args).map_err(explain)),
             crew_reach::READ_CREW_FILE => parse(arguments)
