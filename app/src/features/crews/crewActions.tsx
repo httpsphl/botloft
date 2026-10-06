@@ -7,7 +7,6 @@ import {
   Pencil,
   Play,
   Plus,
-  Sparkles,
   Trash2,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -113,7 +112,7 @@ export function useCrewActions(crew: Crew): CrewActions {
 
   return {
     newBot: { label: t.crews.newBot, icon: Plus, onSelect: () => setOpen("bot") },
-    agency: { label: t.catalog.open, icon: Sparkles, onSelect: () => setOpen("agency") },
+    agency: { label: t.catalog.open, onSelect: () => setOpen("agency") },
     openFolder,
     pause: crew.paused
       ? { label: words.resume, icon: Play, onSelect: () => setPaused(false) }
