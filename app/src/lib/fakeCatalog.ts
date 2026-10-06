@@ -1,4 +1,4 @@
-// The fake daemon's bot catalog (spec 26): the same twelve ids and
+// The fake daemon's bot catalog (spec 26): the same ids and
 // categories as the daemon's sheets, with short stand-in texts. Adding a
 // role goes through `bots.create`, so handles and notifications match.
 
@@ -22,6 +22,20 @@ const ROLES: [id: string, category: BotTemplateCategory, name: string, effort?: 
   ["sales-prospector", "business", "Sales Prospector"],
   ["customer-support", "business", "Customer Support"],
   ["personal-assistant", "business", "Personal Assistant"],
+  ["product-manager", "product", "Product Manager"],
+  ["project-manager", "product", "Project Manager"],
+  ["business-analyst", "product", "Business Analyst"],
+  ["ux-researcher", "product", "UX Researcher"],
+  ["agile-facilitator", "product", "Agile Facilitator"],
+  ["goals-coach", "product", "Goals Coach"],
+  ["meeting-secretary", "product", "Meeting Secretary"],
+  ["process-analyst", "product", "Process Analyst"],
+  ["operations-manager", "product", "Operations Manager"],
+  ["recruiter", "product", "Recruiter"],
+  ["onboarding-coach", "product", "Onboarding Coach"],
+  ["customer-success", "product", "Customer Success"],
+  ["event-planner", "product", "Event Planner"],
+  ["travel-planner", "product", "Travel Planner"],
 ];
 
 /** Every role, as `catalog.get` returns it. */

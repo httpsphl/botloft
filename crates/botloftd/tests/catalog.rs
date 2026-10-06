@@ -16,13 +16,13 @@ async fn crew(app: &mut common::Client) -> Value {
 }
 
 #[tokio::test]
-async fn the_catalog_lists_the_twelve_roles_without_their_instructions() {
+async fn the_catalog_lists_every_role_without_its_instructions() {
     let t = TestDaemon::start().await;
     let mut app = t.session().await;
 
     let all = app.call("catalog.list", json!({})).await.expect("list");
     let all = all.as_array().expect("array");
-    assert_eq!(all.len(), 12);
+    assert_eq!(all.len(), 26);
     let ids: Vec<_> = all
         .iter()
         .filter_map(|entry| entry["id"].as_str())
@@ -46,6 +46,12 @@ async fn the_catalog_lists_the_twelve_roles_without_their_instructions() {
         .map(|entry| entry["id"].as_str().expect("id"))
         .collect();
     assert_eq!(code, ["developer", "code-reviewer", "qa-tester"]);
+
+    let product = app
+        .call("catalog.list", json!({ "category": "product" }))
+        .await
+        .expect("list product");
+    assert_eq!(product.as_array().expect("array").len(), 14);
 
     let bad = app
         .call("catalog.list", json!({ "category": "cooking" }))

@@ -15,7 +15,7 @@ const ids = Object.keys(sheets).map((path) => path.replace(/^.*\/(.+)\.toml$/, "
 
 describe("the roles the owner reads about", () => {
   test("there is a sheet for each, and the fake daemon lists the same", () => {
-    expect(ids.length).toBe(12);
+    expect(ids.length).toBeGreaterThanOrEqual(26);
     expect(FAKE_CATALOG.map((role) => role.id).sort()).toEqual([...ids].sort());
   });
 

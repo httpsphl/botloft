@@ -13,6 +13,8 @@ text_enum!(
         Content => "content",
         Research => "research",
         Business => "business",
+        Product => "product",
+        Marketing => "marketing",
     }
 );
 

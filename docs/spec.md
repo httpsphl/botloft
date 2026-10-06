@@ -1952,7 +1952,7 @@ No app, o nome é **Agência de bots** (inglês "Bot agency", espanhol "Agencia 
 Uma ficha por arquivo em `crates/botloftd/catalog/<id>.toml`, embutida no binário do daemon. O `id` é o nome do arquivo (`[a-z0-9-]{1,32}`, como `code-reviewer`).
 
 ```toml
-category = "code"          # code, design, content, research, business
+category = "code"          # code, design, content, research, business, product, marketing
 name = "Code Reviewer"     # em inglês; o app escreve o nome no idioma do dono (26.5)
 role = "Reviews other bots' code changes and points out bugs and risks"
 summary = "Reads changes and says what is wrong, risky or too complicated"
@@ -1969,7 +1969,7 @@ instructions = """
 - **Sem "Claude".** O texto não cita o nome do modelo nem do programa, só "você" e o papel.
 - **Um teste vigia a forma** (`catalog_lint`): campos presentes e válidos, `id` igual ao nome do arquivo, instruções até 4 000 caracteres e todas as seções, categoria conhecida, e a lista do código igual aos arquivos da pasta (uma ficha esquecida na lista falha o teste).
 
-### 26.3 Os 12 primeiros papéis
+### 26.3 Os papéis
 
 `model` e `effort` ficam `default`, como em todo bot novo, exceto onde a coluna diz.
 
@@ -1988,6 +1988,25 @@ instructions = """
 | `customer-support` | `business` | Responde dúvidas com base no material que o dono deu e passa adiante o que não sabe |
 | `personal-assistant` | `business` | Organiza tarefas, resume o que o dono precisa ler e rascunha e-mails; agenda e e-mail só com ferramenta conectada (25) |
 
+**Produto e gestão** (`product`, 14): o catálogo cresce uma área por vez (26.8, G4). Os que mexem com dado de pessoas (`recruiter`, `onboarding-coach`, `customer-success`) dizem na ficha o que não fazer com esses dados, além do aviso de privacidade de toda ficha, e nenhum contata ninguém por conta própria.
+
+| `id` | O que faz |
+|---|---|
+| `product-manager` | Transforma ideias e retornos em um plano: o que construir, em que ordem e por quê, com um resumo por item |
+| `project-manager` | Divide o projeto em etapas com responsável e data, acompanha e avisa cedo o que atrasa ou trava |
+| `business-analyst` | Transforma um pedido vago em requisitos testáveis, exceções, critérios de aceite e perguntas em aberto |
+| `ux-researcher` | Planeja entrevistas e testes e transforma o que o dono traz em conclusões com evidência; não fala com ninguém |
+| `agile-facilitator` | Mantém um quadro do que vem, está em andamento e está pronto, pede atualizações aos bots e conduz retrospectivas |
+| `goals-coach` | Ajuda a definir metas e medidas e confere o progresso com honestidade |
+| `meeting-secretary` | Prepara pautas e, do material que o dono dá, escreve decisões, tarefas e perguntas em aberto; não entra em chamadas |
+| `process-analyst` | Mapeia como o trabalho é feito, acha perdas e escreve o processo melhor como lista |
+| `operations-manager` | Mantém rotinas, listas de conferência, renovações e fornecedores; propõe rotinas (20) |
+| `recruiter` | Escreve vagas, compara candidaturas só pelos critérios escritos e prepara entrevistas iguais para todos; recomenda, não decide |
+| `onboarding-coach` | Planeja o primeiro dia, a primeira semana e o primeiro mês de uma pessoa nova |
+| `customer-success` | Acompanha os clientes, percebe os em risco e rascunha a mensagem para cada um; nada é enviado sem o dono |
+| `event-planner` | Planeja orçamento, cronograma, opções de fornecedores e a lista do evento; não reserva nem convida |
+| `travel-planner` | Pesquisa rotas e hospedagens, monta o plano dia a dia e o orçamento; nunca reserva nem digita documentos ou cartões |
+
 ### 26.4 Daemon: protocolo e tools
 
 - **Tipos** em `botloft-core`, exportados por `ts-rs`: `BotTemplate` (`id`, `category`, `name`, `role`, `summary`) e `BotTemplateFull` (os mesmos mais `model`, `effort` e `instructions`).
@@ -1998,8 +2017,8 @@ instructions = """
 
 ### 26.5 App
 
-- **Onde aparece.** (1) Numa equipe que só tem o chefe, ou nenhum bot, a aba Bots mostra a Agência embaixo dos cartões, como convite: "Quem você quer na sua equipe?". Isso é decidido quando a equipe abre e vale enquanto ela fica aberta, para o dono poder adicionar vários bots e ver cada um entrar; ao voltar à equipe já com time, o convite não aparece. (2) Em qualquer equipe, um botão "Agência de bots" ao lado de "Novo bot" abre a mesma tela numa janela. Ela é sempre da equipe aberta.
-- **Tela.** Uma grade de cartões, com filtro por categoria e busca por nome, resumo e função (no idioma do app). Cada cartão tem o mascote numa cor fixa por papel, o nome ("Designer"), a categoria, uma linha dizendo o que o bot faz, e dois botões: **Adicionar na equipe** e **Saber mais**.
+- **Onde aparece.** (1) Numa equipe que só tem o chefe, ou nenhum bot, a aba Bots mostra a Agência embaixo dos cartões, como convite: "Quem você quer na sua equipe?", com **8 papéis em destaque** (`developer`, `designer`, `writer`, `researcher`, `social-media`, `customer-support`, `personal-assistant`, `project-manager`), sem busca nem filtros, e o botão **Ver todos os bots**, que abre a janela completa. Isso é decidido quando a equipe abre e vale enquanto ela fica aberta, para o dono poder adicionar vários bots e ver cada um entrar; ao voltar à equipe já com time, o convite não aparece. (2) Em qualquer equipe, um botão "Agência de bots" ao lado de "Novo bot" abre a mesma tela, completa, numa janela. Ela é sempre da equipe aberta.
+- **Tela.** Uma grade de cartões, com filtro por categoria (só as que têm papel) e busca por nome, resumo e função (no idioma do app). Cada cartão tem o mascote numa cor fixa por papel, o nome ("Designer"), a categoria, uma linha dizendo o que o bot faz, e dois botões: **Adicionar na equipe** e **Saber mais**.
 - **Saber mais** troca a grade, no mesmo lugar (sem outra janela por cima), pelo papel inteiro, com "Voltar para todos os bots": o texto de `catalog.ts` (o que faz, quando chamar, com quem combina, e o que vale ligar, como uma ferramenta conectada, quando for o caso). Em "Detalhes", como o resto do que é técnico (15.6), ficam o modelo, o esforço e as instruções do bot (somente leitura, em inglês): o dono pode ler o que o bot vai receber. A tela tem também o botão de adicionar.
 - **Adicionar** cria na hora, sem diálogo, com o nome do idioma do dono (se já existe na equipe, "Designer 2") por `catalog.add`. O cartão (ou a tela do papel) diz na hora que o bot entrou na equipe, com "Personalizar", que fecha a Agência e abre o bot com o painel de detalhes, onde o dono muda nome, função, instruções, modelo e o resto como em qualquer bot. Não há aviso flutuante: assim o dono pode adicionar vários e ver cada um. O catálogo não muda, e o dono pode adicionar a mesma função de novo.
 - **Textos** nos três idiomas (15.6), sem jargão: "bot" e "equipe", nunca "template", "prompt" ou "daemon", e descrevendo o bot pelo nome, não por "Claude".
@@ -2012,7 +2031,7 @@ instructions = """
 
 ### 26.7 Fora desta etapa
 
-Mais de 12 papéis (a lista cresce depois, uma ficha por vez); o dono criar, importar ou compartilhar fichas; **restaurar o padrão** de um bot criado de um modelo (pede guardar o `id` do modelo no bot, e o histórico de instruções do item 5 da seção 18 cobre melhor); marcar no catálogo o que já está na equipe; atualizar bots já criados quando uma ficha muda (eles foram personalizados); modelos de equipe inteira; indicar ferramentas conectadas por papel de forma automática.
+Os papéis das outras áreas (marketing e vendas, engenharia, conteúdo e pesquisa: G4, uma área por vez); finanças, jurídico e saúde, que pedem aviso de que não substituem um profissional; o dono criar, importar ou compartilhar fichas; **restaurar o padrão** de um bot criado de um modelo (pede guardar o `id` do modelo no bot, e o histórico de instruções do item 5 da seção 18 cobre melhor); marcar no catálogo o que já está na equipe; atualizar bots já criados quando uma ficha muda (eles foram personalizados); modelos de equipe inteira; indicar ferramentas conectadas por papel de forma automática.
 
 ### 26.8 Marcos
 
@@ -2021,3 +2040,4 @@ Mais de 12 papéis (a lista cresce depois, uma ficha por vez); o dono criar, imp
 | **G1** Catálogo e daemon | formato da ficha, `catalog.rs`, as 12 fichas, `catalog.list`/`get`/`add`, tipos `ts-rs` | `catalog_lint`; unidade e RPC: `catalog.add` valida como `bots.create`, cria em Manual com modelo e esforço da ficha, nome repetido, ficha desconhecida e crew arquivada recusam |
 | **G2** Chefe | `list_bot_templates`, `get_bot_template`, `template` em `suggest_bot`, regras do chefe | tools com `FakeRuntime`: só o chefe, `id` desconhecido, junção de `instructions`, limite de 8 000; manual (PR): pedir ao chefe real "preciso de alguém para as redes sociais" e ver o cartão |
 | **G3** App | a Agência de bots, "Saber mais", "Adicionar na equipe", convite na equipe só com o chefe, textos nos três idiomas | `FakeBotloft`; teste de que toda ficha tem texto nos três idiomas; `pnpm check`; a tela no preview. Manual (PR): criar cada um dos 12 com o Claude Code real e dar a cada um uma tarefa típica |
+| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas, Engenharia, Conteúdo e pesquisa; categorias `product` e `marketing`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
