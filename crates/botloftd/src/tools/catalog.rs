@@ -32,12 +32,21 @@ pub fn tools() -> Value {
         .into_iter()
         .chain(super::routine_catalog::tools())
         .chain([super::bot_change::tool(), super::crew_access::tool()])
+        .chain(super::templates::tools())
         .chain(super::crew_reach::tools())
         .chain(super::browser_catalog::tools())
         .chain(super::desktop_catalog::tools());
         list.splice(at..at, more);
     }
     tools
+}
+
+/// The ids of the bot catalog, for `suggest_bot`'s `template`.
+fn template_ids() -> Vec<String> {
+    crate::catalog::list(None)
+        .into_iter()
+        .map(|template| template.id)
+        .collect()
 }
 
 /// The schedule's schema, as `schedule_routine` takes it, for the tools
@@ -203,8 +212,16 @@ fn crew_tools() -> Value {
                         "maxLength": REASON_MAX,
                         "description": "For the owner: why the crew needs this bot now.",
                     },
+                    "template": {
+                        "type": "string",
+                        "enum": template_ids(),
+                        "description": "A role of the bot catalog (list_bot_templates). Its \
+                            role, instructions, model and effort are used for what you leave \
+                            out, and your `instructions` are added after them under \"For this \
+                            crew\". Without it, `role` and `instructions` are required.",
+                    },
                 },
-                "required": ["name", "role", "instructions", "reason"],
+                "required": ["name", "reason"],
                 "additionalProperties": false,
             },
         },

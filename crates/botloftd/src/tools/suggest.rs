@@ -11,6 +11,7 @@ use serde_json::{Value, json};
 
 use super::calls::{explain, parse, tool_result};
 use crate::approvals::{self, Answer};
+use crate::catalog;
 use crate::service::bots::{self, NewBot};
 use crate::service::{lead, models};
 use crate::state::Daemon;
@@ -25,13 +26,18 @@ pub(super) const REASON_MAX: usize = 1_000;
 #[serde(deny_unknown_fields)]
 struct Suggestion {
     name: String,
+    #[serde(default)]
     role: String,
+    #[serde(default)]
     instructions: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     model: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     effort: Option<String>,
     reason: String,
+    /// A role of the bot catalog (spec 26.4); gone once it is resolved.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    template: Option<String>,
 }
 
 pub(super) async fn suggest(
@@ -49,7 +55,8 @@ async fn run(
     generation: u64,
     arguments: Value,
 ) -> Result<Value, String> {
-    let suggestion: Suggestion = parse(arguments)?;
+    let mut suggestion: Suggestion = parse(arguments)?;
+    resolve(&mut suggestion)?;
     let new = check(&suggestion)?;
     // Nothing impossible goes to the owner.
     lead::check_suggestion(daemon, bot, &new).map_err(explain)?;
@@ -99,6 +106,38 @@ async fn run(
         })),
         None => Err("Botloft could not ask the owner.".to_owned()),
     }
+}
+
+/// Fills a suggestion that names a catalog role (spec 26.4): the sheet's role,
+/// instructions, model and effort stand in for what is missing, and what the
+/// chief wrote goes after the sheet's instructions. Afterwards it is a plain
+/// suggestion, so the owner's card, and any change the owner makes to it,
+/// read the same as for a bot written from scratch.
+fn resolve(suggestion: &mut Suggestion) -> Result<(), String> {
+    let Some(id) = suggestion.template.take() else {
+        if suggestion.role.trim().is_empty() || suggestion.instructions.trim().is_empty() {
+            return Err("role and instructions are required unless you give a template".to_owned());
+        }
+        return Ok(());
+    };
+    let sheet = catalog::get(id.trim())
+        .ok_or_else(|| format!("no bot template named {id}; list them with list_bot_templates"))?;
+    if suggestion.role.trim().is_empty() {
+        suggestion.role = sheet.role;
+    }
+    let extra = suggestion.instructions.trim();
+    suggestion.instructions = if extra.is_empty() {
+        sheet.instructions
+    } else {
+        format!("{}\n\nFor this crew:\n{extra}", sheet.instructions)
+    };
+    suggestion
+        .model
+        .get_or_insert_with(|| sheet.model.as_str().to_owned());
+    suggestion
+        .effort
+        .get_or_insert_with(|| sheet.effort.as_str().to_owned());
+    Ok(())
 }
 
 /// Creates the bot, then sets the effort it was suggested with.
