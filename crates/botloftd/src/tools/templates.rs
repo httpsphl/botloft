@@ -36,6 +36,7 @@ pub(super) fn tools() -> [Value; 2] {
         "business",
         "product",
         "marketing",
+        "learning",
     ];
     [
         json!({

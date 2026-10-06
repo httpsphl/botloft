@@ -1,4 +1,5 @@
 import { base } from "./catalogBase";
+import { contentAndLearning } from "./catalogContent";
 import { engineering } from "./catalogEngineering";
 import { marketing } from "./catalogMarketing";
 import { product } from "./catalogProduct";
@@ -28,6 +29,7 @@ export const catalog = {
     business: "Business",
     product: "Product & management",
     marketing: "Marketing & sales",
+    learning: "Learning",
   },
   none: "No bot matches that.",
   loading: "Loading the bots…",
@@ -47,5 +49,5 @@ export const catalog = {
     pairs: "Works well with",
     technical: "What the bot is told when it starts",
   },
-  roles: { ...base, ...product, ...marketing, ...engineering },
+  roles: { ...base, ...product, ...marketing, ...engineering, ...contentAndLearning },
 };
