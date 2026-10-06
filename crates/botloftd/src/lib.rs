@@ -6,6 +6,7 @@ pub mod approvals;
 pub mod autostart;
 pub mod backup;
 pub mod browser;
+pub mod catalog;
 pub mod chat;
 pub mod clock;
 pub mod config;

@@ -1133,6 +1133,36 @@ export type CrewAccessListParams = { botId: BotId, };
 
 export type CrewAccessIdParams = { accessId: CrewAccessId, };
 
+/**
+ * The group a role is listed under.
+ */
+export type BotTemplateCategory = "code" | "design" | "content" | "research" | "business";
+
+/**
+ * A role as the list shows it, in English. The app writes the name, role
+ * and summary the owner reads in the owner's language (spec 26.2).
+ */
+export type BotTemplate = { 
+/**
+ * The sheet's file name: `code-reviewer`.
+ */
+id: string, category: BotTemplateCategory, name: string, role: string, summary: string, };
+
+/**
+ * A role with what a bot made from it starts with.
+ */
+export type BotTemplateFull = { id: string, category: BotTemplateCategory, name: string, role: string, summary: string, model: BotModel, effort: BotEffort, instructions: string, };
+
+export type CatalogListParams = { category?: BotTemplateCategory, };
+
+export type CatalogGetParams = { id: string, };
+
+export type CatalogAddParams = { crewId: CrewId, templateId: string, 
+/**
+ * In the owner's language, as the app writes it.
+ */
+name: string, role: string, };
+
 export type BackupCrew = { name: string, 
 /**
  * The crew's bots, archived ones aside.
@@ -1879,6 +1909,9 @@ export interface RpcMethods {
   "bot.mcp.set": { params: BotMcpSetParams; result: BotMcp };
   "crewAccess.list": { params: CrewAccessListParams; result: Array<CrewAccess> };
   "crewAccess.revoke": { params: CrewAccessIdParams; result: Array<CrewAccess> };
+  "catalog.list": { params: CatalogListParams; result: Array<BotTemplate> };
+  "catalog.get": { params: CatalogGetParams; result: BotTemplateFull };
+  "catalog.add": { params: CatalogAddParams; result: Bot };
   "backup.export": { params: BackupExportParams; result: BackupExported };
   "backup.stage": { params: BackupStageParams; result: BackupManifest };
   "backup.confirm": { params: undefined; result: null };
