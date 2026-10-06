@@ -65,7 +65,7 @@ botloft/
   crates/
     botloft-core/    tipos de domínio, IDs, erros, render de envelope, tipos do protocolo
     botloft-store/   SQLite: conexão, migrations, repositórios
-    botloftd/        binário do daemon (rpc, supervisor, runtime, chat, courier, tools, platform)
+    botloftd/        binário do daemon (rpc, supervisor, runtime, chat, courier, tools, platform) e, em catalog/, as fichas dos modelos de bot (26)
   app/
     src/             React (o app e, em src/setup/, a tela de instalação)
     src-tauri/       shell nativa
@@ -568,7 +568,9 @@ Transporte: Streamable HTTP, só POST e resposta `application/json`, sem sessão
 | `send_message` | `to` (handle, com ou sem `@`), `crew?` (outra crew, 10.4), `body`, `kind?` (`note` padrão, `task`), `deadline_minutes?` (só task) | `message_id`, `task_id` e `due` (task), e um lembrete de que a resposta chega depois |
 | `complete_task` | `task_id`, `result`, `status?` (`done` padrão, `failed`) | `task_id`, `status` e quem recebe o resultado |
 | `my_tasks` | `role?` (`assigned`, `requested`) | tasks `open` e `expired`: id, de, para, status, prazo relativo, hops e o pedido original |
-| `suggest_bot` | `name`, `role`, `instructions` (até 8 000 caracteres), `model?`, `effort?`, `reason` (até 1 000) | `created` e, criado, `handle`, `name`, `role`, `model`, `effort` e um lembrete para mandar a primeira task; recusado ou sem resposta, o porquê (10.2). Só o chefe |
+| `suggest_bot` | `name`, `role`, `instructions` (até 8 000 caracteres), `model?`, `effort?`, `reason` (até 1 000), `template?` (um id do catálogo, 26.4: com ele `role` e `instructions` ficam opcionais) | `created` e, criado, `handle`, `name`, `role`, `model`, `effort` e um lembrete para mandar a primeira task; recusado ou sem resposta, o porquê (10.2). Só o chefe |
+| `list_bot_templates` | `category?` | `templates`: `id`, `category`, `name`, `role` e `summary` de cada modelo de bot do catálogo (26). Só o chefe |
+| `get_bot_template` | `id` | a ficha de um modelo: os campos acima, `model`, `effort` e `instructions` (26.2). Só o chefe |
 | `schedule_routine` | `name`, `prompt` (até 8 000 caracteres), `schedule` (como em 20.2), `bot?` (handle de outro bot da crew) | `created` e, criada, `routine_id`, nome, pedido, horário, fuso e a próxima vez; recusada ou sem resposta, o aviso de que nada foi agendado (20.12) |
 | `ask_crew_access` | `crew` (nome da outra crew), `bot?` (handle de um bot dela), `access` (`talk`, `read`, `edit`), `why` (até 1 000) | `allowed` e, permitido, como usar; recusado ou sem resposta, o porquê (10.4) |
 | `crew_files`, `read_crew_file`, `write_crew_file` | `crew`, e `bot?`, `path` ou `path` e `content` | os arquivos de outra crew que o bot alcança, o texto de um, ou o aviso de que gravou (10.4) |
@@ -629,6 +631,7 @@ Toda crew nova nasce com um **chefe**: `crews.create` com `lead` cria a crew e e
 - **Aprovação:** a sugestão vira um pedido no chat do chefe, pelo mesmo caminho das aprovações (10.1): `approval` com `toolName: "mcp__botloft__suggest_bot"`, entrada até 64 KB e resumo com o nome sugerido. O chefe fica `needs_approval`, e a chamada MCP espera a resposta até `approval_timeout_minutes`. A tool vem liberada por `--allowedTools mcp__botloft`, então o Claude Code não pede permissão antes: quem decide é o dono, pelo cartão.
 - **Resposta:** permitir cria o bot na crew do chefe, com modo Manual e o modelo e o esforço sugeridos. O dono pode mudar nome, papel, modelo, esforço e instruções antes: `approvals.answer` leva `input`, o JSON da sugestão como ele deixou, que substitui a entrada gravada (o cartão mostra o que foi criado); `input` só vale para sugestões de bot e pedidos de rotina (20.12). Negar volta ao chefe com a nota do dono, e nada é criado. Sem resposta no prazo, o chefe lê que pode sugerir de novo depois. O bot novo sobe na hora e aparece na barra lateral, com o próprio chat; o resultado da tool lembra o chefe de mandar a primeira task.
 - **Chefe em `bypass_permissions`:** a sugestão cria o bot na hora, sem cartão, como tudo o que esse modo faz sem perguntar (13). O resultado diz ao chefe que foi criado sem pedir.
+- **Catálogo:** antes de escrever instruções do zero, o chefe olha os modelos de bot (`list_bot_templates`, `get_bot_template`) e, se um serve, sugere com `template` (26.4). O cartão e a resposta não mudam: o dono vê, e pode editar, os mesmos campos.
 - Bots criados assim são bots comuns: o dono conversa, muda, pausa e arquiva cada um como qualquer outro.
 
 ### 10.3 Bots que se mudam
@@ -682,6 +685,9 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `bots.list` | `crewId?` | `Bot[]` |
 | `archive.list` | | `{crews, bots}`: o que está arquivado, que `crews.list` e `bots.list` deixam de fora, do arquivado mais recente ao mais antigo. `bots` traz todos os bots arquivados, também os das crews arquivadas (7.6) |
 | `bots.create` | `crewId, name, role, instructions, color?, model?` | `Bot` |
+| `catalog.list` | `category?` | `BotTemplate[]`: os modelos de bot do catálogo, sem as instruções (26.4) |
+| `catalog.get` | `id` | `BotTemplateFull`: o modelo com `instructions`, `model` e `effort` (26.4) |
+| `catalog.add` | `crewId, templateId, name, role` | `Bot`: cria na equipe um bot a partir do modelo (26.4) |
 | `bots.update` | `botId, name?, role?, instructions?, color?` | `Bot` |
 | `bots.setPaused` | `botId, paused` | `Bot` |
 | `bots.setPermissionMode` | `botId, mode` (`default`, `accept_edits`, `plan`, `auto`, `bypass_permissions`) | `Bot`; o bot reinicia no novo modo quando nada estiver em andamento (7.4) |
@@ -835,6 +841,7 @@ app/src/
   features/
     onboarding/   checagens (claude instalado e versão, daemon rodando) e instalação do serviço
     crews/        lista, criar, renomear, pausar; página da crew com timeline e tasks
+    catalog/      modelos de bot: a Agência de bots, "Saber mais" e "Adicionar na equipe" (26.5)
     bots/         conversas na barra lateral, criar, editar, estado, detalhes
     chat/         conversa com o bot: itens, texto ao vivo, aprovações, compositor com anexos
     files/        painel dos arquivos que o bot fez: lista, prévia, abrir
@@ -997,7 +1004,7 @@ Identidade: o mascote do Botloft é uma chama com olhos. O ícone do app (`app/a
 
 ### 15.6 Idiomas
 
-- O app fala **inglês, português (Brasil) e espanhol**. Todo texto que o dono lê fica em `app/src/i18n/<idioma>/`, um arquivo por área (`common`, `shell`, `onboarding`, `updates`, `bots`, `chat`, `crews`, `messages`, `setup`). O inglês é a referência: o formato dele é o tipo `Messages`, e um texto que falte ou sobre em outro idioma não compila. Texto com valores é função (`ready(version)`), com o plural escrito para cada idioma.
+- O app fala **inglês, português (Brasil) e espanhol**. Todo texto que o dono lê fica em `app/src/i18n/<idioma>/`, um arquivo por área (`common`, `shell`, `onboarding`, `updates`, `bots`, `catalog`, `chat`, `crews`, `messages`, `setup`). O inglês é a referência: o formato dele é o tipo `Messages`, e um texto que falte ou sobre em outro idioma não compila. Texto com valores é função (`ready(version)`), com o plural escrito para cada idioma.
 - Componentes leem com `useT()`; código fora do React (toasts, formatação, erros da conexão) com `t()` na hora do uso.
 - Escolha na área da conta (Idioma, ou Configurações), e no botão de idioma da barra de título só nas telas de preparo: "Idioma do sistema" segue o Windows (o primeiro idioma suportado entre os preferidos; `pt-PT` vira `pt-BR`; nenhum, inglês) ou um idioma fixo. A escolha fica no `localStorage` do app (`botloft.locale`) e marca `<html lang>`.
 - Datas e horas (`lib/format.ts`) usam o idioma escolhido.
@@ -1098,6 +1105,7 @@ M2 a M4 foram entregues com ConPTY, terminal com replay, inbox por named pipe e 
 9. Navegador dos bots, com o dono assistindo ao vivo. Desenho na seção 21.
 10. Bots vendo e usando os apps abertos no desktop do dono, com permissões por app ou do desktop inteiro. Desenho na seção 24 e em `docs/adr/0002-desktop-use.md`.
 11. Ferramentas conectadas: o dono liga servidores MCP próprios (LinkedIn, sistemas internos) a bots escolhidos, sem tirar o `--strict-mcp-config`. Desenho na seção 25.
+12. Catálogo de bots: modelos prontos de função (Designer, Pesquisador...) que o dono escolhe na Agência de bots e adiciona à equipe, e que o chefe usa para sugerir bots com instruções melhores. Desenho na seção 26.
 
 ## 19. Pontos a verificar na versão alvo do Claude Code
 
@@ -1924,3 +1932,91 @@ Login por navegador de servidor remoto (o `/mcp` do Claude Code), ferramentas li
 | **E1** Cadastro e arquivo | tabelas, `mcp.save`/`mcp.servers`/`mcp.delete`/`bot.mcp.set`, segredos em `secrets\mcp`, `mcp_json` com os servidores, ambiente do bot, reinício | unidade; supervisor com `FakeRuntime` conferindo o `mcp.json` e o ambiente; bot sem ligação não vê nada |
 | **E2** Aprovação e estado | `permission_prompt` para `mcp__<slug>__*`, "Permitir sempre" por ferramenta (e a limpeza ao excluir ou renomear), estado por `mcp_status` | courier e chat com `FakeRuntime`; manual (PR): um servidor `stdio` de teste e outro `http` com o Claude Code real |
 | **E3** App | Ferramentas conectadas nas Configurações, chaves nos detalhes do bot, diálogo de conectar com a confirmação, três idiomas | `FakeBotloft`; `pnpm check`; a tela no preview |
+
+## 26. Catálogo de bots
+
+### 26.1 O que é
+
+Quem abre o Botloft pela primeira vez tem uma equipe com o chefe e mais nada, e muitas vezes não sabe que bots criar. E o chefe, ao sugerir um bot (10.2), escreve as instruções do zero, na hora, com o que sabe daquela conversa. Esta seção traz um **catálogo de modelos de bot**: funções prontas ("Designer", "Pesquisador"), cada uma com instruções bem escritas, que servem a dois leitores.
+
+- **O dono** explora uma lista, lê o que cada bot faz e adiciona o que quiser à equipe, já com instruções boas. Depois o bot é um bot comum, que ele personaliza.
+- **O chefe** consulta o mesmo catálogo por tool e sugere o bot a partir de um modelo, com instruções melhores do que as que escreveria sozinho.
+
+No app, o nome é **Agência de bots** (inglês "Bot agency", espanhol "Agencia de bots"): um lugar onde o dono escolhe especialistas para a equipe. "Catálogo" (`catalog`) é só o nome interno, de pasta, métodos e tools (15.6: sem jargão na tela). O catálogo é uma lista fixa que vem dentro do app, sem rede e sem conta. Não é uma loja nem aceita contribuição do dono nesta etapa (26.7).
+
+**Autoria.** As fichas são escritas do zero para o Botloft, a partir do que cada função faz na prática e das tools que os nossos bots têm. Nenhum texto vem de outro projeto de agentes (CLAUDE.md, "Regra de autoria"). Se uma ficha vier a ser baseada em material externo, isso é decidido à parte e a atribuição vai para o `NOTICE`.
+
+### 26.2 A ficha
+
+Uma ficha por arquivo em `crates/botloftd/catalog/<id>.toml`, embutida no binário do daemon. O `id` é o nome do arquivo (`[a-z0-9-]{1,32}`, como `code-reviewer`).
+
+```toml
+category = "code"          # code, design, content, research, business
+name = "Code Reviewer"     # em inglês; o app escreve o nome no idioma do dono (26.5)
+role = "Reviews other bots' code changes and points out bugs and risks"
+summary = "Reads changes and says what is wrong, risky or too complicated"
+model = "default"          # como em bots.setModel
+effort = "high"            # como em bots.setEffort
+instructions = """
+...
+"""
+```
+
+- **Quem lê o quê.** O daemon guarda a ficha em inglês, que é o que o chefe lê e o que o bot recebe. O texto que o **dono** lê (nome, função, resumo e a explicação "Saber mais") fica em `app/src/i18n/<idioma>/catalog.ts`, nos três idiomas, por `id` (15.6: o daemon não escreve texto para o dono). Um `id` sem texto no idioma do app cai no inglês da ficha; um teste do app falha se faltar texto num dos três idiomas para algum arquivo do catálogo.
+- **Instruções.** Em inglês, até **4 000 caracteres**, para sobrar espaço para o que o chefe acrescenta (26.4) dentro do limite de 8 000 de 7.4. Estrutura fixa: uma linha dizendo quem o bot é; "responda na língua em que o dono escreve"; o que ele faz; como trabalha, em passos curtos; o que entrega e em que forma (um arquivo pronto vai ao chat com `share_file`); o que pergunta ao dono antes de fazer (`ask_owner`); como trabalha com os outros (tasks por `send_message`, pedir ao chefe um especialista que falta). Nada de personalidade de enfeite, de exemplo de código longo nem de tool que os bots não têm: só se cita o que todo bot tem (`share_file`, `ask_owner`, `send_message`, o navegador, as telas) e, quando o dono tiver ligado uma ferramenta conectada (25) para aquilo, "use-a".
+- **Dado pessoal.** Toda ficha diz que o que o bot lê no trabalho é privado: não o copia para mensagens a outros bots além do que a tarefa pede (13).
+- **Sem "Claude".** O texto não cita o nome do modelo nem do programa, só "você" e o papel.
+- **Um teste vigia a forma** (`catalog_lint`): campos presentes e válidos, `id` igual ao nome do arquivo, instruções até 4 000 caracteres e todas as seções, categoria conhecida, e a lista do código igual aos arquivos da pasta (uma ficha esquecida na lista falha o teste).
+
+### 26.3 Os 12 primeiros papéis
+
+`model` e `effort` ficam `default`, como em todo bot novo, exceto onde a coluna diz.
+
+| `id` | Categoria | O que faz |
+|---|---|---|
+| `developer` | `code` | Escreve e muda código, roda os testes e explica o que mudou |
+| `code-reviewer` | `code` | Lê o que outro bot fez e aponta erros, riscos e o que dá para simplificar, sem editar (`effort` `high`) |
+| `qa-tester` | `code` | Testa o que foi feito, tenta quebrar e devolve os passos para repetir cada problema |
+| `designer` | `design` | Desenha telas e peças em HTML na área de design (22) e ajusta com o que o dono pedir |
+| `writer` | `content` | Escreve textos (artigos, e-mails, páginas) no tom do dono |
+| `social-media` | `content` | Propõe ideias, calendário e posts por rede; nunca publica sozinho |
+| `translator` | `content` | Traduz e adapta mantendo o tom, e avisa onde a tradução perde algo |
+| `researcher` | `research` | Pesquisa na web pelo navegador (21), confere as fontes e entrega um resumo com links e o que não achou |
+| `data-analyst` | `research` | Lê planilhas e dados, calcula, mostra a conta e explica o que achou, com gráficos numa tela HTML |
+| `sales-prospector` | `business` | Acha e qualifica contatos e rascunha as mensagens; nada é enviado sem o dono |
+| `customer-support` | `business` | Responde dúvidas com base no material que o dono deu e passa adiante o que não sabe |
+| `personal-assistant` | `business` | Organiza tarefas, resume o que o dono precisa ler e rascunha e-mails; agenda e e-mail só com ferramenta conectada (25) |
+
+### 26.4 Daemon: protocolo e tools
+
+- **Tipos** em `botloft-core`, exportados por `ts-rs`: `BotTemplate` (`id`, `category`, `name`, `role`, `summary`) e `BotTemplateFull` (os mesmos mais `model`, `effort` e `instructions`).
+- **Métodos** (11.2): `catalog.list {category?}`, `catalog.get {id}` (`-32002` se não existe) e `catalog.add {crewId, templateId, name, role}`. O app passa `name` e `role` já no idioma do dono, como faz com o chefe (10.2); o daemon põe as instruções, o modelo e o esforço da ficha. `catalog.add` valida como `bots.create` (nome livre na crew, papel numa linha, crew ativa e com menos de `max_per_crew` bots) e cria o bot em modo Manual, sem ferramentas conectadas e sem acesso a outras crews. Nada na ficha dá permissão a mais.
+- **Tools do chefe** (10): `list_bot_templates` e `get_bot_template`. Aparecem para todos os bots, mas só o chefe pode usar, como `suggest_bot`. O resultado é JSON em texto, e um `id` desconhecido volta com `isError`.
+- **`suggest_bot` com `template`.** Com `template`, `role` e `instructions` ficam opcionais: o papel vem da ficha se faltar, e as instruções são as da ficha, seguidas, se o chefe mandou `instructions`, de uma linha em branco e "For this crew:" com o que ele escreveu. `model` e `effort` vêm da ficha se faltarem. O limite de 8 000 vale para o texto final. O cartão de aprovação (10.2) mostra o que será criado, e o dono pode editar tudo antes, como hoje.
+- **Regras do chefe** (5.1): olhe o catálogo antes de escrever instruções do zero; use `template` quando a função serve; acrescente em `instructions` só o que é daquela equipe; não invente papel que o catálogo já tem.
+
+### 26.5 App
+
+- **Onde aparece.** (1) Numa equipe que só tem o chefe, a página da equipe mostra o catálogo como convite: "Quem você quer na sua equipe?". (2) Em qualquer equipe, um botão "Agência de bots" ao lado de criar bot abre a mesma tela. Ela é sempre da equipe aberta.
+- **Tela.** Uma grade de cartões, com filtro por categoria e busca por nome e resumo (no idioma do app). Cada cartão tem o nome ("Designer"), uma linha dizendo o que o bot faz, e dois botões: **Adicionar na equipe** e **Saber mais**.
+- **Saber mais** abre um painel com o texto de `catalog.ts`: o que faz, quando chamar, com quem combina e o que vale ligar (por exemplo uma ferramenta conectada). Em "Detalhes", como o resto do que é técnico (15.6), ficam as instruções do bot (somente leitura, em inglês), o modelo e o esforço: o dono pode ler o que o bot vai receber. O painel tem também o botão de adicionar.
+- **Adicionar** cria na hora, sem diálogo, com o nome do idioma do dono (se já existe na equipe, "Designer 2") por `catalog.add`. Um aviso diz que o bot entrou na equipe, com "Personalizar", que abre os detalhes do bot, onde o dono muda nome, função, instruções, modelo e o resto como em qualquer bot. O catálogo não muda, e o dono pode adicionar a mesma função de novo.
+- **Textos** nos três idiomas (15.6), sem jargão: "bot" e "equipe", nunca "template", "prompt" ou "daemon", e descrevendo o bot pelo nome, não por "Claude".
+
+### 26.6 Segurança e privacidade
+
+- Um modelo só preenche campos que o dono já edita; não liga ferramenta, não muda o modo de permissão e não dá acesso a outra crew.
+- O catálogo não tem dado do dono, não usa a rede e não entra no `backup` (14.2): vem com o app. Os bots criados entram, como qualquer bot.
+- As instruções são texto nosso e público; não passam por nenhum log a mais do que as de qualquer bot (13).
+
+### 26.7 Fora desta etapa
+
+Mais de 12 papéis (a lista cresce depois, uma ficha por vez); o dono criar, importar ou compartilhar fichas; **restaurar o padrão** de um bot criado de um modelo (pede guardar o `id` do modelo no bot, e o histórico de instruções do item 5 da seção 18 cobre melhor); marcar no catálogo o que já está na equipe; atualizar bots já criados quando uma ficha muda (eles foram personalizados); modelos de equipe inteira; indicar ferramentas conectadas por papel de forma automática.
+
+### 26.8 Marcos
+
+| Marco | O que entra | Teste |
+|---|---|---|
+| **G1** Catálogo e daemon | formato da ficha, `catalog.rs`, as 12 fichas, `catalog.list`/`get`/`add`, tipos `ts-rs` | `catalog_lint`; unidade e RPC: `catalog.add` valida como `bots.create`, cria em Manual com modelo e esforço da ficha, nome repetido e crew cheia recusam |
+| **G2** Chefe | `list_bot_templates`, `get_bot_template`, `template` em `suggest_bot`, regras do chefe | tools com `FakeRuntime`: só o chefe, `id` desconhecido, junção de `instructions`, limite de 8 000; manual (PR): pedir ao chefe real "preciso de alguém para as redes sociais" e ver o cartão |
+| **G3** App | a Agência de bots, "Saber mais", "Adicionar na equipe", convite na equipe só com o chefe, textos nos três idiomas | `FakeBotloft`; teste de que toda ficha tem texto nos três idiomas; `pnpm check`; a tela no preview. Manual (PR): criar cada um dos 12 com o Claude Code real e dar a cada um uma tarefa típica |
