@@ -19,30 +19,73 @@
     return { left, top, width: rect.width, height: rect.height };
   };
 
-  // Where to click an element, after scrolling it into the middle of the
-  // screen, and what else is on top of that point, if anything.
+  // Whether something else is on top of a point of an element: true when
+  // the point shows the element, a part of it or what it sits in.
+  const shows = (el, x, y) => {
+    const hit = el.ownerDocument.elementFromPoint(x, y);
+    return !!hit && (hit === el || el.contains(hit) || hit.contains(el));
+  };
+
+  // A point inside the element that is not covered, the middle first, then
+  // the corners and edges of its middle part, or null. Returns the fraction
+  // of the box it is at.
+  const freePoint = (el, local) => {
+    const view = el.ownerDocument.defaultView;
+    for (const fy of [0.5, 0.2, 0.8]) {
+      for (const fx of [0.5, 0.2, 0.8]) {
+        const x = local.left + local.width * fx;
+        const y = local.top + local.height * fy;
+        if (x < 0 || y < 0 || x >= view.innerWidth || y >= view.innerHeight) continue;
+        if (shows(el, x, y)) return { fx, fy };
+      }
+    }
+    return null;
+  };
+
+  // Where to click an element. It scrolls into the middle of the screen;
+  // when a fixed header, a banner or a chat widget covers it there, it tries
+  // the other alignments and the other points of the element, and when
+  // nothing is free it says so (`script`), so the click can go through the
+  // page instead of the mouse. Also what is still on top, if anything.
   const point = (ref) => {
     const el = get(ref);
     if (!el) return { missing: true, next: next() };
-    el.scrollIntoView({ block: "center", inline: "center", behavior: "instant" });
+    let pick = null;
+    for (const block of ["center", "end", "start", "nearest"]) {
+      el.scrollIntoView({ block, inline: "center", behavior: "instant" });
+      const local = el.getBoundingClientRect();
+      if (local.width === 0 || local.height === 0) break;
+      pick = freePoint(el, local);
+      if (pick) break;
+    }
+    if (!pick) el.scrollIntoView({ block: "center", inline: "center", behavior: "instant" });
     const box = topRect(el);
     const role = roleOf(el, styleOf(el), "auto") ?? el.localName;
     const label = clean(nameOf(el), 60);
     if (box.width === 0 || box.height === 0) return { hidden: true, role, label, next: next() };
-    const x = Math.min(Math.max(box.left + box.width / 2, 0), innerWidth - 1);
-    const y = Math.min(Math.max(box.top + box.height / 2, 0), innerHeight - 1);
+    const [fx, fy] = pick ? [pick.fx, pick.fy] : [0.5, 0.5];
+    const x = Math.min(Math.max(box.left + box.width * fx, 0), innerWidth - 1);
+    const y = Math.min(Math.max(box.top + box.height * fy, 0), innerHeight - 1);
     const local = el.getBoundingClientRect();
     const hit = el.ownerDocument.elementFromPoint(
-      local.left + local.width / 2,
-      local.top + local.height / 2,
+      local.left + local.width * fx,
+      local.top + local.height * fy,
     );
     let cover = null;
-    if (hit && hit !== el && !el.contains(hit) && !hit.contains(el)) {
+    if (!pick && hit && hit !== el && !el.contains(hit) && !hit.contains(el)) {
       let shown = hit;
       while (shown && !roleOf(shown, styleOf(shown), "auto")) shown = shown.parentElement;
       cover = shown ? token(shown, roleOf(shown, styleOf(shown), "auto")) : `<${hit.localName}>`;
     }
-    return { x, y, role, label, text: isTextField(el), cover, next: next() };
+    return { x, y, role, label, text: isTextField(el), cover, script: !pick && cover !== null, next: next() };
+  };
+
+  // The page's own click on an element, for when the mouse cannot reach it.
+  const clickScript = (ref) => {
+    const el = get(ref);
+    if (!el) return { missing: true };
+    el.click();
+    return { ok: true };
   };
 
   // Focuses a text field and selects what it holds, so typing replaces it.
@@ -112,5 +155,5 @@
     return el && el !== document.body && isTextField(el) ? meaning(el) : { none: true };
   };
 
-  return { point, prepareType, select, scrollEnd, at, focused };
+  return { point, clickScript, prepareType, select, scrollEnd, at, focused };
 }

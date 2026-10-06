@@ -281,5 +281,79 @@ async fn the_owner_sees_the_cursor_get_there_before_the_click() {
     assert!(!clicking.is_finished());
     let warned = clicking.await.expect("task").expect("clicked");
     assert!(warned.contains("\"Hi there\""), "{warned}");
-    assert!(pointed.elapsed() >= Duration::from_millis(500));
+    assert!(pointed.elapsed() >= Duration::from_millis(250));
+}
+
+/// The first page of a site asks the owner; this answers and returns the page.
+async fn open_page(b: &mut common::browsing::Browsing, path: &str) -> String {
+    let opening = call(
+        &b.mcp,
+        "browser_open",
+        json!({ "url": format!("{}{path}", b.site) }),
+    );
+    answer_site(&mut b.app, true, None).await;
+    opening.await.expect("task").expect("page")
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_page_that_never_goes_quiet_does_not_cost_three_seconds_a_click() {
+    let Some(mut b) = setup().await else { return };
+    let page = open_page(&mut b, "/poll").await;
+    let add = ref_of(&page, "button \"Add\"");
+    let mut after = String::new();
+    for _ in 0..3 {
+        let started = Instant::now();
+        after = b
+            .mcp
+            .tool_text("browser_click", json!({ "ref": add }))
+            .await
+            .expect("click");
+        // It used to wait the whole 3 s for a network that never stops (spec
+        // 21.3), so never less than 3.15 s; a click now settles in under a
+        // second on a quiet machine (0.78 s measured) and took 2.2 s on the
+        // slow macOS runner, so the bound sits between the two.
+        assert!(
+            started.elapsed() < Duration::from_millis(2900),
+            "{:?}",
+            started.elapsed()
+        );
+    }
+    assert!(after.contains("Count 3"), "{after}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_button_under_a_fixed_header_is_still_clicked() {
+    let Some(mut b) = setup().await else { return };
+
+    // On a tall page the header is avoided by scrolling the button to a free place.
+    let page = open_page(&mut b, "/scrolled").await;
+    let add = ref_of(&page, "button \"Add\"");
+    let after = b
+        .mcp
+        .tool_text("browser_click", json!({ "ref": add }))
+        .await
+        .expect("click");
+    assert!(after.contains("Count 1"), "{after}");
+    assert!(!after.contains("on top of the element"), "{after}");
+
+    // At the very top nothing scrolls it free: the page's own click does it,
+    // and says so, instead of clicking the header.
+    // The site is known now: no second question.
+    let page = b
+        .mcp
+        .tool_text(
+            "browser_open",
+            json!({ "url": format!("{}/cover", b.site) }),
+        )
+        .await
+        .expect("cover");
+    let add = ref_of(&page, "button \"Add\"");
+    let after = b
+        .mcp
+        .tool_text("browser_click", json!({ "ref": add }))
+        .await
+        .expect("click");
+    assert!(after.contains("Count 1"), "{after}");
+    assert!(after.contains("through the page's own script"), "{after}");
+    assert!(!after.contains("Header clicked"), "{after}");
 }

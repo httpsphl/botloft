@@ -15,7 +15,7 @@ use super::browser_help::ask_owner;
 use super::browser_reply::{answer, describe, point, report, unavailable};
 use super::browser_sites::{allowed, page_allowed};
 use super::calls::explain;
-use crate::browser::{Done, OWNER_WAIT, Scroll, sites};
+use crate::browser::{Aim, Done, OWNER_WAIT, Scroll, Session, sites};
 use crate::service::bots;
 use crate::state::Daemon;
 
@@ -172,11 +172,7 @@ async fn run(
         // The cursor goes first; these report before they act.
         Tool::Click { reference } => {
             let kind = BrowserActionKind::Click;
-            let aim = session
-                .aim(&reference)
-                .await
-                .map_err(|err| describe(&err))?;
-            point(daemon, id, kind, &aim).await;
+            let aim = aim_at(daemon, id, &session, kind, &reference, false).await?;
             (kind, session.click(aim).await)
         }
         Tool::Type {
@@ -185,20 +181,12 @@ async fn run(
             submit,
         } => {
             let kind = BrowserActionKind::Type;
-            let aim = session
-                .aim_field(&reference)
-                .await
-                .map_err(|err| describe(&err))?;
-            point(daemon, id, kind, &aim).await;
+            let aim = aim_at(daemon, id, &session, kind, &reference, true).await?;
             (kind, session.type_text(aim, &text, submit).await)
         }
         Tool::Select { reference, option } => {
             let kind = BrowserActionKind::Select;
-            let aim = session
-                .aim(&reference)
-                .await
-                .map_err(|err| describe(&err))?;
-            point(daemon, id, kind, &aim).await;
+            let aim = aim_at(daemon, id, &session, kind, &reference, false).await?;
             (kind, session.choose(aim, &option).await)
         }
         Tool::Press { key } => {
@@ -235,14 +223,55 @@ async fn run(
     }
     let mut notes = Vec::new();
     if let Some(cover) = &done.cover {
-        notes.push(format!(
-            "The click landed on {cover}, which was on top of the element."
-        ));
+        if done.scripted {
+            notes.push(format!(
+                "{cover} covers the whole element, so the click was made through the page's \
+                 own script instead of the mouse; check that it did what you wanted."
+            ));
+        } else {
+            notes.push(format!(
+                "The click landed on {cover}, which was on top of the element."
+            ));
+        }
     }
     if let Some(chosen) = &done.chosen {
         notes.push(format!("Chose \"{chosen}\"."));
     }
     answer(&session, &bot, 0, Some(notes)).await
+}
+
+/// Finds the element and shows the owner where the bot is about to act. While
+/// someone watches, the tool waits for the cursor to get there, and the page
+/// can change meanwhile (an image loads, a banner opens): the element is found
+/// again after the wait, so the action goes where the element is now.
+async fn aim_at(
+    daemon: &Daemon,
+    id: &BotId,
+    session: &Session,
+    kind: BrowserActionKind,
+    reference: &str,
+    field: bool,
+) -> Result<Aim, String> {
+    let find = || async {
+        if field {
+            session.aim_field(reference).await
+        } else {
+            session.aim(reference).await
+        }
+    };
+    let aim = find().await.map_err(|err| describe(&err))?;
+    if !point(daemon, id, kind, &aim).await {
+        return Ok(aim);
+    }
+    let fresh = find().await.map_err(|err| describe(&err))?;
+    let apart = |a: Option<(f64, f64)>, b: Option<(f64, f64)>| match (a, b) {
+        (Some((ax, ay)), Some((bx, by))) => (ax - bx).abs() > 3.0 || (ay - by).abs() > 3.0,
+        (a, b) => a != b,
+    };
+    if apart(aim.done.point, fresh.done.point) {
+        report(daemon, id, kind, &fresh.done);
+    }
+    Ok(fresh)
 }
 
 /// The note for the bot when the owner left it on another tab.

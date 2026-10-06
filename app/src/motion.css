@@ -174,8 +174,8 @@
   pointer-events: none;
   translate: -4px -3px;
   transition:
-    left 520ms var(--ease-out),
-    top 520ms var(--ease-out);
+    left 260ms var(--ease-out),
+    top 260ms var(--ease-out);
 }
 
 .bot-cursor > span {
@@ -190,7 +190,7 @@
   border: 3px solid;
   border-radius: 9999px;
   pointer-events: none;
-  animation: ripple 700ms var(--ease-out) 520ms both;
+  animation: ripple 700ms var(--ease-out) 260ms both;
 }
 
 .bot-typing {

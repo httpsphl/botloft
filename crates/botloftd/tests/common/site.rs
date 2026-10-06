@@ -62,6 +62,38 @@ const SIGNALS: &str = "<!doctype html><title>Signals</title><p id=\"signals\"></
     '; Brands: ' + navigator.userAgentData.brands.map(b => b.brand).join(', ') + \
     '; Agent: ' + navigator.userAgent + '; Outer: ' + outerWidth + ' x ' + outerHeight;</script>";
 
+/// Says where the last mouse press landed, with a button at (300, 200), 100 by 40:
+/// a click at its middle, (350, 220), must land there at any screen sharpness.
+const WHERE: &str = "<!doctype html><title>Where</title><style>body{margin:0}</style>\
+    <p id=\"pos\">Click none</p>\
+    <button style=\"position:absolute;left:300px;top:200px;width:100px;height:40px\">Add</button>\
+    <script>document.addEventListener('mousedown', e => { \
+    pos.textContent = 'Click ' + e.clientX + ',' + e.clientY; });</script>";
+
+/// A page that never goes quiet, as one with an analytics script or a live
+/// feed: a request every 100 ms, and a button that counts.
+const POLL: &str = "<!doctype html><title>Poll</title><p id=\"n\">Count 0</p>\
+    <button onclick=\"n.textContent='Count '+(++window.c)\">Add</button>\
+    <script>window.c=0;setInterval(()=>fetch('/ping'),100)</script>";
+
+/// A fixed header over the button, which sits at the very top where the
+/// page cannot scroll it out from under the header.
+const COVER: &str = "<!doctype html><title>Cover</title><style>body{margin:0}\
+    header{position:fixed;top:0;left:0;right:0;height:90px;background:#ccc;z-index:9}</style>\
+    <header onclick=\"h.textContent='Header clicked'\"><span id=\"h\">Header</span></header>\
+    <p id=\"n\" style=\"margin-top:100px\">Count 0</p>\
+    <button style=\"position:absolute;top:20px;left:300px\" \
+    onclick=\"n.textContent='Count '+(++window.c)\">Add</button><script>window.c=0</script>";
+
+/// A tall page with a fixed header and a button far down: scrolling it to the
+/// middle of the screen leaves it free.
+const SCROLLED: &str = "<!doctype html><title>Scrolled</title><style>body{margin:0}\
+    header{position:fixed;top:0;left:0;right:0;height:90px;background:#ccc;z-index:9}</style>\
+    <header>Header</header><p id=\"n\" style=\"margin-top:100px\">Count 0</p>\
+    <div style=\"height:1500px\"></div>\
+    <button onclick=\"n.textContent='Count '+(++window.c)\">Add</button>\
+    <div style=\"height:1500px\"></div><script>window.c=0</script>";
+
 async fn account(Form(form): Form<HashMap<String, String>>) -> Html<String> {
     let user = form.get("user").cloned().unwrap_or_default();
     let length = form
@@ -107,6 +139,11 @@ pub async fn serve() -> SocketAddr {
         .route("/sight", get(|| async { Html(SIGHT) }))
         .route("/letters", get(|| async { Html(LETTERS) }))
         .route("/signals", get(|| async { Html(SIGNALS) }))
+        .route("/where", get(|| async { Html(WHERE) }))
+        .route("/poll", get(|| async { Html(POLL) }))
+        .route("/cover", get(|| async { Html(COVER) }))
+        .route("/scrolled", get(|| async { Html(SCROLLED) }))
+        .route("/ping", get(|| async { "ok" }))
         .route("/account", post(account));
     let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
     let addr = listener.local_addr().expect("addr");

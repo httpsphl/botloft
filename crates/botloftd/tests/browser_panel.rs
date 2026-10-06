@@ -9,7 +9,7 @@ use std::time::Duration;
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use common::Client;
-use common::browsing::{Browsing, answer_site, call, setup};
+use common::browsing::{Browsing, answer_site, call, ref_of, setup};
 use serde_json::{Value, json};
 
 /// The width and height of a JPEG, base64, from its frame header.
@@ -134,33 +134,78 @@ async fn the_page_takes_the_shape_of_the_panel_while_the_owner_watches() {
     until_window(&mut b, "1280 x 800").await;
 }
 
+/// The owner's screen is scaled above 100% (Windows at 125%, 150%, 200%): the
+/// app says so in `browser.resize`. The page must stay in its own pixels and
+/// every click, the bot's and the owner's, must land where it aimed. With a
+/// sharper page the browser divided the clicks by the factor (spec 19).
 #[tokio::test(flavor = "multi_thread")]
-async fn the_owner_sees_the_page_as_sharp_as_their_screen_and_the_bot_at_its_size() {
+async fn a_scaled_screen_keeps_the_page_in_its_pixels_and_the_clicks_where_aimed() {
     let Some(mut b) = setup().await else { return };
     let id = b.bot["id"].clone();
     b.app
         .call("browser.watch", json!({ "botId": id }))
         .await
         .expect("watch");
-    // A screen twice as sharp as the app's pixels.
-    let room = json!({ "botId": id, "width": 1000, "height": 700, "scale": 200 });
-    b.app.call("browser.resize", room).await.expect("resize");
-    let opening = call(
-        &b.mcp,
-        "browser_open",
-        json!({ "url": format!("{}/size", b.site) }),
-    );
-    answer_site(&mut b.app, true, None).await;
-    let page = opening.await.expect("task").expect("page");
-    // The page keeps its size; only its pixels double.
-    assert!(page.contains("Window: 1000 x 700, pixels 2"), "{page}");
-    let frame = frame_of(&mut b.app, 700).await;
-    assert_eq!(frame["width"], 1000);
-    let data = frame["data"].as_str().expect("picture");
-    assert_eq!(jpeg_size(data), (2000, 1400));
 
-    // The bot's own picture stays the size of the page, scrolled where the
-    // page is.
+    for scale in [100u32, 125, 150, 200] {
+        let room = json!({ "botId": id, "width": 1000, "height": 700, "scale": scale });
+        b.app.call("browser.resize", room).await.expect("resize");
+        let opening = call(
+            &b.mcp,
+            "browser_open",
+            json!({ "url": format!("{}/size", b.site) }),
+        );
+        if scale == 100 {
+            answer_site(&mut b.app, true, None).await;
+        }
+        let page = opening.await.expect("task").expect("page");
+        // The page keeps its size and its pixels, whatever the screen asks.
+        assert!(
+            page.contains("Window: 1000 x 700, pixels 1"),
+            "{scale}%: {page}"
+        );
+        let frame = frame_of(&mut b.app, 700).await;
+        assert_eq!(
+            jpeg_size(frame["data"].as_str().expect("picture")),
+            (1000, 700)
+        );
+
+        // The bot's click lands on the middle of the button, (350, 220).
+        let page = b
+            .mcp
+            .tool_text(
+                "browser_open",
+                json!({ "url": format!("{}/where", b.site) }),
+            )
+            .await
+            .expect("where");
+        let add = ref_of(&page, "button \"Add\"");
+        let clicked = b
+            .mcp
+            .tool_text("browser_click", json!({ "ref": add }))
+            .await
+            .expect("click");
+        assert!(clicked.contains("Click 350,220"), "{scale}%: {clicked}");
+
+        // So does the owner's, at the point they aimed.
+        b.app
+            .call("browser.take", json!({ "botId": id }))
+            .await
+            .expect("take");
+        common::browsing::click(&mut b.app, &b.bot, 360.0, 230.0).await;
+        b.app
+            .call("browser.release", json!({ "botId": id }))
+            .await
+            .expect("release");
+        let seen = b
+            .mcp
+            .tool_text("browser_look", json!({}))
+            .await
+            .expect("look");
+        assert!(seen.contains("Click 360,230"), "{scale}%: {seen}");
+    }
+
+    // The bot's own picture is the size of the page, scrolled where the page is.
     b.mcp
         .tool_text(
             "browser_open",
