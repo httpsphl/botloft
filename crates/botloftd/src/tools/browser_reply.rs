@@ -57,17 +57,26 @@ pub(super) async fn answer(
 }
 
 /// How long the owner's cursor takes to glide to a point (`.bot-cursor` in
-/// the app's `motion.css`, 520 ms), with a little to spare.
-const GLIDE: Duration = Duration::from_millis(560);
+/// the app's `motion.css`, 260 ms), with a little to spare. It was 520 ms,
+/// which made every click, typing and choice take half a second more while
+/// the owner watched (spec 21.7).
+const GLIDE: Duration = Duration::from_millis(300);
 
 /// Shows the owner where the bot is about to act and, while someone
 /// watches, waits for the cursor to get there, so the page changes after
-/// the cursor arrives and not before (spec 21.7).
-pub(super) async fn point(daemon: &Daemon, bot: &BotId, kind: BrowserActionKind, aim: &Aim) {
+/// the cursor arrives and not before (spec 21.7). Says whether it waited.
+pub(super) async fn point(
+    daemon: &Daemon,
+    bot: &BotId,
+    kind: BrowserActionKind,
+    aim: &Aim,
+) -> bool {
     report(daemon, bot, kind, &aim.done);
     if daemon.browsers.watched(bot) {
         tokio::time::sleep(GLIDE).await;
+        return true;
     }
+    false
 }
 
 pub(super) fn report(daemon: &Daemon, bot: &BotId, kind: BrowserActionKind, done: &Done) {

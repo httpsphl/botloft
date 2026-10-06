@@ -19,6 +19,9 @@ pub struct Done {
     pub label: Option<String>,
     /// Another element was on top of the one clicked.
     pub cover: Option<String>,
+    /// Nothing of the element was free of what covered it, so the click went
+    /// through the page's own script and not the mouse.
+    pub scripted: bool,
     /// What `browser_select` chose.
     pub chosen: Option<String>,
 }
@@ -28,6 +31,8 @@ pub struct Done {
 pub struct Aim {
     reference: String,
     point: Value,
+    /// Covered whatever the point: only the page's own script can click it.
+    script: bool,
     pub done: Done,
 }
 
@@ -81,10 +86,12 @@ impl Session {
             point: point["x"].as_f64().zip(point["y"].as_f64()),
             label,
             cover: point["cover"].as_str().map(str::to_owned),
+            scripted: false,
             chosen: None,
         };
         Ok(Aim {
             reference: reference.to_owned(),
+            script: point["script"] == true,
             point,
             done,
         })
@@ -114,8 +121,27 @@ impl Session {
         Ok(())
     }
 
-    pub async fn click(&self, Aim { done, .. }: Aim) -> Result<Done, BrowserError> {
+    pub async fn click(
+        &self,
+        Aim {
+            reference,
+            script,
+            mut done,
+            ..
+        }: Aim,
+    ) -> Result<Done, BrowserError> {
         let marks = self.marks();
+        if script {
+            let result = self
+                .reader(&format!("clickScript({})", json!(reference)))
+                .await?;
+            if result["missing"] == true {
+                return Err(BrowserError::Stale(reference));
+            }
+            done.scripted = true;
+            self.settle(marks).await;
+            return Ok(done);
+        }
         self.mouse_click(done.point.unwrap_or_default()).await?;
         self.settle(marks).await;
         Ok(done)
@@ -129,10 +155,16 @@ impl Session {
         submit: bool,
     ) -> Result<Done, BrowserError> {
         let Aim {
-            reference, done, ..
+            reference,
+            script,
+            done,
+            ..
         } = aim;
         let marks = self.marks();
-        self.mouse_click(done.point.unwrap_or_default()).await?;
+        // A field nothing frees is still focused by `prepareType` below.
+        if !script {
+            self.mouse_click(done.point.unwrap_or_default()).await?;
+        }
         let ready = self
             .reader(&format!("prepareType({})", json!(reference)))
             .await?;

@@ -1745,8 +1745,9 @@ export type BrowserWatchParams = { botId: BotId, };
 export type BrowserResizeParams = { botId: BotId, width: number, height: number, 
 /**
  * The screen's pixels per pixel of the app, in percent (its
- * `devicePixelRatio` times 100): the page is drawn that sharp for the
- * owner, up to twice (spec 21.3). Absent, 100.
+ * `devicePixelRatio` times 100). The daemon ignores it: the page is
+ * always drawn in its own pixels, because a sharper page made clicks
+ * land at the wrong point (spec 21.3, 19). Absent, 100.
  */
 scale?: number, };
 

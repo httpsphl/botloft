@@ -20,9 +20,13 @@ pub const MAX_WIDTH: u32 = 1600;
 /// How short and how tall the owner's panel may make the page.
 pub const MIN_HEIGHT: u32 = 600;
 pub const MAX_HEIGHT: u32 = 2000;
-/// The sharpest the page is drawn for the owner, in percent: two pixels of
-/// their screen to one of the page.
-pub const MAX_SCALE: u32 = 200;
+/// The sharpest the page is drawn for the owner, in percent: always one pixel
+/// of the page to one of the screenshot. A sharper page (`deviceScaleFactor`
+/// above 1, with a picture taken for each frame) made the browser read where
+/// the bot's and the owner's clicks land wrongly, dividing them by the
+/// factor, on any screen scaled above 100% (measured with the Edge 154,
+/// spec 19). The panel scales the frame up instead.
+pub const MAX_SCALE: u32 = 100;
 
 /// The size of the page, the same in every tab.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -59,7 +63,8 @@ impl Viewport {
         }
     }
 
-    /// The same page, drawn `scale` percent as sharp, within limits.
+    /// The same page, drawn `scale` percent as sharp, within limits: today
+    /// the limit is the page's own pixels (`MAX_SCALE`).
     pub fn at_scale(self, scale: u32) -> Self {
         Self {
             scale: scale.clamp(100, MAX_SCALE),
@@ -132,31 +137,17 @@ impl Session {
     /// The screen as a JPEG, base64, for the bot: the size of the page,
     /// however sharp the owner's screen has it drawn.
     pub async fn screenshot(&self) -> Result<String, BrowserError> {
-        self.capture(false).await
+        self.capture().await
     }
 
-    /// The screen as a JPEG, base64, as sharp as the owner's panel draws it.
+    /// The screen as a JPEG, base64, for whoever looks while the browser rests.
     pub async fn picture(&self) -> Result<String, BrowserError> {
-        self.capture(true).await
+        self.capture().await
     }
 
-    async fn capture(&self, sharp: bool) -> Result<String, BrowserError> {
+    async fn capture(&self) -> Result<String, BrowserError> {
         let (session, _) = self.page()?;
-        let page = self.viewport();
-        let mut params = json!({ "format": "jpeg", "quality": 70 });
-        if !sharp && page.scale > 100 {
-            // The page where it is scrolled to, scaled back down (spec 19).
-            let metrics = self
-                .cdp
-                .call(Some(&session), "Page.getLayoutMetrics", json!({}))
-                .await?;
-            let view = &metrics["cssVisualViewport"];
-            params["clip"] = json!({
-                "x": view["pageX"], "y": view["pageY"],
-                "width": page.width, "height": page.height,
-                "scale": 1.0 / page.factor(),
-            });
-        }
+        let params = json!({ "format": "jpeg", "quality": 70 });
         let shot = self
             .cdp
             .call(Some(&session), "Page.captureScreenshot", params)
@@ -203,15 +194,16 @@ mod tests {
     }
 
     #[test]
-    fn the_page_is_drawn_as_sharp_as_the_screen_up_to_twice() {
+    fn the_page_is_always_drawn_in_its_own_pixels() {
         let page = Viewport::fitting(1000, 700);
         assert_eq!(page.scale, 100);
-        assert_eq!(page.at_scale(150).scale, 150);
-        assert_eq!(page.at_scale(300).scale, MAX_SCALE);
-        // A screen less sharp than the page still gets one pixel each.
-        assert_eq!(page.at_scale(80).scale, 100);
-        assert_eq!(page.at_scale(150).metrics()["deviceScaleFactor"], 1.5);
-        assert_eq!(page.at_scale(150).width, 1000);
+        // A sharper screen asks for more, and the page stays at one pixel
+        // each: a scale above 1 made clicks land at the wrong point.
+        for asked in [80, 125, 150, 200, 300] {
+            assert_eq!(page.at_scale(asked).scale, 100);
+            assert_eq!(page.at_scale(asked).metrics()["deviceScaleFactor"], 1.0);
+            assert_eq!(page.at_scale(asked).width, 1000);
+        }
     }
 
     #[test]
