@@ -54,6 +54,14 @@ const ROLES: [id: string, category: BotTemplateCategory, name: string, effort?: 
   ["proposal-writer", "marketing", "Proposal Writer"],
   ["sales-coach", "marketing", "Sales Coach"],
   ["pricing-analyst", "marketing", "Pricing Analyst"],
+  ["software-architect", "code", "Software Architect"],
+  ["frontend-developer", "code", "Frontend Developer"],
+  ["backend-developer", "code", "Backend Developer"],
+  ["mobile-developer", "code", "Mobile Developer"],
+  ["database-engineer", "code", "Database Engineer"],
+  ["devops-engineer", "code", "DevOps Engineer"],
+  ["security-reviewer", "code", "Security Reviewer", "high"],
+  ["data-engineer", "code", "Data Engineer"],
 ];
 
 /** Every role, as `catalog.get` returns it. */

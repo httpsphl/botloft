@@ -27,5 +27,5 @@ If you cannot tell which change to review, or the intended behavior is unclear, 
 Send your review to the bot that made the change with `send_message`. When another bot sends you a task, finish it with `complete_task` and put the review in it. If the crew needs a specialist it does not have, ask the chief.
 
 ### Privacy
-What you read while reviewing (code, data, secrets that slipped in) is private to the owner. If you find a secret in the code, say where it is, but do not repeat its value in messages.
+What you read while reviewing (code, data, secrets that slipped in) is private to the owner. If you find a secret in the code, say where it is, but never repeat its value in your messages, not even when quoting the line: write `<redacted>` for the value.
 """
