@@ -1,11 +1,13 @@
 // The Bot agency's roles (spec 26.5): filters, search and the cards, or one
 // role in full after "Learn more". Used in the window the crew's button
-// opens and, for a crew with only its chief, in the page itself.
+// opens and, for a crew with only its chief, in the page itself, where
+// `featured` shows just a few and a button to see them all.
 
 import { useState } from "react";
 import { useT } from "../../i18n";
 import { AVATAR_PALETTE, type BotTemplate, type Crew } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
+import { Button } from "../../ui/Button";
 import { AgencyCard } from "./AgencyCard";
 import { RoleDetail } from "./RoleDetail";
 import { roleText } from "./roleText";
@@ -14,12 +16,32 @@ import { useCatalog } from "./useCatalog";
 
 type Category = BotTemplate["category"] | "all";
 
-const CATEGORIES: Category[] = ["all", "code", "design", "content", "research", "business"];
+const CATEGORIES: Category[] = [
+  "all",
+  "product",
+  "marketing",
+  "code",
+  "design",
+  "content",
+  "research",
+  "business",
+];
 
 /** A fixed color per role, so the mascots tell the cards apart. */
 const colorOf = (index: number) => AVATAR_PALETTE[index % AVATAR_PALETTE.length] ?? "#FF7A59";
 
-export function AgencyGrid({ crew, onLeave }: { crew: Crew; onLeave?: () => void }) {
+export function AgencyGrid({
+  crew,
+  onLeave,
+  featured,
+  onSeeAll,
+}: {
+  crew: Crew;
+  onLeave?: () => void;
+  /** Role ids to show alone, in this order, without filters or search. */
+  featured?: readonly string[];
+  onSeeAll?: () => void;
+}) {
   const t = useT();
   const { roles, failed } = useCatalog();
   const { add, added, busy } = useAddRole(crew);
@@ -59,46 +81,56 @@ export function AgencyGrid({ crew, onLeave }: { crew: Crew; onLeave?: () => void
   }
 
   const needle = query.trim().toLowerCase();
-  const shown = roles.filter((role) => {
-    if (category !== "all" && role.category !== category) {
-      return false;
-    }
-    const text = roleText(t, role);
-    return !needle || `${text.name} ${text.summary} ${text.role}`.toLowerCase().includes(needle);
-  });
+  const shown = featured
+    ? featured.flatMap((id) => roles.filter((role) => role.id === id))
+    : roles.filter((role) => {
+        if (category !== "all" && role.category !== category) {
+          return false;
+        }
+        const text = roleText(t, role);
+        return (
+          !needle || `${text.name} ${text.summary} ${text.role}`.toLowerCase().includes(needle)
+        );
+      });
+  // Only the kinds that have a role to show.
+  const kinds = CATEGORIES.filter(
+    (id) => id === "all" || roles.some((role) => role.category === id),
+  );
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          aria-label={t.catalog.search}
-          placeholder={t.catalog.search}
-          className="h-8 w-48 rounded-lg border border-line-strong bg-canvas px-2.5 text-ink text-sm outline-none placeholder:text-muted focus:border-accent"
-        />
-        <fieldset
-          aria-label={t.catalog.filter}
-          className="m-0 flex min-w-0 flex-wrap gap-1.5 border-0 p-0"
-        >
-          {CATEGORIES.map((id) => (
-            <button
-              key={id}
-              type="button"
-              aria-pressed={category === id}
-              onClick={() => setCategory(id)}
-              className={`h-7 rounded-full border px-2.5 font-medium text-xs transition-colors ${
-                category === id
-                  ? "border-ink bg-ink text-canvas"
-                  : "border-line-strong text-ink-soft hover:bg-sunken hover:text-ink"
-              }`}
-            >
-              {t.catalog.categories[id]}
-            </button>
-          ))}
-        </fieldset>
-      </div>
+      {!featured && (
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            aria-label={t.catalog.search}
+            placeholder={t.catalog.search}
+            className="h-8 w-48 rounded-lg border border-line-strong bg-canvas px-2.5 text-ink text-sm outline-none placeholder:text-muted focus:border-accent"
+          />
+          <fieldset
+            aria-label={t.catalog.filter}
+            className="m-0 flex min-w-0 flex-wrap gap-1.5 border-0 p-0"
+          >
+            {kinds.map((id) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={category === id}
+                onClick={() => setCategory(id)}
+                className={`h-7 rounded-full border px-2.5 font-medium text-xs transition-colors ${
+                  category === id
+                    ? "border-ink bg-ink text-canvas"
+                    : "border-line-strong text-ink-soft hover:bg-sunken hover:text-ink"
+                }`}
+              >
+                {t.catalog.categories[id]}
+              </button>
+            ))}
+          </fieldset>
+        </div>
+      )}
       {shown.length === 0 ? (
         <p className="py-6 text-center text-muted text-sm">{t.catalog.none}</p>
       ) : (
@@ -120,6 +152,11 @@ export function AgencyGrid({ crew, onLeave }: { crew: Crew; onLeave?: () => void
             );
           })}
         </ul>
+      )}
+      {featured && onSeeAll && (
+        <div>
+          <Button onClick={onSeeAll}>{t.catalog.seeAll}</Button>
+        </div>
       )}
     </div>
   );

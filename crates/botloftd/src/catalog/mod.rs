@@ -12,39 +12,42 @@ use botloft_core::protocol::{
 use serde::Deserialize;
 use tracing::error;
 
+/// One sheet of the catalog: its id and its file's text.
+macro_rules! sheet {
+    ($id:literal) => {
+        ($id, include_str!(concat!("../../catalog/", $id, ".toml")))
+    };
+}
+
 /// Every sheet, in the order the catalog lists them. A test makes sure this
 /// is the folder's content.
 const SHEETS: &[(&str, &str)] = &[
-    ("developer", include_str!("../../catalog/developer.toml")),
-    (
-        "code-reviewer",
-        include_str!("../../catalog/code-reviewer.toml"),
-    ),
-    ("qa-tester", include_str!("../../catalog/qa-tester.toml")),
-    ("designer", include_str!("../../catalog/designer.toml")),
-    ("writer", include_str!("../../catalog/writer.toml")),
-    (
-        "social-media",
-        include_str!("../../catalog/social-media.toml"),
-    ),
-    ("translator", include_str!("../../catalog/translator.toml")),
-    ("researcher", include_str!("../../catalog/researcher.toml")),
-    (
-        "data-analyst",
-        include_str!("../../catalog/data-analyst.toml"),
-    ),
-    (
-        "sales-prospector",
-        include_str!("../../catalog/sales-prospector.toml"),
-    ),
-    (
-        "customer-support",
-        include_str!("../../catalog/customer-support.toml"),
-    ),
-    (
-        "personal-assistant",
-        include_str!("../../catalog/personal-assistant.toml"),
-    ),
+    sheet!("developer"),
+    sheet!("code-reviewer"),
+    sheet!("qa-tester"),
+    sheet!("designer"),
+    sheet!("writer"),
+    sheet!("social-media"),
+    sheet!("translator"),
+    sheet!("researcher"),
+    sheet!("data-analyst"),
+    sheet!("sales-prospector"),
+    sheet!("customer-support"),
+    sheet!("personal-assistant"),
+    sheet!("product-manager"),
+    sheet!("project-manager"),
+    sheet!("business-analyst"),
+    sheet!("ux-researcher"),
+    sheet!("agile-facilitator"),
+    sheet!("goals-coach"),
+    sheet!("meeting-secretary"),
+    sheet!("process-analyst"),
+    sheet!("operations-manager"),
+    sheet!("recruiter"),
+    sheet!("onboarding-coach"),
+    sheet!("customer-success"),
+    sheet!("event-planner"),
+    sheet!("travel-planner"),
 ];
 
 /// What a sheet file holds.

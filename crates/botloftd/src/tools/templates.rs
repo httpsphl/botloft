@@ -28,7 +28,15 @@ pub(super) struct GetArgs {
 }
 
 pub(super) fn tools() -> [Value; 2] {
-    let categories = ["code", "design", "content", "research", "business"];
+    let categories = [
+        "code",
+        "design",
+        "content",
+        "research",
+        "business",
+        "product",
+        "marketing",
+    ];
     [
         json!({
             "name": LIST_BOT_TEMPLATES,

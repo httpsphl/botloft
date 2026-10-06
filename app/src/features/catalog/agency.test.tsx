@@ -25,6 +25,17 @@ const addCalls = (fake: FakeBotloft) =>
   fake.calls.filter((call) => call.method === "catalog.add").map((call) => call.params);
 
 describe("the Bot agency", () => {
+  test("the invitation shows a few bots, and a button for all of them", async () => {
+    await openCrewWithChief();
+    const invite = await screen.findByRole("region", { name: "Bot agency" });
+    expect(await within(invite).findAllByRole("listitem")).toHaveLength(8);
+    expect(within(invite).queryByRole("searchbox")).toBeNull();
+
+    fireEvent.click(within(invite).getByRole("button", { name: "See all bots" }));
+    const dialog = await screen.findByRole("dialog", { name: "Bot agency" });
+    expect(await within(dialog).findAllByRole("listitem")).toHaveLength(26);
+  });
+
   test("a crew with only its chief invites the owner to pick bots, and a click adds one", async () => {
     const fake = await openCrewWithChief();
     const invite = await screen.findByRole("region", { name: "Bot agency" });
@@ -71,7 +82,12 @@ describe("the Bot agency", () => {
     await openCrewWithChief();
     fireEvent.click(screen.getByRole("button", { name: "Bot agency" }));
     const dialog = await screen.findByRole("dialog", { name: "Bot agency" });
-    expect(await within(dialog).findAllByRole("listitem")).toHaveLength(12);
+    expect(await within(dialog).findAllByRole("listitem")).toHaveLength(26);
+
+    // Only the kinds that have a role are offered.
+    expect(within(dialog).queryByRole("button", { name: "Marketing & sales" })).toBeNull();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Product & management" }));
+    expect(within(dialog).getAllByRole("listitem")).toHaveLength(14);
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Research" }));
     expect(within(dialog).getAllByRole("listitem")).toHaveLength(2);
@@ -113,7 +129,7 @@ describe("the Bot agency", () => {
     expect(addCalls(fake)[0]).toMatchObject({ templateId: "code-reviewer" });
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Back to all bots" }));
-    expect(within(dialog).getAllByRole("listitem")).toHaveLength(12);
+    expect(within(dialog).getAllByRole("listitem")).toHaveLength(26);
   });
 
   test("the same role twice gets another name", async () => {
