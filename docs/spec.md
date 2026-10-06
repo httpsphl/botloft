@@ -2007,6 +2007,29 @@ instructions = """
 | `event-planner` | Planeja orçamento, cronograma, opções de fornecedores e a lista do evento; não reserva nem convida |
 | `travel-planner` | Pesquisa rotas e hospedagens, monta o plano dia a dia e o orçamento; nunca reserva nem digita documentos ou cartões |
 
+**Marketing e vendas** (`marketing`, 18): nenhum publica, envia, paga, cria anúncio ou mexe na loja por conta própria; o dono faz, com o texto e o plano do bot. Os que lidam com o público dizem na ficha o que não fazer: nada de avaliação ou depoimento falso, urgência inventada, truque de interface, comparação não confirmada ou segmentação por característica sensível.
+
+| `id` | O que faz |
+|---|---|
+| `seo-specialist` | Acha o que as pessoas buscam, confere as páginas e sugere mudanças e conteúdo; só métodos honestos |
+| `email-marketer` | Planeja e escreve campanhas e sequências com consentimento e saída fácil; nunca envia |
+| `content-strategist` | Escolhe temas e monta um calendário que o dono consegue manter, com um resumo por peça |
+| `copywriter` | Escreve títulos, anúncios e páginas com várias opções e só afirmações que o dono pode provar |
+| `ads-manager` | Planeja anúncios pagos, escreve e lê resultados; nunca cria, paga nem pede acesso à conta de anúncios |
+| `video-scriptwriter` | Escreve roteiros em duas colunas e a lista de cenas; não faz o vídeo |
+| `newsletter-editor` | Planeja e escreve uma newsletter edição por edição; nunca envia |
+| `community-manager` | Rascunha respostas e boas-vindas e avisa o que pede o dono; nunca publica, apaga nem bane |
+| `ecommerce-manager` | Revisa páginas de produto e catálogo, planeja promoções que a margem aguenta; nunca toca a loja |
+| `brand-strategist` | Escreve o guia da marca: promessa, valores, voz com exemplos e o que a diferencia |
+| `competitor-analyst` | Compara concorrentes só com informação pública, com fonte e data para cada fato |
+| `growth-marketer` | Propõe um experimento de cada vez, com o que medir, e diz quando o resultado é só ruído |
+| `conversion-optimizer` | Acha por que os visitantes saem e propõe mudanças para testar, sem truques |
+| `pr-writer` | Escreve comunicados e pautas só com fatos do dono ou de fonte citada; não envia à imprensa |
+| `reputation-manager` | Organiza avaliações, rascunha respostas honestas e mostra os padrões; nunca escreve avaliação falsa |
+| `proposal-writer` | Escreve propostas e orçamentos com escopo claro; pede os números em vez de inventar |
+| `sales-coach` | Prepara conversas de venda, faz o papel do cliente para treinar e escreve o retorno; sem pressão |
+| `pricing-analyst` | Calcula custo e margem, compara o mercado e propõe uma faixa e um teste; o dono define o preço |
+
 ### 26.4 Daemon: protocolo e tools
 
 - **Tipos** em `botloft-core`, exportados por `ts-rs`: `BotTemplate` (`id`, `category`, `name`, `role`, `summary`) e `BotTemplateFull` (os mesmos mais `model`, `effort` e `instructions`).
@@ -2031,7 +2054,7 @@ instructions = """
 
 ### 26.7 Fora desta etapa
 
-Os papéis das outras áreas (marketing e vendas, engenharia, conteúdo e pesquisa: G4, uma área por vez); finanças, jurídico e saúde, que pedem aviso de que não substituem um profissional; o dono criar, importar ou compartilhar fichas; **restaurar o padrão** de um bot criado de um modelo (pede guardar o `id` do modelo no bot, e o histórico de instruções do item 5 da seção 18 cobre melhor); marcar no catálogo o que já está na equipe; atualizar bots já criados quando uma ficha muda (eles foram personalizados); modelos de equipe inteira; indicar ferramentas conectadas por papel de forma automática.
+Os papéis das outras áreas (engenharia, conteúdo e pesquisa: G4, uma área por vez); finanças, jurídico e saúde, que pedem aviso de que não substituem um profissional; o dono criar, importar ou compartilhar fichas; **restaurar o padrão** de um bot criado de um modelo (pede guardar o `id` do modelo no bot, e o histórico de instruções do item 5 da seção 18 cobre melhor); marcar no catálogo o que já está na equipe; atualizar bots já criados quando uma ficha muda (eles foram personalizados); modelos de equipe inteira; indicar ferramentas conectadas por papel de forma automática.
 
 ### 26.8 Marcos
 
@@ -2040,4 +2063,4 @@ Os papéis das outras áreas (marketing e vendas, engenharia, conteúdo e pesqui
 | **G1** Catálogo e daemon | formato da ficha, `catalog.rs`, as 12 fichas, `catalog.list`/`get`/`add`, tipos `ts-rs` | `catalog_lint`; unidade e RPC: `catalog.add` valida como `bots.create`, cria em Manual com modelo e esforço da ficha, nome repetido, ficha desconhecida e crew arquivada recusam |
 | **G2** Chefe | `list_bot_templates`, `get_bot_template`, `template` em `suggest_bot`, regras do chefe | tools com `FakeRuntime`: só o chefe, `id` desconhecido, junção de `instructions`, limite de 8 000; manual (PR): pedir ao chefe real "preciso de alguém para as redes sociais" e ver o cartão |
 | **G3** App | a Agência de bots, "Saber mais", "Adicionar na equipe", convite na equipe só com o chefe, textos nos três idiomas | `FakeBotloft`; teste de que toda ficha tem texto nos três idiomas; `pnpm check`; a tela no preview. Manual (PR): criar cada um dos 12 com o Claude Code real e dar a cada um uma tarefa típica |
-| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas, Engenharia, Conteúdo e pesquisa; categorias `product` e `marketing`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
+| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia, Conteúdo e pesquisa; categorias `product` e `marketing`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |

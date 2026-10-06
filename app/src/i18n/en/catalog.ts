@@ -1,4 +1,5 @@
 import { base } from "./catalogBase";
+import { marketing } from "./catalogMarketing";
 import { product } from "./catalogProduct";
 
 // The Bot agency (spec 26): ready-made bots the owner adds to a crew. The
@@ -45,5 +46,5 @@ export const catalog = {
     pairs: "Works well with",
     technical: "What the bot is told when it starts",
   },
-  roles: { ...base, ...product },
+  roles: { ...base, ...product, ...marketing },
 };

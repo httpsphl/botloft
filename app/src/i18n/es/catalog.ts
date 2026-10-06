@@ -1,5 +1,6 @@
 import type { Messages } from "../en";
 import { base } from "./catalogBase";
+import { marketing } from "./catalogMarketing";
 import { product } from "./catalogProduct";
 
 export const catalog: Messages["catalog"] = {
@@ -42,5 +43,5 @@ export const catalog: Messages["catalog"] = {
     pairs: "Combina bien con",
     technical: "Lo que recibe el bot cuando empieza",
   },
-  roles: { ...base, ...product },
+  roles: { ...base, ...product, ...marketing },
 };
