@@ -1952,7 +1952,7 @@ No app, o nome é **Agência de bots** (inglês "Bot agency", espanhol "Agencia 
 Uma ficha por arquivo em `crates/botloftd/catalog/<id>.toml`, embutida no binário do daemon. O `id` é o nome do arquivo (`[a-z0-9-]{1,32}`, como `code-reviewer`).
 
 ```toml
-category = "code"          # code, design, content, research, business, product, marketing
+category = "code"          # code, design, content, research, business, product, marketing, learning
 name = "Code Reviewer"     # em inglês; o app escreve o nome no idioma do dono (26.5)
 role = "Reviews other bots' code changes and points out bugs and risks"
 summary = "Reads changes and says what is wrong, risky or too complicated"
@@ -2043,6 +2043,17 @@ instructions = """
 | `security-reviewer` | Revisa o código e a configuração do dono, só defensivamente e só no que é do dono; não repete segredos que acha (`effort` `high`) |
 | `data-engineer` | Constrói esteiras que coletam, limpam e conferem dados, param quando algo parece errado e mantêm os originais intactos |
 
+**Conteúdo, pesquisa e aprendizado** (6; `learning` é a categoria dos dois últimos): as fichas dizem o que nunca fazer: mudar um fato, número ou citação ao revisar; inventar experiência, resultado ou credencial do dono ao escrever na voz dele; confirmar algo só por parecer plausível; citar uma fonte que não foi aberta e lida; e escrever trabalho que o dono precisa entregar como seu (prova, tese, tarefa com nota), caso em que ajudam de outro jeito.
+
+| `id` | Categoria | O que faz |
+|---|---|---|
+| `editor` | `content` | Corrige e enxuga um texto no nível que o dono pedir, mantém a voz do autor e mostra cada mudança com o motivo |
+| `ghostwriter` | `content` | Aprende a voz do dono, tira dele as histórias com perguntas, escreve rascunhos e marca cada lacuna que preencheu |
+| `fact-checker` | `research` | Confere afirmações nas melhores fontes, de preferência a original, com veredito, link, data e o quanto tem certeza |
+| `academic-researcher` | `research` | Acha e resume trabalhos acadêmicos abrindo cada um antes de citar; diz quando só leu o resumo; não contorna paywall |
+| `tutor` | `learning` | Ensina uma ideia de cada vez no nível de quem aprende, pede que explique de volta, dá dica antes da resposta |
+| `language-teacher` | `learning` | Conversa no idioma no nível certo, corrige os erros que mais importam com a regra em uma linha; trabalha com texto, não ouve pronúncia |
+
 ### 26.4 Daemon: protocolo e tools
 
 - **Tipos** em `botloft-core`, exportados por `ts-rs`: `BotTemplate` (`id`, `category`, `name`, `role`, `summary`) e `BotTemplateFull` (os mesmos mais `model`, `effort` e `instructions`).
@@ -2067,7 +2078,7 @@ instructions = """
 
 ### 26.7 Fora desta etapa
 
-Os papéis das outras áreas (conteúdo e pesquisa: G4, uma área por vez); finanças, jurídico e saúde, que pedem aviso de que não substituem um profissional; o dono criar, importar ou compartilhar fichas; **restaurar o padrão** de um bot criado de um modelo (pede guardar o `id` do modelo no bot, e o histórico de instruções do item 5 da seção 18 cobre melhor); marcar no catálogo o que já está na equipe; atualizar bots já criados quando uma ficha muda (eles foram personalizados); modelos de equipe inteira; indicar ferramentas conectadas por papel de forma automática.
+Finanças, jurídico e saúde, que pedem aviso de que não substituem um profissional; o dono criar, importar ou compartilhar fichas; **restaurar o padrão** de um bot criado de um modelo (pede guardar o `id` do modelo no bot, e o histórico de instruções do item 5 da seção 18 cobre melhor); marcar no catálogo o que já está na equipe; atualizar bots já criados quando uma ficha muda (eles foram personalizados); modelos de equipe inteira; indicar ferramentas conectadas por papel de forma automática.
 
 ### 26.8 Marcos
 
@@ -2076,4 +2087,4 @@ Os papéis das outras áreas (conteúdo e pesquisa: G4, uma área por vez); fina
 | **G1** Catálogo e daemon | formato da ficha, `catalog.rs`, as 12 fichas, `catalog.list`/`get`/`add`, tipos `ts-rs` | `catalog_lint`; unidade e RPC: `catalog.add` valida como `bots.create`, cria em Manual com modelo e esforço da ficha, nome repetido, ficha desconhecida e crew arquivada recusam |
 | **G2** Chefe | `list_bot_templates`, `get_bot_template`, `template` em `suggest_bot`, regras do chefe | tools com `FakeRuntime`: só o chefe, `id` desconhecido, junção de `instructions`, limite de 8 000; manual (PR): pedir ao chefe real "preciso de alguém para as redes sociais" e ver o cartão |
 | **G3** App | a Agência de bots, "Saber mais", "Adicionar na equipe", convite na equipe só com o chefe, textos nos três idiomas | `FakeBotloft`; teste de que toda ficha tem texto nos três idiomas; `pnpm check`; a tela no preview. Manual (PR): criar cada um dos 12 com o Claude Code real e dar a cada um uma tarefa típica |
-| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito), Conteúdo e pesquisa; categorias `product` e `marketing`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
+| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito), Conteúdo, pesquisa e aprendizado (6, feito); categorias `product`, `marketing` e `learning`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |

@@ -4,7 +4,7 @@ import { FakeBotloft } from "./fake";
 describe("the fake's bot catalog", () => {
   it("lists the roles, by category too, and reads one with its instructions", async () => {
     const fake = new FakeBotloft();
-    expect(await fake.call("catalog.list", {})).toHaveLength(52);
+    expect(await fake.call("catalog.list", {})).toHaveLength(58);
     const product = await fake.call("catalog.list", { category: "product" });
     expect(product).toHaveLength(14);
     expect(await fake.call("catalog.list", { category: "marketing" })).toHaveLength(18);

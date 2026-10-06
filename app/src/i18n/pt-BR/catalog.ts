@@ -1,5 +1,6 @@
 import type { Messages } from "../en";
 import { base } from "./catalogBase";
+import { contentAndLearning } from "./catalogContent";
 import { engineering } from "./catalogEngineering";
 import { marketing } from "./catalogMarketing";
 import { product } from "./catalogProduct";
@@ -25,6 +26,7 @@ export const catalog: Messages["catalog"] = {
     business: "Negócios",
     product: "Produto e gestão",
     marketing: "Marketing e vendas",
+    learning: "Aprendizado",
   },
   none: "Nenhum bot combina com isso.",
   loading: "Carregando os bots…",
@@ -44,5 +46,5 @@ export const catalog: Messages["catalog"] = {
     pairs: "Combina bem com",
     technical: "O que o bot recebe quando começa",
   },
-  roles: { ...base, ...product, ...marketing, ...engineering },
+  roles: { ...base, ...product, ...marketing, ...engineering, ...contentAndLearning },
 };

@@ -15,6 +15,7 @@ text_enum!(
         Business => "business",
         Product => "product",
         Marketing => "marketing",
+        Learning => "learning",
     }
 );
 
