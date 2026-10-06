@@ -54,6 +54,7 @@ pub(crate) struct NewBot {
     pub instructions: String,
     pub color: Option<String>,
     pub model: BotModel,
+    pub effort: BotEffort,
 }
 
 impl NewBot {
@@ -70,6 +71,7 @@ impl NewBot {
             instructions: validate::instructions(instructions)?,
             color: color.as_deref().map(parse_color).transpose()?,
             model: model.unwrap_or(BotModel::Default),
+            effort: BotEffort::Default,
         })
     }
 }
@@ -109,7 +111,7 @@ pub(crate) fn insert(
         permission_mode: PermissionMode::Default,
         model: new.model,
         model_in_use: None,
-        effort: BotEffort::Default,
+        effort: new.effort,
         effort_default: None,
         created_at: now_ms(),
         archived_at: None,

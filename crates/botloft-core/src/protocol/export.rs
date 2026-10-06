@@ -18,6 +18,8 @@ use crate::ids::{
 mod backup;
 #[path = "export_browser.rs"]
 mod browser;
+#[path = "export_catalog.rs"]
+mod catalog;
 #[path = "export_crew_access.rs"]
 mod crew_access;
 #[path = "export_desktop.rs"]
@@ -190,6 +192,7 @@ fn export_bindings() {
     desktop::decls(&mut out);
     mcp::decls(&mut out);
     crew_access::decls(&mut out);
+    catalog::decls(&mut out);
     backup::decls(&mut out);
     out.decl::<ApprovalItem>();
     usage::decls(&mut out);
@@ -362,6 +365,7 @@ fn export_bindings() {
     desktop::methods(&mut out);
     mcp::methods(&mut out);
     crew_access::methods(&mut out);
+    catalog::methods(&mut out);
     backup::methods(&mut out);
     routines::methods(&mut out);
     questions::methods(&mut out);

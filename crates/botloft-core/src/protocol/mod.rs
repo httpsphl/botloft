@@ -52,6 +52,7 @@ macro_rules! text_enum {
 mod backup;
 mod browser;
 mod browser_input;
+mod catalog;
 mod chat;
 mod crew_access;
 mod desktop;
@@ -76,6 +77,7 @@ mod usage;
 pub use backup::*;
 pub use browser::*;
 pub use browser_input::*;
+pub use catalog::*;
 pub use chat::*;
 pub use crew_access::*;
 pub use desktop::*;
@@ -116,6 +118,9 @@ pub mod method {
     pub const ARCHIVE_LIST: &str = "archive.list";
     pub const BOTS_LIST: &str = "bots.list";
     pub const BOTS_CREATE: &str = "bots.create";
+    pub const CATALOG_LIST: &str = "catalog.list";
+    pub const CATALOG_GET: &str = "catalog.get";
+    pub const CATALOG_ADD: &str = "catalog.add";
     pub const BOTS_UPDATE: &str = "bots.update";
     pub const BOTS_SET_PAUSED: &str = "bots.setPaused";
     pub const BOTS_SET_PERMISSION_MODE: &str = "bots.setPermissionMode";
