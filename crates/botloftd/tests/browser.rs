@@ -309,10 +309,11 @@ async fn a_page_that_never_goes_quiet_does_not_cost_three_seconds_a_click() {
             .await
             .expect("click");
         // It used to wait the whole 3 s for a network that never stops (spec
-        // 21.3); a click now settles in under a second, with room for a slow
-        // machine.
+        // 21.3), so never less than 3.15 s; a click now settles in under a
+        // second on a quiet machine (0.78 s measured) and took 2.2 s on the
+        // slow macOS runner, so the bound sits between the two.
         assert!(
-            started.elapsed() < Duration::from_millis(2000),
+            started.elapsed() < Duration::from_millis(2900),
             "{:?}",
             started.elapsed()
         );
