@@ -1,4 +1,4 @@
-import { Ellipsis, Folder, Plus } from "lucide-react";
+import { Ellipsis, Folder, Plus, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useT } from "../../i18n";
@@ -56,6 +56,9 @@ ${words.openFolderHint}`}
           </p>
         </div>
         <CallPills calls={calls} className="max-w-[45%] justify-end" />
+        <Button icon={Sparkles} title={t.catalog.openHint} onClick={actions.agency.onSelect}>
+          {actions.agency.label}
+        </Button>
         <Button variant="primary" icon={Plus} onClick={actions.newBot.onSelect}>
           {actions.newBot.label}
         </Button>

@@ -28,6 +28,8 @@ export default defineConfig(({ mode }) => ({
       allow: [
         searchForWorkspaceRoot(process.cwd()),
         fileURLToPath(new URL("../crates/botloftd/src/screens", import.meta.url)),
+        // The sheets of the Bot agency, which a test reads (spec 26.2).
+        fileURLToPath(new URL("../crates/botloftd/catalog", import.meta.url)),
       ],
     },
   },

@@ -7,6 +7,7 @@ import {
   Pencil,
   Play,
   Plus,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -19,14 +20,17 @@ import { Confirm } from "../../ui/Confirm";
 import type { MenuItem } from "../../ui/Menu";
 import { attempt } from "../../ui/toast";
 import { BotDialog } from "../bots/BotDialog";
+import { BotAgencyDialog } from "../catalog/BotAgencyDialog";
 import { CrewDialog } from "./CrewDialog";
 import { DeleteCrew } from "./DeleteCrew";
 
-type Open = "bot" | "rename" | "archive" | "delete" | { move: string } | null;
+type Open = "bot" | "agency" | "rename" | "archive" | "delete" | { move: string } | null;
 
 export interface CrewActions {
   /** A new bot in the crew. */
   newBot: MenuItem;
+  /** The Bot agency: ready-made bots to add to the crew (spec 26.5). */
+  agency: MenuItem;
   /** Pause or resume, as the crew is now. */
   pause: MenuItem & { icon: LucideIcon };
   /** Opens the work folder in the system's file manager. */
@@ -68,6 +72,8 @@ export function useCrewActions(crew: Crew): CrewActions {
   let dialogs: ReactNode | null = null;
   if (open === "bot") {
     dialogs = <BotDialog crewId={crew.id} onClose={close} />;
+  } else if (open === "agency") {
+    dialogs = <BotAgencyDialog crew={crew} onClose={close} />;
   } else if (open === "rename") {
     dialogs = <CrewDialog crew={crew} onClose={close} />;
   } else if (open === "archive") {
@@ -107,6 +113,7 @@ export function useCrewActions(crew: Crew): CrewActions {
 
   return {
     newBot: { label: t.crews.newBot, icon: Plus, onSelect: () => setOpen("bot") },
+    agency: { label: t.catalog.open, icon: Sparkles, onSelect: () => setOpen("agency") },
     openFolder,
     pause: crew.paused
       ? { label: words.resume, icon: Play, onSelect: () => setPaused(false) }

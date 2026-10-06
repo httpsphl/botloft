@@ -4,6 +4,7 @@ import { account } from "./account";
 import { alerts } from "./alerts";
 import { bots } from "./bots";
 import { browser } from "./browser";
+import { catalog } from "./catalog";
 import { chat } from "./chat";
 import { common } from "./common";
 import { connections } from "./connections";
@@ -31,6 +32,7 @@ export const en = {
   alerts,
   bots,
   browser,
+  catalog,
   chat,
   connections,
   crews,

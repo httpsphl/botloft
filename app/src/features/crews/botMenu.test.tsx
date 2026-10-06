@@ -76,7 +76,10 @@ describe("a bot's right-click menu", () => {
     await waitFor(() =>
       expect(within(sidebar()).queryByRole("button", { name: /Scout/ })).toBeNull(),
     );
-    expect(fake.calls.at(-1)).toEqual({ method: "bots.archive", params: { botId: scout.id } });
+    expect(fake.calls.filter((call) => call.method !== "catalog.list").at(-1)).toEqual({
+      method: "bots.archive",
+      params: { botId: scout.id },
+    });
     // Writer stays open through it all.
     expect(screen.getByRole("heading", { level: 1, name: "Writer" })).toBeDefined();
     expect(fake.bots.get(writer.id)?.archivedAt).toBeNull();
