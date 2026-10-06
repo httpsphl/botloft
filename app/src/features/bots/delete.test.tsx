@@ -4,6 +4,10 @@ import { FakeBotloft } from "../../lib/fake";
 import { RpcError } from "../../lib/rpc";
 import { crewOpened, openBot, openTab, renderApp, sidebar } from "../../test/app";
 
+/** The last call that is not the Bot agency loading, which an empty crew page does. */
+const lastCall = (fake: FakeBotloft) =>
+  fake.calls.filter((call) => call.method !== "catalog.list").at(-1);
+
 afterEach(cleanup);
 
 /** A crew "Ops" with Scout and Writer, open on the crew's page. */
@@ -44,7 +48,7 @@ describe("deleting a bot", () => {
     // Back on the crew's page, without the bot.
     await waitFor(() => expect(inSidebar("Scout")).toBeNull());
     expect(screen.getByRole("heading", { level: 1, name: "Ops" })).toBeDefined();
-    expect(fake.calls.at(-1)).toEqual({ method: "bots.delete", params: { botId: scout.id } });
+    expect(lastCall(fake)).toEqual({ method: "bots.delete", params: { botId: scout.id } });
     expect(fake.bots.has(scout.id)).toBe(false);
     expect(inSidebar("Writer")).not.toBeNull();
   });
@@ -132,7 +136,7 @@ describe("deleting a crew", () => {
     await waitFor(() =>
       expect(within(sidebar()).queryByRole("button", { name: "Ops" })).toBeNull(),
     );
-    expect(fake.calls.at(-1)).toEqual({ method: "crews.delete", params: { crewId: crew.id } });
+    expect(lastCall(fake)).toEqual({ method: "crews.delete", params: { crewId: crew.id } });
     expect(fake.bots.has(scout.id)).toBe(false);
     expect(inSidebar("Scout")).toBeNull();
     expect(fake.crews.has(docs.id)).toBe(true);
@@ -183,7 +187,7 @@ describe("sending the folder to the Recycle Bin", () => {
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Delete bot" }));
     await waitFor(() => expect(inSidebar("Scout")).toBeNull());
-    expect(fake.calls.at(-1)).toEqual({
+    expect(lastCall(fake)).toEqual({
       method: "bots.delete",
       params: { botId: scout.id, recycleFolder: true },
     });
@@ -228,7 +232,7 @@ describe("sending the folder to the Recycle Bin", () => {
     expect(within(dialog).getByText("C:\\Users\\owner\\Botloft\\ops")).toBeDefined();
     fireEvent.click(within(dialog).getByRole("button", { name: "Delete crew" }));
     await waitFor(() => expect(fake.recycled).toEqual(["C:\\Users\\owner\\Botloft\\ops"]));
-    expect(fake.calls.at(-1)?.params).toEqual({ crewId: ops.id, recycleFolder: true });
+    expect(lastCall(fake)?.params).toEqual({ crewId: ops.id, recycleFolder: true });
 
     fireEvent.click(within(sidebar()).getByRole("button", { name: "Site" }));
     await crewOpened("Site");

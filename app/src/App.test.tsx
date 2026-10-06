@@ -104,7 +104,9 @@ describe("app", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Archive bot" }));
     expect(await screen.findByRole("heading", { level: 1, name: "Ops" })).toBeDefined();
     expect(within(sidebar()).queryByRole("button", { name: /Scout/ })).toBeNull();
-    expect(fake.calls.at(-1)?.method).toBe("bots.archive");
+    expect(fake.calls.filter((call) => call.method !== "catalog.list").at(-1)?.method).toBe(
+      "bots.archive",
+    );
   });
 
   test("pausing a crew shows it everywhere", async () => {
