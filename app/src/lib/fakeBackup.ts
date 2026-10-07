@@ -43,11 +43,12 @@ export function backupHandlers(fake: FakeBotloft): Pick<Handlers, BackupMethods>
         manifest: manifestOf(fake, scope ?? "full"),
       };
     },
-    "backup.stage": ({ passphrase }) => {
+    "backup.stage": ({ path, passphrase }) => {
       if (passphrase !== FAKE_PASSPHRASE) {
         throw refused("wrong_passphrase", "the passphrase is wrong, or the file is damaged");
       }
-      return manifestOf(fake);
+      // A copy that came down from the cloud is a light one (spec 14.2).
+      return manifestOf(fake, path.includes("cloud-download") ? "light" : "full");
     },
     "backup.confirm": () => null,
     "backup.cancel": () => null,
