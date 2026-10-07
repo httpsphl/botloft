@@ -8,7 +8,7 @@ Como pôr no ar o servidor da conta e das cópias (spec 27). Ele é um serviço 
 |---|---|---|
 | Contas, aparelhos, lista de cópias, contagem dos freios | `cloud.db` (SQLite), no volume `/data` | pequeno (KB a poucos MB) |
 | Os bytes das cópias | um bucket S3 (como o R2 da Cloudflare) ou a pasta `/data/copies` | uma cópia tem poucos MB; o teto é de 50 MB |
-| A senha do SMTP e o segredo do bucket | arquivos em `config/`, fora da imagem | — |
+| A senha do SMTP e o segredo do bucket | arquivos em `config/` ou as variáveis `BOTLOFT_CLOUD_SMTP_PASSWORD` e `BOTLOFT_CLOUD_BUCKET_SECRET` (a variável vale mais que o arquivo), fora da imagem | — |
 
 Se o disco da máquina é dividido com outros trabalhos, use o bucket: a VPS fica só com o `cloud.db` e com um arquivo temporário (até 50 MB) por envio em andamento.
 
@@ -66,6 +66,19 @@ docker compose logs -f cloud
 ```
 
 O contêiner roda sem privilégios, com o sistema de arquivos só de leitura (só `/data` escreve) e escuta em `127.0.0.1:8787` da máquina. O `HEALTHCHECK` olha `GET /health`.
+
+## 5b. No Coolify (ou outra plataforma que guarda os segredos como variáveis)
+
+Quando a máquina já roda Coolify, ele ocupa as portas 80 e 443 e dá o TLS: não use o Caddy. O `deploy/cloud/docker-compose.coolify.yml` serve para isso, sem publicar porta:
+
+1. Leve a imagem à máquina (sem registro): `docker save botloft-cloud | gzip > botloft-cloud.tar.gz`, copie, e `gunzip -c botloft-cloud.tar.gz | docker load` lá.
+2. No Coolify: novo recurso, "Docker Compose", e cole o arquivo.
+3. Em *Domains* do serviço `cloud`, ponha o endereço com a porta do contêiner: `https://botloft.seudominio.com:8787`.
+4. Nas variáveis do recurso, preencha `BOTLOFT_CLOUD_SMTP_PASSWORD` (a chave de API do Resend) e `BOTLOFT_CLOUD_BUCKET_SECRET` (o segredo do token do R2).
+5. Ajuste o `BOTLOFT_CLOUD_CONFIG` do compose (a configuração inteira, como texto, sem segredo): `public_url`, o `endpoint`, o `access_key_id` e o `from`.
+6. Deploy. O `/health` e o `/v1/me` (passo 7) dizem se subiu.
+
+O compose usa `pull_policy: never`: a imagem tem que estar na máquina. Nenhum arquivo precisa ser criado na máquina: a configuração vem na variável `BOTLOFT_CLOUD_CONFIG` (quando ela existe, o servidor não lê o `cloud.toml`).
 
 ## 6. Sem Docker (systemd)
 

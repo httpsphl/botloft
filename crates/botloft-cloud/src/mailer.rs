@@ -7,7 +7,7 @@ use lettre::message::header::ContentType;
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 
-use crate::config::Smtp;
+use crate::config::{self, Smtp};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Mail {
@@ -47,8 +47,11 @@ pub struct SmtpMailer {
 
 impl SmtpMailer {
     pub fn new(smtp: &Smtp) -> anyhow::Result<Self> {
-        let password = std::fs::read_to_string(&smtp.password_file)
-            .map_err(|err| anyhow::anyhow!("cannot read the smtp password file: {err}"))?;
+        let password = config::secret(
+            smtp.password_file.as_deref(),
+            config::SMTP_PASSWORD_VAR,
+            "smtp password",
+        )?;
         let builder = if smtp.port == 465 {
             AsyncSmtpTransport::<Tokio1Executor>::relay(&smtp.host)?
         } else {
@@ -56,10 +59,7 @@ impl SmtpMailer {
         };
         let transport = builder
             .port(smtp.port)
-            .credentials(Credentials::new(
-                smtp.user.clone(),
-                password.trim().to_owned(),
-            ))
+            .credentials(Credentials::new(smtp.user.clone(), password))
             .build();
         Ok(Self {
             transport,

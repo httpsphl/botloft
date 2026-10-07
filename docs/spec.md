@@ -2125,7 +2125,8 @@ Um binário, `botloft-cloud serve --config cloud.toml`, com `axum` e SQLite pró
 | `max_copy_bytes` | 50 MiB | o máximo de uma cópia |
 | `keep` | 5 | quantas cópias por conta (a mais antiga sai quando entra a seguinte) |
 | `behind_proxy` | `true` | o proxy põe o endereço de quem chama em `X-Forwarded-For`, e vale o último valor (para os freios de 27.3) |
-| `smtp` | (obrigatória) | `host`, `port`, `user`, `password_file`, `from` |
+| (variável) | — | `BOTLOFT_CLOUD_CONFIG`, o `cloud.toml` inteiro como texto, para plataformas que guardam configuração e não arquivos (o arquivo então não é lido) |
+| `smtp` | (obrigatória) | `host`, `port`, `user`, `from`, e a senha: `password_file` ou a variável `BOTLOFT_CLOUD_SMTP_PASSWORD` (a variável vale mais) |
 
 **Onde as cópias ficam.** Atrás de uma interface (`CopyStore`), com `disk` e `bucket`. Com `bucket`, a VPS guarda só o `cloud.db` e um arquivo temporário de até `max_copy_bytes` por envio em andamento; os bytes das cópias vão para o bucket, que também as replica. As cópias já saem seladas pelo dono (27.1), então o bucket guarda bytes que ninguém consegue abrir. O endereço do bucket e as chaves nunca saem do servidor: o app só fala com o servidor.
 

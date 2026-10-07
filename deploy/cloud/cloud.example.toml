@@ -28,11 +28,13 @@ storage = "disk"
 # name = "botloft-copies"
 # region = "auto"
 # access_key_id = "…"
-# secret_file = "/config/bucket-secret"   # a file with the secret alone
+# secret_file = "/config/bucket-secret"   # a file with the secret alone, or the
+#                                          # variable BOTLOFT_CLOUD_BUCKET_SECRET
 
 [smtp]
 host = "smtp.example.org"
 port = 587                   # 587 starts TLS; 465 is TLS from the start
 user = "botloft"
-password_file = "/config/smtp-password"   # a file with the password alone
+password_file = "/config/smtp-password"   # a file with the password alone, or the
+                                          # variable BOTLOFT_CLOUD_SMTP_PASSWORD
 from = "Botloft <no-reply@example.org>"

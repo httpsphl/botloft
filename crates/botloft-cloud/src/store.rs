@@ -16,7 +16,7 @@ use object_store::path::Path as Key;
 use object_store::{GetOptions, GetRange, ObjectStore, ObjectStoreExt, PutPayload, WriteMultipart};
 use tokio::io::AsyncReadExt;
 
-use crate::config::Bucket;
+use crate::config::{self, Bucket};
 use crate::error::ApiError;
 
 /// Up to this size a copy goes in one request; bigger ones in parts.
@@ -57,14 +57,17 @@ impl CopyStore {
 
     /// Copies in a bucket.
     pub fn bucket(bucket: &Bucket) -> anyhow::Result<Self> {
-        let secret = std::fs::read_to_string(&bucket.secret_file)
-            .map_err(|err| anyhow::anyhow!("cannot read the bucket secret file: {err}"))?;
+        let secret = config::secret(
+            bucket.secret_file.as_deref(),
+            config::BUCKET_SECRET_VAR,
+            "bucket secret",
+        )?;
         let built = AmazonS3Builder::new()
             .with_endpoint(&bucket.endpoint)
             .with_bucket_name(&bucket.name)
             .with_region(&bucket.region)
             .with_access_key_id(&bucket.access_key_id)
-            .with_secret_access_key(secret.trim())
+            .with_secret_access_key(secret)
             .with_virtual_hosted_style_request(false)
             .build()?;
         Ok(Self {

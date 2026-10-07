@@ -49,8 +49,10 @@ pub struct Bucket {
     #[serde(default = "default_region")]
     pub region: String,
     pub access_key_id: String,
-    /// A file with the secret alone, so it never sits in `cloud.toml`.
-    pub secret_file: PathBuf,
+    /// A file with the secret alone, so it never sits in `cloud.toml`. The
+    /// variable `BOTLOFT_CLOUD_BUCKET_SECRET` does the same, and wins.
+    #[serde(default)]
+    pub secret_file: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -60,9 +62,45 @@ pub struct Smtp {
     #[serde(default = "default_port")]
     pub port: u16,
     pub user: String,
-    /// A file with the password alone, so it never sits in this one.
-    pub password_file: PathBuf,
+    /// A file with the password alone, so it never sits in this one. The
+    /// variable `BOTLOFT_CLOUD_SMTP_PASSWORD` does the same, and wins.
+    #[serde(default)]
+    pub password_file: Option<PathBuf>,
     pub from: String,
+}
+
+/// The whole configuration as text, for a platform that keeps settings
+/// (Coolify, for one) rather than files.
+pub const CONFIG_VAR: &str = "BOTLOFT_CLOUD_CONFIG";
+
+/// The variables that can carry a secret, for the same platforms.
+pub const SMTP_PASSWORD_VAR: &str = "BOTLOFT_CLOUD_SMTP_PASSWORD";
+pub const BUCKET_SECRET_VAR: &str = "BOTLOFT_CLOUD_BUCKET_SECRET";
+
+/// A secret from the variable `var` if it is set, else from `file`. `what`
+/// names it in the error, which never holds the value.
+pub fn secret(file: Option<&Path>, var: &str, what: &str) -> anyhow::Result<String> {
+    secret_from(file, std::env::var(var).ok(), var, what)
+}
+
+fn secret_from(
+    file: Option<&Path>,
+    value: Option<String>,
+    var: &str,
+    what: &str,
+) -> anyhow::Result<String> {
+    if let Some(value) = value
+        .map(|value| value.trim().to_owned())
+        .filter(|v| !v.is_empty())
+    {
+        return Ok(value);
+    }
+    match file {
+        Some(file) => std::fs::read_to_string(file)
+            .map(|text| text.trim().to_owned())
+            .map_err(|err| anyhow::anyhow!("cannot read the {what} file: {}", err.kind())),
+        None => anyhow::bail!("the {what} is missing: set {var}, or a file in cloud.toml"),
+    }
 }
 
 fn default_listen() -> SocketAddr {
@@ -91,11 +129,26 @@ fn default_port() -> u16 {
 }
 
 impl Config {
+    /// The configuration: the text in `BOTLOFT_CLOUD_CONFIG` if that is set
+    /// (for a platform that keeps settings, not files), else the file.
     pub fn load(path: &Path) -> anyhow::Result<Self> {
-        let text = std::fs::read_to_string(path)
-            .map_err(|err| anyhow::anyhow!("cannot read {}: {err}", path.display()))?;
-        let config: Self = toml::from_str(&text)
-            .map_err(|err| anyhow::anyhow!("{} is not valid: {err}", path.display()))?;
+        match std::env::var(CONFIG_VAR)
+            .ok()
+            .filter(|text| !text.trim().is_empty())
+        {
+            Some(text) => Self::parse(&text, CONFIG_VAR),
+            None => {
+                let text = std::fs::read_to_string(path)
+                    .map_err(|err| anyhow::anyhow!("cannot read {}: {err}", path.display()))?;
+                Self::parse(&text, &path.display().to_string())
+            }
+        }
+    }
+
+    /// `text` as a configuration; `from` names where it came from.
+    pub fn parse(text: &str, from: &str) -> anyhow::Result<Self> {
+        let config: Self =
+            toml::from_str(text).map_err(|err| anyhow::anyhow!("{from} is not valid: {err}"))?;
         if !config.public_url.starts_with("https://")
             && !config.public_url.starts_with("http://127.0.0.1")
         {
@@ -128,7 +181,7 @@ impl Config {
                 host: "localhost".to_owned(),
                 port: 587,
                 user: String::new(),
-                password_file: PathBuf::new(),
+                password_file: None,
                 from: "Botloft <noreply@localhost>".to_owned(),
             },
         }
@@ -144,6 +197,31 @@ mod tests {
         let path = dir.path().join("cloud.toml");
         std::fs::write(&path, text).expect("write");
         (dir, path)
+    }
+
+    #[test]
+    fn a_secret_comes_from_the_variable_first_then_the_file() {
+        let (_dir, path) = write("  from-the-file \n");
+        let var = Some("  from-the-variable ".to_owned());
+        let said = |file: Option<&Path>, value: Option<String>| secret_from(file, value, "V", "x");
+        assert_eq!(
+            said(Some(&path), var.clone()).expect("var"),
+            "from-the-variable"
+        );
+        assert_eq!(said(Some(&path), None).expect("file"), "from-the-file");
+        // An empty variable counts as not set.
+        assert_eq!(
+            said(Some(&path), Some("  ".to_owned())).expect("file"),
+            "from-the-file"
+        );
+        assert_eq!(said(None, var).expect("var alone"), "from-the-variable");
+        let nothing = said(None, None).expect_err("nothing");
+        assert!(nothing.to_string().contains("set V"), "{nothing}");
+        let gone = said(Some(&path.with_extension("none")), None).expect_err("missing file");
+        assert!(
+            gone.to_string().contains("cannot read the x file"),
+            "{gone}"
+        );
     }
 
     #[test]
@@ -190,6 +268,21 @@ password_file = \"p\"
         );
         let config = Config::load(&path).expect("load");
         assert_eq!(config.bucket.expect("bucket").region, "auto");
+    }
+
+    #[test]
+    fn the_whole_config_can_be_text() {
+        let text = std::fs::read_to_string(
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../deploy/cloud/cloud.example.toml"),
+        )
+        .expect("the example");
+        let config = Config::parse(&text, "text").expect("parses");
+        assert_eq!(config.keep, 5);
+        let broken = Config::parse("public_url = 3", "the variable").expect_err("not valid");
+        assert!(
+            broken.to_string().starts_with("the variable is not valid"),
+            "{broken}"
+        );
     }
 
     /// The file the deploy folder ships is a config the server accepts.

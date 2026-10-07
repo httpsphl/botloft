@@ -1,0 +1,57 @@
+# The Botloft cloud server as a "Docker Compose" resource in Coolify (or any
+# platform that routes by domain and keeps secrets as settings).
+#
+#   1. Put the image on the machine:  gunzip -c botloft-cloud.tar.gz | docker load
+#   2. Coolify: new resource, "Docker Compose (empty)", paste this file.
+#   3. Set the domain of the `cloud` service, with the container's port:
+#        https://cloud.example.org:8787
+#   4. In the variables, fill the two secrets below.
+#   5. Edit BOTLOFT_CLOUD_CONFIG below (public_url, bucket, smtp), and deploy.
+#
+# No port is published: the platform's proxy reaches the container and gives
+# it TLS. The configuration is a variable too (BOTLOFT_CLOUD_CONFIG), so no
+# file has to be created on the machine.
+# See docs/cloud-deploy.md.
+
+services:
+  cloud:
+    image: botloft-cloud:latest
+    pull_policy: never
+    restart: unless-stopped
+    environment:
+      # The secrets are variables of the resource (step 4).
+      BOTLOFT_CLOUD_SMTP_PASSWORD: ${BOTLOFT_CLOUD_SMTP_PASSWORD}
+      BOTLOFT_CLOUD_BUCKET_SECRET: ${BOTLOFT_CLOUD_BUCKET_SECRET}
+      # The configuration, with no secret in it, as text (step 5).
+      BOTLOFT_CLOUD_CONFIG: |
+        listen = "0.0.0.0:8787"
+        public_url = "https://cloud.example.org"
+        data_dir = "/data"
+        quota_bytes = 209715200
+        max_copy_bytes = 52428800
+        keep = 5
+        behind_proxy = true
+        storage = "bucket"
+
+        [bucket]
+        endpoint = "https://<account id>.r2.cloudflarestorage.com"
+        name = "botloft-copies"
+        region = "auto"
+        access_key_id = "<the access key id>"
+
+        [smtp]
+        host = "smtp.resend.com"
+        port = 465
+        user = "resend"
+        from = "Botloft <no-reply@cloud.example.org>"
+    volumes:
+      - cloud-data:/data
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    stop_grace_period: 20s
+
+volumes:
+  cloud-data:
