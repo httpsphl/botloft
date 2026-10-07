@@ -40,6 +40,17 @@ impl Db {
         })
     }
 
+    /// A consistent copy of the database at `path`, which must not exist yet
+    /// (`botloft-cloud backup`): safe while the server runs.
+    pub fn snapshot_to(&self, path: &Path) -> rusqlite::Result<()> {
+        let conn = self
+            .conn
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        conn.execute("VACUUM INTO ?1", [path.to_string_lossy().as_ref()])?;
+        Ok(())
+    }
+
     /// Runs `work` with the connection. Keep it short: the lock is shared.
     pub(crate) fn run<T>(
         &self,
@@ -67,6 +78,28 @@ fn migrate(conn: &mut Connection) -> rusqlite::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_snapshot_is_a_database_of_its_own() {
+        let dir = tempfile::tempdir().expect("dir");
+        let db = Db::memory().expect("db");
+        db.run(|conn| {
+            conn.execute(
+                "INSERT INTO accounts (email, created_at) VALUES ('a@b.c', 1)",
+                [],
+            )
+        })
+        .expect("row");
+        let copy = dir.path().join("copy.db");
+        db.snapshot_to(&copy).expect("snapshot");
+        let back = Db::open(&copy).expect("open the copy");
+        let email: String = back
+            .run(|conn| conn.query_row("SELECT email FROM accounts", [], |row| row.get(0)))
+            .expect("email");
+        assert_eq!(email, "a@b.c");
+        // It will not overwrite a copy that is there.
+        assert!(db.snapshot_to(&copy).is_err());
+    }
 
     #[test]
     fn a_new_database_has_every_table() {

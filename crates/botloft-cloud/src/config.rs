@@ -192,6 +192,19 @@ password_file = \"p\"
         assert_eq!(config.bucket.expect("bucket").region, "auto");
     }
 
+    /// The file the deploy folder ships is a config the server accepts.
+    #[test]
+    fn the_example_config_is_valid() {
+        let path =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../deploy/cloud/cloud.example.toml");
+        let config = Config::load(&path).expect("the example loads");
+        assert_eq!(config.storage, Storage::Disk);
+        assert_eq!(config.quota_bytes, 200 << 20);
+        assert_eq!(config.max_copy_bytes, 50 << 20);
+        assert_eq!(config.keep, 5);
+        assert!(config.behind_proxy);
+    }
+
     #[test]
     fn an_http_address_is_refused() {
         let (_dir, path) = write(

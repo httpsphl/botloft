@@ -1,0 +1,29 @@
+# The Botloft cloud server on one machine. Run from this folder:
+#
+#   docker compose up -d --build
+#
+# It listens on 127.0.0.1 only: a proxy with TLS (see Caddyfile) is the way in.
+# `config/` holds cloud.toml and the files it points to (the SMTP password, the
+# bucket secret), which are never part of the image. See docs/cloud-deploy.md.
+
+services:
+  cloud:
+    build:
+      context: ../..
+      dockerfile: deploy/cloud/Dockerfile
+    image: botloft-cloud:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8787:8787"
+    volumes:
+      - ./config:/config:ro
+      - cloud-data:/data
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    stop_grace_period: 20s
+
+volumes:
+  cloud-data:

@@ -1,0 +1,33 @@
+# The Botloft cloud server as a service of the system, without Docker.
+#
+#   sudo useradd --system --home-dir /var/lib/botloft-cloud --shell /usr/sbin/nologin botloft
+#   sudo install -m 0755 botloft-cloud /usr/local/bin/botloft-cloud
+#   sudo install -d -m 0750 -o root -g botloft /etc/botloft-cloud
+#   sudo cp cloud.toml /etc/botloft-cloud/ && sudo chmod 0640 /etc/botloft-cloud/*
+#   sudo cp botloft-cloud.service /etc/systemd/system/
+#   sudo systemctl enable --now botloft-cloud
+#
+# In cloud.toml: listen = "127.0.0.1:8787" and data_dir = "/var/lib/botloft-cloud".
+
+[Unit]
+Description=Botloft cloud (accounts and sealed copies)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=botloft
+Group=botloft
+ExecStart=/usr/local/bin/botloft-cloud serve --config /etc/botloft-cloud/cloud.toml
+Restart=on-failure
+RestartSec=5
+StateDirectory=botloft-cloud
+WorkingDirectory=/var/lib/botloft-cloud
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ReadWritePaths=/var/lib/botloft-cloud
+
+[Install]
+WantedBy=multi-user.target

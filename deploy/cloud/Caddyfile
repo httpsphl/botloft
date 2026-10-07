@@ -1,0 +1,13 @@
+# TLS and the way in for the Botloft cloud server. Replace the address with
+# yours; Caddy gets and renews the certificate on its own.
+cloud.example.org {
+	# A copy is at most 50 MiB (`max_copy_bytes`); a little more is room for
+	# the headers. The server checks the exact size again.
+	request_body {
+		max_size 60MB
+	}
+
+	# Caddy puts the address of whoever connects in X-Forwarded-For, and the
+	# server (`behind_proxy = true`) uses the last one for its rate limits.
+	reverse_proxy 127.0.0.1:8787
+}
