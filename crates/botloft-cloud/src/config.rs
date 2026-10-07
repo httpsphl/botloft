@@ -45,13 +45,13 @@ fn default_data_dir() -> PathBuf {
     PathBuf::from("./data")
 }
 fn default_quota() -> u64 {
-    2 << 30
+    200 << 20
 }
 fn default_max_copy() -> u64 {
-    1 << 30
+    50 << 20
 }
 fn default_keep() -> u32 {
-    3
+    5
 }
 fn default_true() -> bool {
     true
@@ -118,8 +118,9 @@ mod tests {
              password_file = \"p\"\nfrom = \"Botloft <a@b.c>\"\n",
         );
         let config = Config::load(&path).expect("load");
-        assert_eq!(config.keep, 3);
-        assert_eq!(config.quota_bytes, 2 << 30);
+        assert_eq!(config.keep, 5);
+        assert_eq!(config.quota_bytes, 200 << 20);
+        assert_eq!(config.max_copy_bytes, 50 << 20);
         assert_eq!(config.smtp.port, 587);
         assert_eq!(config.base_url(), "https://cloud.example.org");
     }

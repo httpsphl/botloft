@@ -827,6 +827,7 @@ Formatar o computador ou perder a pasta do Botloft não pode levar as equipes ju
 
 - **O que vai:** uma cópia consistente do banco (`VACUUM INTO`): equipes, bots, conversas, rotinas, regras de "permitir sempre", acessos entre equipes e o uso. E a pasta de cada equipe em `workspaces_root`, arquivadas inclusive: a memória (`CLAUDE.md`) e as regras de cada bot, os anexos e a `shared`. Vai também um `manifest.json` com o formato (1), a data, a versão do Botloft e as equipes, com os nomes dos bots.
 - **O que fica:** o que o Botloft escreve de novo a cada início (`.botloft\` e `.claude\settings.json` de cada bot, 7.5); os segredos, os logs e os perfis dos navegadores dos bots, que estão na pasta de dados e não em `workspaces_root`; e as pastas de trabalho que o dono escolheu fora do Botloft (5), que são dele. O manifesto lista essas pastas, para a importação avisar. O login do Claude também é de cada computador e se faz de novo.
+- **Cópia leve (`scope: "light"`):** o que vai para a nuvem (27) é só o que dá trabalho refazer e pesa pouco: a **estrutura** (equipes, bots com papel, modelo e modo, `settings`, acessos entre equipes, ferramentas conectadas e sites liberados, sem os segredos), as **rotinas** e a **memória** de cada bot (o `CLAUDE.md` e as regras em `.claudeules` da pasta dele). Ficam de fora as conversas (mensagens, entregas, tarefas, itens do chat, aprovações, perguntas, reações), as execuções das rotinas, o uso (`turn_costs`, `plan_readings`), as permissões do computador (`desktop_grants`), e das pastas os anexos, a `shared` e tudo o mais. O banco da cópia é o mesmo `VACUUM INTO` com essas tabelas esvaziadas. O manifesto leva `scope` (`full` quando falta, como nas cópias de antes) e a restauração avisa que as conversas não vêm: os bots voltam com a memória e começam conversas novas. `backup.export {passphrase, scope?}` aceita os dois, `full` por padrão: "Salvar uma cópia" no app continua levando tudo.
 - **Lacre:** o arquivo começa com `BOTLOFTBAK`, um byte de versão (1), o sal do Argon2id (16 bytes), os custos (64 MiB, 3 passadas, 1 faixa, em `u32` little-endian) e o nonce (19 bytes). Depois vem o zip, em blocos de 64 KiB cifrados com XChaCha20-Poly1305 na construção STREAM (contador big-endian de 32 bits e marca do último bloco), com a chave de 32 bytes que o Argon2id tira da senha. Senha errada, arquivo cortado ou blocos trocados não abrem, e nada de um bloco que não abre é escrito. A senha tem ao menos 8 caracteres e nunca é guardada nem vai para o log: quem a perde perde a cópia.
 - **Exportar:** `backup.export {passphrase}` fecha a cópia em `<home>\exports\botloft-AAAA-MM-DD-HHMM.botloft` (só a mais nova fica ali) e devolve `{path, size, manifest}`. O app então oferece "Salvar como…" (`save_file_as`, 15.2) para o dono guardar onde quiser. Os erros que o dono resolve vêm com `reason` (20.8): `short_passphrase`, `wrong_passphrase`, `not_a_backup` e `newer_backup`.
 - **Importar:** em duas etapas, para nada mudar com o Botloft rodando. `backup.stage {path, passphrase}` abre o arquivo com a senha em `<home>\restore\staged.zip`, confere o manifesto (formato 1, de um Botloft que não é mais novo) e o banco, e devolve o manifesto para o app mostrar o que vem. Senha errada ou arquivo que não é cópia não deixam nada. `backup.cancel` desiste. `backup.confirm` marca a cópia para o próximo início, e o app reinicia o Botloft (`restartDaemon`).
@@ -2106,7 +2107,7 @@ Três promessas valem para tudo aqui:
 - **O servidor não lê a cópia.** O arquivo `.botloft` sai selado com a senha da cópia (14.2) e assim chega ao servidor: ele guarda bytes que não consegue abrir. A **senha da conta** não existe (o login é por e-mail, 27.3) e a **senha da cópia** nunca sai do computador. Quem perde a senha da cópia perde as cópias da nuvem: o servidor não tem como recuperar.
 - **O servidor é nosso e o código é aberto.** É uma VPS própria com um serviço Rust deste repositório (`botloft-cloud`, 27.2). Quem quiser pode rodar o seu e apontar o app para ele (`[cloud] url`, 6).
 
-O servidor guarda só: o e-mail, os aparelhos que entraram (nome, data de entrada, último uso), e as cópias (tamanho, data, SHA-256 e os bytes selados). Não sabe nomes de equipes, de bots nem o que há dentro.
+O que sobe é a **cópia leve** (14.2): a estrutura das equipes, a memória dos bots e as rotinas, não as conversas nem os arquivos. Isso mantém o servidor leve (uma cópia tem poucos MB). O servidor guarda só: o e-mail, os aparelhos que entraram (nome, data de entrada, último uso), e as cópias (tamanho, data, SHA-256 e os bytes selados). Não sabe nomes de equipes, de bots nem o que há dentro.
 
 ### 27.2 O servidor (`crates/botloft-cloud`)
 
@@ -2117,9 +2118,9 @@ Um binário, `botloft-cloud serve --config cloud.toml`, com `axum` e SQLite pró
 | `listen` | `127.0.0.1:8787` | onde escuta, atrás do proxy |
 | `public_url` | (obrigatória) | o endereço público, que vai nos links do e-mail |
 | `data_dir` | `./data` | banco e cópias |
-| `quota_bytes` | 2 GiB | o máximo por conta |
-| `max_copy_bytes` | 1 GiB | o máximo de uma cópia |
-| `keep` | 3 | quantas cópias por conta (a mais antiga sai quando entra a seguinte) |
+| `quota_bytes` | 200 MiB | o máximo por conta |
+| `max_copy_bytes` | 50 MiB | o máximo de uma cópia |
+| `keep` | 5 | quantas cópias por conta (a mais antiga sai quando entra a seguinte) |
 | `behind_proxy` | `true` | o proxy põe o endereço de quem chama em `X-Forwarded-For`, e vale o último valor (para os freios de 27.3) |
 | `smtp` | (obrigatória) | `host`, `port`, `user`, `password_file`, `from` |
 
@@ -2153,7 +2154,7 @@ Só o daemon fala com o servidor; o app nunca vê o token. O cliente (`reqwest` 
 | `cloud.signin {email}` | começa o pedido (27.3) e devolve `{wait}`; o resto acontece em segundo plano |
 | `cloud.signin_cancel` | desiste do pedido |
 | `cloud.signout` | `POST /v1/logout` (se não conseguir, apaga o token local do mesmo jeito) |
-| `cloud.upload {passphrase}` | `backup.export` (14.2) e envia o arquivo; devolve `{id, size, created}` |
+| `cloud.upload {passphrase}` | `backup.export` com `scope: "light"` (14.2) e envia o arquivo; devolve `{id, size, created}` |
 | `cloud.copies` | a lista de 27.4 |
 | `cloud.download {id}` | baixa para `<home>\restore\downloaded.botloft` e devolve o caminho; o app segue com `backup.stage {path, passphrase}` e `backup.confirm`, como numa cópia de arquivo |
 | `cloud.delete {id}` | apaga uma cópia |
@@ -2166,7 +2167,7 @@ Notificações: `cloud.signed_in {email}`, `cloud.progress {sent, total}` (envio
 Configurações, "Cópia de segurança" (14.2) ganha o bloco **Conta**, acima de "Salvar uma cópia":
 
 - **Sem conta:** uma frase do que ela guarda ("seu e-mail e as cópias, que ninguém consegue abrir sem a sua senha"), o campo de e-mail e "Entrar". Depois: "Enviamos um link para ana@x.com. Abra o e-mail e volte aqui." com "Reenviar" (acende após 60 s) e "Cancelar".
-- **Com conta:** o e-mail, "Sair", o espaço usado ("320 MB de 2 GB"), "Enviar uma cópia agora" (a senha duas vezes, as mesmas regras de 14.2, uma barra de progresso) e a lista "Cópias na nuvem" (data, tamanho), cada uma com "Restaurar" (pede a "Senha da cópia", baixa e entra no mesmo passo de confirmação de 14.2) e "Apagar". "Apagar minha conta" no fim, com a confirmação que diz que apaga todas as cópias.
+- **Com conta:** o e-mail, "Sair", o espaço usado ("320 MB de 2 GB"), "Enviar uma cópia agora" (a frase "Vão para a nuvem as equipes, os bots, a memória deles e as rotinas. As conversas e os arquivos ficam só neste computador"; a senha duas vezes, as mesmas regras de 14.2, uma barra de progresso) e a lista "Cópias na nuvem" (data, tamanho), cada uma com "Restaurar" (pede a "Senha da cópia", baixa e entra no mesmo passo de confirmação de 14.2, que diz que as conversas não vêm) e "Apagar". "Apagar minha conta" no fim, com a confirmação que diz que apaga todas as cópias.
 - Textos nos três idiomas, sem jargão (15.6): "nuvem", "conta", "cópia"; nunca "servidor", "token" ou "daemon".
 
 ### 27.7 Privacidade (13)
@@ -2184,10 +2185,10 @@ Configurações, "Cópia de segurança" (14.2) ganha o bloco **Conta**, acima de
 | **C2** Servidor: conta | crate `botloft-cloud`, migrations, `Mailer`, login por link, aparelhos, freios | unidade; fluxo completo com a caixa de saída; mesma resposta para e-mail novo e conhecido; link usado ou vencido |
 | **C3** Servidor: cópias | `PUT`/`GET`/`DELETE`, hash, cota, `keep`, `Range`, apagar a conta | corte no meio não deixa nada; hash errado; cota; a mais antiga só sai depois da nova |
 | **C4** Hospedagem | `Dockerfile`, serviço systemd, `Caddyfile` e `docs/cloud-deploy.md`; o crate entra na CI | build; subir e responder em `/v1/me` com 401 |
-| **C5** Daemon | cliente `cloud`, métodos e notificações do protocolo, `secrets\cloud.json`, tipos gerados | o servidor de C2 e C3 no processo, em `127.0.0.1`: entrar, enviar, listar, baixar, restaurar em outra pasta |
+| **C5** Daemon | `backup.export` com `scope` (a cópia leve, 14.2), cliente `cloud`, métodos e notificações do protocolo, `secrets\cloud.json`, tipos gerados | o servidor de C2 e C3 no processo, em `127.0.0.1`: entrar, enviar, listar, baixar, restaurar em outra pasta |
 | **C6** App | o bloco Conta, `FakeBotloft`, três idiomas | `pnpm check`; a tela no preview |
 | **C7** Teste real | volta completa com a VPS de verdade e uma instalação de teste: e-mail chegando (entrega, spam), envio, restauração em pasta limpa | registrado na seção 19 |
 
 ### 27.9 Fora desta etapa
 
-Envio automático (pede guardar a senha da cópia no computador, decisão à parte), retomar um envio, cópias só do que mudou, plano pago e cotas por plano, login por Google ou GitHub, recuperar uma senha de cópia perdida, trocar o servidor sem perder as cópias, e o celular: o relay pelo servidor, o pareamento por QR e o app com aprovações e perguntas, que usam esta conta e vêm em seguida.
+Conversas, anexos e pastas de trabalho na nuvem, envio automático (pede guardar a senha da cópia no computador, decisão à parte), retomar um envio, cópias só do que mudou, plano pago e cotas por plano, login por Google ou GitHub, recuperar uma senha de cópia perdida, trocar o servidor sem perder as cópias, e o celular: o relay pelo servidor, o pareamento por QR e o app com aprovações e perguntas, que usam esta conta e vêm em seguida.
