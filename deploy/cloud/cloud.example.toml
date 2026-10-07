@@ -20,6 +20,11 @@ keep = 5                     # copies an account keeps; the oldest goes
 # A proxy in front sets X-Forwarded-For; its last value is the client.
 behind_proxy = true
 
+# Behind Cloudflare, with the firewall letting only Cloudflare reach the server,
+# the client's address is in a header of its own; ask for it so that each person
+# has a count of their own. Never turn it on if others can reach the server.
+# client_ip_header = "CF-Connecting-IP"
+
 # Where the bytes of the copies live: "disk" (in data_dir) or "bucket".
 storage = "disk"
 

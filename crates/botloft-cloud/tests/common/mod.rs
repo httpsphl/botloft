@@ -85,12 +85,19 @@ impl Server {
     }
 
     pub async fn ask_with(&self, body: Value, address: &str) -> Reply {
-        let request = Request::post("/v1/login")
+        self.ask_via(body, address, &[]).await
+    }
+
+    /// As `ask_with`, with more headers on the request.
+    pub async fn ask_via(&self, body: Value, address: &str, more: &[(&str, &str)]) -> Reply {
+        let mut request = Request::post("/v1/login")
             .header(header::CONTENT_TYPE, "application/json")
-            .header("x-forwarded-for", address)
-            .body(Body::from(body.to_string()))
-            .expect("request");
-        self.send(request).await
+            .header("x-forwarded-for", address);
+        for (name, value) in more {
+            request = request.header(*name, *value);
+        }
+        self.send(request.body(Body::from(body.to_string())).expect("request"))
+            .await
     }
 
     pub async fn get(&self, path: &str) -> Reply {

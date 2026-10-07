@@ -31,6 +31,8 @@ services:
         max_copy_bytes = 52428800
         keep = 5
         behind_proxy = true
+        # Behind Cloudflare, with only Cloudflare allowed through the firewall:
+        # client_ip_header = "CF-Connecting-IP"
         storage = "bucket"
 
         [bucket]

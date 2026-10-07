@@ -172,13 +172,22 @@ pub async fn confirm(
     })
 }
 
-/// Where the request really comes from: behind the proxy, its last
-/// `X-Forwarded-For`; otherwise the connection.
+/// Where the request really comes from: the header the config names, if it
+/// holds an address; else, behind a proxy, the last `X-Forwarded-For`; else
+/// the connection.
 fn client_address(
     state: &AppState,
     headers: &HeaderMap,
     connection: Option<ConnectInfo<SocketAddr>>,
 ) -> String {
+    if let Some(name) = &state.config.client_ip_header
+        && let Some(address) = headers
+            .get(name.trim())
+            .and_then(|value| value.to_str().ok())
+            .and_then(|value| value.trim().parse::<std::net::IpAddr>().ok())
+    {
+        return address.to_string();
+    }
     if state.config.behind_proxy
         && let Some(forwarded) = headers
             .get("x-forwarded-for")

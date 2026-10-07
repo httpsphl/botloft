@@ -23,6 +23,12 @@ pub struct Config {
     /// A proxy in front sets `X-Forwarded-For`; its last value is the client.
     #[serde(default = "default_true")]
     pub behind_proxy: bool,
+    /// A header that holds the client's address, such as `CF-Connecting-IP`
+    /// behind Cloudflare. Trust it only when nothing but that proxy can reach
+    /// the server, because anyone else could write it. Wins over
+    /// `X-Forwarded-For`.
+    #[serde(default)]
+    pub client_ip_header: Option<String>,
     #[serde(default)]
     pub storage: Storage,
     /// Where the copies go when `storage = "bucket"`.
@@ -154,6 +160,11 @@ impl Config {
         {
             anyhow::bail!("public_url must be https (or http://127.0.0.1 for tests)");
         }
+        if let Some(name) = &config.client_ip_header
+            && axum::http::HeaderName::from_bytes(name.trim().as_bytes()).is_err()
+        {
+            anyhow::bail!("client_ip_header is not a header name");
+        }
         if config.storage == Storage::Bucket && config.bucket.is_none() {
             anyhow::bail!("storage = \"bucket\" needs a [bucket] section");
         }
@@ -175,6 +186,7 @@ impl Config {
             max_copy_bytes: default_max_copy(),
             keep: default_keep(),
             behind_proxy: true,
+            client_ip_header: None,
             storage: Storage::Disk,
             bucket: None,
             smtp: Smtp {
@@ -296,6 +308,25 @@ password_file = \"p\"
         assert_eq!(config.max_copy_bytes, 50 << 20);
         assert_eq!(config.keep, 5);
         assert!(config.behind_proxy);
+    }
+
+    #[test]
+    fn the_client_ip_header_must_be_a_header_name() {
+        let with = |name: &str| {
+            let (_dir, path) = write(&format!(
+                "public_url = \"https://cloud.example.org\"\nclient_ip_header = \"{name}\"\n\
+                 [smtp]\nhost = \"m\"\nuser = \"u\"\nfrom = \"a@b.c\"\n"
+            ));
+            Config::load(&path)
+        };
+        assert_eq!(
+            with("CF-Connecting-IP")
+                .expect("a header")
+                .client_ip_header
+                .as_deref(),
+            Some("CF-Connecting-IP")
+        );
+        assert!(with("not a header").is_err());
     }
 
     #[test]

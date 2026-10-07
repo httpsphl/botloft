@@ -3,7 +3,7 @@
 mod common;
 
 use axum::http::StatusCode;
-use common::{server, start};
+use common::{server, server_with, start};
 use serde_json::json;
 
 #[tokio::test]
@@ -243,4 +243,61 @@ async fn without_a_token_nothing_opens() {
         s.authed("GET", "/v1/me", "made-up").await.status,
         StatusCode::UNAUTHORIZED
     );
+}
+
+#[tokio::test]
+async fn behind_cloudflare_each_person_has_their_own_count() {
+    // Every request reaches the server from the same edge address, 9.9.9.9;
+    // the header says who is really asking.
+    let s = server_with(|c| c.client_ip_header = Some("CF-Connecting-IP".to_owned()));
+    let ask = |email: String, who: &str| {
+        let body = json!({ "email": email, "device_name": "PC", "locale": "en" });
+        let who = who.to_owned();
+        let s = &s;
+        async move {
+            s.ask_via(body, "9.9.9.9", &[("CF-Connecting-IP", &who)])
+                .await
+        }
+    };
+    // One person can ask 20 times in the hour...
+    for n in 0..20 {
+        assert_eq!(
+            ask(format!("p{n}@exemplo.com"), "1.1.1.1").await.status,
+            StatusCode::ACCEPTED,
+            "{n}"
+        );
+    }
+    assert_eq!(
+        ask("p20@exemplo.com".to_owned(), "1.1.1.1").await.status,
+        StatusCode::TOO_MANY_REQUESTS
+    );
+    // ...and that does not hold back someone else behind the same edge.
+    assert_eq!(
+        ask("q@exemplo.com".to_owned(), "2.2.2.2").await.status,
+        StatusCode::ACCEPTED
+    );
+    // A header that is not an address is ignored: the edge's count applies.
+    let junk = ask("r@exemplo.com".to_owned(), "not-an-address").await;
+    assert_eq!(junk.status, StatusCode::ACCEPTED);
+}
+
+#[tokio::test]
+async fn without_the_option_the_header_is_not_believed() {
+    // Anyone could write it: with the option off, the edge address counts, so
+    // changing the header does not give a fresh count.
+    let s = server();
+    for n in 0..20 {
+        let body =
+            json!({ "email": format!("p{n}@exemplo.com"), "device_name": "PC", "locale": "en" });
+        let who = format!("3.3.3.{n}");
+        let sent = s
+            .ask_via(body, "9.9.9.9", &[("CF-Connecting-IP", &who)])
+            .await;
+        assert_eq!(sent.status, StatusCode::ACCEPTED, "{n}");
+    }
+    let body = json!({ "email": "p20@exemplo.com", "device_name": "PC", "locale": "en" });
+    let sent = s
+        .ask_via(body, "9.9.9.9", &[("CF-Connecting-IP", "4.4.4.4")])
+        .await;
+    assert_eq!(sent.status, StatusCode::TOO_MANY_REQUESTS);
 }
