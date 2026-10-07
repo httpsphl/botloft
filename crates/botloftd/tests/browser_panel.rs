@@ -47,11 +47,16 @@ async fn until_window(b: &mut Browsing, size: &str) -> String {
     panic!("the window never became {size}:\n{page}");
 }
 
-/// The next frame that is `height` tall.
+/// The next frame that is `height` tall, in what it says and in its pixels.
+/// Right after the page is resized the browser can still send a frame drawn
+/// for the old surface under the new size's metadata (a 1000 x 700 page in a
+/// 1000 x 560 picture, seen on Chromium 154 on Linux); the next repaint is
+/// right.
 async fn frame_of(app: &mut Client, height: u64) -> Value {
     for _ in 0..50 {
         let frame = app.notification("browser.frame").await;
-        if frame["height"] == height {
+        let (width, tall) = jpeg_size(frame["data"].as_str().expect("picture"));
+        if frame["height"] == height && frame["width"] == width && u64::from(tall) == height {
             return frame;
         }
     }
