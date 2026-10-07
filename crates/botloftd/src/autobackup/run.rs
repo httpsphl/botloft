@@ -3,6 +3,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use botloft_core::protocol::AutoBackupEvery;
 use tracing::info;
 
 use super::{Saved, period};
@@ -57,23 +58,9 @@ pub fn tick(daemon: &Daemon) {
         return;
     }
     let outcome = attempt(daemon, &saved);
-    let wait = period(saved.every);
-    daemon.autobackup.update(|state| match &outcome {
-        Outcome::Sent(fingerprint) => {
-            state.last_ok_at = Some(now);
-            state.fingerprint = Some(fingerprint.clone());
-            state.next_at = Some(after(now, wait));
-            state.last_error = None;
-        }
-        Outcome::Unchanged => {
-            state.next_at = Some(after(now, wait));
-            state.last_error = None;
-        }
-        Outcome::Failed { reason, retry, .. } => {
-            state.next_at = Some(after(now, *retry));
-            state.last_error = Some(reason.clone());
-        }
-    });
+    daemon
+        .autobackup
+        .update(|state| record(state, &outcome, saved.every, now));
     if matches!(outcome, Outcome::Failed { turn_off: true, .. }) {
         daemon.autobackup.turn_off();
     }
@@ -82,6 +69,30 @@ pub fn tick(daemon: &Daemon) {
 
 fn after(at: i64, by: Duration) -> i64 {
     crate::clock::after(at, by)
+}
+
+/// What the pass leaves behind. `sent_every` is how often it was set when the
+/// pass began: the owner may have changed it while a copy went up, and that
+/// wins, so the next look comes soon and counts the new period.
+fn record(state: &mut Saved, outcome: &Outcome, sent_every: AutoBackupEvery, now: i64) {
+    let unchanged = state.every == sent_every;
+    let next = |by: Duration| unchanged.then(|| after(now, by));
+    match outcome {
+        Outcome::Sent(fingerprint) => {
+            state.last_ok_at = Some(now);
+            state.fingerprint = Some(fingerprint.clone());
+            state.next_at = next(period(state.every)).or(state.next_at);
+            state.last_error = None;
+        }
+        Outcome::Unchanged => {
+            state.next_at = next(period(state.every)).or(state.next_at);
+            state.last_error = None;
+        }
+        Outcome::Failed { reason, retry, .. } => {
+            state.next_at = next(*retry).or(state.next_at);
+            state.last_error = Some(reason.clone());
+        }
+    }
 }
 
 fn attempt(daemon: &Daemon, saved: &Saved) -> Outcome {
@@ -122,5 +133,74 @@ fn attempt(daemon: &Daemon, saved: &Saved) -> Outcome {
             failed(reason, retry)
         }
         Err(_) => failed("cloud_error", LATER),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const NOW: i64 = 1_000_000;
+
+    fn on(every: AutoBackupEvery) -> Saved {
+        Saved {
+            enabled: true,
+            every,
+            ..Saved::default()
+        }
+    }
+
+    #[test]
+    fn a_sent_copy_waits_one_period() {
+        let mut state = on(AutoBackupEvery::Daily);
+        record(
+            &mut state,
+            &Outcome::Sent("ab".to_owned()),
+            AutoBackupEvery::Daily,
+            NOW,
+        );
+        assert_eq!(state.last_ok_at, Some(NOW));
+        assert_eq!(state.fingerprint.as_deref(), Some("ab"));
+        assert_eq!(state.next_at, Some(NOW + 86_400_000));
+    }
+
+    #[test]
+    fn a_change_of_period_made_during_the_pass_is_not_undone() {
+        // The pass began as daily; the owner chose weekly and asked it to look again.
+        let mut state = on(AutoBackupEvery::Weekly);
+        state.next_at = None;
+        record(
+            &mut state,
+            &Outcome::Sent("ab".to_owned()),
+            AutoBackupEvery::Daily,
+            NOW,
+        );
+        assert_eq!(state.last_ok_at, Some(NOW));
+        assert_eq!(state.next_at, None);
+        record(&mut state, &Outcome::Unchanged, AutoBackupEvery::Daily, NOW);
+        assert_eq!(state.next_at, None);
+        // The next pass, begun as weekly, counts the new period.
+        record(
+            &mut state,
+            &Outcome::Unchanged,
+            AutoBackupEvery::Weekly,
+            NOW,
+        );
+        assert_eq!(state.next_at, Some(NOW + 7 * 86_400_000));
+    }
+
+    #[test]
+    fn a_failure_is_kept_with_when_to_try_again() {
+        let mut state = on(AutoBackupEvery::Daily);
+        let failed = Outcome::Failed {
+            reason: "offline".to_owned(),
+            retry: SOON,
+            turn_off: false,
+        };
+        record(&mut state, &failed, AutoBackupEvery::Daily, NOW);
+        assert_eq!(state.last_error.as_deref(), Some("offline"));
+        assert_eq!(state.next_at, Some(NOW + 900_000));
+        record(&mut state, &Outcome::Unchanged, AutoBackupEvery::Daily, NOW);
+        assert_eq!(state.last_error, None);
     }
 }
