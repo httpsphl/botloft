@@ -3,6 +3,7 @@
 // the e-mail. Nothing leaves the page.
 
 import type { FakeBotloft, Handlers } from "./fake";
+import { turnOffFakeAutoBackup } from "./fakeAutoBackup";
 import { type CloudCopy, type CloudStatus, RpcErrorCode } from "./protocol.gen";
 import { RpcError } from "./rpc";
 
@@ -85,6 +86,7 @@ export function cloudHandlers(fake: FakeBotloft): Pick<Handlers, CloudMethods> {
       return null;
     },
     "cloud.signout": () => {
+      turnOffFakeAutoBackup(fake);
       state.signedIn = false;
       state.email = null;
       state.pending = null;
