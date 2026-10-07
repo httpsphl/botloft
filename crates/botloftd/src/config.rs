@@ -107,12 +107,14 @@ impl Default for BotsConfig {
     }
 }
 
-/// The bots' browser (spec 21.9).
+/// The server of the account unless `[cloud] url` says another one (spec 27).
+pub const DEFAULT_CLOUD_URL: &str = "https://botloft.comitium.com.br";
+
 /// The account and the copies in the cloud (spec 27).
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct CloudConfig {
-    /// The server; empty until there is one.
+    /// The server; set it to an empty string to turn the account off.
     pub url: String,
     /// How often a sign-in waiting for its link asks whether it was opened.
     pub poll_ms: u64,
@@ -121,12 +123,13 @@ pub struct CloudConfig {
 impl Default for CloudConfig {
     fn default() -> Self {
         Self {
-            url: String::new(),
+            url: DEFAULT_CLOUD_URL.to_owned(),
             poll_ms: 2_000,
         }
     }
 }
 
+/// The bots' browser (spec 21.9).
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct BrowserConfig {
@@ -246,6 +249,18 @@ mod tests {
         assert_eq!(config.courier.max_attempts, 3);
         assert_eq!(config.courier.lease_ms, 15_000);
         assert_eq!(config.workspaces_root(), Some(PathBuf::from("D:\\bots")));
+    }
+
+    #[test]
+    fn the_account_server_defaults_to_ours_and_can_be_changed_or_turned_off() {
+        let url = |text: &str| Config::parse(text).expect("parse").cloud.url;
+        assert_eq!(url(""), "https://botloft.comitium.com.br");
+        assert_eq!(url("[cloud]\npoll_ms = 500"), DEFAULT_CLOUD_URL);
+        assert_eq!(
+            url("[cloud]\nurl = 'https://nuvem.exemplo.org'"),
+            "https://nuvem.exemplo.org"
+        );
+        assert_eq!(url("[cloud]\nurl = ''"), "");
     }
 
     #[test]

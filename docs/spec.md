@@ -171,7 +171,7 @@ idle_minutes = 10
 max_open = 4
 
 [cloud]                       # conta e cópias na nuvem (seção 27)
-url = ""                     # o servidor da conta; vazio = sem servidor, e a conta fica desligada
+url = "https://botloft.comitium.com.br"  # o servidor da conta; vazio = sem servidor, e a conta fica desligada
 poll_ms = 2000               # de quanto em quanto um pedido de entrada vê se o link foi aberto
 
 [tasks]
@@ -2174,7 +2174,7 @@ Notificações: `cloud.signed_in {email}`, `cloud.progress {direction, sent, tot
 
 Configurações, "Cópia de segurança" (14.2) ganha o bloco **Conta**, acima de "Salvar uma cópia":
 
-- **Sem conta:** uma frase do que ela guarda ("seu e-mail e as cópias, que ninguém consegue abrir sem a sua senha"), o campo de e-mail e "Entrar". Depois: "Enviamos um link para ana@x.com. Abra o e-mail e volte aqui." com "Enviar de novo" (acende após 60 s, o intervalo do servidor) e "Cancelar". Um link que venceu diz "O link venceu. Peça outro.". Sem endereço de nuvem configurado (`[cloud] url` vazio), o bloco só diz que as cópias na nuvem ainda não estão configuradas.
+- **Sem conta:** uma frase do que ela guarda ("seu e-mail e as cópias, que ninguém consegue abrir sem a sua senha"), o campo de e-mail e "Entrar". Depois: "Enviamos um link para ana@x.com. Abra o e-mail e volte aqui." com "Enviar de novo" (acende após 60 s, o intervalo do servidor) e "Cancelar". Um link que venceu diz "O link venceu. Peça outro.". O endereço padrão é o servidor do projeto (`https://botloft.comitium.com.br`); quem prefere o seu muda `[cloud] url`, e quem quer a conta desligada o deixa vazio. Com o endereço vazio, o bloco só diz que as cópias na nuvem ainda não estão configuradas.
 - **Com conta:** o e-mail, "Sair", o espaço usado ("320 MB de 2 GB"), "Enviar uma cópia agora" (a frase "Vão para a nuvem as equipes, os bots, a memória deles e as rotinas. As conversas e os arquivos ficam só neste computador"; a senha duas vezes, as mesmas regras de 14.2, uma barra de progresso) e a lista "Cópias na nuvem" (data, tamanho), cada uma com "Restaurar" (pede a "Senha da cópia", baixa e entra no mesmo passo de confirmação de 14.2, que diz que as conversas não vêm, pelo `scope: light` do manifesto) e "Apagar". "Apagar minha conta" no fim, com a confirmação que diz que apaga todas as cópias.
 - Textos nos três idiomas, sem jargão (15.6): "nuvem", "conta", "cópia"; nunca "servidor", "token" ou "daemon".
 
