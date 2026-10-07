@@ -85,8 +85,16 @@ fn login_environment() -> Option<Vars> {
         let _ = done.send(bytes);
     });
     let bytes = output.recv_timeout(SHELL_TIMEOUT).ok();
+    if bytes.is_none() {
+        let _ = job.terminate();
+    }
+    // The pipe closes a moment before the process counts as exited: killing
+    // the group right at end of output could turn a clean exit into SIGKILL.
+    // With the output complete, `env` is exiting; wait for it, then sweep
+    // whatever the profile left behind.
+    let status = child.wait().ok();
     let _ = job.terminate();
-    let status = child.wait().ok()?;
+    let status = status?;
     let vars = parse(&bytes?)?;
     status.success().then_some(vars)
 }

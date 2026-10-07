@@ -1,7 +1,10 @@
 //! The browser tests' shared setup (spec 21): a bot in Manual mode, a local
 //! site, and helpers to call tools in the background and answer requests.
 
+use std::sync::OnceLock;
+
 use serde_json::{Value, json};
+use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tokio::task::JoinHandle;
 
 use super::bots::ready_bot;
@@ -14,6 +17,19 @@ pub struct Browsing {
     pub bot: Value,
     pub mcp: Mcp,
     pub site: String,
+    /// Held until the test ends, after the daemon has closed its browser.
+    _slot: OwnedSemaphorePermit,
+}
+
+/// Real browsers a test binary has open at once. A dozen cold Chromium
+/// profiles starting together on a small CI runner could pass the daemon's
+/// 30 s start limit, so the tests wait their turn instead.
+const BROWSERS_AT_ONCE: usize = 3;
+
+async fn browser_slot() -> OwnedSemaphorePermit {
+    static SLOTS: OnceLock<std::sync::Arc<Semaphore>> = OnceLock::new();
+    let slots = SLOTS.get_or_init(|| std::sync::Arc::new(Semaphore::new(BROWSERS_AT_ONCE)));
+    slots.clone().acquire_owned().await.expect("open semaphore")
 }
 
 /// A bot in Manual mode and a local site, or `None` without Edge.
@@ -22,6 +38,7 @@ pub async fn setup() -> Option<Browsing> {
         eprintln!("Microsoft Edge is not installed; skipping");
         return None;
     }
+    let slot = browser_slot().await;
     // A real browser can be slow to ask on a busy CI runner.
     let t = TestDaemon::start_supervised_patient().await;
     let mut app = t.session().await;
@@ -37,6 +54,7 @@ pub async fn setup() -> Option<Browsing> {
         bot,
         mcp,
         site,
+        _slot: slot,
     })
 }
 
