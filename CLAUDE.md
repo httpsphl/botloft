@@ -18,6 +18,7 @@ Este projeto é implementação própria. Não copie nem adapte código, testes,
 crates/botloft-core    tipos de domínio, IDs, envelope, tipos do protocolo (exportados via ts-rs)
 crates/botloft-store   SQLite, migrations em migrations/NNNN_nome.sql
 crates/botloftd        daemon: rpc, supervisor, runtime, chat, courier, tools, platform
+crates/botloft-cloud   servidor da conta e das cópias na nuvem (spec 27), com SQLite próprio
 app/                   Tauri v2 + React 19 + TS strict + Tailwind v4 + Zustand
 docs/                  spec e ADRs (docs/adr/0001: bots headless com chat)
 ```

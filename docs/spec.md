@@ -2120,6 +2120,7 @@ Um binário, `botloft-cloud serve --config cloud.toml`, com `axum` e SQLite pró
 | `quota_bytes` | 2 GiB | o máximo por conta |
 | `max_copy_bytes` | 1 GiB | o máximo de uma cópia |
 | `keep` | 3 | quantas cópias por conta (a mais antiga sai quando entra a seguinte) |
+| `behind_proxy` | `true` | o proxy põe o endereço de quem chama em `X-Forwarded-For`, e vale o último valor (para os freios de 27.3) |
 | `smtp` | (obrigatória) | `host`, `port`, `user`, `password_file`, `from` |
 
 O envio de e-mail passa por uma interface (`Mailer`): o serviço usa SMTP, e os testes uma caixa de saída na memória. Os textos do e-mail saem em `en`, `pt-BR` ou `es`, conforme o `locale` que o app mandou. Logs do servidor: nunca o e-mail, o token nem o código em nível `info`; o proxy guarda o IP por 7 dias para frear abuso e depois apaga. Sem telemetria.
@@ -2129,18 +2130,18 @@ O envio de e-mail passa por uma interface (`Mailer`): o serviço usa SMTP, e os 
 Sem senha. O fluxo é o de "entrar em outro aparelho", que não precisa de endereço do app para o link voltar:
 
 1. O app chama `POST /v1/login {email, device_name, locale}`. A resposta é sempre `202 {request, wait}` (`request` é um segredo de 32 bytes em base64 url-safe; `wait` é 600 s), exista ou não a conta: ninguém descobre por aqui quem tem conta. O servidor guarda só o SHA-256 do `request`.
-2. O e-mail leva um link `<public_url>/v1/login/confirm?code=<outro segredo>`, de uso único e válido por 10 minutos. Abri-lo, em qualquer aparelho, mostra "Pode voltar ao Botloft" e marca o pedido como aprovado. A conta nasce nesse momento, se for a primeira vez.
+2. O e-mail leva um link `<public_url>/v1/login/confirm?code=<outro segredo>`, de uso único e válido por 10 minutos. Abri-lo, em qualquer aparelho, mostra uma página com o nome do aparelho e o botão "Entrar"; só o botão (`POST /v1/login/confirm`) aprova o pedido e mostra "Pode voltar ao Botloft", porque programas de e-mail abrem os links sozinhos e não podem entrar por ninguém. A conta nasce nesse momento, se for a primeira vez. Link usado ou vencido mostra uma página de "este link não vale mais" (`410`).
 3. O app consulta `GET /v1/login/<request>` a cada 2 s: `{status: "pending"}`, `"expired"` ou `"approved"`. Na primeira consulta depois da aprovação vem `{status: "approved", token, device, email}` e o pedido deixa de existir. Quem só tem o link não tem o `request`, e quem o intercepta não tem o link.
 4. O `token` (32 bytes) identifica o aparelho em todas as outras chamadas (`Authorization: Bearer`). O servidor guarda só o SHA-256, como o Botloft faz com os tokens dos bots (13). Fica no computador em `secrets\cloud.json` (ACL do usuário, 5 e 13).
 
-Freios: 5 pedidos por hora por e-mail e 20 por hora por IP (`429` com `retry_after`); o e-mail não é enviado de novo se o último saiu há menos de 60 s. `POST /v1/logout` apaga o token deste aparelho; `GET /v1/me` devolve `{email, used, quota, devices}`; `DELETE /v1/devices/<id>` tira outro aparelho. **Apagar a conta:** `POST /v1/account/delete` manda um link ao e-mail e, confirmado, apaga a conta, os aparelhos e todas as cópias de uma vez; `DELETE /v1/account` não existe sem essa confirmação.
+Freios: 5 pedidos por hora por e-mail e 20 por hora por IP (`429` com `retry_after`); um segundo e-mail para a mesma pessoa em menos de 60 s também dá `429`, sem enviar nada. Um endereço que não é de e-mail dá `400` `bad_email`, e um e-mail que o servidor de e-mail não aceita dá `502` `mail_failed`, sem deixar o pedido para trás. `POST /v1/logout` apaga o token deste aparelho; `GET /v1/me` devolve `{email, used, quota, devices}`; `DELETE /v1/devices/<id>` tira outro aparelho. **Apagar a conta:** `POST /v1/account/delete` manda um link ao e-mail e, confirmado, apaga a conta, os aparelhos e todas as cópias de uma vez; `DELETE /v1/account` não existe sem essa confirmação.
 
 ### 27.4 As cópias
 
 - `PUT /v1/copies` envia o arquivo `.botloft` inteiro, em fluxo, com `Content-Length` e `X-Botloft-Sha256`. O servidor grava num arquivo temporário, confere o tamanho e o hash enquanto grava e só então o torna a cópia mais nova; falha, corte ou hash diferente não deixam nada. Responde `201 {id, size, created}`. Recusa com `413` e `reason` `too_big` (acima de `max_copy_bytes`) ou `quota` (a conta não cabe), `400` `bad_hash`. Depois de gravar uma cópia nova e só então, apaga as mais antigas além de `keep`.
 - `GET /v1/copies` lista `{id, size, created}`, da mais nova para a mais antiga. `GET /v1/copies/<id>` baixa, com `Range` para retomar. `DELETE /v1/copies/<id>` apaga uma.
 - O servidor não abre o arquivo: não confere o lacre nem o manifesto. Se o cliente enviou lixo, a restauração falha no app com `not_a_backup` (14.2), sem mudar nada.
-- Erros vêm como `{reason, message}`; os `reason` são `unauthorized`, `not_found`, `rate_limited`, `login_expired`, `too_big`, `quota`, `bad_hash`.
+- Erros vêm como `{reason, message}`; os `reason` são `unauthorized`, `not_found`, `bad_email`, `rate_limited`, `mail_failed`, `too_big`, `quota`, `bad_hash`, `internal`. Um pedido de entrada vencido não é erro: a consulta devolve `{status: "expired"}`.
 
 ### 27.5 No daemon (`cloud`)
 
