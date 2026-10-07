@@ -55,13 +55,14 @@ pub async fn ask(
         "{}/v1/account/delete/confirm?code={code}",
         state.config.base_url()
     );
-    let (subject, text) = delete_mail(locale, &link);
+    let letter = delete_mail(locale, &link, state.config.base_url());
     let sent = state
         .mailer
         .send(Mail {
             to: who.email,
-            subject,
-            body: text,
+            subject: letter.subject,
+            body: letter.text,
+            html: letter.html,
         })
         .await;
     if sent.is_err() {

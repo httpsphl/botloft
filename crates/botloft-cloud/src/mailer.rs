@@ -3,7 +3,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use lettre::message::header::ContentType;
+use lettre::message::MultiPart;
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 
@@ -13,7 +13,10 @@ use crate::config::{self, Smtp};
 pub struct Mail {
     pub to: String,
     pub subject: String,
+    /// The plain text version.
     pub body: String,
+    /// The same message drawn, for the clients that show HTML.
+    pub html: String,
 }
 
 /// Mail kept in memory, for tests.
@@ -72,8 +75,10 @@ impl SmtpMailer {
             .from(self.from.parse()?)
             .to(mail.to.parse()?)
             .subject(mail.subject.as_str())
-            .header(ContentType::TEXT_PLAIN)
-            .body(mail.body.clone())?;
+            .multipart(MultiPart::alternative_plain_html(
+                mail.body.clone(),
+                mail.html.clone(),
+            ))?;
         self.transport.send(message).await?;
         Ok(())
     }

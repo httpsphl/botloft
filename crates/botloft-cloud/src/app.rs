@@ -24,6 +24,7 @@ pub struct AppState {
 pub fn router(state: AppState) -> Router {
     Router::new()
         .route("/health", get(|| async { "ok" }))
+        .route("/brand/flame.png", get(crate::html::flame))
         .route("/v1/login", post(login::ask))
         .route(
             "/v1/login/confirm",

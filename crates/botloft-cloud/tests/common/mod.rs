@@ -22,6 +22,8 @@ pub struct Server {
 
 pub struct Reply {
     pub status: StatusCode,
+    pub headers: axum::http::HeaderMap,
+    pub bytes: Vec<u8>,
     pub body: String,
 }
 
@@ -67,11 +69,13 @@ fn build(outbox: Outbox, config: Config) -> Server {
 impl Server {
     pub async fn send(&self, request: Request<Body>) -> Reply {
         let response = self.app.clone().oneshot(request).await.expect("response");
-        let status = response.status();
+        let (status, headers) = (response.status(), response.headers().clone());
         let bytes = to_bytes(response.into_body(), 1 << 20).await.expect("body");
         Reply {
             status,
+            headers,
             body: String::from_utf8_lossy(&bytes).into_owned(),
+            bytes: bytes.to_vec(),
         }
     }
 

@@ -70,13 +70,14 @@ pub async fn ask(
     })?;
 
     let link = format!("{}/v1/login/confirm?code={code}", state.config.base_url());
-    let (subject, body) = login_mail(locale, &link, &device);
+    let letter = login_mail(locale, &link, &device, state.config.base_url());
     let sent = state
         .mailer
         .send(Mail {
             to: email,
-            subject,
-            body,
+            subject: letter.subject,
+            body: letter.text,
+            html: letter.html,
         })
         .await;
     if sent.is_err() {
