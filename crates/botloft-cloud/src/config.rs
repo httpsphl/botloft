@@ -23,7 +23,34 @@ pub struct Config {
     /// A proxy in front sets `X-Forwarded-For`; its last value is the client.
     #[serde(default = "default_true")]
     pub behind_proxy: bool,
+    #[serde(default)]
+    pub storage: Storage,
+    /// Where the copies go when `storage = "bucket"`.
+    pub bucket: Option<Bucket>,
     pub smtp: Smtp,
+}
+
+/// Where the bytes of the copies are kept (spec 27.2).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Storage {
+    /// In `data_dir`.
+    #[default]
+    Disk,
+    /// An S3-compatible bucket, such as Cloudflare R2.
+    Bucket,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Bucket {
+    pub endpoint: String,
+    pub name: String,
+    #[serde(default = "default_region")]
+    pub region: String,
+    pub access_key_id: String,
+    /// A file with the secret alone, so it never sits in `cloud.toml`.
+    pub secret_file: PathBuf,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -56,6 +83,9 @@ fn default_keep() -> u32 {
 fn default_true() -> bool {
     true
 }
+fn default_region() -> String {
+    "auto".to_owned()
+}
 fn default_port() -> u16 {
     587
 }
@@ -70,6 +100,9 @@ impl Config {
             && !config.public_url.starts_with("http://127.0.0.1")
         {
             anyhow::bail!("public_url must be https (or http://127.0.0.1 for tests)");
+        }
+        if config.storage == Storage::Bucket && config.bucket.is_none() {
+            anyhow::bail!("storage = \"bucket\" needs a [bucket] section");
         }
         Ok(config)
     }
@@ -89,6 +122,8 @@ impl Config {
             max_copy_bytes: default_max_copy(),
             keep: default_keep(),
             behind_proxy: true,
+            storage: Storage::Disk,
+            bucket: None,
             smtp: Smtp {
                 host: "localhost".to_owned(),
                 port: 587,
@@ -123,6 +158,38 @@ mod tests {
         assert_eq!(config.max_copy_bytes, 50 << 20);
         assert_eq!(config.smtp.port, 587);
         assert_eq!(config.base_url(), "https://cloud.example.org");
+    }
+
+    #[test]
+    fn a_bucket_needs_its_section() {
+        let (_dir, path) = write(
+            "public_url = \"https://cloud.example.org\"
+storage = \"bucket\"
+[smtp]
+host = \"m\"
+             user = \"u\"
+password_file = \"p\"
+from = \"a@b.c\"
+",
+        );
+        assert!(Config::load(&path).is_err());
+        let (_dir, path) = write(
+            "public_url = \"https://cloud.example.org\"
+storage = \"bucket\"
+[bucket]
+             endpoint = \"https://x.r2.cloudflarestorage.com\"
+name = \"b\"
+access_key_id = \"k\"
+             secret_file = \"s\"
+[smtp]
+host = \"m\"
+user = \"u\"
+password_file = \"p\"
+             from = \"a@b.c\"
+",
+        );
+        let config = Config::load(&path).expect("load");
+        assert_eq!(config.bucket.expect("bucket").region, "auto");
     }
 
     #[test]

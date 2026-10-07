@@ -15,6 +15,10 @@ struct Words {
     done: &'static str,
     gone_title: &'static str,
     gone: &'static str,
+    del_title: &'static str,
+    del_ask: &'static str,
+    del_button: &'static str,
+    deleted: &'static str,
 }
 
 fn words(locale: Locale) -> Words {
@@ -27,6 +31,10 @@ fn words(locale: Locale) -> Words {
             done: "You can go back to Botloft now.",
             gone_title: "This link no longer works",
             gone: "It was already used or it expired. Ask for a new one in Botloft.",
+            del_title: "Delete your account",
+            del_ask: "This deletes the account of {} and every copy saved in it. It cannot be undone.",
+            del_button: "Delete everything",
+            deleted: "Your account and its copies are deleted.",
         },
         Locale::PtBr => Words {
             title: "Entrar no Botloft",
@@ -36,6 +44,10 @@ fn words(locale: Locale) -> Words {
             done: "Pode voltar ao Botloft.",
             gone_title: "Este link não vale mais",
             gone: "Ele já foi usado ou expirou. Peça outro no Botloft.",
+            del_title: "Apagar sua conta",
+            del_ask: "Isto apaga a conta de {} e todas as cópias guardadas nela. Não dá para desfazer.",
+            del_button: "Apagar tudo",
+            deleted: "Sua conta e as cópias foram apagadas.",
         },
         Locale::Es => Words {
             title: "Entrar en Botloft",
@@ -45,6 +57,10 @@ fn words(locale: Locale) -> Words {
             done: "Ya puedes volver a Botloft.",
             gone_title: "Este enlace ya no sirve",
             gone: "Ya se usó o caducó. Pide otro en Botloft.",
+            del_title: "Borrar tu cuenta",
+            del_ask: "Esto borra la cuenta de {} y todas las copias guardadas en ella. No se puede deshacer.",
+            del_button: "Borrar todo",
+            deleted: "Tu cuenta y sus copias se han borrado.",
         },
     }
 }
@@ -63,6 +79,29 @@ pub fn confirm(locale: Locale, device: &str, code: &str) -> Response {
         w.button
     );
     page(locale, w.title, &body)
+}
+
+/// The button page for deleting an account.
+pub fn delete_ask(locale: Locale, email: &str, code: &str) -> Response {
+    let w = words(locale);
+    let body = format!(
+        "<h1>{}</h1><p>{}</p>         <form method=\"post\" action=\"/v1/account/delete/confirm\">         <input type=\"hidden\" name=\"code\" value=\"{}\"><button>{}</button></form>",
+        w.del_title,
+        w.del_ask
+            .replace("{}", &format!("<b>{}</b>", escape(email))),
+        escape(code),
+        w.del_button
+    );
+    page(locale, w.del_title, &body)
+}
+
+pub fn deleted(locale: Locale) -> Response {
+    let w = words(locale);
+    page(
+        locale,
+        w.del_title,
+        &format!("<h1>{}</h1><p>{}</p>", w.del_title, w.deleted),
+    )
 }
 
 pub fn done(locale: Locale) -> Response {

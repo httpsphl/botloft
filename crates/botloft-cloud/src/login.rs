@@ -1,7 +1,7 @@
 //! Signing in by e-mail link (spec 27.3): ask, confirm in the e-mail, collect.
 
 use axum::extract::{Extension, Form, Path, Query, State};
-use axum::http::{HeaderMap, header};
+use axum::http::HeaderMap;
 use axum::response::{IntoResponse, Response};
 use axum::{Json, extract::ConnectInfo};
 use serde::Deserialize;
@@ -147,7 +147,7 @@ pub async fn confirm_page(
         Some(waiting) => {
             pages::confirm(Locale::parse(&waiting.locale), &waiting.device_name, &code)
         }
-        None => pages::gone(browser_locale(&headers)),
+        None => pages::gone(Locale::of_request(&headers)),
     })
 }
 
@@ -168,15 +168,8 @@ pub async fn confirm(
     })?;
     Ok(match locale {
         Some(locale) => pages::done(locale).into_response(),
-        None => pages::gone(browser_locale(&headers)),
+        None => pages::gone(Locale::of_request(&headers)),
     })
-}
-
-fn browser_locale(headers: &HeaderMap) -> Locale {
-    headers
-        .get(header::ACCEPT_LANGUAGE)
-        .and_then(|value| value.to_str().ok())
-        .map_or(Locale::En, Locale::from_accept_language)
 }
 
 /// Where the request really comes from: behind the proxy, its last

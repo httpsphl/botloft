@@ -62,6 +62,54 @@ impl ApiError {
         )
     }
 
+    pub fn length_required() -> Self {
+        Self::new(
+            StatusCode::LENGTH_REQUIRED,
+            "length_required",
+            "The upload must say how big it is.",
+        )
+    }
+
+    pub fn bad_length() -> Self {
+        Self::new(
+            StatusCode::BAD_REQUEST,
+            "bad_length",
+            "The upload is not the size it said, or it was cut off.",
+        )
+    }
+
+    pub fn bad_hash() -> Self {
+        Self::new(
+            StatusCode::BAD_REQUEST,
+            "bad_hash",
+            "The upload does not match its SHA-256.",
+        )
+    }
+
+    pub fn too_big() -> Self {
+        Self::new(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "too_big",
+            "That copy is bigger than a copy may be.",
+        )
+    }
+
+    pub fn quota() -> Self {
+        Self::new(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "quota",
+            "The account has no room for this copy. Delete an old one first.",
+        )
+    }
+
+    pub fn range_not_satisfiable() -> Self {
+        Self::new(
+            StatusCode::RANGE_NOT_SATISFIABLE,
+            "bad_range",
+            "That part of the copy does not exist.",
+        )
+    }
+
     pub fn internal() -> Self {
         Self::new(
             StatusCode::INTERNAL_SERVER_ERROR,

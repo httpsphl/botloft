@@ -9,6 +9,7 @@ use serde_json::{Value, json};
 
 use crate::accounts::{self, Who};
 use crate::app::AppState;
+use crate::copy_rows;
 use crate::error::ApiError;
 use crate::tokens;
 
@@ -42,7 +43,7 @@ pub async fn me(
     let (devices, used) = state.db.run(|conn| {
         Ok((
             accounts::devices(conn, who.account_id)?,
-            accounts::used_bytes(conn, who.account_id)?,
+            copy_rows::used(conn, who.account_id)?,
         ))
     })?;
     let devices: Vec<Value> = devices

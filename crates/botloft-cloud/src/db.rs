@@ -10,7 +10,10 @@ use rusqlite::Connection;
 use crate::error::ApiError;
 
 /// `(version, sql)`; versions are consecutive and match the file prefix.
-const MIGRATIONS: &[(u32, &str)] = &[(1, include_str!("../migrations/0001_accounts.sql"))];
+const MIGRATIONS: &[(u32, &str)] = &[
+    (1, include_str!("../migrations/0001_accounts.sql")),
+    (2, include_str!("../migrations/0002_copies.sql")),
+];
 
 #[derive(Clone)]
 pub struct Db {
@@ -75,7 +78,14 @@ mod tests {
                 stmt.query_map([], |row| row.get(0))?.collect()
             })
             .expect("tables");
-        for name in ["accounts", "attempts", "devices", "logins"] {
+        for name in [
+            "accounts",
+            "attempts",
+            "copies",
+            "deletions",
+            "devices",
+            "logins",
+        ] {
             assert!(tables.iter().any(|table| table == name), "{name}");
         }
     }

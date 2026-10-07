@@ -9,7 +9,8 @@ use crate::clock::Clock;
 use crate::config::Config;
 use crate::db::Db;
 use crate::mailer::Mailer;
-use crate::{login, session};
+use crate::store::CopyStore;
+use crate::{copies, login, removal, session};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -17,6 +18,7 @@ pub struct AppState {
     pub mailer: Arc<Mailer>,
     pub clock: Clock,
     pub config: Arc<Config>,
+    pub store: CopyStore,
 }
 
 pub fn router(state: AppState) -> Router {
@@ -30,5 +32,12 @@ pub fn router(state: AppState) -> Router {
         .route("/v1/me", get(session::me))
         .route("/v1/logout", post(session::logout))
         .route("/v1/devices/{id}", delete(session::remove_device))
+        .route("/v1/copies", get(copies::list).put(copies::put))
+        .route("/v1/copies/{id}", get(copies::get).delete(copies::remove))
+        .route("/v1/account/delete", post(removal::ask))
+        .route(
+            "/v1/account/delete/confirm",
+            get(removal::confirm_page).post(removal::confirm),
+        )
         .with_state(state)
 }

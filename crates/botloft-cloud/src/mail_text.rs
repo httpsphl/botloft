@@ -33,6 +33,14 @@ impl Locale {
             .unwrap_or(Self::En)
     }
 
+    /// The language the browser asked for.
+    pub fn of_request(headers: &axum::http::HeaderMap) -> Self {
+        headers
+            .get(axum::http::header::ACCEPT_LANGUAGE)
+            .and_then(|value| value.to_str().ok())
+            .map_or(Self::En, Self::from_accept_language)
+    }
+
     /// The tag to store and send back.
     pub fn tag(self) -> &'static str {
         match self {
@@ -68,6 +76,45 @@ pub fn login_mail(locale: Locale, link: &str, device: &str) -> (String, String) 
                 "Abre este enlace para entrar en Botloft en \"{device}\":\n\n{link}\n\n\
                  Sirve una vez y caduca en 10 minutos. Si no lo pediste tú, \
                  ignora este correo: no pasa nada.\n"
+            ),
+        ),
+    }
+}
+
+/// The subject and the text of the e-mail that confirms deleting an account.
+pub fn delete_mail(locale: Locale, link: &str) -> (String, String) {
+    match locale {
+        Locale::En => (
+            "Delete your Botloft account?".to_owned(),
+            format!(
+                "Open this link and press the button to delete your Botloft account and every                  copy saved in it:
+
+{link}
+
+It expires in 10 minutes. If you did not ask                  for this, ignore this e-mail: nothing is deleted.
+"
+            ),
+        ),
+        Locale::PtBr => (
+            "Apagar sua conta do Botloft?".to_owned(),
+            format!(
+                "Abra este link e aperte o botão para apagar sua conta do Botloft e todas as                  cópias guardadas nela:
+
+{link}
+
+Ele expira em 10 minutos. Se não foi você                  que pediu, ignore este e-mail: nada é apagado.
+"
+            ),
+        ),
+        Locale::Es => (
+            "¿Borrar tu cuenta de Botloft?".to_owned(),
+            format!(
+                "Abre este enlace y pulsa el botón para borrar tu cuenta de Botloft y todas las                  copias guardadas en ella:
+
+{link}
+
+Caduca en 10 minutos. Si no lo pediste                  tú, ignora este correo: no se borra nada.
+"
             ),
         ),
     }

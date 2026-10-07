@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Context;
-use botloft_cloud::{AppState, Clock, Config, Db, Mailer, SmtpMailer, router};
+use botloft_cloud::{AppState, Clock, Config, CopyStore, Db, Mailer, SmtpMailer, Storage, router};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -35,7 +35,12 @@ async fn main() -> anyhow::Result<()> {
     let Command::Serve { config } = Cli::parse().command;
     let config = Config::load(&config)?;
     std::fs::create_dir_all(&config.data_dir).context("cannot create data_dir")?;
+    let store = match (config.storage, &config.bucket) {
+        (Storage::Bucket, Some(bucket)) => CopyStore::bucket(bucket)?,
+        _ => CopyStore::disk(&config.data_dir.join("copies"))?,
+    };
     let state = AppState {
+        store,
         db: Db::open(&config.data_dir.join("cloud.db")).context("cannot open the database")?,
         mailer: Arc::new(Mailer::Smtp(Box::new(SmtpMailer::new(&config.smtp)?))),
         clock: Clock::default(),

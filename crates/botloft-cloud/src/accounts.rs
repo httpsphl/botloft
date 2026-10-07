@@ -234,14 +234,10 @@ pub fn delete_device(conn: &Connection, account_id: i64, id: &str) -> rusqlite::
     Ok(removed > 0)
 }
 
-/// Bytes the account's copies take. The copies arrive in C3 (spec 27.8).
-pub fn used_bytes(_conn: &Connection, _account_id: i64) -> rusqlite::Result<u64> {
-    Ok(0)
-}
-
 /// Drops what ran out: links and the old counts of the rate limits.
 pub fn purge(conn: &Connection, now: i64) -> rusqlite::Result<()> {
     conn.execute("DELETE FROM logins WHERE expires_at <= ?1", [now])?;
     conn.execute("DELETE FROM attempts WHERE at <= ?1", [now - 3_600_000])?;
+    conn.execute("DELETE FROM deletions WHERE expires_at <= ?1", [now])?;
     Ok(())
 }

@@ -8,12 +8,14 @@ use std::sync::Arc;
 use axum::Router;
 use axum::body::{Body, to_bytes};
 use axum::http::{Request, StatusCode, header};
-use botloft_cloud::{AppState, Clock, Config, Db, Mailer, Outbox, router};
+use botloft_cloud::{AppState, Clock, Config, CopyStore, Db, Mailer, Outbox, router};
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 use tower::ServiceExt;
 
 pub struct Server {
     app: Router,
+    pub store: CopyStore,
     pub outbox: Outbox,
     pub clock: Clock,
 }
@@ -34,15 +36,29 @@ pub fn server() -> Server {
 }
 
 pub fn start(outbox: Outbox) -> Server {
+    build(outbox, Config::for_tests())
+}
+
+/// A server with other limits than the defaults.
+pub fn server_with(change: impl FnOnce(&mut Config)) -> Server {
+    let mut config = Config::for_tests();
+    change(&mut config);
+    build(Outbox::default(), config)
+}
+
+fn build(outbox: Outbox, config: Config) -> Server {
     let clock = Clock::default();
+    let store = CopyStore::memory();
     let state = AppState {
         db: Db::memory().expect("db"),
         mailer: Arc::new(Mailer::Outbox(outbox.clone())),
         clock: clock.clone(),
-        config: Arc::new(Config::for_tests()),
+        config: Arc::new(config),
+        store: store.clone(),
     };
     Server {
         app: router(state),
+        store,
         outbox,
         clock,
     }
@@ -92,9 +108,67 @@ impl Server {
         self.send(request).await
     }
 
+    /// `PUT /v1/copies` with the right hash and length.
+    pub async fn put_copy(&self, token: &str, data: &[u8]) -> Reply {
+        self.put_copy_with(token, data, Some(&sha(data)), Some(data.len()))
+            .await
+    }
+
+    /// `PUT /v1/copies` with the hash and the declared length left to the test.
+    pub async fn put_copy_with(
+        &self,
+        token: &str,
+        data: &[u8],
+        hash: Option<&str>,
+        length: Option<usize>,
+    ) -> Reply {
+        let mut request =
+            Request::put("/v1/copies").header(header::AUTHORIZATION, format!("Bearer {token}"));
+        if let Some(hash) = hash {
+            request = request.header("x-botloft-sha256", hash);
+        }
+        if let Some(length) = length {
+            request = request.header(header::CONTENT_LENGTH, length);
+        }
+        self.send(request.body(Body::from(data.to_vec())).expect("request"))
+            .await
+    }
+
+    /// `GET` with the token and, maybe, a `Range`.
+    pub async fn fetch(
+        &self,
+        path: &str,
+        token: &str,
+        range: Option<&str>,
+    ) -> (StatusCode, header::HeaderMap, Vec<u8>) {
+        let mut request =
+            Request::get(path).header(header::AUTHORIZATION, format!("Bearer {token}"));
+        if let Some(range) = range {
+            request = request.header(header::RANGE, range);
+        }
+        let response = self
+            .app
+            .clone()
+            .oneshot(request.body(Body::empty()).expect("request"))
+            .await
+            .expect("response");
+        let (status, headers) = (response.status(), response.headers().clone());
+        let bytes = to_bytes(response.into_body(), 1 << 22).await.expect("body");
+        (status, headers, bytes.to_vec())
+    }
+
     /// The button on the page the e-mail link opens.
     pub async fn press(&self, code: &str) -> Reply {
         let request = Request::post("/v1/login/confirm")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .body(Body::from(format!("code={code}")))
+            .expect("request");
+        self.send(request).await
+    }
+
+    /// The button on the page that deletes an account.
+    pub async fn post_delete(&self, code: &str) -> Reply {
+        let request = Request::post("/v1/account/delete/confirm")
             .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
             .body(Body::from(format!("code={code}")))
             .expect("request");
@@ -130,4 +204,9 @@ impl Server {
         assert_eq!(polled["status"], "approved", "{polled}");
         polled["token"].as_str().expect("token").to_owned()
     }
+}
+
+/// The SHA-256 of `data`, as the upload says it.
+pub fn sha(data: &[u8]) -> String {
+    hex::encode(Sha256::digest(data))
 }
