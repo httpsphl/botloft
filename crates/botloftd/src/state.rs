@@ -6,10 +6,11 @@ use std::sync::{Arc, Mutex, MutexGuard, TryLockError};
 use std::time::Instant;
 
 use botloft_core::protocol::{
-    AccountUsage, Bot, BotContextChanged, BotDeleted, BotDesktop, BotMcp, BotRules,
-    BotStateChanged, BrowserAction, BrowserState, ChatDelta, ChatItemChanged, CloudProgress,
-    CloudSignedIn, Crew, CrewDeleted, Delivery, DesktopAwayUse, DesktopState, FolderRecycled,
-    McpOverview, Message, Question, ReactionChanged, Routine, RoutineRun, ScreenDraft, Task,
+    AccountUsage, AutoBackupStatus, Bot, BotContextChanged, BotDeleted, BotDesktop, BotMcp,
+    BotRules, BotStateChanged, BrowserAction, BrowserState, ChatDelta, ChatItemChanged,
+    CloudProgress, CloudSignedIn, Crew, CrewDeleted, Delivery, DesktopAwayUse, DesktopState,
+    FolderRecycled, McpOverview, Message, Question, ReactionChanged, Routine, RoutineRun,
+    ScreenDraft, Task,
 };
 use botloft_store::Store;
 use tokio::runtime::{Handle, RuntimeFlavor};
@@ -63,6 +64,7 @@ pub enum Event {
     CloudSignedIn(CloudSignedIn),
     CloudProgress(CloudProgress),
     CloudSigninExpired,
+    AutoBackupChanged(AutoBackupStatus),
 }
 
 /// Events buffered per connection before a slow client is dropped.
@@ -108,6 +110,8 @@ pub struct DaemonOptions {
     pub owner_idle: OwnerIdle,
     /// The server of the account (spec 6, `[cloud]`).
     pub cloud: crate::cloud::CloudSettings,
+    /// Where the automatic backup keeps its passphrase (spec 27.10).
+    pub secrets: Arc<dyn crate::autobackup::SecretStore>,
 }
 
 pub struct Daemon {
@@ -125,6 +129,8 @@ pub struct Daemon {
     pub desktop: Desktop,
     /// The account and the copies in the cloud (spec 27).
     pub cloud: crate::cloud::Cloud,
+    /// The copies it sends by itself (spec 27.10).
+    pub autobackup: crate::autobackup::AutoBackup,
     /// Other crews a bot may reach for its current turn (spec 10.4).
     pub crew_access: crate::service::crew_access::TurnAccess,
     /// What each bot's process had cost by its last turn (spec 8.7).
@@ -169,6 +175,11 @@ impl Daemon {
             ),
             screens: Screens::default(),
             desktop: Desktop::new(options.owner_idle),
+            autobackup: crate::autobackup::AutoBackup::new(
+                &options.paths.home,
+                options.secrets,
+                options.cloud.auto_tick,
+            ),
             cloud: crate::cloud::Cloud::new(options.cloud),
             crew_access: Default::default(),
             costs: Default::default(),

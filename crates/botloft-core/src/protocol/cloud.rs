@@ -112,3 +112,51 @@ pub struct CloudProgress {
     pub sent: u64,
     pub total: u64,
 }
+
+/// How often the automatic backup looks for something new to send (spec 27.10).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub enum AutoBackupEvery {
+    #[default]
+    Daily,
+    Weekly,
+}
+
+/// `autobackup.status` and the `autobackup.changed` notification.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct AutoBackupStatus {
+    /// This computer can keep the passphrase safely (Windows today).
+    pub available: bool,
+    pub enabled: bool,
+    pub every: AutoBackupEvery,
+    /// Unix time in milliseconds of the last copy it sent.
+    #[cfg_attr(test, ts(optional))]
+    pub last_ok_at: Option<i64>,
+    /// Unix time in milliseconds of the next look; absent when it is off.
+    #[cfg_attr(test, ts(optional))]
+    pub next_at: Option<i64>,
+    /// Why the last try failed (a `reason` of 27.5, or `no_passphrase`).
+    #[cfg_attr(test, ts(optional))]
+    pub last_error: Option<String>,
+}
+
+/// `autobackup.enable`: the passphrase is kept in the system's credential
+/// store, and never leaves this computer.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct AutoBackupEnableParams {
+    pub passphrase: String,
+    pub every: AutoBackupEvery,
+}
+
+/// `autobackup.set_every`
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct AutoBackupEveryParams {
+    pub every: AutoBackupEvery,
+}

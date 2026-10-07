@@ -3,6 +3,7 @@
 //! parses the command line and wires these modules together.
 
 pub mod approvals;
+pub mod autobackup;
 pub mod autostart;
 pub mod backup;
 pub mod browser;

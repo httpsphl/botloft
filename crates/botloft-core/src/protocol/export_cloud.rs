@@ -17,6 +17,10 @@ pub(super) fn decls(out: &mut Out) {
     out.decl::<CloudSignedIn>();
     out.decl::<CloudDirection>();
     out.decl::<CloudProgress>();
+    out.decl::<AutoBackupEvery>();
+    out.decl::<AutoBackupStatus>();
+    out.decl::<AutoBackupEnableParams>();
+    out.decl::<AutoBackupEveryParams>();
 }
 
 pub(super) fn methods(out: &mut Out) {
@@ -49,6 +53,26 @@ pub(super) fn methods(out: &mut Out) {
     );
     out.method(method::CLOUD_DELETE, &out.name::<CloudCopyParams>(), "null");
     out.method(method::CLOUD_DELETE_ACCOUNT, "undefined", "null");
+    out.method(
+        method::AUTOBACKUP_STATUS,
+        "undefined",
+        &out.name::<AutoBackupStatus>(),
+    );
+    out.method(
+        method::AUTOBACKUP_ENABLE,
+        &out.name::<AutoBackupEnableParams>(),
+        &out.name::<AutoBackupStatus>(),
+    );
+    out.method(
+        method::AUTOBACKUP_SET_EVERY,
+        &out.name::<AutoBackupEveryParams>(),
+        &out.name::<AutoBackupStatus>(),
+    );
+    out.method(
+        method::AUTOBACKUP_DISABLE,
+        "undefined",
+        &out.name::<AutoBackupStatus>(),
+    );
 }
 
 pub(super) fn notifications(out: &mut Out) {
@@ -68,5 +92,11 @@ pub(super) fn notifications(out: &mut Out) {
         out.text,
         "  \"{}\": null;",
         notification::CLOUD_SIGNIN_EXPIRED
+    );
+    let changed = out.name::<AutoBackupStatus>();
+    let _ = writeln!(
+        out.text,
+        "  \"{}\": {changed};",
+        notification::AUTOBACKUP_CHANGED
     );
 }

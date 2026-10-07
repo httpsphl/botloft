@@ -150,6 +150,10 @@ pub mod method {
     pub const CLOUD_DOWNLOAD: &str = "cloud.download";
     pub const CLOUD_DELETE: &str = "cloud.delete";
     pub const CLOUD_DELETE_ACCOUNT: &str = "cloud.delete_account";
+    pub const AUTOBACKUP_STATUS: &str = "autobackup.status";
+    pub const AUTOBACKUP_ENABLE: &str = "autobackup.enable";
+    pub const AUTOBACKUP_SET_EVERY: &str = "autobackup.set_every";
+    pub const AUTOBACKUP_DISABLE: &str = "autobackup.disable";
     pub const CREW_ACCESS_LIST: &str = "crewAccess.list";
     pub const CREW_ACCESS_REVOKE: &str = "crewAccess.revoke";
     pub const MCP_SERVERS: &str = "mcp.servers";
@@ -242,6 +246,7 @@ pub mod notification {
     pub const CLOUD_SIGNED_IN: &str = "cloud.signed_in";
     pub const CLOUD_PROGRESS: &str = "cloud.progress";
     pub const CLOUD_SIGNIN_EXPIRED: &str = "cloud.signin_expired";
+    pub const AUTOBACKUP_CHANGED: &str = "autobackup.changed";
 }
 
 /// Error codes: the standard JSON-RPC ones plus the daemon's (spec 11.4).

@@ -2,6 +2,7 @@
 //! console signals.
 
 mod console;
+mod credentials;
 mod env;
 mod job;
 mod owner;
@@ -12,6 +13,7 @@ mod task;
 mod task_xml;
 
 pub use console::leave_own_console;
+pub use credentials::{secret_available, secret_delete, secret_load, secret_save};
 pub use env::user_environment;
 pub use job::ProcessJob;
 pub use owner::owner_name;

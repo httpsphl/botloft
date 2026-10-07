@@ -1304,6 +1304,43 @@ export type CloudDirection = "upload" | "download";
  */
 export type CloudProgress = { direction: CloudDirection, sent: number, total: number, };
 
+/**
+ * How often the automatic backup looks for something new to send (spec 27.10).
+ */
+export type AutoBackupEvery = "daily" | "weekly";
+
+/**
+ * `autobackup.status` and the `autobackup.changed` notification.
+ */
+export type AutoBackupStatus = { 
+/**
+ * This computer can keep the passphrase safely (Windows today).
+ */
+available: boolean, enabled: boolean, every: AutoBackupEvery, 
+/**
+ * Unix time in milliseconds of the last copy it sent.
+ */
+lastOkAt?: number, 
+/**
+ * Unix time in milliseconds of the next look; absent when it is off.
+ */
+nextAt?: number, 
+/**
+ * Why the last try failed (a `reason` of 27.5, or `no_passphrase`).
+ */
+lastError?: string, };
+
+/**
+ * `autobackup.enable`: the passphrase is kept in the system's credential
+ * store, and never leaves this computer.
+ */
+export type AutoBackupEnableParams = { passphrase: string, every: AutoBackupEvery, };
+
+/**
+ * `autobackup.set_every`
+ */
+export type AutoBackupEveryParams = { every: AutoBackupEvery, };
+
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
 /**
  * What the bot says the command is for, as in `ToolItem`. The bot
@@ -2023,6 +2060,10 @@ export interface RpcMethods {
   "cloud.download": { params: CloudCopyParams; result: CloudDownloaded };
   "cloud.delete": { params: CloudCopyParams; result: null };
   "cloud.delete_account": { params: undefined; result: null };
+  "autobackup.status": { params: undefined; result: AutoBackupStatus };
+  "autobackup.enable": { params: AutoBackupEnableParams; result: AutoBackupStatus };
+  "autobackup.set_every": { params: AutoBackupEveryParams; result: AutoBackupStatus };
+  "autobackup.disable": { params: undefined; result: AutoBackupStatus };
   "routines.list": { params: RoutinesListParams; result: Array<Routine> };
   "routines.create": { params: RoutinesCreateParams; result: Routine };
   "routines.update": { params: RoutinesUpdateParams; result: Routine };
@@ -2081,6 +2122,7 @@ export interface RpcNotifications {
   "cloud.signed_in": CloudSignedIn;
   "cloud.progress": CloudProgress;
   "cloud.signin_expired": null;
+  "autobackup.changed": AutoBackupStatus;
   "browser.changed": BrowserState;
   "browser.action": BrowserAction;
   "browser.frame": BrowserFrame;
