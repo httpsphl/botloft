@@ -116,6 +116,19 @@ describe("effort", () => {
     expect(within(menu).queryByRole("button", { name: "Use recommended" })).toBeNull();
   });
 
+  test("Haiku 5.5 takes effort levels, unlike Haiku 4.5", async () => {
+    const { fake, scout } = await openScout((bot) => {
+      bot.model = "haiku";
+      bot.modelInUse = "claude-haiku-5-5";
+      bot.effortDefault = "medium";
+    });
+    expect(picker().getAttribute("aria-label")).toBe("Effort: Medium");
+    const { menu, slider } = open();
+    expect(within(menu).getByText(/Recommended for Haiku 5.5/)).toBeDefined();
+    slideTo(slider, 0);
+    await waitFor(() => expect(efforts(fake)).toEqual([{ botId: scout.id, effort: "low" }]));
+  });
+
   test("nothing is marked until Claude Code said the model's level", async () => {
     const { fake, scout } = await openScout((bot) => {
       bot.effortDefault = null;
