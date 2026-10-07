@@ -168,13 +168,13 @@ fn export_to(
 }
 
 /// What a backup of this scope takes of the folders.
-struct Filter<'a> {
-    scope: BackupScope,
-    bots: &'a HashSet<String>,
+pub(super) struct Filter<'a> {
+    pub(super) scope: BackupScope,
+    pub(super) bots: &'a HashSet<String>,
 }
 
 impl Filter<'_> {
-    fn takes(&self, relative: &Path, is_dir: bool) -> bool {
+    pub(super) fn takes(&self, relative: &Path, is_dir: bool) -> bool {
         if regenerated(relative) {
             return false;
         }

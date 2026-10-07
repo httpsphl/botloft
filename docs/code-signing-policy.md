@@ -58,9 +58,9 @@ listens on `127.0.0.1` only. What goes over the network:
 - **Your bots.** Each bot is Claude Code running on your computer with your own Claude account. What
   it sends to Anthropic, and the websites it opens when its work needs them, are the same as when
   you use Claude Code yourself.
-- **The optional cloud account.** Only if you sign in, and only on a click. The server gets your
+- **The optional cloud account.** Only if you sign in, and only when you send a copy or turn on automatic copies (every day or week, and only when something changed). The server gets your
   e-mail address, the name of your computer, and the light backup you choose to upload: it is sealed
-  on your computer with the backup password, which never leaves it, so the server cannot read it.
+  on your computer with the backup password, which never leaves it, so the server cannot read it. For automatic copies Windows keeps that password in its credential store, readable only by your user account.
   Signing out, deleting a copy or deleting the account is in the app. The server is the
   `botloft-cloud` crate in this repository, and the address is a setting, so you can run your own.
 

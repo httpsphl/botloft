@@ -127,6 +127,7 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
         .with_context(|| format!("cannot create {}", paths.workspaces_root.display()))?;
 
     info!(home = %paths.home.display(), workspaces = %paths.workspaces_root.display(), "starting");
+    let secrets = botloftd::autobackup::SystemSecrets::for_home(&paths.home);
     let daemon = Daemon::new(DaemonOptions {
         paths,
         port: config.port,
@@ -143,6 +144,7 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
         trash: Arc::new(RecycleBin),
         owner_idle: Arc::new(platform::desktop::owner_idle),
         cloud: botloftd::cloud::CloudSettings::from_config(&config),
+        secrets: Arc::new(secrets),
     });
     // No bot process survived the last run, so nobody waits for these.
     approvals::expire_all(&daemon);
@@ -169,6 +171,7 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
         tokio::spawn(supervisor::run(Arc::clone(&daemon)));
         tokio::spawn(courier::run(Arc::clone(&daemon)));
         tokio::spawn(routines::run(Arc::clone(&daemon)));
+        tokio::spawn(botloftd::autobackup::run(Arc::clone(&daemon)));
         tokio::spawn(browser::run(Arc::clone(&daemon)));
         // The outline around the window a bot uses (spec 24.9).
         tokio::spawn(botloftd::desktop::outline::run(Arc::clone(&daemon)));

@@ -137,6 +137,26 @@ export const account: Messages["account"] = {
       "Esto borra tu cuenta y todas las copias guardadas en ella, y no se puede deshacer. Enviamos un enlace a tu correo, y no se borra nada hasta que pulses el botón de allí.",
     removeAccountSend: "Enviar el enlace",
     removeAccountSent: "Enviamos un enlace a tu correo. Ábrelo y pulsa el botón para terminar.",
+    auto: {
+      title: "Copias automáticas",
+      intro:
+        "Botloft puede enviar una copia a la nube por sí solo, y solo cuando algo cambió. La contraseña queda guardada en el almacén de credenciales de Windows, solo en este equipo.",
+      tip: "Usa una contraseña solo para esto, que no uses en ningún otro lugar.",
+      every: "Con qué frecuencia",
+      daily: "Cada día",
+      weekly: "Cada semana",
+      turnOn: "Activar",
+      turningOn: "Activando…",
+      turnOff: "Desactivar",
+      onDaily: "Activado: una copia al día, si algo cambió.",
+      onWeekly: "Activado: una copia a la semana, si algo cambió.",
+      lastCopy: (when: string) => `Última copia enviada: ${when}.`,
+      noneYet: "Aún no se envió ninguna copia.",
+      next: (when: string) => `Próxima revisión: ${when}.`,
+      unavailable: "Las copias automáticas solo funcionan en Windows por ahora.",
+      failed: "No se pudo activar",
+      lastFailed: "El último intento falló",
+    },
     failed: "Algo salió mal",
     reasons: {
       no_server: "Este Botloft aún no tiene la nube configurada.",
@@ -152,6 +172,9 @@ export const account: Messages["account"] = {
       not_found: "Esa copia ya no está.",
       bad_hash: "La copia se dañó por el camino. Inténtalo de nuevo.",
       cloud_error: "Algo salió mal con la nube. Inténtalo de nuevo en un momento.",
+      no_keystore: "Este equipo no tiene dónde guardar la contraseña de forma segura.",
+      no_passphrase:
+        "La contraseña ya no está en este equipo, así que las copias automáticas se detuvieron. Actívalas de nuevo.",
     } as Record<string, string>,
   },
   settings: {

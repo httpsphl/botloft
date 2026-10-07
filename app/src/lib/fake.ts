@@ -4,6 +4,7 @@
 
 import type { BotloftApi } from "./api";
 import { FakeAllow } from "./fakeAllow";
+import { autoBackupHandlers } from "./fakeAutoBackup";
 import { backupHandlers } from "./fakeBackup";
 import { botHandlers } from "./fakeBots";
 import { FakeBrowser } from "./fakeBrowser";
@@ -291,6 +292,7 @@ export class FakeBotloft implements BotloftApi {
     ...usageHandlers(this),
     ...backupHandlers(this),
     ...cloudHandlers(this),
+    ...autoBackupHandlers(this),
     ...searchHandlers(this),
   };
 }

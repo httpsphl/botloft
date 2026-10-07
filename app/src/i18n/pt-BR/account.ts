@@ -137,6 +137,26 @@ export const account: Messages["account"] = {
       "Isto apaga a sua conta e todas as cópias guardadas nela, e não dá para desfazer. Enviamos um link para o seu e-mail, e nada é apagado até você apertar o botão de lá.",
     removeAccountSend: "Enviar o link",
     removeAccountSent: "Enviamos um link para o seu e-mail. Abra e aperte o botão para terminar.",
+    auto: {
+      title: "Cópias automáticas",
+      intro:
+        "O Botloft pode mandar uma cópia para a nuvem sozinho, e só quando algo mudou. A senha fica guardada no cofre de credenciais do Windows, só neste computador.",
+      tip: "Use uma senha só para isto, que você não use em nenhum outro lugar.",
+      every: "Com que frequência",
+      daily: "Todo dia",
+      weekly: "Toda semana",
+      turnOn: "Ligar",
+      turningOn: "Ligando…",
+      turnOff: "Desligar",
+      onDaily: "Ligado: uma cópia por dia, se algo mudou.",
+      onWeekly: "Ligado: uma cópia por semana, se algo mudou.",
+      lastCopy: (when: string) => `Última cópia enviada: ${when}.`,
+      noneYet: "Nenhuma cópia enviada ainda.",
+      next: (when: string) => `Próxima vez que olha: ${when}.`,
+      unavailable: "As cópias automáticas só funcionam no Windows por enquanto.",
+      failed: "Não foi possível ligar",
+      lastFailed: "A última tentativa falhou",
+    },
     failed: "Algo deu errado",
     reasons: {
       no_server: "Este Botloft ainda não tem a nuvem configurada.",
@@ -152,6 +172,9 @@ export const account: Messages["account"] = {
       not_found: "Essa cópia não está mais lá.",
       bad_hash: "A cópia se danificou no caminho. Tente de novo.",
       cloud_error: "Algo deu errado com a nuvem. Tente de novo daqui a pouco.",
+      no_keystore: "Este computador não tem onde guardar a senha com segurança.",
+      no_passphrase:
+        "A senha sumiu deste computador, então as cópias automáticas pararam. Ligue de novo.",
     } as Record<string, string>,
   },
   settings: {

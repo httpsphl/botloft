@@ -2,6 +2,7 @@
 //! started for the owner by systemd or launchd.
 
 mod account;
+mod credentials;
 mod env;
 mod job;
 // Both build everywhere, so each one's tests run on either system.
@@ -19,6 +20,7 @@ use std::process::{Command, Output, Stdio};
 use std::time::{Duration, Instant};
 
 pub use self::account::owner_name;
+pub use self::credentials::{secret_available, secret_delete, secret_load, secret_save};
 pub use self::env::user_environment;
 pub use self::job::ProcessJob;
 #[cfg(target_os = "macos")]

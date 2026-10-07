@@ -58,7 +58,9 @@ you decide what they may do.
 - **Choose per bot.** How much it asks before acting, and which Claude model it uses. See how much
   of your plan's usage is left.
 - **Back up and move.** Save a sealed backup file, or sign in with your e-mail (no password) to keep
-  a light copy in the cloud and restore it on another computer. The server cannot read it.
+  a light copy in the cloud and restore it on another computer. The server cannot read it. Turn on
+  automatic copies, every day or week and only when something changed, if you want them to go by
+  themselves (Windows for now).
 
 <table>
   <tr>
@@ -180,8 +182,10 @@ You sign in with a link sent to your e-mail; there is no account password. The c
 light one: your crews' structure, the bots' memory and the routines, not the chats or files. Botloft
 seals it on your computer with the backup password before sending, so the server stores bytes it
 cannot open. It also knows your e-mail, the computers you signed in on, and the size and date of each
-copy. Lose the backup password and the cloud copies cannot be recovered. Nothing is sent without a
-click, and you can delete the copies or the whole account from the app. The server is this
+copy. Lose the backup password and the cloud copies cannot be recovered. Nothing is sent unless you
+send it or turn on automatic copies. Those go every day or week, only when something changed; for
+them Windows keeps your backup password in its credential store, on this computer only, so use a
+password just for this. You can delete the copies or the whole account from the app. The server is this
 repository's `botloft-cloud` crate: you can [run your own](docs/cloud-deploy.md) and point the app at
 it.
 </details>

@@ -36,5 +36,6 @@ pub(super) fn to_notification(event: &Event) -> String {
         Event::CloudSignedIn(signed) => note(notification::CLOUD_SIGNED_IN, signed),
         Event::CloudProgress(progress) => note(notification::CLOUD_PROGRESS, progress),
         Event::CloudSigninExpired => note(notification::CLOUD_SIGNIN_EXPIRED, &()),
+        Event::AutoBackupChanged(status) => note(notification::AUTOBACKUP_CHANGED, status),
     }
 }

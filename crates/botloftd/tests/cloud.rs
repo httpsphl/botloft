@@ -4,78 +4,14 @@
 mod common;
 
 use std::fs;
-use std::sync::Arc;
 use std::time::Duration;
 
-use botloft_cloud::{AppState, Clock, Config, CopyStore, Db, Mailer, Outbox, router};
 use botloft_store::Store;
 use botloftd::backup::restore;
 use botloftd::paths::Paths;
+use common::cloud_server::{cloud_server, signed_in};
 use common::{Client, TestDaemon};
 use serde_json::{Value, json};
-use tokio::net::TcpListener;
-
-/// The server of the account, and what a test needs to reach into.
-struct CloudServer {
-    url: String,
-    outbox: Outbox,
-    clock: Clock,
-}
-
-async fn cloud_server() -> CloudServer {
-    let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
-    let url = format!("http://{}", listener.local_addr().expect("addr"));
-    let (outbox, clock) = (Outbox::default(), Clock::default());
-    let mut config = Config::for_tests();
-    config.public_url = url.clone();
-    let state = AppState {
-        db: Db::memory().expect("db"),
-        mailer: Arc::new(Mailer::Outbox(outbox.clone())),
-        clock: clock.clone(),
-        config: Arc::new(config),
-        store: CopyStore::memory(),
-    };
-    tokio::spawn(async move {
-        axum::serve(listener, router(state)).await.expect("serve");
-    });
-    CloudServer { url, outbox, clock }
-}
-
-impl CloudServer {
-    /// The owner opens the link in the newest e-mail and presses the button.
-    async fn press_the_link(&self) {
-        let mail = self.outbox.sent().pop().expect("an e-mail");
-        let link = mail
-            .body
-            .split_whitespace()
-            .find(|word| word.starts_with("http"))
-            .expect("a link");
-        let code = link.split("code=").nth(1).expect("a code");
-        let pressed = reqwest::Client::new()
-            .post(format!("{}/v1/login/confirm", self.url))
-            .header("content-type", "application/x-www-form-urlencoded")
-            .body(format!("code={code}"))
-            .send()
-            .await
-            .expect("press");
-        assert!(pressed.status().is_success(), "{}", pressed.status());
-    }
-}
-
-async fn signed_in(cloud: &CloudServer) -> (TestDaemon, Client) {
-    let t = TestDaemon::start_with_cloud(&cloud.url).await;
-    let mut app = t.session().await;
-    app.call(
-        "cloud.signin",
-        json!({ "email": "ana@exemplo.com", "locale": "pt-BR" }),
-    )
-    .await
-    .expect("signin");
-    cloud.press_the_link().await;
-    let signed = app.notification("cloud.signed_in").await;
-    assert_eq!(signed["email"], "ana@exemplo.com");
-    (t, app)
-}
 
 async fn fails(app: &mut Client, method: &str, params: Value) -> common::RpcFailure {
     app.call(method, params).await.expect_err("it should fail")

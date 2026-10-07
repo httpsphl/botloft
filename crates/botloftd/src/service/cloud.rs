@@ -13,6 +13,7 @@ use tracing::info;
 
 use super::{ApiError, ApiResult, backup};
 use crate::backup::export;
+use crate::backup::fingerprint::light_fingerprint;
 use crate::cloud::signin::Signin;
 use crate::cloud::{self, CloudError, Credentials, Progress, Server};
 use crate::state::{Daemon, Event};
@@ -40,7 +41,7 @@ fn fail(daemon: &Daemon, err: CloudError) -> ApiError {
     }
 }
 
-fn signed_in(daemon: &Daemon) -> ApiResult<(Server, Credentials)> {
+pub(super) fn signed_in(daemon: &Daemon) -> ApiResult<(Server, Credentials)> {
     let server = daemon.cloud.server().map_err(|err| fail(daemon, err))?;
     let credentials = daemon
         .cloud
@@ -131,14 +132,37 @@ pub fn signout(daemon: &Daemon) {
         let _ = run(server.logout(&credentials.token));
     }
     daemon.cloud.forget(&daemon.paths.secrets());
+    // Without the account there is nowhere to send the copies.
+    daemon.autobackup.turn_off();
+    daemon.emit(Event::AutoBackupChanged(daemon.autobackup.status()));
 }
 
 /// `cloud.upload`: a light copy sealed with the passphrase, sent as the
 /// account's newest.
 pub fn upload(daemon: &Daemon, params: CloudUploadParams) -> ApiResult<CloudCopy> {
+    // What the copy holds, taken first: the automatic backup then knows this
+    // one covers it and does not send the same thing again soon.
+    let covers = daemon
+        .autobackup
+        .snapshot()
+        .enabled
+        .then(|| light_fingerprint(daemon).ok())
+        .flatten();
+    let copy = send_light(daemon, &params.passphrase)?;
+    if let Some(fingerprint) = covers {
+        daemon
+            .autobackup
+            .covered(fingerprint, daemon.clock.now_ms());
+    }
+    Ok(copy)
+}
+
+/// Makes a light copy sealed with `passphrase` and sends it, one at a time.
+/// The owner's button and the automatic backup both come here.
+pub(crate) fn send_light(daemon: &Daemon, passphrase: &str) -> ApiResult<CloudCopy> {
     let (server, credentials) = signed_in(daemon)?;
-    let exported =
-        export::export(daemon, &params.passphrase, BackupScope::Light).map_err(backup::api)?;
+    let _sending = daemon.cloud.sending();
+    let exported = export::export(daemon, passphrase, BackupScope::Light).map_err(backup::api)?;
     let sent = run(cloud::upload(
         &server,
         &credentials.token,

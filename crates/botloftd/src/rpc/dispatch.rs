@@ -8,9 +8,9 @@ use serde_json::Value;
 use super::jsonrpc::{RpcError, empty_params};
 use crate::approvals;
 use crate::service::{
-    self, ApiResult, archive, attachments, backup, bots, catalog, chat, cloud, crew_access, crews,
-    delete, deliveries, desktop, files, lead, mcp, messages, models, modes, questions, reactions,
-    routines, rules, screens, settings, tasks, usage,
+    self, ApiError, ApiResult, archive, attachments, autobackup, backup, bots, catalog, chat,
+    cloud, crew_access, crews, delete, deliveries, desktop, files, lead, mcp, messages, models,
+    modes, questions, reactions, routines, rules, screens, settings, tasks, usage,
 };
 use crate::state::Daemon;
 
@@ -76,6 +76,10 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::CLOUD_DOWNLOAD => reply(cloud::download(daemon, parse(params)?)),
         method::CLOUD_DELETE => reply(cloud::delete(daemon, parse(params)?).map(|()| Value::Null)),
         method::CLOUD_DELETE_ACCOUNT => reply(cloud::delete_account(daemon).map(|()| Value::Null)),
+        method::AUTOBACKUP_STATUS => reply(Ok::<_, ApiError>(autobackup::status(daemon))),
+        method::AUTOBACKUP_ENABLE => reply(autobackup::enable(daemon, parse(params)?)),
+        method::AUTOBACKUP_SET_EVERY => reply(autobackup::set_every(daemon, parse(params)?)),
+        method::AUTOBACKUP_DISABLE => reply(Ok::<_, ApiError>(autobackup::disable(daemon))),
         method::CREW_ACCESS_LIST => reply(crew_access::list(daemon, parse(params)?)),
         method::CREW_ACCESS_REVOKE => reply(crew_access::revoke(daemon, parse(params)?)),
         method::MCP_SERVERS => reply(mcp::overview(daemon)),

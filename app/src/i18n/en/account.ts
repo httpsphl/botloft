@@ -135,6 +135,26 @@ export const account = {
       "This deletes your account and every copy saved in it, and it cannot be undone. We send a link to your e-mail, and nothing is deleted until you press the button there.",
     removeAccountSend: "Send the link",
     removeAccountSent: "We sent a link to your e-mail. Open it and press the button to finish.",
+    auto: {
+      title: "Automatic copies",
+      intro:
+        "Botloft can send a copy to the cloud by itself, and only when something changed. Your passphrase is kept in Windows' credential store, on this computer only.",
+      tip: "Use a passphrase just for this, one you do not use anywhere else.",
+      every: "How often",
+      daily: "Every day",
+      weekly: "Every week",
+      turnOn: "Turn on",
+      turningOn: "Turning on…",
+      turnOff: "Turn off",
+      onDaily: "On: a copy every day, if something changed.",
+      onWeekly: "On: a copy every week, if something changed.",
+      lastCopy: (when: string) => `Last copy sent: ${when}.`,
+      noneYet: "No copy sent yet.",
+      next: (when: string) => `Next look: ${when}.`,
+      unavailable: "Automatic copies work only on Windows for now.",
+      failed: "Could not turn it on",
+      lastFailed: "The last try failed",
+    },
     failed: "Something went wrong",
     reasons: {
       no_server: "This Botloft has no cloud set up yet.",
@@ -150,6 +170,9 @@ export const account = {
       not_found: "That copy is no longer there.",
       bad_hash: "The copy was damaged on the way. Try again.",
       cloud_error: "Something went wrong with the cloud. Try again in a moment.",
+      no_keystore: "This computer has nowhere safe to keep the passphrase.",
+      no_passphrase:
+        "The passphrase is gone from this computer, so automatic copies stopped. Turn them on again.",
     } as Record<string, string>,
   },
   settings: {

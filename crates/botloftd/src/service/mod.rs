@@ -3,6 +3,7 @@
 
 pub mod archive;
 pub mod attachments;
+pub mod autobackup;
 pub mod backup;
 pub mod bots;
 pub mod catalog;

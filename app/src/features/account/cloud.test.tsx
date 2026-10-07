@@ -94,7 +94,7 @@ describe("the account and the copies in the cloud", () => {
     sendCopy(dialog);
     await within(dialog).findByText("Copy sent (47 KB).");
 
-    fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+    fireEvent.click(await within(dialog).findByRole("button", { name: "Delete" }));
     const ask = await screen.findByRole("dialog", { name: "Delete this copy?" });
     fireEvent.click(within(ask).getByRole("button", { name: "Cancel" }));
     await waitFor(() =>
@@ -102,7 +102,7 @@ describe("the account and the copies in the cloud", () => {
     );
     expect(fake.calls.some((each) => each.method === "cloud.delete")).toBe(false);
 
-    fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+    fireEvent.click(await within(dialog).findByRole("button", { name: "Delete" }));
     const again = await screen.findByRole("dialog", { name: "Delete this copy?" });
     fireEvent.click(within(again).getByRole("button", { name: "Delete" }));
     expect(await within(dialog).findByText("No copies yet.")).toBeDefined();

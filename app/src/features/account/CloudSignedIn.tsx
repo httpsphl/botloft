@@ -10,6 +10,7 @@ import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { Confirm } from "../../ui/Confirm";
 import { backupError } from "./backupError";
+import { CloudAuto } from "./CloudAuto";
 import { CloudCopies } from "./CloudCopies";
 import { CloudUpload } from "./CloudUpload";
 
@@ -64,6 +65,7 @@ export function CloudSignedIn({
           void refresh();
         }}
       />
+      <CloudAuto />
       <CloudCopies version={version} onChanged={refresh} />
 
       <div className="flex flex-col gap-2 border-line border-t pt-3">

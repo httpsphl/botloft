@@ -14,6 +14,7 @@ mod crews;
 mod delete;
 mod deliveries;
 mod desktop_grants;
+mod fingerprint;
 mod light;
 mod mcp_servers;
 mod messages;

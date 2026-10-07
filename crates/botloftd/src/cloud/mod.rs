@@ -26,6 +26,8 @@ pub struct CloudSettings {
     pub url: String,
     /// How often a waiting sign-in asks whether the link was opened.
     pub poll: Duration,
+    /// How often the automatic backup looks whether its time has come.
+    pub auto_tick: Duration,
 }
 
 impl Default for CloudSettings {
@@ -33,6 +35,7 @@ impl Default for CloudSettings {
         Self {
             url: String::new(),
             poll: Duration::from_secs(2),
+            auto_tick: crate::autobackup::DEFAULT_TICK,
         }
     }
 }
@@ -42,6 +45,7 @@ impl CloudSettings {
         Self {
             url: config.cloud.url.trim().to_owned(),
             poll: Duration::from_millis(config.cloud.poll_ms),
+            auto_tick: crate::autobackup::DEFAULT_TICK,
         }
     }
 }
@@ -118,6 +122,9 @@ impl std::fmt::Display for CloudError {
 pub struct Cloud {
     pub(crate) settings: CloudSettings,
     pending: Arc<Mutex<Option<AbortHandle>>>,
+    /// One copy goes up at a time: a manual one and an automatic one share
+    /// the folder the sealed file is made in.
+    sending: Mutex<()>,
 }
 
 impl Cloud {
@@ -125,6 +132,7 @@ impl Cloud {
         Self {
             settings,
             pending: Arc::default(),
+            sending: Mutex::new(()),
         }
     }
 
@@ -144,6 +152,13 @@ impl Cloud {
 
     pub fn forget(&self, secrets_dir: &Path) {
         creds::remove(secrets_dir);
+    }
+
+    /// Held while a copy is made and sent.
+    pub(crate) fn sending(&self) -> std::sync::MutexGuard<'_, ()> {
+        self.sending
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
     /// A sign-in waits for the link.
