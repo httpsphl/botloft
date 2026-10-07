@@ -2117,12 +2117,16 @@ Um binário, `botloft-cloud serve --config cloud.toml`, com `axum` e SQLite pró
 |---|---|---|
 | `listen` | `127.0.0.1:8787` | onde escuta, atrás do proxy |
 | `public_url` | (obrigatória) | o endereço público, que vai nos links do e-mail |
-| `data_dir` | `./data` | banco e cópias |
+| `data_dir` | `./data` | o banco (`cloud.db`, pequeno) e, com `storage = "disk"`, as cópias |
+| `storage` | `disk` | onde ficam os bytes das cópias: `disk` (em `data_dir`) ou `bucket` (um bucket compatível com S3, como o R2 da Cloudflare) |
+| `bucket` | (só com `storage = "bucket"`) | `endpoint`, `name`, `region` (`auto` no R2), `access_key_id` e `secret_file`, um arquivo só com o segredo, como a senha do `smtp` |
 | `quota_bytes` | 200 MiB | o máximo por conta |
 | `max_copy_bytes` | 50 MiB | o máximo de uma cópia |
 | `keep` | 5 | quantas cópias por conta (a mais antiga sai quando entra a seguinte) |
 | `behind_proxy` | `true` | o proxy põe o endereço de quem chama em `X-Forwarded-For`, e vale o último valor (para os freios de 27.3) |
 | `smtp` | (obrigatória) | `host`, `port`, `user`, `password_file`, `from` |
+
+**Onde as cópias ficam.** Atrás de uma interface (`CopyStore`), com `disk` e `bucket`. Com `bucket`, a VPS guarda só o `cloud.db` e um arquivo temporário de até `max_copy_bytes` por envio em andamento; os bytes das cópias vão para o bucket, que também as replica. As cópias já saem seladas pelo dono (27.1), então o bucket guarda bytes que ninguém consegue abrir. O endereço do bucket e as chaves nunca saem do servidor: o app só fala com o servidor.
 
 O envio de e-mail passa por uma interface (`Mailer`): o serviço usa SMTP, e os testes uma caixa de saída na memória. Os textos do e-mail saem em `en`, `pt-BR` ou `es`, conforme o `locale` que o app mandou. Logs do servidor: nunca o e-mail, o token nem o código em nível `info`; o proxy guarda o IP por 7 dias para frear abuso e depois apaga. Sem telemetria.
 
@@ -2139,7 +2143,7 @@ Freios: 5 pedidos por hora por e-mail e 20 por hora por IP (`429` com `retry_aft
 
 ### 27.4 As cópias
 
-- `PUT /v1/copies` envia o arquivo `.botloft` inteiro, em fluxo, com `Content-Length` e `X-Botloft-Sha256`. O servidor grava num arquivo temporário, confere o tamanho e o hash enquanto grava e só então o torna a cópia mais nova; falha, corte ou hash diferente não deixam nada. Responde `201 {id, size, created}`. Recusa com `413` e `reason` `too_big` (acima de `max_copy_bytes`) ou `quota` (a conta não cabe), `400` `bad_hash`. Depois de gravar uma cópia nova e só então, apaga as mais antigas além de `keep`.
+- `PUT /v1/copies` envia o arquivo `.botloft` inteiro, em fluxo, com `Content-Length` e `X-Botloft-Sha256`. O servidor grava num arquivo temporário, confere o tamanho e o hash enquanto grava e só então o passa ao `CopyStore` e o torna a cópia mais nova; falha, corte ou hash diferente não deixam nada. Responde `201 {id, size, created}`. Recusa com `413` e `reason` `too_big` (acima de `max_copy_bytes`) ou `quota` (a conta não cabe), `400` `bad_hash`. Depois de gravar uma cópia nova e só então, apaga as mais antigas além de `keep`.
 - `GET /v1/copies` lista `{id, size, created}`, da mais nova para a mais antiga. `GET /v1/copies/<id>` baixa, com `Range` para retomar. `DELETE /v1/copies/<id>` apaga uma.
 - O servidor não abre o arquivo: não confere o lacre nem o manifesto. Se o cliente enviou lixo, a restauração falha no app com `not_a_backup` (14.2), sem mudar nada.
 - Erros vêm como `{reason, message}`; os `reason` são `unauthorized`, `not_found`, `bad_email`, `rate_limited`, `mail_failed`, `too_big`, `quota`, `bad_hash`, `internal`. Um pedido de entrada vencido não é erro: a consulta devolve `{status: "expired"}`.
@@ -2183,11 +2187,11 @@ Configurações, "Cópia de segurança" (14.2) ganha o bloco **Conta**, acima de
 |---|---|---|
 | **C1** Spec | esta seção | revisão do dono |
 | **C2** Servidor: conta | crate `botloft-cloud`, migrations, `Mailer`, login por link, aparelhos, freios | unidade; fluxo completo com a caixa de saída; mesma resposta para e-mail novo e conhecido; link usado ou vencido |
-| **C3** Servidor: cópias | `PUT`/`GET`/`DELETE`, hash, cota, `keep`, `Range`, apagar a conta | corte no meio não deixa nada; hash errado; cota; a mais antiga só sai depois da nova |
-| **C4** Hospedagem | `Dockerfile`, serviço systemd, `Caddyfile` e `docs/cloud-deploy.md`; o crate entra na CI | build; subir e responder em `/v1/me` com 401 |
+| **C3** Servidor: cópias | `PUT`/`GET`/`DELETE`, hash, cota, `keep`, `Range`, apagar a conta, `CopyStore` com `disk` e `bucket` | corte no meio não deixa nada; hash errado; cota; a mais antiga só sai depois da nova |
+| **C4** Hospedagem | `Dockerfile`, serviço systemd, `Caddyfile` e `docs/cloud-deploy.md` (inclui o bucket e o backup do `cloud.db`); o crate entra na CI | build; subir e responder em `/v1/me` com 401 |
 | **C5** Daemon | `backup.export` com `scope` (a cópia leve, 14.2), cliente `cloud`, métodos e notificações do protocolo, `secrets\cloud.json`, tipos gerados | o servidor de C2 e C3 no processo, em `127.0.0.1`: entrar, enviar, listar, baixar, restaurar em outra pasta |
 | **C6** App | o bloco Conta, `FakeBotloft`, três idiomas | `pnpm check`; a tela no preview |
-| **C7** Teste real | volta completa com a VPS de verdade e uma instalação de teste: e-mail chegando (entrega, spam), envio, restauração em pasta limpa | registrado na seção 19 |
+| **C7** Teste real | volta completa com a VPS de verdade, o bucket de verdade e uma instalação de teste: e-mail chegando (entrega, spam), envio, restauração em pasta limpa | registrado na seção 19 |
 
 ### 27.9 Fora desta etapa
 
