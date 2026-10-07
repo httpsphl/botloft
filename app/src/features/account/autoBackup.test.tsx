@@ -1,5 +1,5 @@
-import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, test } from "vitest";
+import { act, cleanup, configure, fireEvent, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { FakeBotloft } from "../../lib/fake";
 import { fakeAutoBackupSent, setFakeAutoBackup } from "../../lib/fakeAutoBackup";
 import { openFakeCloudLink } from "../../lib/fakeCloud";
@@ -7,6 +7,10 @@ import { FakeHost } from "../../lib/fakeHost";
 import { crewOpened, renderApp } from "../../test/app";
 
 afterEach(cleanup);
+
+// Each test signs in and opens menus: a loaded machine needs more than a second.
+configure({ asyncUtilTimeout: 5000 });
+vi.setConfig({ testTimeout: 20_000 });
 
 const type = (field: HTMLElement, value: string) => fireEvent.change(field, { target: { value } });
 
@@ -26,6 +30,8 @@ async function signedIn() {
   await within(dialog).findByText(/We sent a link/);
   act(() => openFakeCloudLink(fake));
   await within(dialog).findByText("Signed in as ana@exemplo.com");
+  // The block asks the daemon for its status, so it is there a moment later.
+  await within(dialog).findByText("Automatic copies");
   return { fake, dialog };
 }
 
