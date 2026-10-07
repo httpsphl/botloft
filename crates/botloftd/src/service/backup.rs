@@ -26,7 +26,8 @@ pub(crate) fn api(err: SealError) -> ApiError {
 
 /// `backup.export`: seals a backup and says where it is.
 pub fn export(daemon: &Daemon, params: BackupExportParams) -> ApiResult<BackupExported> {
-    let exported = export::export(daemon, &params.passphrase).map_err(api)?;
+    let scope = params.scope.unwrap_or_default();
+    let exported = export::export(daemon, &params.passphrase, scope).map_err(api)?;
     info!(bytes = exported.size, "backup exported");
     Ok(exported)
 }

@@ -49,8 +49,8 @@ signed either. On every system, updates are signed with Botloft's own updater ke
 
 ## Privacy
 
-Botloft has no telemetry, no analytics and no accounts of its own. The background service listens
-on `127.0.0.1` only. What goes over the network:
+Botloft has no telemetry and no analytics, and it works without any account. The background service
+listens on `127.0.0.1` only. What goes over the network:
 
 - **Update check.** When the app opens, and every 6 hours while it is open, it asks GitHub for the
   latest release's `latest.json`. It downloads an update only when you click **Update now**. No
@@ -58,6 +58,11 @@ on `127.0.0.1` only. What goes over the network:
 - **Your bots.** Each bot is Claude Code running on your computer with your own Claude account. What
   it sends to Anthropic, and the websites it opens when its work needs them, are the same as when
   you use Claude Code yourself.
+- **The optional cloud account.** Only if you sign in, and only on a click. The server gets your
+  e-mail address, the name of your computer, and the light backup you choose to upload: it is sealed
+  on your computer with the backup password, which never leaves it, so the server cannot read it.
+  Signing out, deleting a copy or deleting the account is in the app. The server is the
+  `botloft-cloud` crate in this repository, and the address is a setting, so you can run your own.
 
 ## What Botloft changes on your computer
 

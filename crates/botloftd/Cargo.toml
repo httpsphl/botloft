@@ -23,6 +23,7 @@ getrandom = "0.4.3"
 hex = "0.4.3"
 jiff = "0.2.37"
 jpeg-encoder = "0.7.1"
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "json", "stream"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 sha2 = "0.11.0"
@@ -52,5 +53,6 @@ embed-resource = "3.0.11"
 
 [dev-dependencies]
 base64 = "0.23.1"
+botloft-cloud = { path = "../botloft-cloud" }
 tempfile = "3.27.0"
 tokio = { version = "1.53.1", features = ["test-util", "macros", "rt-multi-thread"] }

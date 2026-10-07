@@ -57,6 +57,8 @@ you decide what they may do.
   waits near the clock and tells you when a bot needs you.
 - **Choose per bot.** How much it asks before acting, and which Claude model it uses. See how much
   of your plan's usage is left.
+- **Back up and move.** Save a sealed backup file, or sign in with your e-mail (no password) to keep
+  a light copy in the cloud and restore it on another computer. The server cannot read it.
 
 <table>
   <tr>
@@ -128,8 +130,10 @@ The full design, from the protocol to the states of a bot, lives in [`docs/spec.
 
 ## Privacy and security
 
-- **Local only.** The daemon listens on `127.0.0.1`. No cloud service of our own, no telemetry, no
-  accounts. What bots send to Claude goes through Claude Code, as when you use it yourself.
+- **Local first.** The daemon listens on `127.0.0.1`, and there is no telemetry. An account is
+  optional: without one, Botloft uses the network for nothing beyond updates and what bots send to
+  Claude, which goes through Claude Code as when you use it yourself. With one, the server only ever
+  holds a backup sealed with a password that never leaves your computer (see the FAQ).
 - **You decide what bots may do.** Per bot: ask before anything, accept edits, plan only, or decide on
   its own what needs your OK. Unless it decides on its own, a bot also asks before its first visit
   to each website.
@@ -167,6 +171,19 @@ Each bot has a folder under `Botloft\<crew>\<bot>` in your home folder (`%USERPR
 `~` on Linux and macOS), and each crew a shared work folder that you can point at a project of
 yours. Botloft's own data (SQLite, logs, secrets) is in `%LOCALAPPDATA%\Botloft` on Windows,
 `~/.local/share/Botloft` on Linux and `~/Library/Application Support/Botloft` on macOS.
+</details>
+
+<details>
+<summary><b>What does the optional account keep, and who can read it?</b></summary>
+
+You sign in with a link sent to your e-mail; there is no account password. The cloud copy is the
+light one: your crews' structure, the bots' memory and the routines, not the chats or files. Botloft
+seals it on your computer with the backup password before sending, so the server stores bytes it
+cannot open. It also knows your e-mail, the computers you signed in on, and the size and date of each
+copy. Lose the backup password and the cloud copies cannot be recovered. Nothing is sent without a
+click, and you can delete the copies or the whole account from the app. The server is this
+repository's `botloft-cloud` crate: you can [run your own](docs/cloud-deploy.md) and point the app at
+it.
 </details>
 
 <details>

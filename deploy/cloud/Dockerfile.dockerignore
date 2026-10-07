@@ -1,0 +1,9 @@
+.git
+.dev
+.claude
+target
+**/node_modules
+app/dist
+app/src-tauri/target
+graphify-out
+*.log

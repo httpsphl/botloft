@@ -9,6 +9,7 @@ import { botHandlers } from "./fakeBots";
 import { FakeBrowser } from "./fakeBrowser";
 import { catalogHandlers } from "./fakeCatalog";
 import { FakeChat } from "./fakeChat";
+import { cloudHandlers } from "./fakeCloud";
 import { FakeConversation } from "./fakeConversation";
 import { FakeCrewAccess } from "./fakeCrewAccess";
 import { crewHandlers } from "./fakeCrews";
@@ -289,6 +290,7 @@ export class FakeBotloft implements BotloftApi {
     ...this.lesson.handlers(),
     ...usageHandlers(this),
     ...backupHandlers(this),
+    ...cloudHandlers(this),
     ...searchHandlers(this),
   };
 }

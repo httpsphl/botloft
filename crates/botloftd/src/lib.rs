@@ -9,6 +9,7 @@ pub mod browser;
 pub mod catalog;
 pub mod chat;
 pub mod clock;
+pub mod cloud;
 pub mod config;
 pub mod context;
 pub mod courier;

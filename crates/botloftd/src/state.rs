@@ -7,9 +7,9 @@ use std::time::Instant;
 
 use botloft_core::protocol::{
     AccountUsage, Bot, BotContextChanged, BotDeleted, BotDesktop, BotMcp, BotRules,
-    BotStateChanged, BrowserAction, BrowserState, ChatDelta, ChatItemChanged, Crew, CrewDeleted,
-    Delivery, DesktopAwayUse, DesktopState, FolderRecycled, McpOverview, Message, Question,
-    ReactionChanged, Routine, RoutineRun, ScreenDraft, Task,
+    BotStateChanged, BrowserAction, BrowserState, ChatDelta, ChatItemChanged, CloudProgress,
+    CloudSignedIn, Crew, CrewDeleted, Delivery, DesktopAwayUse, DesktopState, FolderRecycled,
+    McpOverview, Message, Question, ReactionChanged, Routine, RoutineRun, ScreenDraft, Task,
 };
 use botloft_store::Store;
 use tokio::runtime::{Handle, RuntimeFlavor};
@@ -60,6 +60,9 @@ pub enum Event {
     ScreenDraft(ScreenDraft),
     QuestionChanged(Question),
     ReactionChanged(ReactionChanged),
+    CloudSignedIn(CloudSignedIn),
+    CloudProgress(CloudProgress),
+    CloudSigninExpired,
 }
 
 /// Events buffered per connection before a slow client is dropped.
@@ -103,6 +106,8 @@ pub struct DaemonOptions {
     pub trash: Arc<dyn Trash>,
     /// How long ago the owner last used the computer (spec 24.8).
     pub owner_idle: OwnerIdle,
+    /// The server of the account (spec 6, `[cloud]`).
+    pub cloud: crate::cloud::CloudSettings,
 }
 
 pub struct Daemon {
@@ -118,6 +123,8 @@ pub struct Daemon {
     pub browsers: Browsers,
     pub screens: Screens,
     pub desktop: Desktop,
+    /// The account and the copies in the cloud (spec 27).
+    pub cloud: crate::cloud::Cloud,
     /// Other crews a bot may reach for its current turn (spec 10.4).
     pub crew_access: crate::service::crew_access::TurnAccess,
     /// What each bot's process had cost by its last turn (spec 8.7).
@@ -162,6 +169,7 @@ impl Daemon {
             ),
             screens: Screens::default(),
             desktop: Desktop::new(options.owner_idle),
+            cloud: crate::cloud::Cloud::new(options.cloud),
             crew_access: Default::default(),
             costs: Default::default(),
             trash: options.trash,

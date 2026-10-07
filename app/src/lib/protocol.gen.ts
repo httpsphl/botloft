@@ -1163,6 +1163,11 @@ export type CatalogAddParams = { crewId: CrewId, templateId: string,
  */
 name: string, role: string, };
 
+/**
+ * How much a backup carries (spec 14.2).
+ */
+export type BackupScope = "full" | "light";
+
 export type BackupCrew = { name: string, 
 /**
  * The crew's bots, archived ones aside.
@@ -1189,9 +1194,17 @@ createdAt: number,
 /**
  * The Botloft version that made it.
  */
-version: string, crews: Array<BackupCrew>, };
+version: string, 
+/**
+ * Missing in a manifest from before the scope existed: `full`.
+ */
+scope: BackupScope, crews: Array<BackupCrew>, };
 
-export type BackupExportParams = { passphrase: string, };
+export type BackupExportParams = { passphrase: string, 
+/**
+ * `full` when missing.
+ */
+scope?: BackupScope, };
 
 /**
  * A backup written and ready for the owner to save elsewhere.
@@ -1206,6 +1219,90 @@ size: number, manifest: BackupManifest, };
  * `backup.stage`: a backup file the owner picked, and its passphrase.
  */
 export type BackupStageParams = { path: string, passphrase: string, };
+
+/**
+ * `cloud.status`: where the owner stands with the account.
+ */
+export type CloudStatus = { 
+/**
+ * The server the app talks to; empty when none is set up.
+ */
+url: string, signedIn: boolean, email?: string, 
+/**
+ * Bytes the account's copies take, when the server answered.
+ */
+used?: number, 
+/**
+ * Bytes the account may keep, when the server answered.
+ */
+quota?: number, 
+/**
+ * A sign-in waits for the owner to open the link in the e-mail.
+ */
+pending: boolean, };
+
+/**
+ * `cloud.signin`: the e-mail the link goes to.
+ */
+export type CloudSigninParams = { email: string, 
+/**
+ * The app's language (`en`, `pt-BR`, `es`), for the e-mail.
+ */
+locale?: string, };
+
+export type CloudSigninStarted = { 
+/**
+ * Seconds the link in the e-mail works.
+ */
+wait: number, };
+
+/**
+ * `cloud.upload`: the passphrase seals the copy, and never leaves here.
+ */
+export type CloudUploadParams = { passphrase: string, };
+
+/**
+ * A copy the account keeps.
+ */
+export type CloudCopy = { id: string, 
+/**
+ * Bytes.
+ */
+size: number, 
+/**
+ * Unix time in milliseconds.
+ */
+created: number, };
+
+/**
+ * `cloud.copies`, newest first.
+ */
+export type CloudCopies = { copies: Array<CloudCopy>, };
+
+/**
+ * `cloud.download` and `cloud.delete`: which copy.
+ */
+export type CloudCopyParams = { id: string, };
+
+/**
+ * A copy fetched, where the app goes on with `backup.stage`.
+ */
+export type CloudDownloaded = { path: string, };
+
+/**
+ * `cloud.signed_in`: the owner opened the link and this computer is in.
+ */
+export type CloudSignedIn = { email: string, };
+
+/**
+ * Which way the bytes of a [`CloudProgress`] go.
+ */
+export type CloudDirection = "upload" | "download";
+
+/**
+ * `cloud.progress`: how much of a copy went up or came down.
+ */
+export type CloudProgress = { direction: CloudDirection, sent: number, total: number, };
 
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
 /**
@@ -1917,6 +2014,15 @@ export interface RpcMethods {
   "backup.stage": { params: BackupStageParams; result: BackupManifest };
   "backup.confirm": { params: undefined; result: null };
   "backup.cancel": { params: undefined; result: null };
+  "cloud.status": { params: undefined; result: CloudStatus };
+  "cloud.signin": { params: CloudSigninParams; result: CloudSigninStarted };
+  "cloud.signin_cancel": { params: undefined; result: null };
+  "cloud.signout": { params: undefined; result: null };
+  "cloud.upload": { params: CloudUploadParams; result: CloudCopy };
+  "cloud.copies": { params: undefined; result: CloudCopies };
+  "cloud.download": { params: CloudCopyParams; result: CloudDownloaded };
+  "cloud.delete": { params: CloudCopyParams; result: null };
+  "cloud.delete_account": { params: undefined; result: null };
   "routines.list": { params: RoutinesListParams; result: Array<Routine> };
   "routines.create": { params: RoutinesCreateParams; result: Routine };
   "routines.update": { params: RoutinesUpdateParams; result: Routine };
@@ -1972,6 +2078,9 @@ export interface RpcNotifications {
   "desktop.away": Array<DesktopAwayUse>;
   "mcp.servers": McpOverview;
   "bot.mcp": BotMcp;
+  "cloud.signed_in": CloudSignedIn;
+  "cloud.progress": CloudProgress;
+  "cloud.signin_expired": null;
   "browser.changed": BrowserState;
   "browser.action": BrowserAction;
   "browser.frame": BrowserFrame;

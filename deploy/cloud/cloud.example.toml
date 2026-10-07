@@ -1,0 +1,45 @@
+# The Botloft cloud server (spec 27.2). Copy to config/cloud.toml and edit.
+# The paths are as the container sees them; see docs/cloud-deploy.md.
+
+# Where it listens. In the container it must be 0.0.0.0 (the compose file
+# only publishes it on 127.0.0.1 of the machine); run natively, use
+# 127.0.0.1:8787.
+listen = "0.0.0.0:8787"
+
+# The public address, which goes in the links of the e-mails. https only.
+public_url = "https://cloud.example.org"
+
+# The database (cloud.db, small) and, with storage = "disk", the copies.
+data_dir = "/data"
+
+# Limits. A copy is a few MB: structure, bots' memory and routines.
+quota_bytes = 209715200      # 200 MiB an account
+max_copy_bytes = 52428800    # 50 MiB a copy
+keep = 5                     # copies an account keeps; the oldest goes
+
+# A proxy in front sets X-Forwarded-For; its last value is the client.
+behind_proxy = true
+
+# Behind Cloudflare, with the firewall letting only Cloudflare reach the server,
+# the client's address is in a header of its own; ask for it so that each person
+# has a count of their own. Never turn it on if others can reach the server.
+# client_ip_header = "CF-Connecting-IP"
+
+# Where the bytes of the copies live: "disk" (in data_dir) or "bucket".
+storage = "disk"
+
+# [bucket]                   # an S3-compatible bucket, such as Cloudflare R2
+# endpoint = "https://<account id>.r2.cloudflarestorage.com"
+# name = "botloft-copies"
+# region = "auto"
+# access_key_id = "…"
+# secret_file = "/config/bucket-secret"   # a file with the secret alone, or the
+#                                          # variable BOTLOFT_CLOUD_BUCKET_SECRET
+
+[smtp]
+host = "smtp.example.org"
+port = 587                   # 587 starts TLS; 465 is TLS from the start
+user = "botloft"
+password_file = "/config/smtp-password"   # a file with the password alone, or the
+                                          # variable BOTLOFT_CLOUD_SMTP_PASSWORD
+from = "Botloft <no-reply@example.org>"

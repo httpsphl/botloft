@@ -7,6 +7,7 @@ pub mod backup;
 pub mod bots;
 pub mod catalog;
 pub mod chat;
+pub mod cloud;
 pub mod crew_access;
 pub mod crews;
 pub mod delete;

@@ -54,6 +54,7 @@ mod browser;
 mod browser_input;
 mod catalog;
 mod chat;
+mod cloud;
 mod crew_access;
 mod desktop;
 #[cfg(test)]
@@ -79,6 +80,7 @@ pub use browser::*;
 pub use browser_input::*;
 pub use catalog::*;
 pub use chat::*;
+pub use cloud::*;
 pub use crew_access::*;
 pub use desktop::*;
 pub use files::*;
@@ -139,6 +141,15 @@ pub mod method {
     pub const BACKUP_STAGE: &str = "backup.stage";
     pub const BACKUP_CONFIRM: &str = "backup.confirm";
     pub const BACKUP_CANCEL: &str = "backup.cancel";
+    pub const CLOUD_STATUS: &str = "cloud.status";
+    pub const CLOUD_SIGNIN: &str = "cloud.signin";
+    pub const CLOUD_SIGNIN_CANCEL: &str = "cloud.signin_cancel";
+    pub const CLOUD_SIGNOUT: &str = "cloud.signout";
+    pub const CLOUD_UPLOAD: &str = "cloud.upload";
+    pub const CLOUD_COPIES: &str = "cloud.copies";
+    pub const CLOUD_DOWNLOAD: &str = "cloud.download";
+    pub const CLOUD_DELETE: &str = "cloud.delete";
+    pub const CLOUD_DELETE_ACCOUNT: &str = "cloud.delete_account";
     pub const CREW_ACCESS_LIST: &str = "crewAccess.list";
     pub const CREW_ACCESS_REVOKE: &str = "crewAccess.revoke";
     pub const MCP_SERVERS: &str = "mcp.servers";
@@ -228,6 +239,9 @@ pub mod notification {
     pub const SCREEN_DRAFT: &str = "screen.draft";
     pub const QUESTION_CHANGED: &str = "question.changed";
     pub const REACTION_CHANGED: &str = "reaction.changed";
+    pub const CLOUD_SIGNED_IN: &str = "cloud.signed_in";
+    pub const CLOUD_PROGRESS: &str = "cloud.progress";
+    pub const CLOUD_SIGNIN_EXPIRED: &str = "cloud.signin_expired";
 }
 
 /// Error codes: the standard JSON-RPC ones plus the daemon's (spec 11.4).

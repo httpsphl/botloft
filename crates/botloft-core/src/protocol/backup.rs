@@ -2,6 +2,20 @@
 
 use serde::{Deserialize, Serialize};
 
+/// How much a backup carries (spec 14.2).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub enum BackupScope {
+    /// Everything, conversations and files included. What backups made
+    /// before the scope existed hold.
+    #[default]
+    Full,
+    /// What goes to the cloud (spec 27): the structure, the bots' memory and
+    /// the routines.
+    Light,
+}
+
 /// What a backup holds, as its manifest says.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -13,6 +27,9 @@ pub struct BackupManifest {
     pub created_at: i64,
     /// The Botloft version that made it.
     pub version: String,
+    /// Missing in a manifest from before the scope existed: `full`.
+    #[serde(default)]
+    pub scope: BackupScope,
     pub crews: Vec<BackupCrew>,
 }
 
@@ -33,6 +50,10 @@ pub struct BackupCrew {
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct BackupExportParams {
     pub passphrase: String,
+    /// `full` when missing.
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub scope: Option<BackupScope>,
 }
 
 /// `backup.stage`: a backup file the owner picked, and its passphrase.
