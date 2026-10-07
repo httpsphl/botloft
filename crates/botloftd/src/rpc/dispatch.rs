@@ -8,9 +8,9 @@ use serde_json::Value;
 use super::jsonrpc::{RpcError, empty_params};
 use crate::approvals;
 use crate::service::{
-    self, ApiResult, archive, attachments, backup, bots, catalog, chat, crew_access, crews, delete,
-    deliveries, desktop, files, lead, mcp, messages, models, modes, questions, reactions, routines,
-    rules, screens, settings, tasks, usage,
+    self, ApiResult, archive, attachments, backup, bots, catalog, chat, cloud, crew_access, crews,
+    delete, deliveries, desktop, files, lead, mcp, messages, models, modes, questions, reactions,
+    routines, rules, screens, settings, tasks, usage,
 };
 use crate::state::Daemon;
 
@@ -61,6 +61,21 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::BACKUP_STAGE => reply(backup::stage(daemon, parse(params)?)),
         method::BACKUP_CONFIRM => reply(backup::confirm(daemon).map(|()| Value::Null)),
         method::BACKUP_CANCEL => reply(backup::cancel(daemon).map(|()| Value::Null)),
+        method::CLOUD_STATUS => reply(cloud::status(daemon)),
+        method::CLOUD_SIGNIN => reply(cloud::signin(daemon, parse(params)?)),
+        method::CLOUD_SIGNIN_CANCEL => {
+            cloud::signin_cancel(daemon);
+            Ok(Value::Null)
+        }
+        method::CLOUD_SIGNOUT => {
+            cloud::signout(daemon);
+            Ok(Value::Null)
+        }
+        method::CLOUD_UPLOAD => reply(cloud::upload(daemon, parse(params)?)),
+        method::CLOUD_COPIES => reply(cloud::copies(daemon)),
+        method::CLOUD_DOWNLOAD => reply(cloud::download(daemon, parse(params)?)),
+        method::CLOUD_DELETE => reply(cloud::delete(daemon, parse(params)?).map(|()| Value::Null)),
+        method::CLOUD_DELETE_ACCOUNT => reply(cloud::delete_account(daemon).map(|()| Value::Null)),
         method::CREW_ACCESS_LIST => reply(crew_access::list(daemon, parse(params)?)),
         method::CREW_ACCESS_REVOKE => reply(crew_access::revoke(daemon, parse(params)?)),
         method::MCP_SERVERS => reply(mcp::overview(daemon)),

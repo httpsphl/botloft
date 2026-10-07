@@ -186,16 +186,25 @@ async fn run(
     }
 }
 
-/// Reads that the app never sets against notifications: their answer may
+/// Requests that the app never sets against notifications: their answer may
 /// come after newer notifications, so they wait neither for the requests
 /// before them nor hold back the notifications meanwhile.
-const ASIDE: [&str; 6] = [
+const ASIDE: &[&str] = &[
     method::FILES_LIST,
     method::FILES_READ,
     method::SCREENS_LIST,
     method::ATTACHMENTS_READ,
     method::USAGE_TOKENS,
     method::CHAT_SEARCH,
+    // They wait for the network, a copy's transfer for minutes (spec 27.5).
+    method::CLOUD_STATUS,
+    method::CLOUD_SIGNIN,
+    method::CLOUD_SIGNOUT,
+    method::CLOUD_UPLOAD,
+    method::CLOUD_COPIES,
+    method::CLOUD_DOWNLOAD,
+    method::CLOUD_DELETE,
+    method::CLOUD_DELETE_ACCOUNT,
 ];
 
 enum Routed {

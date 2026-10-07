@@ -110,6 +110,18 @@ const APPROVAL_WAIT: Duration = Duration::from_secs(3);
 const PATIENT_APPROVAL_WAIT: Duration = Duration::from_secs(30);
 
 pub fn new_daemon_waiting(settings: SupervisorSettings, approval_wait: Duration) -> Parts {
+    new_daemon_with(
+        settings,
+        approval_wait,
+        botloftd::cloud::CloudSettings::default(),
+    )
+}
+
+pub fn new_daemon_with(
+    settings: SupervisorSettings,
+    approval_wait: Duration,
+    cloud: botloftd::cloud::CloudSettings,
+) -> Parts {
     let dir = tempfile::tempdir().expect("tempdir");
     let paths = Paths::new(dir.path().join("home"), dir.path().join("workspaces"));
     let runtime = FakeRuntime::new();
@@ -134,6 +146,7 @@ pub fn new_daemon_waiting(settings: SupervisorSettings, approval_wait: Duration)
         trash: Arc::new(trash.clone()),
         // The owner is always right there, unless a test says otherwise.
         owner_idle: Arc::new(|| Some(Duration::ZERO)),
+        cloud,
     });
     Parts {
         daemon,
@@ -163,8 +176,30 @@ impl TestDaemon {
         Self::launch(true, PATIENT_APPROVAL_WAIT).await
     }
 
+    /// Server only, with an account server to talk to (spec 27).
+    pub async fn start_with_cloud(url: &str) -> Self {
+        let cloud = botloftd::cloud::CloudSettings {
+            url: url.to_owned(),
+            poll: Duration::from_millis(50),
+        };
+        Self::launch_with(false, APPROVAL_WAIT, cloud).await
+    }
+
     async fn launch(supervised: bool, approval_wait: Duration) -> Self {
-        let parts = new_daemon_waiting(test_settings(), approval_wait);
+        Self::launch_with(
+            supervised,
+            approval_wait,
+            botloftd::cloud::CloudSettings::default(),
+        )
+        .await
+    }
+
+    async fn launch_with(
+        supervised: bool,
+        approval_wait: Duration,
+        cloud: botloftd::cloud::CloudSettings,
+    ) -> Self {
+        let parts = new_daemon_with(test_settings(), approval_wait, cloud);
         let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
         let addr = listener.local_addr().expect("addr");
         if supervised {
@@ -207,6 +242,8 @@ impl TestDaemon {
 pub struct RpcFailure {
     pub code: i64,
     pub message: String,
+    /// What the app words itself (spec 20.8); empty when there is none.
+    pub reason: String,
 }
 
 pub struct Client {
@@ -270,6 +307,10 @@ impl Client {
                     Some(error) => Err(RpcFailure {
                         code: error["code"].as_i64().expect("error code"),
                         message: error["message"].as_str().unwrap_or_default().to_owned(),
+                        reason: error["data"]["reason"]
+                            .as_str()
+                            .unwrap_or_default()
+                            .to_owned(),
                     }),
                     None => Ok(frame["result"].clone()),
                 };

@@ -33,5 +33,8 @@ pub(super) fn to_notification(event: &Event) -> String {
         Event::ScreenDraft(draft) => note(notification::SCREEN_DRAFT, draft),
         Event::QuestionChanged(question) => note(notification::QUESTION_CHANGED, question),
         Event::ReactionChanged(change) => note(notification::REACTION_CHANGED, change),
+        Event::CloudSignedIn(signed) => note(notification::CLOUD_SIGNED_IN, signed),
+        Event::CloudProgress(progress) => note(notification::CLOUD_PROGRESS, progress),
+        Event::CloudSigninExpired => note(notification::CLOUD_SIGNIN_EXPIRED, &()),
     }
 }

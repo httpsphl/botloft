@@ -3,7 +3,7 @@
 // `FAKE_PASSPHRASE`. Nothing is sealed, written or restored.
 
 import type { FakeBotloft, Handlers } from "./fake";
-import { type BackupManifest, RpcErrorCode } from "./protocol.gen";
+import { type BackupManifest, type BackupScope, RpcErrorCode } from "./protocol.gen";
 import { RpcError } from "./rpc";
 
 type BackupMethods = Extract<keyof Handlers, `backup.${string}`>;
@@ -15,11 +15,12 @@ function refused(reason: string, message: string): RpcError {
   return new RpcError(RpcErrorCode.validation, message, reason);
 }
 
-function manifestOf(fake: FakeBotloft): BackupManifest {
+function manifestOf(fake: FakeBotloft, scope: BackupScope = "full"): BackupManifest {
   return {
     format: 1,
     createdAt: fake.now,
-    version: "0.10.0",
+    version: "0.11.0",
+    scope,
     crews: [...fake.crews.values()].map((crew) => ({
       name: crew.name,
       bots: [...fake.bots.values()]
@@ -32,14 +33,14 @@ function manifestOf(fake: FakeBotloft): BackupManifest {
 
 export function backupHandlers(fake: FakeBotloft): Pick<Handlers, BackupMethods> {
   return {
-    "backup.export": ({ passphrase }) => {
+    "backup.export": ({ passphrase, scope }) => {
       if ([...passphrase].length < 8) {
         throw refused("short_passphrase", "the passphrase must have at least 8 characters");
       }
       return {
         path: "C:\\Users\\owner\\AppData\\Local\\Botloft\\exports\\botloft-2026-10-05-1430.botloft",
         size: 1_234_567,
-        manifest: manifestOf(fake),
+        manifest: manifestOf(fake, scope ?? "full"),
       };
     },
     "backup.stage": ({ passphrase }) => {

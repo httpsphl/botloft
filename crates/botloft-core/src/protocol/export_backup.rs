@@ -4,6 +4,7 @@ use super::super::*;
 use super::Out;
 
 pub(super) fn decls(out: &mut Out) {
+    out.decl::<BackupScope>();
     out.decl::<BackupCrew>();
     out.decl::<BackupManifest>();
     out.decl::<BackupExportParams>();

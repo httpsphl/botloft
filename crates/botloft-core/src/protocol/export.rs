@@ -20,6 +20,8 @@ mod backup;
 mod browser;
 #[path = "export_catalog.rs"]
 mod catalog;
+#[path = "export_cloud.rs"]
+mod cloud;
 #[path = "export_crew_access.rs"]
 mod crew_access;
 #[path = "export_desktop.rs"]
@@ -194,6 +196,7 @@ fn export_bindings() {
     crew_access::decls(&mut out);
     catalog::decls(&mut out);
     backup::decls(&mut out);
+    cloud::decls(&mut out);
     out.decl::<ApprovalItem>();
     usage::decls(&mut out);
     questions::decls(&mut out);
@@ -367,6 +370,7 @@ fn export_bindings() {
     crew_access::methods(&mut out);
     catalog::methods(&mut out);
     backup::methods(&mut out);
+    cloud::methods(&mut out);
     routines::methods(&mut out);
     questions::methods(&mut out);
     reactions::methods(&mut out);
@@ -420,6 +424,7 @@ fn export_bindings() {
     rules::notifications(&mut out);
     desktop::notifications(&mut out);
     mcp::notifications(&mut out);
+    cloud::notifications(&mut out);
     browser::notifications(&mut out);
     out.text.push_str("}\n\n");
 

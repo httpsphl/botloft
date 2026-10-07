@@ -171,7 +171,8 @@ idle_minutes = 10
 max_open = 4
 
 [cloud]                       # conta e cópias na nuvem (seção 27)
-url = ""                     # vazio = o servidor do Botloft; a conta só existe se o dono entrar
+url = ""                     # o servidor da conta; vazio = sem servidor, e a conta fica desligada
+poll_ms = 2000               # de quanto em quanto um pedido de entrada vê se o link foi aberto
 
 [tasks]
 max_hops = 4
@@ -2150,21 +2151,21 @@ Freios: 5 pedidos por hora por e-mail e 20 por hora por IP (`429` com `retry_aft
 
 ### 27.5 No daemon (`cloud`)
 
-Só o daemon fala com o servidor; o app nunca vê o token. O cliente (`reqwest` com `rustls`) lê `[cloud] url` do `config.toml` (6) e recusa `http` fora de `127.0.0.1`. Métodos novos do protocolo (11), todos só do dono:
+Só o daemon fala com o servidor; o app nunca vê o token. O cliente (`reqwest` com `rustls`) lê `[cloud] url` do `config.toml` (6) e recusa `http` fora de `127.0.0.1`. O token é de um servidor: se o `url` muda, o computador volta a estar sem conta. Métodos novos do protocolo (11), todos só do dono, e respondidos à parte (como a busca no chat, 11.1), porque esperam a rede e um envio leva minutos:
 
 | Método | O que faz |
 |---|---|
-| `cloud.status` | `{url, signedIn, email?, used?, quota?, pending?}` |
-| `cloud.signin {email}` | começa o pedido (27.3) e devolve `{wait}`; o resto acontece em segundo plano |
+| `cloud.status` | `{url, signedIn, email?, used?, quota?, pending}`; `used` e `quota` vêm do servidor e faltam se ele não responde em 5 s (a tela ainda mostra quem entrou) |
+| `cloud.signin {email, locale?}` | começa o pedido (27.3) e devolve `{wait}`; o resto acontece em segundo plano. `locale` é o idioma do app, para o e-mail; sem ele vale o do `session.hello` |
 | `cloud.signin_cancel` | desiste do pedido |
 | `cloud.signout` | `POST /v1/logout` (se não conseguir, apaga o token local do mesmo jeito) |
-| `cloud.upload {passphrase}` | `backup.export` com `scope: "light"` (14.2) e envia o arquivo; devolve `{id, size, created}` |
+| `cloud.upload {passphrase}` | `backup.export` com `scope: "light"` (14.2), numa pasta própria (`cloud-upload`, para não trocar um arquivo completo que o dono ainda não salvou), e envia; o arquivo selado não fica no disco depois. Devolve `{id, size, created}` |
 | `cloud.copies` | a lista de 27.4 |
-| `cloud.download {id}` | baixa para `<home>\restore\downloaded.botloft` e devolve o caminho; o app segue com `backup.stage {path, passphrase}` e `backup.confirm`, como numa cópia de arquivo |
+| `cloud.download {id}` | baixa para `<home>\cloud-download\copy.botloft` (não pode ser `restore`: o `backup.stage` esvazia essa pasta) e devolve o caminho; o SHA-256 é conferido, e uma cópia que não bate não deixa arquivo; o app segue com `backup.stage {path, passphrase}` e `backup.confirm`, como numa cópia de arquivo |
 | `cloud.delete {id}` | apaga uma cópia |
 | `cloud.delete_account` | pede o link de apagar a conta (27.3) |
 
-Notificações: `cloud.signed_in {email}`, `cloud.progress {sent, total}` (envio e download) e `cloud.signin_expired`. Erros que o dono resolve levam `reason` (20.8): os de 27.4 mais `offline` e `short_passphrase`. O envio de uma cópia que falhou recomeça do início (retomar o envio fica para depois). Nunca se loga e-mail, token nem endereço de cópia em `info`.
+Notificações: `cloud.signed_in {email}`, `cloud.progress {direction, sent, total}` (`upload` ou `download`, no máximo a cada 100 ms) e `cloud.signin_expired` (o link venceu ou o servidor o recusou). Erros que o dono resolve levam `reason` (20.8): os de 27.4 mais `no_server` (sem endereço, ou um que não é https), `offline`, `not_signed_in`, `signed_out` (o servidor recusou o token: outro computador o tirou da conta, e este esquece a entrada) e `short_passphrase`. O envio de uma cópia que falhou recomeça do início (retomar o envio fica para depois). Nunca se loga e-mail, token nem endereço de cópia em `info`.
 
 ### 27.6 No app
 

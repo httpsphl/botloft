@@ -24,6 +24,7 @@ pub struct Config {
     pub bots: BotsConfig,
     pub browser: BrowserConfig,
     pub tasks: TasksConfig,
+    pub cloud: CloudConfig,
 }
 
 impl Default for Config {
@@ -40,6 +41,7 @@ impl Default for Config {
             bots: BotsConfig::default(),
             browser: BrowserConfig::default(),
             tasks: TasksConfig::default(),
+            cloud: CloudConfig::default(),
         }
     }
 }
@@ -106,6 +108,25 @@ impl Default for BotsConfig {
 }
 
 /// The bots' browser (spec 21.9).
+/// The account and the copies in the cloud (spec 27).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct CloudConfig {
+    /// The server; empty until there is one.
+    pub url: String,
+    /// How often a sign-in waiting for its link asks whether it was opened.
+    pub poll_ms: u64,
+}
+
+impl Default for CloudConfig {
+    fn default() -> Self {
+        Self {
+            url: String::new(),
+            poll_ms: 2_000,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct BrowserConfig {
