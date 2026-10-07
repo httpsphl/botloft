@@ -170,6 +170,9 @@ path = ""                     # vazio = Microsoft Edge do Windows
 idle_minutes = 10
 max_open = 4
 
+[cloud]                       # conta e cópias na nuvem (seção 27)
+url = ""                     # vazio = o servidor do Botloft; a conta só existe se o dono entrar
+
 [tasks]
 max_hops = 4
 default_deadline_minutes = 120
@@ -775,6 +778,7 @@ Pragmas: `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON`, `busy_time
 - `log_level` vale só para os crates do Botloft; dependências ficam em `warn`, porque em `debug`/`trace` a pilha de WebSocket registra frames, que podem conter mensagens. `RUST_LOG` sobrepõe tudo e é só para depuração local.
 - Nome de anexo vira só o nome do arquivo (sem `..`, sem pasta, sem caracteres proibidos no Windows) antes de ir para o disco.
 - Ferramentas conectadas (25): só o dono cadastra, pelo app. Um servidor `stdio` roda com os poderes do dono, fora das cercas de 7.5, e um `http` recebe o que o bot mandar; o cadastro diz isso e pede confirmação. Segredos dos servidores ficam em `secrets\mcp` e no ambiente dos bots ligados, nunca no banco, no `mcp.json` ou no log.
+- Conta e cópias na nuvem (27): opcionais e só por ação do dono. O token do aparelho fica em `secrets\cloud.json` (ACL do usuário), o servidor guarda dele só o SHA-256, e a cópia sai selada com a senha do dono, que não vai ao servidor. O cliente só fala `https` (fora `127.0.0.1`). Não é telemetria: nada é enviado sem o clique do dono.
 - Isolamento entre bots é cooperativo (mesmo usuário do Windows). Documentar isso no README sem prometer sandbox.
 - Navegador dos bots (21): perfil próprio por bot, sem os logins do navegador do dono. A porta do DevTools escuta só em 127.0.0.1 e não tem senha: enquanto o navegador está aberto, outro programa do computador pode controlá-lo, como pode fazer com o resto do que roda com o usuário. Páginas não chegam a ela: o Chromium recusa WebSocket com `Origin` de site sem `--remote-allow-origins`. Trocar a porta por um pipe fica para depois. O texto das páginas pode trazer instruções para o bot; as tools dizem a ele que não valem como pedido do dono, e nos modos que perguntam, cada site novo passa pelo dono (21.5).
 - Pasta de trabalho escolhida (5): todos os bots da crew a editam como a própria pasta. Por isso ela não pode tocar a pasta de dados do Botloft (segredos, banco), conter os workspaces de todos os bots, encostar nas pastas de outra crew nem ser um disco inteiro.
@@ -819,7 +823,7 @@ Em fatias (18, item 8). O que já vale fora do Windows:
 
 ### 14.2 Cópia de segurança
 
-Formatar o computador ou perder a pasta do Botloft não pode levar as equipes junto. O dono exporta tudo para um arquivo `.botloft`, protegido com uma senha dele, e importa esse arquivo em outro computador ou depois de reinstalar. É o mesmo arquivo que um backup na nuvem vai enviar: o servidor guardaria só bytes que não consegue ler.
+Formatar o computador ou perder a pasta do Botloft não pode levar as equipes junto. O dono exporta tudo para um arquivo `.botloft`, protegido com uma senha dele, e importa esse arquivo em outro computador ou depois de reinstalar. É o mesmo arquivo que a cópia na nuvem envia (27): o servidor guarda só bytes que não consegue ler.
 
 - **O que vai:** uma cópia consistente do banco (`VACUUM INTO`): equipes, bots, conversas, rotinas, regras de "permitir sempre", acessos entre equipes e o uso. E a pasta de cada equipe em `workspaces_root`, arquivadas inclusive: a memória (`CLAUDE.md`) e as regras de cada bot, os anexos e a `shared`. Vai também um `manifest.json` com o formato (1), a data, a versão do Botloft e as equipes, com os nomes dos bots.
 - **O que fica:** o que o Botloft escreve de novo a cada início (`.botloft\` e `.claude\settings.json` de cada bot, 7.5); os segredos, os logs e os perfis dos navegadores dos bots, que estão na pasta de dados e não em `workspaces_root`; e as pastas de trabalho que o dono escolheu fora do Botloft (5), que são dele. O manifesto lista essas pastas, para a importação avisar. O login do Claude também é de cada computador e se faz de novo.
@@ -2089,3 +2093,100 @@ Finanças, jurídico e saúde, que pedem aviso de que não substituem um profiss
 | **G2** Chefe | `list_bot_templates`, `get_bot_template`, `template` em `suggest_bot`, regras do chefe | tools com `FakeRuntime`: só o chefe, `id` desconhecido, junção de `instructions`, limite de 8 000; manual (PR): pedir ao chefe real "preciso de alguém para as redes sociais" e ver o cartão |
 | **G3** App | a Agência de bots, "Saber mais", "Adicionar na equipe", convite na equipe só com o chefe, textos nos três idiomas | `FakeBotloft`; teste de que toda ficha tem texto nos três idiomas; `pnpm check`; a tela no preview. Manual (PR): criar cada um dos 12 com o Claude Code real e dar a cada um uma tarefa típica |
 | **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito), Conteúdo, pesquisa e aprendizado (6, feito); categorias `product`, `marketing` e `learning`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
+
+## 27. Conta e cópia na nuvem
+
+### 27.1 O que é
+
+A cópia de segurança de 14.2 já protege contra formatar o computador, mas só se o dono guardar o arquivo em outro lugar. Esta seção traz uma **conta** opcional e um lugar onde as cópias ficam guardadas: o dono envia a cópia selada pelo app e a baixa de volta em qualquer computador. É o primeiro passo para o celular (aprovar e responder de longe), que fica para depois (27.9).
+
+Três promessas valem para tudo aqui:
+
+- **É opcional e é do dono.** Sem conta, o Botloft não usa a rede para nada além do que já usa (o atualizador, os bots). Nada é enviado sem um clique do dono, e a primeira tela diz o que o servidor guarda.
+- **O servidor não lê a cópia.** O arquivo `.botloft` sai selado com a senha da cópia (14.2) e assim chega ao servidor: ele guarda bytes que não consegue abrir. A **senha da conta** não existe (o login é por e-mail, 27.3) e a **senha da cópia** nunca sai do computador. Quem perde a senha da cópia perde as cópias da nuvem: o servidor não tem como recuperar.
+- **O servidor é nosso e o código é aberto.** É uma VPS própria com um serviço Rust deste repositório (`botloft-cloud`, 27.2). Quem quiser pode rodar o seu e apontar o app para ele (`[cloud] url`, 6).
+
+O servidor guarda só: o e-mail, os aparelhos que entraram (nome, data de entrada, último uso), e as cópias (tamanho, data, SHA-256 e os bytes selados). Não sabe nomes de equipes, de bots nem o que há dentro.
+
+### 27.2 O servidor (`crates/botloft-cloud`)
+
+Um binário, `botloft-cloud serve --config cloud.toml`, com `axum` e SQLite próprio (migrations do crate, `migrations/NNNN_nome.sql`, separado do banco do daemon). Fica atrás de um proxy com TLS (Caddy ou nginx): o cliente só fala `https`, a não ser em `127.0.0.1` (testes). O `cloud.toml`:
+
+| Chave | Padrão | O que é |
+|---|---|---|
+| `listen` | `127.0.0.1:8787` | onde escuta, atrás do proxy |
+| `public_url` | (obrigatória) | o endereço público, que vai nos links do e-mail |
+| `data_dir` | `./data` | banco e cópias |
+| `quota_bytes` | 2 GiB | o máximo por conta |
+| `max_copy_bytes` | 1 GiB | o máximo de uma cópia |
+| `keep` | 3 | quantas cópias por conta (a mais antiga sai quando entra a seguinte) |
+| `smtp` | (obrigatória) | `host`, `port`, `user`, `password_file`, `from` |
+
+O envio de e-mail passa por uma interface (`Mailer`): o serviço usa SMTP, e os testes uma caixa de saída na memória. Os textos do e-mail saem em `en`, `pt-BR` ou `es`, conforme o `locale` que o app mandou. Logs do servidor: nunca o e-mail, o token nem o código em nível `info`; o proxy guarda o IP por 7 dias para frear abuso e depois apaga. Sem telemetria.
+
+### 27.3 Entrar (link mágico)
+
+Sem senha. O fluxo é o de "entrar em outro aparelho", que não precisa de endereço do app para o link voltar:
+
+1. O app chama `POST /v1/login {email, device_name, locale}`. A resposta é sempre `202 {request, wait}` (`request` é um segredo de 32 bytes em base64 url-safe; `wait` é 600 s), exista ou não a conta: ninguém descobre por aqui quem tem conta. O servidor guarda só o SHA-256 do `request`.
+2. O e-mail leva um link `<public_url>/v1/login/confirm?code=<outro segredo>`, de uso único e válido por 10 minutos. Abri-lo, em qualquer aparelho, mostra "Pode voltar ao Botloft" e marca o pedido como aprovado. A conta nasce nesse momento, se for a primeira vez.
+3. O app consulta `GET /v1/login/<request>` a cada 2 s: `{status: "pending"}`, `"expired"` ou `"approved"`. Na primeira consulta depois da aprovação vem `{status: "approved", token, device, email}` e o pedido deixa de existir. Quem só tem o link não tem o `request`, e quem o intercepta não tem o link.
+4. O `token` (32 bytes) identifica o aparelho em todas as outras chamadas (`Authorization: Bearer`). O servidor guarda só o SHA-256, como o Botloft faz com os tokens dos bots (13). Fica no computador em `secrets\cloud.json` (ACL do usuário, 5 e 13).
+
+Freios: 5 pedidos por hora por e-mail e 20 por hora por IP (`429` com `retry_after`); o e-mail não é enviado de novo se o último saiu há menos de 60 s. `POST /v1/logout` apaga o token deste aparelho; `GET /v1/me` devolve `{email, used, quota, devices}`; `DELETE /v1/devices/<id>` tira outro aparelho. **Apagar a conta:** `POST /v1/account/delete` manda um link ao e-mail e, confirmado, apaga a conta, os aparelhos e todas as cópias de uma vez; `DELETE /v1/account` não existe sem essa confirmação.
+
+### 27.4 As cópias
+
+- `PUT /v1/copies` envia o arquivo `.botloft` inteiro, em fluxo, com `Content-Length` e `X-Botloft-Sha256`. O servidor grava num arquivo temporário, confere o tamanho e o hash enquanto grava e só então o torna a cópia mais nova; falha, corte ou hash diferente não deixam nada. Responde `201 {id, size, created}`. Recusa com `413` e `reason` `too_big` (acima de `max_copy_bytes`) ou `quota` (a conta não cabe), `400` `bad_hash`. Depois de gravar uma cópia nova e só então, apaga as mais antigas além de `keep`.
+- `GET /v1/copies` lista `{id, size, created}`, da mais nova para a mais antiga. `GET /v1/copies/<id>` baixa, com `Range` para retomar. `DELETE /v1/copies/<id>` apaga uma.
+- O servidor não abre o arquivo: não confere o lacre nem o manifesto. Se o cliente enviou lixo, a restauração falha no app com `not_a_backup` (14.2), sem mudar nada.
+- Erros vêm como `{reason, message}`; os `reason` são `unauthorized`, `not_found`, `rate_limited`, `login_expired`, `too_big`, `quota`, `bad_hash`.
+
+### 27.5 No daemon (`cloud`)
+
+Só o daemon fala com o servidor; o app nunca vê o token. O cliente (`reqwest` com `rustls`) lê `[cloud] url` do `config.toml` (6) e recusa `http` fora de `127.0.0.1`. Métodos novos do protocolo (11), todos só do dono:
+
+| Método | O que faz |
+|---|---|
+| `cloud.status` | `{url, signedIn, email?, used?, quota?, pending?}` |
+| `cloud.signin {email}` | começa o pedido (27.3) e devolve `{wait}`; o resto acontece em segundo plano |
+| `cloud.signin_cancel` | desiste do pedido |
+| `cloud.signout` | `POST /v1/logout` (se não conseguir, apaga o token local do mesmo jeito) |
+| `cloud.upload {passphrase}` | `backup.export` (14.2) e envia o arquivo; devolve `{id, size, created}` |
+| `cloud.copies` | a lista de 27.4 |
+| `cloud.download {id}` | baixa para `<home>\restore\downloaded.botloft` e devolve o caminho; o app segue com `backup.stage {path, passphrase}` e `backup.confirm`, como numa cópia de arquivo |
+| `cloud.delete {id}` | apaga uma cópia |
+| `cloud.delete_account` | pede o link de apagar a conta (27.3) |
+
+Notificações: `cloud.signed_in {email}`, `cloud.progress {sent, total}` (envio e download) e `cloud.signin_expired`. Erros que o dono resolve levam `reason` (20.8): os de 27.4 mais `offline` e `short_passphrase`. O envio de uma cópia que falhou recomeça do início (retomar o envio fica para depois). Nunca se loga e-mail, token nem endereço de cópia em `info`.
+
+### 27.6 No app
+
+Configurações, "Cópia de segurança" (14.2) ganha o bloco **Conta**, acima de "Salvar uma cópia":
+
+- **Sem conta:** uma frase do que ela guarda ("seu e-mail e as cópias, que ninguém consegue abrir sem a sua senha"), o campo de e-mail e "Entrar". Depois: "Enviamos um link para ana@x.com. Abra o e-mail e volte aqui." com "Reenviar" (acende após 60 s) e "Cancelar".
+- **Com conta:** o e-mail, "Sair", o espaço usado ("320 MB de 2 GB"), "Enviar uma cópia agora" (a senha duas vezes, as mesmas regras de 14.2, uma barra de progresso) e a lista "Cópias na nuvem" (data, tamanho), cada uma com "Restaurar" (pede a "Senha da cópia", baixa e entra no mesmo passo de confirmação de 14.2) e "Apagar". "Apagar minha conta" no fim, com a confirmação que diz que apaga todas as cópias.
+- Textos nos três idiomas, sem jargão (15.6): "nuvem", "conta", "cópia"; nunca "servidor", "token" ou "daemon".
+
+### 27.7 Privacidade (13)
+
+- Nada vai à rede sem o dono pedir; sair da conta apaga o token do computador.
+- O servidor vê o e-mail, o IP de quem conecta (no proxy, por 7 dias), os tamanhos e as datas. Não vê a senha da cópia nem o que há na cópia.
+- Quem controla o servidor pode apagar ou recusar cópias, e pode ver quando e quanto se envia. Por isso o lacre é do dono e não do servidor.
+- Quem acessa o e-mail entra na conta e baixa as cópias seladas, mas não as abre sem a senha da cópia.
+
+### 27.8 Marcos
+
+| Marco | O que entra | Teste |
+|---|---|---|
+| **C1** Spec | esta seção | revisão do dono |
+| **C2** Servidor: conta | crate `botloft-cloud`, migrations, `Mailer`, login por link, aparelhos, freios | unidade; fluxo completo com a caixa de saída; mesma resposta para e-mail novo e conhecido; link usado ou vencido |
+| **C3** Servidor: cópias | `PUT`/`GET`/`DELETE`, hash, cota, `keep`, `Range`, apagar a conta | corte no meio não deixa nada; hash errado; cota; a mais antiga só sai depois da nova |
+| **C4** Hospedagem | `Dockerfile`, serviço systemd, `Caddyfile` e `docs/cloud-deploy.md`; o crate entra na CI | build; subir e responder em `/v1/me` com 401 |
+| **C5** Daemon | cliente `cloud`, métodos e notificações do protocolo, `secrets\cloud.json`, tipos gerados | o servidor de C2 e C3 no processo, em `127.0.0.1`: entrar, enviar, listar, baixar, restaurar em outra pasta |
+| **C6** App | o bloco Conta, `FakeBotloft`, três idiomas | `pnpm check`; a tela no preview |
+| **C7** Teste real | volta completa com a VPS de verdade e uma instalação de teste: e-mail chegando (entrega, spam), envio, restauração em pasta limpa | registrado na seção 19 |
+
+### 27.9 Fora desta etapa
+
+Envio automático (pede guardar a senha da cópia no computador, decisão à parte), retomar um envio, cópias só do que mudou, plano pago e cotas por plano, login por Google ou GitHub, recuperar uma senha de cópia perdida, trocar o servidor sem perder as cópias, e o celular: o relay pelo servidor, o pareamento por QR e o app com aprovações e perguntas, que usam esta conta e vêm em seguida.
