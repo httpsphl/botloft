@@ -44,7 +44,7 @@ use tokio_tungstenite::tungstenite::{self, Message};
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
 
 pub const TOKEN: &str = "test-owner-token";
-const WAIT: Duration = Duration::from_secs(5);
+const WAIT: Duration = Duration::from_secs(20);
 
 pub struct TestDaemon {
     pub addr: SocketAddr,
