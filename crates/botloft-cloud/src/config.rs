@@ -29,6 +29,10 @@ pub struct Config {
     /// `X-Forwarded-For`.
     #[serde(default)]
     pub client_ip_header: Option<String>,
+    /// The built files of the phone page (`app/dist-phone`), which the
+    /// server serves at `/m` (spec 28.7). Without it there is no page.
+    #[serde(default)]
+    pub phone_dir: Option<PathBuf>,
     #[serde(default)]
     pub storage: Storage,
     /// Where the copies go when `storage = "bucket"`.
@@ -187,6 +191,7 @@ impl Config {
             keep: default_keep(),
             behind_proxy: true,
             client_ip_header: None,
+            phone_dir: None,
             storage: Storage::Disk,
             bucket: None,
             smtp: Smtp {

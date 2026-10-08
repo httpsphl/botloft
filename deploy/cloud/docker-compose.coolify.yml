@@ -27,6 +27,7 @@ services:
         listen = "0.0.0.0:8787"
         public_url = "https://cloud.example.org"
         data_dir = "/data"
+        phone_dir = "/srv/phone"
         quota_bytes = 209715200
         max_copy_bytes = 52428800
         keep = 5

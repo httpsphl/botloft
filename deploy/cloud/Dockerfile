@@ -5,6 +5,16 @@
 # The build context is the repository, because the crate lives in a workspace.
 # See docs/cloud-deploy.md.
 
+# The phone's page (spec 28.7): app/src/phone, built with Vite.
+FROM node:22-bookworm-slim AS phone
+RUN npm install --global pnpm@12.4.1
+WORKDIR /src/app
+COPY app/package.json app/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY app/ ./
+COPY docs/test-vectors/ /src/docs/test-vectors/
+RUN pnpm build:phone
+
 FROM rust:1-bookworm AS build
 # aws-lc, which the bucket client's TLS uses, builds with cmake.
 RUN apt-get update \
@@ -24,6 +34,7 @@ RUN apt-get update \
     && useradd --system --home-dir /data --shell /usr/sbin/nologin botloft \
     && mkdir /data && chown botloft /data
 COPY --from=build /botloft-cloud /usr/local/bin/botloft-cloud
+COPY --from=phone /src/app/dist-phone /srv/phone
 USER botloft
 WORKDIR /data
 VOLUME /data

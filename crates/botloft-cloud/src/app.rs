@@ -11,7 +11,7 @@ use crate::db::Db;
 use crate::hub::Hub;
 use crate::mailer::Mailer;
 use crate::store::CopyStore;
-use crate::{copies, login, pairing, relay, removal, session};
+use crate::{copies, login, pairing, phone, relay, removal, session};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -36,6 +36,9 @@ pub fn router(state: AppState) -> Router {
         .route("/v1/me", get(session::me))
         .route("/v1/logout", post(session::logout))
         .route("/v1/devices/{id}", delete(session::remove_device))
+        .route("/m", get(phone::index))
+        .route("/m/", get(phone::index))
+        .route("/m/{*path}", get(phone::file))
         .route("/v1/relay", get(relay::relay))
         .route("/v1/pairings", post(pairing::open))
         .route(

@@ -1,0 +1,21 @@
+/* The phone's page (spec 28.7): the app's colors and fonts, and a page that
+   scrolls and whose text can be selected, as on any phone. */
+@import "../index.css";
+@source "../";
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: auto;
+    min-height: 100%;
+  }
+
+  body {
+    overflow: auto;
+    user-select: text;
+    font-size: 1rem;
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior-y: contain;
+  }
+}

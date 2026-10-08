@@ -208,13 +208,19 @@ impl TestDaemon {
 
     /// Server, supervisor and courier, with an account server to talk to.
     pub async fn start_supervised_with_cloud(url: &str) -> Self {
+        Self::start_supervised_with_cloud_waiting(url, APPROVAL_WAIT).await
+    }
+
+    /// The same, with requests that wait as long as `wait` for the owner (a
+    /// person at a real phone is slower than a test).
+    pub async fn start_supervised_with_cloud_waiting(url: &str, wait: Duration) -> Self {
         let cloud = botloftd::cloud::CloudSettings {
             url: url.to_owned(),
             poll: Duration::from_millis(50),
             relay_retry: fast_retry(),
             ..Default::default()
         };
-        Self::launch_with(true, APPROVAL_WAIT, cloud, Arc::new(MemorySecrets::new())).await
+        Self::launch_with(true, wait, cloud, Arc::new(MemorySecrets::new())).await
     }
 
     async fn launch(supervised: bool, approval_wait: Duration) -> Self {

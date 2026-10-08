@@ -19,10 +19,20 @@ pub struct CloudServer {
 
 pub async fn cloud_server() -> CloudServer {
     let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+    cloud_server_on(listener, None).await
+}
+
+/// The same on a listener of the test's choosing, serving the phone's page
+/// from `phone_dir` (spec 28.7).
+pub async fn cloud_server_on(
+    listener: TcpListener,
+    phone_dir: Option<std::path::PathBuf>,
+) -> CloudServer {
     let url = format!("http://{}", listener.local_addr().expect("addr"));
     let (outbox, clock, hub) = (Outbox::default(), Clock::default(), Hub::default());
     let mut config = Config::for_tests();
     config.public_url = url.clone();
+    config.phone_dir = phone_dir;
     let state = AppState {
         db: Db::memory().expect("db"),
         mailer: Arc::new(Mailer::Outbox(outbox.clone())),

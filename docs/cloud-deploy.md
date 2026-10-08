@@ -56,7 +56,7 @@ printf '%s' 'a-senha-do-smtp' > config/smtp-password
 chmod 600 config/smtp-password
 ```
 
-As chaves (todas explicadas no exemplo): `public_url` (https, vai nos links dos e-mails), `quota_bytes` (200 MiB por conta), `max_copy_bytes` (50 MiB), `keep` (5 cópias por conta), `behind_proxy`, `storage`, `[bucket]`, `[smtp]`. O servidor recusa um `public_url` que não seja https.
+As chaves (todas explicadas no exemplo): `public_url` (https, vai nos links dos e-mails), `quota_bytes` (200 MiB por conta), `max_copy_bytes` (50 MiB), `keep` (5 cópias por conta), `behind_proxy`, `phone_dir` (a página do celular, em `/m`; a imagem do Docker já traz os arquivos em `/srv/phone`), `storage`, `[bucket]`, `[smtp]`. O servidor recusa um `public_url` que não seja https.
 
 ## 5. Subir com Docker
 

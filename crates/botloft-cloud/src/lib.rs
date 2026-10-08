@@ -20,6 +20,7 @@ mod mailer;
 mod pages;
 mod pairing;
 mod pairing_rows;
+mod phone;
 mod relay;
 mod relay_rows;
 mod removal;

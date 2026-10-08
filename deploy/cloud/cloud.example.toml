@@ -17,6 +17,11 @@ quota_bytes = 209715200      # 200 MiB an account
 max_copy_bytes = 52428800    # 50 MiB a copy
 keep = 5                     # copies an account keeps; the oldest goes
 
+# The phone's page (spec 28.7), served at /m: the built files of app/dist-phone.
+# The Docker image already holds them here. Without it there is no page, and
+# phones cannot be connected.
+phone_dir = "/srv/phone"
+
 # A proxy in front sets X-Forwarded-For; its last value is the client.
 behind_proxy = true
 

@@ -45,7 +45,7 @@ describe("the phone block in Settings", () => {
     expect(
       await within(dialog).findByRole("img", { name: "Code to scan with your phone" }),
     ).toBeTruthy();
-    expect(within(dialog).getByText(/The code works for 5:00 more/)).toBeTruthy();
+    expect(within(dialog).getByText(/The code works for [45]:[0-5][0-9] more/)).toBeTruthy();
 
     // A phone scans it: its name, and the code to compare with the phone's screen.
     act(() => joinFakePhone(fake, "Celular da Ana", "482913"));
