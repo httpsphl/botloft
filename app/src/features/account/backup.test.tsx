@@ -17,7 +17,7 @@ async function openBackup() {
   await crewOpened("Ops");
   fireEvent.click(await screen.findByRole("button", { name: /Ana Lima/ }));
   fireEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
-  const dialog = screen.getByRole("dialog", { name: "Settings" });
+  const dialog = screen.getByRole("region", { name: "Settings" });
   fireEvent.click(within(dialog).getByRole("tab", { name: "Backup" }));
   return { fake, host, dialog };
 }

@@ -13,7 +13,7 @@ export const phone = {
       `Check that your computer shows ${code} too. Then press Connect on the computer.`,
     waiting: "Waiting for you to accept on the computer…",
     notALink:
-      "To connect a phone, point its camera at the code on your computer: Settings, Backup, Phone.",
+      "To connect a phone, point its camera at the code on your computer: Settings, Account and phone.",
     expired: "The code ran out or was already used. Ask for a new one on the computer.",
     offline: "Could not reach Botloft. Check the connection and try again.",
     failed: "Could not connect. Ask for a new code on the computer.",
@@ -167,7 +167,7 @@ export const phone = {
   cut: {
     revokedTitle: "This phone was disconnected",
     leftTitle: "Phone disconnected",
-    body: "To use it again, connect it from Botloft on your computer: Settings, Backup, Phone.",
+    body: "To use it again, connect it from Botloft on your computer: Settings, Account and phone.",
     ok: "OK",
   },
 };

@@ -14,7 +14,7 @@ export const phone: Messages["phone"] = {
       `Confira se o computador mostra ${code} também. Depois aperte Conectar no computador.`,
     waiting: "Esperando você aceitar no computador…",
     notALink:
-      "Para conectar um celular, aponte a câmera dele para o código que aparece no computador: Configurações, Cópia de segurança, Celular.",
+      "Para conectar um celular, aponte a câmera dele para o código que aparece no computador: Configurações, Conta e celular.",
     expired: "O código venceu ou já foi usado. Peça um novo no computador.",
     offline: "Não foi possível falar com o Botloft. Confira a conexão e tente de novo.",
     failed: "Não foi possível conectar. Peça um novo código no computador.",
@@ -169,7 +169,7 @@ export const phone: Messages["phone"] = {
   cut: {
     revokedTitle: "Este celular foi desconectado",
     leftTitle: "Celular desconectado",
-    body: "Para usar de novo, conecte pelo Botloft no computador: Configurações, Cópia de segurança, Celular.",
+    body: "Para usar de novo, conecte pelo Botloft no computador: Configurações, Conta e celular.",
     ok: "OK",
   },
 };

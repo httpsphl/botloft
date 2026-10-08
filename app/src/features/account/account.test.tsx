@@ -92,7 +92,7 @@ describe("account area", () => {
     renderApp();
     await openAccount();
     fireEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
-    const dialog = screen.getByRole("dialog", { name: "Settings" });
+    const dialog = screen.getByRole("region", { name: "Settings" });
     fireEvent.click(within(dialog).getByRole("tab", { name: "Appearance" }));
     fireEvent.click(within(dialog).getByRole("radio", { name: "Dark" }));
     expect(document.documentElement.dataset.theme).toBe("dark");
@@ -101,11 +101,11 @@ describe("account area", () => {
       within(dialog).getByRole("button", { name: "Language: System language: English" }),
     );
     fireEvent.click(within(dialog).getByRole("option", { name: "Español" }));
-    expect(screen.getByRole("dialog", { name: "Configuración" })).toBeDefined();
+    expect(screen.getByRole("region", { name: "Configuración" })).toBeDefined();
     fireEvent.click(screen.getByRole("button", { name: "Idioma: Español" }));
     fireEvent.click(screen.getByRole("option", { name: /Idioma del sistema/ }));
     fireEvent.click(screen.getByRole("tab", { name: "About" }));
-    expect(screen.getByRole("dialog", { name: "Settings" }).textContent).toContain("Botloft 0.1.0");
+    expect(screen.getByRole("region", { name: "Settings" }).textContent).toContain("Botloft 0.1.0");
   });
 
   test("the setup screens keep the language menu, since they have no sidebar", async () => {

@@ -3,6 +3,7 @@
 
 import { ChevronRight, LoaderCircle, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
+import { SettingsPage } from "../features/account/SettingsPage";
 import { BotAvatar } from "../features/bots/BotAvatar";
 import { BotView } from "../features/bots/BotView";
 import { CrewsOverview } from "../features/crews/CrewsOverview";
@@ -38,6 +39,7 @@ export function Workspace() {
   const loaded = useApp((state) => state.loaded);
   const loadError = useApp((state) => state.loadError);
   const hasCrews = useApp((state) => Object.keys(state.crews).length > 0);
+  const page = useApp((state) => state.page);
   const runtimeError = useApp((state) => state.system?.runtimeError ?? null);
   const signedOut = useApp((state) => state.system?.claudeSignedIn === false);
   useAttentionMark();
@@ -65,7 +67,13 @@ export function Workspace() {
       <div className="flex min-h-0 flex-1">
         <Rail />
         <Sidebar />
-        <Welcome />
+        {page === "settings" ? (
+          <main className="flex min-w-0 flex-1 flex-col">
+            <SettingsPage />
+          </main>
+        ) : (
+          <Welcome />
+        )}
       </div>
     );
   } else {
@@ -130,6 +138,8 @@ function Selection() {
     view = <SearchPage />;
   } else if (page === "routines") {
     view = <RoutinesPage />;
+  } else if (page === "settings") {
+    view = <SettingsPage />;
   } else if (crew && bot) {
     view = <BotView bot={bot} crew={crew} />;
   } else if (crew) {
@@ -162,7 +172,9 @@ function Breadcrumb() {
             ? t.questions.box.label
             : page === "routines"
               ? t.routines.page.title
-              : t.search.label}
+              : page === "settings"
+                ? t.account.settings.title
+                : t.search.label}
         </span>
       </>
     );

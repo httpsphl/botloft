@@ -24,7 +24,7 @@ async function scout() {
 async function openSettings(page: string) {
   fireEvent.click(await screen.findByRole("button", { name: /Ana Lima/ }));
   fireEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
-  const dialog = screen.getByRole("dialog", { name: "Settings" });
+  const dialog = screen.getByRole("region", { name: "Settings" });
   fireEvent.click(within(dialog).getByRole("tab", { name: page }));
   return dialog;
 }
@@ -37,9 +37,9 @@ describe("the app's own choices", () => {
     const dialog = await openSettings("Chat");
     fireEvent.click(within(dialog).getByRole("switch", { name: "Enter sends the message" }));
     expect(dialog.textContent).toContain("Enter starts a new line, and Ctrl+Enter sends.");
-    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    openBot("Scout");
 
-    const field = screen.getByLabelText("Message to Scout");
+    const field = await screen.findByLabelText("Message to Scout");
     fireEvent.change(field, { target: { value: "two\nlines" } });
     expect(screen.getByText("Ctrl+Enter to send, Enter for a new line")).toBeDefined();
     fireEvent.keyDown(field, { key: "Enter" });

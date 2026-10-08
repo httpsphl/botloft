@@ -18,7 +18,6 @@ import { useApp, useHost } from "../../store/context";
 import { POPOVER, POPOVER_ITEM } from "../../ui/surface";
 import { attempt } from "../../ui/toast";
 import { useDismiss } from "../../ui/useDismiss";
-import { SettingsDialog } from "./SettingsDialog";
 import { UsageDialog } from "./UsageDialog";
 
 const RELEASES = "https://github.com/httpsphl/botloft/releases";
@@ -35,7 +34,8 @@ export function AccountArea() {
   const account = useApp((state) => state.system?.account ?? null);
   const signedOut = useApp((state) => state.system?.claudeSignedIn === false);
   const [open, setOpen] = useState(false);
-  const [dialog, setDialog] = useState<"usage" | "settings" | null>(null);
+  const [dialog, setDialog] = useState<"usage" | null>(null);
+  const openPage = useApp((state) => state.openPage);
   const root = useRef<HTMLDivElement>(null);
 
   useDismiss(
@@ -48,7 +48,11 @@ export function AccountArea() {
   const detail = describe(account?.claude ?? null, signedOut, a);
   const show = (which: "usage" | "settings") => {
     setOpen(false);
-    setDialog(which);
+    if (which === "settings") {
+      openPage("settings");
+    } else {
+      setDialog(which);
+    }
   };
 
   return (
@@ -79,7 +83,6 @@ export function AccountArea() {
         </span>
       </button>
       {dialog === "usage" && <UsageDialog onClose={() => setDialog(null)} />}
-      {dialog === "settings" && <SettingsDialog onClose={() => setDialog(null)} />}
     </div>
   );
 }

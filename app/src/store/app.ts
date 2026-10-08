@@ -106,8 +106,8 @@ export interface AppState {
 
 export type AppStore = StoreApi<AppState>;
 
-/** The question box (spec 23.6), the search (spec 8.8) or every routine (spec 20.9). */
-export type Page = "questions" | "search" | "routines" | null;
+/** The question box (spec 23.6), the search (spec 8.8), every routine (spec 20.9) or Settings (spec 15.1). */
+export type Page = "questions" | "search" | "routines" | "settings" | null;
 
 const byCreation = <T extends { createdAt: number; id: string }>(a: T, b: T) =>
   a.createdAt - b.createdAt || a.id.localeCompare(b.id);

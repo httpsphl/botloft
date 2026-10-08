@@ -1,5 +1,5 @@
 // The account when this computer is in (spec 27.6): who, how much is used,
-// the copies, and the way out.
+// and the way out. The copies are in Backup (CloudBackup.tsx).
 
 import { useState } from "react";
 import { useT } from "../../i18n";
@@ -10,9 +10,6 @@ import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { Confirm } from "../../ui/Confirm";
 import { backupError } from "./backupError";
-import { CloudAuto } from "./CloudAuto";
-import { CloudCopies } from "./CloudCopies";
-import { CloudUpload } from "./CloudUpload";
 
 export function CloudSignedIn({
   status,
@@ -23,7 +20,6 @@ export function CloudSignedIn({
 }) {
   const t = useT().account.cloud;
   const api = useApi();
-  const [version, setVersion] = useState(0);
   const [removing, setRemoving] = useState(false);
   const [asked, setAsked] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -58,15 +54,6 @@ export function CloudSignedIn({
           {t.signOut}
         </Button>
       </div>
-
-      <CloudUpload
-        onSent={() => {
-          setVersion((current) => current + 1);
-          void refresh();
-        }}
-      />
-      <CloudAuto />
-      <CloudCopies version={version} onChanged={refresh} />
 
       <div className="flex flex-col gap-2 border-line border-t pt-3">
         {asked ? (
