@@ -150,7 +150,7 @@ function ChatRow({
       onClick={open}
       className="flex min-h-[4.5rem] w-full items-center gap-3 rounded-2xl border border-line bg-panel p-3 text-left active:scale-[0.99]"
     >
-      <BotDot name={line.name} color={line.color} state={line.state} size={44} />
+      <BotDot name={line.name} color={line.color} state={line.state} size={34} />
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="flex items-center gap-2">
           <span className="truncate font-medium">{line.name}</span>

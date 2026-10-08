@@ -67,7 +67,11 @@ export function ChatView({ api, state, back }: { api: PhoneApi; state: PhoneStat
 
       <div className="flex flex-1 flex-col gap-3">
         {convo.more && (
-          <PhoneButton onClick={() => void api.olderItems()} disabled={convo.older}>
+          <PhoneButton
+            className="flex-none"
+            onClick={() => void api.olderItems()}
+            disabled={convo.older}
+          >
             {convo.older ? c.loadingOlder : c.older}
           </PhoneButton>
         )}

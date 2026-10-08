@@ -114,7 +114,9 @@ export function PhoneApp({
     <Shell>
       <div className="sticky top-0 z-10 -mx-4 flex flex-col gap-3 bg-canvas px-4 pt-1 pb-2">
         <header className="flex items-center justify-between gap-3 py-1">
-          <h1 className="font-semibold text-xl">{t.inbox.title}</h1>
+          <h1 className="font-semibold text-xl">
+            {tab === "chats" ? t.tabs.chats : t.inbox.title}
+          </h1>
           <button
             type="button"
             aria-label={t.inbox.thisPhone}
@@ -214,7 +216,7 @@ function Tab({ on, pick, children }: { on: boolean; pick(): void; children: Reac
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="mx-auto flex min-h-full w-full max-w-md flex-col gap-4 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]">
+    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]">
       {children}
     </main>
   );

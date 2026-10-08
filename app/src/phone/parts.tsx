@@ -44,7 +44,12 @@ export function BotDot({
   size?: number;
 }) {
   return (
-    <span aria-hidden className="inline-flex shrink-0">
+    // The flame of a working bot rises above the drawing: the box holds it.
+    <span
+      aria-hidden
+      style={{ width: size * 1.3, height: size * 1.3 }}
+      className="inline-flex shrink-0 items-end justify-center overflow-hidden"
+    >
       <BotAvatar
         color={/^#[0-9a-f]{3,8}$/i.test(color) ? color : "#FF7A59"}
         size={size}
