@@ -20,8 +20,8 @@ async function openBackup() {
   await crewOpened("Ops");
   fireEvent.click(await screen.findByRole("button", { name: /Ana Lima/ }));
   fireEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
-  const dialog = screen.getByRole("dialog", { name: "Settings" });
-  fireEvent.click(within(dialog).getByRole("tab", { name: "Backup" }));
+  const dialog = screen.getByRole("region", { name: "Settings" });
+  fireEvent.click(within(dialog).getByRole("tab", { name: "Account and phone" }));
   return { fake, host, dialog };
 }
 
@@ -35,6 +35,9 @@ async function signIn(fake: FakeBotloft, dialog: HTMLElement) {
   act(() => openFakeCloudLink(fake));
   await within(dialog).findByText("Signed in as ana@exemplo.com");
 }
+
+const tab = (dialog: HTMLElement, name: string) =>
+  fireEvent.click(within(dialog).getByRole("tab", { name }));
 
 /** Types the passphrase twice in the cloud block, the first pair of fields. */
 function sendCopy(dialog: HTMLElement) {
@@ -69,6 +72,7 @@ describe("the account and the copies in the cloud", () => {
   test("a copy goes up, is listed, and comes back with its passphrase as a light one", async () => {
     const { fake, host, dialog } = await openBackup();
     await signIn(fake, dialog);
+    tab(dialog, "Backup");
     expect(await within(dialog).findByText("No copies yet.")).toBeDefined();
 
     sendCopy(dialog);
@@ -76,9 +80,11 @@ describe("the account and the copies in the cloud", () => {
     const upload = fake.calls.find((each) => each.method === "cloud.upload");
     expect(upload?.params).toEqual({ passphrase: "correct horse" });
     expect(await within(dialog).findByText(/47 KB$/)).toBeDefined();
-    expect(within(dialog).getByText(/47 KB of 200 MB used/)).toBeDefined();
+    tab(dialog, "Account and phone");
+    expect(await within(dialog).findByText(/47 KB of 200 MB used/)).toBeDefined();
+    tab(dialog, "Backup");
 
-    fireEvent.click(within(dialog).getByRole("button", { name: "Restore" }));
+    fireEvent.click(await within(dialog).findByRole("button", { name: "Restore" }));
     const field = await within(dialog).findByLabelText("The copy's passphrase");
     type(field, FAKE_PASSPHRASE);
     fireEvent.click(within(dialog).getByRole("button", { name: "Open" }));
@@ -91,6 +97,8 @@ describe("the account and the copies in the cloud", () => {
   test("a copy is deleted only after the owner confirms", async () => {
     const { fake, dialog } = await openBackup();
     await signIn(fake, dialog);
+    tab(dialog, "Backup");
+    await within(dialog).findByText("No copies yet.");
     sendCopy(dialog);
     await within(dialog).findByText("Copy sent (47 KB).");
 

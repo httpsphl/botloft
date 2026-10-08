@@ -4,9 +4,10 @@
 
 import {
   acceptProof,
-  deriveKeys,
+  deriveRaw,
   fromB64,
   generateKeypair,
+  importKey,
   joinProof,
   type Keypair,
   pairCode,
@@ -137,12 +138,15 @@ export function pairing(fragment: Fragment, deps: PairDeps): Pair {
     if (!sameBytes(theirs, fragment.daemonPub) || !sameBytes(expected, fromB64(proof2))) {
       throw new PairError("failed");
     }
+    // The bytes are kept too: that is what can be stored under a PIN (28.13).
+    const raw = await deriveRaw(mine.privateKey, theirs, fragment.secret);
     return {
       token,
       device,
       peer,
       name,
-      keys: await deriveKeys(mine.privateKey, theirs, fragment.secret),
+      keys: { c2p: await importKey(raw.c2p), p2c: await importKey(raw.p2c) },
+      raw,
       sent: 0,
       received: 0,
     };

@@ -4,6 +4,8 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { BotAvatar, moodOf } from "../features/bots/BotAvatar";
+import type { BotState } from "../lib/protocol.gen";
 
 type Look = "primary" | "danger" | "quiet";
 
@@ -29,15 +31,30 @@ export function PhoneButton({
   );
 }
 
-/** The bot's color and first letter. */
-export function BotDot({ name, color }: { name: string; color: string }) {
+/** The bot's mascot in its color, as on the computer; it moves with what the bot is doing. */
+export function BotDot({
+  color,
+  state,
+  size = 36,
+}: {
+  /** Kept for callers; the mascot has no letter. */
+  name?: string;
+  color: string;
+  state?: BotState;
+  size?: number;
+}) {
   return (
+    // The flame of a working bot rises above the drawing: the box holds it.
     <span
       aria-hidden
-      style={{ backgroundColor: /^#[0-9a-f]{3,8}$/i.test(color) ? color : undefined }}
-      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-black/20 bg-sunken font-semibold text-black/80 text-sm"
+      style={{ width: size * 1.3, height: size * 1.3 }}
+      className="inline-flex shrink-0 items-end justify-center overflow-hidden"
     >
-      {name.slice(0, 1).toUpperCase()}
+      <BotAvatar
+        color={/^#[0-9a-f]{3,8}$/i.test(color) ? color : "#FF7A59"}
+        size={size}
+        mood={state ? moodOf({ state, paused: false }) : undefined}
+      />
     </span>
   );
 }

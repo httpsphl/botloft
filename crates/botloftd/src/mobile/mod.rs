@@ -4,11 +4,13 @@
 
 mod bridge;
 mod cards;
+mod chats;
 mod kdf;
 mod pair;
 mod phones;
 mod relay;
 pub mod seal;
+mod talk;
 
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::Path;
@@ -25,6 +27,7 @@ pub use self::pair::Confirm;
 use self::phones::{Phone, Phones};
 pub use self::relay::run;
 use self::seal::{Dir, Keypair, Keys};
+use self::talk::Talk;
 use crate::cloud::{CloudError, Credentials, Server};
 use crate::state::{Daemon, Event};
 
@@ -78,6 +81,7 @@ struct State {
 pub struct Mobile {
     phones: Phones,
     state: Mutex<State>,
+    talk: Mutex<Talk>,
     wake: Notify,
     retry: Retry,
 }
@@ -97,6 +101,7 @@ impl Mobile {
         Self {
             phones: Phones::open(secrets_dir),
             state: Mutex::new(State::default()),
+            talk: Mutex::new(Talk::default()),
             wake: Notify::new(),
             retry,
         }
@@ -180,6 +185,9 @@ impl Mobile {
             }
             changed
         };
+        if relay != MobileRelay::Connected {
+            self.leave_all();
+        }
         if changed {
             self.changed(daemon);
         }
@@ -213,6 +221,9 @@ impl Mobile {
             } else {
                 state.online.remove(device);
             }
+        }
+        if !online {
+            self.leave(device);
         }
         self.changed(daemon);
         true
@@ -278,16 +289,27 @@ impl Mobile {
             state.online.clear();
             state.answers.clear();
         }
+        self.leave_all();
         self.wake();
         self.changed(daemon);
     }
 
     /// Whether the phone may answer now: at most 30 a minute.
     pub(crate) fn may_answer(&self, daemon: &Daemon, phone: &str) -> bool {
+        self.within_limit(daemon, phone.to_owned())
+    }
+
+    /// Whether the phone may write to a bot now: at most 30 a minute, apart
+    /// from the answers (spec 28.12).
+    pub(crate) fn may_send(&self, daemon: &Daemon, phone: &str) -> bool {
+        self.within_limit(daemon, format!("send:{phone}"))
+    }
+
+    fn within_limit(&self, daemon: &Daemon, key: String) -> bool {
         const PER_MINUTE: usize = 30;
         let now = daemon.clock.now_ms();
         let mut state = self.lock();
-        let recent = state.answers.entry(phone.to_owned()).or_default();
+        let recent = state.answers.entry(key).or_default();
         while recent.front().is_some_and(|at| *at <= now - 60_000) {
             recent.pop_front();
         }

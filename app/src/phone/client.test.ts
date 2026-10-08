@@ -98,7 +98,8 @@ async function setup(notices?: NoticePlatform) {
     fetch: fetchMock as unknown as typeof fetch,
     store,
     retry: { min: 5, max: 20 },
-    answerWait: 50,
+    answerWait: 200,
+    sentWait: 80,
     ...(notices ? { notices } : {}),
   });
   client.start();
@@ -145,7 +146,7 @@ describe("the phone's connection", () => {
     socket().serverSend({ t: "ready", kind: "phone", device: DEVICE, peer: PEER, online: true });
     await vi.waitFor(() => expect(client.getState().computer).toBe("online"));
     expect(client.getState().link).toBe("online");
-    await vi.waitFor(async () => expect((await computer.heard()).length).toBe(1));
+    await vi.waitFor(async () => expect((await computer.heard()).length).toBe(2));
     expect((await computer.heard())[0]).toEqual({ seq: 1, message: { t: "sync" } });
 
     // The list arrives newest-last, whatever the order it was sent in.
@@ -170,7 +171,7 @@ describe("the phone's connection", () => {
   test("answers are sealed with counters that rise and are saved first", async () => {
     const { client, store, socket, computer } = await setup();
     socket().serverSend({ t: "ready", kind: "phone", device: DEVICE, peer: PEER, online: true });
-    await vi.waitFor(async () => expect((await computer.heard()).length).toBe(1));
+    await vi.waitFor(async () => expect((await computer.heard()).length).toBe(2));
     await computer.say({ t: "approval.open", card: card("apr_a", 1) });
     await vi.waitFor(() => expect(client.getState().approvals).toHaveLength(1));
 
@@ -181,15 +182,16 @@ describe("the phone's connection", () => {
     ]);
     expect(await both).toEqual([true, true]);
     const heard = await computer.heard();
-    expect(heard.map((h) => h.seq)).toEqual([1, 2, 3]);
-    expect(heard[1]?.message).toEqual({
+    expect(heard.map((h) => h.seq)).toEqual([1, 2, 3, 4]);
+    expect(heard[1]?.message).toEqual({ t: "chats" });
+    expect(heard[2]?.message).toEqual({
       t: "approval.answer",
       approvalId: "apr_a",
       allow: true,
       note: "fine",
     });
-    expect(heard[2]?.message).toEqual({ t: "question.answer", questionId: "qst_x", answer: "A" });
-    expect((await store.load())?.sent).toBe(3);
+    expect(heard[3]?.message).toEqual({ t: "question.answer", questionId: "qst_x", answer: "A" });
+    expect((await store.load())?.sent).toBe(4);
     expect(client.getState().sending).toContain("apr_a");
 
     // The computer says it closed: the button is not waiting any more.
@@ -254,7 +256,7 @@ describe("the phone's connection", () => {
     const { client, socket, computer } = await setup();
     const first = socket();
     first.serverSend({ t: "ready", kind: "phone", device: DEVICE, peer: PEER, online: true });
-    await vi.waitFor(async () => expect((await computer.heard(first)).length).toBe(1));
+    await vi.waitFor(async () => expect((await computer.heard(first)).length).toBe(2));
     first.close();
     expect(client.getState()).toMatchObject({ link: "offline", computer: "unknown" });
     expect(await client.answerApproval("apr_a", true)).toBe(false);
@@ -268,11 +270,15 @@ describe("the phone's connection", () => {
     // Presence of the computer: when it comes back, the phone asks again.
     second.serverSend({ t: "presence", device: PEER, online: true });
     await vi.waitFor(async () =>
-      expect((await computer.heard(second)).length).toBeGreaterThanOrEqual(2),
+      expect((await computer.heard(second)).length).toBeGreaterThanOrEqual(4),
     );
-    expect((await computer.heard(second)).every((h) => h.message.t === "sync")).toBe(true);
+    expect(
+      (await computer.heard(second)).every(
+        (h) => h.message.t === "sync" || h.message.t === "chats",
+      ),
+    ).toBe(true);
     // The counter went on rising across connections.
-    expect((await computer.heard(second)).map((h) => h.seq)).toEqual([2, 3]);
+    expect((await computer.heard(second)).map((h) => h.seq)).toEqual([3, 4, 5, 6]);
   });
 
   test("a token the server refuses ends the phone, and leaving forgets the keys", async () => {
@@ -442,5 +448,124 @@ describe("notices", () => {
         ([url, init]) => String(url).endsWith("/v1/push/subscribe") && init?.method === "DELETE",
       ),
     ).toBe(true);
+  });
+});
+
+describe("the conversations through the sealed channel", () => {
+  const bot = (id: string, at: number) => ({
+    botId: id,
+    name: id,
+    color: "#aabbcc",
+    crew: "Ops",
+    state: "idle" as const,
+    lastReplyAt: at,
+  });
+  const you = (id: string, at: number, body: string) =>
+    ({ kind: "you", id, at, text: body, cut: false }) as const;
+  const ready = { t: "ready", kind: "phone", device: DEVICE, peer: PEER, online: true };
+
+  test("the list comes in parts, and a message repeated by the relay counts once", async () => {
+    const { client, socket, computer } = await setup();
+    socket().serverSend(ready);
+    await vi.waitFor(async () => expect((await computer.heard()).length).toBe(2));
+    expect((await computer.heard())[1]?.message).toEqual({ t: "chats" });
+
+    await computer.say({ t: "chats", first: true, bots: [bot("bot_a", 10)] });
+    await computer.say({ t: "chats", first: false, bots: [bot("bot_b", 20)] });
+    await vi.waitFor(() => expect(client.getState().chats).toHaveLength(2));
+    expect(client.getState().chatsLoaded).toBe(true);
+    // A repeat of a counter already used changes nothing.
+    await computer.sayRaw(2, { t: "chats", first: false, bots: [bot("bot_c", 30)] });
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(client.getState().chats).toHaveLength(2);
+
+    await computer.say({ t: "line", bot: { ...bot("bot_a", 99), name: "Renamed" } });
+    await vi.waitFor(() =>
+      expect(client.getState().chats.find((c) => c.botId === "bot_a")?.name).toBe("Renamed"),
+    );
+  });
+
+  test("opens a chat in parts, sends a message and swaps it for the real item", async () => {
+    const { client, socket, computer } = await setup();
+    socket().serverSend(ready);
+    await vi.waitFor(async () => expect((await computer.heard()).length).toBe(2));
+    await computer.say({ t: "chats", first: true, bots: [bot("bot_a", 10)] });
+
+    await client.openChat("bot_a");
+    const heard = (await computer.heard()).map((h) => h.message);
+    expect(heard.slice(2)).toMatchObject([
+      { t: "watch", botId: "bot_a" },
+      { t: "history", botId: "bot_a" },
+    ]);
+    const req = (heard[3] as Extract<FromPhone, { t: "history" }>).req;
+    await computer.say({
+      t: "history",
+      req,
+      botId: "bot_a",
+      items: [you("itm_1", 1, "one")],
+      more: true,
+      done: false,
+    });
+    await computer.say({
+      t: "history",
+      req,
+      botId: "bot_a",
+      items: [you("itm_2", 2, "two")],
+      more: true,
+      done: true,
+    });
+    await vi.waitFor(() => expect(client.getState().convo?.loaded).toBe(true));
+    expect(client.getState().convo?.items.map((i) => i.id)).toEqual(["itm_1", "itm_2"]);
+    expect(client.getState().convo?.more).toBe(true);
+
+    expect(await client.write("  three  ")).toBe(true);
+    const sent = (await computer.heard()).map((h) => h.message).at(-1) as Extract<
+      FromPhone,
+      { t: "send" }
+    >;
+    expect(sent).toMatchObject({ t: "send", botId: "bot_a", text: "three" });
+    expect(client.getState().convo?.pending[0]?.status).toBe("sending");
+    await computer.say({ t: "sent", clientId: sent.clientId, ok: true });
+    await vi.waitFor(() => expect(client.getState().convo?.pending[0]?.status).toBe("sent"));
+    await computer.say({ t: "item", botId: "bot_a", item: you("itm_3", 3, "three") });
+    await vi.waitFor(() => expect(client.getState().convo?.pending).toEqual([]));
+    expect(client.getState().convo?.items.map((i) => i.id)).toEqual(["itm_1", "itm_2", "itm_3"]);
+  });
+
+  test("a message nobody takes is marked as not sent after a while", async () => {
+    const { client, socket, computer } = await setup();
+    socket().serverSend(ready);
+    await vi.waitFor(async () => expect((await computer.heard()).length).toBe(2));
+    await client.openChat("bot_a");
+    expect(await client.write("hello?")).toBe(true);
+    await vi.waitFor(
+      () => expect(client.getState().convo?.pending[0]).toMatchObject({ status: "failed" }),
+      { timeout: 2000 },
+    );
+  });
+
+  test("after the connection comes back, the open chat is asked for again", async () => {
+    const { client, socket, computer } = await setup();
+    const first = socket();
+    first.serverSend(ready);
+    await vi.waitFor(async () => expect((await computer.heard(first)).length).toBe(2));
+    await client.openChat("bot_a");
+    first.close();
+    await vi.waitFor(() => expect(FakeSocket.all.length).toBe(2));
+    const second = socket();
+    await vi.waitFor(() => expect(second.readyState).toBe(1));
+    second.serverSend(ready);
+    await vi.waitFor(async () =>
+      expect((await computer.heard(second)).map((h) => h.message.t)).toEqual([
+        "sync",
+        "chats",
+        "watch",
+        "history",
+      ]),
+    );
+    // Leaving the chat tells the computer it is no longer watched.
+    await client.closeChat();
+    expect((await computer.heard(second)).at(-1)?.message).toEqual({ t: "watch" });
+    expect(client.getState().convo).toBeNull();
   });
 });

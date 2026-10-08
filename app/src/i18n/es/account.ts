@@ -98,7 +98,7 @@ export const account: Messages["account"] = {
     } as Record<string, string>,
   },
   cloud: {
-    title: "Cuenta y copias en la nube",
+    title: "Cuenta",
     noCloud: "Las copias en la nube aún no están configuradas en este Botloft.",
     intro:
       "La cuenta guarda copias de tus equipos en la nube, para que las recuperes en otro ordenador. Solo se guardan tu correo y las copias, y nadie abre una copia sin tu contraseña.",
@@ -180,10 +180,10 @@ export const account: Messages["account"] = {
   mobile: {
     title: "Móvil",
     intro:
-      "Aprueba las solicitudes de tus bots y responde a sus preguntas desde cualquier lugar. Las conversaciones y los archivos se quedan solo en este ordenador.",
+      "Aprueba las solicitudes de tus bots, responde a sus preguntas y habla con ellos desde cualquier lugar. Los archivos se quedan solo en este ordenador.",
     needAccount: "Inicia sesión en la cuenta de arriba para usar el móvil.",
     warning:
-      "Quien tenga un móvil conectado y desbloqueado puede permitir solicitudes hasta que lo desconectes.",
+      "Quien tenga un móvil conectado y desbloqueado puede leer las conversaciones de tus bots, escribirles y permitir solicitudes hasta que lo desconectes. Un PIN en el móvil ayuda; lo activas allí.",
     connect: "Conectar un móvil",
     starting: "Preparando…",
     qrLabel: "Código para escanear con el móvil",
@@ -286,6 +286,17 @@ export const account: Messages["account"] = {
     about: "Acerca de",
     backup: "Copia de seguridad",
     tools: "Herramientas conectadas",
+    account: "Cuenta y móvil",
+    groupDaily: "Cada día",
+    groupConnect: "Cuenta y conexiones",
+    groupData: "Tus datos",
+    groupBotloft: "Botloft",
+    search: "Buscar en los ajustes",
+    searchNone: (query: string) => `Nada en los ajustes coincide con "${query}".`,
+    searchIn: (page: string) => `En ${page}`,
+    backupNeedsAccount: "Las copias en la nube necesitan tu cuenta.",
+    goToAccount: "Ir a Cuenta y móvil",
+    copiesTitle: "Copias en la nube",
     claudeCode: (version: string) => `Claude Code ${version}`,
     botloft: (version: string) => `Botloft ${version}`,
     checkUpdates: "Buscar actualizaciones",

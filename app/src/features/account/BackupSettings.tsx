@@ -12,22 +12,17 @@ import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { BackupRestore } from "./BackupRestore";
 import { backupError } from "./backupError";
-import { CloudAccount } from "./CloudAccount";
-import { MobilePhones } from "./MobilePhones";
+import { CloudBackup } from "./CloudBackup";
 import { PassphraseFields, usePassphrase } from "./PassphraseFields";
 import { Section } from "./settingsParts";
 
 type Outcome = { saved: string } | { notSaved: true } | { failed: string } | null;
 
-export function BackupSettings() {
+export function BackupSettings({ goToAccount }: { goToAccount(): void }) {
   const b = useT().account.backup;
-  const cloud = useT().account.cloud;
   return (
     <>
-      <Section title={cloud.title}>
-        <CloudAccount />
-      </Section>
-      <MobilePhones />
+      <CloudBackup goToAccount={goToAccount} />
       <Section title={b.exportTitle}>
         <p className="text-ink-soft text-sm leading-relaxed">{b.exportIntro}</p>
         <ExportCopy />

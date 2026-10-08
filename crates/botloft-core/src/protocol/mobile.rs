@@ -3,8 +3,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::ids::{ApprovalId, QuestionId};
-use crate::protocol::{ApprovalStatus, QuestionStatus};
+use crate::ids::{ApprovalId, BotId, ChatItemId, QuestionId};
+use crate::protocol::{Activity, ApprovalStatus, BotState, NoticeLevel, QuestionStatus};
 
 /// Whether the computer's connection to the relay is up.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -164,6 +164,99 @@ pub struct QuestionCard {
     pub options: Vec<String>,
 }
 
+/// A bot in the phone's list of conversations (spec 28.12).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct ChatLine {
+    pub bot_id: BotId,
+    pub name: String,
+    pub color: String,
+    pub crew: String,
+    pub state: BotState,
+    /// When the bot last finished a reply, in Unix milliseconds.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, ts(optional))]
+    pub last_reply_at: Option<i64>,
+    /// The last thing in the chat, on one line.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, ts(optional))]
+    pub last: Option<Activity>,
+    /// Up to when the owner read this chat on the computer, so the phone
+    /// does not mark as new what was read there.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, ts(optional))]
+    pub read_at: Option<i64>,
+}
+
+/// One thing in a conversation, as the phone shows it (spec 28.12): the
+/// text, and never the output of a tool.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(
+    tag = "kind",
+    rename_all = "snake_case",
+    rename_all_fields = "camelCase"
+)]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub enum PhoneItem {
+    /// The owner wrote it.
+    You {
+        id: ChatItemId,
+        at: i64,
+        text: String,
+        cut: bool,
+    },
+    /// Another bot, a routine or the daemon wrote it to this bot; `from` is
+    /// the name.
+    BotMessage {
+        id: ChatItemId,
+        at: i64,
+        from: String,
+        text: String,
+        cut: bool,
+    },
+    /// The bot wrote it, markdown.
+    Reply {
+        id: ChatItemId,
+        at: i64,
+        text: String,
+        cut: bool,
+    },
+    Tool {
+        id: ChatItemId,
+        at: i64,
+        summary: String,
+    },
+    Approval {
+        id: ChatItemId,
+        at: i64,
+        approval_id: ApprovalId,
+        summary: String,
+        status: ApprovalStatus,
+    },
+    Question {
+        id: ChatItemId,
+        at: i64,
+        question_id: QuestionId,
+        text: String,
+        status: QuestionStatus,
+    },
+    /// A turn that failed.
+    Failed {
+        id: ChatItemId,
+        at: i64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(test, ts(optional))]
+        error: Option<String>,
+    },
+    Notice {
+        id: ChatItemId,
+        at: i64,
+        level: NoticeLevel,
+        text: String,
+    },
+}
+
 /// What the computer sends the phone, sealed (spec 28.3).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "t", rename_all_fields = "camelCase")]
@@ -190,6 +283,43 @@ pub enum ToPhone {
         question_id: QuestionId,
         status: QuestionStatus,
     },
+    /// The list of conversations, in parts when it is long (spec 28.12).
+    #[serde(rename = "chats")]
+    Chats { bots: Vec<ChatLine>, first: bool },
+    /// A part of a page of history, oldest first; `done` on the last part,
+    /// `more` when there are older pages.
+    #[serde(rename = "history")]
+    History {
+        req: u32,
+        bot_id: BotId,
+        items: Vec<PhoneItem>,
+        more: bool,
+        done: bool,
+    },
+    /// What came of a `send`.
+    #[serde(rename = "sent")]
+    Sent {
+        client_id: String,
+        ok: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(test, ts(optional))]
+        reason: Option<String>,
+    },
+    /// A new or changed item of the open conversation.
+    #[serde(rename = "item")]
+    Item { bot_id: BotId, item: PhoneItem },
+    /// The whole reply the bot is writing now; empty when it is done.
+    #[serde(rename = "live")]
+    Live { bot_id: BotId, text: String },
+    /// The open conversation's bot started or stopped working.
+    #[serde(rename = "state")]
+    State { bot_id: BotId, state: BotState },
+    /// The line of a bot in the list changed.
+    #[serde(rename = "line")]
+    Line { bot: ChatLine },
+    /// The owner read the bot's chat on the computer, up to this reply.
+    #[serde(rename = "read")]
+    Read { bot_id: BotId, upto: i64 },
 }
 
 /// What the phone sends the computer, sealed (spec 28.3).
@@ -215,8 +345,36 @@ pub enum FromPhone {
     },
     #[serde(rename = "question.dismiss")]
     QuestionDismiss { question_id: QuestionId },
+    /// Asks for the list of conversations (spec 28.12).
+    #[serde(rename = "chats")]
+    Chats,
+    /// A page of a conversation: the newest, or those before `before`.
+    #[serde(rename = "history")]
+    History {
+        req: u32,
+        bot_id: BotId,
+        #[serde(default)]
+        #[cfg_attr(test, ts(optional))]
+        before: Option<ChatItemId>,
+    },
+    /// The owner writes to a bot.
+    #[serde(rename = "send")]
+    Send {
+        client_id: String,
+        bot_id: BotId,
+        text: String,
+    },
+    /// Which conversation is open, if any.
+    #[serde(rename = "watch")]
+    Watch {
+        #[serde(default)]
+        #[cfg_attr(test, ts(optional))]
+        bot_id: Option<BotId>,
+    },
 }
 
+/// The biggest text of one chat item the phone gets, in bytes (spec 28.12).
+pub const ITEM_TEXT_MAX: usize = 6 * 1024;
 /// The biggest `text` a card carries, in bytes (spec 28.5).
 pub const CARD_TEXT_MAX: usize = 8 * 1024;
 /// The biggest sealed message either way, in bytes of JSON.
@@ -258,5 +416,56 @@ mod tests {
         .expect("json");
         assert_eq!(closed["t"], "question.closed");
         assert_eq!(closed["status"], "answered");
+    }
+
+    #[test]
+    fn the_conversation_messages_have_the_shape_the_phone_reads() {
+        let bot = BotId::generate();
+        // What the phone asks for.
+        let history: FromPhone = serde_json::from_value(serde_json::json!({
+            "t": "history", "req": 3, "botId": bot,
+        }))
+        .expect("a first page has no `before`");
+        assert!(matches!(
+            history,
+            FromPhone::History {
+                req: 3,
+                before: None,
+                ..
+            }
+        ));
+        let watch: FromPhone =
+            serde_json::from_value(serde_json::json!({ "t": "watch" })).expect("nothing open");
+        assert!(matches!(watch, FromPhone::Watch { bot_id: None }));
+        let send = serde_json::to_value(FromPhone::Send {
+            client_id: "c1".into(),
+            bot_id: bot.clone(),
+            text: "oi".into(),
+        })
+        .expect("json");
+        assert_eq!(
+            send,
+            serde_json::json!({ "t": "send", "clientId": "c1", "botId": bot, "text": "oi" })
+        );
+        // What it gets: an item is told by its `kind`, in camelCase.
+        let item = PhoneItem::Approval {
+            id: ChatItemId::generate(),
+            at: 5,
+            approval_id: ApprovalId::generate(),
+            summary: "git status".into(),
+            status: ApprovalStatus::Allowed,
+        };
+        let shown = serde_json::to_value(ToPhone::Item { bot_id: bot, item }).expect("json");
+        assert_eq!(shown["t"], "item");
+        assert_eq!(shown["item"]["kind"], "approval");
+        assert_eq!(shown["item"]["status"], "allowed");
+        assert!(shown["item"]["approvalId"].is_string());
+        let failed = serde_json::to_value(PhoneItem::Failed {
+            id: ChatItemId::generate(),
+            at: 1,
+            error: None,
+        })
+        .expect("json");
+        assert!(failed.get("error").is_none(), "an absent error is left out");
     }
 }

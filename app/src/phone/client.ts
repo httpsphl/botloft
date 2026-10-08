@@ -20,10 +20,11 @@ import {
   turnOn,
 } from "./notices";
 import type { Session, SessionStore } from "./store";
+import { type ChatPart, noChats, type SeenStore, Talk } from "./talk";
 
 export type Ended = Exclude<ApprovalStatus, "pending"> | Exclude<QuestionStatus, "open">;
 
-export interface PhoneState {
+export interface PhoneState extends ChatPart {
   /** `revoked`: the server or the computer cut this phone off. `left`: the owner left from here. */
   session: "ok" | "revoked" | "left";
   link: "connecting" | "online" | "offline";
@@ -50,6 +51,12 @@ export interface PhoneApi {
   dismissQuestion(id: string): Promise<boolean>;
   /** Leaves from this side: the computer is told, and the keys go. */
   disconnect(): Promise<void>;
+  /** Opens a conversation: its newest items come, and then what happens in it. */
+  openChat(botId: string): Promise<void>;
+  closeChat(): Promise<void>;
+  olderItems(): Promise<void>;
+  /** Writes to the open bot. False if it could not even be sent. */
+  write(text: string): Promise<boolean>;
   /** Notices when something waits (spec 28.8). */
   noticeState(): Promise<NoticeState>;
   turnOnNotices(): Promise<NoticeState>;
@@ -68,6 +75,10 @@ export interface Deps {
   answerWait?: number;
   /** The browser's push; without it, this phone gives no notices. */
   notices?: NoticePlatform;
+  /** Where the last reply seen of each bot is kept. */
+  seen?: SeenStore;
+  /** How long a written message may wait to be taken. */
+  sentWait?: number;
 }
 
 const text = new TextEncoder();
@@ -89,6 +100,7 @@ export class PhoneClient implements PhoneApi {
   private inbox: Promise<void> = Promise.resolve();
   private outbox: Promise<unknown> = Promise.resolve();
   private saving: Promise<void> = Promise.resolve();
+  private readonly talk: Talk;
 
   constructor(
     private session: Session,
@@ -105,10 +117,21 @@ export class PhoneClient implements PhoneApi {
       sending: [],
       ended: {},
       name: session.name,
+      ...noChats,
     };
+    this.talk = new Talk(
+      this.getState,
+      (change) => this.set(change),
+      (message) => this.send(message),
+      deps.seen,
+      deps.sentWait,
+    );
   }
 
   getState = (): PhoneState => this.state;
+
+  /** The session as it is now, counters and all (for locking it, spec 28.13). */
+  snapshot = (): Session => this.session;
 
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
@@ -177,6 +200,7 @@ export class PhoneClient implements PhoneApi {
         void this.keepNotices();
         this.set({ link: "online", computer: frame.online === true ? "online" : "offline" });
         await this.send({ t: "sync" });
+        await this.talk.ask();
         break;
       case "presence":
         if (frame.device === this.session.peer) {
@@ -184,6 +208,7 @@ export class PhoneClient implements PhoneApi {
           this.set({ computer: online ? "online" : "offline" });
           if (online) {
             await this.send({ t: "sync" });
+            await this.talk.ask();
           }
         }
         break;
@@ -270,8 +295,14 @@ export class PhoneClient implements PhoneApi {
         }
         break;
       default:
+        this.talk.handle(message);
     }
   }
+
+  openChat = (botId: string): Promise<void> => this.talk.open(botId);
+  closeChat = (): Promise<void> => this.talk.leave();
+  olderItems = (): Promise<void> => this.talk.older();
+  write = (text: string): Promise<boolean> => this.talk.write(text);
 
   private close(id: string, status: Ended): void {
     const { state } = this;
@@ -395,7 +426,14 @@ export class PhoneClient implements PhoneApi {
 
   private cut(session: "revoked" | "left"): void {
     this.stop();
-    this.set({ session, link: "offline", computer: "unknown", approvals: [], questions: [] });
+    this.set({
+      session,
+      link: "offline",
+      computer: "unknown",
+      approvals: [],
+      questions: [],
+      ...noChats,
+    });
   }
 
   disconnect = async (): Promise<void> => {

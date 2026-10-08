@@ -21,7 +21,7 @@ function renderApp(fake = new FakeBotloft(), host = new FakeHost()) {
 async function openSettings() {
   fireEvent.click(await screen.findByRole("button", { name: /Ana Lima/ }));
   fireEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
-  return screen.getByRole("dialog", { name: "Settings" });
+  return screen.getByRole("region", { name: "Settings" });
 }
 
 describe("settings", () => {
@@ -182,5 +182,61 @@ describe("closing the window", () => {
         "Running in the background, so your bots keep working after you close this window.",
       ),
     ).toBeDefined();
+  });
+});
+
+describe("the page of settings", () => {
+  test("has its parts in groups, and the account is not in Backup", async () => {
+    renderApp();
+    const page = await openSettings();
+    for (const group of ["Every day", "Account and connections", "Your data", "Botloft"]) {
+      expect(within(page).getByText(group)).toBeDefined();
+    }
+    const tabs = within(page)
+      .getAllByRole("tab")
+      .map((tab) => tab.textContent);
+    expect(tabs).toEqual([
+      "General",
+      "Appearance",
+      "Chat",
+      "Notifications",
+      "Account and phone",
+      "Connected tools",
+      "Backup",
+      "Archived",
+      "About",
+    ]);
+
+    fireEvent.click(within(page).getByRole("tab", { name: "Backup" }));
+    expect(within(page).queryByLabelText("Your e-mail")).toBeNull();
+    expect(await within(page).findByText("Copies in the cloud need your account.")).toBeDefined();
+    fireEvent.click(within(page).getByRole("button", { name: "Go to Account and phone" }));
+    expect(await within(page).findByLabelText("Your e-mail")).toBeDefined();
+    expect(
+      within(page).getByRole("tab", { name: "Account and phone" }).getAttribute("aria-selected"),
+    ).toBe("true");
+  });
+
+  test("a search finds a setting by its name and takes the owner to its page", async () => {
+    renderApp();
+    const page = await openSettings();
+    const box = within(page).getByRole("searchbox", { name: "Search settings" });
+    fireEvent.change(box, { target: { value: "THEME" } });
+    const results = within(page).getByRole("list", { name: "Search settings" });
+    expect(results.textContent).toContain("In Appearance");
+    fireEvent.click(within(results).getByRole("button", { name: /Theme/ }));
+    expect(
+      within(page).getByRole("tab", { name: "Appearance" }).getAttribute("aria-selected"),
+    ).toBe("true");
+    expect((box as HTMLInputElement).value).toBe("");
+
+    fireEvent.change(box, { target: { value: "zzzz" } });
+    expect(within(page).getByText('Nothing in Settings matches "zzzz".')).toBeDefined();
+  });
+
+  test("opens before the first crew too, where a copy can be brought back", async () => {
+    renderApp(new FakeBotloft());
+    const page = await openSettings();
+    expect(within(page).getByRole("tab", { name: "Backup" })).toBeDefined();
   });
 });

@@ -98,7 +98,7 @@ export const account: Messages["account"] = {
     } as Record<string, string>,
   },
   cloud: {
-    title: "Conta e cópias na nuvem",
+    title: "Conta",
     noCloud: "As cópias na nuvem ainda não estão configuradas neste Botloft.",
     intro:
       "A conta guarda cópias das suas equipes na nuvem, para você trazê-las de volta em outro computador. Só o seu e-mail e as cópias ficam guardados, e ninguém abre uma cópia sem a sua senha.",
@@ -180,10 +180,10 @@ export const account: Messages["account"] = {
   mobile: {
     title: "Celular",
     intro:
-      "Aprove os pedidos dos seus bots e responda às perguntas deles de qualquer lugar. As conversas e os arquivos ficam só neste computador.",
+      "Aprove os pedidos dos seus bots, responda às perguntas deles e converse com eles de qualquer lugar. Os arquivos ficam só neste computador.",
     needAccount: "Entre na conta acima para usar o celular.",
     warning:
-      "Quem estiver com um celular conectado e desbloqueado pode permitir pedidos até você desconectá-lo.",
+      "Quem estiver com um celular conectado e desbloqueado pode ler as conversas dos seus bots, escrever para eles e permitir pedidos até você desconectá-lo. Um PIN no celular ajuda; você liga nele.",
     connect: "Conectar um celular",
     starting: "Preparando…",
     qrLabel: "Código para ler com o celular",
@@ -284,6 +284,17 @@ export const account: Messages["account"] = {
     about: "Sobre",
     backup: "Cópia de segurança",
     tools: "Ferramentas conectadas",
+    account: "Conta e celular",
+    groupDaily: "No dia a dia",
+    groupConnect: "Conta e conexões",
+    groupData: "Seus dados",
+    groupBotloft: "Botloft",
+    search: "Buscar nas configurações",
+    searchNone: (query: string) => `Nada nas configurações combina com "${query}".`,
+    searchIn: (page: string) => `Em ${page}`,
+    backupNeedsAccount: "As cópias na nuvem precisam da sua conta.",
+    goToAccount: "Ir para Conta e celular",
+    copiesTitle: "Cópias na nuvem",
     claudeCode: (version: string) => `Claude Code ${version}`,
     botloft: (version: string) => `Botloft ${version}`,
     checkUpdates: "Procurar atualizações",

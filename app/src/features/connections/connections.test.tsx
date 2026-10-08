@@ -21,7 +21,7 @@ async function openTools() {
   await crewOpened("Ops");
   fireEvent.click(await screen.findByRole("button", { name: /Ana Lima/ }));
   fireEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
-  const dialog = screen.getByRole("dialog", { name: "Settings" });
+  const dialog = screen.getByRole("region", { name: "Settings" });
   fireEvent.click(within(dialog).getByRole("tab", { name: "Connected tools" }));
   return { fake, scout, dialog };
 }
@@ -105,7 +105,6 @@ describe("connected tools", () => {
     await waitFor(() =>
       expect(screen.queryByRole("dialog", { name: "Connect a tool" })).toBeNull(),
     );
-    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
 
     openBot("Scout");
     await screen.findByRole("region", { name: "Chat with Scout" });

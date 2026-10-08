@@ -98,7 +98,7 @@ export const account = {
     } as Record<string, string>,
   },
   cloud: {
-    title: "Account and cloud copies",
+    title: "Account",
     noCloud: "Cloud copies are not set up in this Botloft yet.",
     intro:
       "An account keeps copies of your crews in the cloud, so you can bring them back on another computer. Only your e-mail and the copies are kept, and nobody can open a copy without your passphrase.",
@@ -178,10 +178,10 @@ export const account = {
   mobile: {
     title: "Phone",
     intro:
-      "Approve your bots' requests and answer their questions from anywhere. Chats and files stay only on this computer.",
+      "Approve your bots' requests, answer their questions and talk with them from anywhere. Files stay only on this computer.",
     needAccount: "Sign in to the account above to use the phone.",
     warning:
-      "Whoever holds a connected phone, unlocked, can allow requests until you disconnect it.",
+      "Whoever holds a connected phone, unlocked, can read your bots' conversations, write to them and allow requests until you disconnect it. A PIN on the phone helps; you can turn it on there.",
     connect: "Connect a phone",
     starting: "Preparing…",
     qrLabel: "Code to scan with your phone",
@@ -283,6 +283,17 @@ export const account = {
     about: "About",
     backup: "Backup",
     tools: "Connected tools",
+    account: "Account and phone",
+    groupDaily: "Every day",
+    groupConnect: "Account and connections",
+    groupData: "Your data",
+    groupBotloft: "Botloft",
+    search: "Search settings",
+    searchNone: (query: string) => `Nothing in Settings matches "${query}".`,
+    searchIn: (page: string) => `In ${page}`,
+    backupNeedsAccount: "Copies in the cloud need your account.",
+    goToAccount: "Go to Account and phone",
+    copiesTitle: "Copies in the cloud",
     claudeCode: (version: string) => `Claude Code ${version}`,
     botloft: (version: string) => `Botloft ${version}`,
     checkUpdates: "Check for updates",

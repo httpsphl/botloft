@@ -23,13 +23,14 @@ async function signedIn() {
   await crewOpened("Ops");
   fireEvent.click(await screen.findByRole("button", { name: /Ana Lima/ }));
   fireEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
-  const dialog = screen.getByRole("dialog", { name: "Settings" });
-  fireEvent.click(within(dialog).getByRole("tab", { name: "Backup" }));
+  const dialog = screen.getByRole("region", { name: "Settings" });
+  fireEvent.click(within(dialog).getByRole("tab", { name: "Account and phone" }));
   type(await within(dialog).findByLabelText("Your e-mail"), "ana@exemplo.com");
   fireEvent.click(within(dialog).getByRole("button", { name: "Send me the link" }));
   await within(dialog).findByText(/We sent a link/);
   act(() => openFakeCloudLink(fake));
   await within(dialog).findByText("Signed in as ana@exemplo.com");
+  fireEvent.click(within(dialog).getByRole("tab", { name: "Backup" }));
   // The block asks the daemon for its status, so it is there a moment later.
   await within(dialog).findByText("Automatic copies");
   return { fake, dialog };
