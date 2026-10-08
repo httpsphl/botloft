@@ -177,6 +177,37 @@ export const account: Messages["account"] = {
         "La contraseña ya no está en este equipo, así que las copias automáticas se detuvieron. Actívalas de nuevo.",
     } as Record<string, string>,
   },
+  mobile: {
+    title: "Móvil",
+    intro:
+      "Aprueba las solicitudes de tus bots y responde a sus preguntas desde cualquier lugar. Las conversaciones y los archivos se quedan solo en este ordenador.",
+    needAccount: "Inicia sesión en la cuenta de arriba para usar el móvil.",
+    warning:
+      "Quien tenga un móvil conectado y desbloqueado puede permitir solicitudes hasta que lo desconectes.",
+    connect: "Conectar un móvil",
+    starting: "Preparando…",
+    qrLabel: "Código para escanear con el móvil",
+    scan: "Abre la cámara del móvil y apúntala a este código.",
+    expires: (time: string) => `El código vale ${time} más.`,
+    expired: "El código venció. Pide otro.",
+    cancel: "Cancelar",
+    wants: (name: string) => `${name} quiere conectarse.`,
+    compare: (code: string) =>
+      `Comprueba que el móvil muestre ${code} también, y solo entonces conéctalo.`,
+    accept: "Conectar",
+    refuse: "No es este",
+    connecting: "Conectando…",
+    phones: "Móviles conectados",
+    none: "Todavía no hay ningún móvil conectado.",
+    online: "En línea ahora",
+    seen: (when: string) => `Visto ${when}`,
+    neverSeen: "Aún no visto",
+    disconnect: "Desconectar",
+    disconnectTitle: (name: string) => `¿Desconectar ${name}?`,
+    disconnectText:
+      "El móvil pierde el acceso al instante. Para usarlo de nuevo, conéctalo otra vez.",
+    failed: "Algo salió mal",
+  },
   settings: {
     title: "Configuración",
     background: "En segundo plano",
