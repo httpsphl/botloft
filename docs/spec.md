@@ -780,6 +780,7 @@ Pragmas: `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON`, `busy_time
 - Nome de anexo vira só o nome do arquivo (sem `..`, sem pasta, sem caracteres proibidos no Windows) antes de ir para o disco.
 - Ferramentas conectadas (25): só o dono cadastra, pelo app. Um servidor `stdio` roda com os poderes do dono, fora das cercas de 7.5, e um `http` recebe o que o bot mandar; o cadastro diz isso e pede confirmação. Segredos dos servidores ficam em `secrets\mcp` e no ambiente dos bots ligados, nunca no banco, no `mcp.json` ou no log.
 - Conta e cópias na nuvem (27): opcionais e só por ação do dono. O token do aparelho fica em `secrets\cloud.json` (ACL do usuário), o servidor guarda dele só o SHA-256, e a cópia sai selada com a senha do dono, que não vai ao servidor. O cliente só fala `https` (fora `127.0.0.1`). Não é telemetria: nada é enviado sem o clique do dono.
+- Celular (28): só aprova e responde, com selo de ponta a ponta entre o computador e o celular (ECDH P-256, HKDF, AES-256-GCM); as chaves vêm de um QR cujo segredo fica no fragmento do link e nunca chega ao servidor. O token de um celular só alcança o relay e o push, nunca as cópias. As chaves ficam em `secrets\mobile.json` (ACL do usuário). Nada de conversa, arquivo ou comando passa em claro, e o aviso de push nunca leva conteúdo.
 - Isolamento entre bots é cooperativo (mesmo usuário do Windows). Documentar isso no README sem prometer sandbox.
 - Navegador dos bots (21): perfil próprio por bot, sem os logins do navegador do dono. A porta do DevTools escuta só em 127.0.0.1 e não tem senha: enquanto o navegador está aberto, outro programa do computador pode controlá-lo, como pode fazer com o resto do que roda com o usuário. Páginas não chegam a ela: o Chromium recusa WebSocket com `Origin` de site sem `--remote-allow-origins`. Trocar a porta por um pipe fica para depois. O texto das páginas pode trazer instruções para o bot; as tools dizem a ele que não valem como pedido do dono, e nos modos que perguntam, cada site novo passa pelo dono (21.5).
 - Pasta de trabalho escolhida (5): todos os bots da crew a editam como a própria pasta. Por isso ela não pode tocar a pasta de dados do Botloft (segredos, banco), conter os workspaces de todos os bots, encostar nas pastas de outra crew nem ser um disco inteiro.
@@ -2102,7 +2103,7 @@ Finanças, jurídico e saúde, que pedem aviso de que não substituem um profiss
 
 ### 27.1 O que é
 
-A cópia de segurança de 14.2 já protege contra formatar o computador, mas só se o dono guardar o arquivo em outro lugar. Esta seção traz uma **conta** opcional e um lugar onde as cópias ficam guardadas: o dono envia a cópia selada pelo app e a baixa de volta em qualquer computador. É o primeiro passo para o celular (aprovar e responder de longe), que fica para depois (27.9).
+A cópia de segurança de 14.2 já protege contra formatar o computador, mas só se o dono guardar o arquivo em outro lugar. Esta seção traz uma **conta** opcional e um lugar onde as cópias ficam guardadas: o dono envia a cópia selada pelo app e a baixa de volta em qualquer computador. É o primeiro passo para o celular (aprovar e responder de longe, seção 28).
 
 Três promessas valem para tudo aqui:
 
@@ -2200,7 +2201,7 @@ Configurações, "Cópia de segurança" (14.2) ganha o bloco **Conta**, acima de
 
 ### 27.9 Fora desta etapa
 
-Conversas, anexos e pastas de trabalho na nuvem, envio automático no Linux e no macOS (pede um cofre de senhas de cada sistema), retomar um envio, cópias só do que mudou, plano pago e cotas por plano, login por Google ou GitHub, recuperar uma senha de cópia perdida, trocar o servidor sem perder as cópias, e o celular: o relay pelo servidor, o pareamento por QR e o app com aprovações e perguntas, que usam esta conta e vêm em seguida.
+Conversas, anexos e pastas de trabalho na nuvem, envio automático no Linux e no macOS (pede um cofre de senhas de cada sistema), retomar um envio, cópias só do que mudou, plano pago e cotas por plano, login por Google ou GitHub, recuperar uma senha de cópia perdida, e trocar o servidor sem perder as cópias. O celular (o relay pelo servidor, a conexão por QR e o PWA com aprovações e perguntas) usa esta conta e está na seção 28.
 
 ### 27.10 Envio automático
 
@@ -2227,3 +2228,147 @@ Notificação: `autobackup.changed`, com o status, depois de cada olhada e de ca
 No app, o bloco **Cópias automáticas** fica na conta, entre "Enviar uma cópia agora" e "Cópias na nuvem". Desligado: uma frase do que acontece, a senha duas vezes, "Com que frequência" ("Todo dia" ou "Toda semana") e "Ligar". Ligado: "Ligado: uma cópia por dia, se algo mudou", "Última cópia enviada: …" (ou "Nenhuma cópia enviada ainda"), "Próxima vez que olha: …", a última falha em palavras (os `reasons` de 27.6, mais `no_keystore` e `no_passphrase`), o seletor e "Desligar". Sem cofre: "As cópias automáticas só funcionam no Windows por enquanto." Textos nos três idiomas.
 
 Testes: `crates/botloft-store` (a impressão digital muda com o que o dono faz e não com o que muda sozinho), `crates/botloftd/tests/autobackup.rs` (o servidor de 27.2 no processo e o relógio na mão: diário, semanal, sem mudança, cópia à mão, falha de rede, senha sumida, sair da conta, `no_keystore`), o cofre do Windows de verdade (`platform::windows::credentials`), e o bloco do app com o `FakeBotloft`.
+
+## 28. Celular
+
+Status: **CE1 (spec).** Vem depois de 27 e usa a conta dela. É o "celular" que 27.9 deixou para depois.
+
+### 28.1 O que é
+
+Uma página que o dono instala na tela inicial do celular (um PWA) para **aprovar pedidos dos bots e responder às perguntas deles** (10.1, 23) quando está longe do computador. O celular é um controle remoto: os bots continuam rodando no computador, e o `botloftd` continua só em `127.0.0.1` (13). Nada de código nativo, de loja ou de conta de desenvolvedor.
+
+O que o celular **faz**: mostra os pedidos de aprovação abertos, permite ou nega um de cada vez (com nota), mostra as perguntas abertas, responde ou descarta, e avisa quando chega algo novo.
+
+O que o celular **não faz** nesta etapa: ver conversas, mandar mensagem a um bot, ver arquivos, criar bot, crew, tarefa ou rotina, mexer em configurações. Quanto menos o celular sabe, menos há para vazar de um celular perdido.
+
+Quatro promessas valem para tudo aqui:
+
+- **É opcional e é do dono.** Exige a conta de 27. Sem nenhum celular conectado, o daemon não abre conexão nenhuma além das de 27. Conectar e desconectar é sempre um clique no computador.
+- **O servidor não lê nada.** Pedidos, perguntas e respostas passam **selados de ponta a ponta** entre o computador e o celular, com chaves que só os dois têm (28.3). O servidor repassa bytes e sabe só que existe tráfego, de que tamanho e quando.
+- **Quem entra no e-mail não vira celular.** O link do e-mail (27.3) abre a conta, mas um celular só entra por um QR que o computador mostra, e só fala com os bots quem tem as chaves do QR.
+- **O celular perdido se corta pelo computador:** "Desconectar" tira o aparelho do servidor e do daemon na hora (28.6).
+
+### 28.2 Quem é quem
+
+| Peça | Papel |
+|---|---|
+| computador | o `botloftd` com os bots; abre **uma** conexão de saída para o servidor (`wss`), nunca recebe |
+| servidor (`botloft-cloud`, 27.2) | autentica os aparelhos, liga o computador ao celular pareado com ele e entrega o PWA em `<public_url>/m`; não abre o conteúdo |
+| celular | o PWA; guarda as chaves e o token no navegador (IndexedDB, chaves não extraíveis) |
+
+A conta de 27 ganha o **tipo** do aparelho (`computer` ou `phone`) e, no celular, o **par** (`peer`): o computador com que ele foi conectado. Um celular conectado a dois computadores são duas conexões, cada uma com o seu token e as suas chaves.
+
+**O token de um celular só alcança o relay, o push e `GET /v1/me`.** As cópias (27.4), o login e a lista de aparelhos dão `403` `wrong_device`. Um celular nunca baixa uma cópia.
+
+### 28.3 Conectar um celular e selar as mensagens
+
+Criptografia que existe em todo navegador (WebCrypto) e em crates do RustCrypto, para o PWA não carregar biblioteca de criptografia: **ECDH P-256**, **HKDF-SHA-256**, **HMAC-SHA-256** e **AES-256-GCM**.
+
+1. No app (28.7), "Conectar um celular" chama `mobile.pair_start`. O daemon sorteia `pair_id` (16 bytes) e `secret` (32 bytes), a chave efêmera dele (`D`), e avisa o servidor (`POST /v1/pairings {id}`, com o token do computador; vale 5 minutos e uma vez). O app mostra um **QR** (gerado no app, sem serviço externo) com `<public_url>/m#p=<pair_id>&s=<secret>`. O que vem depois do `#` o navegador nunca envia: o servidor não vê o `secret`.
+2. O celular abre o link, lê o fragmento e gera a chave dele (`P`). Manda `POST /v1/pairings/<id>/join {phone_pub, device_name, proof}`, com `proof = HMAC(secret, "botloft-pair-1" ‖ id ‖ phone_pub)`. O servidor guarda e avisa o computador pelo relay.
+3. O daemon confere a `proof`; errada, recusa. Certa, mostra no app o **nome do celular e um código de 6 dígitos** que sai das duas chaves públicas (`HKDF(secret, D ‖ P)`, 20 bits), e o celular mostra o mesmo código. O dono compara e clica **Conectar** (`mobile.pair_confirm`): é isso que impede quem fotografou o QR de entrar no lugar do dono.
+4. O daemon manda `POST /v1/pairings/<id>/accept {daemon_pub, proof2}` (`proof2 = HMAC(secret, "botloft-pair-1-accept" ‖ id ‖ D ‖ P)`). O servidor cria o aparelho `phone` com o `peer` e, na primeira consulta do celular (`GET /v1/pairings/<id>`, uma vez), entrega `{token, device, daemon_pub, proof2}`. O celular confere `proof2`: um servidor que trocasse a chave `D` não tem o `secret` e não consegue forjá-la.
+5. Os dois derivam `shared = ECDH(D, P)` e, com `HKDF(shared, salt = secret, info = "botloft-mobile-1")`, duas chaves AES-256: `k_c2p` (computador para celular) e `k_p2c`. A chave de cada direção só sela naquela direção. O `secret` é apagado dos dois lados.
+
+**Mensagem selada** (`seal`): `{v: 1, seq, ct}`. `ct` é AES-256-GCM com nonce de 12 bytes (`seq` em 8 bytes big-endian, 4 bytes zero) e dados autenticados `v ‖ direção ‖ device_id ‖ seq`. Quem recebe guarda o maior `seq` visto por direção e **recusa** qualquer um que não seja maior (repetição); o celular guarda o dele no IndexedDB. Trocar de chave é conectar de novo. Vetores de teste (chaves, nonces e textos de verdade) ficam num arquivo único (`docs/test-vectors/mobile.json`), gerado pelo Rust e lido pelo teste do PWA: os dois lados têm que concordar byte a byte.
+
+**Dentro do selo,** JSON de uma linha, no máximo 16 KiB:
+
+| Sentido | Mensagem |
+|---|---|
+| celular → computador | `sync` (pede o retrato de agora); `approval.answer {approvalId, allow, note?}`; `question.answer {questionId, answer}`; `question.dismiss {questionId}` |
+| computador → celular | `snapshot {approvals, questions}` (resposta de `sync`); `approval.open {card}`; `approval.closed {approvalId, status}`; `question.open {card}`; `question.closed {questionId, status}` |
+
+O `card` é o que o celular mostra (28.5), não o `Approval` nem a `Question` inteiros.
+
+### 28.4 O relay (servidor)
+
+- **Aparelhos.** A migration do crate acrescenta `devices.kind` (`computer` por padrão, para o que já existe) e `devices.peer`, mais as tabelas `pairings` (`id`, `account`, `computer`, `phone_pub`, `proof`, `daemon_pub`, `proof2`, `token_once`, `expires_at`) e `relay_queue` (`device`, `seq`, `body`, `expires_at`). `DELETE /v1/devices/<id>` num computador leva os celulares dele, e num celular fecha o socket dele na hora.
+- **`GET /v1/relay`** (WebSocket, `Authorization: Bearer`). O computador e cada celular abrem um. O servidor liga um celular só ao `peer` dele; um segundo socket do mesmo aparelho substitui o primeiro. Quadros em JSON de até 64 KiB: `{t: "msg", seq, body}` (o `body` é o selo, em base64, que o servidor **não abre**), `{t: "ack", seq}`, `{t: "presence", peer: "online" | "offline"}` (para o celular saber se o computador está no ar), `{t: "wake"}` (28.8) e `{t: "ping"}` a cada 25 s (os proxies cortam conexões quietas, e a Cloudflare corta em 100 s). Limite de 60 quadros por minuto por aparelho (`429`).
+- **Fila só no sentido do computador.** Uma resposta do celular enquanto o computador está sem conexão (uma queda de rede) espera até 1 hora, no máximo 50 quadros, em ordem de `seq`, e sai da fila no `ack` do daemon. **Do computador para o celular não há fila:** quando o celular abre, ele manda `sync` e recebe o retrato de agora. O celular não guarda nenhum conteúdo no aparelho entre uma abertura e outra, só a lista em memória.
+- **O daemon decide, o servidor só leva.** Uma resposta que o servidor entregou mas o daemon recusa (pedido que já expirou, `seq` repetido, selo que não abre) é descartada no daemon e o celular recebe `approval.closed` ou `question.closed` com o estado verdadeiro.
+- **Reconexão.** O daemon reconecta com espera crescente (1 s até 60 s); só para de tentar quando o dono tira o último celular ou sai da conta.
+- **Logs do servidor:** nunca o `body`, o token nem o nome do aparelho em `info`.
+
+### 28.5 No daemon (`mobile`) e o que o celular pode
+
+Métodos novos do protocolo (11), todos só do dono:
+
+| Método | O que faz |
+|---|---|
+| `mobile.status` | `{relay: "off" \| "connecting" \| "connected", phones: [{id, name, pairedAt, lastSeenAt?, online}], pending?}` |
+| `mobile.pair_start` | começa a conexão (28.3); devolve `{pairId, url, expiresIn}`, e `url` é o que o QR leva. Exige a conta (`not_signed_in`) |
+| `mobile.pair_cancel {pairId}` | desiste |
+| `mobile.pair_confirm {pairId, accept}` | o dono compara o código e aceita ou recusa |
+| `mobile.revoke {phoneId}` | `DELETE /v1/devices/<id>`, apaga as chaves e para de aceitar selos desse celular. Se o servidor não responde, apaga as chaves do mesmo jeito e tenta o servidor depois |
+
+Notificações: `mobile.changed {status}` e `mobile.pair_request {pairId, name, code}` (o celular entrou no link; o app mostra o nome e o código). Erros com `reason` (20.8): os de 27.5 mais `pair_expired`, `bad_proof` e `unknown_phone`. As chaves, o token e o `seq` de cada celular ficam em `secrets\mobile.json` (ACL do usuário, 13), nunca no banco; a cópia de segurança (14.2) não leva segredos, então **restaurar num computador novo pede conectar o celular de novo**. O relay só está aberto com pelo menos um celular conectado ou uma conexão em andamento.
+
+**O que vai ao celular.** Cada pedido aberto (10.1) e cada pergunta aberta (23.3) vira um `card`: o bot (nome e cor), a crew, a hora, e para o pedido, o tipo, o `summary`, a `explanation` e o texto do comando ou do plano; para a pergunta, o texto e as opções. Nada de `Bot`, de conversa, de caminho de pasta do dono além do que o próprio pedido mostra.
+
+**Regras de segurança do celular** (o daemon as aplica; o PWA só as mostra):
+
+1. **Só permite o que mostra inteiro.** Um pedido cujo texto passa de 8 KiB (comando, plano, diff) vai ao celular **cortado e marcado**, com só "Negar" e "Abra no computador". Ninguém aprova no escuro.
+2. **Só "uma vez".** O celular não grava "permitir sempre" (`always`) e não edita a entrada (`input`). A regra durável é decisão de quem está no computador.
+3. **O que muda o computador de forma durável fica no computador.** Sugestão de bot (10.2), rotina pedida por bot (20.12), acesso a outra crew (10.4), permissão de desktop (24.2), ferramentas conectadas novas (25.4) e tudo do navegador em mãos (21.10) aparecem no celular só como "Precisa de você no computador", com "Negar" quando couber. O celular nunca recebe `browser_ask_owner` nem nada que peça senha ou código (23.2).
+4. **O mesmo caminho do app.** `approval.answer` chama a mesma lógica de `approvals.answer` (10.1), e `question.answer` e `question.dismiss` as de `questions.*` (23.3): `conflict` se já foi respondido, `expired` se venceu. Responder no celular fecha o cartão no computador e vice-versa, nos dois sentidos, na hora (`approval.closed`, `question.closed`).
+5. **Rate limit** no daemon: 30 respostas por minuto por celular.
+6. **Nunca se loga** o selo, o `card` nem a resposta em `info` (13).
+
+### 28.6 Celular perdido, roubado ou trocado
+
+- **Desconectar** (app, 28.7) chama `mobile.revoke`: o servidor apaga o token e fecha o socket, o daemon esquece as chaves e descarta qualquer selo daquele celular. O celular fica com chaves que não servem para nada.
+- **Sair da conta** (27.3) apaga todos os celulares do computador. **Apagar a conta** leva os aparelhos e as filas.
+- Um celular roubado **e desbloqueado** consegue permitir pedidos de uma vez só e dentro das regras de 28.5 até o dono desconectá-lo. É o risco que a pessoa aceita ao receber pedidos no bolso. O PWA mostra o que está permitindo, e a tela do app diz isso na hora de conectar.
+- O servidor, comprometido, não consegue entrar numa conversa com os bots nem aprovar nada: não tem as chaves, e uma chave `D` trocada na conexão não passa em `proof2` (28.3). Consegue apagar mensagens e fechar sockets (o dono vê "sem conexão" e resolve no computador), e ver quando e quanto passa (28.9).
+
+### 28.7 Telas
+
+**App do computador:** Configurações, bloco **Celular** (abaixo de Conta, 27.6). Sem conta: "Entre na conta para usar o celular", com o botão que leva ao bloco Conta. Com conta e sem celular: uma frase do que o celular faz e não faz ("Aprove pedidos e responda perguntas dos bots de qualquer lugar. As conversas ficam só no computador."), e "Conectar um celular". Conectando: o QR, "Abra a câmera do celular e aponte para o código", o tempo que falta e "Cancelar"; quando o celular entra, "O celular de Ana quer entrar. Confira que o código é 482 913 nos dois", com "Conectar" e "Recusar". Com celulares: cada um com o nome, quando entrou, "online agora" ou "visto há 2 h", e **"Desconectar"** com a confirmação que diz que o celular perde o acesso na hora. Aviso fixo, em palavras do dia a dia, de que quem tiver o celular desbloqueado pode aprovar pedidos (28.6). Textos nos três idiomas, sem jargão (15.6): "celular", "conectar", "código"; nunca "relay", "pareamento", "token", "chave" nem "daemon".
+
+**PWA (`<public_url>/m`):** a mesma identidade visual do app (cores, fonte, mascote, tema do aparelho), uma coluna, feito para o polegar, em `pt-BR`, `en` e `es` pelo idioma do aparelho.
+- **Caixa:** a lista do que espera o dono, pedidos e perguntas misturados, o mais velho primeiro (o que vence antes), cada linha com o rosto do bot, o nome, a crew e a hora; vazio mostra o mascote e "Nada esperando você". Se o computador está fora do ar: "O computador está desligado ou sem internet. Os pedidos continuam esperando lá."
+- **Pedido:** o cartão de 15.1 simplificado: o bot, o que ele quer fazer em uma frase (a `explanation`, marcada como escrita pelo bot, ou o aviso de que ele não disse para que serve), o comando inteiro a um toque, **Permitir** e **Negar** (com campo de nota). Cartão cortado ou do tipo que fica no computador: só "Negar" e a explicação.
+- **Pergunta:** o texto em markdown, as opções como botões e um campo para outra resposta, com **Responder** e **Descartar**.
+- **Este celular:** nome, "Desconectar daqui" (apaga as chaves e avisa o computador) e, no iOS fora da tela inicial, a instrução de "Adicionar à Tela de Início" (o aviso por push só chega depois disso).
+- O PWA é uma entrada do `app/` (`app/mobile`) que reusa os componentes, o tema e o `i18n`, atrás de uma interface própria, `MobileApi`, com um `FakeMobile` para os testes. É compilado para dentro do `botloft-cloud` (um binário só). `Content-Security-Policy`: `default-src 'self'`, `connect-src 'self' wss:`, sem script de terceiros. O service worker guarda só o casco da página (nunca um `card`).
+
+### 28.8 Avisos (Web Push)
+
+Quando chega um pedido ou uma pergunta, o dono precisa saber sem abrir a página. O daemon manda ao servidor o quadro `{t: "wake"}`, **sem conteúdo**, no máximo um a cada 30 s por computador (os avisos que chegam no meio se juntam num só). O servidor manda um Web Push (RFC 8030, VAPID) a cada celular conectado a esse computador.
+
+- `POST /v1/push/subscribe {endpoint, p256dh, auth, locale}` (só do celular) e `DELETE /v1/push/subscribe`. O servidor guarda isso por celular. O `cloud.toml` ganha `[push]` com `subject` (um `mailto:` ou `https:`) e `vapid_key_file` (como o `password_file` do `smtp`, 27.2); sem `[push]`, o servidor não oferece push e o PWA mostra só o que há ao abrir.
+- O texto do aviso é **sempre o mesmo** e escrito no idioma do celular: "O Botloft precisa de você". Não leva o nome do bot, o comando nem a pergunta: os serviços de push (Apple, Google, Mozilla) veem o que passa por eles. Tocar abre a caixa, e o conteúdo vem pelo relay, selado.
+- Endereço de push recusado pelo serviço (`410`) é apagado.
+
+### 28.9 Privacidade (13)
+
+- Nada vai à rede sem um celular conectado pelo dono (28.1). Desconectar o último celular fecha a conexão.
+- O servidor vê: o e-mail, os nomes dos aparelhos que entraram, o IP de quem conecta (no proxy, por 7 dias, 27.7), quando cada um está online, o **tamanho e a hora** de cada mensagem selada, e os endereços de push. Não vê: nome de bot ou de equipe, comando, plano, pergunta, resposta, nota, nem as chaves.
+- Quem controla o servidor pode ver **que** o dono aprovou algo às 14h, e quanto tempo levou, mas não o quê.
+- Os serviços de push veem que "um aviso do Botloft" chegou a um aparelho, e nada além.
+- Sem telemetria: nenhuma contagem de uso do celular sai do aparelho.
+
+### 28.10 Marcos
+
+| Marco | O que entra | Teste |
+|---|---|---|
+| **CE1** Spec | esta seção | revisão do dono |
+| **CE2** Servidor | migration (`devices.kind`, `peer`, `pairings`, `relay_queue`), `/v1/pairings`, `/v1/relay`, fila no sentido do computador, token de celular restrito, `DELETE /v1/devices` com celulares | dois pares de clientes de teste: o QR de ponta a ponta no processo; `403` `wrong_device` nas cópias; a fila entrega em ordem e sai no `ack`; um selo adulterado chega adulterado (o servidor não abre); revogar fecha o socket; pareamento vence e vale uma vez |
+| **CE3** Daemon | cliente do relay com reconexão, `seal` (P-256, HKDF, AES-GCM) com os vetores de teste, conexão, `secrets\mobile.json`, métodos e notificações, a ponte de aprovações e perguntas com as regras de 28.5, tipos gerados | o servidor de CE2 no processo e um "celular" de teste em Rust: conectar com o código, receber o retrato, permitir e negar, responder uma pergunta, `seq` repetido, selo adulterado, pedido já respondido no computador, cartão grande, tipo que fica no computador, sem `always`, revogar |
+| **CE4** App do computador | bloco Celular com o QR e o código, `FakeBotloft`, três idiomas | `pnpm check`; a tela no preview |
+| **CE5** PWA | a entrada `app/mobile`, `MobileApi` e `FakeMobile`, a caixa, os cartões, WebCrypto contra os vetores, três idiomas, servido pelo `botloft-cloud` | `pnpm check`; os vetores do Rust abrem no PWA e os do PWA abrem no Rust; Chromium real no Docker (`linux-docker-testing`) com o servidor e um daemon de teste: conectar e aprovar ponta a ponta |
+| **CE6** Avisos | `[push]`, VAPID, `/v1/push/*`, `wake` com limite, service worker | teste com um serviço de push falso: um `wake` vira um push sem conteúdo; `410` apaga o endereço; vários pedidos seguidos viram um aviso |
+| **CE7** Teste real | um iPhone e um Android de verdade, a VPS de verdade, o Claude Code real: um bot pede para rodar um comando e o dono permite pelo celular; aviso com a tela bloqueada; celular desconectado pelo computador | registrado aqui, em "A verificar" |
+
+**A verificar (CE7).** Nada disso é certo até ser visto:
+
+- o leitor de QR da câmera do iOS e do Android preserva o `#` do link (os dois abrem o fragmento no navegador);
+- ECDH P-256 e HKDF no WebCrypto do Safari (iOS 16.4 ou mais novo) e do Chrome do Android dão os mesmos bytes que o RustCrypto (os vetores cobrem; falta o aparelho);
+- IndexedDB guarda chave `CryptoKey` não extraível no PWA instalado do iOS e não é apagada por falta de uso (o iOS apaga dados de sites que não são abertos por semanas, mas um PWA instalado fica fora dessa regra: confirmar);
+- Web Push chega no iOS com o PWA instalado e a tela bloqueada, e no Android com o Chrome fechado;
+- o proxy (Caddy; Cloudflare, se houver) mantém o WebSocket de `/v1/relay` aberto por horas com o ping de 25 s.
+
+### 28.11 Fora desta etapa
+
+Conversa, mensagem aos bots, arquivos, tarefas e rotinas no celular; app nativo e lojas; trocar as chaves sem conectar de novo; trava com biometria ou PIN dentro do PWA; mais de um dono; ligação direta entre celular e computador sem o servidor (WebRTC); aviso com conteúdo; permitir "sempre" pelo celular.
