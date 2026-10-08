@@ -29,17 +29,20 @@ impl Mobile {
     /// that are on hear of it. Phones that are not ask when they open.
     pub(crate) fn on_event(&self, daemon: &Daemon, event: &Event) {
         let message = match event {
-            Event::ChatItem(change) => match &change.item.body {
-                ChatBody::Approval(shown) if shown.status == ApprovalStatus::Pending => {
-                    cards::approval_card(daemon, &change.item, shown)
-                        .map(|card| ToPhone::ApprovalOpen { card })
+            Event::ChatItem(change) => {
+                self.chat_item_changed(daemon, &change.item);
+                match &change.item.body {
+                    ChatBody::Approval(shown) if shown.status == ApprovalStatus::Pending => {
+                        cards::approval_card(daemon, &change.item, shown)
+                            .map(|card| ToPhone::ApprovalOpen { card })
+                    }
+                    ChatBody::Approval(shown) => Some(ToPhone::ApprovalClosed {
+                        approval_id: shown.approval_id.clone(),
+                        status: shown.status,
+                    }),
+                    _ => None,
                 }
-                ChatBody::Approval(shown) => Some(ToPhone::ApprovalClosed {
-                    approval_id: shown.approval_id.clone(),
-                    status: shown.status,
-                }),
-                _ => None,
-            },
+            }
             Event::QuestionChanged(question) if question.status == QuestionStatus::Open => {
                 cards::question_card(daemon, question).map(|card| ToPhone::QuestionOpen { card })
             }
@@ -47,6 +50,14 @@ impl Mobile {
                 question_id: question.id.clone(),
                 status: question.status,
             }),
+            Event::ChatDelta(delta) => {
+                self.chat_delta(daemon, delta);
+                None
+            }
+            Event::BotState(changed) => {
+                self.bot_state(daemon, &changed.bot_id, changed.state);
+                None
+            }
             _ => None,
         };
         let Some(message) = message else {
@@ -190,11 +201,10 @@ impl Mobile {
                     }
                 }
             }
-            // The conversations (spec 28.12) are for the next step.
-            FromPhone::Chats
+            message @ (FromPhone::Chats
             | FromPhone::History { .. }
             | FromPhone::Send { .. }
-            | FromPhone::Watch { .. } => {}
+            | FromPhone::Watch { .. }) => self.talk_apply(daemon, phone, message).await,
             FromPhone::QuestionDismiss { question_id } => {
                 if self.may_answer(daemon, phone) {
                     let params = QuestionIdParams {
@@ -292,6 +302,18 @@ impl Mobile {
             );
         }
     }
+}
+
+/// Runs `work` where the store may be waited for, and gives its result;
+/// `None` if it did not finish.
+pub(super) async fn blocking_result<T: Send + 'static>(
+    daemon: &Arc<Daemon>,
+    work: impl FnOnce(&Daemon) -> T + Send + 'static,
+) -> Option<T> {
+    let daemon = Arc::clone(daemon);
+    tokio::task::spawn_blocking(move || work(&daemon))
+        .await
+        .ok()
 }
 
 /// Runs a service call where the store may be waited for.

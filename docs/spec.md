@@ -2399,15 +2399,15 @@ Arquivos e anexos, tarefas e rotinas no celular (conversa, só de texto, está e
 
 ### 28.12 Conversas
 
-Status: **CH1 (spec)**. O celular, que só aprovava e respondia (28.1), passa a **ler as conversas dos bots e a mandar texto a eles**. O que ele continua sem fazer: anexos e arquivos (ver, mandar ou abrir), telas e navegador do bot, tarefas, rotinas, reações, busca, e qualquer configuração.
+Status: **CH2 (daemon feito)**. O celular, que só aprovava e respondia (28.1), passa a **ler as conversas dos bots e a mandar texto a eles**. O que ele continua sem fazer: anexos e arquivos (ver, mandar ou abrir), telas e navegador do bot, tarefas, rotinas, reações, busca, e qualquer configuração.
 
 **O que muda na privacidade (28.9).** Até aqui só passavam pedidos e perguntas. Agora passa **o texto das conversas**, e continua selado de ponta a ponta: o servidor não o lê. Ele vê um pouco mais do ritmo (mais mensagens, de tamanhos variados, quando alguém conversa), mas nada do que se diz. E um celular desbloqueado e conectado passa a **ler o histórico dos bots e a falar com eles**: por isso o aviso do app (28.7) diz isso também, e a regra abaixo protege o que há de pior.
 
 **Regras de segurança (o daemon as aplica).**
 
-1. **Bot em `bypass_permissions` só se fala no computador.** Esse bot faz tudo sem perguntar (13): uma mensagem do celular a ele seria, na prática, uma ordem sem nenhuma aprovação. `send` a ele volta `needs_computer`, e o celular mostra o bot na lista e o histórico, sem o campo de escrever.
+1. **Sem regra especial para `bypass_permissions`.** Um bot que faz tudo sem perguntar também recebe mensagem do celular. A proteção contra quem pega o celular é a trava com PIN (28.13), que o dono liga se quiser; o daemon não tem como saber se ela está ligada (ela vive no aparelho), então não finge que protege. O aviso do app diz isso com todas as letras.
 2. **O mesmo caminho do app.** `send` chama a lógica de `messages.send` (9.1), do dono, sem anexos: bot pausado recebe quando voltar, bot arquivado dá erro (`not_found`), texto vazio ou grande demais dá `invalid`.
-3. **Limite de envio:** os mesmos 30 por minuto por celular das respostas (28.5, regra 5).
+3. **Limite de envio:** 30 por minuto por celular, contados à parte dos 30 das respostas (28.5, regra 5); passou disso, `sent` volta `rate_limited`.
 4. **O que não vai ao celular:** a saída das ferramentas e a entrada delas (o celular recebe uma linha, `summary`), segredos de bots, anexos, e o texto que passa de 6 KiB (vai cortado, com `cut`).
 
 **Mensagens seladas novas** (mesmo selo de 28.3, até 16 KiB cada; o que não cabe vai em várias mensagens).
@@ -2415,9 +2415,9 @@ Status: **CH1 (spec)**. O celular, que só aprovava e respondia (28.1), passa a 
 | Sentido | Mensagem |
 |---|---|
 | celular → computador | `chats`: pede a lista de conversas. `history {req, botId, before?}`: uma página do histórico, as 20 mais novas ou as 20 antes do item `before`. `send {clientId, botId, text}`. `watch {botId}` (ou `{botId: null}`): qual conversa está aberta |
-| computador → celular | `chats {bots: [ChatLine], first}`: a lista (`first` é verdadeiro na primeira parte). `history {req, botId, items: [PhoneItem], more, done}`: as partes de uma página, do mais antigo ao mais novo (`done` na última; `more` diz se há páginas antes). `sent {clientId, ok, reason?}`. `item {botId, item}` e `live {botId, text}` e `state {botId, state}` (só da conversa aberta). `line {bot: ChatLine}` (a linha de qualquer bot mudou) |
+| computador → celular | `chats {bots: [ChatLine], first}`: a lista (`first` é verdadeiro na primeira parte). `history {req, botId, items: [PhoneItem], more, done}`: as partes de uma página, do mais antigo ao mais novo (`done` na última; `more` diz se há páginas antes). `sent {clientId, ok, reason?}` (`reason`: `invalid`, `not_found`, `rate_limited` ou `failed`). `item {botId, item}` e `live {botId, text}` e `state {botId, state}` (só da conversa aberta). `line {bot: ChatLine}` (a linha de qualquer bot mudou) |
 
-- **`ChatLine`**: `botId`, `name`, `color`, `crew`, `state` (o `BotState`, de 7.1, que a tela mostra como "trabalhando" ou "parado"), `canSend` (falso para `bypass_permissions` e para bot arquivado), `lastReplyAt?` e `last?: {kind, text, at}` (a última atividade, em uma linha, como 11.2). Só bots e equipes ativos.
+- **`ChatLine`**: `botId`, `name`, `color`, `crew`, `state` (o `BotState`, de 7.1, que a tela mostra como "trabalhando" ou "parado"), `lastReplyAt?` e `last?: {kind, text, at}` (a última atividade, em uma linha, como 11.2). Só bots e equipes ativos.
 - **`PhoneItem`** (`kind` diz qual): `you {id, at, text, cut}` (o dono escreveu), `bot_message {id, at, from, text, cut}` (outro bot, uma rotina ou o daemon escreveu ao bot; `from` é o nome), `reply {id, at, text, cut}` (o bot respondeu, markdown), `tool {id, at, summary}`, `approval {id, at, approvalId, summary, status}`, `question {id, at, questionId, text, status}`, `failed {id, at, error?}` (um turno que falhou) e `notice {id, at, level, text}`. Os turnos que deram certo não viram item (só ruído).
 - **`live`** é o texto inteiro da resposta que o bot está escrevendo agora (não pedaços: um pedaço perdido não estraga o resto), no máximo uma vez por segundo, só enquanto aquela conversa está aberta; vazio quando a resposta termina e o item `reply` chega. **`item`** leva um item novo ou que mudou (o status de um pedido que foi respondido, por exemplo).
 - **`line`** avisa que a linha de um bot mudou, no máximo uma vez a cada 2 s por bot, e só para resposta, pergunta, pedido ou aviso novos (não para cada ferramenta que o bot usa).
@@ -2432,7 +2432,7 @@ Status: **CH1 (spec)**. O celular, que só aprovava e respondia (28.1), passa a 
 | Marco | O que entra | Teste |
 |---|---|---|
 | **CH1** Spec | esta seção, os tipos novos de 28.3 (`ChatLine`, `PhoneItem`, as mensagens), o limite do computador no relay | revisão do dono; os tipos geram o TypeScript; o relay aceita 600 quadros por minuto do computador e recusa o 61º do celular |
-| **CH2** Daemon | `chats`, `history`, `send`, `watch`, `item`, `live`, `state`, `line`, as regras acima | com o celular de teste em Rust: a lista só com bots ativos; páginas do histórico em partes de até 16 KiB; ferramentas sem saída; texto cortado em 6 KiB; `send` pelo mesmo caminho do app, `needs_computer` no `bypass_permissions`, limite de envio; `live` no máximo por segundo e só na conversa aberta |
+| **CH2** Daemon | `chats`, `history`, `send`, `watch`, `item`, `live`, `state`, `line`, as regras acima | com o celular de teste em Rust (`tests/mobile_chats.rs`): a lista só com bots ativos; páginas do histórico em partes de até 16 KiB; ferramentas sem saída; texto cortado em 6 KiB; `send` pelo mesmo caminho do app (inclusive para `bypass_permissions`), limite de envio; `live` no máximo por segundo e só na conversa aberta. **Feito.** O `line` de um bot que muda dentro dos 2 s é descartado, não adiado: a lista se atualiza na próxima mudança ou quando o celular a pede de novo |
 | **CH3** PWA | as abas, a lista, a conversa, o campo de escrever, a resposta ao vivo, três idiomas | testes de tela com o `FakePhone`; o cliente contra um computador de mentira (repetição, partes do histórico, mensagem otimista) |
 | **CH4** Teste real | uma conversa de verdade no Android, com um bot do Claude Code real | registrado na seção 19 |
 

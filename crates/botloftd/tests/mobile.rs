@@ -8,67 +8,11 @@ use std::time::Duration;
 
 use botloft_core::protocol::{ApprovalStatus, FromPhone, QuestionStatus, ToPhone};
 use common::bots::ready_bot;
-use common::cloud_server::{CloudServer, cloud_server, cloud_server_pushing, sign_in};
+use common::cloud_server::{cloud_server_pushing, sign_in};
 use common::mcp::Mcp;
-use common::mobile::{Phone, join};
+use common::mobile::{connect_phone, join, setup, status_where};
 use common::{Client, TestDaemon, stream};
 use serde_json::{Value, json};
-
-/// A daemon signed in to its own account server.
-async fn setup() -> (CloudServer, TestDaemon, Client) {
-    let cloud = cloud_server().await;
-    let t = TestDaemon::start_supervised_with_cloud(&cloud.url).await;
-    let mut app = t.session().await;
-    sign_in(&cloud, &mut app).await;
-    (cloud, t, app)
-}
-
-/// Waits until `mobile.status` satisfies `ok`.
-async fn status_where(app: &mut Client, ok: impl Fn(&Value) -> bool) -> Value {
-    for _ in 0..200 {
-        let status = app
-            .call("mobile.status", Value::Null)
-            .await
-            .expect("status");
-        if ok(&status) {
-            return status;
-        }
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
-    panic!("mobile.status never became what the test waits for");
-}
-
-/// Connects a phone as the owner would, comparing the codes.
-async fn connect_phone(cloud: &CloudServer, app: &mut Client) -> Phone {
-    let started = app
-        .call("mobile.pair_start", Value::Null)
-        .await
-        .expect("start");
-    assert_eq!(started["expiresIn"], 300);
-    let qr = started["url"].as_str().expect("url");
-    assert!(qr.starts_with(&format!("{}/m#p=", cloud.url)), "{qr}");
-    let joined = join(&cloud.url, qr, "Celular da Ana", false).await;
-    let request = app.notification("mobile.pair_request").await;
-    assert_eq!(request["name"], "Celular da Ana");
-    assert_eq!(
-        request["code"],
-        joined.code.as_str(),
-        "both screens show the same code"
-    );
-    assert_eq!(request["pairId"], started["pairId"]);
-    app.call(
-        "mobile.pair_confirm",
-        json!({ "pairId": started["pairId"], "accept": true }),
-    )
-    .await
-    .expect("confirm");
-    let mut phone = joined.collect().await.expect("a token");
-    status_where(app, |s| s["phones"][0]["id"] == phone.id.as_str()).await;
-    let ready = phone.connect().await;
-    assert_eq!(ready["kind"], "phone");
-    status_where(app, |s| s["phones"][0]["online"] == true).await;
-    phone
-}
 
 /// A lead in a turn, ready to ask for permission.
 async fn lead(

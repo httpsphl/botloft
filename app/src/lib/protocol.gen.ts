@@ -1458,11 +1458,6 @@ export type QuestionCard = { questionId: QuestionId, bot: CardBot, crew: string,
  */
 export type ChatLine = { botId: BotId, name: string, color: string, crew: string, state: BotState, 
 /**
- * False for a bot that can only be written to at the computer
- * (`bypass_permissions`, spec 28.12).
- */
-canSend: boolean, 
-/**
  * When the bot last finished a reply, in Unix milliseconds.
  */
 lastReplyAt?: number, 

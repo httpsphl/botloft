@@ -174,9 +174,6 @@ pub struct ChatLine {
     pub color: String,
     pub crew: String,
     pub state: BotState,
-    /// False for a bot that can only be written to at the computer
-    /// (`bypass_permissions`, spec 28.12).
-    pub can_send: bool,
     /// When the bot last finished a reply, in Unix milliseconds.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(test, ts(optional))]

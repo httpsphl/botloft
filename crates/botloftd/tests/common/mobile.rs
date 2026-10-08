@@ -13,6 +13,9 @@ use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
 
+use super::cloud_server::{CloudServer, cloud_server, sign_in};
+use super::{Client, TestDaemon};
+
 const WAIT: Duration = Duration::from_secs(10);
 
 /// A phone that scanned the code and joined it.
@@ -200,9 +203,20 @@ impl Phone {
         }
     }
 
-    /// The next thing the computer says, opened. Frames that are not messages
-    /// (who is online) are skipped.
+    /// The next thing the computer says, opened, except for the changes in
+    /// the list of conversations (`next_any` gives those too).
     pub async fn next(&mut self) -> ToPhone {
+        loop {
+            let message = self.next_any().await;
+            if !matches!(message, ToPhone::Line { .. }) {
+                return message;
+            }
+        }
+    }
+
+    /// The next message, opened. Frames that are not messages (who is
+    /// online) are skipped.
+    pub async fn next_any(&mut self) -> ToPhone {
         loop {
             let frame = self.frame().await;
             if frame["t"] != "msg" {
@@ -228,7 +242,20 @@ impl Phone {
                 Err(_) => return,
                 Ok(Some(Ok(Message::Text(text)))) => {
                     let frame: Value = serde_json::from_str(&text).expect("json");
-                    assert_ne!(frame["t"], "msg", "unexpected message: {frame}");
+                    if frame["t"] == "msg" {
+                        let (_, plain) = seal::open(
+                            &self.keys.c2p,
+                            Dir::ComputerToPhone,
+                            &self.id,
+                            frame["body"].as_str().expect("body"),
+                        )
+                        .expect("a message that opens");
+                        let message: ToPhone = serde_json::from_slice(&plain).expect("known");
+                        assert!(
+                            matches!(message, ToPhone::Line { .. }),
+                            "unexpected message: {message:?}"
+                        );
+                    }
                 }
                 Ok(other) => panic!("the socket ended: {other:?}"),
             }
@@ -246,4 +273,60 @@ impl Phone {
             }
         }
     }
+}
+
+/// A daemon signed in to its own account server.
+pub async fn setup() -> (CloudServer, TestDaemon, Client) {
+    let cloud = cloud_server().await;
+    let t = TestDaemon::start_supervised_with_cloud(&cloud.url).await;
+    let mut app = t.session().await;
+    sign_in(&cloud, &mut app).await;
+    (cloud, t, app)
+}
+
+/// Waits until `mobile.status` satisfies `ok`.
+pub async fn status_where(app: &mut Client, ok: impl Fn(&Value) -> bool) -> Value {
+    for _ in 0..200 {
+        let status = app
+            .call("mobile.status", Value::Null)
+            .await
+            .expect("status");
+        if ok(&status) {
+            return status;
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    panic!("mobile.status never became what the test waits for");
+}
+
+/// Connects a phone as the owner would, comparing the codes.
+pub async fn connect_phone(cloud: &CloudServer, app: &mut Client) -> Phone {
+    let started = app
+        .call("mobile.pair_start", Value::Null)
+        .await
+        .expect("start");
+    assert_eq!(started["expiresIn"], 300);
+    let qr = started["url"].as_str().expect("url");
+    assert!(qr.starts_with(&format!("{}/m#p=", cloud.url)), "{qr}");
+    let joined = join(&cloud.url, qr, "Celular da Ana", false).await;
+    let request = app.notification("mobile.pair_request").await;
+    assert_eq!(request["name"], "Celular da Ana");
+    assert_eq!(
+        request["code"],
+        joined.code.as_str(),
+        "both screens show the same code"
+    );
+    assert_eq!(request["pairId"], started["pairId"]);
+    app.call(
+        "mobile.pair_confirm",
+        json!({ "pairId": started["pairId"], "accept": true }),
+    )
+    .await
+    .expect("confirm");
+    let mut phone = joined.collect().await.expect("a token");
+    status_where(app, |s| s["phones"][0]["id"] == phone.id.as_str()).await;
+    let ready = phone.connect().await;
+    assert_eq!(ready["kind"], "phone");
+    status_where(app, |s| s["phones"][0]["online"] == true).await;
+    phone
 }
