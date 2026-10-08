@@ -8,22 +8,48 @@ import type { PhoneApi, PhoneState } from "./client";
 import { BotDot, PhoneButton, PhoneMarkdown } from "./parts";
 import { SEND_MAX } from "./talk";
 
+/** How far from the end still counts as reading the end. */
+const FOLLOW_PX = 120;
+
 export function ChatView({ api, state, back }: { api: PhoneApi; state: PhoneState; back(): void }) {
   const c = useT().phone.chats;
   const { convo } = state;
   const line = state.chats.find((one) => one.botId === convo?.botId);
   const [text, setText] = useState("");
   const [tooLong, setTooLong] = useState(false);
-  const end = useRef<HTMLDivElement>(null);
-  const last = convo?.items.at(-1)?.id;
-  const pendingCount = convo?.pending.length ?? 0;
+  const column = useRef<HTMLDivElement>(null);
+  /** The owner is at the end of the conversation, so what comes is followed. */
+  const atEnd = useRef(true);
   const failed = convo?.pending.find((pending) => pending.status === "failed");
 
-  // New things scroll into view; older ones added at the top do not.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: these are what moves the end
+  // Whatever makes the conversation taller (a new item, the reply as it is
+  // written, "working…", a card) keeps its end in view for whoever is
+  // reading the end; someone who scrolled up is left where they are.
+  const open = convo !== null;
   useEffect(() => {
-    end.current?.scrollIntoView?.({ block: "end" });
-  }, [last, pendingCount, convo?.live, convo?.loaded]);
+    const node = column.current;
+    if (!open || !node) {
+      return;
+    }
+    const onScroll = () => {
+      const page = document.documentElement;
+      atEnd.current = page.scrollHeight - window.scrollY - window.innerHeight < FOLLOW_PX;
+    };
+    const follow = () => {
+      if (atEnd.current) {
+        window.scrollTo({ top: document.documentElement.scrollHeight });
+      }
+    };
+    atEnd.current = true;
+    window.addEventListener("scroll", onScroll, { passive: true });
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(follow);
+    observer?.observe(node);
+    follow();
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      observer?.disconnect();
+    };
+  }, [open]);
 
   // A message that did not go comes back to the box, if the box is empty.
   const failedText = failed?.text;
@@ -47,6 +73,7 @@ export function ChatView({ api, state, back }: { api: PhoneApi; state: PhoneStat
       return;
     }
     setTooLong(false);
+    atEnd.current = true;
     const body = text;
     setText("");
     await api.write(body);
@@ -65,11 +92,14 @@ export function ChatView({ api, state, back }: { api: PhoneApi; state: PhoneStat
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col gap-3">
+      <div ref={column} className="flex flex-1 flex-col gap-3">
         {convo.more && (
           <PhoneButton
             className="flex-none"
-            onClick={() => void api.olderItems()}
+            onClick={() => {
+              atEnd.current = false;
+              void api.olderItems();
+            }}
             disabled={convo.older}
           >
             {convo.older ? c.loadingOlder : c.older}
@@ -95,7 +125,6 @@ export function ChatView({ api, state, back }: { api: PhoneApi; state: PhoneStat
             {c.busy(name)}
           </p>
         )}
-        <div ref={end} />
       </div>
 
       <form

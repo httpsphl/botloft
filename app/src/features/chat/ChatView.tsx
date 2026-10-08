@@ -7,6 +7,7 @@ import {
   memo,
   type ReactNode,
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -50,6 +51,7 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
   const files = useFiles();
   const scroller = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLOListElement>(null);
+  const content = useRef<HTMLDivElement>(null);
   /** The search result already shown, so it is not scrolled to again. */
   const shownFocus = useRef<string | null>(null);
   const atEnd = useRef(true);
@@ -66,8 +68,9 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
   const openedAt = useMemo(() => Date.now(), [bot.id]);
   useSharedSound(chat.items, openedAt);
   const last = chat.items.at(-1);
+  const working = bot.state === "busy";
   /** Changes whenever the end of the chat does. */
-  const end = `${chat.items.length}/${last?.id}/${last?.updatedAt}/${chat.draft.length}`;
+  const end = `${chat.items.length}/${last?.id}/${last?.updatedAt}/${chat.draft.length}/${working}`;
   const seenTail = useRef("");
 
   useLayoutEffect(() => {
@@ -84,6 +87,23 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
     }
   }, [end]);
 
+  // Whatever makes the chat taller (the dots of a bot that starts, a card
+  // opening, an image loading) keeps the end in view for who is reading it.
+  useEffect(() => {
+    const element = content.current;
+    if (!element || typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      const scrolled = scroller.current;
+      if (scrolled && atEnd.current) {
+        scrolled.scrollTop = scrolled.scrollHeight;
+      }
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
   const onSent = useCallback(() => {
     atEnd.current = true;
   }, []);
@@ -93,10 +113,11 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
     if (element) {
       anchor.current = element.scrollHeight - element.scrollTop;
     }
+    // Whoever loads older items is reading up the chat, not following it.
+    atEnd.current = false;
     void chat.loadOlder();
   };
 
-  const working = bot.state === "busy";
   const live: Live | undefined = chat.draft || working ? { draft: chat.draft, working } : undefined;
   const rows = useMemo(() => chatRows(chat.items), [chat.items]);
   const tail = rows.at(-1);
@@ -181,7 +202,7 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
             element.scrollHeight - element.scrollTop - element.clientHeight < STICKY_PX;
         }}
       >
-        <div className="flex flex-col px-5 pt-5 pb-3">
+        <div ref={content} className="flex flex-col px-5 pt-5 pb-3">
           {chat.error && (
             <Callout tone="danger" title={t.chat.view.loadFailed}>
               {chat.error}

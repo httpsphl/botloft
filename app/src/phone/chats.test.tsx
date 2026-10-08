@@ -385,3 +385,51 @@ describe("what the owner read on the computer", () => {
     expect(within(screen.getByRole("button", { name: /Writer/ })).queryByRole("img")).toBeNull();
   });
 });
+
+describe("following the end of a conversation", () => {
+  test("goes down as it grows while the owner reads the end, and not when they scrolled up", async () => {
+    let grew = () => {};
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(callback: ResizeObserverCallback) {
+          grew = () => callback([], this as unknown as ResizeObserver);
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    const scrollTo = vi.fn();
+    vi.stubGlobal("scrollTo", scrollTo);
+    Object.defineProperty(document.documentElement, "scrollHeight", {
+      value: 3000,
+      configurable: true,
+    });
+    Object.defineProperty(window, "innerHeight", { value: 800, configurable: true });
+    const at = (y: number) => {
+      Object.defineProperty(window, "scrollY", { value: y, configurable: true });
+      window.dispatchEvent(new Event("scroll"));
+    };
+    const phone = withList(line({ state: "busy" }));
+    await openChat(phone, [you("itm_1", "Hello")]);
+    expect(scrollTo).toHaveBeenCalledWith({ top: 3000 });
+
+    // "working…" and the reply as it is written make it taller.
+    scrollTo.mockClear();
+    act(() => phone.receive({ t: "live", botId: "bot_1", text: "Writing" }));
+    act(() => grew());
+    expect(scrollTo).toHaveBeenCalledWith({ top: 3000 });
+
+    // Scrolled up to read: left alone.
+    at(0);
+    scrollTo.mockClear();
+    act(() => grew());
+    expect(scrollTo).not.toHaveBeenCalled();
+
+    // Back at the end: followed again.
+    at(2200);
+    act(() => grew());
+    expect(scrollTo).toHaveBeenCalledWith({ top: 3000 });
+    vi.unstubAllGlobals();
+  });
+});
