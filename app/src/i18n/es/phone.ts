@@ -79,6 +79,42 @@ export const phone: Messages["phone"] = {
     install:
       "Para recibir avisos, añade Botloft a la pantalla de inicio: toca Compartir y luego Añadir a pantalla de inicio.",
   },
+  lock: {
+    title: "Botloft está bloqueado",
+    pinLabel: "PIN",
+    unlock: "Desbloquear",
+    unlocking: "Abriendo…",
+    wrong: (left: number) =>
+      `PIN incorrecto. ${left === 1 ? "Queda 1 intento" : `Quedan ${left} intentos`}.`,
+    wait: (seconds: number) => `Espera ${seconds} s antes de intentarlo de nuevo.`,
+    wiped:
+      "Demasiados PIN incorrectos: este móvil fue desconectado. Conéctalo de nuevo desde el ordenador.",
+    forgot: "Olvidé el PIN",
+    forgotTitle: "¿Olvidaste el PIN?",
+    forgotText:
+      "Este móvil se desconectará y lo conectas de nuevo desde el ordenador. No se pierde nada: las conversaciones se quedan en el ordenador.",
+    forgotConfirm: "Desconectar este móvil",
+  },
+  pin: {
+    title: "Bloqueo con PIN",
+    why: "Con un PIN, quien coja este móvil desbloqueado no puede leer tus conversaciones ni aprobar solicitudes. Sin él, el móvil queda abierto para quien lo tenga en la mano.",
+    on: "El PIN está activado. La app se bloquea un minuto después de salir de ella.",
+    off: "El PIN está desactivado.",
+    turnOn: "Activar el PIN",
+    turnOff: "Desactivar el PIN",
+    newPin: "Nuevo PIN (de 6 a 10 números)",
+    again: "Repite el PIN",
+    current: "PIN actual",
+    mismatch: "Los dos PIN son distintos.",
+    invalid: "Usa de 6 a 10 números.",
+    wrongPin: "PIN incorrecto.",
+    save: "Guardar",
+    cancel: "Cancelar",
+    old: "Para activar el PIN, conecta este móvil de nuevo: pide un código nuevo en el ordenador.",
+    nudgeTitle: "¿Proteger este móvil con un PIN?",
+    nudgeYes: "Proteger con un PIN",
+    nudgeNo: "Ahora no",
+  },
   cut: {
     revokedTitle: "Este móvil fue desconectado",
     leftTitle: "Móvil desconectado",

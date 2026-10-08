@@ -2461,3 +2461,5 @@ Status: **LK1 (spec)**. Um celular desbloqueado e conectado aprova pedidos (28.5
 |---|---|---|
 | **LK1** Spec | esta seção | revisão do dono |
 | **LK2** PWA | o cofre (cifra, contadores, erros), a tela do PIN, ligar e desligar em "Este celular", o aviso da caixa, a trava por segundo plano, três idiomas | o cofre contra o WebCrypto (PIN certo e errado, adulteração, espera, apagar no décimo erro, sessão antiga); telas com o `FakePhone`; a trava no Android de verdade |
+
+**Visto** (2026-10-08, navegador do app como celular, servidor e daemon de verdade em processo): conectar mostra o aviso com o motivo; ligar o PIN deixa no IndexedDB só `{v, lock: {salt, iterations: 600000, iv, ct, failed, nextTryAt}}`, sem `plain`, sem o token e sem os ids; recarregar a página abre trancada; PIN errado diz "Restam 9 tentativas" e limpa o campo; o PIN certo abre, reconecta e traz os pedidos de volta; com a página "escondida" ela seguia aberta aos 26 s e estava trancada aos 70 s. **Falta ver no Android de verdade**: o teclado numérico, o minuto em segundo plano com o app instalado, e o que acontece com uma sessão feita antes do PIN (deve dizer para conectar de novo).

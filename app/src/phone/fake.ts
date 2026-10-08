@@ -4,6 +4,7 @@
 import type { ApprovalCard, QuestionCard } from "../lib/protocol.gen";
 import type { PhoneApi, PhoneState } from "./client";
 import type { NoticeState } from "./notices";
+import type { LockApi } from "./PinSettings";
 
 export class FakePhone implements PhoneApi {
   private state: PhoneState = {
@@ -69,5 +70,34 @@ export class FakePhone implements PhoneApi {
   disconnect = async () => {
     this.calls.push({ method: "disconnect", args: [] });
     this.set({ session: "left" });
+  };
+}
+
+/** The page's lock, for the tests: it keeps the PIN it was given. */
+export class FakeLock implements LockApi {
+  state_: "off" | "on" | "old" = "off";
+  pin: string | null = null;
+  dismissed = false;
+  readonly calls: string[] = [];
+
+  state = async () => this.state_;
+  setPin = async (pin: string) => {
+    this.calls.push("setPin");
+    this.pin = pin;
+    this.state_ = "on";
+  };
+  removePin = async (pin: string) => {
+    this.calls.push("removePin");
+    if (pin !== this.pin) {
+      return false;
+    }
+    this.pin = null;
+    this.state_ = "off";
+    return true;
+  };
+  nudgeDismissed = () => this.dismissed;
+  dismissNudge = () => {
+    this.calls.push("dismissNudge");
+    this.dismissed = true;
   };
 }

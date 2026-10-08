@@ -110,6 +110,9 @@ export class PhoneClient implements PhoneApi {
 
   getState = (): PhoneState => this.state;
 
+  /** The session as it is now, counters and all (for locking it, spec 28.13). */
+  snapshot = (): Session => this.session;
+
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);

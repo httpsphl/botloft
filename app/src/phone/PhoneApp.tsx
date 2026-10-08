@@ -9,6 +9,7 @@ import { Confirm } from "../ui/Confirm";
 import { ApprovalView } from "./ApprovalView";
 import type { PhoneApi } from "./client";
 import { Notices } from "./NoticesControl";
+import { type LockApi, PinNudge, PinSettings } from "./PinSettings";
 import { PhoneButton } from "./parts";
 import { QuestionView } from "./QuestionView";
 
@@ -26,7 +27,16 @@ function needsHomeScreen(): boolean {
   return ios && !standalone && !window.matchMedia?.("(display-mode: standalone)").matches;
 }
 
-export function PhoneApp({ api, onGone }: { api: PhoneApi; onGone?(): void }) {
+export function PhoneApp({
+  api,
+  onGone,
+  lock,
+}: {
+  api: PhoneApi;
+  onGone?(): void;
+  /** The PIN (spec 28.13); without it the page offers none. */
+  lock?: LockApi;
+}) {
   const t = useT().phone;
   const state = usePhone(api);
   const [view, setView] = useState<"inbox" | "phone">("inbox");
@@ -51,7 +61,7 @@ export function PhoneApp({ api, onGone }: { api: PhoneApi; onGone?(): void }) {
     );
   }
   if (view === "phone") {
-    return <ThisPhone api={api} name={state.name} back={() => setView("inbox")} />;
+    return <ThisPhone api={api} name={state.name} lock={lock} back={() => setView("inbox")} />;
   }
 
   const waiting = state.approvals.length + state.questions.length;
@@ -73,6 +83,7 @@ export function PhoneApp({ api, onGone }: { api: PhoneApi; onGone?(): void }) {
       {state.link !== "online" && <Callout tone="info" title={t.inbox.noConnection} />}
       {needsHomeScreen() && <Callout tone="info" title={t.settings.install} />}
       <Notices api={api} invite />
+      {lock && <PinNudge lock={lock} open={() => setView("phone")} />}
 
       <div className="flex flex-col gap-4">
         {state.approvals.map((card) => (
@@ -118,7 +129,17 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ThisPhone({ api, name, back }: { api: PhoneApi; name: string; back(): void }) {
+function ThisPhone({
+  api,
+  name,
+  lock,
+  back,
+}: {
+  api: PhoneApi;
+  name: string;
+  lock: LockApi | undefined;
+  back(): void;
+}) {
   const t = useT().phone;
   const [leaving, setLeaving] = useState(false);
   return (
@@ -135,6 +156,7 @@ function ThisPhone({ api, name, back }: { api: PhoneApi; name: string; back(): v
       </p>
       {needsHomeScreen() && <Callout tone="info" title={t.settings.install} />}
       <Notices api={api} />
+      {lock && <PinSettings lock={lock} />}
       <PhoneButton look="danger" onClick={() => setLeaving(true)} className="flex-none">
         {t.settings.disconnect}
       </PhoneButton>
