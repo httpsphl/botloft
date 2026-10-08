@@ -3,11 +3,12 @@
 
 mod common;
 
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use botloft_core::protocol::{ApprovalStatus, FromPhone, QuestionStatus, ToPhone};
 use common::bots::ready_bot;
-use common::cloud_server::{CloudServer, cloud_server, sign_in};
+use common::cloud_server::{CloudServer, cloud_server, cloud_server_pushing, sign_in};
 use common::mcp::Mcp;
 use common::mobile::{Phone, join};
 use common::{Client, TestDaemon, stream};
@@ -471,4 +472,86 @@ async fn the_relay_comes_back_when_the_server_cuts_it_and_nothing_is_lost_for_go
         panic!("open")
     };
     assert_eq!(card.text, "After the drop?");
+}
+
+/// What a push service was asked: the authorization and the size of the body.
+type Asked = Arc<Mutex<Vec<(String, usize)>>>;
+
+#[tokio::test]
+async fn a_question_that_opens_makes_the_server_push_the_phone_with_nothing_in_it() {
+    // A push service that counts what it is asked, and what came with it.
+    let asked: Asked = Arc::default();
+    let service = axum::Router::new()
+        .route(
+            "/{*any}",
+            axum::routing::post(
+                |axum::extract::State(asked): axum::extract::State<Asked>,
+                 headers: axum::http::HeaderMap,
+                 body: axum::body::Bytes| async move {
+                    let auth = headers
+                        .get("authorization")
+                        .and_then(|value| value.to_str().ok())
+                        .unwrap_or_default()
+                        .to_owned();
+                    asked.lock().expect("asked").push((auth, body.len()));
+                    axum::http::StatusCode::CREATED
+                },
+            ),
+        )
+        .with_state(Arc::clone(&asked));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind");
+    let address = listener.local_addr().expect("address");
+    tokio::spawn(async move {
+        let _ = axum::serve(listener, service).await;
+    });
+
+    let (private, _) = botloft_cloud::new_key().expect("key");
+    let pusher = botloft_cloud::Pusher::new(
+        &private,
+        "mailto:ops@example.org",
+        &["127.0.0.1".to_owned()],
+        Duration::from_millis(50),
+    )
+    .expect("pusher");
+    let cloud = cloud_server_pushing(pusher).await;
+    let t = TestDaemon::start_supervised_with_cloud(&cloud.url).await;
+    let mut app = t.session().await;
+    sign_in(&cloud, &mut app).await;
+    let mut phone = connect_phone(&cloud, &mut app).await;
+    let subscribed = reqwest::Client::new()
+        .post(format!("{}/v1/push/subscribe", cloud.url))
+        .bearer_auth(&phone.token)
+        .json(&json!({ "endpoint": format!("http://{address}/push/abc") }))
+        .send()
+        .await
+        .expect("subscribe");
+    assert_eq!(subscribed.status(), 204);
+
+    // A bot asks: the owner's phone is told, and the push holds nothing of it.
+    let crew = app
+        .call("crews.create", json!({ "name": "Ops" }))
+        .await
+        .expect("crew");
+    let (_, _process, mut mcp) = ready_bot(&t, &mut app, &crew, "Scout").await;
+    mcp.tool("ask_owner", json!({ "question": "A secret question?" }))
+        .await
+        .expect("asked");
+    for _ in 0..100 {
+        if !asked.lock().expect("asked").is_empty() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    let pushes = asked.lock().expect("asked").clone();
+    assert_eq!(pushes.len(), 1);
+    assert!(pushes[0].0.starts_with("vapid t="), "{}", pushes[0].0);
+    assert_eq!(pushes[0].1, 0, "an empty push");
+    assert!(!pushes[0].0.contains("secret"));
+    // The question itself reaches the phone, sealed, through the relay.
+    let ToPhone::QuestionOpen { card } = phone.next().await else {
+        panic!("the question should reach the phone");
+    };
+    assert_eq!(card.text, "A secret question?");
 }

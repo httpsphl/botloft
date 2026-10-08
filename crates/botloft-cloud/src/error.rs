@@ -59,6 +59,22 @@ impl ApiError {
         )
     }
 
+    pub fn no_push() -> Self {
+        Self::new(
+            StatusCode::NOT_FOUND,
+            "no_push",
+            "This server does not send notices.",
+        )
+    }
+
+    pub fn bad_endpoint() -> Self {
+        Self::new(
+            StatusCode::BAD_REQUEST,
+            "bad_endpoint",
+            "That is not an address of a push service this server uses.",
+        )
+    }
+
     pub fn bad_email() -> Self {
         Self::new(
             StatusCode::BAD_REQUEST,

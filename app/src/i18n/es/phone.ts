@@ -59,6 +59,15 @@ export const phone: Messages["phone"] = {
     ended: { answered: "Respondiste", dismissed: "Descartada" },
   },
   settings: {
+    notices: {
+      turnOn: "Activar los avisos",
+      turnOff: "Desactivar los avisos",
+      on: "Los avisos están activados. Recibes uno cuando un bot te necesite.",
+      off: "Los avisos están desactivados.",
+      blocked:
+        "Los avisos están bloqueados para esta página. Permítelos en los ajustes del navegador.",
+      unsupported: "Este navegador no puede dar avisos.",
+    },
     title: "Este móvil",
     back: "Volver",
     name: "Nombre",

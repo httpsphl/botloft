@@ -10,6 +10,15 @@ import type {
   ToPhone,
 } from "../lib/protocol.gen";
 import { open, SealError, seal } from "./crypto";
+import {
+  keepNotices,
+  type NoticePlatform,
+  type NoticeServer,
+  type NoticeState,
+  noticeState,
+  turnOff,
+  turnOn,
+} from "./notices";
 import type { Session, SessionStore } from "./store";
 
 export type Ended = Exclude<ApprovalStatus, "pending"> | Exclude<QuestionStatus, "open">;
@@ -41,6 +50,10 @@ export interface PhoneApi {
   dismissQuestion(id: string): Promise<boolean>;
   /** Leaves from this side: the computer is told, and the keys go. */
   disconnect(): Promise<void>;
+  /** Notices when something waits (spec 28.8). */
+  noticeState(): Promise<NoticeState>;
+  turnOnNotices(): Promise<NoticeState>;
+  turnOffNotices(): Promise<NoticeState>;
 }
 
 export interface Deps {
@@ -53,6 +66,8 @@ export interface Deps {
   retry?: { min: number; max: number };
   /** How long an answer may be on its way before the button comes back. */
   answerWait?: number;
+  /** The browser's push; without it, this phone gives no notices. */
+  notices?: NoticePlatform;
 }
 
 const text = new TextEncoder();
@@ -158,6 +173,8 @@ export class PhoneClient implements PhoneApi {
     switch (frame.t) {
       case "ready":
         this.delay = this.deps.retry?.min ?? 1000;
+        // The server may have lost this phone's address for notices.
+        void this.keepNotices();
         this.set({ link: "online", computer: frame.online === true ? "online" : "offline" });
         await this.send({ t: "sync" });
         break;
@@ -332,6 +349,49 @@ export class PhoneClient implements PhoneApi {
 
   dismissQuestion = (id: string): Promise<boolean> =>
     this.answer(id, { t: "question.dismiss", questionId: id });
+
+  private noticeServer(): NoticeServer {
+    const call = (method: string, path: string, body?: unknown) =>
+      this.deps.fetch(`${this.deps.origin}/v1/push/${path}`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${this.session.token}`,
+          ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+    return {
+      key: async () => {
+        const answer = await call("GET", "key");
+        return answer.ok ? (((await answer.json()) as { key?: string }).key ?? null) : null;
+      },
+      subscribe: async (endpoint) => (await call("POST", "subscribe", { endpoint })).ok,
+      unsubscribe: async () => {
+        await call("DELETE", "subscribe");
+      },
+    };
+  }
+
+  private async keepNotices(): Promise<void> {
+    if (this.deps.notices) {
+      await keepNotices(this.deps.notices, this.noticeServer()).catch(() => {});
+    }
+  }
+
+  noticeState = async (): Promise<NoticeState> =>
+    this.deps.notices
+      ? noticeState(this.deps.notices, this.noticeServer()).catch(() => "unsupported")
+      : "unsupported";
+
+  turnOnNotices = async (): Promise<NoticeState> =>
+    this.deps.notices
+      ? turnOn(this.deps.notices, this.noticeServer()).catch(() => "off")
+      : "unsupported";
+
+  turnOffNotices = async (): Promise<NoticeState> =>
+    this.deps.notices
+      ? turnOff(this.deps.notices, this.noticeServer()).catch(() => "off")
+      : "unsupported";
 
   private cut(session: "revoked" | "left"): void {
     this.stop();

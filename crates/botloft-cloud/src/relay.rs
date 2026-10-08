@@ -266,7 +266,12 @@ fn handle(state: &AppState, who: &Who, text: &str) -> Option<Value> {
                 .run(|conn| rows::ack(conn, &who.device_id, from, upto));
             None
         }
-        // `wake` is for the push of CE6; pings and pongs need no answer.
+        // Something waits for the owner: the phones that are not looking are told.
+        (Kind::Computer, "wake") => {
+            state.push.wake(state, &who.device_id);
+            None
+        }
+        // Pings and pongs need no answer.
         _ => None,
     }
 }

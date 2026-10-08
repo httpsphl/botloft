@@ -547,6 +547,8 @@ dependencies = [
  "hex",
  "lettre",
  "object_store",
+ "p256",
+ "reqwest",
  "rusqlite",
  "serde",
  "serde_json",
@@ -1480,7 +1482,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c0681a4fc24c767085329728d8dfba959af91228aa4610cca4f8ce317ba46ae0"
 dependencies = [
  "der",
+ "digest 0.11.3",
  "elliptic-curve",
+ "rfc6979",
  "signature",
  "spki",
  "zeroize",
@@ -3517,6 +3521,7 @@ dependencies = [
  "elliptic-curve",
  "primefield",
  "primeorder",
+ "sha2 0.11.0",
 ]
 
 [[package]]
@@ -4167,6 +4172,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rfc6979"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4a459cddafb3fe76b31fd8f1108007566c40301feb64dc7b54656eb7388172b"
+dependencies = [
+ "crypto-bigint",
+ "hmac",
+]
+
+[[package]]
 name = "rfd"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4754,6 +4769,7 @@ version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "28d567dcbaf0049cb8ac2608a76cd95ff9e4412e1899d389ee400918ca7537f5"
 dependencies = [
+ "digest 0.11.3",
  "rand_core 0.10.1",
 ]
 

@@ -136,6 +136,16 @@ cd deploy/cloud && docker compose up -d --build
 
 O banco se atualiza sozinho ao subir (as migrações são numeradas e rodam uma vez). Faça um backup (passo 9) antes de uma versão nova.
 
+## Avisos no celular (opcional)
+
+Sem isto o celular (spec 28) só mostra os pedidos quando a página está aberta. Para o Botloft avisar com a tela bloqueada, ligue o Web Push:
+
+```bash
+docker compose run --rm cloud vapid-key --to /config/vapid-key   # imprime a chave pública
+```
+
+Depois descomente `[push]` no `cloud.toml` (ou no `BOTLOFT_CLOUD_CONFIG`): `subject` (um `mailto:` ou `https:` seu), `vapid_key_file` (ou a variável `BOTLOFT_CLOUD_VAPID_KEY`, para o Coolify) e, se quiser, `allow_hosts`. O servidor só chama os serviços de push dos navegadores (Chrome, Firefox, Edge, Safari) e manda uma chamada **vazia** e assinada: o texto do aviso é o da própria página, e nada de bot, comando ou pergunta passa por Google, Apple ou Mozilla. Guarde a chave privada como guarda a senha do SMTP: quem a tem pode mandar avisos em nome do seu servidor. Trocá-la obriga cada celular a ligar os avisos de novo.
+
 ## Limites conhecidos
 
 - **Uma instância só.** O banco é um arquivo SQLite: não suba dois servidores sobre o mesmo `cloud.db`.

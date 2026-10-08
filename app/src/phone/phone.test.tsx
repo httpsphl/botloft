@@ -208,3 +208,43 @@ describe("connecting this phone", () => {
     expect(guessName(names, "Mozilla/5.0 (X11; Linux x86_64)")).toBe("Phone");
   });
 });
+
+describe("notices", () => {
+  test("the inbox invites while they are off and goes quiet once they are on", async () => {
+    const phone = new FakePhone();
+    render(<PhoneApp api={phone} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Turn on notices" }));
+    await waitFor(() => expect(phone.calls.map((call) => call.method)).toEqual(["turnOnNotices"]));
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Turn on notices" })).toBeNull(),
+    );
+  });
+
+  test("the page about this phone turns them on and off and says when they are blocked", async () => {
+    const phone = new FakePhone();
+    phone.notices = "on";
+    render(<PhoneApp api={phone} />);
+    // On: the inbox has nothing to say; this phone's page has the control.
+    expect(screen.queryByRole("button", { name: "Turn on notices" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "This phone" }));
+    expect(await screen.findByText(/Notices are on/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Turn off notices" }));
+    expect(await screen.findByText("Notices are off.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Turn on notices" })).toBeTruthy();
+  });
+
+  test("says when the owner blocked them or the browser cannot", async () => {
+    for (const [state, words] of [
+      ["blocked", /blocked for this page/],
+      ["unsupported", /cannot give notices/],
+    ] as const) {
+      cleanup();
+      const phone = new FakePhone();
+      phone.notices = state;
+      render(<PhoneApp api={phone} />);
+      fireEvent.click(screen.getByRole("button", { name: "This phone" }));
+      expect(await screen.findByText(words)).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "Turn on notices" })).toBeNull();
+    }
+  });
+});

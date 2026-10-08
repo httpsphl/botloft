@@ -59,6 +59,14 @@ export const phone = {
     ended: { answered: "You answered", dismissed: "Dismissed" },
   },
   settings: {
+    notices: {
+      turnOn: "Turn on notices",
+      turnOff: "Turn off notices",
+      on: "Notices are on. You get one when a bot needs you.",
+      off: "Notices are off.",
+      blocked: "Notices are blocked for this page. Allow them in the browser's settings.",
+      unsupported: "This browser cannot give notices.",
+    },
     title: "This phone",
     back: "Back",
     name: "Name",

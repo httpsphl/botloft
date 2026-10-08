@@ -5,6 +5,7 @@
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { PhoneClient } from "./client";
+import { browserPlatform } from "./notices";
 import { PairScreen } from "./PairScreen";
 import { PhoneApp } from "./PhoneApp";
 import { pairing, parseFragment } from "./pair";
@@ -36,6 +37,7 @@ function clientFor(session: Session): PhoneClient {
     webSocket: WebSocket,
     fetch: window.fetch.bind(window),
     store,
+    notices: browserPlatform(),
   });
   client.start();
   return client;

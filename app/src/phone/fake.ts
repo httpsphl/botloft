@@ -3,6 +3,7 @@
 
 import type { ApprovalCard, QuestionCard } from "../lib/protocol.gen";
 import type { PhoneApi, PhoneState } from "./client";
+import type { NoticeState } from "./notices";
 
 export class FakePhone implements PhoneApi {
   private state: PhoneState = {
@@ -17,6 +18,8 @@ export class FakePhone implements PhoneApi {
     name: "Celular da Ana",
   };
   private readonly listeners = new Set<() => void>();
+  /** How notices stand; the buttons change it as the browser would. */
+  notices: NoticeState = "off";
   /** Whether an answer can be sent, for a test of the failure. */
   sendable = true;
   readonly calls: { method: string; args: unknown[] }[] = [];
@@ -52,6 +55,17 @@ export class FakePhone implements PhoneApi {
     this.answer("answerApproval", id, allow, note);
   answerQuestion = (id: string, text: string) => this.answer("answerQuestion", id, text);
   dismissQuestion = (id: string) => this.answer("dismissQuestion", id);
+  noticeState = async (): Promise<NoticeState> => this.notices;
+  turnOnNotices = async (): Promise<NoticeState> => {
+    this.calls.push({ method: "turnOnNotices", args: [] });
+    this.notices = this.notices === "off" ? "on" : this.notices;
+    return this.notices;
+  };
+  turnOffNotices = async (): Promise<NoticeState> => {
+    this.calls.push({ method: "turnOffNotices", args: [] });
+    this.notices = this.notices === "on" ? "off" : this.notices;
+    return this.notices;
+  };
   disconnect = async () => {
     this.calls.push({ method: "disconnect", args: [] });
     this.set({ session: "left" });

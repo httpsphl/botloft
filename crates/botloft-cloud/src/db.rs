@@ -14,6 +14,7 @@ const MIGRATIONS: &[(u32, &str)] = &[
     (1, include_str!("../migrations/0001_accounts.sql")),
     (2, include_str!("../migrations/0002_copies.sql")),
     (3, include_str!("../migrations/0003_mobile.sql")),
+    (4, include_str!("../migrations/0004_push.sql")),
 ];
 
 #[derive(Clone)]
@@ -120,6 +121,7 @@ mod tests {
             "devices",
             "logins",
             "pairings",
+            "push_subscriptions",
             "relay_queue",
         ] {
             assert!(tables.iter().any(|table| table == name), "{name}");

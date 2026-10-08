@@ -33,11 +33,35 @@ pub struct Config {
     /// server serves at `/m` (spec 28.7). Without it there is no page.
     #[serde(default)]
     pub phone_dir: Option<PathBuf>,
+    /// Notices to phones through their browser's push service (spec 28.8).
+    /// Without it, a phone shows only what is there when it is opened.
+    #[serde(default)]
+    pub push: Option<Push>,
     #[serde(default)]
     pub storage: Storage,
     /// Where the copies go when `storage = "bucket"`.
     pub bucket: Option<Bucket>,
     pub smtp: Smtp,
+}
+
+/// Web Push (spec 28.8): the server signs its calls to the push services
+/// with a key of its own (VAPID, RFC 8292) and sends no content.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Push {
+    /// Who runs this server, for the push services: a `mailto:` or `https:`
+    /// address.
+    pub subject: String,
+    /// A file with the private key alone (`botloft-cloud vapid-key` makes
+    /// one). The variable `BOTLOFT_CLOUD_VAPID_KEY` does the same, and wins.
+    #[serde(default)]
+    pub vapid_key_file: Option<PathBuf>,
+    /// The push services a phone may name, by host (a host also covers its
+    /// subdomains). Empty means the ones of the browsers: Chrome, Firefox,
+    /// Edge and Safari. The server calls only these, so a phone cannot make
+    /// it call another address.
+    #[serde(default)]
+    pub allow_hosts: Vec<String>,
 }
 
 /// Where the bytes of the copies are kept (spec 27.2).
@@ -86,6 +110,7 @@ pub const CONFIG_VAR: &str = "BOTLOFT_CLOUD_CONFIG";
 /// The variables that can carry a secret, for the same platforms.
 pub const SMTP_PASSWORD_VAR: &str = "BOTLOFT_CLOUD_SMTP_PASSWORD";
 pub const BUCKET_SECRET_VAR: &str = "BOTLOFT_CLOUD_BUCKET_SECRET";
+pub const VAPID_KEY_VAR: &str = "BOTLOFT_CLOUD_VAPID_KEY";
 
 /// A secret from the variable `var` if it is set, else from `file`. `what`
 /// names it in the error, which never holds the value.
@@ -169,6 +194,12 @@ impl Config {
         {
             anyhow::bail!("client_ip_header is not a header name");
         }
+        if let Some(push) = &config.push
+            && !push.subject.starts_with("mailto:")
+            && !push.subject.starts_with("https://")
+        {
+            anyhow::bail!("[push] subject must be a mailto: or https: address");
+        }
         if config.storage == Storage::Bucket && config.bucket.is_none() {
             anyhow::bail!("storage = \"bucket\" needs a [bucket] section");
         }
@@ -192,6 +223,7 @@ impl Config {
             behind_proxy: true,
             client_ip_header: None,
             phone_dir: None,
+            push: None,
             storage: Storage::Disk,
             bucket: None,
             smtp: Smtp {
@@ -239,6 +271,44 @@ mod tests {
             gone.to_string().contains("cannot read the x file"),
             "{gone}"
         );
+    }
+
+    #[test]
+    fn push_needs_a_subject_that_says_who_runs_the_server() {
+        let with = |subject: &str| {
+            let (_dir, path) = write(&format!(
+                "public_url = \"https://cloud.example.org\"
+                 [smtp]
+host = \"mail\"
+user = \"u\"
+from = \"a <a@b.c>\"
+                 [push]
+subject = \"{subject}\"
+vapid_key_file = \"k\"
+"
+            ));
+            Config::load(&path)
+        };
+        for good in ["mailto:ops@example.org", "https://example.org/contact"] {
+            let config = with(good).expect(good);
+            let push = config.push.expect("push");
+            assert!(
+                push.allow_hosts.is_empty(),
+                "the browsers' services by default"
+            );
+        }
+        for bad in ["ops@example.org", "http://example.org", ""] {
+            assert!(with(bad).is_err(), "{bad}");
+        }
+        let (_dir, path) = write(
+            "public_url = \"https://cloud.example.org\"
+[smtp]
+host = \"mail\"
+user = \"u\"
+             from = \"a <a@b.c>\"
+",
+        );
+        assert!(Config::load(&path).expect("load").push.is_none());
     }
 
     #[test]

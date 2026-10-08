@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use botloft_cloud::{
-    AppState, Clock, Config, CopyStore, Db, Hub, Mailer, SmtpMailer, Storage, router,
+    AppState, Clock, Config, CopyStore, Db, Hub, Mailer, Pusher, SmtpMailer, Storage, router,
 };
 use clap::{Parser, Subcommand};
 
@@ -31,6 +31,13 @@ enum Command {
     Backup {
         #[arg(long, default_value = "cloud.toml")]
         config: PathBuf,
+        /// The file to write; it must not exist yet.
+        #[arg(long)]
+        to: PathBuf,
+    },
+    /// Makes the key the server signs its Web Push calls with (spec 28.8):
+    /// the private half goes in a new file, the public half is printed.
+    VapidKey {
         /// The file to write; it must not exist yet.
         #[arg(long)]
         to: PathBuf,
@@ -63,6 +70,20 @@ async fn main() -> anyhow::Result<()> {
         .init();
     match Cli::parse().command {
         Command::Serve { config } => serve(Config::load(&config)?).await,
+        Command::VapidKey { to } => {
+            let (private, public) = botloft_cloud::new_key()?;
+            let mut file = std::fs::OpenOptions::new();
+            file.write(true).create_new(true);
+            #[cfg(unix)]
+            std::os::unix::fs::OpenOptionsExt::mode(&mut file, 0o600);
+            let mut file = file
+                .open(&to)
+                .context("cannot create the file (it must not exist)")?;
+            std::io::Write::write_all(&mut file, private.as_bytes())?;
+            println!("private key written to {}", to.display());
+            println!("public key (the phones get it from the server): {public}");
+            Ok(())
+        }
         Command::Backup { config, to } => {
             let config = Config::load(&config)?;
             if let Some(folder) = to.parent().filter(|folder| !folder.as_os_str().is_empty()) {
@@ -90,6 +111,7 @@ async fn serve(config: Config) -> anyhow::Result<()> {
         clock: Clock::default(),
         config: Arc::new(config.clone()),
         hub: Hub::default(),
+        push: Pusher::from_config(&config)?,
     };
     let listener = tokio::net::TcpListener::bind(config.listen).await?;
     tracing::info!("listening on {}", config.listen);

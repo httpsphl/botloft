@@ -16,6 +16,7 @@ import {
   seal,
   toB64,
 } from "./crypto";
+import type { NoticePlatform } from "./notices";
 import { PairError, pairing } from "./pair";
 import { memoryStore, type Session } from "./store";
 
@@ -71,7 +72,7 @@ const question = (id: string, at: number): QuestionCard => ({
 });
 
 /** The computer's end: the same keys, the other direction. */
-async function setup() {
+async function setup(notices?: NoticePlatform) {
   FakeSocket.all = [];
   const raw = (fill: number) => new Uint8Array(32).fill(fill);
   const [c2p, p2c] = [await importKey(raw(1)), await importKey(raw(2))];
@@ -86,13 +87,19 @@ async function setup() {
     received: 0,
   };
   await store.save(session);
+  const fetchMock = vi.fn(async (url: string, init?: RequestInit) =>
+    String(url).endsWith("/v1/push/key") && init?.method === "GET"
+      ? Response.json({ key: toB64(new Uint8Array(65).fill(4)) })
+      : new Response(null, { status: 204 }),
+  );
   const client = new PhoneClient(session, {
     origin: "http://127.0.0.1:1",
     webSocket: FakeSocket as unknown as typeof WebSocket,
-    fetch: vi.fn(async () => new Response(null, { status: 204 })) as unknown as typeof fetch,
+    fetch: fetchMock as unknown as typeof fetch,
     store,
     retry: { min: 5, max: 20 },
     answerWait: 50,
+    ...(notices ? { notices } : {}),
   });
   client.start();
   const socket = () => FakeSocket.all[FakeSocket.all.length - 1] as FakeSocket;
@@ -126,7 +133,7 @@ async function setup() {
       return out;
     },
   };
-  return { client, store, socket, computer };
+  return { client, store, socket, computer, fetchMock };
 }
 
 describe("the phone's connection", () => {
@@ -389,5 +396,51 @@ describe("connecting this phone", () => {
     });
     const joined = await (await world({ expire: true })).pair.join("Phone");
     await expect(joined.collect()).rejects.toMatchObject({ reason: "expired" });
+  });
+});
+
+describe("notices", () => {
+  const granted = (): NoticePlatform => ({
+    supported: () => true,
+    homeScreenNeeded: () => false,
+    permission: () => "granted",
+    requestPermission: async () => "granted",
+    subscription: async () => ({ endpoint: "https://push.example/abc" }),
+    subscribe: async () => ({ endpoint: "https://push.example/abc" }),
+    unsubscribe: async () => {},
+  });
+
+  test("a phone with notices on tells the server its address each time it connects", async () => {
+    const { socket, fetchMock } = await setup(granted());
+    socket().serverSend({ t: "ready", kind: "phone", device: DEVICE, peer: PEER, online: true });
+    await vi.waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(
+          ([url, init]) =>
+            String(url).endsWith("/v1/push/subscribe") &&
+            init?.method === "POST" &&
+            init.body === JSON.stringify({ endpoint: "https://push.example/abc" }) &&
+            new Headers(init.headers).get("Authorization") === "Bearer tok",
+        ),
+      ).toBe(true),
+    );
+  });
+
+  test("without the browser's push there is nothing to turn on", async () => {
+    const { client, socket, fetchMock } = await setup();
+    socket().serverSend({ t: "ready", kind: "phone", device: DEVICE, peer: PEER, online: true });
+    expect(await client.noticeState()).toBe("unsupported");
+    expect(await client.turnOnNotices()).toBe("unsupported");
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/v1/push/"))).toBe(false);
+  });
+
+  test("turning them off asks the server to forget the address", async () => {
+    const { client, fetchMock } = await setup(granted());
+    await client.turnOffNotices();
+    expect(
+      fetchMock.mock.calls.some(
+        ([url, init]) => String(url).endsWith("/v1/push/subscribe") && init?.method === "DELETE",
+      ),
+    ).toBe(true);
   });
 });

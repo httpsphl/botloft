@@ -8,7 +8,7 @@ use std::sync::Arc;
 use axum::Router;
 use axum::body::{Body, to_bytes};
 use axum::http::{Request, StatusCode, header};
-use botloft_cloud::{AppState, Clock, Config, CopyStore, Db, Hub, Mailer, Outbox, router};
+use botloft_cloud::{AppState, Clock, Config, CopyStore, Db, Hub, Mailer, Outbox, Pusher, router};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use tower::ServiceExt;
@@ -40,17 +40,22 @@ pub fn server() -> Server {
 }
 
 pub fn start(outbox: Outbox) -> Server {
-    build(outbox, Config::for_tests())
+    build(outbox, Config::for_tests(), Pusher::off())
+}
+
+/// A server that sends Web Push through `pusher`.
+pub fn server_pushing(pusher: Pusher) -> Server {
+    build(Outbox::default(), Config::for_tests(), pusher)
 }
 
 /// A server with other limits than the defaults.
 pub fn server_with(change: impl FnOnce(&mut Config)) -> Server {
     let mut config = Config::for_tests();
     change(&mut config);
-    build(Outbox::default(), config)
+    build(Outbox::default(), config, Pusher::off())
 }
 
-fn build(outbox: Outbox, config: Config) -> Server {
+fn build(outbox: Outbox, config: Config, push: Pusher) -> Server {
     let clock = Clock::default();
     let store = CopyStore::memory();
     let state = AppState {
@@ -60,6 +65,7 @@ fn build(outbox: Outbox, config: Config) -> Server {
         config: Arc::new(config),
         store: store.clone(),
         hub: Hub::default(),
+        push,
     };
     Server {
         app: router(state),

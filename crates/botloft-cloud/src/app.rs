@@ -10,8 +10,9 @@ use crate::config::Config;
 use crate::db::Db;
 use crate::hub::Hub;
 use crate::mailer::Mailer;
+use crate::push::Pusher;
 use crate::store::CopyStore;
-use crate::{copies, login, pairing, phone, relay, removal, session};
+use crate::{copies, login, pairing, phone, push_api, relay, removal, session};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -21,6 +22,7 @@ pub struct AppState {
     pub config: Arc<Config>,
     pub store: CopyStore,
     pub hub: Hub,
+    pub push: Pusher,
 }
 
 pub fn router(state: AppState) -> Router {
@@ -39,6 +41,11 @@ pub fn router(state: AppState) -> Router {
         .route("/m", get(phone::index))
         .route("/m/", get(phone::index))
         .route("/m/{*path}", get(phone::file))
+        .route("/v1/push/key", get(push_api::key))
+        .route(
+            "/v1/push/subscribe",
+            post(push_api::subscribe).delete(push_api::unsubscribe),
+        )
         .route("/v1/relay", get(relay::relay))
         .route("/v1/pairings", post(pairing::open))
         .route(

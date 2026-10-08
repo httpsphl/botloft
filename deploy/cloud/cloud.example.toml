@@ -41,6 +41,16 @@ storage = "disk"
 # secret_file = "/config/bucket-secret"   # a file with the secret alone, or the
 #                                          # variable BOTLOFT_CLOUD_BUCKET_SECRET
 
+# Notices to phones (spec 28.8): the push services of the browsers get an empty,
+# signed call, and the phone's page writes the notice. Make the key with
+#   botloft-cloud vapid-key --to /config/vapid-key
+# and uncomment. Without this section phones see only what is there when they
+# open the page.
+# [push]
+# subject = "mailto:you@example.org"
+# vapid_key_file = "/config/vapid-key"      # or the variable BOTLOFT_CLOUD_VAPID_KEY
+# allow_hosts = []                           # empty: Chrome, Firefox, Edge and Safari
+
 [smtp]
 host = "smtp.example.org"
 port = 587                   # 587 starts TLS; 465 is TLS from the start

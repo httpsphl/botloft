@@ -8,6 +8,7 @@ import { Callout } from "../ui/Callout";
 import { Confirm } from "../ui/Confirm";
 import { ApprovalView } from "./ApprovalView";
 import type { PhoneApi } from "./client";
+import { Notices } from "./NoticesControl";
 import { PhoneButton } from "./parts";
 import { QuestionView } from "./QuestionView";
 
@@ -71,6 +72,7 @@ export function PhoneApp({ api, onGone }: { api: PhoneApi; onGone?(): void }) {
       {state.computer === "offline" && <Callout tone="warn" title={t.inbox.computerOff} />}
       {state.link !== "online" && <Callout tone="info" title={t.inbox.noConnection} />}
       {needsHomeScreen() && <Callout tone="info" title={t.settings.install} />}
+      <Notices api={api} invite />
 
       <div className="flex flex-col gap-4">
         {state.approvals.map((card) => (
@@ -132,6 +134,7 @@ function ThisPhone({ api, name, back }: { api: PhoneApi; name: string; back(): v
         {name}
       </p>
       {needsHomeScreen() && <Callout tone="info" title={t.settings.install} />}
+      <Notices api={api} />
       <PhoneButton look="danger" onClick={() => setLeaving(true)} className="flex-none">
         {t.settings.disconnect}
       </PhoneButton>
