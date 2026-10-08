@@ -13,6 +13,7 @@ use crate::error::ApiError;
 const MIGRATIONS: &[(u32, &str)] = &[
     (1, include_str!("../migrations/0001_accounts.sql")),
     (2, include_str!("../migrations/0002_copies.sql")),
+    (3, include_str!("../migrations/0003_mobile.sql")),
 ];
 
 #[derive(Clone)]
@@ -118,6 +119,8 @@ mod tests {
             "deletions",
             "devices",
             "logins",
+            "pairings",
+            "relay_queue",
         ] {
             assert!(tables.iter().any(|table| table == name), "{name}");
         }

@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use botloft_cloud::{AppState, Clock, Config, CopyStore, Db, Mailer, Outbox, router};
+use botloft_cloud::{AppState, Clock, Config, CopyStore, Db, Hub, Mailer, Outbox, router};
 use serde_json::json;
 use tokio::net::TcpListener;
 
@@ -28,6 +28,7 @@ pub async fn cloud_server() -> CloudServer {
         clock: clock.clone(),
         config: Arc::new(config),
         store: CopyStore::memory(),
+        hub: Hub::default(),
     };
     tokio::spawn(async move {
         axum::serve(listener, router(state)).await.expect("serve");

@@ -6,7 +6,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Context;
-use botloft_cloud::{AppState, Clock, Config, CopyStore, Db, Mailer, SmtpMailer, Storage, router};
+use botloft_cloud::{
+    AppState, Clock, Config, CopyStore, Db, Hub, Mailer, SmtpMailer, Storage, router,
+};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -87,6 +89,7 @@ async fn serve(config: Config) -> anyhow::Result<()> {
         mailer: Arc::new(Mailer::Smtp(Box::new(SmtpMailer::new(&config.smtp)?))),
         clock: Clock::default(),
         config: Arc::new(config.clone()),
+        hub: Hub::default(),
     };
     let listener = tokio::net::TcpListener::bind(config.listen).await?;
     tracing::info!("listening on {}", config.listen);

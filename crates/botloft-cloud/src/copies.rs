@@ -17,7 +17,7 @@ use tokio::io::AsyncWriteExt;
 use crate::app::AppState;
 use crate::copy_rows::{self, Copy, blob_key};
 use crate::error::ApiError;
-use crate::session::Authed;
+use crate::session::Computer;
 use crate::tokens;
 
 /// The upload's temp file goes away however the request ends.
@@ -32,7 +32,7 @@ impl Drop for Temp {
 /// `PUT /v1/copies`
 pub async fn put(
     State(state): State<AppState>,
-    Authed(who): Authed,
+    Computer(who): Computer,
     headers: HeaderMap,
     body: Body,
 ) -> Result<(StatusCode, Json<Value>), ApiError> {
@@ -115,7 +115,7 @@ pub async fn put(
 /// `GET /v1/copies`, newest first.
 pub async fn list(
     State(state): State<AppState>,
-    Authed(who): Authed,
+    Computer(who): Computer,
 ) -> Result<Json<Value>, ApiError> {
     let copies = state.db.run(|conn| copy_rows::list(conn, who.account_id))?;
     let copies: Vec<Value> = copies
@@ -128,7 +128,7 @@ pub async fn list(
 /// `GET /v1/copies/<id>`, all of it or one `Range: bytes=`.
 pub async fn get(
     State(state): State<AppState>,
-    Authed(who): Authed,
+    Computer(who): Computer,
     Path(id): Path<String>,
     headers: HeaderMap,
 ) -> Result<Response, ApiError> {
@@ -171,7 +171,7 @@ pub async fn get(
 /// `DELETE /v1/copies/<id>`
 pub async fn remove(
     State(state): State<AppState>,
-    Authed(who): Authed,
+    Computer(who): Computer,
     Path(id): Path<String>,
 ) -> Result<StatusCode, ApiError> {
     let removed = state

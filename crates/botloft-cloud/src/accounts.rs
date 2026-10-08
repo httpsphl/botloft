@@ -1,7 +1,6 @@
 //! Queries for logins, accounts and devices (spec 27.3).
 
 use rusqlite::{Connection, OptionalExtension, params};
-use serde::Serialize;
 
 /// How long a sign-in link and its request live.
 pub const LOGIN_TTL_MS: i64 = 600_000;
@@ -169,75 +168,13 @@ pub fn finish_login(
     Ok(true)
 }
 
-/// Who a token belongs to.
-pub struct Who {
-    pub account_id: i64,
-    pub device_id: String,
-    pub email: String,
-}
-
-/// Looks the token up and notes that the device was used, at most once a minute.
-pub fn who_is(conn: &Connection, token_hash: &str, now: i64) -> rusqlite::Result<Option<Who>> {
-    let who = conn
-        .query_row(
-            "SELECT devices.account_id, devices.id, accounts.email FROM devices \
-             JOIN accounts ON accounts.id = devices.account_id WHERE devices.token_hash = ?1",
-            [token_hash],
-            |row| {
-                Ok(Who {
-                    account_id: row.get(0)?,
-                    device_id: row.get(1)?,
-                    email: row.get(2)?,
-                })
-            },
-        )
-        .optional()?;
-    if let Some(who) = &who {
-        conn.execute(
-            "UPDATE devices SET last_used_at = ?1 WHERE id = ?2 AND last_used_at < ?1 - 60000",
-            params![now, who.device_id],
-        )?;
-    }
-    Ok(who)
-}
-
-#[derive(Serialize)]
-pub struct Device {
-    pub id: String,
-    pub name: String,
-    pub created_at: i64,
-    pub last_used_at: i64,
-}
-
-pub fn devices(conn: &Connection, account_id: i64) -> rusqlite::Result<Vec<Device>> {
-    let mut stmt = conn.prepare(
-        "SELECT id, name, created_at, last_used_at FROM devices \
-         WHERE account_id = ?1 ORDER BY created_at",
-    )?;
-    stmt.query_map([account_id], |row| {
-        Ok(Device {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            created_at: row.get(2)?,
-            last_used_at: row.get(3)?,
-        })
-    })?
-    .collect()
-}
-
-/// False when the account has no such device.
-pub fn delete_device(conn: &Connection, account_id: i64, id: &str) -> rusqlite::Result<bool> {
-    let removed = conn.execute(
-        "DELETE FROM devices WHERE id = ?1 AND account_id = ?2",
-        params![id, account_id],
-    )?;
-    Ok(removed > 0)
-}
-
-/// Drops what ran out: links and the old counts of the rate limits.
+/// Drops what ran out: links, phones being connected, messages nobody took,
+/// and the old counts of the rate limits.
 pub fn purge(conn: &Connection, now: i64) -> rusqlite::Result<()> {
     conn.execute("DELETE FROM logins WHERE expires_at <= ?1", [now])?;
     conn.execute("DELETE FROM attempts WHERE at <= ?1", [now - 3_600_000])?;
     conn.execute("DELETE FROM deletions WHERE expires_at <= ?1", [now])?;
+    conn.execute("DELETE FROM pairings WHERE expires_at <= ?1", [now])?;
+    conn.execute("DELETE FROM relay_queue WHERE expires_at <= ?1", [now])?;
     Ok(())
 }

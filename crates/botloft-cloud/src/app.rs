@@ -8,9 +8,10 @@ use axum::routing::{delete, get, post};
 use crate::clock::Clock;
 use crate::config::Config;
 use crate::db::Db;
+use crate::hub::Hub;
 use crate::mailer::Mailer;
 use crate::store::CopyStore;
-use crate::{copies, login, removal, session};
+use crate::{copies, login, pairing, relay, removal, session};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -19,6 +20,7 @@ pub struct AppState {
     pub clock: Clock,
     pub config: Arc<Config>,
     pub store: CopyStore,
+    pub hub: Hub,
 }
 
 pub fn router(state: AppState) -> Router {
@@ -34,6 +36,15 @@ pub fn router(state: AppState) -> Router {
         .route("/v1/me", get(session::me))
         .route("/v1/logout", post(session::logout))
         .route("/v1/devices/{id}", delete(session::remove_device))
+        .route("/v1/relay", get(relay::relay))
+        .route("/v1/pairings", post(pairing::open))
+        .route(
+            "/v1/pairings/{id}",
+            get(pairing::status).delete(pairing::cancel),
+        )
+        .route("/v1/pairings/{id}/join", post(pairing::join))
+        .route("/v1/pairings/{id}/accept", post(pairing::accept))
+        .route("/v1/pairings/{id}/result", get(pairing::result))
         .route("/v1/copies", get(copies::list).put(copies::put))
         .route("/v1/copies/{id}", get(copies::get).delete(copies::remove))
         .route("/v1/account/delete", post(removal::ask))

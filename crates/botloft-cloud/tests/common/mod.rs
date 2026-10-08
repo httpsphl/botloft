@@ -8,10 +8,12 @@ use std::sync::Arc;
 use axum::Router;
 use axum::body::{Body, to_bytes};
 use axum::http::{Request, StatusCode, header};
-use botloft_cloud::{AppState, Clock, Config, CopyStore, Db, Mailer, Outbox, router};
+use botloft_cloud::{AppState, Clock, Config, CopyStore, Db, Hub, Mailer, Outbox, router};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use tower::ServiceExt;
+
+pub mod mobile;
 
 pub struct Server {
     app: Router,
@@ -57,6 +59,7 @@ fn build(outbox: Outbox, config: Config) -> Server {
         clock: clock.clone(),
         config: Arc::new(config),
         store: store.clone(),
+        hub: Hub::default(),
     };
     Server {
         app: router(state),
