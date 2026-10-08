@@ -468,8 +468,18 @@ async fn the_relay_comes_back_when_the_server_cuts_it_and_nothing_is_lost_for_go
     mcp.tool("ask_owner", json!({ "question": "After the drop?" }))
         .await
         .expect("asked");
-    let ToPhone::QuestionOpen { card } = phone.next().await else {
-        panic!("open")
+    // The status can still say "connected" for a moment after the cut, so the
+    // question may open while the relay is down. A phone that is told its
+    // computer is back asks again (as the page does), and gets the retrato.
+    phone.send(&FromPhone::Sync).await;
+    let card = loop {
+        match phone.next().await {
+            ToPhone::QuestionOpen { card } => break card,
+            ToPhone::Snapshot { questions, .. } if !questions.is_empty() => {
+                break questions[0].clone();
+            }
+            _ => {}
+        }
     };
     assert_eq!(card.text, "After the drop?");
 }
