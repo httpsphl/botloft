@@ -135,6 +135,8 @@ pub mod method {
     pub const BOTS_DELETE: &str = "bots.delete";
     pub const BOTS_RESTART: &str = "bots.restart";
     pub const CHAT_HISTORY: &str = "chat.history";
+    /// The owner read a bot's chat on the computer (spec 28.12).
+    pub const CHAT_READ: &str = "chat.read";
     pub const CHAT_SEARCH: &str = "chat.search";
     pub const APPROVALS_ANSWER: &str = "approvals.answer";
     pub const RULES_LIST: &str = "rules.list";

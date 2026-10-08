@@ -227,6 +227,30 @@ export class Talk {
     }
   }
 
+  /** What the owner read on the computer counts as seen here too. */
+  private absorb(read: Record<string, number>): void {
+    const seen = { ...this.get().seen };
+    let changed = false;
+    for (const [botId, upto] of Object.entries(read)) {
+      if (upto > (seen[botId] ?? 0)) {
+        seen[botId] = upto;
+        changed = true;
+      }
+    }
+    if (changed) {
+      this.set({ seen });
+      this.store?.save(seen);
+    }
+  }
+
+  private absorbLines(lines: ChatLine[]): void {
+    this.absorb(
+      Object.fromEntries(
+        lines.filter((line) => line.readAt !== undefined).map((line) => [line.botId, line.readAt]),
+      ) as Record<string, number>,
+    );
+  }
+
   private markSeen(botId: string): void {
     const at = this.list.find((line) => line.botId === botId)?.lastReplyAt;
     if (at === undefined || this.get().seen[botId] === at) {
@@ -243,10 +267,14 @@ export class Talk {
       case "chats":
         this.onChats(message.bots, message.first);
         return true;
+      case "read":
+        this.absorb({ [message.botId]: message.upto });
+        return true;
       case "line": {
         const rest = this.list.filter((line) => line.botId !== message.bot.botId);
         this.list = byActivity([...rest, message.bot]);
         this.set({ chats: this.list });
+        this.absorbLines([message.bot]);
         if (this.convo()?.botId === message.bot.botId) {
           this.markSeen(message.bot.botId);
         }
@@ -285,6 +313,7 @@ export class Talk {
       this.store.save(start);
     }
     this.set({ chats: this.list, chatsLoaded: true });
+    this.absorbLines(bots);
   }
 
   private onHistory(message: Extract<ToPhone, { t: "history" }>): void {

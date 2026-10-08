@@ -182,6 +182,11 @@ pub struct ChatLine {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(test, ts(optional))]
     pub last: Option<Activity>,
+    /// Up to when the owner read this chat on the computer, so the phone
+    /// does not mark as new what was read there.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, ts(optional))]
+    pub read_at: Option<i64>,
 }
 
 /// One thing in a conversation, as the phone shows it (spec 28.12): the
@@ -312,6 +317,9 @@ pub enum ToPhone {
     /// The line of a bot in the list changed.
     #[serde(rename = "line")]
     Line { bot: ChatLine },
+    /// The owner read the bot's chat on the computer, up to this reply.
+    #[serde(rename = "read")]
+    Read { bot_id: BotId, upto: i64 },
 }
 
 /// What the phone sends the computer, sealed (spec 28.3).

@@ -51,6 +51,7 @@ pub fn line(daemon: &Daemon, bot: &BotId) -> Option<ChatLine> {
     let (crew, record) = bots::active(&store, bot).ok()?;
     let crew_name = crew.name.clone();
     let bot = bots::to_protocol(daemon, &store, &crew, record);
+    let read_at = daemon.mobile.read_at(&bot.id);
     Some(ChatLine {
         bot_id: bot.id,
         name: bot.name,
@@ -59,6 +60,7 @@ pub fn line(daemon: &Daemon, bot: &BotId) -> Option<ChatLine> {
         state: bot.state,
         last_reply_at: bot.last_reply_at,
         last: bot.last_activity,
+        read_at,
     })
 }
 

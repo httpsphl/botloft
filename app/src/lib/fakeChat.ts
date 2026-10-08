@@ -178,8 +178,9 @@ export class FakeChat {
     });
   }
 
-  handlers(): Pick<Handlers, "chat.history" | "approvals.answer"> {
+  handlers(): Pick<Handlers, "chat.history" | "chat.read" | "approvals.answer"> {
     return {
+      "chat.read": () => null,
       "chat.history": ({ botId, before, limit, until }) => {
         this.fake.bot(botId, false);
         const mine = this.items.filter((item) => item.botId === botId);

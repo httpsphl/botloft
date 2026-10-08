@@ -1464,7 +1464,12 @@ lastReplyAt?: number,
 /**
  * The last thing in the chat, on one line.
  */
-last?: Activity, };
+last?: Activity, 
+/**
+ * Up to when the owner read this chat on the computer, so the phone
+ * does not mark as new what was read there.
+ */
+readAt?: number, };
 
 /**
  * One thing in a conversation, as the phone shows it (spec 28.12): the
@@ -1475,7 +1480,7 @@ export type PhoneItem = { "kind": "you", id: ChatItemId, at: number, text: strin
 /**
  * What the computer sends the phone, sealed (spec 28.3).
  */
-export type ToPhone = { "t": "snapshot", approvals: Array<ApprovalCard>, questions: Array<QuestionCard>, } | { "t": "approval.open", card: ApprovalCard, } | { "t": "approval.closed", approvalId: ApprovalId, status: ApprovalStatus, } | { "t": "question.open", card: QuestionCard, } | { "t": "question.closed", questionId: QuestionId, status: QuestionStatus, } | { "t": "chats", bots: Array<ChatLine>, first: boolean, } | { "t": "history", req: number, botId: BotId, items: Array<PhoneItem>, more: boolean, done: boolean, } | { "t": "sent", clientId: string, ok: boolean, reason?: string, } | { "t": "item", botId: BotId, item: PhoneItem, } | { "t": "live", botId: BotId, text: string, } | { "t": "state", botId: BotId, state: BotState, } | { "t": "line", bot: ChatLine, };
+export type ToPhone = { "t": "snapshot", approvals: Array<ApprovalCard>, questions: Array<QuestionCard>, } | { "t": "approval.open", card: ApprovalCard, } | { "t": "approval.closed", approvalId: ApprovalId, status: ApprovalStatus, } | { "t": "question.open", card: QuestionCard, } | { "t": "question.closed", questionId: QuestionId, status: QuestionStatus, } | { "t": "chats", bots: Array<ChatLine>, first: boolean, } | { "t": "history", req: number, botId: BotId, items: Array<PhoneItem>, more: boolean, done: boolean, } | { "t": "sent", clientId: string, ok: boolean, reason?: string, } | { "t": "item", botId: BotId, item: PhoneItem, } | { "t": "live", botId: BotId, text: string, } | { "t": "state", botId: BotId, state: BotState, } | { "t": "line", bot: ChatLine, } | { "t": "read", botId: BotId, upto: number, };
 
 /**
  * What the phone sends the computer, sealed (spec 28.3).
@@ -2155,6 +2160,7 @@ export interface RpcMethods {
   "bots.delete": { params: BotsDeleteParams; result: BotDeleted };
   "bots.restart": { params: BotsRestartParams; result: Bot };
   "chat.history": { params: ChatHistoryParams; result: Array<ChatItem> };
+  "chat.read": { params: BotIdParams; result: null };
   "approvals.answer": { params: ApprovalsAnswerParams; result: Approval };
   "messages.send": { params: MessagesSendParams; result: Message };
   "messages.list": { params: MessagesListParams; result: Array<Message> };

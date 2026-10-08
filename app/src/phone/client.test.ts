@@ -98,7 +98,7 @@ async function setup(notices?: NoticePlatform) {
     fetch: fetchMock as unknown as typeof fetch,
     store,
     retry: { min: 5, max: 20 },
-    answerWait: 50,
+    answerWait: 200,
     sentWait: 80,
     ...(notices ? { notices } : {}),
   });

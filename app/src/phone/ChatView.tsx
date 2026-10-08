@@ -54,11 +54,11 @@ export function ChatView({ api, state, back }: { api: PhoneApi; state: PhoneStat
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <header className="flex items-center gap-3 py-2">
+      <header className="sticky top-0 z-10 -mx-4 flex items-center gap-3 border-line border-b bg-canvas px-4 py-2">
         <PhoneButton onClick={back} className="flex-none">
           {c.back}
         </PhoneButton>
-        {line && <BotDot name={line.name} color={line.color} />}
+        {line && <BotDot name={line.name} color={line.color} state={line.state} />}
         <div className="flex min-w-0 flex-col">
           <h1 className="truncate font-semibold text-lg">{name}</h1>
           {line && <span className="truncate text-muted text-xs">{c.inCrew(line.crew)}</span>}

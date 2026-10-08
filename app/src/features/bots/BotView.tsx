@@ -4,7 +4,7 @@ import { useT } from "../../i18n";
 import type { Bot, BotFile, Crew } from "../../lib/protocol.gen";
 import { useWindowVisible } from "../../shell/visibility";
 import { routinesOf } from "../../store/app";
-import { useApp } from "../../store/context";
+import { useApi, useApp } from "../../store/context";
 import { PanelClosing, PanelRestored } from "../../ui/panelMotion";
 import { type Tab, Tabs, tabId } from "../../ui/Tabs";
 import { useStable } from "../../ui/useStable";
@@ -85,11 +85,14 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
   const visible = useWindowVisible();
   const replyAt = useApp((state) => state.replyAt[bot.id]);
   const markSeen = useApp((state) => state.markSeen);
+  const api = useApi();
   useEffect(() => {
     if (visible && replyAt !== undefined) {
       markSeen(bot.id);
+      // A phone connected to this computer stops marking it new (spec 28.12).
+      api.call("chat.read", { botId: bot.id }).catch(() => {});
     }
-  }, [bot.id, visible, replyAt, markSeen]);
+  }, [bot.id, visible, replyAt, markSeen, api]);
   // A browser at rest is open, but the bot is not using it (spec 21.2).
   const browsing = useApp((state) => {
     const browser = state.browsers[bot.id];

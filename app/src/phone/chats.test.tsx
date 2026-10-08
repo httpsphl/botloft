@@ -1,5 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import type { ApprovalCard, ChatLine, PhoneItem } from "../lib/protocol.gen";
 import { FakePhone } from "./fake";
 import { PhoneApp } from "./PhoneApp";
@@ -308,5 +308,80 @@ describe("writing to a bot", () => {
     fireEvent.click(sendButton());
     expect(await screen.findByText("Too long to send from the phone.")).toBeTruthy();
     expect(phone.asked.filter((ask) => ask.t === "send")).toHaveLength(1);
+  });
+});
+
+describe("finding the way around", () => {
+  const many = () => [
+    line({ botId: "bot_1", name: "Scout", crew: "Ops" }),
+    line({ botId: "bot_2", name: "Writer", crew: "Marketing", lastReplyAt: 1 }),
+    line({ botId: "bot_3", name: "Editor", crew: "Marketing", lastReplyAt: 1 }),
+  ];
+
+  test("groups the bots by crew, and the chips narrow the list to one", () => {
+    const phone = withList(...many());
+    act(() => phone.set({ seen: { bot_1: 100, bot_2: 1, bot_3: 1 } }));
+    const sections = screen.getAllByRole("region");
+    expect(sections.map((section) => section.getAttribute("aria-label"))).toEqual([
+      "Marketing",
+      "Ops",
+    ]);
+    expect(within(sections[0] as HTMLElement).getByText("2 bots")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /^Ops/ }));
+    expect(screen.queryByRole("button", { name: /Writer/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /Scout/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    expect(screen.getByRole("button", { name: /Writer/ })).toBeTruthy();
+  });
+
+  test("a chip tells when its crew has a reply not seen", () => {
+    const phone = withList(...many());
+    act(() => phone.set({ seen: { bot_1: 100, bot_2: 0, bot_3: 1 } }));
+    const chip = screen.getByRole("button", { name: /Marketing/ });
+    expect(within(chip).getByRole("img", { name: "new reply" })).toBeTruthy();
+    expect(within(screen.getByRole("button", { name: /^Ops/ })).queryByRole("img")).toBeNull();
+  });
+
+  test("the phone's back gesture closes the chat instead of leaving the app", async () => {
+    const phone = withList(line());
+    await openChat(phone, []);
+    expect(history.state).toMatchObject({ botloft: true });
+    act(() => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    await waitFor(() => expect(phone.getState().convo).toBeNull());
+    expect(phone.asked.at(-1)).toEqual({ t: "watch" });
+    expect(screen.getByRole("tab", { name: /Chats/ })).toBeTruthy();
+  });
+
+  test("the page's back button takes the step of history back too", async () => {
+    const phone = withList(line());
+    const back = vi.spyOn(history, "back");
+    await openChat(phone, []);
+    fireEvent.click(screen.getByRole("button", { name: "Chats" }));
+    await waitFor(() => expect(phone.getState().convo).toBeNull());
+    expect(back).toHaveBeenCalled();
+    back.mockRestore();
+  });
+});
+
+describe("what the owner read on the computer", () => {
+  test("clears the dot, whether the phone was on or hears of it in the list", () => {
+    const phone = withList(line(), line({ botId: "bot_2", name: "Writer", crew: "Ops" }));
+    act(() => phone.set({ seen: {} }));
+    expect(screen.getAllByRole("img", { name: "new reply" }).length).toBeGreaterThan(0);
+    act(() => phone.receive({ t: "read", botId: "bot_1", upto: 100 }));
+    const scout = screen.getByRole("button", { name: /Scout/ });
+    expect(within(scout).queryByRole("img")).toBeNull();
+    expect(within(screen.getByRole("button", { name: /Writer/ })).getByRole("img")).toBeTruthy();
+    // A later list carries it too.
+    act(() =>
+      phone.receive({
+        t: "chats",
+        first: true,
+        bots: [line({ botId: "bot_2", name: "Writer", crew: "Ops", readAt: 100 })],
+      }),
+    );
+    expect(within(screen.getByRole("button", { name: /Writer/ })).queryByRole("img")).toBeNull();
   });
 });

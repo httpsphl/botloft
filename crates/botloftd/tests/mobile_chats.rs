@@ -311,3 +311,35 @@ async fn the_open_conversation_follows_the_reply_and_the_list_hears_of_it() {
         }
     }
 }
+
+#[tokio::test]
+async fn reading_a_chat_on_the_computer_tells_the_phone_and_the_list_remembers() {
+    let (t, mut app, mut phone, bot) = start().await;
+    app.call("messages.send", json!({ "botId": bot["id"], "body": "Go" }))
+        .await
+        .expect("send");
+    let process = t.process_of(&bot).await;
+    let lines = process.wait_lines(1).await;
+    stream::answer(&process, lines.last().expect("line"), "Done").await;
+    // The reply is in the list.
+    let mut reply_at = None;
+    while reply_at.is_none() {
+        if let ToPhone::Line { bot } = phone.next_any().await {
+            reply_at = bot.last_reply_at;
+        }
+    }
+
+    app.call("chat.read", json!({ "botId": bot["id"] }))
+        .await
+        .expect("read");
+    loop {
+        if let ToPhone::Read { bot_id, upto } = phone.next_any().await {
+            assert_eq!(bot_id, bot_id(&bot));
+            assert_eq!(Some(upto), reply_at);
+            break;
+        }
+    }
+    // A phone that was away finds it in the list.
+    let list = chats(&mut phone).await;
+    assert_eq!(list[0].read_at, reply_at);
+}

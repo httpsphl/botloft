@@ -32,6 +32,8 @@ pub(crate) struct Talk {
     live_sent: HashMap<String, i64>,
     /// When a `line` about each bot last went out.
     line_sent: HashMap<BotId, i64>,
+    /// Up to which reply the owner read each chat on the computer.
+    read: HashMap<BotId, i64>,
 }
 
 impl Talk {
@@ -50,6 +52,39 @@ fn reason(error: &ApiError) -> &'static str {
 }
 
 impl Mobile {
+    pub(crate) fn read_at(&self, bot: &BotId) -> Option<i64> {
+        Talk::lock(&self.talk).read.get(bot).copied()
+    }
+
+    /// The owner read a chat on the computer: the phones that are on stop
+    /// marking its replies as new, and the ones that are not hear of it in
+    /// the list when they open.
+    pub(crate) fn owner_read(&self, daemon: &Daemon, bot: &BotId) {
+        let Some(line) = chats::line(daemon, bot) else {
+            return;
+        };
+        let Some(upto) = line.last_reply_at else {
+            return;
+        };
+        {
+            let mut talk = Talk::lock(&self.talk);
+            if talk.read.get(bot).is_some_and(|known| *known >= upto) {
+                return;
+            }
+            talk.read.insert(bot.clone(), upto);
+        }
+        for phone in self.online_phones(daemon) {
+            self.send_to(
+                daemon,
+                &phone.id,
+                &ToPhone::Read {
+                    bot_id: bot.clone(),
+                    upto,
+                },
+            );
+        }
+    }
+
     /// A phone left: what it had open is forgotten.
     pub(crate) fn leave(&self, phone: &str) {
         let mut talk = Talk::lock(&self.talk);

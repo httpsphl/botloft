@@ -53,6 +53,11 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::BOTS_DELETE => reply(delete::bot(daemon, parse(params)?)),
         method::BOTS_RESTART => reply(bots::restart(daemon, parse(params)?)),
         method::CHAT_HISTORY => reply(chat::history(daemon, parse(params)?)),
+        method::CHAT_READ => {
+            let params: botloft_core::protocol::BotIdParams = parse(params)?;
+            daemon.mobile.owner_read(daemon, &params.bot_id);
+            Ok(Value::Null)
+        }
         method::CHAT_SEARCH => reply(chat::search(daemon, parse(params)?)),
         method::APPROVALS_ANSWER => reply(approvals::answer(daemon, parse(params)?)),
         method::RULES_LIST => reply(rules::list(daemon, parse(params)?)),
