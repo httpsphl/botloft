@@ -2395,7 +2395,7 @@ Quando chega um pedido ou uma pergunta, o dono precisa saber sem abrir a página
 
 ### 28.11 Fora desta etapa
 
-Arquivos e anexos, tarefas e rotinas no celular (conversa, só de texto, está em 28.12); app nativo e lojas; trocar as chaves sem conectar de novo; trava com biometria ou PIN dentro do PWA; mais de um dono; ligação direta entre celular e computador sem o servidor (WebRTC); aviso com conteúdo; permitir "sempre" pelo celular.
+Arquivos e anexos, tarefas e rotinas no celular (conversa, só de texto, está em 28.12); app nativo e lojas; trocar as chaves sem conectar de novo; trava por biometria dentro do PWA (o PIN está em 28.13); mais de um dono; ligação direta entre celular e computador sem o servidor (WebRTC); aviso com conteúdo; permitir "sempre" pelo celular.
 
 ### 28.12 Conversas
 
@@ -2435,3 +2435,29 @@ Status: **CH1 (spec)**. O celular, que só aprovava e respondia (28.1), passa a 
 | **CH2** Daemon | `chats`, `history`, `send`, `watch`, `item`, `live`, `state`, `line`, as regras acima | com o celular de teste em Rust: a lista só com bots ativos; páginas do histórico em partes de até 16 KiB; ferramentas sem saída; texto cortado em 6 KiB; `send` pelo mesmo caminho do app, `needs_computer` no `bypass_permissions`, limite de envio; `live` no máximo por segundo e só na conversa aberta |
 | **CH3** PWA | as abas, a lista, a conversa, o campo de escrever, a resposta ao vivo, três idiomas | testes de tela com o `FakePhone`; o cliente contra um computador de mentira (repetição, partes do histórico, mensagem otimista) |
 | **CH4** Teste real | uma conversa de verdade no Android, com um bot do Claude Code real | registrado na seção 19 |
+
+### 28.13 Trava com PIN
+
+Status: **LK1 (spec)**. Um celular desbloqueado e conectado aprova pedidos (28.5) e, com as conversas (28.12), lê e fala com os bots: quem o segurar faz o que o dono faria. A trava é um **PIN do próprio app**, que o dono **liga se quiser**. O app **não obriga**: explica o motivo e deixa a decisão com o dono.
+
+**O que o app diz, em palavras do dia a dia.** Na tela do celular (28.7): "Com um PIN, quem pegar este celular desbloqueado não consegue ler suas conversas nem aprovar pedidos. Sem ele, o celular fica aberto para quem o segurar." Depois de conectar, e enquanto não houver PIN, a caixa mostra um aviso curto com o mesmo motivo, **"Proteger com um PIN"** e **"Agora não"** (o "agora não" é lembrado no aparelho e o aviso não volta; o PIN segue em "Este celular").
+
+**Como funciona.**
+
+- **O PIN tem de 6 a 10 dígitos**, digitados duas vezes ao ligar.
+- **Com PIN, o que o celular guarda fica cifrado.** O token, o id, o nome, os contadores e as duas chaves (28.3) vão para o IndexedDB dentro de um bloco `AES-256-GCM`, com uma chave que sai do PIN: `PBKDF2-HMAC-SHA-256`, 600 000 passadas, sal de 16 bytes sorteado ao ligar. Sem o PIN, nem um script da página consegue usar a sessão. O que o celular guarda para si (a chave de AES e os contadores já abertos) vive só na memória e some quando a página tranca.
+- **Para isso, a sessão passa a guardar as chaves como bytes** (a forma de antes, `CryptoKey` que não se exporta, não dá para cifrar). Uma sessão feita antes dessa mudança continua funcionando, mas **não aceita PIN**: "Para ligar o PIN, conecte este celular de novo" (um QR novo no computador). Daí em diante todas guardam os bytes, que o app converte em `CryptoKey` sem exportação para usar.
+- **Quando tranca:** ao abrir o app trancado; e **um minuto depois de a página ir para o segundo plano** (ou ao voltar, se passou mais que isso). Trancar fecha a conexão com o relay, apaga a sessão e a chave da memória e mostra o campo do PIN. Os avisos (28.8) não dependem da página aberta e seguem chegando; tocar num aviso abre a tela do PIN.
+- **Erros.** Cada erro é contado **fora** do bloco cifrado (para valer entre as aberturas): do terceiro em diante há uma espera que dobra a cada erro (30 s, 1 min, 2 min…); **no décimo erro o celular apaga as chaves e a sessão dele** e volta para a tela de conectar. O servidor não é avisado (o token estava cifrado), então o dono **desconecta o celular pelo computador** (28.6) se quiser fechar o acesso de vez.
+- **Esqueci o PIN:** apaga a sessão do celular e vai para a tela de conectar; o dono conecta de novo com um QR. Não se perde nada, porque o celular não guarda conversas.
+- **Desligar o PIN** pede o PIN, e a sessão volta a ser guardada sem cifra. **Trocar** é desligar e ligar.
+- **Desconectar daqui** (28.7) e ser desconectado apagam tudo, com ou sem PIN, como antes.
+
+**O que a trava não faz.** Não protege depois de aberta (por isso o minuto de segundo plano) nem um aparelho que já está comprometido; PIN de 6 dígitos cifrado com `PBKDF2` aguenta quem só tem o aparelho por pouco tempo, não quem copia o perfil do navegador e tem dias para tentar (o limite de 10 erros vale só para a tela, não para quem lê o arquivo). Por isso o dono continua tendo o corte pelo computador. O texto dos avisos é sempre o mesmo e não precisa de PIN para ser lido.
+
+**Marcos.**
+
+| Marco | O que entra | Teste |
+|---|---|---|
+| **LK1** Spec | esta seção | revisão do dono |
+| **LK2** PWA | o cofre (cifra, contadores, erros), a tela do PIN, ligar e desligar em "Este celular", o aviso da caixa, a trava por segundo plano, três idiomas | o cofre contra o WebCrypto (PIN certo e errado, adulteração, espera, apagar no décimo erro, sessão antiga); telas com o `FakePhone`; a trava no Android de verdade |
