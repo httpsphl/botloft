@@ -176,7 +176,7 @@ pub async fn confirm(
 /// Where the request really comes from: the header the config names, if it
 /// holds an address; else, behind a proxy, the last `X-Forwarded-For`; else
 /// the connection.
-fn client_address(
+pub(crate) fn client_address(
     state: &AppState,
     headers: &HeaderMap,
     connection: Option<ConnectInfo<SocketAddr>>,
@@ -222,7 +222,7 @@ fn clean_email(raw: &str) -> Option<String> {
 }
 
 /// The name of the computer: printable, at most 60 characters.
-fn clean_device(raw: &str) -> String {
+pub(crate) fn clean_device(raw: &str) -> String {
     let name: String = raw
         .chars()
         .filter(|c| !c.is_control())

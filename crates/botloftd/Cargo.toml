@@ -9,6 +9,7 @@ authors.workspace = true
 
 [dependencies]
 anyhow = "1.0.104"
+aes-gcm = "0.11.1"
 argon2 = "0.5"
 axum = { version = "0.8.9", features = ["ws"] }
 base64 = "0.23.1"
@@ -23,13 +24,14 @@ getrandom = "0.4.3"
 hex = "0.4.3"
 jiff = "0.2.37"
 jpeg-encoder = "0.7.1"
+p256 = { version = "0.14.0", default-features = false, features = ["ecdh", "arithmetic", "alloc"] }
 reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "json", "stream"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 sha2 = "0.11.0"
 thiserror = "2.0.21"
 tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "signal", "time"] }
-tokio-tungstenite = "0.30.0"
+tokio-tungstenite = { version = "0.30.0", features = ["rustls-tls-webpki-roots"] }
 toml = "1.1.6"
 toml_edit = "0.25.15"
 tracing = "0.1.44"

@@ -13,6 +13,7 @@ import { desktop } from "./desktop";
 import { files } from "./files";
 import { messages } from "./messages";
 import { onboarding } from "./onboarding";
+import { phone } from "./phone";
 import { questions } from "./questions";
 import { routines } from "./routines";
 import { screens } from "./screens";
@@ -39,6 +40,7 @@ export const en = {
   desktop,
   files,
   messages,
+  phone,
   questions,
   routines,
   screens,

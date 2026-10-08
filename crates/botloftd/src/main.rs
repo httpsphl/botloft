@@ -172,6 +172,7 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
         tokio::spawn(courier::run(Arc::clone(&daemon)));
         tokio::spawn(routines::run(Arc::clone(&daemon)));
         tokio::spawn(botloftd::autobackup::run(Arc::clone(&daemon)));
+        tokio::spawn(botloftd::mobile::run(Arc::clone(&daemon)));
         tokio::spawn(browser::run(Arc::clone(&daemon)));
         // The outline around the window a bot uses (spec 24.9).
         tokio::spawn(botloftd::desktop::outline::run(Arc::clone(&daemon)));

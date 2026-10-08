@@ -28,6 +28,8 @@ mod crew_access;
 mod desktop;
 #[path = "export_mcp.rs"]
 mod mcp;
+#[path = "export_mobile.rs"]
+mod mobile;
 #[path = "export_questions.rs"]
 mod questions;
 #[path = "export_reactions.rs"]
@@ -197,6 +199,7 @@ fn export_bindings() {
     catalog::decls(&mut out);
     backup::decls(&mut out);
     cloud::decls(&mut out);
+    mobile::decls(&mut out);
     out.decl::<ApprovalItem>();
     usage::decls(&mut out);
     questions::decls(&mut out);
@@ -371,6 +374,7 @@ fn export_bindings() {
     catalog::methods(&mut out);
     backup::methods(&mut out);
     cloud::methods(&mut out);
+    mobile::methods(&mut out);
     routines::methods(&mut out);
     questions::methods(&mut out);
     reactions::methods(&mut out);
@@ -425,6 +429,7 @@ fn export_bindings() {
     desktop::notifications(&mut out);
     mcp::notifications(&mut out);
     cloud::notifications(&mut out);
+    mobile::notifications(&mut out);
     browser::notifications(&mut out);
     out.text.push_str("}\n\n");
 

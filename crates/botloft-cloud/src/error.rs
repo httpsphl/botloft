@@ -35,6 +35,46 @@ impl ApiError {
         Self::new(StatusCode::NOT_FOUND, "not_found", "There is nothing here.")
     }
 
+    pub fn wrong_device() -> Self {
+        Self::new(
+            StatusCode::FORBIDDEN,
+            "wrong_device",
+            "This device is not allowed to do that.",
+        )
+    }
+
+    pub fn bad_pairing() -> Self {
+        Self::new(
+            StatusCode::BAD_REQUEST,
+            "bad_pairing",
+            "That is not a valid pairing request.",
+        )
+    }
+
+    pub fn pair_expired() -> Self {
+        Self::new(
+            StatusCode::GONE,
+            "pair_expired",
+            "This code was used or has run out. Ask for a new one.",
+        )
+    }
+
+    pub fn no_push() -> Self {
+        Self::new(
+            StatusCode::NOT_FOUND,
+            "no_push",
+            "This server does not send notices.",
+        )
+    }
+
+    pub fn bad_endpoint() -> Self {
+        Self::new(
+            StatusCode::BAD_REQUEST,
+            "bad_endpoint",
+            "That is not an address of a push service this server uses.",
+        )
+    }
+
     pub fn bad_email() -> Self {
         Self::new(
             StatusCode::BAD_REQUEST,

@@ -1,0 +1,73 @@
+// A phone connection for the tests and the preview: the screens read its
+// state and call its methods, and nothing leaves the page.
+
+import type { ApprovalCard, QuestionCard } from "../lib/protocol.gen";
+import type { PhoneApi, PhoneState } from "./client";
+import type { NoticeState } from "./notices";
+
+export class FakePhone implements PhoneApi {
+  private state: PhoneState = {
+    session: "ok",
+    link: "online",
+    computer: "online",
+    loaded: true,
+    approvals: [],
+    questions: [],
+    sending: [],
+    ended: {},
+    name: "Celular da Ana",
+  };
+  private readonly listeners = new Set<() => void>();
+  /** How notices stand; the buttons change it as the browser would. */
+  notices: NoticeState = "off";
+  /** Whether an answer can be sent, for a test of the failure. */
+  sendable = true;
+  readonly calls: { method: string; args: unknown[] }[] = [];
+
+  getState = (): PhoneState => this.state;
+
+  subscribe = (listener: () => void): (() => void) => {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  };
+
+  /** Plays a change the computer or the connection makes. */
+  set(change: Partial<PhoneState>): void {
+    this.state = { ...this.state, ...change };
+    for (const listener of this.listeners) {
+      listener();
+    }
+  }
+
+  add(approval?: ApprovalCard, question?: QuestionCard): void {
+    this.set({
+      approvals: approval ? [...this.state.approvals, approval] : this.state.approvals,
+      questions: question ? [...this.state.questions, question] : this.state.questions,
+    });
+  }
+
+  private async answer(method: string, ...args: unknown[]): Promise<boolean> {
+    this.calls.push({ method, args });
+    return this.sendable;
+  }
+
+  answerApproval = (id: string, allow: boolean, note?: string) =>
+    this.answer("answerApproval", id, allow, note);
+  answerQuestion = (id: string, text: string) => this.answer("answerQuestion", id, text);
+  dismissQuestion = (id: string) => this.answer("dismissQuestion", id);
+  noticeState = async (): Promise<NoticeState> => this.notices;
+  turnOnNotices = async (): Promise<NoticeState> => {
+    this.calls.push({ method: "turnOnNotices", args: [] });
+    this.notices = this.notices === "off" ? "on" : this.notices;
+    return this.notices;
+  };
+  turnOffNotices = async (): Promise<NoticeState> => {
+    this.calls.push({ method: "turnOffNotices", args: [] });
+    this.notices = this.notices === "on" ? "off" : this.notices;
+    return this.notices;
+  };
+  disconnect = async () => {
+    this.calls.push({ method: "disconnect", args: [] });
+    this.set({ session: "left" });
+  };
+}

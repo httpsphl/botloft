@@ -18,6 +18,7 @@ pub mod desktop;
 pub mod keep_awake;
 pub mod logging;
 pub mod mcp_secrets;
+pub mod mobile;
 pub mod paths;
 pub mod platform;
 pub mod routines;

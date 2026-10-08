@@ -11,11 +11,12 @@ use serde::Deserialize;
 use crate::accounts::LOGIN_TTL_MS;
 use crate::app::AppState;
 use crate::copy_rows;
+use crate::devices;
 use crate::error::ApiError;
 use crate::limits::{self, GAP, PER_EMAIL};
 use crate::mail_text::{Locale, delete_mail};
 use crate::mailer::Mail;
-use crate::session::Authed;
+use crate::session::Computer;
 use crate::{pages, tokens};
 
 #[derive(Deserialize, Default)]
@@ -27,7 +28,7 @@ pub struct Ask {
 /// `POST /v1/account/delete`: mails a link; nothing is deleted yet.
 pub async fn ask(
     State(state): State<AppState>,
-    Authed(who): Authed,
+    Computer(who): Computer,
     body: Option<Json<Ask>>,
 ) -> Result<StatusCode, ApiError> {
     let locale = Locale::parse(&body.map(|Json(ask)| ask.locale).unwrap_or_default());
@@ -126,12 +127,16 @@ pub async fn confirm(
             return Ok(None);
         };
         let keys = copy_rows::keys(conn, account_id)?;
+        let devices = devices::device_ids(conn, account_id)?;
         conn.execute("DELETE FROM accounts WHERE id = ?1", [account_id])?;
-        Ok(Some((Locale::parse(&locale), keys)))
+        Ok(Some((Locale::parse(&locale), keys, devices)))
     })?;
-    let Some((locale, keys)) = gone else {
+    let Some((locale, keys, devices)) = gone else {
         return Ok(pages::gone(Locale::of_request(&headers)));
     };
+    for device in devices {
+        state.hub.kick(&device);
+    }
     // The rows are gone; now the bytes.
     for key in keys {
         state.store.delete(&key).await;

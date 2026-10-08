@@ -18,6 +18,7 @@ import { FakeDesktop } from "./fakeDesktop";
 import { FakeFiles } from "./fakeFiles";
 import { FakeLesson } from "./fakeLesson";
 import { FakeMcp } from "./fakeMcp";
+import { mobileHandlers } from "./fakeMobile";
 import { FakeQuestions } from "./fakeQuestions";
 import { FakeReactions } from "./fakeReactions";
 import { FakeRoutines } from "./fakeRoutines";
@@ -293,6 +294,7 @@ export class FakeBotloft implements BotloftApi {
     ...backupHandlers(this),
     ...cloudHandlers(this),
     ...autoBackupHandlers(this),
+    ...mobileHandlers(this),
     ...searchHandlers(this),
   };
 }

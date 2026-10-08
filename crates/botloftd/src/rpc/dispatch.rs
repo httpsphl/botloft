@@ -9,8 +9,8 @@ use super::jsonrpc::{RpcError, empty_params};
 use crate::approvals;
 use crate::service::{
     self, ApiError, ApiResult, archive, attachments, autobackup, backup, bots, catalog, chat,
-    cloud, crew_access, crews, delete, deliveries, desktop, files, lead, mcp, messages, models,
-    modes, questions, reactions, routines, rules, screens, settings, tasks, usage,
+    cloud, crew_access, crews, delete, deliveries, desktop, files, lead, mcp, messages, mobile,
+    models, modes, questions, reactions, routines, rules, screens, settings, tasks, usage,
 };
 use crate::state::Daemon;
 
@@ -80,6 +80,15 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::AUTOBACKUP_ENABLE => reply(autobackup::enable(daemon, parse(params)?)),
         method::AUTOBACKUP_SET_EVERY => reply(autobackup::set_every(daemon, parse(params)?)),
         method::AUTOBACKUP_DISABLE => reply(Ok::<_, ApiError>(autobackup::disable(daemon))),
+        method::MOBILE_STATUS => reply(Ok::<_, ApiError>(mobile::status(daemon))),
+        method::MOBILE_PAIR_START => reply(mobile::pair_start(daemon)),
+        method::MOBILE_PAIR_CANCEL => {
+            reply(mobile::pair_cancel(daemon, parse(params)?).map(|()| Value::Null))
+        }
+        method::MOBILE_PAIR_CONFIRM => {
+            reply(mobile::pair_confirm(daemon, parse(params)?).map(|()| Value::Null))
+        }
+        method::MOBILE_REVOKE => reply(mobile::revoke(daemon, parse(params)?)),
         method::CREW_ACCESS_LIST => reply(crew_access::list(daemon, parse(params)?)),
         method::CREW_ACCESS_REVOKE => reply(crew_access::revoke(daemon, parse(params)?)),
         method::MCP_SERVERS => reply(mcp::overview(daemon)),

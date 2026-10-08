@@ -19,6 +19,12 @@ pub const PER_ADDRESS: Rule = Rule {
     limit: 20,
     window_ms: 3_600_000,
 };
+/// Phones joining a pairing (spec 28.3), per address.
+pub const PAIR_PER_ADDRESS: Rule = Rule {
+    kind: "pair",
+    limit: 30,
+    window_ms: 3_600_000,
+};
 pub const GAP: Rule = Rule {
     kind: "gap",
     limit: 1,

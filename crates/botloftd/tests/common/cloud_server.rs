@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use botloft_cloud::{AppState, Clock, Config, CopyStore, Db, Mailer, Outbox, router};
+use botloft_cloud::{AppState, Clock, Config, CopyStore, Db, Hub, Mailer, Outbox, Pusher, router};
 use serde_json::json;
 use tokio::net::TcpListener;
 
@@ -14,25 +14,57 @@ pub struct CloudServer {
     pub url: String,
     pub outbox: Outbox,
     pub clock: Clock,
+    pub hub: Hub,
 }
 
 pub async fn cloud_server() -> CloudServer {
     let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+    cloud_server_on(listener, None).await
+}
+
+/// The same on a listener of the test's choosing, serving the phone's page
+/// from `phone_dir` (spec 28.7).
+pub async fn cloud_server_on(
+    listener: TcpListener,
+    phone_dir: Option<std::path::PathBuf>,
+) -> CloudServer {
+    launch(listener, phone_dir, Pusher::off()).await
+}
+
+/// A server that sends Web Push through `push` (spec 28.8).
+pub async fn cloud_server_pushing(push: Pusher) -> CloudServer {
+    let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+    launch(listener, None, push).await
+}
+
+async fn launch(
+    listener: TcpListener,
+    phone_dir: Option<std::path::PathBuf>,
+    push: Pusher,
+) -> CloudServer {
     let url = format!("http://{}", listener.local_addr().expect("addr"));
-    let (outbox, clock) = (Outbox::default(), Clock::default());
+    let (outbox, clock, hub) = (Outbox::default(), Clock::default(), Hub::default());
     let mut config = Config::for_tests();
     config.public_url = url.clone();
+    config.phone_dir = phone_dir;
     let state = AppState {
         db: Db::memory().expect("db"),
         mailer: Arc::new(Mailer::Outbox(outbox.clone())),
         clock: clock.clone(),
         config: Arc::new(config),
         store: CopyStore::memory(),
+        hub: hub.clone(),
+        push,
     };
     tokio::spawn(async move {
         axum::serve(listener, router(state)).await.expect("serve");
     });
-    CloudServer { url, outbox, clock }
+    CloudServer {
+        url,
+        outbox,
+        clock,
+        hub,
+    }
 }
 
 impl CloudServer {

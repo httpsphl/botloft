@@ -64,6 +64,7 @@ mod lesson;
 mod mcp;
 mod messaging;
 mod methods;
+mod mobile;
 mod model;
 mod questions;
 mod reactions;
@@ -88,6 +89,7 @@ pub use lesson::*;
 pub use mcp::*;
 pub use messaging::*;
 pub use methods::*;
+pub use mobile::*;
 pub use model::*;
 pub use questions::*;
 pub use reactions::*;
@@ -154,6 +156,11 @@ pub mod method {
     pub const AUTOBACKUP_ENABLE: &str = "autobackup.enable";
     pub const AUTOBACKUP_SET_EVERY: &str = "autobackup.set_every";
     pub const AUTOBACKUP_DISABLE: &str = "autobackup.disable";
+    pub const MOBILE_STATUS: &str = "mobile.status";
+    pub const MOBILE_PAIR_START: &str = "mobile.pair_start";
+    pub const MOBILE_PAIR_CANCEL: &str = "mobile.pair_cancel";
+    pub const MOBILE_PAIR_CONFIRM: &str = "mobile.pair_confirm";
+    pub const MOBILE_REVOKE: &str = "mobile.revoke";
     pub const CREW_ACCESS_LIST: &str = "crewAccess.list";
     pub const CREW_ACCESS_REVOKE: &str = "crewAccess.revoke";
     pub const MCP_SERVERS: &str = "mcp.servers";
@@ -247,6 +254,8 @@ pub mod notification {
     pub const CLOUD_PROGRESS: &str = "cloud.progress";
     pub const CLOUD_SIGNIN_EXPIRED: &str = "cloud.signin_expired";
     pub const AUTOBACKUP_CHANGED: &str = "autobackup.changed";
+    pub const MOBILE_CHANGED: &str = "mobile.changed";
+    pub const MOBILE_PAIR_REQUEST: &str = "mobile.pair_request";
 }
 
 /// Error codes: the standard JSON-RPC ones plus the daemon's (spec 11.4).

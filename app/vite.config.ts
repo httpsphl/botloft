@@ -10,8 +10,15 @@ const host = process.env.TAURI_DEV_HOST;
 
 // `vite build --mode setup` builds the setup window alone (setup.html,
 // spec 15.7) into dist-setup, which the botloft-setup crate embeds.
+// `vite build --mode phone` builds the phone's page (src/phone, spec 28.7)
+// into dist-phone, which the account server serves at /m.
 export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss()],
+  ...(mode === "phone" && {
+    root: fileURLToPath(new URL("./src/phone", import.meta.url)),
+    base: "/m/",
+    publicDir: fileURLToPath(new URL("./public-phone", import.meta.url)),
+  }),
   // Keep Rust compiler errors visible in the terminal.
   clearScreen: false,
   server: {
@@ -30,6 +37,8 @@ export default defineConfig(({ mode }) => ({
         fileURLToPath(new URL("../crates/botloftd/src/screens", import.meta.url)),
         // The sheets of the Bot agency, which a test reads (spec 26.2).
         fileURLToPath(new URL("../crates/botloftd/catalog", import.meta.url)),
+        // The bytes the computer and the phone must agree on (spec 28.3).
+        fileURLToPath(new URL("../docs/test-vectors", import.meta.url)),
       ],
     },
   },
@@ -37,6 +46,11 @@ export default defineConfig(({ mode }) => ({
     // WebView2 on Windows is evergreen Chromium.
     target: "chrome120",
     ...(mode === "setup" && { outDir: "dist-setup", rollupOptions: { input: "setup.html" } }),
+    ...(mode === "phone" && {
+      target: "es2022",
+      outDir: fileURLToPath(new URL("./dist-phone", import.meta.url)),
+      emptyOutDir: true,
+    }),
   },
   test: {
     environment: "jsdom",

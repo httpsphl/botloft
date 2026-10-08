@@ -56,7 +56,7 @@ printf '%s' 'a-senha-do-smtp' > config/smtp-password
 chmod 600 config/smtp-password
 ```
 
-As chaves (todas explicadas no exemplo): `public_url` (https, vai nos links dos e-mails), `quota_bytes` (200 MiB por conta), `max_copy_bytes` (50 MiB), `keep` (5 cópias por conta), `behind_proxy`, `storage`, `[bucket]`, `[smtp]`. O servidor recusa um `public_url` que não seja https.
+As chaves (todas explicadas no exemplo): `public_url` (https, vai nos links dos e-mails), `quota_bytes` (200 MiB por conta), `max_copy_bytes` (50 MiB), `keep` (5 cópias por conta), `behind_proxy`, `phone_dir` (a página do celular, em `/m`; a imagem do Docker já traz os arquivos em `/srv/phone`), `storage`, `[bucket]`, `[smtp]`. O servidor recusa um `public_url` que não seja https.
 
 ## 5. Subir com Docker
 
@@ -135,6 +135,16 @@ cd deploy/cloud && docker compose up -d --build
 ```
 
 O banco se atualiza sozinho ao subir (as migrações são numeradas e rodam uma vez). Faça um backup (passo 9) antes de uma versão nova.
+
+## Avisos no celular (opcional)
+
+Sem isto o celular (spec 28) só mostra os pedidos quando a página está aberta. Para o Botloft avisar com a tela bloqueada, ligue o Web Push:
+
+```bash
+docker compose run --rm cloud vapid-key --to /config/vapid-key   # imprime a chave pública
+```
+
+Depois descomente `[push]` no `cloud.toml` (ou no `BOTLOFT_CLOUD_CONFIG`): `subject` (um `mailto:` ou `https:` seu), `vapid_key_file` (ou a variável `BOTLOFT_CLOUD_VAPID_KEY`, para o Coolify) e, se quiser, `allow_hosts`. O servidor só chama os serviços de push dos navegadores (Chrome, Firefox, Edge, Safari) e manda uma chamada **vazia** e assinada: o texto do aviso é o da própria página, e nada de bot, comando ou pergunta passa por Google, Apple ou Mozilla. Guarde a chave privada como guarda a senha do SMTP: quem a tem pode mandar avisos em nome do seu servidor. Trocá-la obriga cada celular a ligar os avisos de novo.
 
 ## Limites conhecidos
 

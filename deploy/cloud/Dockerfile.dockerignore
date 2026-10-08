@@ -4,6 +4,7 @@
 target
 **/node_modules
 app/dist
+app/dist-phone
 app/src-tauri/target
 graphify-out
 *.log

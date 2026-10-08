@@ -19,6 +19,7 @@ pub mod lead;
 pub mod mcp;
 pub mod mcp_state;
 pub mod messages;
+pub mod mobile;
 pub mod models;
 pub mod modes;
 pub mod plan;

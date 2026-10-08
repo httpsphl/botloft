@@ -13,6 +13,7 @@ import { Callout } from "../../ui/Callout";
 import { BackupRestore } from "./BackupRestore";
 import { backupError } from "./backupError";
 import { CloudAccount } from "./CloudAccount";
+import { MobilePhones } from "./MobilePhones";
 import { PassphraseFields, usePassphrase } from "./PassphraseFields";
 import { Section } from "./settingsParts";
 
@@ -26,6 +27,7 @@ export function BackupSettings() {
       <Section title={cloud.title}>
         <CloudAccount />
       </Section>
+      <MobilePhones />
       <Section title={b.exportTitle}>
         <p className="text-ink-soft text-sm leading-relaxed">{b.exportIntro}</p>
         <ExportCopy />

@@ -23,6 +23,7 @@ Thumbs.db
 
 # Setup window build (spec 15.7)
 /app/dist-setup/
+/app/dist-phone/
 
 # Design sync (claude.ai/design): staged scripts, build output, machine state
 /.ds-sync/
