@@ -1,10 +1,11 @@
 // A phone connection for the tests and the preview: the screens read its
 // state and call its methods, and nothing leaves the page.
 
-import type { ApprovalCard, QuestionCard } from "../lib/protocol.gen";
+import type { ApprovalCard, FromPhone, QuestionCard, ToPhone } from "../lib/protocol.gen";
 import type { PhoneApi, PhoneState } from "./client";
 import type { NoticeState } from "./notices";
 import type { LockApi } from "./PinSettings";
+import { noChats, type SeenStore, Talk } from "./talk";
 
 export class FakePhone implements PhoneApi {
   private state: PhoneState = {
@@ -17,7 +18,23 @@ export class FakePhone implements PhoneApi {
     sending: [],
     ended: {},
     name: "Celular da Ana",
+    ...noChats,
   };
+  /** What the screens asked of the computer, in order. */
+  readonly asked: FromPhone[] = [];
+  private readonly talk: Talk;
+
+  constructor(seen?: SeenStore) {
+    this.talk = new Talk(
+      () => this.state,
+      (change) => this.set(change),
+      async (message) => {
+        this.asked.push(message);
+        return this.sendable;
+      },
+      seen,
+    );
+  }
   private readonly listeners = new Set<() => void>();
   /** How notices stand; the buttons change it as the browser would. */
   notices: NoticeState = "off";
@@ -67,6 +84,15 @@ export class FakePhone implements PhoneApi {
     this.notices = this.notices === "on" ? "off" : this.notices;
     return this.notices;
   };
+  /** Plays a message the computer sends about conversations. */
+  receive(message: ToPhone): void {
+    this.talk.handle(message);
+  }
+
+  openChat = (botId: string) => this.talk.open(botId);
+  closeChat = () => this.talk.leave();
+  olderItems = () => this.talk.older();
+  write = (text: string) => this.talk.write(text);
   disconnect = async () => {
     this.calls.push({ method: "disconnect", args: [] });
     this.set({ session: "left" });

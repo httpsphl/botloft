@@ -178,10 +178,10 @@ export const account = {
   mobile: {
     title: "Phone",
     intro:
-      "Approve your bots' requests and answer their questions from anywhere. Chats and files stay only on this computer.",
+      "Approve your bots' requests, answer their questions and talk with them from anywhere. Files stay only on this computer.",
     needAccount: "Sign in to the account above to use the phone.",
     warning:
-      "Whoever holds a connected phone, unlocked, can allow requests until you disconnect it.",
+      "Whoever holds a connected phone, unlocked, can read your bots' conversations, write to them and allow requests until you disconnect it. A PIN on the phone helps; you can turn it on there.",
     connect: "Connect a phone",
     starting: "Preparing…",
     qrLabel: "Code to scan with your phone",

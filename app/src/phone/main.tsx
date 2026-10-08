@@ -12,6 +12,7 @@ import { PhoneApp } from "./PhoneApp";
 import type { LockApi } from "./PinSettings";
 import { pairing, parseFragment } from "./pair";
 import { browserRecords, type Session } from "./store";
+import { browserSeen } from "./talk";
 import { createVault } from "./vault";
 import "./phone.css";
 
@@ -44,6 +45,7 @@ function clientFor(session: Session): PhoneClient {
     fetch: window.fetch.bind(window),
     store: vault,
     notices: browserPlatform(),
+    seen: browserSeen(),
   });
   client.start();
   return client;

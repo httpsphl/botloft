@@ -2399,7 +2399,7 @@ Arquivos e anexos, tarefas e rotinas no celular (conversa, só de texto, está e
 
 ### 28.12 Conversas
 
-Status: **CH2 (daemon feito)**. O celular, que só aprovava e respondia (28.1), passa a **ler as conversas dos bots e a mandar texto a eles**. O que ele continua sem fazer: anexos e arquivos (ver, mandar ou abrir), telas e navegador do bot, tarefas, rotinas, reações, busca, e qualquer configuração.
+Status: **CH3 (PWA feito)**. O celular, que só aprovava e respondia (28.1), passa a **ler as conversas dos bots e a mandar texto a eles**. O que ele continua sem fazer: anexos e arquivos (ver, mandar ou abrir), telas e navegador do bot, tarefas, rotinas, reações, busca, e qualquer configuração.
 
 **O que muda na privacidade (28.9).** Até aqui só passavam pedidos e perguntas. Agora passa **o texto das conversas**, e continua selado de ponta a ponta: o servidor não o lê. Ele vê um pouco mais do ritmo (mais mensagens, de tamanhos variados, quando alguém conversa), mas nada do que se diz. E um celular desbloqueado e conectado passa a **ler o histórico dos bots e a falar com eles**: por isso o aviso do app (28.7) diz isso também, e a regra abaixo protege o que há de pior.
 
@@ -2433,7 +2433,7 @@ Status: **CH2 (daemon feito)**. O celular, que só aprovava e respondia (28.1), 
 |---|---|---|
 | **CH1** Spec | esta seção, os tipos novos de 28.3 (`ChatLine`, `PhoneItem`, as mensagens), o limite do computador no relay | revisão do dono; os tipos geram o TypeScript; o relay aceita 600 quadros por minuto do computador e recusa o 61º do celular |
 | **CH2** Daemon | `chats`, `history`, `send`, `watch`, `item`, `live`, `state`, `line`, as regras acima | com o celular de teste em Rust (`tests/mobile_chats.rs`): a lista só com bots ativos; páginas do histórico em partes de até 16 KiB; ferramentas sem saída; texto cortado em 6 KiB; `send` pelo mesmo caminho do app (inclusive para `bypass_permissions`), limite de envio; `live` no máximo por segundo e só na conversa aberta. **Feito.** O `line` de um bot que muda dentro dos 2 s é descartado, não adiado: a lista se atualiza na próxima mudança ou quando o celular a pede de novo |
-| **CH3** PWA | as abas, a lista, a conversa, o campo de escrever, a resposta ao vivo, três idiomas | testes de tela com o `FakePhone`; o cliente contra um computador de mentira (repetição, partes do histórico, mensagem otimista) |
+| **CH3** PWA | as abas, a lista, a conversa, o campo de escrever, a resposta ao vivo, três idiomas | testes de tela com o `FakePhone`; o cliente contra um computador de mentira (repetição, partes do histórico, mensagem otimista) **Feito** (`talk.ts`, `ChatsList`, `ChatView`; o aviso do app e o da página dizem que um celular conectado e destrancado lê e escreve). Uma mensagem aceita (`sent ok`) mas que o bot ainda não recebeu (bot pausado) fica como "enviada" até o item `you` chegar; sem `sent` em 20 s ela fica marcada como não enviada |
 | **CH4** Teste real | uma conversa de verdade no Android, com um bot do Claude Code real | registrado na seção 19 |
 
 ### 28.13 Trava com PIN

@@ -180,10 +180,10 @@ export const account: Messages["account"] = {
   mobile: {
     title: "Móvil",
     intro:
-      "Aprueba las solicitudes de tus bots y responde a sus preguntas desde cualquier lugar. Las conversaciones y los archivos se quedan solo en este ordenador.",
+      "Aprueba las solicitudes de tus bots, responde a sus preguntas y habla con ellos desde cualquier lugar. Los archivos se quedan solo en este ordenador.",
     needAccount: "Inicia sesión en la cuenta de arriba para usar el móvil.",
     warning:
-      "Quien tenga un móvil conectado y desbloqueado puede permitir solicitudes hasta que lo desconectes.",
+      "Quien tenga un móvil conectado y desbloqueado puede leer las conversaciones de tus bots, escribirles y permitir solicitudes hasta que lo desconectes. Un PIN en el móvil ayuda; lo activas allí.",
     connect: "Conectar un móvil",
     starting: "Preparando…",
     qrLabel: "Código para escanear con el móvil",

@@ -7,6 +7,8 @@ import { useT } from "../i18n";
 import { Callout } from "../ui/Callout";
 import { Confirm } from "../ui/Confirm";
 import { ApprovalView } from "./ApprovalView";
+import { ChatsList, isUnread } from "./ChatsList";
+import { ChatView } from "./ChatView";
 import type { PhoneApi } from "./client";
 import { Notices } from "./NoticesControl";
 import { type LockApi, PinNudge, PinSettings } from "./PinSettings";
@@ -40,6 +42,7 @@ export function PhoneApp({
   const t = useT().phone;
   const state = usePhone(api);
   const [view, setView] = useState<"inbox" | "phone">("inbox");
+  const [tab, setTab] = useState<"requests" | "chats">("requests");
 
   if (state.session !== "ok") {
     return (
@@ -64,7 +67,16 @@ export function PhoneApp({
     return <ThisPhone api={api} name={state.name} lock={lock} back={() => setView("inbox")} />;
   }
 
+  if (state.convo) {
+    return (
+      <Shell>
+        <ChatView api={api} state={state} back={() => void api.closeChat()} />
+      </Shell>
+    );
+  }
+
   const waiting = state.approvals.length + state.questions.length;
+  const news = state.chats.some((line) => isUnread(line, state.seen));
   return (
     <Shell>
       <header className="flex items-center justify-between gap-3 py-2">
@@ -85,7 +97,33 @@ export function PhoneApp({
       <Notices api={api} invite />
       {lock && <PinNudge lock={lock} open={() => setView("phone")} />}
 
-      <div className="flex flex-col gap-4">
+      <div role="tablist" className="flex gap-2">
+        <Tab on={tab === "requests"} pick={() => setTab("requests")}>
+          {t.tabs.requests}
+          {waiting > 0 && ` (${waiting})`}
+        </Tab>
+        <Tab on={tab === "chats"} pick={() => setTab("chats")}>
+          {t.tabs.chats}
+          {news && (
+            <span
+              role="img"
+              aria-label={t.tabs.newReply}
+              className="ml-2 inline-block h-2.5 w-2.5 rounded-full bg-work"
+            />
+          )}
+        </Tab>
+      </div>
+
+      {tab === "chats" && (
+        <ChatsList
+          chats={state.chats}
+          loaded={state.chatsLoaded}
+          seen={state.seen}
+          open={(botId) => void api.openChat(botId)}
+        />
+      )}
+
+      <div className={tab === "requests" ? "flex flex-col gap-4" : "hidden"}>
         {state.approvals.map((card) => (
           <ApprovalView
             key={card.approvalId}
@@ -118,6 +156,20 @@ export function PhoneApp({
         )}
       </div>
     </Shell>
+  );
+}
+
+function Tab({ on, pick, children }: { on: boolean; pick(): void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={on}
+      onClick={pick}
+      className={`inline-flex h-11 flex-1 items-center justify-center rounded-xl border font-medium text-base ${on ? "border-ink bg-ink text-canvas" : "border-line-strong bg-panel text-ink"}`}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -155,6 +207,7 @@ function ThisPhone({
         {name}
       </p>
       {needsHomeScreen() && <Callout tone="info" title={t.settings.install} />}
+      <p className="text-ink-soft text-sm">{t.chats.reach}</p>
       <Notices api={api} />
       {lock && <PinSettings lock={lock} />}
       <PhoneButton look="danger" onClick={() => setLeaving(true)} className="flex-none">
