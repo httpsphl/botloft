@@ -333,8 +333,8 @@ async fn reading_a_chat_on_the_computer_tells_the_phone_and_the_list_remembers()
         .await
         .expect("read");
     loop {
-        if let ToPhone::Read { bot_id, upto } = phone.next_any().await {
-            assert_eq!(bot_id, bot_id(&bot));
+        if let ToPhone::Read { bot_id: got, upto } = phone.next_any().await {
+            assert_eq!(got, bot_id(&bot));
             assert_eq!(Some(upto), reply_at);
             break;
         }
