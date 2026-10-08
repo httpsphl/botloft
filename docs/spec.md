@@ -2240,7 +2240,7 @@ Uma página que o dono instala na tela inicial do celular (um PWA) para **aprova
 
 O que o celular **faz**: mostra os pedidos de aprovação abertos, permite ou nega um de cada vez (com nota), mostra as perguntas abertas, responde ou descarta, e avisa quando chega algo novo.
 
-O que o celular **não faz** nesta etapa: ver conversas, mandar mensagem a um bot, ver arquivos, criar bot, crew, tarefa ou rotina, mexer em configurações. Quanto menos o celular sabe, menos há para vazar de um celular perdido.
+O que o celular **não faz** nesta etapa: ver arquivos, criar bot, crew, tarefa ou rotina, mexer em configurações. (As conversas, ler e mandar texto, vêm em 28.12.) Quanto menos o celular sabe, menos há para vazar de um celular perdido.
 
 Quatro promessas valem para tudo aqui:
 
@@ -2395,4 +2395,43 @@ Quando chega um pedido ou uma pergunta, o dono precisa saber sem abrir a página
 
 ### 28.11 Fora desta etapa
 
-Conversa, mensagem aos bots, arquivos, tarefas e rotinas no celular; app nativo e lojas; trocar as chaves sem conectar de novo; trava com biometria ou PIN dentro do PWA; mais de um dono; ligação direta entre celular e computador sem o servidor (WebRTC); aviso com conteúdo; permitir "sempre" pelo celular.
+Arquivos e anexos, tarefas e rotinas no celular (conversa, só de texto, está em 28.12); app nativo e lojas; trocar as chaves sem conectar de novo; trava com biometria ou PIN dentro do PWA; mais de um dono; ligação direta entre celular e computador sem o servidor (WebRTC); aviso com conteúdo; permitir "sempre" pelo celular.
+
+### 28.12 Conversas
+
+Status: **CH1 (spec)**. O celular, que só aprovava e respondia (28.1), passa a **ler as conversas dos bots e a mandar texto a eles**. O que ele continua sem fazer: anexos e arquivos (ver, mandar ou abrir), telas e navegador do bot, tarefas, rotinas, reações, busca, e qualquer configuração.
+
+**O que muda na privacidade (28.9).** Até aqui só passavam pedidos e perguntas. Agora passa **o texto das conversas**, e continua selado de ponta a ponta: o servidor não o lê. Ele vê um pouco mais do ritmo (mais mensagens, de tamanhos variados, quando alguém conversa), mas nada do que se diz. E um celular desbloqueado e conectado passa a **ler o histórico dos bots e a falar com eles**: por isso o aviso do app (28.7) diz isso também, e a regra abaixo protege o que há de pior.
+
+**Regras de segurança (o daemon as aplica).**
+
+1. **Bot em `bypass_permissions` só se fala no computador.** Esse bot faz tudo sem perguntar (13): uma mensagem do celular a ele seria, na prática, uma ordem sem nenhuma aprovação. `send` a ele volta `needs_computer`, e o celular mostra o bot na lista e o histórico, sem o campo de escrever.
+2. **O mesmo caminho do app.** `send` chama a lógica de `messages.send` (9.1), do dono, sem anexos: bot pausado recebe quando voltar, bot arquivado dá erro (`not_found`), texto vazio ou grande demais dá `invalid`.
+3. **Limite de envio:** os mesmos 30 por minuto por celular das respostas (28.5, regra 5).
+4. **O que não vai ao celular:** a saída das ferramentas e a entrada delas (o celular recebe uma linha, `summary`), segredos de bots, anexos, e o texto que passa de 6 KiB (vai cortado, com `cut`).
+
+**Mensagens seladas novas** (mesmo selo de 28.3, até 16 KiB cada; o que não cabe vai em várias mensagens).
+
+| Sentido | Mensagem |
+|---|---|
+| celular → computador | `chats`: pede a lista de conversas. `history {req, botId, before?}`: uma página do histórico, as 20 mais novas ou as 20 antes do item `before`. `send {clientId, botId, text}`. `watch {botId}` (ou `{botId: null}`): qual conversa está aberta |
+| computador → celular | `chats {bots: [ChatLine], first}`: a lista (`first` é verdadeiro na primeira parte). `history {req, botId, items: [PhoneItem], more, done}`: as partes de uma página, do mais antigo ao mais novo (`done` na última; `more` diz se há páginas antes). `sent {clientId, ok, reason?}`. `item {botId, item}` e `live {botId, text}` e `state {botId, state}` (só da conversa aberta). `line {bot: ChatLine}` (a linha de qualquer bot mudou) |
+
+- **`ChatLine`**: `botId`, `name`, `color`, `crew`, `state` (o `BotState`, de 7.1, que a tela mostra como "trabalhando" ou "parado"), `canSend` (falso para `bypass_permissions` e para bot arquivado), `lastReplyAt?` e `last?: {kind, text, at}` (a última atividade, em uma linha, como 11.2). Só bots e equipes ativos.
+- **`PhoneItem`** (`kind` diz qual): `you {id, at, text, cut}` (o dono escreveu), `bot_message {id, at, from, text, cut}` (outro bot, uma rotina ou o daemon escreveu ao bot; `from` é o nome), `reply {id, at, text, cut}` (o bot respondeu, markdown), `tool {id, at, summary}`, `approval {id, at, approvalId, summary, status}`, `question {id, at, questionId, text, status}`, `failed {id, at, error?}` (um turno que falhou) e `notice {id, at, level, text}`. Os turnos que deram certo não viram item (só ruído).
+- **`live`** é o texto inteiro da resposta que o bot está escrevendo agora (não pedaços: um pedaço perdido não estraga o resto), no máximo uma vez por segundo, só enquanto aquela conversa está aberta; vazio quando a resposta termina e o item `reply` chega. **`item`** leva um item novo ou que mudou (o status de um pedido que foi respondido, por exemplo).
+- **`line`** avisa que a linha de um bot mudou, no máximo uma vez a cada 2 s por bot, e só para resposta, pergunta, pedido ou aviso novos (não para cada ferramenta que o bot usa).
+- **Quem pede, recebe:** `history` e `chats` chegam como resposta ao pedido do celular. Se o celular pede de novo antes de a resposta chegar, vale a última (`req`).
+
+**Limites do relay (28.4).** O limite de 60 quadros por minuto passa a valer só para o **celular**; o do **computador** sobe para 600, porque ele fala por todos os bots. As respostas do daemon (`history`, `chats`) não contam como o celular falando.
+
+**No PWA (28.7).** A caixa vira a primeira de duas abas, **Pedidos** (como hoje) e **Conversas**. Em Conversas, a lista de bots com o rosto, o nome, a equipe, a última atividade e uma bolinha quando há resposta mais nova do que a última vez que esta tela abriu a conversa (guardada no aparelho; só um número por bot, nunca texto). Tocar abre a conversa: as mensagens mais recentes embaixo, "ver mais antigas" em cima, a resposta ao vivo, "trabalhando…" enquanto o bot está ocupado, o cartão de pedido ou pergunta ali dentro (com os mesmos botões de 28.5) e o campo de escrever com **Enviar**. A mensagem que o celular manda aparece na hora, como "enviando", e é trocada pelo item de verdade quando ele chega; se `sent` volta com erro, fica marcada e o texto volta para o campo. O texto das conversas, como o dos cartões, **fica só na memória**: nada vai para o IndexedDB nem para o cache do service worker.
+
+**Marcos.**
+
+| Marco | O que entra | Teste |
+|---|---|---|
+| **CH1** Spec | esta seção, os tipos novos de 28.3 (`ChatLine`, `PhoneItem`, as mensagens), o limite do computador no relay | revisão do dono; os tipos geram o TypeScript; o relay aceita 600 quadros por minuto do computador e recusa o 61º do celular |
+| **CH2** Daemon | `chats`, `history`, `send`, `watch`, `item`, `live`, `state`, `line`, as regras acima | com o celular de teste em Rust: a lista só com bots ativos; páginas do histórico em partes de até 16 KiB; ferramentas sem saída; texto cortado em 6 KiB; `send` pelo mesmo caminho do app, `needs_computer` no `bypass_permissions`, limite de envio; `live` no máximo por segundo e só na conversa aberta |
+| **CH3** PWA | as abas, a lista, a conversa, o campo de escrever, a resposta ao vivo, três idiomas | testes de tela com o `FakePhone`; o cliente contra um computador de mentira (repetição, partes do histórico, mensagem otimista) |
+| **CH4** Teste real | uma conversa de verdade no Android, com um bot do Claude Code real | registrado na seção 19 |

@@ -1454,14 +1454,38 @@ atComputer: boolean, };
 export type QuestionCard = { questionId: QuestionId, bot: CardBot, crew: string, createdAt: number, text: string, options: Array<string>, };
 
 /**
+ * A bot in the phone's list of conversations (spec 28.12).
+ */
+export type ChatLine = { botId: BotId, name: string, color: string, crew: string, state: BotState, 
+/**
+ * False for a bot that can only be written to at the computer
+ * (`bypass_permissions`, spec 28.12).
+ */
+canSend: boolean, 
+/**
+ * When the bot last finished a reply, in Unix milliseconds.
+ */
+lastReplyAt?: number, 
+/**
+ * The last thing in the chat, on one line.
+ */
+last?: Activity, };
+
+/**
+ * One thing in a conversation, as the phone shows it (spec 28.12): the
+ * text, and never the output of a tool.
+ */
+export type PhoneItem = { "kind": "you", id: ChatItemId, at: number, text: string, cut: boolean, } | { "kind": "bot_message", id: ChatItemId, at: number, from: string, text: string, cut: boolean, } | { "kind": "reply", id: ChatItemId, at: number, text: string, cut: boolean, } | { "kind": "tool", id: ChatItemId, at: number, summary: string, } | { "kind": "approval", id: ChatItemId, at: number, approvalId: ApprovalId, summary: string, status: ApprovalStatus, } | { "kind": "question", id: ChatItemId, at: number, questionId: QuestionId, text: string, status: QuestionStatus, } | { "kind": "failed", id: ChatItemId, at: number, error?: string, } | { "kind": "notice", id: ChatItemId, at: number, level: NoticeLevel, text: string, };
+
+/**
  * What the computer sends the phone, sealed (spec 28.3).
  */
-export type ToPhone = { "t": "snapshot", approvals: Array<ApprovalCard>, questions: Array<QuestionCard>, } | { "t": "approval.open", card: ApprovalCard, } | { "t": "approval.closed", approvalId: ApprovalId, status: ApprovalStatus, } | { "t": "question.open", card: QuestionCard, } | { "t": "question.closed", questionId: QuestionId, status: QuestionStatus, };
+export type ToPhone = { "t": "snapshot", approvals: Array<ApprovalCard>, questions: Array<QuestionCard>, } | { "t": "approval.open", card: ApprovalCard, } | { "t": "approval.closed", approvalId: ApprovalId, status: ApprovalStatus, } | { "t": "question.open", card: QuestionCard, } | { "t": "question.closed", questionId: QuestionId, status: QuestionStatus, } | { "t": "chats", bots: Array<ChatLine>, first: boolean, } | { "t": "history", req: number, botId: BotId, items: Array<PhoneItem>, more: boolean, done: boolean, } | { "t": "sent", clientId: string, ok: boolean, reason?: string, } | { "t": "item", botId: BotId, item: PhoneItem, } | { "t": "live", botId: BotId, text: string, } | { "t": "state", botId: BotId, state: BotState, } | { "t": "line", bot: ChatLine, };
 
 /**
  * What the phone sends the computer, sealed (spec 28.3).
  */
-export type FromPhone = { "t": "sync" } | { "t": "approval.answer", approvalId: ApprovalId, allow: boolean, note?: string, } | { "t": "question.answer", questionId: QuestionId, answer: string, } | { "t": "question.dismiss", questionId: QuestionId, };
+export type FromPhone = { "t": "sync" } | { "t": "approval.answer", approvalId: ApprovalId, allow: boolean, note?: string, } | { "t": "question.answer", questionId: QuestionId, answer: string, } | { "t": "question.dismiss", questionId: QuestionId, } | { "t": "chats" } | { "t": "history", req: number, botId: BotId, before?: ChatItemId, } | { "t": "send", clientId: string, botId: BotId, text: string, } | { "t": "watch", botId?: BotId, };
 
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
 /**

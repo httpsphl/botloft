@@ -357,3 +357,23 @@ async fn the_computer_hears_when_a_phone_joins() {
     .await;
     assert_eq!(pc.next().await, json!({ "t": "pairing", "id": id }));
 }
+
+#[tokio::test]
+async fn the_computer_may_send_ten_times_what_a_phone_may_in_a_minute() {
+    let s = server();
+    let address = s.listen().await;
+    let computer = s.sign_in("ana@exemplo.com", "1.1.1.1").await;
+    let (mut pc, _) = Sock::ready(address, &computer).await;
+
+    // It speaks for every bot: 600 frames in a minute go through, the 601st does not.
+    for _ in 0..599 {
+        pc.send(json!({ "t": "noop" })).await;
+    }
+    // (This one counts too, and tells that all before it were handled.)
+    pc.sync().await;
+    pc.send(json!({ "t": "noop" })).await;
+    assert_eq!(pc.next().await["reason"], "rate_limited");
+    // A minute later it is free again.
+    s.clock.advance(61_000);
+    pc.sync().await;
+}

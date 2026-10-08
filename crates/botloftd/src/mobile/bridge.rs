@@ -190,6 +190,11 @@ impl Mobile {
                     }
                 }
             }
+            // The conversations (spec 28.12) are for the next step.
+            FromPhone::Chats
+            | FromPhone::History { .. }
+            | FromPhone::Send { .. }
+            | FromPhone::Watch { .. } => {}
             FromPhone::QuestionDismiss { question_id } => {
                 if self.may_answer(daemon, phone) {
                     let params = QuestionIdParams {

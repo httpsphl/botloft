@@ -27,8 +27,10 @@ const MAX_FRAME: usize = 64 * 1024;
 const HELLO_WAIT: Duration = Duration::from_secs(10);
 /// How often the server pings, so proxies keep the socket open.
 const PING_EVERY: Duration = Duration::from_secs(25);
-/// Frames a device may send in a minute.
-const FRAMES_PER_MINUTE: usize = 60;
+/// Frames a phone may send in a minute; the computer speaks for every bot and
+/// may send ten times as many (spec 28.12).
+const PHONE_FRAMES_PER_MINUTE: usize = 60;
+const COMPUTER_FRAMES_PER_MINUTE: usize = 600;
 
 /// `GET /v1/relay`
 pub async fn relay(State(state): State<AppState>, upgrade: WebSocketUpgrade) -> Response {
@@ -89,7 +91,7 @@ async fn serve(state: AppState, mut socket: WebSocket) {
         tokio::select! {
             incoming = socket.recv() => match incoming {
                 Some(Ok(Message::Text(text))) => {
-                    if !within_limit(&state, &mut recent) {
+                    if !within_limit(&state, &who, &mut recent) {
                         let _ = put(&mut socket, json!({"t": "error", "reason": "rate_limited"})).await;
                         continue;
                     }
@@ -126,12 +128,16 @@ async fn serve(state: AppState, mut socket: WebSocket) {
 }
 
 /// At most `FRAMES_PER_MINUTE` frames in any minute (the server's clock).
-fn within_limit(state: &AppState, recent: &mut VecDeque<i64>) -> bool {
+fn within_limit(state: &AppState, who: &Who, recent: &mut VecDeque<i64>) -> bool {
+    let limit = match who.kind {
+        Kind::Phone => PHONE_FRAMES_PER_MINUTE,
+        Kind::Computer => COMPUTER_FRAMES_PER_MINUTE,
+    };
     let now = state.clock.now();
     while recent.front().is_some_and(|at| *at <= now - 60_000) {
         recent.pop_front();
     }
-    if recent.len() >= FRAMES_PER_MINUTE {
+    if recent.len() >= limit {
         return false;
     }
     recent.push_back(now);
