@@ -9,8 +9,8 @@ use botloft_core::protocol::{
     AccountUsage, AutoBackupStatus, Bot, BotContextChanged, BotDeleted, BotDesktop, BotMcp,
     BotRules, BotStateChanged, BrowserAction, BrowserState, ChatDelta, ChatItemChanged,
     CloudProgress, CloudSignedIn, Crew, CrewDeleted, Delivery, DesktopAwayUse, DesktopState,
-    FolderRecycled, McpOverview, Message, Question, ReactionChanged, Routine, RoutineRun,
-    ScreenDraft, Task,
+    FolderRecycled, McpOverview, Message, MobilePairRequest, MobileStatus, Question,
+    ReactionChanged, Routine, RoutineRun, ScreenDraft, Task,
 };
 use botloft_store::Store;
 use tokio::runtime::{Handle, RuntimeFlavor};
@@ -65,6 +65,8 @@ pub enum Event {
     CloudProgress(CloudProgress),
     CloudSigninExpired,
     AutoBackupChanged(AutoBackupStatus),
+    MobileChanged(MobileStatus),
+    MobilePairRequest(MobilePairRequest),
 }
 
 /// Events buffered per connection before a slow client is dropped.
@@ -131,6 +133,8 @@ pub struct Daemon {
     pub cloud: crate::cloud::Cloud,
     /// The copies it sends by itself (spec 27.10).
     pub autobackup: crate::autobackup::AutoBackup,
+    /// The phone that approves and answers from afar (spec 28).
+    pub mobile: crate::mobile::Mobile,
     /// Other crews a bot may reach for its current turn (spec 10.4).
     pub crew_access: crate::service::crew_access::TurnAccess,
     /// What each bot's process had cost by its last turn (spec 8.7).
@@ -180,6 +184,7 @@ impl Daemon {
                 options.secrets,
                 options.cloud.auto_tick,
             ),
+            mobile: crate::mobile::Mobile::new(&options.paths.secrets(), options.cloud.relay_retry),
             cloud: crate::cloud::Cloud::new(options.cloud),
             crew_access: Default::default(),
             costs: Default::default(),

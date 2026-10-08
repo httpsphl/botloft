@@ -4,6 +4,7 @@
 
 import type { FakeBotloft, Handlers } from "./fake";
 import { turnOffFakeAutoBackup } from "./fakeAutoBackup";
+import { forgetFakePhones } from "./fakeMobile";
 import { type CloudCopy, type CloudStatus, RpcErrorCode } from "./protocol.gen";
 import { RpcError } from "./rpc";
 
@@ -39,6 +40,11 @@ function refused(reason: string, message: string): RpcError {
 
 function signedIn(state: CloudState): void {
   if (!state.signedIn) throw refused("not_signed_in", "sign in to the account first");
+}
+
+/** Whether the fake is signed in to the account. */
+export function fakeSignedIn(fake: FakeBotloft): boolean {
+  return stateOf(fake).signedIn;
 }
 
 /** The owner opens the link in the e-mail: the waiting sign-in finishes. */
@@ -87,6 +93,7 @@ export function cloudHandlers(fake: FakeBotloft): Pick<Handlers, CloudMethods> {
     },
     "cloud.signout": () => {
       turnOffFakeAutoBackup(fake);
+      forgetFakePhones(fake);
       state.signedIn = false;
       state.email = null;
       state.pending = null;

@@ -27,9 +27,10 @@ fn run<T>(work: impl Future<Output = T>) -> T {
 }
 
 /// A refused token ends the sign-in on this computer: it was revoked.
-fn fail(daemon: &Daemon, err: CloudError) -> ApiError {
+pub(super) fn fail(daemon: &Daemon, err: CloudError) -> ApiError {
     if err.reason == "unauthorized" {
         daemon.cloud.forget(&daemon.paths.secrets());
+        daemon.mobile.forget(daemon);
         return ApiError::Rule {
             reason: "signed_out",
             message: "sign in again to use the account".to_owned(),
@@ -132,6 +133,8 @@ pub fn signout(daemon: &Daemon) {
         let _ = run(server.logout(&credentials.token));
     }
     daemon.cloud.forget(&daemon.paths.secrets());
+    // The phones go with the account (spec 28.6).
+    daemon.mobile.forget(daemon);
     // Without the account there is nowhere to send the copies.
     daemon.autobackup.turn_off();
     daemon.emit(Event::AutoBackupChanged(daemon.autobackup.status()));

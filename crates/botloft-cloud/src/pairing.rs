@@ -232,6 +232,11 @@ pub async fn result(
                 // Two polls at once: the other one took it.
                 return Ok(Json(json!({ "status": "expired" })));
             }
+            // The computer learns the phone's id, which only the phone had.
+            state.hub.send(
+                &ready.computer,
+                json!({ "t": "paired", "pairing": id, "device": device }).to_string(),
+            );
             Ok(Json(json!({
                 "status": "approved",
                 "token": token,

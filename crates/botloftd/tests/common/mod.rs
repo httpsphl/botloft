@@ -10,6 +10,7 @@ pub mod context;
 #[cfg(windows)]
 pub mod desktop;
 pub mod mcp;
+pub mod mobile;
 pub mod routines;
 pub mod site;
 pub mod stream;
@@ -163,6 +164,14 @@ pub fn new_daemon_with(
     }
 }
 
+/// The relay tries again soon, so a test does not wait for it.
+fn fast_retry() -> botloftd::mobile::Retry {
+    botloftd::mobile::Retry {
+        min: Duration::from_millis(50),
+        max: Duration::from_millis(200),
+    }
+}
+
 impl TestDaemon {
     /// Server only: bots are never started and nothing is delivered.
     pub async fn start() -> Self {
@@ -191,9 +200,21 @@ impl TestDaemon {
         let cloud = botloftd::cloud::CloudSettings {
             url: url.to_owned(),
             poll: Duration::from_millis(50),
+            relay_retry: fast_retry(),
             ..Default::default()
         };
         Self::launch_with(false, APPROVAL_WAIT, cloud, secrets).await
+    }
+
+    /// Server, supervisor and courier, with an account server to talk to.
+    pub async fn start_supervised_with_cloud(url: &str) -> Self {
+        let cloud = botloftd::cloud::CloudSettings {
+            url: url.to_owned(),
+            poll: Duration::from_millis(50),
+            relay_retry: fast_retry(),
+            ..Default::default()
+        };
+        Self::launch_with(true, APPROVAL_WAIT, cloud, Arc::new(MemorySecrets::new())).await
     }
 
     async fn launch(supervised: bool, approval_wait: Duration) -> Self {
@@ -219,6 +240,8 @@ impl TestDaemon {
             tokio::spawn(supervisor::run(Arc::clone(&parts.daemon)));
             tokio::spawn(courier::run(Arc::clone(&parts.daemon)));
         }
+        // The phone's relay waits until a phone is wanted (spec 28).
+        tokio::spawn(botloftd::mobile::run(Arc::clone(&parts.daemon)));
         tokio::spawn(server::serve(
             Arc::clone(&parts.daemon),
             listener,

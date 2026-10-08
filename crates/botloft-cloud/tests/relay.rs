@@ -317,6 +317,24 @@ async fn a_device_sends_sixty_frames_a_minute_and_a_second_socket_replaces_the_f
 }
 
 #[tokio::test]
+async fn the_computer_hears_the_phones_id_when_it_collects_its_token() {
+    let s = server();
+    let address = s.listen().await;
+    let computer = s.sign_in("ana@exemplo.com", "1.1.1.1").await;
+    let (mut pc, _) = Sock::ready(address, &computer).await;
+    let phone = s.pair(&computer, 3).await;
+    // The join came first, then the phone collected its token.
+    assert_eq!(
+        pc.next().await,
+        json!({ "t": "pairing", "id": phone.pairing })
+    );
+    assert_eq!(
+        pc.next().await,
+        json!({ "t": "paired", "pairing": phone.pairing, "device": phone.device })
+    );
+}
+
+#[tokio::test]
 async fn the_computer_hears_when_a_phone_joins() {
     let s = server();
     let address = s.listen().await;

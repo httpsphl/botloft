@@ -1341,6 +1341,128 @@ export type AutoBackupEnableParams = { passphrase: string, every: AutoBackupEver
  */
 export type AutoBackupEveryParams = { every: AutoBackupEvery, };
 
+/**
+ * Whether the computer's connection to the relay is up.
+ */
+export type MobileRelay = "off" | "connecting" | "connected";
+
+/**
+ * A phone the owner connected.
+ */
+export type MobilePhone = { id: string, name: string, 
+/**
+ * Unix time in milliseconds.
+ */
+pairedAt: number, 
+/**
+ * When the phone last sent anything, in Unix milliseconds.
+ */
+lastSeenAt?: number, online: boolean, };
+
+/**
+ * A phone that opened the QR code and waits for the owner to compare the
+ * code and accept it.
+ */
+export type MobileJoined = { name: string, 
+/**
+ * Six digits, the same on the phone's screen.
+ */
+code: string, };
+
+/**
+ * A QR code on screen.
+ */
+export type MobilePairing = { pairId: string, 
+/**
+ * Unix time in milliseconds the code stops working.
+ */
+expiresAt: number, joined?: MobileJoined, };
+
+/**
+ * `mobile.status`, and the `mobile.changed` notification.
+ */
+export type MobileStatus = { relay: MobileRelay, phones: Array<MobilePhone>, pending?: MobilePairing, };
+
+/**
+ * `mobile.pair_start`: what the QR code carries.
+ */
+export type MobilePairStarted = { pairId: string, 
+/**
+ * The address the QR code holds, `#` and all.
+ */
+url: string, 
+/**
+ * Seconds the code works.
+ */
+expiresIn: number, };
+
+/**
+ * `mobile.pair_cancel`.
+ */
+export type MobilePairIdParams = { pairId: string, };
+
+/**
+ * `mobile.pair_confirm`: the owner compared the codes.
+ */
+export type MobilePairConfirmParams = { pairId: string, accept: boolean, };
+
+/**
+ * `mobile.revoke`.
+ */
+export type MobileRevokeParams = { phoneId: string, };
+
+/**
+ * The `mobile.pair_request` notification: a phone opened the code.
+ */
+export type MobilePairRequest = { pairId: string, name: string, code: string, };
+
+/**
+ * The bot that asks, as the phone shows it.
+ */
+export type CardBot = { name: string, color: string, };
+
+/**
+ * A request waiting for the owner, as the phone shows it (spec 28.5). It
+ * carries what the owner needs to decide, and nothing else of the bot.
+ */
+export type ApprovalCard = { approvalId: ApprovalId, bot: CardBot, crew: string, 
+/**
+ * Unix time in milliseconds.
+ */
+createdAt: number, toolName: string, summary: string, 
+/**
+ * What the bot says the command is for; the bot wrote it.
+ */
+explanation?: string, 
+/**
+ * The command, the plan or the request, whole unless `cut`.
+ */
+text: string, 
+/**
+ * `text` is not the whole request: the phone may only deny it.
+ */
+cut: boolean, 
+/**
+ * The request is of a kind that is answered at the computer: the phone
+ * may only deny it.
+ */
+atComputer: boolean, };
+
+/**
+ * A question waiting for the owner, as the phone shows it.
+ */
+export type QuestionCard = { questionId: QuestionId, bot: CardBot, crew: string, createdAt: number, text: string, options: Array<string>, };
+
+/**
+ * What the computer sends the phone, sealed (spec 28.3).
+ */
+export type ToPhone = { "t": "snapshot", approvals: Array<ApprovalCard>, questions: Array<QuestionCard>, } | { "t": "approval.open", card: ApprovalCard, } | { "t": "approval.closed", approvalId: ApprovalId, status: ApprovalStatus, } | { "t": "question.open", card: QuestionCard, } | { "t": "question.closed", questionId: QuestionId, status: QuestionStatus, };
+
+/**
+ * What the phone sends the computer, sealed (spec 28.3).
+ */
+export type FromPhone = { "t": "sync" } | { "t": "approval.answer", approvalId: ApprovalId, allow: boolean, note?: string, } | { "t": "question.answer", questionId: QuestionId, answer: string, } | { "t": "question.dismiss", questionId: QuestionId, };
+
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
 /**
  * What the bot says the command is for, as in `ToolItem`. The bot
@@ -2064,6 +2186,11 @@ export interface RpcMethods {
   "autobackup.enable": { params: AutoBackupEnableParams; result: AutoBackupStatus };
   "autobackup.set_every": { params: AutoBackupEveryParams; result: AutoBackupStatus };
   "autobackup.disable": { params: undefined; result: AutoBackupStatus };
+  "mobile.status": { params: undefined; result: MobileStatus };
+  "mobile.pair_start": { params: undefined; result: MobilePairStarted };
+  "mobile.pair_cancel": { params: MobilePairIdParams; result: null };
+  "mobile.pair_confirm": { params: MobilePairConfirmParams; result: null };
+  "mobile.revoke": { params: MobileRevokeParams; result: MobileStatus };
   "routines.list": { params: RoutinesListParams; result: Array<Routine> };
   "routines.create": { params: RoutinesCreateParams; result: Routine };
   "routines.update": { params: RoutinesUpdateParams; result: Routine };
@@ -2123,6 +2250,8 @@ export interface RpcNotifications {
   "cloud.progress": CloudProgress;
   "cloud.signin_expired": null;
   "autobackup.changed": AutoBackupStatus;
+  "mobile.changed": MobileStatus;
+  "mobile.pair_request": MobilePairRequest;
   "browser.changed": BrowserState;
   "browser.action": BrowserAction;
   "browser.frame": BrowserFrame;

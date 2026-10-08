@@ -14,12 +14,13 @@ pub struct CloudServer {
     pub url: String,
     pub outbox: Outbox,
     pub clock: Clock,
+    pub hub: Hub,
 }
 
 pub async fn cloud_server() -> CloudServer {
     let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
     let url = format!("http://{}", listener.local_addr().expect("addr"));
-    let (outbox, clock) = (Outbox::default(), Clock::default());
+    let (outbox, clock, hub) = (Outbox::default(), Clock::default(), Hub::default());
     let mut config = Config::for_tests();
     config.public_url = url.clone();
     let state = AppState {
@@ -28,12 +29,17 @@ pub async fn cloud_server() -> CloudServer {
         clock: clock.clone(),
         config: Arc::new(config),
         store: CopyStore::memory(),
-        hub: Hub::default(),
+        hub: hub.clone(),
     };
     tokio::spawn(async move {
         axum::serve(listener, router(state)).await.expect("serve");
     });
-    CloudServer { url, outbox, clock }
+    CloudServer {
+        url,
+        outbox,
+        clock,
+        hub,
+    }
 }
 
 impl CloudServer {

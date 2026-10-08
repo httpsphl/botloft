@@ -11,7 +11,7 @@ use serde_json::{Value, json};
 use super::CloudError;
 
 /// Small calls give up after this; transfers only when they go quiet.
-const CALL: Duration = Duration::from_secs(30);
+pub(super) const CALL: Duration = Duration::from_secs(30);
 const QUIET: Duration = Duration::from_secs(60);
 
 pub struct Server {
@@ -90,7 +90,7 @@ impl Server {
         })
     }
 
-    async fn json(&self, request: RequestBuilder) -> Result<Value, CloudError> {
+    pub(super) async fn json(&self, request: RequestBuilder) -> Result<Value, CloudError> {
         let response = self.send(request.timeout(CALL)).await?;
         response
             .json()

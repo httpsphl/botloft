@@ -205,6 +205,11 @@ const ASIDE: &[&str] = &[
     method::CLOUD_DOWNLOAD,
     method::CLOUD_DELETE,
     method::CLOUD_DELETE_ACCOUNT,
+    // The phone: they ask the server (spec 28.5).
+    method::MOBILE_PAIR_START,
+    method::MOBILE_PAIR_CANCEL,
+    method::MOBILE_PAIR_CONFIRM,
+    method::MOBILE_REVOKE,
 ];
 
 enum Routed {

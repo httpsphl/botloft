@@ -4,6 +4,7 @@
 
 mod client;
 mod creds;
+mod pairing;
 pub(crate) mod signin;
 mod transfer;
 
@@ -15,6 +16,7 @@ use tokio::task::AbortHandle;
 
 pub use client::{Me, Server};
 pub use creds::Credentials;
+pub use pairing::Seen;
 pub use transfer::{Progress, download, upload};
 
 use crate::config::Config;
@@ -28,6 +30,8 @@ pub struct CloudSettings {
     pub poll: Duration,
     /// How often the automatic backup looks whether its time has come.
     pub auto_tick: Duration,
+    /// How soon the phone relay tries again after losing the server.
+    pub relay_retry: crate::mobile::Retry,
 }
 
 impl Default for CloudSettings {
@@ -36,6 +40,7 @@ impl Default for CloudSettings {
             url: String::new(),
             poll: Duration::from_secs(2),
             auto_tick: crate::autobackup::DEFAULT_TICK,
+            relay_retry: crate::mobile::Retry::default(),
         }
     }
 }
@@ -46,6 +51,7 @@ impl CloudSettings {
             url: config.cloud.url.trim().to_owned(),
             poll: Duration::from_millis(config.cloud.poll_ms),
             auto_tick: crate::autobackup::DEFAULT_TICK,
+            relay_retry: crate::mobile::Retry::default(),
         }
     }
 }
@@ -88,7 +94,7 @@ impl CloudError {
 
     /// The server's own `reason`; one this build does not know stays generic.
     pub(crate) fn from_server(reason: &str, message: String) -> Self {
-        const KNOWN: [&str; 11] = [
+        const KNOWN: [&str; 14] = [
             "unauthorized",
             "not_found",
             "bad_email",
@@ -100,6 +106,9 @@ impl CloudError {
             "too_big",
             "quota",
             "bad_range",
+            "wrong_device",
+            "bad_pairing",
+            "pair_expired",
         ];
         Self {
             reason: KNOWN
