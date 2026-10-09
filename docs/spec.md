@@ -1114,6 +1114,7 @@ M2 a M4 foram entregues com ConPTY, terminal com replay, inbox por named pipe e 
 10. Bots vendo e usando os apps abertos no desktop do dono, com permissões por app ou do desktop inteiro. Desenho na seção 24 e em `docs/adr/0002-desktop-use.md`.
 11. Ferramentas conectadas: o dono liga servidores MCP próprios (LinkedIn, sistemas internos) a bots escolhidos, sem tirar o `--strict-mcp-config`. Desenho na seção 25.
 12. Catálogo de bots: modelos prontos de função (Designer, Pesquisador...) que o dono escolhe na Agência de bots e adiciona à equipe, e que o chefe usa para sugerir bots com instruções melhores. Desenho na seção 26.
+13. Modelos de equipe (começar uma equipe já com os bots certos) e resumo diário (o chefe conta, no fim do dia, o que cada bot fez). Desenho na seção 29.
 
 ## 19. Pontos a verificar na versão alvo do Claude Code
 
@@ -2201,7 +2202,7 @@ instructions = """
 
 ### 26.7 Fora desta etapa
 
-O dono criar, importar ou compartilhar fichas; **restaurar o padrão** de um bot criado de um modelo (pede guardar o `id` do modelo no bot, e o histórico de instruções do item 5 da seção 18 cobre melhor); marcar no catálogo o que já está na equipe; atualizar bots já criados quando uma ficha muda (eles foram personalizados); modelos de equipe inteira; indicar ferramentas conectadas por papel de forma automática.
+O dono criar, importar ou compartilhar fichas; **restaurar o padrão** de um bot criado de um modelo (pede guardar o `id` do modelo no bot, e o histórico de instruções do item 5 da seção 18 cobre melhor); marcar no catálogo o que já está na equipe; atualizar bots já criados quando uma ficha muda (eles foram personalizados); indicar ferramentas conectadas por papel de forma automática.
 
 ### 26.8 Marcos
 
@@ -2579,3 +2580,36 @@ Status: **LK1 (spec)**. Um celular desbloqueado e conectado aprova pedidos (28.5
 | **LK2** PWA | o cofre (cifra, contadores, erros), a tela do PIN, ligar e desligar em "Este celular", o aviso da caixa, a trava por segundo plano, três idiomas | o cofre contra o WebCrypto (PIN certo e errado, adulteração, espera, apagar no décimo erro, sessão antiga); telas com o `FakePhone`; a trava no Android de verdade |
 
 **Visto** (2026-10-08, navegador do app como celular, servidor e daemon de verdade em processo): conectar mostra o aviso com o motivo; ligar o PIN deixa no IndexedDB só `{v, lock: {salt, iterations: 600000, iv, ct, failed, nextTryAt}}`, sem `plain`, sem o token e sem os ids; recarregar a página abre trancada; PIN errado diz "Restam 9 tentativas" e limpa o campo; o PIN certo abre, reconecta e traz os pedidos de volta; com a página "escondida" ela seguia aberta aos 26 s e estava trancada aos 70 s. **Falta ver no Android de verdade**: o teclado numérico, o minuto em segundo plano com o app instalado, e o que acontece com uma sessão feita antes do PIN (deve dizer para conectar de novo).
+
+
+## 29. Modelos de equipe e resumo diário
+
+### 29.1 Modelos de equipe
+
+Montar uma equipe do zero pede escolher cinco ou seis papéis, um por um, na Agência de bots (26). Um **modelo de equipe** é uma equipe já pensada para um tipo de trabalho: o dono escolhe "Estúdio de conteúdo" e a equipe nasce com o chefe e os bots certos.
+
+- **Onde aparece.** É o primeiro passo de "Nova equipe" (a janela da barra lateral e a de "Criar sua primeira equipe" na primeira execução): a lista de modelos e, embaixo, "Começar com uma equipe vazia", que leva ao formulário de sempre. Se o catálogo não carregou, o passo some e o formulário abre direto.
+- **Escolher um modelo** leva ao formulário de sempre com o **nome** preenchido (o do modelo, editável), a **meta** preenchida (vira as instruções do chefe, editável; ela diz que a equipe já está lá e que o trabalho vai como tarefas) e uma caixa "Este modelo traz: <nomes dos bots>" com "Escolher outro modelo" para voltar à lista. O resto (pasta de trabalho, modelo do chefe) não muda.
+- **Criar.** O app chama `crews.create` com o chefe, como sempre, e depois `catalog.add` (26.4) para cada papel do modelo, em ordem, com o nome e a função no idioma do dono, como a Agência faz; dois papéis com o mesmo nome ganham "2". Um bot que falha não interrompe os outros: a equipe já existe, o app avisa "A equipe foi criada, mas N bots não puderam ser adicionados" com o motivo, e o dono completa pela Agência. No fim abre o chat do chefe, como sempre.
+- **Os modelos** (`app/src/features/crews/crewTemplates.ts`, com os textos em `i18n/<idioma>/crewTemplates.ts`). Cada um tem entre 5 e 6 papéis do catálogo, e o limite é 11, porque o chefe ocupa um dos 12 lugares de uma equipe (`bots.max_per_crew`):
+
+| `id` | Papéis |
+|---|---|
+| `content-studio` | `content-strategist`, `writer`, `editor`, `seo-specialist`, `social-media`, `designer` |
+| `software-team` | `software-architect`, `frontend-developer`, `backend-developer`, `qa-tester`, `code-reviewer`, `technical-writer` |
+| `online-store` | `ecommerce-manager`, `copywriter`, `customer-support`, `returns-assistant`, `ads-manager`, `bookkeeper` |
+| `growth-team` | `growth-marketer`, `ppc-strategist`, `paid-social-strategist`, `ad-creative-strategist`, `tracking-specialist`, `email-marketer` |
+| `research-desk` | `researcher`, `academic-researcher`, `fact-checker`, `data-analyst`, `editor`, `writer` |
+| `back-office` | `bookkeeper`, `invoicing-assistant`, `cash-flow-forecaster`, `bills-assistant`, `tax-organizer`, `contract-reader` |
+| `personal-office` | `personal-assistant`, `travel-planner`, `bills-assistant`, `tax-organizer`, `goals-coach`, `meeting-secretary` |
+| `course-studio` | `course-creator`, `video-scriptwriter`, `presentation-designer`, `designer`, `editor`, `social-media` |
+| `game-studio` | `game-designer`, `game-narrative-designer`, `level-designer`, `game-economy-designer`, `playtest-analyst`, `designer` |
+| `people-team` | `recruiter`, `onboarding-coach`, `training-designer`, `hr-policy-writer`, `engagement-survey-analyst`, `performance-review-coach` |
+
+- **Só no app.** Não há método novo no daemon: o modelo é uma lista de `id` do catálogo, que o catálogo valida ao adicionar. Um teste confere que todo papel de todo modelo existe, sem repetição e com no máximo 11.
+- **Segurança e privacidade.** Um modelo só faz o que o dono já faz à mão (criar a equipe e adicionar bots do catálogo): todos os bots começam no modo Manual, com as fichas e os limites de 26, e nada sai do computador. Os modelos que mexem com dinheiro, pessoas ou documentos (`back-office`, `personal-office`, `people-team`) dizem na meta que nada é pago ou enviado sem o dono e que as decisões são dele.
+- **Fora desta etapa.** O dono salvar a própria equipe como modelo ou compartilhar modelos; o chefe sugerir um modelo para uma equipe que já existe; modelos por setor ou por país.
+
+| Marco | O que entra | Teste |
+|---|---|---|
+| **TM1** Modelos | o passo de modelos em "Nova equipe", os 10 modelos, a criação em ordem e o aviso de falha parcial, três idiomas | `FakeBotloft`: a lista, o formulário preenchido, `crews.create` e um `catalog.add` por papel, e uma falha que não derruba a equipe; todo papel existe no catálogo; `pnpm check`. Manual (PR): criar uma equipe de 2 ou 3 modelos com o Claude Code real e dar ao chefe um pedido |

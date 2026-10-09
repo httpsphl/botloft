@@ -9,6 +9,7 @@ import { chat } from "./chat";
 import { common } from "./common";
 import { connections } from "./connections";
 import { crews } from "./crews";
+import { crewTemplates } from "./crewTemplates";
 import { desktop } from "./desktop";
 import { files } from "./files";
 import { messages } from "./messages";
@@ -37,6 +38,7 @@ export const en = {
   chat,
   connections,
   crews,
+  crewTemplates,
   desktop,
   files,
   messages,

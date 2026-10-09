@@ -2,7 +2,7 @@ import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 import { FakeBotloft } from "../../lib/fake";
 import { FakeHost } from "../../lib/fakeHost";
-import { crewOpened, renderApp } from "../../test/app";
+import { crewOpened, openNewCrewForm, renderApp } from "../../test/app";
 
 afterEach(cleanup);
 
@@ -17,8 +17,7 @@ describe("work folders", () => {
     renderApp(fake, host);
     await crewOpened("Ops");
 
-    fireEvent.click(screen.getByRole("button", { name: "New crew" }));
-    const dialog = screen.getByRole("dialog", { name: "New crew" });
+    const dialog = await openNewCrewForm();
     fireEvent.change(within(dialog).getByLabelText("Name"), { target: { value: "Bakery" } });
     expect(within(dialog).getByText("A new folder inside Botloft")).toBeDefined();
     fireEvent.click(within(dialog).getByRole("button", { name: "Choose folder…" }));
@@ -41,8 +40,7 @@ describe("work folders", () => {
     renderApp(fake, host);
     await crewOpened("Ops");
 
-    fireEvent.click(screen.getByRole("button", { name: "New crew" }));
-    const dialog = screen.getByRole("dialog", { name: "New crew" });
+    const dialog = await openNewCrewForm();
     fireEvent.change(within(dialog).getByLabelText("Name"), { target: { value: "Bakery" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Choose folder…" }));
     await within(dialog).findByText(PROJECT);

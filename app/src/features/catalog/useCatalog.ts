@@ -4,8 +4,11 @@ import type { BotTemplate } from "../../lib/protocol.gen";
 import { useApi } from "../../store/context";
 import { notifyError } from "../../ui/toast";
 
-/** The roles of the Bot agency, read once when the screen opens. */
-export function useCatalog(): { roles: BotTemplate[] | null; failed: boolean } {
+/**
+ * The roles of the Bot agency, read once when the screen opens. With
+ * `enabled` false nothing is read (a dialog that only sometimes needs them).
+ */
+export function useCatalog(enabled = true): { roles: BotTemplate[] | null; failed: boolean } {
   const t = useT();
   const api = useApi();
   const [roles, setRoles] = useState<BotTemplate[] | null>(null);
@@ -13,6 +16,9 @@ export function useCatalog(): { roles: BotTemplate[] | null; failed: boolean } {
   const failure = t.catalog.failed.load;
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
     let live = true;
     api.call("catalog.list", {}).then(
       (list) => live && setRoles(list),
@@ -26,7 +32,7 @@ export function useCatalog(): { roles: BotTemplate[] | null; failed: boolean } {
     return () => {
       live = false;
     };
-  }, [api, failure]);
+  }, [api, failure, enabled]);
 
   return { roles, failed };
 }

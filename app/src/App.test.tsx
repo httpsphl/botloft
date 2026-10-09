@@ -33,6 +33,8 @@ describe("app", () => {
     expect(await screen.findByRole("heading", { name: "Welcome to Botloft" })).toBeDefined();
     expect(screen.getByText("Version 2.1.284")).toBeDefined();
     fireEvent.click(screen.getByRole("button", { name: "Create your first crew" }));
+    const chooser = await screen.findByRole("dialog", { name: "Start from a template" });
+    fireEvent.click(within(chooser).getByRole("button", { name: /Start with an empty crew/ }));
     type("Name", "Ops");
     fireEvent.click(screen.getByRole("button", { name: "Create crew" }));
     expect(await screen.findByRole("heading", { level: 1, name: "Ops" })).toBeDefined();

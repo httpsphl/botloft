@@ -28,3 +28,14 @@ export function openBot(name: string) {
 export function openTab(name: string | RegExp) {
   fireEvent.click(screen.getByRole("tab", { name }));
 }
+
+/**
+ * Opens "New crew" and takes the empty crew in the template step (spec 29.1),
+ * so the form is there. Returns the dialog.
+ */
+export async function openNewCrewForm() {
+  fireEvent.click(screen.getByRole("button", { name: "New crew" }));
+  const chooser = await screen.findByRole("dialog", { name: "Start from a template" });
+  fireEvent.click(within(chooser).getByRole("button", { name: /Start with an empty crew/ }));
+  return screen.getByRole("dialog", { name: "New crew" });
+}

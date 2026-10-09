@@ -6,6 +6,11 @@ import { useApi, useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Dialog } from "../../ui/Dialog";
 import { SelectField, TextArea, TextField } from "../../ui/Field";
+import { notifyError } from "../../ui/toast";
+import { useCatalog } from "../catalog/useCatalog";
+import { addTemplateBots } from "./addTemplateBots";
+import type { CrewTemplate } from "./crewTemplates";
+import { PickedTemplate, TemplatePicker } from "./TemplatePicker";
 import { WorkFolderField } from "./WorkFolderField";
 
 const MODELS: BotModel[] = ["default", "fable", "opus", "sonnet", "haiku"];
@@ -24,6 +29,19 @@ export function CrewDialog({ crew, onClose }: { crew?: Crew; onClose(): void }) 
   const putBot = useApp((state) => state.putBot);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // A new crew starts from a template (spec 29.1) when the catalog loaded:
+  // `undefined` is the list of templates, `null` an empty crew.
+  const { roles, failed: catalogFailed } = useCatalog(!crew);
+  const [template, setTemplate] = useState<CrewTemplate | null | undefined>(undefined);
+  const loading = !crew && roles === null && !catalogFailed;
+  const choosing = !crew && template === undefined && roles !== null;
+
+  const pick = (picked: CrewTemplate) => {
+    const item = t.crewTemplates.items[picked.id];
+    setTemplate(picked);
+    setName((current) => current || item.name);
+    setGoal(item.goal);
+  };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -52,6 +70,15 @@ export function CrewDialog({ crew, onClose }: { crew?: Crew; onClose(): void }) 
         for (const bot of bots) {
           putBot(bot);
         }
+        if (template && roles) {
+          const made = await addTemplateBots(api, t, saved.id, template, roles);
+          for (const bot of made.added) {
+            putBot(bot);
+          }
+          if (made.failed > 0) {
+            notifyError(t.crewTemplates.partial(made.failed), made.error);
+          }
+        }
         if (saved.leadBotId) {
           selectBot(saved.leadBotId);
         }
@@ -66,18 +93,37 @@ export function CrewDialog({ crew, onClose }: { crew?: Crew; onClose(): void }) 
   const formId = "crew-form";
   return (
     <Dialog
-      title={crew ? t.crews.dialog.renameTitle : t.crews.newCrew}
+      title={crew ? t.crews.dialog.renameTitle : choosing ? t.crewTemplates.title : t.crews.newCrew}
       onClose={onClose}
       footer={
         <>
           <Button onClick={onClose}>{t.common.cancel}</Button>
-          <Button variant="primary" type="submit" form={formId} disabled={busy}>
-            {crew ? t.crews.rename : t.crews.dialog.create}
-          </Button>
+          {!loading && !choosing && (
+            <Button variant="primary" type="submit" form={formId} disabled={busy}>
+              {crew ? t.crews.rename : t.crews.dialog.create}
+            </Button>
+          )}
         </>
       }
     >
-      <form id={formId} onSubmit={submit} className="flex flex-col gap-3">
+      {loading && <p className="text-muted text-sm">{t.catalog.loading}</p>}
+      {choosing && roles && <TemplatePicker onPick={pick} onScratch={() => setTemplate(null)} />}
+      <form
+        id={formId}
+        onSubmit={submit}
+        hidden={loading || choosing}
+        className="flex flex-col gap-3"
+      >
+        {template && roles && (
+          <PickedTemplate
+            template={template}
+            roles={roles}
+            onChange={() => {
+              setTemplate(undefined);
+              setGoal("");
+            }}
+          />
+        )}
         <TextField
           label={t.crews.dialog.name}
           value={name}
