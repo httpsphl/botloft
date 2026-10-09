@@ -95,6 +95,17 @@ fn update(daemon: &Daemon, bot: &BotId, change: impl FnOnce(&mut Entry)) {
 /// Asks the bot's process how full its conversation is. The answer comes
 /// as a `control_response` ([`answered`]).
 pub(crate) fn ask(daemon: &Daemon, bot: &BotId) {
+    // An agent that does not answer must not be asked.
+    let speaks = daemon
+        .store()
+        .bot(bot)
+        .ok()
+        .flatten()
+        .and_then(|record| crate::agent::of(record.agent))
+        .is_some_and(|agent| agent.speaks_control());
+    if !speaks {
+        return;
+    }
     let _ = daemon
         .supervisor
         .write_control(bot, control::context_request());
@@ -266,6 +277,12 @@ pub(crate) fn process_ended(daemon: &Daemon, bot: &BotId) {
 pub fn compact(daemon: &Daemon, params: BotIdParams) -> ApiResult<Bot> {
     let store = daemon.store();
     let (crew, record) = active(&store, &params.bot_id)?;
+    if !crate::agent::of(record.agent).is_some_and(|agent| agent.speaks_control()) {
+        return Err(ApiError::validation(format!(
+            "bots that run on {} cannot compact their conversation",
+            record.agent.as_str()
+        )));
+    }
     if !daemon.contexts.compacting(&record.id) {
         let not_running = || ApiError::Conflict(format!("bot {} is not running", record.id));
         let ready = matches!(

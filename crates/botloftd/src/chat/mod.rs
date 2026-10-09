@@ -13,7 +13,7 @@ use botloft_core::ids::BotId;
 use botloft_core::protocol::ChatDelta;
 use tracing::debug;
 
-use crate::agent::Agent;
+use crate::agent::{Agent, OutputDecoder};
 use crate::state::{Daemon, Event};
 
 /// Longest line kept; anything longer is dropped whole (spec 8.1).
@@ -32,7 +32,7 @@ pub struct StreamReader {
     bot: BotId,
     generation: u64,
     /// Reads the lines: they are the agent's own protocol.
-    agent: &'static dyn Agent,
+    decoder: Box<dyn OutputDecoder>,
     buffer: Vec<u8>,
     /// Inside a line that grew past [`LINE_MAX`]; ends at its newline.
     skipping: bool,
@@ -45,7 +45,7 @@ impl StreamReader {
         Self {
             bot,
             generation,
-            agent,
+            decoder: agent.decoder(),
             buffer: Vec::new(),
             skipping: false,
             live: String::new(),
@@ -110,7 +110,7 @@ impl StreamReader {
                 return;
             }
         };
-        if let Some(text) = self.agent.live_text(&event) {
+        if let Some(text) = self.decoder.live_text(&event) {
             // Lines from a process that was replaced say nothing about the
             // new one.
             if daemon.supervisor.is_current(&self.bot, self.generation) {
@@ -123,7 +123,7 @@ impl StreamReader {
         }
         // Whatever comes next follows the text before it.
         self.flush(daemon);
-        self.agent
-            .handle_output(daemon, &self.bot, self.generation, &event);
+        self.decoder
+            .handle(daemon, &self.bot, self.generation, &event);
     }
 }

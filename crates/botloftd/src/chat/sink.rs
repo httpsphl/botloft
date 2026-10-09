@@ -9,8 +9,11 @@ use botloft_core::ids::BotId;
 use botloft_core::protocol::{ChatBody, ReplyItem, TokenUsage, ToolItem, ToolStatus, TurnItem};
 use serde_json::Value;
 
+use tracing::warn;
+
 use super::items;
-use crate::state::Daemon;
+use crate::state::{Daemon, Event};
+use crate::{routines, screens};
 
 /// The bot's reply text; nothing for an empty one.
 pub(crate) fn reply(daemon: &Daemon, bot: &BotId, text: &str) {
@@ -83,4 +86,41 @@ pub(crate) fn turn_finished(
             error,
         }),
     );
+}
+
+/// The message written with `uuid` was taken up by the bot: its delivery is
+/// read, and a routine's run starts (spec 9.1).
+pub(crate) fn message_read(daemon: &Daemon, bot: &BotId, uuid: &str) {
+    let now = daemon.clock.now_ms();
+    let read = daemon.store().mark_read(uuid, now);
+    match read {
+        Ok(Some(delivery)) => {
+            routines::turn_began(daemon, bot, &delivery.message_id);
+            daemon.emit(Event::DeliveryChanged(delivery));
+        }
+        Ok(None) => {}
+        Err(err) => warn!("could not mark a delivery read: {err}"),
+    }
+}
+
+/// The agent has a conversation the next start resumes (spec 7.3).
+pub(crate) fn session_started(daemon: &Daemon, bot: &BotId, session: &str) {
+    let store = daemon.store();
+    let known = store.session_id(bot).ok().flatten();
+    if known.as_deref() != Some(session)
+        && let Err(err) = store.set_session_id(bot, Some(session))
+    {
+        warn!(bot = %bot, "could not save the session id: {err}");
+    }
+    drop(store);
+    daemon.supervisor.remember_session(bot, session);
+}
+
+/// Everything that follows the end of a turn, whatever the agent: the
+/// routine's run, the screens, the access to other crews, the bot's state.
+pub(crate) fn finish_turn(daemon: &Daemon, bot: &BotId, generation: u64, failed: bool) {
+    routines::turn_ended(daemon, bot, failed);
+    screens::turn_ended(daemon, bot);
+    daemon.crew_access.end_turn(bot);
+    daemon.supervisor.turn_ended(bot, generation);
 }

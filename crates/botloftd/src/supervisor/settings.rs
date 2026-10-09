@@ -16,6 +16,10 @@ pub enum ClaudeSource {
 #[derive(Debug, Clone)]
 pub struct SupervisorSettings {
     pub claude: ClaudeSource,
+    /// `agy_path` from the config; empty looks in the usual places (spec 30).
+    pub agy_path: String,
+    /// Agents the owner switched on although they are experimental.
+    pub experimental_agents: Vec<String>,
     pub backoff_initial: Duration,
     pub backoff_max: Duration,
     pub fresh_start_if_dies_within: Duration,
@@ -30,6 +34,8 @@ impl SupervisorSettings {
             claude: ClaudeSource::Discover {
                 configured: config.claude_path.clone(),
             },
+            agy_path: config.agy_path.clone(),
+            experimental_agents: config.experimental_agents.clone(),
             backoff_initial: Duration::from_millis(config.supervisor.restart_backoff_initial_ms),
             backoff_max: Duration::from_millis(config.supervisor.restart_backoff_max_ms),
             fresh_start_if_dies_within: Duration::from_secs(

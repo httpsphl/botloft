@@ -102,13 +102,6 @@ text_enum!(
     }
 );
 
-impl AgentKind {
-    /// Whether the daemon can run bots of this agent yet.
-    pub fn runs(self) -> bool {
-        matches!(self, Self::Claude)
-    }
-}
-
 text_enum!(
     /// Which Claude model a bot runs on (spec 7.4): Claude Code's `--model`
     /// aliases, or the account's default.

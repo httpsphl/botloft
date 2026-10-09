@@ -40,6 +40,12 @@ pub fn create(daemon: &Daemon, params: BotsCreateParams) -> ApiResult<Bot> {
         params.model,
         params.agent,
     )?;
+    if !daemon.supervisor.agent_enabled(new.agent) {
+        return Err(ApiError::validation(format!(
+            "bots that run on {} are not available yet",
+            new.agent.as_str()
+        )));
+    }
     let store = daemon.store();
     let crew = crews::active(&store, &params.crew_id)?;
     let record = insert(daemon, &store, &crew, BotId::generate(), new)?;
@@ -68,19 +74,12 @@ impl NewBot {
         model: Option<BotModel>,
         agent: Option<AgentKind>,
     ) -> ApiResult<Self> {
-        let agent = agent.unwrap_or(AgentKind::Claude);
-        if !agent.runs() {
-            return Err(ApiError::validation(format!(
-                "bots that run on {} are not available yet",
-                agent.as_str()
-            )));
-        }
         Ok(Self {
             name: validate::name("name", name)?,
             role: validate::role(role)?,
             instructions: validate::instructions(instructions)?,
             color: color.as_deref().map(parse_color).transpose()?,
-            agent,
+            agent: agent.unwrap_or(AgentKind::Claude),
             model: model.unwrap_or(BotModel::Default),
             effort: BotEffort::Default,
         })

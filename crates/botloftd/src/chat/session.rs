@@ -4,7 +4,6 @@
 
 use botloft_core::ids::BotId;
 use serde_json::Value;
-use tracing::warn;
 
 use crate::state::Daemon;
 
@@ -23,15 +22,7 @@ pub(super) fn began(daemon: &Daemon, bot: &BotId, event: &Value) {
     if !event["parent_tool_use_id"].is_null() {
         return;
     }
-    let store = daemon.store();
-    let known = store.session_id(bot).ok().flatten();
-    if known.as_deref() != Some(session)
-        && let Err(err) = store.set_session_id(bot, Some(session))
-    {
-        warn!(bot = %bot, "could not save the session id: {err}");
-    }
-    drop(store);
-    daemon.supervisor.remember_session(bot, session);
+    super::sink::session_started(daemon, bot, session);
 }
 
 /// Whether this `result` is Claude Code saying it could not find the

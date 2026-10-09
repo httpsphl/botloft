@@ -2,13 +2,15 @@
 //! both directions.
 
 use std::ffi::OsString;
+use std::io;
+use std::path::{Path, PathBuf};
 
 use botloft_core::ids::BotId;
 use botloft_core::protocol::AgentKind;
 use bytes::Bytes;
 use serde_json::{Value, json};
 
-use super::{Agent, LaunchPlan, Turn};
+use super::{Agent, LaunchFiles, LaunchPlan, OutputDecoder, Turn};
 use crate::chat::claude;
 use crate::state::Daemon;
 
@@ -27,6 +29,11 @@ pub struct ClaudeAgent;
 impl Agent for ClaudeAgent {
     fn kind(&self) -> AgentKind {
         AgentKind::Claude
+    }
+
+    fn locate(&self, _configured: &str, claude: &Path) -> io::Result<PathBuf> {
+        // Found and checked by the supervisor, which keeps it up to date.
+        Ok(claude.to_path_buf())
     }
 
     fn args(&self, plan: &LaunchPlan<'_>) -> Vec<OsString> {
@@ -84,9 +91,19 @@ impl Agent for ClaudeAgent {
         args
     }
 
-    fn extra_env(&self) -> Vec<(OsString, OsString)> {
+    fn extra_env(&self, _workspace: &Path) -> Vec<(OsString, OsString)> {
         // Loads the work folder's CLAUDE.md with the bot's memory.
         vec![(OsString::from(ADDITIONAL_MEMORY), OsString::from("1"))]
+    }
+
+    fn write_launch_files(&self, _files: &LaunchFiles<'_>) -> io::Result<()> {
+        // `workspace::prepare_bot` writes everything Claude Code reads, and
+        // it expands the token from the environment.
+        Ok(())
+    }
+
+    fn speaks_control(&self) -> bool {
+        true
     }
 
     fn encode_turn(&self, uuid: &str, turn: &Turn) -> Bytes {
@@ -111,11 +128,20 @@ impl Agent for ClaudeAgent {
         Bytes::from(line)
     }
 
-    fn live_text<'a>(&self, event: &'a Value) -> Option<&'a str> {
+    fn decoder(&self) -> Box<dyn OutputDecoder> {
+        Box::new(ClaudeDecoder)
+    }
+}
+
+/// Claude Code's stream keeps nothing between lines.
+struct ClaudeDecoder;
+
+impl OutputDecoder for ClaudeDecoder {
+    fn live_text<'a>(&mut self, event: &'a Value) -> Option<&'a str> {
         claude::live_text(event)
     }
 
-    fn handle_output(&self, daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
+    fn handle(&mut self, daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
         claude::apply(daemon, bot, generation, event);
     }
 }

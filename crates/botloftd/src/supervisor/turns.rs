@@ -64,6 +64,24 @@ impl Supervisor {
         });
     }
 
+    /// The agent took up a message without giving its id back (`agy` does
+    /// not): it was the oldest one written. Returns that id so its delivery
+    /// can be marked read.
+    pub(crate) fn oldest_message_began(&self, bot: &BotId, generation: u64) -> Option<String> {
+        let mut inner = self.lock();
+        let Inner { slots, .. } = &mut *inner;
+        let slot = slots.get_mut(bot)?;
+        if slot.generation != Some(generation) || slot.running.is_none() {
+            return None;
+        }
+        let uuid = (!slot.waiting.is_empty()).then(|| slot.waiting.remove(0));
+        slot.in_turn = true;
+        if slot.is_working() {
+            self.set_state(bot, slot, slot.working_state());
+        }
+        uuid
+    }
+
     /// Claude Code lists the subagents it runs in the background (`system/
     /// background_tasks_changed`); the whole list comes each time. They work
     /// after the turn that started them has ended.
