@@ -3,11 +3,14 @@
 
 use std::ffi::OsString;
 
+use botloft_core::ids::BotId;
 use botloft_core::protocol::AgentKind;
 use bytes::Bytes;
-use serde_json::json;
+use serde_json::{Value, json};
 
 use super::{Agent, LaunchPlan, Turn};
+use crate::chat::claude;
+use crate::state::Daemon;
 
 /// Tools the bot uses without asking: its crew tools (spec 7.4).
 const ALLOWED_TOOLS: &str = "mcp__botloft";
@@ -106,6 +109,14 @@ impl Agent for ClaudeAgent {
         let mut line = event.to_string().into_bytes();
         line.push(b'\n');
         Bytes::from(line)
+    }
+
+    fn live_text<'a>(&self, event: &'a Value) -> Option<&'a str> {
+        claude::live_text(event)
+    }
+
+    fn handle_output(&self, daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
+        claude::apply(daemon, bot, generation, event);
     }
 }
 
