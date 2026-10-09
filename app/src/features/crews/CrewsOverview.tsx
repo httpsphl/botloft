@@ -10,6 +10,7 @@ import { CountBadge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { BotAvatar, moodOf } from "../bots/BotAvatar";
 import { CrewDialog } from "./CrewDialog";
+import { orderedCrews, useCrewOrder } from "./crewOrder";
 
 /** Faces shown on a card; the rest are counted. */
 const FACES = 6;
@@ -18,7 +19,7 @@ const FACES = 6;
 export function CrewsOverview() {
   const t = useT();
   const words = t.crews.overview;
-  const crews = useApp(useShallow(crewList));
+  const crews = orderedCrews(useApp(useShallow(crewList)), useCrewOrder());
   const botCount = useApp((state) => Object.keys(state.bots).length);
   const [creating, setCreating] = useState(false);
   return (

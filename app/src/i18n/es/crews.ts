@@ -13,6 +13,8 @@ export const crews: Messages["crews"] = {
     awaitingApproval: (text: string) => `Esperando aprobación: ${text}`,
     unread: "sin leer",
     unreadCount: (count: number) => `${count} sin leer`,
+    moveUp: "Mover arriba",
+    moveDown: "Mover abajo",
     showAll: "Ver todos los equipos",
     collapseAll: "Contraer todos los equipos",
     expandAll: "Expandir todos los equipos",

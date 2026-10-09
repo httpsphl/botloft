@@ -18,6 +18,8 @@ export const crews = {
     unread: "unread",
     /** Beside a crew's name: how many of its bots are unread. */
     unreadCount: (count: number) => `${count} unread`,
+    moveUp: "Move up",
+    moveDown: "Move down",
     showAll: "See all crews",
     collapseAll: "Fold all crews",
     expandAll: "Unfold all crews",

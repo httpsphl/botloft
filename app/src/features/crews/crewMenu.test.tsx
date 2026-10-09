@@ -39,6 +39,7 @@ describe("a crew's right-click menu", () => {
     ).toEqual([
       "New bot",
       "Pause crew",
+      "Move up",
       "Rename",
       "Open work folder",
       "Change work folder…",
