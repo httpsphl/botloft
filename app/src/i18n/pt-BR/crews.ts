@@ -35,6 +35,9 @@ export const crews: Messages["crews"] = {
     noBots: "Nenhum bot ainda",
   },
   dialog: {
+    color: "Cor",
+    noColor: "Sem cor",
+    swatch: (color: string) => `Cor ${color}`,
     folder: "Pasta de trabalho",
     folderHint: "Onde os bots guardam o que fazem. Pode ser uma pasta que você já usa.",
     folderDefault: "Uma pasta nova dentro do Botloft",

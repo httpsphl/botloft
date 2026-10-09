@@ -32,6 +32,7 @@ export function crewHandlers(fake: FakeBotloft): Pick<Handlers, CrewMethods> {
         workFolder: workFolder === undefined ? sharedFolder(slug) : checkFolder(workFolder),
         workFolderChosen: workFolder !== undefined,
         leadBotId: null,
+        color: null,
         paused: false,
         createdAt: fake.now,
         archivedAt: null,
@@ -51,6 +52,11 @@ export function crewHandlers(fake: FakeBotloft): Pick<Handlers, CrewMethods> {
         throw invalid(`bot ${botId} is not in crew ${crewId}`);
       }
       crew.leadBotId = botId;
+      return fake.changedCrew(crew);
+    },
+    "crews.setColor": ({ crewId, color }) => {
+      const crew = fake.crew(crewId);
+      crew.color = color === null ? null : color.toUpperCase();
       return fake.changedCrew(crew);
     },
     "crews.rename": ({ crewId, name }) => {

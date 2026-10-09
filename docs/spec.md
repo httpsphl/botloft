@@ -682,6 +682,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `crews.list` | | `Crew[]` |
 | `crews.create` | `name, workFolder?, lead?` (`{name, role, instructions, model?}`: o chefe, 10.2) | `Crew` |
 | `crews.rename` | `crewId, name` | `Crew` |
+| `crews.setColor` | `crewId, color` (`#RRGGBB`, ou `null` para tirar) | `Crew`; a cor aparece como um ponto ao lado do nome na lista de equipes |
 | `crews.setPaused` | `crewId, paused` | `Crew` |
 | `crews.setLead` | `crewId, botId` (ou `null`, sem chefe) | `Crew`; o chefe antigo e o novo reiniciam quando nada estiver em andamento (10.2) |
 | `crews.setWorkFolder` | `crewId, workFolder` (caminho, ou `null` para voltar à `shared\`) | `Crew`; os bots reiniciam na pasta nova quando nada estiver em andamento (5) |
@@ -752,7 +753,7 @@ Pragmas: `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON`, `busy_time
 
 | Tabela | Colunas principais |
 |---|---|
-| `crews` | `id, name, slug, paused, work_dir, lead_bot_id, created_at, archived_at` (`work_dir` é a pasta escolhida; `NULL` usa a `shared`. `lead_bot_id` é o chefe, sem chave estrangeira: ele é gravado junto com a crew) |
+| `crews` | `id, name, slug, paused, work_dir, lead_bot_id, color, created_at, archived_at` (`work_dir` é a pasta escolhida; `NULL` usa a `shared`. `lead_bot_id` é o chefe, sem chave estrangeira: ele é gravado junto com a crew. `color` é o `#RRGGBB` que o dono escolheu, `NULL` sem cor) |
 | `bots` | `id, crew_id, name, handle, slug, role, instructions, color, paused, permission_mode, model, model_in_use, effort, effort_default, token_hash, session_id, created_at, archived_at` (`effort_default` é o nível do próprio modelo, como o Claude Code disse: `low` a `max`, `none` ou `NULL`, 7.4) |
 | `messages` | `id, crew_id, from_kind (owner/bot/system), from_bot_id, to_bot_id, kind (note/task/result/system), body, task_id, created_at`; `reply_item_id` e `reply_text` quando o dono respondeu a algo do chat (9.3; sem chave estrangeira, porque os itens saem antes das messages na exclusão, 7.6) |
 | `attachments` | `id, message_id, name, media_type, size, path, created_at` |

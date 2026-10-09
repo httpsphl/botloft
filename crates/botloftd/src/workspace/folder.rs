@@ -146,6 +146,7 @@ mod tests {
             work_folder_chosen: work_folder.is_some(),
             lead_bot_id: None,
             paused: false,
+            color: None,
             created_at: 0,
             archived_at: None,
         }

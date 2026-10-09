@@ -114,6 +114,10 @@ workFolderChosen: boolean,
  */
 leadBotId: BotId | null, paused: boolean, 
 /**
+ * Color `#RRGGBB` the owner gave the crew; `null` for none.
+ */
+color: string | null, 
+/**
  * Unix time in milliseconds.
  */
 createdAt: number, 
@@ -399,6 +403,12 @@ workFolder?: string,
 lead?: NewLead, };
 
 export type CrewsRenameParams = { crewId: CrewId, name: string, };
+
+export type CrewsSetColorParams = { crewId: CrewId, 
+/**
+ * `#RRGGBB`; `null` clears the color.
+ */
+color: string | null, };
 
 export type CrewsSetPausedParams = { crewId: CrewId, paused: boolean, };
 
@@ -2144,6 +2154,7 @@ export interface RpcMethods {
   "crews.list": { params: undefined; result: Array<Crew> };
   "crews.create": { params: CrewsCreateParams; result: Crew };
   "crews.rename": { params: CrewsRenameParams; result: Crew };
+  "crews.setColor": { params: CrewsSetColorParams; result: Crew };
   "crews.setPaused": { params: CrewsSetPausedParams; result: Crew };
   "crews.setWorkFolder": { params: CrewsSetWorkFolderParams; result: Crew };
   "crews.setLead": { params: CrewsSetLeadParams; result: Crew };

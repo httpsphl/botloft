@@ -13,6 +13,7 @@ fn setup() -> (Store, CrewId) {
         work_folder_chosen: false,
         lead_bot_id: None,
         paused: false,
+        color: None,
         created_at: 1,
         archived_at: None,
     };

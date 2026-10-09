@@ -9,6 +9,7 @@ import { SelectField, TextArea, TextField } from "../../ui/Field";
 import { notifyError } from "../../ui/toast";
 import { useCatalog } from "../catalog/useCatalog";
 import { addTemplateBots } from "./addTemplateBots";
+import { CrewColorField } from "./CrewColorField";
 import type { CrewTemplate } from "./crewTemplates";
 import { PickedTemplate, TemplatePicker } from "./TemplatePicker";
 import { WorkFolderField } from "./WorkFolderField";
@@ -22,6 +23,7 @@ export function CrewDialog({ crew, onClose }: { crew?: Crew; onClose(): void }) 
   const putCrew = useApp((state) => state.putCrew);
   const selectCrew = useApp((state) => state.selectCrew);
   const [name, setName] = useState(crew?.name ?? "");
+  const [color, setColor] = useState<string | null>(crew?.color ?? null);
   const [folder, setFolder] = useState<string | null>(null);
   const [goal, setGoal] = useState("");
   const [chiefModel, setChiefModel] = useState<BotModel>("default");
@@ -49,7 +51,7 @@ export function CrewDialog({ crew, onClose }: { crew?: Crew; onClose(): void }) 
     setError(null);
     try {
       const d = t.crews.dialog;
-      const saved = crew
+      let saved = crew
         ? await api.call("crews.rename", { crewId: crew.id, name })
         : await api.call("crews.create", {
             name,
@@ -62,6 +64,9 @@ export function CrewDialog({ crew, onClose }: { crew?: Crew; onClose(): void }) 
               ...(chiefModel !== "default" && { model: chiefModel }),
             },
           });
+      if (crew && color !== crew.color) {
+        saved = await api.call("crews.setColor", { crewId: crew.id, color });
+      }
       putCrew(saved);
       if (!crew) {
         selectCrew(saved.id);
@@ -134,6 +139,7 @@ export function CrewDialog({ crew, onClose }: { crew?: Crew; onClose(): void }) 
           autoFocus
           required
         />
+        {crew && <CrewColorField value={color} onChange={setColor} />}
         {!crew && (
           <>
             <TextArea

@@ -188,6 +188,15 @@ pub struct CrewsRenameParams {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
+pub struct CrewsSetColorParams {
+    pub crew_id: CrewId,
+    /// `#RRGGBB`; `null` clears the color.
+    pub color: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
 pub struct CrewsSetPausedParams {
     pub crew_id: CrewId,
     pub paused: bool,
