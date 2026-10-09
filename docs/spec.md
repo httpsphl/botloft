@@ -850,7 +850,7 @@ app/src/
   shell/          janela, barra de título, layout, atalhos
   features/
     onboarding/   checagens (claude instalado e versão, daemon rodando) e instalação do serviço
-    crews/        lista, criar, renomear, pausar; página da crew com timeline e tasks
+    crews/        lista, criar, renomear, pausar, reordenar (arrastar ou "Mover para cima/baixo" no menu; a ordem fica no localStorage); página da crew com timeline e tasks
     catalog/      modelos de bot: a Agência de bots, "Saber mais" e "Adicionar na equipe" (26.5)
     bots/         conversas na barra lateral, criar, editar, estado, detalhes
     chat/         conversa com o bot: itens, texto ao vivo, aprovações, compositor com anexos
