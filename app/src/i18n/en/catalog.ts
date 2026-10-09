@@ -8,6 +8,7 @@ import { marketing } from "./catalogMarketing";
 import { paidMedia } from "./catalogPaidMedia";
 import { people } from "./catalogPeople";
 import { product } from "./catalogProduct";
+import { security } from "./catalogSecurity";
 
 // The Bot agency (spec 26): ready-made bots the owner adds to a crew. The
 // roles are the daemon's sheets, by id; this is what the owner reads about
@@ -37,6 +38,7 @@ export const catalog = {
     learning: "Learning",
     finance: "Finance",
     people: "People & HR",
+    security: "Security",
   },
   none: "No bot matches that.",
   loading: "Loading the bots…",
@@ -67,5 +69,6 @@ export const catalog = {
     ...paidMedia,
     ...people,
     ...engineeringMore,
+    ...security,
   },
 };

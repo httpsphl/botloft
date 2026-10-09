@@ -2069,6 +2069,18 @@ instructions = """
 | `localization-engineer` | `code` | Tira o texto do código para arquivos de tradução, trata plural, data e moeda por região e cria um teste de texto faltando |
 | `refactoring-engineer` | `code` | Arruma o código em commits pequenos com testes antes, sem mudar o comportamento; não altera teste só para passar (`effort` `high`) |
 
+**Segurança** (`security`, 7; o `security-reviewer` segue em `code`): todos trabalham só de forma defensiva, no que é do dono e com a aprovação dele. Nenhum ataca, varre ou manda tráfego a um sistema sem pedir, escreve código de ataque contra um sistema no ar, entra numa conta, usa um segredo que achou ou pede senha, chave ou token no chat. As fichas dizem o que nunca fazer: repetir o valor de um segredo (nem parte dele, nem num bloco de código: escrevem `<redacted>`); chamar algo de conforme, certificado ou seguro por conta própria; apagar log ou prova antes de salvar; culpar uma pessoa sem prova; e rodar código desconhecido com dado de verdade. Os que lidam com a lei dizem que não são advogado nem auditor e mandam o dono ao profissional ou ao órgão de proteção de dados.
+
+| `id` | Categoria | O que faz |
+|---|---|---|
+| `threat-modeler` | `security` | Desenha o sistema em partes e fluxos, pergunta o que pode dar errado onde a confiança muda e ordena por probabilidade e gravidade (`effort` `high`) |
+| `incident-responder` | `security` | Guia um incidente: contém primeiro, guarda a prova, monta a linha do tempo, lista quem avisar e escreve a revisão sem culpados; o dono toma as ações (`effort` `high`) |
+| `secrets-auditor` | `security` | Acha senhas, chaves e tokens por lugar e tipo, nunca o valor; trata o achado como vazado e dá a ordem de troca |
+| `privacy-engineer` | `security` | Mapeia dados pessoais, o que dá para coletar menos e guardar menos, e as escolhas das pessoas; as leis viram perguntas para um advogado |
+| `compliance-checklist` | `security` | Traduz uma norma ou questionário em perguntas simples e só marca como feito com prova; não é auditor |
+| `ai-code-auditor` | `security` | Confere se o que o código usa existe, os buracos básicos de segurança, os casos de borda e se os testes testam algo; dá um veredito (`effort` `high`) |
+| `cloud-config-reviewer` | `security` | Lê exportações de configuração e lista os riscos de sempre com prova e a menor mudança segura; avisa do que pode trancar o dono fora (`effort` `high`) |
+
 **Conteúdo, pesquisa e aprendizado** (6; `learning` é a categoria dos dois últimos): as fichas dizem o que nunca fazer: mudar um fato, número ou citação ao revisar; inventar experiência, resultado ou credencial do dono ao escrever na voz dele; confirmar algo só por parecer plausível; citar uma fonte que não foi aberta e lida; e escrever trabalho que o dono precisa entregar como seu (prova, tese, tarefa com nota), caso em que ajudam de outro jeito.
 
 | `id` | Categoria | O que faz |
@@ -2150,7 +2162,7 @@ Jurídico e saúde, que pedem aviso de que não substituem um profissional; o do
 | **G1** Catálogo e daemon | formato da ficha, `catalog.rs`, as 12 fichas, `catalog.list`/`get`/`add`, tipos `ts-rs` | `catalog_lint`; unidade e RPC: `catalog.add` valida como `bots.create`, cria em Manual com modelo e esforço da ficha, nome repetido, ficha desconhecida e crew arquivada recusam |
 | **G2** Chefe | `list_bot_templates`, `get_bot_template`, `template` em `suggest_bot`, regras do chefe | tools com `FakeRuntime`: só o chefe, `id` desconhecido, junção de `instructions`, limite de 8 000; manual (PR): pedir ao chefe real "preciso de alguém para as redes sociais" e ver o cartão |
 | **G3** App | a Agência de bots, "Saber mais", "Adicionar na equipe", convite na equipe só com o chefe, textos nos três idiomas | `FakeBotloft`; teste de que toda ficha tem texto nos três idiomas; `pnpm check`; a tela no preview. Manual (PR): criar cada um dos 12 com o Claude Code real e dar a cada um uma tarefa típica |
-| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito, mais 8 depois), Conteúdo, pesquisa e aprendizado (6, feito), Design (8, feito), Finanças (7, feito), Mídia paga (6, feito, em `marketing`), Pessoas e RH (7, feito); categorias `product`, `marketing`, `learning`, `finance` e `people`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
+| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito, mais 8 depois), Conteúdo, pesquisa e aprendizado (6, feito), Design (8, feito), Finanças (7, feito), Mídia paga (6, feito, em `marketing`), Pessoas e RH (7, feito), Segurança (7, feito); categorias `product`, `marketing`, `learning`, `finance`, `people` e `security`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
 
 ## 27. Conta e cópia na nuvem
 

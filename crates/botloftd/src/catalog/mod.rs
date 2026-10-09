@@ -116,6 +116,13 @@ const SHEETS: &[(&str, &str)] = &[
     sheet!("rapid-prototyper"),
     sheet!("localization-engineer"),
     sheet!("refactoring-engineer"),
+    sheet!("threat-modeler"),
+    sheet!("incident-responder"),
+    sheet!("secrets-auditor"),
+    sheet!("privacy-engineer"),
+    sheet!("compliance-checklist"),
+    sheet!("ai-code-auditor"),
+    sheet!("cloud-config-reviewer"),
 ];
 
 /// What a sheet file holds.
