@@ -76,6 +76,13 @@ const ROLES: [id: string, category: BotTemplateCategory, name: string, effort?: 
   ["infographic-designer", "design", "Infographic Designer"],
   ["image-prompt-writer", "design", "Image Prompt Writer"],
   ["design-critic", "design", "Design Critic"],
+  ["bookkeeper", "finance", "Bookkeeper"],
+  ["budget-planner", "finance", "Budget Planner"],
+  ["financial-analyst", "finance", "Financial Analyst"],
+  ["cash-flow-forecaster", "finance", "Cash Flow Forecaster"],
+  ["bills-assistant", "finance", "Bills Assistant"],
+  ["invoicing-assistant", "finance", "Invoicing Assistant"],
+  ["tax-organizer", "finance", "Tax Organizer"],
 ];
 
 /** Every role, as `catalog.get` returns it. */
