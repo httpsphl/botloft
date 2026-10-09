@@ -149,6 +149,9 @@ pub struct Bot {
     pub permission_mode: PermissionMode,
     /// The agent behind the bot.
     pub agent: AgentKind,
+    /// The model of a bot that does not run on Claude Code, as its agent
+    /// names it; `null` for the agent's default (spec 30).
+    pub agent_model: Option<String>,
     pub model: BotModel,
     /// The model id Claude Code reported when the bot last started a turn
     /// (`claude-opus-5-5`); `null` before its first turn.

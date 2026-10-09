@@ -21,6 +21,8 @@ pub struct BotRecord {
     pub paused: bool,
     pub permission_mode: PermissionMode,
     pub agent: AgentKind,
+    /// The model of a bot not on Claude Code; `None` for the default.
+    pub agent_model: Option<String>,
     pub model: BotModel,
     /// What Claude Code last reported; written by [`Store::set_model_in_use`]
     /// and left alone by [`Store::update_bot`].
@@ -34,7 +36,7 @@ pub struct BotRecord {
 }
 
 const COLUMNS: &str = "id, crew_id, name, handle, slug, role, instructions, color, paused, created_at, archived_at, \
-     permission_mode, model, model_in_use, effort, effort_default, agent";
+     permission_mode, model, model_in_use, effort, effort_default, agent, agent_model";
 
 fn from_row(row: &Row<'_>) -> rusqlite::Result<BotRecord> {
     Ok(BotRecord {
@@ -58,6 +60,7 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<BotRecord> {
             .get::<_, Option<String>>(15)?
             .and_then(|level| level.parse().ok()),
         agent: parse_column(row, 16)?,
+        agent_model: row.get(17)?,
     })
 }
 
@@ -67,7 +70,7 @@ impl Store {
             .execute(
                 &format!(
                     "INSERT INTO bots ({COLUMNS}) \
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)"
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)"
                 ),
                 params![
                     bot.id.as_str(),
@@ -86,7 +89,8 @@ impl Store {
                     bot.model_in_use,
                     bot.effort.as_str(),
                     bot.effort_default.map(ModelEffort::as_str),
-                    bot.agent.as_str()
+                    bot.agent.as_str(),
+                    bot.agent_model
                 ],
             )
             .map_err(|err| unique_as_duplicate(err, "bot handle or slug"))?;
@@ -155,7 +159,7 @@ impl Store {
             .execute(
                 "UPDATE bots SET name = ?2, handle = ?3, role = ?4, instructions = ?5, \
                  color = ?6, paused = ?7, archived_at = ?8, permission_mode = ?9, model = ?10, \
-                 effort = ?11 WHERE id = ?1",
+                 effort = ?11, agent_model = ?12 WHERE id = ?1",
                 params![
                     bot.id.as_str(),
                     bot.name,
@@ -167,7 +171,8 @@ impl Store {
                     bot.archived_at,
                     bot.permission_mode.as_str(),
                     bot.model.as_str(),
-                    bot.effort.as_str()
+                    bot.effort.as_str(),
+                    bot.agent_model
                 ],
             )
             .map_err(|err| unique_as_duplicate(err, "bot handle"))?;

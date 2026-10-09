@@ -34,6 +34,7 @@ fn bot(crew: &CrewId, handle: &str, created_at: i64) -> BotRecord {
         paused: false,
         permission_mode: PermissionMode::Default,
         agent: AgentKind::Claude,
+        agent_model: None,
         model: BotModel::Default,
         model_in_use: None,
         effort: BotEffort::Default,

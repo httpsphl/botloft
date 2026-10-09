@@ -157,6 +157,9 @@ fn export_bindings() {
     out.decl::<BotsSetPausedParams>();
     out.decl::<BotsSetPermissionModeParams>();
     out.decl::<BotsSetModelParams>();
+    out.decl::<BotsSetAgentModelParams>();
+    out.decl::<AgentsModelsParams>();
+    out.decl::<AgentModel>();
     out.decl::<BotIdParams>();
     out.decl::<BotsRestartParams>();
     out.decl::<BotStateChanged>();
@@ -312,6 +315,16 @@ fn export_bindings() {
         method::BOTS_SET_MODEL,
         &out.name::<BotsSetModelParams>(),
         &bot,
+    );
+    out.method(
+        method::BOTS_SET_AGENT_MODEL,
+        &out.name::<BotsSetAgentModelParams>(),
+        &bot,
+    );
+    out.method(
+        method::AGENTS_MODELS,
+        &out.name::<AgentsModelsParams>(),
+        &format!("{}[]", out.name::<AgentModel>()),
     );
     out.method(method::BOTS_ARCHIVE, &out.name::<BotIdParams>(), &bot);
     out.method(

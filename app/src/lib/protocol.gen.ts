@@ -242,7 +242,12 @@ color: string, paused: boolean, permissionMode: PermissionMode,
 /**
  * The agent behind the bot.
  */
-agent: AgentKind, model: BotModel, 
+agent: AgentKind, 
+/**
+ * The model of a bot that does not run on Claude Code, as its agent
+ * names it; `null` for the agent's default (spec 30).
+ */
+agentModel: string | null, model: BotModel, 
 /**
  * The model id Claude Code reported when the bot last started a turn
  * (`claude-opus-5-5`); `null` before its first turn.
@@ -476,6 +481,29 @@ export type BotsSetPausedParams = { botId: BotId, paused: boolean, };
 export type BotsSetPermissionModeParams = { botId: BotId, mode: PermissionMode, };
 
 export type BotsSetModelParams = { botId: BotId, model: BotModel, };
+
+/**
+ * Params of `bots.setAgentModel` (spec 30).
+ */
+export type BotsSetAgentModelParams = { botId: BotId, 
+/**
+ * An id from `agents.models`; `null` goes back to the agent's default.
+ */
+model: string | null, };
+
+/**
+ * Params of `agents.models`.
+ */
+export type AgentsModelsParams = { agent: AgentKind, };
+
+/**
+ * A model an agent offers.
+ */
+export type AgentModel = { id: string, 
+/**
+ * As the agent names it for people.
+ */
+name: string, };
 
 export type BotIdParams = { botId: BotId, };
 
@@ -2185,6 +2213,8 @@ export interface RpcMethods {
   "bots.setPaused": { params: BotsSetPausedParams; result: Bot };
   "bots.setPermissionMode": { params: BotsSetPermissionModeParams; result: Bot };
   "bots.setModel": { params: BotsSetModelParams; result: Bot };
+  "bots.setAgentModel": { params: BotsSetAgentModelParams; result: Bot };
+  "agents.models": { params: AgentsModelsParams; result: AgentModel[] };
   "bots.archive": { params: BotIdParams; result: Bot };
   "bots.delete": { params: BotsDeleteParams; result: BotDeleted };
   "bots.restart": { params: BotsRestartParams; result: Bot };

@@ -3,13 +3,14 @@
 
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{
-    Bot, BotEffort, BotsSetEffortParams, BotsSetModelParams, ModelEffort,
+    AgentKind, AgentModel, AgentsModelsParams, Bot, BotEffort, BotsSetAgentModelParams,
+    BotsSetEffortParams, BotsSetModelParams, ModelEffort,
 };
 use serde_json::Value;
 use tracing::{info, warn};
 
-use super::ApiResult;
 use super::bots::{active, changed, to_protocol};
+use super::{ApiError, ApiResult};
 use crate::state::Daemon;
 
 /// Saves the model; the bot restarts on it when nothing is in progress.
@@ -104,4 +105,71 @@ pub(crate) fn applied(daemon: &Daemon, bot: &BotId, applied: &Value) {
     }
     record.effort_default = default;
     changed(daemon, &store, &crew, record);
+}
+
+/// Saves the model of a bot that does not run on Claude Code; the bot
+/// restarts on it when nothing is in progress (spec 30).
+pub fn set_agent_model(daemon: &Daemon, params: BotsSetAgentModelParams) -> ApiResult<Bot> {
+    let store = daemon.store();
+    let (crew, mut record) = active(&store, &params.bot_id)?;
+    if record.agent == AgentKind::Claude {
+        return Err(ApiError::validation(
+            "a Claude Code bot's model is set with bots.setModel",
+        ));
+    }
+    let model = match params.model.as_deref().map(str::trim) {
+        None | Some("") => None,
+        Some(id) => {
+            let fine = id.len() <= 100
+                && id
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_' | ':'));
+            if !fine {
+                return Err(ApiError::validation("model is not a model id"));
+            }
+            Some(id.to_owned())
+        }
+    };
+    if record.agent_model == model {
+        return Ok(to_protocol(daemon, &store, &crew, record));
+    }
+    record.agent_model = model;
+    store.update_bot(&record)?;
+    // What the agent reported belongs to the model it ran on.
+    store.set_effort_default(&record.id, None)?;
+    let bot = changed(daemon, &store, &crew, record);
+    drop(store);
+    info!(bot = %params.bot_id, "agent model changed");
+    daemon.supervisor.launch_settings_changed(&params.bot_id);
+    Ok(bot)
+}
+
+/// The models the agent offers, as it lists them. Kept for a while: asking
+/// takes seconds.
+pub fn agent_models(daemon: &Daemon, params: AgentsModelsParams) -> ApiResult<Vec<AgentModel>> {
+    use std::sync::Mutex;
+    use std::time::{Duration, Instant};
+    static CACHE: Mutex<Option<(Instant, Vec<AgentModel>)>> = Mutex::new(None);
+    if params.agent != AgentKind::Agy {
+        return Err(ApiError::validation(
+            "only agy lists its models; Claude Code's are fixed",
+        ));
+    }
+    let mut cache = CACHE
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    if let Some((at, models)) = cache.as_ref()
+        && at.elapsed() < Duration::from_secs(600)
+    {
+        return Ok(models.clone());
+    }
+    let agent = crate::agent::of(AgentKind::Agy)
+        .ok_or_else(|| ApiError::validation("agy is not available"))?;
+    let program = agent
+        .locate(daemon.supervisor.agy_path(), std::path::Path::new(""))
+        .map_err(|err| ApiError::Conflict(err.to_string()))?;
+    let models = crate::agent::agy_models(&program)
+        .map_err(|err| ApiError::Conflict(format!("could not list the models: {err}")))?;
+    *cache = Some((Instant::now(), models.clone()));
+    Ok(models)
 }
