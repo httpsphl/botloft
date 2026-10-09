@@ -2079,6 +2079,18 @@ instructions = """
 | `image-prompt-writer` | `design` | Escreve descrições para o gerador de imagem ou vídeo do dono, com um parágrafo de estilo para conjuntos, e as refina pelos resultados |
 | `design-critic` | `design` | Lê o objetivo e os arquivos da tela e entrega o que mais importa primeiro, separando problema claro de gosto |
 
+**Finanças** (`finance`, 7): nenhum paga, transfere, negocia, entra em banco ou site de imposto, nem pede senha, número de cartão ou código de acesso; o dono faz cada pagamento e cada envio. Nenhum substitui contador ou consultor: o texto da ficha e o do app dizem isso, e nenhum dá conselho de investimento ou empréstimo. Dizem o que nunca fazer: alterar um arquivo original, esconder uma conta que não fecha com número otimista, tratar uma previsão como promessa, decidir o que é dedutível (listam como pergunta para o contador) e passar adiante uma conta que pede pagamento urgente para uma conta nova sem avisar o dono.
+
+| `id` | Categoria | O que faz |
+|---|---|---|
+| `bookkeeper` | `finance` | Põe cada transação numa categoria, casa com o comprovante, confere os totais e lista o que está sem prova |
+| `budget-planner` | `finance` | Monta o orçamento com os números reais, diz primeiro se não fecha e acompanha a diferença no mês |
+| `financial-analyst` | `finance` | Calcula margens, crescimento e ponto de equilíbrio mostrando cada fórmula; não diz o que comprar, vender ou investir |
+| `cash-flow-forecaster` | `finance` | Prevê entradas e saídas por semana com caso esperado, cauteloso e bom, e avisa o ponto mais baixo |
+| `bills-assistant` | `finance` | Lista contas e vencimentos, confere com pedido ou contrato e prepara o pagamento para o dono fazer |
+| `invoicing-assistant` | `finance` | Prepara notas numeradas e lembretes em três tons, sem ameaçar; marca os campos legais que não sabe |
+| `tax-organizer` | `finance` | Junta e organiza os papéis dos impostos, avisa as datas e lista as dúvidas para o contador |
+
 ### 26.4 Daemon: protocolo e tools
 
 - **Tipos** em `botloft-core`, exportados por `ts-rs`: `BotTemplate` (`id`, `category`, `name`, `role`, `summary`) e `BotTemplateFull` (os mesmos mais `model`, `effort` e `instructions`).
@@ -2103,7 +2115,7 @@ instructions = """
 
 ### 26.7 Fora desta etapa
 
-Finanças, jurídico e saúde, que pedem aviso de que não substituem um profissional; o dono criar, importar ou compartilhar fichas; **restaurar o padrão** de um bot criado de um modelo (pede guardar o `id` do modelo no bot, e o histórico de instruções do item 5 da seção 18 cobre melhor); marcar no catálogo o que já está na equipe; atualizar bots já criados quando uma ficha muda (eles foram personalizados); modelos de equipe inteira; indicar ferramentas conectadas por papel de forma automática.
+Jurídico e saúde, que pedem aviso de que não substituem um profissional; o dono criar, importar ou compartilhar fichas; **restaurar o padrão** de um bot criado de um modelo (pede guardar o `id` do modelo no bot, e o histórico de instruções do item 5 da seção 18 cobre melhor); marcar no catálogo o que já está na equipe; atualizar bots já criados quando uma ficha muda (eles foram personalizados); modelos de equipe inteira; indicar ferramentas conectadas por papel de forma automática.
 
 ### 26.8 Marcos
 
@@ -2112,7 +2124,7 @@ Finanças, jurídico e saúde, que pedem aviso de que não substituem um profiss
 | **G1** Catálogo e daemon | formato da ficha, `catalog.rs`, as 12 fichas, `catalog.list`/`get`/`add`, tipos `ts-rs` | `catalog_lint`; unidade e RPC: `catalog.add` valida como `bots.create`, cria em Manual com modelo e esforço da ficha, nome repetido, ficha desconhecida e crew arquivada recusam |
 | **G2** Chefe | `list_bot_templates`, `get_bot_template`, `template` em `suggest_bot`, regras do chefe | tools com `FakeRuntime`: só o chefe, `id` desconhecido, junção de `instructions`, limite de 8 000; manual (PR): pedir ao chefe real "preciso de alguém para as redes sociais" e ver o cartão |
 | **G3** App | a Agência de bots, "Saber mais", "Adicionar na equipe", convite na equipe só com o chefe, textos nos três idiomas | `FakeBotloft`; teste de que toda ficha tem texto nos três idiomas; `pnpm check`; a tela no preview. Manual (PR): criar cada um dos 12 com o Claude Code real e dar a cada um uma tarefa típica |
-| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito), Conteúdo, pesquisa e aprendizado (6, feito), Design (8, feito); categorias `product`, `marketing` e `learning`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
+| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito), Conteúdo, pesquisa e aprendizado (6, feito), Design (8, feito), Finanças (7, feito); categorias `product`, `marketing`, `learning` e `finance`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
 
 ## 27. Conta e cópia na nuvem
 

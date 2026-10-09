@@ -2,6 +2,7 @@ import { base } from "./catalogBase";
 import { contentAndLearning } from "./catalogContent";
 import { design } from "./catalogDesign";
 import { engineering } from "./catalogEngineering";
+import { finance } from "./catalogFinance";
 import { marketing } from "./catalogMarketing";
 import { product } from "./catalogProduct";
 
@@ -31,6 +32,7 @@ export const catalog = {
     product: "Product & management",
     marketing: "Marketing & sales",
     learning: "Learning",
+    finance: "Finance",
   },
   none: "No bot matches that.",
   loading: "Loading the bots…",
@@ -50,5 +52,13 @@ export const catalog = {
     pairs: "Works well with",
     technical: "What the bot is told when it starts",
   },
-  roles: { ...base, ...product, ...marketing, ...engineering, ...contentAndLearning, ...design },
+  roles: {
+    ...base,
+    ...product,
+    ...marketing,
+    ...engineering,
+    ...contentAndLearning,
+    ...design,
+    ...finance,
+  },
 };
