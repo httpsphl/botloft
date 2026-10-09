@@ -127,6 +127,29 @@ async fn updates_refresh_the_rules_and_keep_the_bot_memory() {
     .expect("rename");
     assert!(read(ws.join(".claude/rules/botloft.md")).contains("crew **Docs Team**"));
 
+    let colored = app
+        .call(
+            "crews.setColor",
+            json!({ "crewId": crew["id"], "color": "#5ec8ff" }),
+        )
+        .await
+        .expect("color");
+    assert_eq!(colored["color"], "#5EC8FF");
+    app.call(
+        "crews.setColor",
+        json!({ "crewId": crew["id"], "color": "blue" }),
+    )
+    .await
+    .expect_err("not a hex color");
+    let cleared = app
+        .call(
+            "crews.setColor",
+            json!({ "crewId": crew["id"], "color": null }),
+        )
+        .await
+        .expect("clear");
+    assert_eq!(cleared["color"], serde_json::Value::Null);
+
     let paused = app
         .call(
             "bots.setPaused",

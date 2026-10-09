@@ -23,6 +23,8 @@ pub struct Crew {
     /// `null` when the crew has no chief.
     pub lead_bot_id: Option<BotId>,
     pub paused: bool,
+    /// Color `#RRGGBB` the owner gave the crew; `null` for none.
+    pub color: Option<String>,
     /// Unix time in milliseconds.
     pub created_at: i64,
     /// Unix time in milliseconds; `null` while the crew is active.

@@ -65,6 +65,7 @@ export const onboarding = {
     askFirstTitle: "Bots ask before they change things",
     askFirstBody:
       "When a bot wants to run a command or edit a file, it asks in its chat and waits for you to allow or deny it.",
+    ideasTitle: "Or tap an idea",
     createCrew: "Create your first crew",
   },
   claudeCode: {

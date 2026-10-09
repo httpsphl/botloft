@@ -43,6 +43,9 @@ export const crews = {
     noBots: "No bots yet",
   },
   dialog: {
+    color: "Color",
+    noColor: "No color",
+    swatch: (color: string) => `Color ${color}`,
     folder: "Work folder",
     folderHint: "Where the bots put what they make. It can be a folder you already use.",
     folderDefault: "A new folder inside Botloft",

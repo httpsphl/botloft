@@ -1,9 +1,10 @@
 //! `crews.*` operations.
 
+use botloft_core::avatar::normalize_color;
 use botloft_core::ids::CrewId;
 use botloft_core::protocol::{
-    Crew, CrewIdParams, CrewsCreateParams, CrewsRenameParams, CrewsSetPausedParams,
-    CrewsSetWorkFolderParams,
+    Crew, CrewIdParams, CrewsCreateParams, CrewsRenameParams, CrewsSetColorParams,
+    CrewsSetPausedParams, CrewsSetWorkFolderParams,
 };
 use botloft_core::{now_ms, slug, validate};
 use botloft_store::Store;
@@ -48,6 +49,7 @@ pub fn create(daemon: &Daemon, params: CrewsCreateParams) -> ApiResult<Crew> {
         work_folder: chosen.unwrap_or_default(),
         lead_bot_id: None,
         paused: false,
+        color: None,
         created_at: now_ms(),
         archived_at: None,
     };
@@ -79,6 +81,22 @@ pub fn rename(daemon: &Daemon, params: CrewsRenameParams) -> ApiResult<Crew> {
             warn!(bot = %bot.id, "could not refresh the bot rules after a crew rename: {err}");
         }
     }
+    Ok(changed(daemon, crew))
+}
+
+/// Gives the crew a color, or clears it.
+pub fn set_color(daemon: &Daemon, params: CrewsSetColorParams) -> ApiResult<Crew> {
+    let color = match params.color.as_deref() {
+        None => None,
+        Some(input) => Some(
+            normalize_color(input)
+                .ok_or_else(|| ApiError::validation("color must look like #RRGGBB"))?,
+        ),
+    };
+    let store = daemon.store();
+    let mut crew = active(&store, &params.crew_id)?;
+    crew.color = color;
+    store.update_crew(&crew)?;
     Ok(changed(daemon, crew))
 }
 

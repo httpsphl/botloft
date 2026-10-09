@@ -144,6 +144,7 @@ fn export_bindings() {
     out.decl::<SystemStatus>();
     out.decl::<CrewsCreateParams>();
     out.decl::<CrewsRenameParams>();
+    out.decl::<CrewsSetColorParams>();
     out.decl::<CrewsSetPausedParams>();
     out.decl::<CrewsSetWorkFolderParams>();
     out.decl::<NewLead>();
@@ -262,6 +263,11 @@ fn export_bindings() {
     out.method(
         method::CREWS_RENAME,
         &out.name::<CrewsRenameParams>(),
+        &crew,
+    );
+    out.method(
+        method::CREWS_SET_COLOR,
+        &out.name::<CrewsSetColorParams>(),
         &crew,
     );
     out.method(

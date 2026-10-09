@@ -295,6 +295,7 @@ mod tests {
             work_folder_chosen: false,
             lead_bot_id: None,
             paused: false,
+            color: None,
             created_at: 0,
             archived_at: None,
         };

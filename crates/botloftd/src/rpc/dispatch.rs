@@ -30,6 +30,7 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::CREWS_LIST => reply(crews::list(daemon)),
         method::CREWS_CREATE => reply(crews::create(daemon, parse(params)?)),
         method::CREWS_RENAME => reply(crews::rename(daemon, parse(params)?)),
+        method::CREWS_SET_COLOR => reply(crews::set_color(daemon, parse(params)?)),
         method::CREWS_SET_PAUSED => reply(crews::set_paused(daemon, parse(params)?)),
         method::CREWS_SET_WORK_FOLDER => reply(crews::set_work_folder(daemon, parse(params)?)),
         method::CREWS_SET_LEAD => reply(lead::set_lead(daemon, parse(params)?)),

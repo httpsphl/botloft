@@ -127,6 +127,14 @@ function CrewEntry({ crew }: { crew: Crew }) {
           }}
           className={`${row} h-8 gap-2 pr-2.5 pl-8 font-semibold text-sm ${selected || menuAt ? "bg-sunken" : ""}`}
         >
+          {crew.color && (
+            <span
+              aria-hidden
+              data-testid="crew-color"
+              className="size-2.5 shrink-0 rounded-full"
+              style={{ background: crew.color }}
+            />
+          )}
           <span className="min-w-0 flex-1 truncate">{crew.name}</span>
           {waiting && (
             <span className="flex shrink-0">
