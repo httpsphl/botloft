@@ -8,10 +8,10 @@ use botloft_core::envelope::{self, Envelope, Sender};
 use botloft_core::ids::random_uuid;
 use botloft_core::protocol::{Attachment, Message, SenderKind, Task};
 use bytes::Bytes;
-use serde_json::{Value, json};
 use tracing::debug;
 
 use super::context::RoutineContext;
+use crate::agent::{Agent, Turn, TurnImage};
 
 /// Images the API accepts inline (spec 9.5).
 const INLINE_IMAGES: &[&str] = &["image/png", "image/jpeg", "image/gif", "image/webp"];
@@ -44,7 +44,12 @@ pub(super) struct Rendered {
     pub uuid: String,
 }
 
-pub(super) fn render(message: &Message, context: &Context<'_>, now: i64) -> Rendered {
+pub(super) fn render(
+    message: &Message,
+    context: &Context<'_>,
+    now: i64,
+    agent: &dyn Agent,
+) -> Rendered {
     let text = match message.from_kind {
         // The owner is the session's user: their words go as written.
         SenderKind::Owner => {
@@ -72,25 +77,14 @@ pub(super) fn render(message: &Message, context: &Context<'_>, now: i64) -> Rend
             None => envelope(message, context, Sender::Botloft, now),
         },
     };
-    let mut content = vec![json!({ "type": "text", "text": text })];
-    content.extend(
-        message
-            .attachments
-            .iter()
-            .filter_map(|attachment| inline_image(attachment, context.workspace)),
-    );
+    let images = message
+        .attachments
+        .iter()
+        .filter_map(|attachment| inline_image(attachment, context.workspace))
+        .collect();
     let uuid = random_uuid();
-    let event = json!({
-        "type": "user",
-        "uuid": uuid,
-        "message": { "role": "user", "content": content },
-    });
-    let mut line = event.to_string().into_bytes();
-    line.push(b'\n');
-    Rendered {
-        line: Bytes::from(line),
-        uuid,
-    }
+    let line = agent.encode_turn(&uuid, &Turn { text, images });
+    Rendered { line, uuid }
 }
 
 fn envelope(message: &Message, context: &Context<'_>, from: Sender<'_>, now: i64) -> String {
@@ -119,21 +113,17 @@ fn with_attachment_list(body: &str, attachments: &[Attachment]) -> String {
 
 /// An image block for a small enough image; `None` for anything else or
 /// a file that cannot be read.
-fn inline_image(attachment: &Attachment, workspace: &Path) -> Option<Value> {
+fn inline_image(attachment: &Attachment, workspace: &Path) -> Option<TurnImage> {
     if !INLINE_IMAGES.contains(&attachment.media_type.as_str())
         || attachment.size > INLINE_IMAGE_MAX
     {
         return None;
     }
     match std::fs::read(workspace.join(&attachment.path)) {
-        Ok(bytes) => Some(json!({
-            "type": "image",
-            "source": {
-                "type": "base64",
-                "media_type": attachment.media_type,
-                "data": BASE64.encode(bytes),
-            },
-        })),
+        Ok(bytes) => Some(TurnImage {
+            media_type: attachment.media_type.clone(),
+            data: BASE64.encode(bytes),
+        }),
         Err(err) => {
             debug!(attachment = %attachment.id, "attachment not inlined: {err}");
             None
@@ -146,7 +136,10 @@ mod tests {
     use botloft_core::ids::{AttachmentId, BotId, ChatItemId, CrewId, MessageId};
     use botloft_core::protocol::{MessageKind, MessageReply};
 
+    use serde_json::Value;
+
     use super::*;
+    use crate::agent::ClaudeAgent;
 
     fn message(from_kind: SenderKind, body: &str) -> Message {
         Message {
@@ -184,13 +177,23 @@ mod tests {
             question: None,
             reactions: &[],
         };
-        let owner = render(&message(SenderKind::Owner, "Ship it"), &context, 0);
+        let owner = render(
+            &message(SenderKind::Owner, "Ship it"),
+            &context,
+            0,
+            &ClaudeAgent,
+        );
         let line = parse(&owner);
         assert_eq!(line["type"], "user");
         assert_eq!(line["uuid"], owner.uuid);
         assert_eq!(line["message"]["content"][0]["text"], "Ship it");
 
-        let bot = parse(&render(&message(SenderKind::Bot, "hi"), &context, 0));
+        let bot = parse(&render(
+            &message(SenderKind::Bot, "hi"),
+            &context,
+            0,
+            &ClaudeAgent,
+        ));
         let text = bot["message"]["content"][0]["text"].as_str().expect("text");
         assert!(
             text.starts_with("[botloft] from @scout · crew Ops"),
@@ -217,7 +220,7 @@ mod tests {
             item_id: ChatItemId::generate(),
             text: "Acme signs monthly.".into(),
         });
-        let line = parse(&render(&owner, &context, 0));
+        let line = parse(&render(&owner, &context, 0, &ClaudeAgent));
         assert_eq!(
             line["message"]["content"][0]["text"],
             "Replying to: \"Acme signs monthly.\"
@@ -258,7 +261,7 @@ Make it yearly"
             question: None,
             reactions: &[],
         };
-        let line = parse(&render(&owner, &context, 0));
+        let line = parse(&render(&owner, &context, 0, &ClaudeAgent));
         let content = line["message"]["content"].as_array().expect("blocks");
         assert_eq!(content.len(), 2, "text and the one image");
         assert_eq!(
