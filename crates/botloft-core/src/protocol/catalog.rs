@@ -18,6 +18,7 @@ text_enum!(
         Learning => "learning",
         Finance => "finance",
         People => "people",
+        Security => "security",
     }
 );
 

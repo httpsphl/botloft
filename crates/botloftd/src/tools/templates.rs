@@ -39,6 +39,7 @@ pub(super) fn tools() -> [Value; 2] {
         "learning",
         "finance",
         "people",
+        "security",
     ];
     [
         json!({

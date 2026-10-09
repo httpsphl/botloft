@@ -22,7 +22,7 @@ async fn the_catalog_lists_every_role_without_its_instructions() {
 
     let all = app.call("catalog.list", json!({})).await.expect("list");
     let all = all.as_array().expect("array");
-    assert_eq!(all.len(), 94);
+    assert_eq!(all.len(), 101);
     let ids: Vec<_> = all
         .iter()
         .filter_map(|entry| entry["id"].as_str())
@@ -99,6 +99,12 @@ async fn the_catalog_lists_every_role_without_its_instructions() {
         .await
         .expect("list people");
     assert_eq!(people.as_array().expect("array").len(), 7);
+
+    let security = app
+        .call("catalog.list", json!({ "category": "security" }))
+        .await
+        .expect("list security");
+    assert_eq!(security.as_array().expect("array").len(), 7);
 
     let learning = app
         .call("catalog.list", json!({ "category": "learning" }))

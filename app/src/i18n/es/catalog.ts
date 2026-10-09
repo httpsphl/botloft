@@ -9,6 +9,7 @@ import { marketing } from "./catalogMarketing";
 import { paidMedia } from "./catalogPaidMedia";
 import { people } from "./catalogPeople";
 import { product } from "./catalogProduct";
+import { security } from "./catalogSecurity";
 
 export const catalog: Messages["catalog"] = {
   title: "Agencia de bots",
@@ -34,6 +35,7 @@ export const catalog: Messages["catalog"] = {
     learning: "Aprendizaje",
     finance: "Finanzas",
     people: "Personas y RR. HH.",
+    security: "Seguridad",
   },
   none: "Ningún bot coincide con eso.",
   loading: "Cargando los bots…",
@@ -64,5 +66,6 @@ export const catalog: Messages["catalog"] = {
     ...paidMedia,
     ...people,
     ...engineeringMore,
+    ...security,
   },
 };
