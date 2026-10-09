@@ -3,6 +3,7 @@ import { type FormEvent, useState } from "react";
 import { useT } from "../../i18n";
 import { errorText } from "../../lib/api";
 import {
+  type AgentKind,
   AVATAR_PALETTE,
   type Bot,
   type BotModel,
@@ -17,6 +18,8 @@ import { BotAvatar } from "./BotAvatar";
 import { ColorPicker } from "./ColorPicker";
 
 const MODELS: BotModel[] = ["default", "fable", "opus", "sonnet", "haiku"];
+/** Stable, for a selector: a new array each time would render in a loop. */
+const CLAUDE_ONLY: AgentKind[] = ["claude"];
 
 type Props = { onClose(): void } & ({ crewId: CrewId; bot?: undefined } | { bot: Bot });
 
@@ -34,6 +37,10 @@ export function BotDialog(props: Props) {
   const custom = color !== undefined && !(AVATAR_PALETTE as readonly string[]).includes(color);
   const [picking, setPicking] = useState(custom);
   const [model, setModel] = useState<BotModel>(editing?.model ?? "default");
+  // Which agent runs the bot is chosen once, when it is made (spec 30).
+  const agents = useApp((state) => state.system?.enabledAgents ?? CLAUDE_ONLY);
+  const [agent, setAgent] = useState<AgentKind>("claude");
+  const runsOn: AgentKind = editing?.agent ?? agent;
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -62,7 +69,8 @@ export function BotDialog(props: Props) {
           role,
           instructions,
           ...(color !== undefined && { color }),
-          ...(model !== "default" && { model }),
+          ...(runsOn === "claude" && model !== "default" && { model }),
+          ...(runsOn !== "claude" && { agent: runsOn }),
         });
       }
       putBot(bot);
@@ -118,13 +126,30 @@ export function BotDialog(props: Props) {
           placeholder={t.bots.dialog.instructionsPlaceholder}
           hint={editing ? t.bots.dialog.instructionsHint : undefined}
         />
-        <SelectField
-          label={t.chat.model.title}
-          value={model}
-          onChange={(event) => setModel(event.target.value as BotModel)}
-          options={MODELS.map((value) => ({ value, label: t.chat.model.names[value] }))}
-          hint={t.chat.model.cost}
-        />
+        {!editing && agents.length > 1 && (
+          <div className="flex flex-col gap-2">
+            <SelectField
+              label={t.bots.dialog.agent.title}
+              value={agent}
+              onChange={(event) => setAgent(event.target.value as AgentKind)}
+              options={agents.map((value) => ({ value, label: t.bots.dialog.agent.names[value] }))}
+            />
+            {agent !== "claude" && (
+              <p role="note" className="rounded-lg bg-sunken p-2.5 text-ink-soft text-xs">
+                {t.bots.dialog.agent.experimental}
+              </p>
+            )}
+          </div>
+        )}
+        {runsOn === "claude" && (
+          <SelectField
+            label={t.chat.model.title}
+            value={model}
+            onChange={(event) => setModel(event.target.value as BotModel)}
+            options={MODELS.map((value) => ({ value, label: t.chat.model.names[value] }))}
+            hint={t.chat.model.cost}
+          />
+        )}
         <fieldset className="flex flex-col gap-1.5">
           <legend className="mb-1.5 font-medium text-ink-soft text-sm">
             {t.bots.dialog.color}

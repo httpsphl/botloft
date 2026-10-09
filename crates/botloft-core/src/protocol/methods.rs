@@ -78,6 +78,9 @@ pub struct SystemStatus {
     pub deliveries: DeliveryBacklog,
     /// The Claude account's usage as last reported; `null` before any turn.
     pub usage: Option<AccountUsage>,
+    /// The agents a bot may be made for (spec 30): Claude Code, and the
+    /// experimental ones the owner switched on.
+    pub enabled_agents: Vec<AgentKind>,
 }
 
 /// The owner, as the app shows them in its account area (spec 15.1).

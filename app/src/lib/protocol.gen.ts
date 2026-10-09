@@ -398,7 +398,12 @@ account: OwnerAccount, deliveries: DeliveryBacklog,
 /**
  * The Claude account's usage as last reported; `null` before any turn.
  */
-usage: AccountUsage | null, };
+usage: AccountUsage | null, 
+/**
+ * The agents a bot may be made for (spec 30): Claude Code, and the
+ * experimental ones the owner switched on.
+ */
+enabledAgents: Array<AgentKind>, };
 
 export type CrewsCreateParams = { name: string, 
 /**

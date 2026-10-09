@@ -679,7 +679,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 
 | Método | Params | Result |
 |---|---|---|
-| `system.status` | | versão, uptime, versão e caminho do claude (`claudeVersion`, `claudePath`), `runtimeError` (por que os bots não sobem), `claudeSignedIn` (7.3; `null` antes de conferir), `account` (o dono para a área da conta do app: `name`, o nome de exibição da conta do Windows, `GetUserNameExW(NameDisplay)`, ou o nome de usuário sem ele, lido uma vez; e `claude`, a conta do Claude com `email`, `plan` e `organization`, ou `null` desconectado), backlog de entrega, `usage` (uso da conta, 8.1) |
+| `system.status` | | versão, uptime, `enabledAgents` (os agentes para os quais um bot pode ser criado: `claude` e os experimentais ligados, seção 30), versão e caminho do claude (`claudeVersion`, `claudePath`), `runtimeError` (por que os bots não sobem), `claudeSignedIn` (7.3; `null` antes de conferir), `account` (o dono para a área da conta do app: `name`, o nome de exibição da conta do Windows, `GetUserNameExW(NameDisplay)`, ou o nome de usuário sem ele, lido uma vez; e `claude`, a conta do Claude com `email`, `plan` e `organization`, ou `null` desconectado), backlog de entrega, `usage` (uso da conta, 8.1) |
 | `system.refresh` | | pede uma nova conferência do Claude Code (login e, se falhou, o executável) e responde na hora com o `system.status` atual; o app relê o status até ver o resultado |
 | `crews.list` | | `Crew[]` |
 | `crews.create` | `name, workFolder?, lead?` (`{name, role, instructions, model?}`: o chefe, 10.2) | `Crew` |
@@ -2648,7 +2648,7 @@ Decisão e contexto: `docs/adr/0003-agentes.md`. Um bot tem um **agente**, `Bot.
 | **A1** | A interface `Agent` no daemon (`crates/botloftd/src/agent`), com o Claude por trás e os testes de hoje sem mudança. Em fatias: **A1a** argumentos do processo, ambiente extra e codificação do turno no stdin (feito); **A1b** leitura da saída: cada agente decodifica o próprio fluxo (`Agent::handle_output`, `Agent::live_text`) e grava no chat por `chat::sink` (resposta, ferramenta que começa e termina, fim de turno), o que todo agente tem; o que é só do Claude (contexto, compactação, parte do plano, rascunho de telas) fica no decodificador dele, `chat/claude.rs` (feito); **A1c** descoberta e login, arquivos da pasta do bot e aprovações | em andamento |
 | **A2** | AGY, **experimental**: só existe quando `experimental_agents = ["agy"]` no `config.toml`. Lançamento, entrada e saída, MCP do Botloft, isolamento por regras `deny`, retomada de conversa, no `agy` real. Sem aprovações do dono e sem comandos de shell (30.3); sem modelo e esforço escolhidos, contexto, compactação nem ferramentas conectadas do dono | feito (sem seletor no app) |
 | **A3** | Codex por `codex app-server` | a fazer |
-| **A4** | Seletor de agente no app, conta e login de cada agente, paridade de rotinas, navegador, desktop e perguntas | a fazer |
+| **A4** | Seletor de agente no app (**feito**: na criação do bot, aparece quando há mais de um agente em `enabledAgents`, com o aviso de experimental e sem a escolha de modelo; o medidor de contexto, o esforço e o modelo do campo de mensagem só aparecem para bots Claude). **Falta:** conta e login de cada agente, paridade de rotinas, navegador, desktop e perguntas | em andamento |
 
 ### 30.2 O que a interface `Agent` possui
 

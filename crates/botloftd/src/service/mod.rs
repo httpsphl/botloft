@@ -32,7 +32,7 @@ pub mod settings;
 pub mod tasks;
 pub mod usage;
 
-use botloft_core::protocol::{OwnerAccount, PROTOCOL_VERSION, SystemStatus, error_code};
+use botloft_core::protocol::{AgentKind, OwnerAccount, PROTOCOL_VERSION, SystemStatus, error_code};
 use botloft_core::slug;
 use botloft_core::validate::ValidationError;
 use botloft_store::StoreError;
@@ -117,6 +117,10 @@ pub fn status(daemon: &Daemon) -> ApiResult<SystemStatus> {
         },
         deliveries,
         usage: daemon.usage(),
+        enabled_agents: [AgentKind::Claude, AgentKind::Agy, AgentKind::Codex]
+            .into_iter()
+            .filter(|kind| daemon.supervisor.agent_enabled(*kind))
+            .collect(),
     })
 }
 
