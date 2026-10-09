@@ -105,6 +105,23 @@ export const routines = {
       signal_invalid: "A signal needs letters or digits, like report-ready.",
     },
   },
+  /** The daily summary the chief writes (spec 29.2), a routine made for the owner. */
+  summary: {
+    title: "Daily summary",
+    hint: "Every day the chief tells you what each bot did, what is stuck and what is waiting for you.",
+    name: "Daily summary",
+    // Sent to the chief every day. It names the tool, which is also how the app
+    // recognizes this routine.
+    prompt:
+      "The day is ending. Use crew_activity (the last 24 hours) and write me a short summary of the day: what each bot finished, what is still open or late, what failed, and what is waiting for me (approvals and questions), the most important first. Plain words, no more than 12 lines. If nothing happened, say so in one line. Do not start new work and do not message other bots for this.",
+    time: "Time",
+    turnOn: "Turn on",
+    turnOff: "Turn off",
+    on: (when: string) => `On · ${when}`,
+    off: "Off",
+    change: "Change",
+    failed: "Could not change the daily summary",
+  },
   removeTitle: (name: string) => `Delete ${name}?`,
   removeBody: "It stops running. What it already did stays in the chat.",
   failed: {
