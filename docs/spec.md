@@ -2097,6 +2097,18 @@ instructions = """
 | `invoicing-assistant` | `finance` | Prepara notas numeradas e lembretes em três tons, sem ameaçar; marca os campos legais que não sabe |
 | `tax-organizer` | `finance` | Junta e organiza os papéis dos impostos, avisa as datas e lista as dúvidas para o contador |
 
+**Pessoas e RH** (`people`, 7; o `recruiter` e o `onboarding-coach` seguem em `product`): nenhum decide nada sobre uma pessoa (contratar, pagar, promover, advertir, demitir), nenhum fala com ninguém por conta própria, e nenhum julga ou separa pessoas por idade, gênero, origem, religião, família, saúde ou deficiência. Os que lidam com leis dizem que não são advogado e que a regra muda por país. As fichas dizem o que nunca fazer: inventar emprego, título, diploma, habilidade ou número num currículo; prometer mais anonimato do que o dono pode manter, mostrar resultado de um grupo com menos de cinco respostas ou tentar descobrir quem escreveu; apresentar uma política como conferida juridicamente; e passar adiante avaliação ou plano de mudança além do que a tarefa precisa.
+
+| `id` | Categoria | O que faz |
+|---|---|---|
+| `training-designer` | `people` | Parte do que as pessoas devem fazer de diferente, escreve objetivos observáveis, aulas curtas com prática e como medir; avisa quando treinamento não é o que falta |
+| `change-manager` | `people` | Planeja quem sabe primeiro e com quais palavras, as perguntas esperadas com respostas honestas e o apoio depois; não anuncia nada |
+| `performance-review-coach` | `people` | Escreve feedback específico e equilibrado a partir de exemplos, confere o próprio viés e planeja a conversa; salário, promoção e advertência são do dono |
+| `hr-policy-writer` | `people` | Redige políticas e um manual com versão de dois minutos; marca o que depende da lei como pergunta para um profissional |
+| `engagement-survey-analyst` | `people` | Pergunta se haverá ação, escreve pesquisa curta e neutra, lê por tema sem expor grupos pequenos e termina em três a cinco ações |
+| `resume-tailor` | `people` | Casa a vaga com o que o dono fez de verdade, reescreve currículo e carta, prepara a entrevista com as histórias dele |
+| `career-coach` | `people` | Escuta, mostra opções com o que cada uma custa e vira a escolha em três passos pequenos; não é terapeuta nem consultor financeiro |
+
 ### 26.4 Daemon: protocolo e tools
 
 - **Tipos** em `botloft-core`, exportados por `ts-rs`: `BotTemplate` (`id`, `category`, `name`, `role`, `summary`) e `BotTemplateFull` (os mesmos mais `model`, `effort` e `instructions`).
@@ -2130,7 +2142,7 @@ Jurídico e saúde, que pedem aviso de que não substituem um profissional; o do
 | **G1** Catálogo e daemon | formato da ficha, `catalog.rs`, as 12 fichas, `catalog.list`/`get`/`add`, tipos `ts-rs` | `catalog_lint`; unidade e RPC: `catalog.add` valida como `bots.create`, cria em Manual com modelo e esforço da ficha, nome repetido, ficha desconhecida e crew arquivada recusam |
 | **G2** Chefe | `list_bot_templates`, `get_bot_template`, `template` em `suggest_bot`, regras do chefe | tools com `FakeRuntime`: só o chefe, `id` desconhecido, junção de `instructions`, limite de 8 000; manual (PR): pedir ao chefe real "preciso de alguém para as redes sociais" e ver o cartão |
 | **G3** App | a Agência de bots, "Saber mais", "Adicionar na equipe", convite na equipe só com o chefe, textos nos três idiomas | `FakeBotloft`; teste de que toda ficha tem texto nos três idiomas; `pnpm check`; a tela no preview. Manual (PR): criar cada um dos 12 com o Claude Code real e dar a cada um uma tarefa típica |
-| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito), Conteúdo, pesquisa e aprendizado (6, feito), Design (8, feito), Finanças (7, feito), Mídia paga (6, feito, em `marketing`); categorias `product`, `marketing`, `learning` e `finance`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
+| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito), Conteúdo, pesquisa e aprendizado (6, feito), Design (8, feito), Finanças (7, feito), Mídia paga (6, feito, em `marketing`), Pessoas e RH (7, feito); categorias `product`, `marketing`, `learning`, `finance` e `people`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
 
 ## 27. Conta e cópia na nuvem
 
