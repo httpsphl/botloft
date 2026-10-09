@@ -4,6 +4,7 @@ import { design } from "./catalogDesign";
 import { engineering } from "./catalogEngineering";
 import { engineeringMore } from "./catalogEngineeringMore";
 import { finance } from "./catalogFinance";
+import { legal } from "./catalogLegal";
 import { marketing } from "./catalogMarketing";
 import { paidMedia } from "./catalogPaidMedia";
 import { people } from "./catalogPeople";
@@ -40,6 +41,7 @@ export const catalog = {
     finance: "Finance",
     people: "People & HR",
     security: "Security",
+    legal: "Legal",
   },
   none: "No bot matches that.",
   loading: "Loading the bots…",
@@ -72,5 +74,6 @@ export const catalog = {
     ...engineeringMore,
     ...security,
     ...sectors,
+    ...legal,
   },
 };

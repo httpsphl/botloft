@@ -2093,6 +2093,18 @@ instructions = """
 | `restaurant-manager` | `business` | Calcula o custo de cada prato, planeja escalas e compras; alérgeno e dieta só pela ficha de receita do dono |
 | `course-creator` | `business` | Constrói o roteiro de trás para a frente a partir de uma promessa honesta e escreve a página só com conteúdo e resultado reais |
 
+**Jurídico** (`legal`, 7): nenhum é advogado nem dá conselho jurídico. Organizam, explicam e redigem, dizem que um advogado do país do dono precisa conferir o que importa e perguntam qual lei vale, porque ela muda com o país, o estado e a data. Nenhum envia, assina, protocola ou concorda com nada pelo dono. As fichas dizem o que nunca fazer: dizer que algo é legal, ilegal, válido, exigível ou que vai ganhar; inventar lei, artigo, caso ou citação (só citam o que abriram e leram, com fonte e data, e dizem "não consegui verificar" quando é o caso); contar ao cliente de um escritório quais são os direitos dele ou se tem um caso; arredondar horas para cima ou exagerar o trabalho; ameaçar numa carta de reclamação; e expor o segredo de um cliente numa descrição de horas.
+
+| `id` | Categoria | O que faz |
+|---|---|---|
+| `contract-reader` | `legal` | Resume o contrato em uma página, aponta cláusulas como comum, incomum ou que vale negociar e termina em perguntas para um advogado (`effort` `high`) |
+| `terms-drafter` | `legal` | Redige termos de uso, aviso de privacidade e política de troca a partir de como o negócio realmente funciona; o que depende da lei vira pergunta |
+| `legal-research-assistant` | `legal` | Pesquisa em fontes oficiais, abre cada fonte antes de citar e separa o que a lei diz do que está em aberto (`effort` `high`) |
+| `legal-intake-assistant` | `legal` | Prepara o formulário de um caso novo e resume os fatos numa linha do tempo, com o urgente no topo; não responde ao cliente |
+| `legal-billing-assistant` | `legal` | Transforma o registro de trabalho em lançamentos de horas e rascunhos de fatura, sem exagerar nem revelar segredo de cliente |
+| `contract-deadline-tracker` | `legal` | Lista cada data e obrigação com a cláusula de origem e põe as armadilhas primeiro, como renovação automática com aviso prévio |
+| `complaint-letter-drafter` | `legal` | Redige carta de reclamação educada e firme a partir de fatos e papéis do dono, sem ameaça; quem envia é o dono |
+
 **Conteúdo, pesquisa e aprendizado** (6; `learning` é a categoria dos dois últimos): as fichas dizem o que nunca fazer: mudar um fato, número ou citação ao revisar; inventar experiência, resultado ou credencial do dono ao escrever na voz dele; confirmar algo só por parecer plausível; citar uma fonte que não foi aberta e lida; e escrever trabalho que o dono precisa entregar como seu (prova, tese, tarefa com nota), caso em que ajudam de outro jeito.
 
 | `id` | Categoria | O que faz |
@@ -2165,7 +2177,7 @@ instructions = """
 
 ### 26.7 Fora desta etapa
 
-Jurídico e saúde, que pedem aviso de que não substituem um profissional; o dono criar, importar ou compartilhar fichas; **restaurar o padrão** de um bot criado de um modelo (pede guardar o `id` do modelo no bot, e o histórico de instruções do item 5 da seção 18 cobre melhor); marcar no catálogo o que já está na equipe; atualizar bots já criados quando uma ficha muda (eles foram personalizados); modelos de equipe inteira; indicar ferramentas conectadas por papel de forma automática.
+Saúde, que pede aviso de que não substitui um profissional; o dono criar, importar ou compartilhar fichas; **restaurar o padrão** de um bot criado de um modelo (pede guardar o `id` do modelo no bot, e o histórico de instruções do item 5 da seção 18 cobre melhor); marcar no catálogo o que já está na equipe; atualizar bots já criados quando uma ficha muda (eles foram personalizados); modelos de equipe inteira; indicar ferramentas conectadas por papel de forma automática.
 
 ### 26.8 Marcos
 
@@ -2174,7 +2186,7 @@ Jurídico e saúde, que pedem aviso de que não substituem um profissional; o do
 | **G1** Catálogo e daemon | formato da ficha, `catalog.rs`, as 12 fichas, `catalog.list`/`get`/`add`, tipos `ts-rs` | `catalog_lint`; unidade e RPC: `catalog.add` valida como `bots.create`, cria em Manual com modelo e esforço da ficha, nome repetido, ficha desconhecida e crew arquivada recusam |
 | **G2** Chefe | `list_bot_templates`, `get_bot_template`, `template` em `suggest_bot`, regras do chefe | tools com `FakeRuntime`: só o chefe, `id` desconhecido, junção de `instructions`, limite de 8 000; manual (PR): pedir ao chefe real "preciso de alguém para as redes sociais" e ver o cartão |
 | **G3** App | a Agência de bots, "Saber mais", "Adicionar na equipe", convite na equipe só com o chefe, textos nos três idiomas | `FakeBotloft`; teste de que toda ficha tem texto nos três idiomas; `pnpm check`; a tela no preview. Manual (PR): criar cada um dos 12 com o Claude Code real e dar a cada um uma tarefa típica |
-| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito, mais 8 depois), Conteúdo, pesquisa e aprendizado (6, feito), Design (8, feito), Finanças (7, feito), Mídia paga (6, feito, em `marketing`), Pessoas e RH (7, feito), Segurança (7, feito), Setores (7, feito, em `business`); categorias `product`, `marketing`, `learning`, `finance`, `people` e `security`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
+| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito, mais 8 depois), Conteúdo, pesquisa e aprendizado (6, feito), Design (8, feito), Finanças (7, feito), Mídia paga (6, feito, em `marketing`), Pessoas e RH (7, feito), Segurança (7, feito), Setores (7, feito, em `business`), Jurídico (7, feito); categorias `product`, `marketing`, `learning`, `finance`, `people`, `security` e `legal`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
 
 ## 27. Conta e cópia na nuvem
 

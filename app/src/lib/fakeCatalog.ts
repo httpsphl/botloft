@@ -118,6 +118,13 @@ const ROLES: [id: string, category: BotTemplateCategory, name: string, effort?: 
   ["grant-writer", "business", "Grant Writer"],
   ["restaurant-manager", "business", "Restaurant Assistant"],
   ["course-creator", "business", "Online Course Creator"],
+  ["contract-reader", "legal", "Contract Reader"],
+  ["terms-drafter", "legal", "Terms and Privacy Notice Drafter"],
+  ["legal-research-assistant", "legal", "Legal Research Assistant"],
+  ["legal-intake-assistant", "legal", "Client Intake Assistant"],
+  ["legal-billing-assistant", "legal", "Time and Billing Assistant"],
+  ["contract-deadline-tracker", "legal", "Contract Dates Tracker"],
+  ["complaint-letter-drafter", "legal", "Complaint Letter Drafter"],
 ];
 
 /** Every role, as `catalog.get` returns it. */
