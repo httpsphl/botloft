@@ -14,6 +14,11 @@ pub struct Config {
     pub workspaces_root: String,
     /// Empty means resolve `claude` from PATH.
     pub claude_path: String,
+    /// Empty means look for `agy` in its installer's folder and on PATH.
+    pub agy_path: String,
+    /// Agents not meant for everyone yet, by name (`"agy"`, spec 30). A bot
+    /// can only be made for one of these when it is listed here.
+    pub experimental_agents: Vec<String>,
     /// Start when the owner signs in to Windows (spec 14).
     pub start_with_windows: bool,
     /// Keep the computer awake while a bot works (spec 14).
@@ -33,6 +38,8 @@ impl Default for Config {
             port: 45710,
             workspaces_root: String::new(),
             claude_path: String::new(),
+            agy_path: String::new(),
+            experimental_agents: Vec::new(),
             start_with_windows: true,
             keep_awake: true,
             log_level: "info".to_owned(),

@@ -131,6 +131,27 @@ impl Supervisor {
         self.busy.subscribe()
     }
 
+    /// Whether bots of `kind` may be made: Claude Code always, an
+    /// experimental agent only when the owner listed it in `config.toml`
+    /// (spec 30); Codex does not run yet.
+    pub fn agent_enabled(&self, kind: botloft_core::protocol::AgentKind) -> bool {
+        use botloft_core::protocol::AgentKind;
+        match kind {
+            AgentKind::Claude => true,
+            AgentKind::Agy => self
+                .settings
+                .experimental_agents
+                .iter()
+                .any(|name| name == "agy"),
+            AgentKind::Codex => false,
+        }
+    }
+
+    /// The `agy_path` of the config; empty looks in the usual places.
+    pub fn agy_path(&self) -> &str {
+        &self.settings.agy_path
+    }
+
     /// The Claude Code executable the bots run, once found.
     pub fn claude_path(&self) -> Option<std::path::PathBuf> {
         match &self.lock().claude {

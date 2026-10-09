@@ -123,12 +123,16 @@ impl Supervisor {
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         // What the session applies and how full it is (spec 9.2); Claude
         // Code answers as soon as it is up.
-        for ask in [control::settings_request(), control::context_request()] {
-            let _ = process.control.write(ask);
+        // The agent of a launched bot runs.
+        let speaks = agent::of(bot.agent).is_some_and(|agent| agent.speaks_control());
+        if speaks {
+            for ask in [control::settings_request(), control::context_request()] {
+                let _ = process.control.write(ask);
+            }
         }
         // Each connected tool says whether it came up (spec 25.5).
         crate::service::mcp_state::forget(daemon, &bot.id);
-        if launch.connected {
+        if launch.connected && speaks {
             let _ = process.control.write(control::mcp_request());
         }
         context::process_started(daemon, &bot.id, launch.resumed);

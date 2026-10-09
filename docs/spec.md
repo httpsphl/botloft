@@ -144,6 +144,8 @@ Identidade e instruções vão em `.claude/rules/botloft.md` e não na linha de 
 port = 45710                  # só 127.0.0.1 no MVP
 workspaces_root = ""          # vazio = %USERPROFILE%\Botloft
 claude_path = ""              # vazio = resolver pelo PATH
+agy_path = ""                 # vazio = %LOCALAPPDATA%\agy\bin e o PATH (seção 30)
+experimental_agents = []      # ["agy"] liga os bots Antigravity (seção 30)
 start_with_windows = true     # o daemon sobe quando o dono entra no Windows (14)
 keep_awake = true             # impede suspensão enquanto houver bot busy
 log_level = "info"
@@ -2644,7 +2646,7 @@ Decisão e contexto: `docs/adr/0003-agentes.md`. Um bot tem um **agente**, `Bot.
 |---|---|---|
 | **A0** | ADR, esta seção, `bots.agent` no banco e no protocolo; `bots.create` com `codex` ou `agy` dá `-32004` ("not available yet") | feito |
 | **A1** | A interface `Agent` no daemon (`crates/botloftd/src/agent`), com o Claude por trás e os testes de hoje sem mudança. Em fatias: **A1a** argumentos do processo, ambiente extra e codificação do turno no stdin (feito); **A1b** leitura da saída: cada agente decodifica o próprio fluxo (`Agent::handle_output`, `Agent::live_text`) e grava no chat por `chat::sink` (resposta, ferramenta que começa e termina, fim de turno), o que todo agente tem; o que é só do Claude (contexto, compactação, parte do plano, rascunho de telas) fica no decodificador dele, `chat/claude.rs` (feito); **A1c** descoberta e login, arquivos da pasta do bot e aprovações | em andamento |
-| **A2** | AGY: lançamento, entrada e saída, MCP, aprovações, isolamento, modelos e esforço, testados com o `agy` real | a fazer |
+| **A2** | AGY, **experimental**: só existe quando `experimental_agents = ["agy"]` no `config.toml`. Lançamento, entrada e saída, MCP do Botloft, isolamento por regras `deny`, retomada de conversa, no `agy` real. Sem aprovações do dono e sem comandos de shell (30.3); sem modelo e esforço escolhidos, contexto, compactação nem ferramentas conectadas do dono | feito (sem seletor no app) |
 | **A3** | Codex por `codex app-server` | a fazer |
 | **A4** | Seletor de agente no app, conta e login de cada agente, paridade de rotinas, navegador, desktop e perguntas | a fazer |
 
@@ -2652,7 +2654,16 @@ Decisão e contexto: `docs/adr/0003-agentes.md`. Um bot tem um **agente**, `Bot.
 
 Descoberta e saúde (binário, versão mínima, login, comando de entrar); lançamento (argumentos, ambiente, arquivos da pasta do bot: instruções, regras, configuração de MCP, isolamento); entrada (turno do dono, de outro bot ou do daemon, imagens, recibo de leitura); saída (decodificador com estado para eventos normalizados: turno começou, resposta, ferramenta, turno acabou, contexto, limite, falha de login, sessão iniciada ou perdida, subagentes, modelo em uso); aprovações (pedido no formato comum `{tool_name, input, tool_use_id}` e a resposta de volta); capacidades (modelos, esforços, modos de permissão, vocabulário de ferramentas). Modelo e esforço passam a ser texto validado pelas capacidades do agente. O que um agente não faz aparece desligado no app.
 
-### 30.3 Isolamento
+### 30.3 Antigravity (`agy`), experimental
+
+- **Ligar:** `experimental_agents = ["agy"]` no `config.toml`; sem isso, `bots.create` com `agent: "agy"` dá `-32004`. O app ainda não tem o seletor (A4).
+- **Casa própria:** o processo roda com `USERPROFILE` e `HOME` em `<pasta do bot>\.botloft\agy-home`. Lá o Botloft escreve a cada start `.gemini/config/mcp_config.json` (o servidor `botloft`, com o token do bot no cabeçalho) e `.gemini/antigravity-cli/settings.json`. Assim o `GEMINI.md`, os servidores MCP e as configurações pessoais do dono ficam de fora (o login não mora ali e continua valendo).
+- **Regras do bot:** o texto que o Claude lê em `.claude/rules/botloft.md` é copiado para `AGENTS.md` na pasta do bot, que o `agy` carrega.
+- **Permissões:** em `-p` o `agy` não pergunta nada (30.4), então o Botloft decide de antemão: `allow` só `mcp(botloft/*)`; `deny` de `read_file(<pasta>)` e `write_file(<pasta>)` para cada pasta cercada (a mesma lista da seção 7.5: dados do Botloft e pastas de outras crews). Comandos de shell são negados pelo próprio `agy`, e o `result` traz `denied_actions`. O dono ainda não tem como liberar um comando.
+- **Não faz:** pedidos de controle (`get_settings`, `get_context_usage`, `mcp_status`, `/compact`): o `agy` recusa o formato; por isso o medidor de contexto e "Compactar" não existem para esses bots. Também não há cartão de plano, uso do plano nem ferramentas conectadas do dono.
+- **Eventos:** `init` dá o modelo; `step_update` `user_input` `DONE` é o recibo de leitura da mensagem mais antiga escrita (o `agy` não devolve o id) e grava a conversa a retomar (`--conversation`); `agent_response` `ACTIVE` é o texto ao vivo e `DONE` fecha a resposta; `tool` `ACTIVE`, `DONE` e `ERROR` são a ferramenta (`write_to_file`, `run_command`, `view_file`... aparecem como `Write`, `Bash`, `Read`); `result` fecha o turno, com `usage` e `status`.
+
+### 30.3.1 Isolamento dos agentes
 
 Um agente só roda bots quando o Botloft impõe o que a seção 7.5 impõe no Claude: nada de ler as outras crews nem os dados do Botloft. Cada agente usa o seu mecanismo, e o resultado do teste real entra aqui antes de o agente ser liberado.
 
@@ -2662,7 +2673,15 @@ Um agente só roda bots quando o Botloft impõe o que a seção 7.5 impõe no Cl
 |---|---|---|
 | `agy` 1.3.1: modo de impressão com `stream-json` | `agy --input-format stream-json --output-format stream-json --model <id> -p=` lê uma linha JSON por mensagem: `{"event":"user","message":{"role":"user","content":[{"type":"text","text":"..."}]}}`. Sem `event` ou sem `content` responde erro explícito. O `-p` precisa do `=` quando outras flags vêm depois | feito: um turno, `gemini-3.8-flash-low` |
 | `agy`: eventos de saída | `init` (`conversation_id`, `model`, `cwd`, `tools`, `permission_mode` = `request-review`), `step_update` (`step_type` `user_input` ou `agent_response`, `state` `ACTIVE` ou `DONE`, `text_delta`, `usage`) e `result` (`status` `SUCCESS` ou `ERROR`, `response`, `usage` com `input_tokens`, `output_tokens`, `thinking_tokens`, `cache_read_tokens`, `total_tokens`). O processo saiu com o fim do stdin | feito: um turno |
-| `agy`: vários turnos num processo, ferramentas, pedido de aprovação, MCP por HTTP, `--conversation`, isolamento por `--sandbox` e `--add-dir` | **Não visto** | a fazer (A2) |
+| `agy`: vários turnos num processo | Com o stdin aberto, duas mensagens com 25 s de intervalo viram dois turnos: um `result` por turno (`num_turns` 1, depois 2), e o segundo lembra do primeiro. Os `step_index` seguem contando. O texto vem com o prefixo `[MAHI68] `, que não sabemos explicar | feito: 1.3.1, `gemini-3.8-flash-low` |
+| `agy`: ferramentas | `step_type` `tool`, `state` `ACTIVE`, `DONE` ou `ERROR`, `tool_name` (`write_to_file`, `run_command`...) e `tool_info.parameters` (`TargetFile`, `CommandLine`...). Não há bloco de resultado da ferramenta como no Claude; o erro vem em `tool_info.error` | feito: um `write_to_file` e um `run_command` |
+| `agy`: aprovações em modo `-p` | **Não há canal para o dono aprovar.** `init.permission_mode` vem `request-review`, mas escrever um arquivo, dentro ou **fora** da pasta de trabalho, não pediu nada. Um comando de shell (`run_command`) foi **negado sozinho**: "headless mode cannot prompt"; o `result` traz `denied_actions: [{action:"command"}]`. A mensagem manda pôr uma regra em `permissions.allow` do `settings.json` (`command(<alvo>)`) ou usar `--dangerously-skip-permissions` | feito: 1.3.1 |
+| `agy`: isolamento | `--sandbox` **não** impediu a escrita fora da pasta (só restringe o terminal). O agente carrega `~/.gemini/GEMINI.md` do dono (memória pessoal, 24 KB aqui) e usa `~/.gemini/antigravity-cli/settings.json`; o MCP fica em `~/.gemini/config/mcp_config.json`. **`USERPROFILE` muda essa pasta** e o login sobrevive; sem o `GEMINI.md` do dono o prefixo `[MAHI68]` some. Regras `permissions` no `settings.json`: `command(echo hello)` em `allow` funcionou; `write_file(C:/pasta/completa)` em `deny` bloqueia a escrita ali (letra do drive, barras normais, sem curinga; `/**`, `/*` e o caminho sem o drive **não** casaram; `write_file(*)` bloqueia tudo). Ação e alvos conforme `antigravity.google/docs/permissions` | feito: 1.3.1. Na pasta de um daemon real, um bot não leu o `owner.token` (fechou em `DENIED`) |
+| `agy`: instruções da pasta | `AGENTS.md` e `GEMINI.md` na pasta de trabalho são lidos; `.claude/rules/*.md` e `.agents/rules/*.md` **não** | feito: 1.3.1 |
+| `agy`: MCP por HTTP | `agy mcp add --header "K: V" <nome> <url>` grava `{"mcpServers":{"<nome>":{"disabled":false,"headers":{...},"serverUrl":"<url>"}}}` em `~/.gemini/config/mcp_config.json`. **Testado com o daemon real**: o bot listou as ferramentas do servidor `botloft` (`send_message`, `complete_task`, `ask_owner`...) com `allow` `mcp(botloft/*)` | feito: 1.3.1 |
+| `agy`: pedido de controle de outro formato | Uma linha `{"type":"control_request",...}` no stdin vira um turno com erro: `stream input message is missing the "event" field` (visto no daemon real antes de o Botloft parar de enviá-la) | feito: 1.3.1 |
+| `agy`: `--conversation`, `--add-dir` | Passados no lançamento e cobertos por teste com o `FakeRuntime`; a retomada **não** foi vista com o `agy` real | a fazer |
+| `agy`: erros de login, limite de uso | **Não visto**: um bot sem login ou no limite aparece como turno com erro | a fazer |
 | `agy models` | Lista `gemini-3.8-flash-{high,medium,low}`, `gemini-3.7-...`, `gemini-3.1-pro-{high,low}` e `claude-opus-5-5-{low,medium,high}`, entre outros: o nível de esforço faz parte do id do modelo | feito |
 | `codex` 0.148.0-alpha.9: `exec --json` | Um turno por processo: `thread.started`, `turn.started`, `item.completed` (`agent_message`), `turn.completed` com `usage` (`input_tokens`, `cached_input_tokens`, `output_tokens`, `reasoning_output_tokens`). Não serve para um bot que fica ligado | feito: um turno, `read-only` |
 | `codex app-server` | Experimental, JSON-RPC. `app-server generate-json-schema` gera o esquema, que traz pedidos de aprovação (`CommandExecutionRequestApprovalParams`, `FileChangeRequestApprovalParams`, `PermissionsRequestApprovalParams`, `McpServerElicitationRequestParams`) e `DynamicToolCallParams` | esquema gerado e lido; conversa **não vista** (A3) |

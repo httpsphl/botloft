@@ -6,11 +6,11 @@
 use botloft_core::ids::BotId;
 use botloft_core::protocol::TokenUsage;
 use serde_json::Value;
-use tracing::{debug, warn};
+use tracing::debug;
 
 use super::{account, control, sink};
-use crate::state::{Daemon, Event};
-use crate::{context, routines, service};
+use crate::state::Daemon;
+use crate::{context, service};
 
 pub(crate) fn apply(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
     // Lines from a process that was replaced say nothing about the new one.
@@ -123,16 +123,7 @@ fn replay(daemon: &Daemon, bot: &BotId, event: &Value) {
     let Some(uuid) = event["uuid"].as_str() else {
         return;
     };
-    let now = daemon.clock.now_ms();
-    let read = daemon.store().mark_read(uuid, now);
-    match read {
-        Ok(Some(delivery)) => {
-            routines::turn_began(daemon, bot, &delivery.message_id);
-            daemon.emit(Event::DeliveryChanged(delivery));
-        }
-        Ok(None) => {}
-        Err(err) => warn!("could not mark a delivery read: {err}"),
-    }
+    sink::message_read(daemon, bot, uuid);
 }
 
 fn tool_results(daemon: &Daemon, bot: &BotId, event: &Value) {
@@ -189,10 +180,7 @@ fn result(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
             error,
         );
     }
-    routines::turn_ended(daemon, bot, failed);
-    crate::screens::turn_ended(daemon, bot);
-    daemon.crew_access.end_turn(bot);
-    daemon.supervisor.turn_ended(bot, generation);
+    sink::finish_turn(daemon, bot, generation, failed);
 }
 
 /// The turn's tokens from the `usage` of a `result`: the sum of the turn's

@@ -13,7 +13,7 @@ use tracing::debug;
 
 use super::slot::StopIntent;
 use super::{Inner, STABLE_AFTER, Supervisor};
-use crate::agent::{self, LaunchPlan};
+use crate::agent::{self, LaunchFiles, LaunchPlan};
 use crate::chat::{LIVE_TEXT_EVERY, StreamReader};
 use crate::platform;
 use crate::runtime::claude::Claude;
@@ -116,6 +116,7 @@ pub(super) fn launch_spec(
     let agent = agent::of(bot.agent).ok_or_else(|| {
         io::Error::other(format!("bots on {} cannot start yet", bot.agent.as_str()))
     })?;
+    let program = agent.locate(daemon.supervisor.agy_path(), &claude.path)?;
     let mcp = workspace.join(".botloft").join("mcp.json");
     let work_folder = daemon.paths.work_folder(crew);
     let args = agent.args(&LaunchPlan {
@@ -142,14 +143,26 @@ pub(super) fn launch_spec(
     ] {
         env.push((OsString::from(name), value));
     }
-    env.extend(agent.extra_env());
+    // What the agent sets replaces what the user environment has.
+    for (name, value) in agent.extra_env(&workspace) {
+        env.retain(|(have, _)| !have.eq_ignore_ascii_case(&name));
+        env.push((name, value));
+    }
+    let mut fenced = workspace::fences(&daemon.paths, crew, &crews);
+    fenced.push(daemon.paths.secrets());
+    agent.write_launch_files(&LaunchFiles {
+        workspace: &workspace,
+        port: daemon.port,
+        token: &token,
+        fenced: &fenced,
+    })?;
 
     // The values of the headers and variables of the bot's connected tools,
     // which its `mcp.json` expands (spec 25.2).
     env.extend(mcp_secrets::environment(&daemon.paths.secrets(), &servers)?);
 
     let spec = SpawnSpec {
-        program: claude.path.clone(),
+        program,
         args,
         cwd: workspace.clone(),
         env,
