@@ -1136,7 +1136,7 @@ export type CrewAccessIdParams = { accessId: CrewAccessId, };
 /**
  * The group a role is listed under.
  */
-export type BotTemplateCategory = "code" | "design" | "content" | "research" | "business" | "product" | "marketing" | "learning" | "finance";
+export type BotTemplateCategory = "code" | "design" | "content" | "research" | "business" | "product" | "marketing" | "learning" | "finance" | "people";
 
 /**
  * A role as the list shows it, in English. The app writes the name, role

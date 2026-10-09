@@ -5,6 +5,7 @@ import { engineering } from "./catalogEngineering";
 import { finance } from "./catalogFinance";
 import { marketing } from "./catalogMarketing";
 import { paidMedia } from "./catalogPaidMedia";
+import { people } from "./catalogPeople";
 import { product } from "./catalogProduct";
 
 // The Bot agency (spec 26): ready-made bots the owner adds to a crew. The
@@ -34,6 +35,7 @@ export const catalog = {
     marketing: "Marketing & sales",
     learning: "Learning",
     finance: "Finance",
+    people: "People & HR",
   },
   none: "No bot matches that.",
   loading: "Loading the bots…",
@@ -62,5 +64,6 @@ export const catalog = {
     ...design,
     ...finance,
     ...paidMedia,
+    ...people,
   },
 };

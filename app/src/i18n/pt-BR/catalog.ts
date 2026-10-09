@@ -6,6 +6,7 @@ import { engineering } from "./catalogEngineering";
 import { finance } from "./catalogFinance";
 import { marketing } from "./catalogMarketing";
 import { paidMedia } from "./catalogPaidMedia";
+import { people } from "./catalogPeople";
 import { product } from "./catalogProduct";
 
 export const catalog: Messages["catalog"] = {
@@ -31,6 +32,7 @@ export const catalog: Messages["catalog"] = {
     marketing: "Marketing e vendas",
     learning: "Aprendizado",
     finance: "Finanças",
+    people: "Pessoas e RH",
   },
   none: "Nenhum bot combina com isso.",
   loading: "Carregando os bots…",
@@ -59,5 +61,6 @@ export const catalog: Messages["catalog"] = {
     ...design,
     ...finance,
     ...paidMedia,
+    ...people,
   },
 };

@@ -27,6 +27,7 @@ const CATEGORIES: Category[] = [
   "business",
   "learning",
   "finance",
+  "people",
 ];
 
 /** A fixed color per role, so the mascots tell the cards apart. */
