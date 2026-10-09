@@ -2019,7 +2019,7 @@ instructions = """
 | `event-planner` | Planeja orçamento, cronograma, opções de fornecedores e a lista do evento; não reserva nem convida |
 | `travel-planner` | Pesquisa rotas e hospedagens, monta o plano dia a dia e o orçamento; nunca reserva nem digita documentos ou cartões |
 
-**Marketing e vendas** (`marketing`, 18): nenhum publica, envia, paga, cria anúncio ou mexe na loja por conta própria; o dono faz, com o texto e o plano do bot. Os que lidam com o público dizem na ficha o que não fazer: nada de avaliação ou depoimento falso, urgência inventada, truque de interface, comparação não confirmada ou segmentação por característica sensível.
+**Marketing e vendas** (`marketing`, 24, entre eles os seis de mídia paga): nenhum publica, envia, paga, cria anúncio ou mexe na loja por conta própria; o dono faz, com o texto e o plano do bot. Os que lidam com o público dizem na ficha o que não fazer: nada de avaliação ou depoimento falso, urgência inventada, truque de interface, comparação não confirmada ou segmentação por característica sensível.
 
 | `id` | O que faz |
 |---|---|
@@ -2041,6 +2041,12 @@ instructions = """
 | `proposal-writer` | Escreve propostas e orçamentos com escopo claro; pede os números em vez de inventar |
 | `sales-coach` | Prepara conversas de venda, faz o papel do cliente para treinar e escreve o retorno; sem pressão |
 | `pricing-analyst` | Calcula custo e margem, compara o mercado e propõe uma faixa e um teste; o dono define o preço |
+| `ppc-strategist` | Planeja anúncios de busca: palavras agrupadas por intenção, exclusões, anúncios com a oferta real e um teste pequeno com regras de parar e subir |
+| `paid-social-strategist` | Planeja campanhas pagas em redes: um objetivo, públicos por interesse, lugar e listas do dono, formatos e variações; nunca segmenta por traço sensível |
+| `ad-creative-strategist` | Escreve ângulos, ganchos e briefings para testar, muda uma coisa por teste e só usa afirmação que o dono prova |
+| `ad-auditor` | Lê relatórios exportados e lista vazamentos de verba com números, dinheiro em jogo e ajuste, em ordem; sem acesso à conta |
+| `tracking-specialist` | Compara onde cada resultado é contado, explica as diferenças e propõe nomes limpos de eventos e links; não mexe em tag no ar nem coleta dado a mais |
+| `search-query-analyst` | Agrupa os termos buscados por intenção e entrega três listas (excluir, incluir, escrever), com o quanto tem certeza |
 
 **Engenharia** (`code`, 8, junto com `developer`, `code-reviewer` e `qa-tester`): trabalham no código e nos sistemas do dono, sempre com as aprovações do modo Manual. As fichas dizem o que nunca fazer: rodar mudança destrutiva ou em sistema de verdade sem pedir, mexer em dado real sem cópia de segurança, pedir senha, chave ou token no chat, ou pôr segredo em código que qualquer um lê.
 
@@ -2124,7 +2130,7 @@ Jurídico e saúde, que pedem aviso de que não substituem um profissional; o do
 | **G1** Catálogo e daemon | formato da ficha, `catalog.rs`, as 12 fichas, `catalog.list`/`get`/`add`, tipos `ts-rs` | `catalog_lint`; unidade e RPC: `catalog.add` valida como `bots.create`, cria em Manual com modelo e esforço da ficha, nome repetido, ficha desconhecida e crew arquivada recusam |
 | **G2** Chefe | `list_bot_templates`, `get_bot_template`, `template` em `suggest_bot`, regras do chefe | tools com `FakeRuntime`: só o chefe, `id` desconhecido, junção de `instructions`, limite de 8 000; manual (PR): pedir ao chefe real "preciso de alguém para as redes sociais" e ver o cartão |
 | **G3** App | a Agência de bots, "Saber mais", "Adicionar na equipe", convite na equipe só com o chefe, textos nos três idiomas | `FakeBotloft`; teste de que toda ficha tem texto nos três idiomas; `pnpm check`; a tela no preview. Manual (PR): criar cada um dos 12 com o Claude Code real e dar a cada um uma tarefa típica |
-| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito), Conteúdo, pesquisa e aprendizado (6, feito), Design (8, feito), Finanças (7, feito); categorias `product`, `marketing`, `learning` e `finance`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
+| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito), Conteúdo, pesquisa e aprendizado (6, feito), Design (8, feito), Finanças (7, feito), Mídia paga (6, feito, em `marketing`); categorias `product`, `marketing`, `learning` e `finance`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
 
 ## 27. Conta e cópia na nuvem
 

@@ -4,6 +4,7 @@ import { design } from "./catalogDesign";
 import { engineering } from "./catalogEngineering";
 import { finance } from "./catalogFinance";
 import { marketing } from "./catalogMarketing";
+import { paidMedia } from "./catalogPaidMedia";
 import { product } from "./catalogProduct";
 
 // The Bot agency (spec 26): ready-made bots the owner adds to a crew. The
@@ -60,5 +61,6 @@ export const catalog = {
     ...contentAndLearning,
     ...design,
     ...finance,
+    ...paidMedia,
   },
 };

@@ -95,6 +95,12 @@ const SHEETS: &[(&str, &str)] = &[
     sheet!("bills-assistant"),
     sheet!("invoicing-assistant"),
     sheet!("tax-organizer"),
+    sheet!("ppc-strategist"),
+    sheet!("paid-social-strategist"),
+    sheet!("ad-creative-strategist"),
+    sheet!("ad-auditor"),
+    sheet!("tracking-specialist"),
+    sheet!("search-query-analyst"),
 ];
 
 /// What a sheet file holds.
