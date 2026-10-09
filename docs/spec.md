@@ -2105,6 +2105,18 @@ instructions = """
 | `contract-deadline-tracker` | `legal` | Lista cada data e obrigação com a cláusula de origem e põe as armadilhas primeiro, como renovação automática com aviso prévio |
 | `complaint-letter-drafter` | `legal` | Redige carta de reclamação educada e firme a partir de fatos e papéis do dono, sem ameaça; quem envia é o dono |
 
+**Jogos** (`games`, 7): ajudam o dono a fazer um jogo, que continua sendo dele; propõem, explicam o porquê e mudam o que o dono decidir. As fichas dizem o que nunca fazer: copiar personagens, texto, arte, música ou regras exatas de outro jogo (dizem quando uma ideia fica perto de uma conhecida); desenhar algo para enganar o jogador a gastar, como custo escondido, contagem regressiva falsa, vantagem por pagamento, prêmio aleatório pago ou mecânica de aposta, e nunca voltado a crianças; usar a história ou o nome de uma pessoa real sem permissão; e guardar nome de jogadores, sobretudo crianças, nas anotações de um teste. O `game-audio-director` não gera áudio: escreve briefings para quem faz e lembra de conferir os direitos.
+
+| `id` | Categoria | O que faz |
+|---|---|---|
+| `game-designer` | `games` | Acha o ciclo central, escreve as regras em frases exatas procurando brechas e planeja a menor versão jogável e o teste |
+| `game-narrative-designer` | `games` | Faz o mundo, os personagens e a história em torno das escolhas do jogador, com os textos em falas curtas e o contexto de cada uma |
+| `level-designer` | `games` | Planeja a ordem em que o jogador aprende cada mecânica e descreve cada fase em texto, com a lista de teste |
+| `game-economy-designer` | `games` | Equilibra moedas, itens e progresso numa planilha com fórmulas e simulações; propõe só formas justas de ganhar dinheiro |
+| `playtest-analyst` | `games` | Planeja o teste sem explicar o jogo, separa o que o jogador fez do que disse e ordena as mudanças por efeito; não fala com jogadores |
+| `game-audio-director` | `games` | Planeja música e lista de sons numa tabela, avisos visuais para quem não ouve bem e um briefing por peça |
+| `tabletop-game-master` | `games` | Prepara aventuras curtas com escolhas e vários finais, responde regras só do livro do dono e pergunta ao grupo sobre limites |
+
 **Conteúdo, pesquisa e aprendizado** (6; `learning` é a categoria dos dois últimos): as fichas dizem o que nunca fazer: mudar um fato, número ou citação ao revisar; inventar experiência, resultado ou credencial do dono ao escrever na voz dele; confirmar algo só por parecer plausível; citar uma fonte que não foi aberta e lida; e escrever trabalho que o dono precisa entregar como seu (prova, tese, tarefa com nota), caso em que ajudam de outro jeito.
 
 | `id` | Categoria | O que faz |
@@ -2186,7 +2198,7 @@ Saúde, que pede aviso de que não substitui um profissional; o dono criar, impo
 | **G1** Catálogo e daemon | formato da ficha, `catalog.rs`, as 12 fichas, `catalog.list`/`get`/`add`, tipos `ts-rs` | `catalog_lint`; unidade e RPC: `catalog.add` valida como `bots.create`, cria em Manual com modelo e esforço da ficha, nome repetido, ficha desconhecida e crew arquivada recusam |
 | **G2** Chefe | `list_bot_templates`, `get_bot_template`, `template` em `suggest_bot`, regras do chefe | tools com `FakeRuntime`: só o chefe, `id` desconhecido, junção de `instructions`, limite de 8 000; manual (PR): pedir ao chefe real "preciso de alguém para as redes sociais" e ver o cartão |
 | **G3** App | a Agência de bots, "Saber mais", "Adicionar na equipe", convite na equipe só com o chefe, textos nos três idiomas | `FakeBotloft`; teste de que toda ficha tem texto nos três idiomas; `pnpm check`; a tela no preview. Manual (PR): criar cada um dos 12 com o Claude Code real e dar a cada um uma tarefa típica |
-| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito, mais 8 depois), Conteúdo, pesquisa e aprendizado (6, feito), Design (8, feito), Finanças (7, feito), Mídia paga (6, feito, em `marketing`), Pessoas e RH (7, feito), Segurança (7, feito), Setores (7, feito, em `business`), Jurídico (7, feito); categorias `product`, `marketing`, `learning`, `finance`, `people`, `security` e `legal`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
+| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito, mais 8 depois), Conteúdo, pesquisa e aprendizado (6, feito), Design (8, feito), Finanças (7, feito), Mídia paga (6, feito, em `marketing`), Pessoas e RH (7, feito), Segurança (7, feito), Setores (7, feito, em `business`), Jurídico (7, feito), Jogos (7, feito); categorias `product`, `marketing`, `learning`, `finance`, `people`, `security`, `legal` e `games`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
 
 ## 27. Conta e cópia na nuvem
 
