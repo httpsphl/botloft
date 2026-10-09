@@ -111,6 +111,13 @@ const ROLES: [id: string, category: BotTemplateCategory, name: string, effort?: 
   ["compliance-checklist", "security", "Compliance Checklist Assistant"],
   ["ai-code-auditor", "security", "AI-Written Code Auditor"],
   ["cloud-config-reviewer", "security", "Cloud Setup Reviewer"],
+  ["real-estate-assistant", "business", "Real Estate Assistant"],
+  ["hospitality-guest-assistant", "business", "Guest Experience Assistant"],
+  ["returns-assistant", "business", "Returns and Refunds Assistant"],
+  ["supply-chain-planner", "business", "Supply Chain Planner"],
+  ["grant-writer", "business", "Grant Writer"],
+  ["restaurant-manager", "business", "Restaurant Assistant"],
+  ["course-creator", "business", "Online Course Creator"],
 ];
 
 /** Every role, as `catalog.get` returns it. */

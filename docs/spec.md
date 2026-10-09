@@ -2081,6 +2081,18 @@ instructions = """
 | `ai-code-auditor` | `security` | Confere se o que o código usa existe, os buracos básicos de segurança, os casos de borda e se os testes testam algo; dá um veredito (`effort` `high`) |
 | `cloud-config-reviewer` | `security` | Lê exportações de configuração e lista os riscos de sempre com prova e a menor mudança segura; avisa do que pode trancar o dono fora (`effort` `high`) |
 
+**Setores** (`business`, 7, junto com `sales-prospector`, `customer-support` e `personal-assistant`): nenhum envia, assina, compra, paga, reembolsa, publica ou promete nada a ninguém; o dono decide e age. Os que tocam em profissão regulada dizem que não são corretor, avaliador, advogado nem fiscal sanitário. As fichas dizem o que nunca fazer: afirmar um valor de mercado como fato; inventar horário, preço ou promessa a um hóspede; decidir uma exceção à política de devolução ou negar um reembolso a que o cliente pode ter direito por lei; dizer que um prato não leva um alérgeno ou serve a uma dieta sem a ficha de receita do dono dizer; inventar resultado, parceiro ou número numa candidatura; e prometer ganho, depoimento ou prazo falso numa página de curso.
+
+| `id` | Categoria | O que faz |
+|---|---|---|
+| `real-estate-assistant` | `business` | Compara imóveis numa tabela com os custos reais, prepara visitas e o anúncio honesto; não faz proposta nem assina |
+| `hospitality-guest-assistant` | `business` | Mantém a folha de fatos do lugar e responde hóspedes só a partir dela; reembolso e desconto são do dono |
+| `returns-assistant` | `business` | Separa pedidos pela política escrita em dentro, fora ou dúvida, rascunha a resposta e mostra o que se repete; não reembolsa |
+| `supply-chain-planner` | `business` | Propõe ponto de reposição e tamanho de pedido com a fórmula, compara fornecedores pelo custo total; não faz pedido |
+| `grant-writer` | `business` | Lê o edital, confere se o dono se enquadra antes de escrever e redige com fatos reais, marcando lacunas; não envia |
+| `restaurant-manager` | `business` | Calcula o custo de cada prato, planeja escalas e compras; alérgeno e dieta só pela ficha de receita do dono |
+| `course-creator` | `business` | Constrói o roteiro de trás para a frente a partir de uma promessa honesta e escreve a página só com conteúdo e resultado reais |
+
 **Conteúdo, pesquisa e aprendizado** (6; `learning` é a categoria dos dois últimos): as fichas dizem o que nunca fazer: mudar um fato, número ou citação ao revisar; inventar experiência, resultado ou credencial do dono ao escrever na voz dele; confirmar algo só por parecer plausível; citar uma fonte que não foi aberta e lida; e escrever trabalho que o dono precisa entregar como seu (prova, tese, tarefa com nota), caso em que ajudam de outro jeito.
 
 | `id` | Categoria | O que faz |
@@ -2162,7 +2174,7 @@ Jurídico e saúde, que pedem aviso de que não substituem um profissional; o do
 | **G1** Catálogo e daemon | formato da ficha, `catalog.rs`, as 12 fichas, `catalog.list`/`get`/`add`, tipos `ts-rs` | `catalog_lint`; unidade e RPC: `catalog.add` valida como `bots.create`, cria em Manual com modelo e esforço da ficha, nome repetido, ficha desconhecida e crew arquivada recusam |
 | **G2** Chefe | `list_bot_templates`, `get_bot_template`, `template` em `suggest_bot`, regras do chefe | tools com `FakeRuntime`: só o chefe, `id` desconhecido, junção de `instructions`, limite de 8 000; manual (PR): pedir ao chefe real "preciso de alguém para as redes sociais" e ver o cartão |
 | **G3** App | a Agência de bots, "Saber mais", "Adicionar na equipe", convite na equipe só com o chefe, textos nos três idiomas | `FakeBotloft`; teste de que toda ficha tem texto nos três idiomas; `pnpm check`; a tela no preview. Manual (PR): criar cada um dos 12 com o Claude Code real e dar a cada um uma tarefa típica |
-| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito, mais 8 depois), Conteúdo, pesquisa e aprendizado (6, feito), Design (8, feito), Finanças (7, feito), Mídia paga (6, feito, em `marketing`), Pessoas e RH (7, feito), Segurança (7, feito); categorias `product`, `marketing`, `learning`, `finance`, `people` e `security`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
+| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito, mais 8 depois), Conteúdo, pesquisa e aprendizado (6, feito), Design (8, feito), Finanças (7, feito), Mídia paga (6, feito, em `marketing`), Pessoas e RH (7, feito), Segurança (7, feito), Setores (7, feito, em `business`); categorias `product`, `marketing`, `learning`, `finance`, `people` e `security`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
 
 ## 27. Conta e cópia na nuvem
 

@@ -9,6 +9,7 @@ import { marketing } from "./catalogMarketing";
 import { paidMedia } from "./catalogPaidMedia";
 import { people } from "./catalogPeople";
 import { product } from "./catalogProduct";
+import { sectors } from "./catalogSectors";
 import { security } from "./catalogSecurity";
 
 export const catalog: Messages["catalog"] = {
@@ -67,5 +68,6 @@ export const catalog: Messages["catalog"] = {
     ...people,
     ...engineeringMore,
     ...security,
+    ...sectors,
   },
 };
