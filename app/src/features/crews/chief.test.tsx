@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, screen, within } from "@testing-library/react"
 import { afterEach, describe, expect, test } from "vitest";
 import { FakeBotloft } from "../../lib/fake";
 import { SUGGEST_TOOL } from "../../lib/fakeChat";
-import { crewOpened, openBot, renderApp, sidebar } from "../../test/app";
+import { crewOpened, openBot, openNewCrewForm, renderApp, sidebar } from "../../test/app";
 
 afterEach(cleanup);
 
@@ -47,8 +47,7 @@ describe("the crew's chief", () => {
     fake.addCrew("Ops");
     renderApp(fake);
     await crewOpened("Ops");
-    fireEvent.click(screen.getByRole("button", { name: "New crew" }));
-    const dialog = screen.getByRole("dialog", { name: "New crew" });
+    const dialog = await openNewCrewForm();
     fireEvent.change(within(dialog).getByLabelText("Name"), { target: { value: "Bakery" } });
     fireEvent.change(within(dialog).getByLabelText("What is this crew for?"), {
       target: { value: "Build my bakery's website" },
