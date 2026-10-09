@@ -4,7 +4,7 @@ import { FakeBotloft } from "./fake";
 describe("the fake's bot catalog", () => {
   it("lists the roles, by category too, and reads one with its instructions", async () => {
     const fake = new FakeBotloft();
-    expect(await fake.call("catalog.list", {})).toHaveLength(86);
+    expect(await fake.call("catalog.list", {})).toHaveLength(94);
     const product = await fake.call("catalog.list", { category: "product" });
     expect(product).toHaveLength(14);
     expect(await fake.call("catalog.list", { category: "marketing" })).toHaveLength(24);
@@ -17,7 +17,7 @@ describe("the fake's bot catalog", () => {
       "code-reviewer",
       "qa-tester",
     ]);
-    expect(code).toHaveLength(11);
+    expect(code).toHaveLength(19);
     expect(code[0]).not.toHaveProperty("instructions");
 
     const reviewer = await fake.call("catalog.get", { id: "code-reviewer" });

@@ -22,7 +22,7 @@ async fn the_catalog_lists_every_role_without_its_instructions() {
 
     let all = app.call("catalog.list", json!({})).await.expect("list");
     let all = all.as_array().expect("array");
-    assert_eq!(all.len(), 86);
+    assert_eq!(all.len(), 94);
     let ids: Vec<_> = all
         .iter()
         .filter_map(|entry| entry["id"].as_str())
@@ -59,6 +59,14 @@ async fn the_catalog_lists_every_role_without_its_instructions() {
             "devops-engineer",
             "security-reviewer",
             "data-engineer",
+            "technical-writer",
+            "sre-engineer",
+            "release-engineer",
+            "codebase-guide",
+            "prompt-engineer",
+            "rapid-prototyper",
+            "localization-engineer",
+            "refactoring-engineer",
         ]
     );
 

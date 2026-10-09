@@ -2048,7 +2048,7 @@ instructions = """
 | `tracking-specialist` | Compara onde cada resultado é contado, explica as diferenças e propõe nomes limpos de eventos e links; não mexe em tag no ar nem coleta dado a mais |
 | `search-query-analyst` | Agrupa os termos buscados por intenção e entrega três listas (excluir, incluir, escrever), com o quanto tem certeza |
 
-**Engenharia** (`code`, 8, junto com `developer`, `code-reviewer` e `qa-tester`): trabalham no código e nos sistemas do dono, sempre com as aprovações do modo Manual. As fichas dizem o que nunca fazer: rodar mudança destrutiva ou em sistema de verdade sem pedir, mexer em dado real sem cópia de segurança, pedir senha, chave ou token no chat, ou pôr segredo em código que qualquer um lê.
+**Engenharia** (`code`, 16, junto com `developer`, `code-reviewer` e `qa-tester`): trabalham no código e nos sistemas do dono, sempre com as aprovações do modo Manual. As fichas dizem o que nunca fazer: rodar mudança destrutiva ou em sistema de verdade sem pedir, mexer em dado real sem cópia de segurança, pedir senha, chave ou token no chat, ou pôr segredo em código que qualquer um lê.
 
 | `id` | O que faz |
 |---|---|
@@ -2060,6 +2060,14 @@ instructions = """
 | `devops-engineer` | Automatiza compilação, teste e publicação com jeito de voltar atrás; pergunta antes de tocar em sistema de verdade |
 | `security-reviewer` | Revisa o código e a configuração do dono, só defensivamente e só no que é do dono; não repete segredos que acha (`effort` `high`) |
 | `data-engineer` | Constrói esteiras que coletam, limpam e conferem dados, param quando algo parece errado e mantêm os originais intactos |
+| `technical-writer` | `code` | Escreve documentação a partir do código e roda os comandos numa cópia; diz o que testou e o que só leu |
+| `sre-engineer` | `code` | Define metas em números, mapeia onde falha, propõe alertas que pedem ação e escreve guias; não reinicia nem muda nada em produção |
+| `release-engineer` | `code` | Propõe a versão, as notas e a lista de conferência, com os passos de publicar e de desfazer; o dono publica e nunca entrega chave de assinatura |
+| `codebase-guide` | `code` | Guia um código desconhecido por um caminho real, com arquivo e função, e termina numa primeira tarefa; só lê |
+| `prompt-engineer` | `code` | Escreve e testa instruções para modelos de IA com exemplos reais, uma mudança por vez, e avisa do risco de texto de fora dar ordens |
+| `rapid-prototyper` | `code` | Constrói só o que responde a uma pergunta, com dado inventado e sem conta real, e diz o que é de mentira |
+| `localization-engineer` | `code` | Tira o texto do código para arquivos de tradução, trata plural, data e moeda por região e cria um teste de texto faltando |
+| `refactoring-engineer` | `code` | Arruma o código em commits pequenos com testes antes, sem mudar o comportamento; não altera teste só para passar (`effort` `high`) |
 
 **Conteúdo, pesquisa e aprendizado** (6; `learning` é a categoria dos dois últimos): as fichas dizem o que nunca fazer: mudar um fato, número ou citação ao revisar; inventar experiência, resultado ou credencial do dono ao escrever na voz dele; confirmar algo só por parecer plausível; citar uma fonte que não foi aberta e lida; e escrever trabalho que o dono precisa entregar como seu (prova, tese, tarefa com nota), caso em que ajudam de outro jeito.
 
@@ -2142,7 +2150,7 @@ Jurídico e saúde, que pedem aviso de que não substituem um profissional; o do
 | **G1** Catálogo e daemon | formato da ficha, `catalog.rs`, as 12 fichas, `catalog.list`/`get`/`add`, tipos `ts-rs` | `catalog_lint`; unidade e RPC: `catalog.add` valida como `bots.create`, cria em Manual com modelo e esforço da ficha, nome repetido, ficha desconhecida e crew arquivada recusam |
 | **G2** Chefe | `list_bot_templates`, `get_bot_template`, `template` em `suggest_bot`, regras do chefe | tools com `FakeRuntime`: só o chefe, `id` desconhecido, junção de `instructions`, limite de 8 000; manual (PR): pedir ao chefe real "preciso de alguém para as redes sociais" e ver o cartão |
 | **G3** App | a Agência de bots, "Saber mais", "Adicionar na equipe", convite na equipe só com o chefe, textos nos três idiomas | `FakeBotloft`; teste de que toda ficha tem texto nos três idiomas; `pnpm check`; a tela no preview. Manual (PR): criar cada um dos 12 com o Claude Code real e dar a cada um uma tarefa típica |
-| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito), Conteúdo, pesquisa e aprendizado (6, feito), Design (8, feito), Finanças (7, feito), Mídia paga (6, feito, em `marketing`), Pessoas e RH (7, feito); categorias `product`, `marketing`, `learning`, `finance` e `people`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
+| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito, mais 8 depois), Conteúdo, pesquisa e aprendizado (6, feito), Design (8, feito), Finanças (7, feito), Mídia paga (6, feito, em `marketing`), Pessoas e RH (7, feito); categorias `product`, `marketing`, `learning`, `finance` e `people`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
 
 ## 27. Conta e cópia na nuvem
 
