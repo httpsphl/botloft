@@ -81,7 +81,7 @@ async fn the_chief_reads_the_catalog() {
         .await
         .expect("list");
     let all = all["templates"].as_array().expect("templates");
-    assert_eq!(all.len(), 108);
+    assert_eq!(all.len(), 115);
     assert!(all[0].get("instructions").is_none(), "the list is light");
 
     let research = c

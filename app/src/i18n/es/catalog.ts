@@ -5,6 +5,7 @@ import { design } from "./catalogDesign";
 import { engineering } from "./catalogEngineering";
 import { engineeringMore } from "./catalogEngineeringMore";
 import { finance } from "./catalogFinance";
+import { legal } from "./catalogLegal";
 import { marketing } from "./catalogMarketing";
 import { paidMedia } from "./catalogPaidMedia";
 import { people } from "./catalogPeople";
@@ -37,6 +38,7 @@ export const catalog: Messages["catalog"] = {
     finance: "Finanzas",
     people: "Personas y RR. HH.",
     security: "Seguridad",
+    legal: "Jurídico",
   },
   none: "Ningún bot coincide con eso.",
   loading: "Cargando los bots…",
@@ -69,5 +71,6 @@ export const catalog: Messages["catalog"] = {
     ...engineeringMore,
     ...security,
     ...sectors,
+    ...legal,
   },
 };
