@@ -6,7 +6,7 @@ import { type Messages, useT } from "../../i18n";
 import { when } from "../../lib/format";
 import { plainText } from "../../lib/plainText";
 import type { Activity, Bot, Crew } from "../../lib/protocol.gen";
-import { activityOf, botsOf, crewList } from "../../store/app";
+import { activityOf, crewList } from "../../store/app";
 import { useApp } from "../../store/context";
 import { isUnread, unreadIn } from "../../store/seen";
 import { CountBadge } from "../../ui/Badge";
@@ -22,6 +22,8 @@ import { CrewDialog } from "./CrewDialog";
 import { setAllCollapsed, setCollapsed, useCollapsed, useCollapsedSet } from "./collapsed";
 import { useCrewActions } from "./crewActions";
 import { row } from "./SidebarPages";
+import { StateFilters } from "./StateFilters";
+import { filteredBots, useStateFilter } from "./stateFilter";
 
 /** Crews as sections and their bots as conversations (spec 15.1). */
 export function Sidebar() {
@@ -63,6 +65,7 @@ export function Sidebar() {
             onClick={() => setCreating(true)}
           />
         </div>
+        {crews.length > 0 && <StateFilters />}
         <ul className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
           {crews.map((crew) => (
             <CrewEntry key={crew.id} crew={crew} />
@@ -76,7 +79,8 @@ export function Sidebar() {
 
 function CrewEntry({ crew }: { crew: Crew }) {
   const t = useT();
-  const bots = useApp(useShallow((state) => botsOf(state, crew.id)));
+  const filter = useStateFilter();
+  const bots = useApp(useShallow((state) => filteredBots(state, crew.id, filter)));
   const selected = useApp((state) => state.selectedCrewId === crew.id && !state.selectedBotId);
   const unread = useApp((state) => unreadIn(state, crew.id));
   const selectCrew = useApp((state) => state.selectCrew);
@@ -92,6 +96,10 @@ function CrewEntry({ crew }: { crew: Crew }) {
     collapsed && bots.some((bot) => bot.state === "needs_approval" || bot.state === "auth_error");
   const words = t.crews.sidebar;
 
+  // Filtering, a crew with nothing to show steps aside.
+  if (filter !== "all" && bots.length === 0) {
+    return null;
+  }
   return (
     <li className="mt-2">
       <div className="relative flex items-center">

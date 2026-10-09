@@ -19,6 +19,13 @@ export const crews: Messages["crews"] = {
     collapse: (crew: string) => `Contraer ${crew}`,
     expand: (crew: string) => `Expandir ${crew}`,
     waiting: "un bot te necesita",
+    filters: {
+      label: "Filtrar conversaciones",
+      all: "Todas",
+      needs: "Te necesitan",
+      working: "Trabajando",
+      unread: "Sin leer",
+    },
   },
   overview: {
     count: (count: number) => (count === 1 ? "1 equipo" : `${count} equipos`),

@@ -26,6 +26,13 @@ export const crews = {
     expand: (crew: string) => `Unfold ${crew}`,
     /** Beside a folded crew's name, when one of its bots needs the owner. */
     waiting: "a bot needs you",
+    filters: {
+      label: "Filter conversations",
+      all: "All",
+      needs: "Needs you",
+      working: "Working",
+      unread: "Unread",
+    },
   },
   /** The page of all crews, opened from "Crews" on the left. */
   overview: {
