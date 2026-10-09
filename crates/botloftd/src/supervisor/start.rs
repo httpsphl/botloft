@@ -14,6 +14,7 @@ use tracing::{debug, warn};
 use super::slot::Running;
 use super::spawn::{Launch, launch_spec, pump, settle};
 use super::{ClaudeStatus, Inner, Supervisor};
+use crate::agent::{self, ClaudeAgent};
 use crate::chat::{StreamReader, control};
 use crate::context;
 use crate::runtime::Process;
@@ -156,7 +157,9 @@ impl Supervisor {
         slot.state = BotState::Launching;
         self.announce(&bot.id, slot);
         debug!(bot = %bot.id, generation, pid = ?process.pid, resumed = launch.resumed, "bot started");
-        let reader = StreamReader::new(bot.id.clone(), generation);
+        // The bot launched, so its agent runs.
+        let agent = agent::of(bot.agent).unwrap_or(&ClaudeAgent);
+        let reader = StreamReader::new(bot.id.clone(), generation, agent);
         tokio::spawn(pump(self.daemon.clone(), reader, process.events));
         tokio::spawn(settle(
             self.daemon.clone(),

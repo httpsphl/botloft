@@ -2643,7 +2643,7 @@ Decisão e contexto: `docs/adr/0003-agentes.md`. Um bot tem um **agente**, `Bot.
 | Passo | O que entra | Estado |
 |---|---|---|
 | **A0** | ADR, esta seção, `bots.agent` no banco e no protocolo; `bots.create` com `codex` ou `agy` dá `-32004` ("not available yet") | feito |
-| **A1** | A interface `Agent` no daemon (`crates/botloftd/src/agent`), com o Claude por trás e os testes de hoje sem mudança. Em fatias: **A1a** argumentos do processo, ambiente extra e codificação do turno no stdin (feito); **A1b** leitura da saída em eventos normalizados; **A1c** descoberta e login, arquivos da pasta do bot e aprovações | em andamento |
+| **A1** | A interface `Agent` no daemon (`crates/botloftd/src/agent`), com o Claude por trás e os testes de hoje sem mudança. Em fatias: **A1a** argumentos do processo, ambiente extra e codificação do turno no stdin (feito); **A1b** leitura da saída: cada agente decodifica o próprio fluxo (`Agent::handle_output`, `Agent::live_text`) e grava no chat por `chat::sink` (resposta, ferramenta que começa e termina, fim de turno), o que todo agente tem; o que é só do Claude (contexto, compactação, parte do plano, rascunho de telas) fica no decodificador dele, `chat/claude.rs` (feito); **A1c** descoberta e login, arquivos da pasta do bot e aprovações | em andamento |
 | **A2** | AGY: lançamento, entrada e saída, MCP, aprovações, isolamento, modelos e esforço, testados com o `agy` real | a fazer |
 | **A3** | Codex por `codex app-server` | a fazer |
 | **A4** | Seletor de agente no app, conta e login de cada agente, paridade de rotinas, navegador, desktop e perguntas | a fazer |

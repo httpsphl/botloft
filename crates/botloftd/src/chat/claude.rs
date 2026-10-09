@@ -1,19 +1,18 @@
-//! What each stream-json event means for the chat and the bot's state
+//! Claude Code's stream-json, decoded into the chat (spec 8.1, 30): what each
+//! event means for the chat and the bot's state
 //! (spec 8.1). Fields are read defensively: the format is not documented
 //! and grows between Claude Code versions.
 
-use botloft_core::chat::{TOOL_OUTPUT_MAX, clip, tool_file, tool_input_max, tool_summary};
-use botloft_core::command::tool_explanation;
 use botloft_core::ids::BotId;
-use botloft_core::protocol::{ChatBody, ReplyItem, TokenUsage, ToolItem, ToolStatus, TurnItem};
+use botloft_core::protocol::TokenUsage;
 use serde_json::Value;
 use tracing::{debug, warn};
 
-use super::{account, control, items};
+use super::{account, control, sink};
 use crate::state::{Daemon, Event};
 use crate::{context, routines, service};
 
-pub(super) fn apply(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
+pub(crate) fn apply(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
     // Lines from a process that was replaced say nothing about the new one.
     if !daemon.supervisor.is_current(bot, generation) {
         return;
@@ -74,7 +73,7 @@ fn init(daemon: &Daemon, bot: &BotId, event: &Value) {
 
 /// The piece of reply text a `stream_event` carries, if that is what it is
 /// (spec 8.3). A subagent's text stays out of the chat.
-pub(super) fn live_text(event: &Value) -> Option<&str> {
+pub(crate) fn live_text(event: &Value) -> Option<&str> {
     if event["type"] != "stream_event" || !event["parent_tool_use_id"].is_null() {
         return None;
     }
@@ -105,36 +104,14 @@ fn assistant(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
     context::used(daemon, bot, &event["message"]);
     for block in blocks(event) {
         match block["type"].as_str() {
-            Some("text") => {
-                let text = block["text"].as_str().unwrap_or_default().trim();
-                if !text.is_empty() {
-                    items::add(
-                        daemon,
-                        bot,
-                        ChatBody::Reply(ReplyItem {
-                            text: text.to_owned(),
-                        }),
-                    );
-                }
-            }
-            Some("tool_use") => {
-                let name = block["name"].as_str().unwrap_or("tool");
-                let input = &block["input"];
-                items::add(
-                    daemon,
-                    bot,
-                    ChatBody::Tool(ToolItem {
-                        tool_use_id: block["id"].as_str().unwrap_or_default().to_owned(),
-                        name: name.to_owned(),
-                        summary: tool_summary(name, input),
-                        explanation: tool_explanation(name, input),
-                        input: clip(&input.to_string(), tool_input_max(name)),
-                        status: ToolStatus::Running,
-                        output: None,
-                        file: tool_file(name, input),
-                    }),
-                );
-            }
+            Some("text") => sink::reply(daemon, bot, block["text"].as_str().unwrap_or_default()),
+            Some("tool_use") => sink::tool_started(
+                daemon,
+                bot,
+                block["id"].as_str().unwrap_or_default(),
+                block["name"].as_str().unwrap_or("tool"),
+                &block["input"],
+            ),
             _ => {}
         }
     }
@@ -167,25 +144,8 @@ fn tool_results(daemon: &Daemon, bot: &BotId, event: &Value) {
             continue;
         };
         crate::screens::tool_done(daemon, bot, id);
-        let found = daemon.store().tool_item(bot, id);
-        let Ok(Some(item)) = found else {
-            continue;
-        };
-        let ChatBody::Tool(tool) = item.body else {
-            continue;
-        };
         let failed = block["is_error"].as_bool() == Some(true);
-        let output = result_text(&block["content"]);
-        let body = ChatBody::Tool(ToolItem {
-            status: if failed {
-                ToolStatus::Failed
-            } else {
-                ToolStatus::Done
-            },
-            output: (!output.is_empty()).then(|| clip(&output, TOOL_OUTPUT_MAX)),
-            ..tool
-        });
-        items::update(daemon, &item.id, body);
+        sink::tool_finished(daemon, bot, id, failed, &result_text(&block["content"]));
     }
 }
 
@@ -221,14 +181,12 @@ fn result(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
     });
     // A compaction ends like a turn; its notice already says what happened.
     if !context::turn_ended(daemon, bot, event) {
-        items::add(
+        sink::turn_finished(
             daemon,
             bot,
-            ChatBody::Turn(TurnItem {
-                duration_ms: event["duration_ms"].as_u64().unwrap_or_default(),
-                tokens: tokens(&event["usage"], reloaded),
-                error,
-            }),
+            event["duration_ms"].as_u64().unwrap_or_default(),
+            tokens(&event["usage"], reloaded),
+            error,
         );
     }
     routines::turn_ended(daemon, bot, failed);

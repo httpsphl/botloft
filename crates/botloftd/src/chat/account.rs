@@ -7,7 +7,7 @@ use botloft_core::protocol::{
 };
 use serde_json::Value;
 
-use super::{events, items};
+use super::{claude, items};
 use crate::state::Daemon;
 
 /// Errors that restarting cannot fix: Claude Code needs the owner.
@@ -31,7 +31,7 @@ pub(super) fn failed_turn(
     error: &str,
     event: &Value,
 ) {
-    let detail = events::blocks(event)
+    let detail = claude::blocks(event)
         .iter()
         .filter_map(|block| block["text"].as_str())
         .collect::<Vec<_>>()

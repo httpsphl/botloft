@@ -9,10 +9,14 @@ mod claude;
 use std::ffi::OsString;
 use std::path::Path;
 
+use botloft_core::ids::BotId;
 use botloft_core::protocol::{AgentKind, BotEffort, BotModel, PermissionMode};
 use bytes::Bytes;
+use serde_json::Value;
 
 pub use claude::ClaudeAgent;
+
+use crate::state::Daemon;
 
 /// One image that goes in the turn, already read and encoded.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -55,6 +59,16 @@ pub trait Agent: Send + Sync + 'static {
     /// One turn as the bytes written to the process's stdin; `uuid` is what
     /// the agent gives back when the turn begins.
     fn encode_turn(&self, uuid: &str, turn: &Turn) -> Bytes;
+
+    /// The piece of reply text one line of output carries while the reply is
+    /// still being written, if that is what it is (spec 8.3).
+    fn live_text<'a>(&self, event: &'a Value) -> Option<&'a str>;
+
+    /// What one line of output (already JSON) means for the chat and the
+    /// bot's state: it saves items and tells the supervisor, through
+    /// `chat::sink` for what every agent has and its own code for the rest.
+    /// Lines from a process that was replaced are ignored (spec 30).
+    fn handle_output(&self, daemon: &Daemon, bot: &BotId, generation: u64, event: &Value);
 }
 
 static CLAUDE: ClaudeAgent = ClaudeAgent;
