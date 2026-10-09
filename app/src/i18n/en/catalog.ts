@@ -2,6 +2,7 @@ import { base } from "./catalogBase";
 import { contentAndLearning } from "./catalogContent";
 import { design } from "./catalogDesign";
 import { engineering } from "./catalogEngineering";
+import { engineeringMore } from "./catalogEngineeringMore";
 import { finance } from "./catalogFinance";
 import { marketing } from "./catalogMarketing";
 import { paidMedia } from "./catalogPaidMedia";
@@ -65,5 +66,6 @@ export const catalog = {
     ...finance,
     ...paidMedia,
     ...people,
+    ...engineeringMore,
   },
 };
