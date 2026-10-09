@@ -5,6 +5,7 @@ import { design } from "./catalogDesign";
 import { engineering } from "./catalogEngineering";
 import { finance } from "./catalogFinance";
 import { marketing } from "./catalogMarketing";
+import { paidMedia } from "./catalogPaidMedia";
 import { product } from "./catalogProduct";
 
 export const catalog: Messages["catalog"] = {
@@ -57,5 +58,6 @@ export const catalog: Messages["catalog"] = {
     ...contentAndLearning,
     ...design,
     ...finance,
+    ...paidMedia,
   },
 };
