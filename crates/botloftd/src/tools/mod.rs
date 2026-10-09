@@ -6,6 +6,7 @@
 //! Claude Code tries `server/discover` first and falls back to
 //! `initialize` when that fails, so both paths lead to the same tools.
 
+mod activity;
 mod bot_change;
 mod browser;
 mod browser_args;
@@ -58,7 +59,7 @@ const CACHE_TTL_MS: u64 = 60 * 60 * 1000;
 
 const INSTRUCTIONS: &str = "Tools to work with your Botloft crew: see who is in it, send notes \
     or tasks to other bots, report the result of tasks assigned to you and, for the crew's chief, \
-    suggest new bots (list_bot_templates and get_bot_template show the catalog of ready-made roles). schedule_routine asks the owner for work at set times. ask_owner asks the owner a question without waiting; the answer arrives later as a message. send_signal tells the crew something happened, and the routines waiting for it run. share_file shows the \
+    suggest new bots (list_bot_templates and get_bot_template show the catalog of ready-made roles) and, to write the owner a summary, read what the crew's bots did with crew_activity. schedule_routine asks the owner for work at set times. ask_owner asks the owner a question without waiting; the answer arrives later as a message. send_signal tells the crew something happened, and the routines waiting for it run. share_file shows the \
     owner files you made, as cards in the chat they can open and save. The browser_ tools drive your own web browser, which the owner can watch \
     live and take over when you ask with browser_ask_owner. The desktop_ tools read the apps open on \
     the owner's own computer, app by app as the owner allows. The owner writes to you directly; messages from other bots and from Botloft start with \

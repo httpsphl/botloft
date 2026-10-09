@@ -106,6 +106,20 @@ export const routines: Messages["routines"] = {
       signal_invalid: "O aviso precisa de letras ou números, como relatorio-pronto.",
     },
   },
+  summary: {
+    title: "Resumo diário",
+    hint: "Todo dia o chefe conta o que cada bot fez, o que está parado e o que está esperando por você.",
+    name: "Resumo diário",
+    prompt:
+      "O dia está acabando. Use crew_activity (as últimas 24 horas) e escreva para mim um resumo curto do dia: o que cada bot terminou, o que ainda está aberto ou atrasado, o que deu errado e o que está esperando por mim (aprovações e perguntas), o mais importante primeiro. Palavras simples, no máximo 12 linhas. Se nada aconteceu, diga isso em uma linha. Não comece trabalho novo e não escreva para outros bots por causa disso.",
+    time: "Horário",
+    turnOn: "Ligar",
+    turnOff: "Desligar",
+    on: (when: string) => `Ligado · ${when}`,
+    off: "Desligado",
+    change: "Mudar",
+    failed: "Não foi possível mudar o resumo diário",
+  },
   removeTitle: (name: string) => `Apagar ${name}?`,
   removeBody: "Ela para de rodar. O que ela já fez continua no chat.",
   failed: {

@@ -9,6 +9,7 @@ import type { Bot, Crew } from "../../lib/protocol.gen";
 import { botsOf, routinesOf } from "../../store/app";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
+import { DailySummary } from "./DailySummary";
 import { RoutineDialog } from "./RoutineDialog";
 import { RoutineRow } from "./RoutineRow";
 
@@ -66,6 +67,7 @@ export function CrewRoutines({ crew }: { crew: Crew }) {
   });
   return (
     <div className="min-h-0 flex-1 overflow-y-auto p-5">
+      <DailySummary crew={crew} />
       {byBot.length === 0 ? (
         <p className="rounded-2xl border border-line border-dashed px-6 py-10 text-center text-muted text-sm">
           {r.crewEmpty}

@@ -106,6 +106,20 @@ export const routines: Messages["routines"] = {
       signal_invalid: "El aviso necesita letras o números, como informe-listo.",
     },
   },
+  summary: {
+    title: "Resumen diario",
+    hint: "Cada día el jefe te cuenta qué hizo cada bot, qué está parado y qué te está esperando.",
+    name: "Resumen diario",
+    prompt:
+      "El día se acaba. Usa crew_activity (las últimas 24 horas) y escríbeme un resumen corto del día: qué terminó cada bot, qué sigue abierto o atrasado, qué falló y qué me está esperando (aprobaciones y preguntas), lo más importante primero. Palabras sencillas, como máximo 12 líneas. Si no pasó nada, dilo en una línea. No empieces trabajo nuevo ni escribas a otros bots por esto.",
+    time: "Hora",
+    turnOn: "Activar",
+    turnOff: "Desactivar",
+    on: (when: string) => `Activado · ${when}`,
+    off: "Desactivado",
+    change: "Cambiar",
+    failed: "No se pudo cambiar el resumen diario",
+  },
   removeTitle: (name: string) => `¿Eliminar ${name}?`,
   removeBody: "Deja de ejecutarse. Lo que ya hizo sigue en el chat.",
   failed: {
