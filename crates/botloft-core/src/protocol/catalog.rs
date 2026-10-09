@@ -19,6 +19,7 @@ text_enum!(
         Finance => "finance",
         People => "people",
         Security => "security",
+        Games => "games",
         Legal => "legal",
     }
 );

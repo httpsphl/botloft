@@ -40,6 +40,7 @@ pub(super) fn tools() -> [Value; 2] {
         "finance",
         "people",
         "security",
+        "games",
         "legal",
     ];
     [

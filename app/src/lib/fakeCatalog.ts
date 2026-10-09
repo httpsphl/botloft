@@ -125,6 +125,13 @@ const ROLES: [id: string, category: BotTemplateCategory, name: string, effort?: 
   ["legal-billing-assistant", "legal", "Time and Billing Assistant"],
   ["contract-deadline-tracker", "legal", "Contract Dates Tracker"],
   ["complaint-letter-drafter", "legal", "Complaint Letter Drafter"],
+  ["game-designer", "games", "Game Designer"],
+  ["game-narrative-designer", "games", "Narrative Designer"],
+  ["level-designer", "games", "Level Designer"],
+  ["game-economy-designer", "games", "Game Economy Designer"],
+  ["playtest-analyst", "games", "Playtest Analyst"],
+  ["game-audio-director", "games", "Game Audio Brief Writer"],
+  ["tabletop-game-master", "games", "Tabletop Game Master"],
 ];
 
 /** Every role, as `catalog.get` returns it. */
