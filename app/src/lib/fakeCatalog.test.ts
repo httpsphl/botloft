@@ -4,10 +4,11 @@ import { FakeBotloft } from "./fake";
 describe("the fake's bot catalog", () => {
   it("lists the roles, by category too, and reads one with its instructions", async () => {
     const fake = new FakeBotloft();
-    expect(await fake.call("catalog.list", {})).toHaveLength(58);
+    expect(await fake.call("catalog.list", {})).toHaveLength(66);
     const product = await fake.call("catalog.list", { category: "product" });
     expect(product).toHaveLength(14);
     expect(await fake.call("catalog.list", { category: "marketing" })).toHaveLength(18);
+    expect(await fake.call("catalog.list", { category: "design" })).toHaveLength(9);
     const code = await fake.call("catalog.list", { category: "code" });
     expect(code.map((role) => role.id).slice(0, 3)).toEqual([
       "developer",
