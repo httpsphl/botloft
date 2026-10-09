@@ -12,7 +12,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use botloft_core::ids::BotId;
-use botloft_core::protocol::{BotState, Delivery, Message, SenderKind, Task};
+use botloft_core::protocol::{AgentKind, BotState, Delivery, Message, SenderKind, Task};
 use botloft_store::{DeliveryOutcome, Store, StoreError};
 use tokio::sync::Notify;
 use tracing::{debug, warn};
@@ -20,6 +20,7 @@ use tracing::{debug, warn};
 use self::render::{Context, Rendered, render};
 pub use self::settings::CourierSettings;
 use self::sleep::{became_ready, hasten, next_wait};
+use crate::agent::{self, ClaudeAgent};
 use crate::clock;
 use crate::service::tasks;
 use crate::state::{Daemon, Event};
@@ -228,6 +229,7 @@ fn prepare(daemon: &Daemon, store: &Store, delivery: &Delivery) -> Result<Step, 
         .map(|(reaction, quote)| (reaction.emoji, quote))
         .collect();
     Ok(Step::Send(Box::new(Draft {
+        agent: bot.agent,
         workspace: daemon.paths.bot_workspace(&crew.slug, &bot.slug),
         message,
         crew_name: crew.name,
@@ -242,6 +244,7 @@ fn prepare(daemon: &Daemon, store: &Store, delivery: &Delivery) -> Result<Step, 
 
 /// A delivery about to go, read from the store.
 struct Draft {
+    agent: AgentKind,
     message: Message,
     crew_name: String,
     sender_handle: Option<String>,
@@ -271,7 +274,9 @@ impl Draft {
                 .map(|(id, text)| (id.as_str(), text.as_str())),
             reactions: &self.reactions,
         };
-        render(&self.message, &context, now)
+        // Only agents the daemon runs get this far; the bot was checked at launch.
+        let agent = agent::of(self.agent).unwrap_or(&ClaudeAgent);
+        render(&self.message, &context, now, agent)
     }
 }
 

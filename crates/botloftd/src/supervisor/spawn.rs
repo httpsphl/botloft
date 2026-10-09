@@ -13,6 +13,7 @@ use tracing::debug;
 
 use super::slot::StopIntent;
 use super::{Inner, STABLE_AFTER, Supervisor};
+use crate::agent::{self, LaunchPlan};
 use crate::chat::{LIVE_TEXT_EVERY, StreamReader};
 use crate::platform;
 use crate::runtime::claude::Claude;
@@ -20,16 +21,6 @@ use crate::runtime::{ProcessEvent, SpawnSpec};
 use crate::secrets::{self, TokenHash};
 use crate::state::Daemon;
 use crate::{approvals, context, courier, mcp_secrets, routines, workspace};
-
-/// Tools the bot uses without asking: its crew tools (spec 7.4).
-const ALLOWED_TOOLS: &str = "mcp__botloft";
-/// Claude Code's own schedulers: they die with the process and Botloft never
-/// sees them. Work at set times is a routine (spec 7.4, 20).
-const DISALLOWED_TOOLS: &str = "CronCreate,CronDelete,CronList,ScheduleWakeup,RemoteTrigger";
-/// Makes Claude Code load `CLAUDE.md` from `--add-dir` folders (spec 5).
-const ADDITIONAL_MEMORY: &str = "CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD";
-/// Where permission requests go (spec 10.1).
-const PERMISSION_TOOL: &str = "mcp__botloft__permission_prompt";
 
 impl Supervisor {
     /// The process of `generation` ended: restart it, or settle if the
@@ -122,52 +113,20 @@ pub(super) fn launch_spec(
         None => (random_uuid(), false),
     };
 
+    let agent = agent::of(bot.agent).ok_or_else(|| {
+        io::Error::other(format!("bots on {} cannot start yet", bot.agent.as_str()))
+    })?;
     let mcp = workspace.join(".botloft").join("mcp.json");
-    let mut args: Vec<OsString> = [
-        "-p",
-        "--input-format",
-        "stream-json",
-        "--output-format",
-        "stream-json",
-        "--verbose",
-        "--include-partial-messages",
-        "--replay-user-messages",
-    ]
-    .into_iter()
-    .map(OsString::from)
-    .collect();
-    args.push(if resumed { "--resume" } else { "--session-id" }.into());
-    args.push(session.into());
-    for arg in [
-        "--setting-sources",
-        "project,local",
-        "--strict-mcp-config",
-        "--permission-mode",
-        bot.permission_mode.cli_value(),
-        "--permission-prompt-tool",
-        PERMISSION_TOOL,
-        "--allowedTools",
-        ALLOWED_TOOLS,
-        "--disallowedTools",
-        DISALLOWED_TOOLS,
-        "--mcp-config",
-    ] {
-        args.push(arg.into());
-    }
-    args.push(mcp.into_os_string());
-    // The crew's work folder, which the bot edits like its own (spec 5).
-    args.push("--add-dir".into());
-    args.push(daemon.paths.work_folder(crew).into_os_string());
-    // Without the flag, Claude Code uses the default of the owner's plan.
-    if let Some(model) = bot.model.cli_value() {
-        args.push("--model".into());
-        args.push(model.into());
-    }
-    // Without the flag, Claude Code uses the level it sets for the model.
-    if let Some(effort) = bot.effort.cli_value() {
-        args.push("--effort".into());
-        args.push(effort.into());
-    }
+    let work_folder = daemon.paths.work_folder(crew);
+    let args = agent.args(&LaunchPlan {
+        session: &session,
+        resumed,
+        mcp_config: &mcp,
+        work_folder: &work_folder,
+        permission_mode: bot.permission_mode,
+        model: bot.model,
+        effort: bot.effort,
+    });
 
     let mut env = platform::user_environment()?;
     env.retain(|(name, _)| {
@@ -180,11 +139,10 @@ pub(super) fn launch_spec(
         ("BOTLOFT_BOT_ID", OsString::from(bot.id.as_str())),
         ("BOTLOFT_BOT_TOKEN", OsString::from(&token)),
         ("BOTLOFT_PORT", OsString::from(daemon.port.to_string())),
-        // Loads the work folder's CLAUDE.md with the bot's memory.
-        (ADDITIONAL_MEMORY, OsString::from("1")),
     ] {
         env.push((OsString::from(name), value));
     }
+    env.extend(agent.extra_env());
 
     // The values of the headers and variables of the bot's connected tools,
     // which its `mcp.json` expands (spec 25.2).
