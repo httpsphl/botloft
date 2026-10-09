@@ -64,6 +64,7 @@ export const onboarding: Messages["onboarding"] = {
     askFirstTitle: "Os bots perguntam antes de mudar as coisas",
     askFirstBody:
       "Quando um bot quer rodar um comando ou editar um arquivo, ele pergunta no chat e espera você permitir ou negar.",
+    ideasTitle: "Ou toque em uma ideia",
     createCrew: "Criar sua primeira equipe",
   },
   claudeCode: {

@@ -16,16 +16,30 @@ import { WorkFolderField } from "./WorkFolderField";
 
 const MODELS: BotModel[] = ["default", "fable", "opus", "sonnet", "haiku"];
 
-/** Creates a crew with its chief, or renames `crew`. */
-export function CrewDialog({ crew, onClose }: { crew?: Crew; onClose(): void }) {
+/**
+ * Creates a crew with its chief, or renames `crew`. `start` opens a new crew
+ * already on that template, as when the owner taps an idea on the welcome
+ * screen.
+ */
+export function CrewDialog({
+  crew,
+  start,
+  onClose,
+}: {
+  crew?: Crew;
+  start?: CrewTemplate | undefined;
+  onClose(): void;
+}) {
   const t = useT();
   const api = useApi();
   const putCrew = useApp((state) => state.putCrew);
   const selectCrew = useApp((state) => state.selectCrew);
-  const [name, setName] = useState(crew?.name ?? "");
+  const [name, setName] = useState(
+    crew?.name ?? (start ? t.crewTemplates.items[start.id].name : ""),
+  );
   const [color, setColor] = useState<string | null>(crew?.color ?? null);
   const [folder, setFolder] = useState<string | null>(null);
-  const [goal, setGoal] = useState("");
+  const [goal, setGoal] = useState(start ? t.crewTemplates.items[start.id].goal : "");
   const [chiefModel, setChiefModel] = useState<BotModel>("default");
   const selectBot = useApp((state) => state.selectBot);
   const putBot = useApp((state) => state.putBot);
@@ -34,7 +48,7 @@ export function CrewDialog({ crew, onClose }: { crew?: Crew; onClose(): void }) 
   // A new crew starts from a template (spec 29.1) when the catalog loaded:
   // `undefined` is the list of templates, `null` an empty crew.
   const { roles, failed: catalogFailed } = useCatalog(!crew);
-  const [template, setTemplate] = useState<CrewTemplate | null | undefined>(undefined);
+  const [template, setTemplate] = useState<CrewTemplate | null | undefined>(start);
   const loading = !crew && roles === null && !catalogFailed;
   const choosing = !crew && template === undefined && roles !== null;
 

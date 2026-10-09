@@ -8,14 +8,21 @@ import { Button } from "../../ui/Button";
 import { useDaemonSettings } from "../account/useDaemonSettings";
 import { BotAvatar } from "../bots/BotAvatar";
 import { CrewDialog } from "../crews/CrewDialog";
+import { CREW_TEMPLATES, type CrewTemplate } from "../crews/crewTemplates";
 import { ClaudeCodeHelp } from "./ClaudeCodeHelp";
 import { SignInButton } from "./SignIn";
 
+/** Templates shown as ideas on the first screen. */
+const IDEAS = 4;
+
 /** First run: what is ready, what is not, and the first crew. */
 export function Welcome() {
-  const w = useT().onboarding.welcome;
+  const t = useT();
+  const w = t.onboarding.welcome;
+  const ideas = t.crewTemplates.items;
   const system = useApp((state) => state.system);
   const [creating, setCreating] = useState(false);
+  const [idea, setIdea] = useState<CrewTemplate | undefined>(undefined);
   const whenClosed = usePref(prefs.whenClosed);
   const { settings } = useDaemonSettings();
   const running =
@@ -82,11 +89,42 @@ export function Welcome() {
           <p className="font-semibold">{w.askFirstTitle}</p>
           <p className="mt-1 text-ink-soft">{w.askFirstBody}</p>
         </div>
-        <Button className="mt-6" variant="primary" icon={Plus} onClick={() => setCreating(true)}>
+        <section aria-label={w.ideasTitle} className="mt-6">
+          <h2 className="font-semibold text-sm">{w.ideasTitle}</h2>
+          <ul className="m-0 mt-2 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2">
+            {CREW_TEMPLATES.slice(0, IDEAS).map((template) => {
+              const item = ideas[template.id];
+              return (
+                <li key={template.id} className="flex">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIdea(template);
+                      setCreating(true);
+                    }}
+                    className="flex w-full flex-col gap-0.5 rounded-xl border border-line bg-panel p-3 text-left transition-colors hover:border-line-strong hover:bg-sunken"
+                  >
+                    <span className="font-semibold text-sm">{item.name}</span>
+                    <span className="line-clamp-2 text-ink-soft text-sm">{item.summary}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+        <Button
+          className="mt-4"
+          variant="primary"
+          icon={Plus}
+          onClick={() => {
+            setIdea(undefined);
+            setCreating(true);
+          }}
+        >
           {w.createCrew}
         </Button>
       </div>
-      {creating && <CrewDialog onClose={() => setCreating(false)} />}
+      {creating && <CrewDialog start={idea} onClose={() => setCreating(false)} />}
     </main>
   );
 }
