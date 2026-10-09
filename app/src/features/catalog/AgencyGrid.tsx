@@ -29,6 +29,7 @@ const CATEGORIES: Category[] = [
   "finance",
   "people",
   "security",
+  "health",
   "games",
   "legal",
 ];

@@ -5,6 +5,7 @@ import { engineering } from "./catalogEngineering";
 import { engineeringMore } from "./catalogEngineeringMore";
 import { finance } from "./catalogFinance";
 import { games } from "./catalogGames";
+import { health } from "./catalogHealth";
 import { legal } from "./catalogLegal";
 import { marketing } from "./catalogMarketing";
 import { paidMedia } from "./catalogPaidMedia";
@@ -42,6 +43,7 @@ export const catalog = {
     finance: "Finance",
     people: "People & HR",
     security: "Security",
+    health: "Health",
     games: "Games",
     legal: "Legal",
   },
@@ -78,5 +80,6 @@ export const catalog = {
     ...sectors,
     ...legal,
     ...games,
+    ...health,
   },
 };

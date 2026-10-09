@@ -2117,6 +2117,18 @@ instructions = """
 | `game-audio-director` | `games` | Planeja música e lista de sons numa tabela, avisos visuais para quem não ouve bem e um briefing por peça |
 | `tabletop-game-master` | `games` | Prepara aventuras curtas com escolhas e vários finais, responde regras só do livro do dono e pergunta ao grupo sobre limites |
 
+**Saúde** (`health`, 7): apoio, nunca atendimento. Nenhum é médico, enfermeiro, farmacêutico ou terapeuta, e nenhum diagnostica, trata, receita ou manda começar, parar ou mudar um remédio ou uma dose. Ajudam a organizar, entender e preparar, para a pessoa conversar melhor com quem cuida dela. Todas as fichas têm a mesma regra de emergência: se alguém pode estar em perigo agora (dor no peito, falta de ar, AVC, sangramento forte, overdose, pensamento de se machucar ou de suicídio), o bot para, diz na primeira linha para ligar já para o número de emergência ou para um serviço de apoio emocional e não oferece conforto no lugar do cuidado. A privacidade é mais forte que a das outras fichas: pedem só o que a tarefa precisa, não repetem identificadores inteiros, não repassam a outros bots além do necessário e perguntam se a pessoa de quem são os dados concordou. As fichas dizem o que nunca fazer: adivinhar o que um sintoma significa, dizer que um resultado é bom, ruim ou normal, dar dieta para doença, meta de calorias ou conselho de suplemento, responder a parte médica de uma mensagem de paciente (separam para o profissional), inventar estudo ou número, e pedir registros, pagar ou entrar em portal em nome do dono.
+
+| `id` | Categoria | O que faz |
+|---|---|---|
+| `appointment-prep-assistant` | `health` | Resume o histórico em uma página para o profissional, com os remédios como estão na embalagem e as perguntas em ordem; depois da consulta anota só o que foi dito |
+| `elder-care-companion` | `health` | Mantém o calendário, o plano de quem faz o quê e o resumo para a equipe de cuidado; lista remédios como estão escritos e cuida de quem cuida |
+| `clinic-front-desk-assistant` | `health` | Responde dúvidas práticas de pacientes a partir da folha de fatos; o que fala de sintoma, remédio, resultado ou urgência vai separado ao profissional |
+| `medical-bill-helper` | `health` | Explica cada linha de conta e de extrato do plano, acha erros comuns e rascunha o roteiro ou a carta de recurso; não julga o tratamento |
+| `wellness-habit-coach` | `health` | Faz hábitos minúsculos ligados a algo que a pessoa já faz; sem promessa médica e, se uma meta fica nociva, para de orientá-la |
+| `health-evidence-summarizer` | `health` | Prefere revisões e diretrizes, abre cada fonte antes de citar e diz o tamanho do efeito, os danos e o que não se sabe (`effort` `high`) |
+| `health-records-organizer` | `health` | Junta laudos, resultados, receitas e vacinas numa linha do tempo copiando cada valor como está; não interpreta |
+
 **Conteúdo, pesquisa e aprendizado** (6; `learning` é a categoria dos dois últimos): as fichas dizem o que nunca fazer: mudar um fato, número ou citação ao revisar; inventar experiência, resultado ou credencial do dono ao escrever na voz dele; confirmar algo só por parecer plausível; citar uma fonte que não foi aberta e lida; e escrever trabalho que o dono precisa entregar como seu (prova, tese, tarefa com nota), caso em que ajudam de outro jeito.
 
 | `id` | Categoria | O que faz |
@@ -2189,7 +2201,7 @@ instructions = """
 
 ### 26.7 Fora desta etapa
 
-Saúde, que pede aviso de que não substitui um profissional; o dono criar, importar ou compartilhar fichas; **restaurar o padrão** de um bot criado de um modelo (pede guardar o `id` do modelo no bot, e o histórico de instruções do item 5 da seção 18 cobre melhor); marcar no catálogo o que já está na equipe; atualizar bots já criados quando uma ficha muda (eles foram personalizados); modelos de equipe inteira; indicar ferramentas conectadas por papel de forma automática.
+O dono criar, importar ou compartilhar fichas; **restaurar o padrão** de um bot criado de um modelo (pede guardar o `id` do modelo no bot, e o histórico de instruções do item 5 da seção 18 cobre melhor); marcar no catálogo o que já está na equipe; atualizar bots já criados quando uma ficha muda (eles foram personalizados); modelos de equipe inteira; indicar ferramentas conectadas por papel de forma automática.
 
 ### 26.8 Marcos
 
@@ -2198,7 +2210,7 @@ Saúde, que pede aviso de que não substitui um profissional; o dono criar, impo
 | **G1** Catálogo e daemon | formato da ficha, `catalog.rs`, as 12 fichas, `catalog.list`/`get`/`add`, tipos `ts-rs` | `catalog_lint`; unidade e RPC: `catalog.add` valida como `bots.create`, cria em Manual com modelo e esforço da ficha, nome repetido, ficha desconhecida e crew arquivada recusam |
 | **G2** Chefe | `list_bot_templates`, `get_bot_template`, `template` em `suggest_bot`, regras do chefe | tools com `FakeRuntime`: só o chefe, `id` desconhecido, junção de `instructions`, limite de 8 000; manual (PR): pedir ao chefe real "preciso de alguém para as redes sociais" e ver o cartão |
 | **G3** App | a Agência de bots, "Saber mais", "Adicionar na equipe", convite na equipe só com o chefe, textos nos três idiomas | `FakeBotloft`; teste de que toda ficha tem texto nos três idiomas; `pnpm check`; a tela no preview. Manual (PR): criar cada um dos 12 com o Claude Code real e dar a cada um uma tarefa típica |
-| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito, mais 8 depois), Conteúdo, pesquisa e aprendizado (6, feito), Design (8, feito), Finanças (7, feito), Mídia paga (6, feito, em `marketing`), Pessoas e RH (7, feito), Segurança (7, feito), Setores (7, feito, em `business`), Jurídico (7, feito), Jogos (7, feito); categorias `product`, `marketing`, `learning`, `finance`, `people`, `security`, `legal` e `games`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
+| **G4** Mais papéis | uma área por PR: Produto e gestão (14, feito), Marketing e vendas (18, feito), Engenharia (8, feito, mais 8 depois), Conteúdo, pesquisa e aprendizado (6, feito), Design (8, feito), Finanças (7, feito), Mídia paga (6, feito, em `marketing`), Pessoas e RH (7, feito), Segurança (7, feito), Setores (7, feito, em `business`), Jurídico (7, feito), Jogos (7, feito), Saúde (7, feito); categorias `product`, `marketing`, `learning`, `finance`, `people`, `security`, `legal`, `games` e `health`; chips só das categorias com papel; convite com 8 destaques e "Ver todos os bots" | `catalog_lint` e o teste de texto nos três idiomas em cada PR; manual (PR): 2 ou 3 papéis da área, os mais diferentes entre si, com o Claude Code real |
 
 ## 27. Conta e cópia na nuvem
 

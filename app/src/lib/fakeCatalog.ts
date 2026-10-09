@@ -132,6 +132,13 @@ const ROLES: [id: string, category: BotTemplateCategory, name: string, effort?: 
   ["playtest-analyst", "games", "Playtest Analyst"],
   ["game-audio-director", "games", "Game Audio Brief Writer"],
   ["tabletop-game-master", "games", "Tabletop Game Master"],
+  ["appointment-prep-assistant", "health", "Appointment Prep Assistant"],
+  ["elder-care-companion", "health", "Family Care Organizer"],
+  ["clinic-front-desk-assistant", "health", "Clinic Front Desk Assistant"],
+  ["medical-bill-helper", "health", "Medical Bill Helper"],
+  ["wellness-habit-coach", "health", "Daily Habits Coach"],
+  ["health-evidence-summarizer", "health", "Health Evidence Summarizer"],
+  ["health-records-organizer", "health", "Health Records Organizer"],
 ];
 
 /** Every role, as `catalog.get` returns it. */

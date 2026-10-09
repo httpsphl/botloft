@@ -6,6 +6,7 @@ import { engineering } from "./catalogEngineering";
 import { engineeringMore } from "./catalogEngineeringMore";
 import { finance } from "./catalogFinance";
 import { games } from "./catalogGames";
+import { health } from "./catalogHealth";
 import { legal } from "./catalogLegal";
 import { marketing } from "./catalogMarketing";
 import { paidMedia } from "./catalogPaidMedia";
@@ -39,6 +40,7 @@ export const catalog: Messages["catalog"] = {
     finance: "Finanças",
     people: "Pessoas e RH",
     security: "Segurança",
+    health: "Saúde",
     games: "Jogos",
     legal: "Jurídico",
   },
@@ -75,5 +77,6 @@ export const catalog: Messages["catalog"] = {
     ...sectors,
     ...legal,
     ...games,
+    ...health,
   },
 };
