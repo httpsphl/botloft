@@ -33,6 +33,7 @@ fn bot(crew: &CrewId, handle: &str, created_at: i64) -> BotRecord {
         color: "#FF7A59".to_owned(),
         paused: false,
         permission_mode: PermissionMode::Default,
+        agent: AgentKind::Claude,
         model: BotModel::Default,
         model_in_use: None,
         effort: BotEffort::Default,

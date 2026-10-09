@@ -29,6 +29,7 @@ pub fn add(daemon: &Daemon, params: CatalogAddParams) -> ApiResult<Bot> {
         &template.instructions,
         None,
         Some(template.model),
+        None,
     )?;
     new.effort = template.effort;
     let store = daemon.store();

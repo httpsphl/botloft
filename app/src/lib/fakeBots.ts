@@ -33,6 +33,7 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
         color: color ?? AVATAR_PALETTE[index % AVATAR_PALETTE.length] ?? "#FF7A59",
         paused: false,
         permissionMode: "default",
+        agent: "claude",
         model: model ?? "default",
         modelInUse: null,
         effort: "default",

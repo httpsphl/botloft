@@ -4,7 +4,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use super::{BotModel, DeliveryBacklog, PermissionMode};
+use super::{AgentKind, BotModel, DeliveryBacklog, PermissionMode};
 use crate::ids::{BotId, CrewId};
 
 /// Identifies the connecting app in `session.hello`.
@@ -235,6 +235,10 @@ pub struct BotsCreateParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub model: Option<BotModel>,
+    /// `claude` when absent.
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub agent: Option<AgentKind>,
 }
 
 /// Fields left out stay unchanged.

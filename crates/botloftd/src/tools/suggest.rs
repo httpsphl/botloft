@@ -199,6 +199,7 @@ fn check(suggestion: &Suggestion) -> Result<NewBot, String> {
         &suggestion.instructions,
         None,
         model,
+        None,
     )
     .map_err(explain)
 }

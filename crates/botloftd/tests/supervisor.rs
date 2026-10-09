@@ -211,6 +211,7 @@ async fn a_failed_spawn_backs_off_and_retries() {
         instructions: String::new(),
         color: None,
         model: None,
+        agent: None,
     };
     let bot = bots::create(&daemon, params).expect("bot");
     tokio::spawn(supervisor::run(Arc::clone(&daemon)));

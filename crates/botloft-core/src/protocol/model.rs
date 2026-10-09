@@ -91,6 +91,25 @@ impl PermissionMode {
 }
 
 text_enum!(
+    /// Which agent runs a bot (spec 30). Chosen when the bot is created.
+    AgentKind, "agent" {
+        /// Claude Code.
+        Claude => "claude",
+        /// OpenAI's Codex CLI.
+        Codex => "codex",
+        /// Google's Antigravity CLI (`agy`).
+        Agy => "agy",
+    }
+);
+
+impl AgentKind {
+    /// Whether the daemon can run bots of this agent yet.
+    pub fn runs(self) -> bool {
+        matches!(self, Self::Claude)
+    }
+}
+
+text_enum!(
     /// Which Claude model a bot runs on (spec 7.4): Claude Code's `--model`
     /// aliases, or the account's default.
     BotModel, "model" {
@@ -135,6 +154,8 @@ pub struct Bot {
     pub color: String,
     pub paused: bool,
     pub permission_mode: PermissionMode,
+    /// The agent behind the bot.
+    pub agent: AgentKind,
     pub model: BotModel,
     /// The model id Claude Code reported when the bot last started a turn
     /// (`claude-opus-5-5`); `null` before its first turn.

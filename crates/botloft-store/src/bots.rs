@@ -1,7 +1,7 @@
 //! `bots` table.
 
 use botloft_core::ids::{BotId, CrewId};
-use botloft_core::protocol::{BotEffort, BotModel, ModelEffort, PermissionMode};
+use botloft_core::protocol::{AgentKind, BotEffort, BotModel, ModelEffort, PermissionMode};
 use rusqlite::{OptionalExtension, Row, params};
 
 use crate::{Result, Store, cached_execute, cached_row, parse_column, unique_as_duplicate};
@@ -20,6 +20,7 @@ pub struct BotRecord {
     pub color: String,
     pub paused: bool,
     pub permission_mode: PermissionMode,
+    pub agent: AgentKind,
     pub model: BotModel,
     /// What Claude Code last reported; written by [`Store::set_model_in_use`]
     /// and left alone by [`Store::update_bot`].
@@ -33,7 +34,7 @@ pub struct BotRecord {
 }
 
 const COLUMNS: &str = "id, crew_id, name, handle, slug, role, instructions, color, paused, created_at, archived_at, \
-     permission_mode, model, model_in_use, effort, effort_default";
+     permission_mode, model, model_in_use, effort, effort_default, agent";
 
 fn from_row(row: &Row<'_>) -> rusqlite::Result<BotRecord> {
     Ok(BotRecord {
@@ -56,6 +57,7 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<BotRecord> {
         effort_default: row
             .get::<_, Option<String>>(15)?
             .and_then(|level| level.parse().ok()),
+        agent: parse_column(row, 16)?,
     })
 }
 
@@ -65,7 +67,7 @@ impl Store {
             .execute(
                 &format!(
                     "INSERT INTO bots ({COLUMNS}) \
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)"
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)"
                 ),
                 params![
                     bot.id.as_str(),
@@ -83,7 +85,8 @@ impl Store {
                     bot.model.as_str(),
                     bot.model_in_use,
                     bot.effort.as_str(),
-                    bot.effort_default.map(ModelEffort::as_str)
+                    bot.effort_default.map(ModelEffort::as_str),
+                    bot.agent.as_str()
                 ],
             )
             .map_err(|err| unique_as_duplicate(err, "bot handle or slug"))?;

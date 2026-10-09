@@ -38,7 +38,16 @@ pub fn create(daemon: &Daemon, params: CrewsCreateParams) -> ApiResult<Crew> {
 
     let lead = params
         .lead
-        .map(|lead| NewBot::check(&lead.name, &lead.role, &lead.instructions, None, lead.model))
+        .map(|lead| {
+            NewBot::check(
+                &lead.name,
+                &lead.role,
+                &lead.instructions,
+                None,
+                lead.model,
+                None,
+            )
+        })
         .transpose()?;
 
     let mut crew = Crew {
