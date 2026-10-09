@@ -310,6 +310,7 @@ mod tests {
             color: "#FF7A59".to_owned(),
             paused: false,
             permission_mode: botloft_core::protocol::PermissionMode::Default,
+            agent: botloft_core::protocol::AgentKind::Claude,
             model: botloft_core::protocol::BotModel::Default,
             model_in_use: None,
             effort: botloft_core::protocol::BotEffort::Default,

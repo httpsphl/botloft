@@ -34,6 +34,7 @@ fn add_bot(daemon: &Daemon) -> BotId {
             instructions: String::new(),
             color: None,
             model: None,
+            agent: None,
         },
     )
     .expect("bot")

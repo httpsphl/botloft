@@ -690,7 +690,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `crews.delete` | `crewId, recycleFolder?` | `{crewId}`; exclui a crew, ativa ou arquivada, com todos os bots dela; com `recycleFolder`, a pasta dela vai depois para a Lixeira (7.6) |
 | `bots.list` | `crewId?` | `Bot[]` |
 | `archive.list` | | `{crews, bots}`: o que está arquivado, que `crews.list` e `bots.list` deixam de fora, do arquivado mais recente ao mais antigo. `bots` traz todos os bots arquivados, também os das crews arquivadas (7.6) |
-| `bots.create` | `crewId, name, role, instructions, color?, model?` | `Bot` |
+| `bots.create` | `crewId, name, role, instructions, color?, model?, agent?` | `Bot` (`agent` é `claude`, `codex` ou `agy`; só `claude` roda por enquanto, os outros dão `-32004`: seção 30) |
 | `catalog.list` | `category?` | `BotTemplate[]`: os modelos de bot do catálogo, sem as instruções (26.4) |
 | `catalog.get` | `id` | `BotTemplateFull`: o modelo com `instructions`, `model` e `effort` (26.4) |
 | `catalog.add` | `crewId, templateId, name, role` | `Bot`: cria na equipe um bot a partir do modelo (26.4) |
@@ -754,7 +754,7 @@ Pragmas: `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON`, `busy_time
 | Tabela | Colunas principais |
 |---|---|
 | `crews` | `id, name, slug, paused, work_dir, lead_bot_id, color, created_at, archived_at` (`work_dir` é a pasta escolhida; `NULL` usa a `shared`. `lead_bot_id` é o chefe, sem chave estrangeira: ele é gravado junto com a crew. `color` é o `#RRGGBB` que o dono escolheu, `NULL` sem cor) |
-| `bots` | `id, crew_id, name, handle, slug, role, instructions, color, paused, permission_mode, model, model_in_use, effort, effort_default, token_hash, session_id, created_at, archived_at` (`effort_default` é o nível do próprio modelo, como o Claude Code disse: `low` a `max`, `none` ou `NULL`, 7.4) |
+| `bots` | `id, crew_id, name, handle, slug, role, instructions, color, paused, permission_mode, agent, model, model_in_use, effort, effort_default, token_hash, session_id, created_at, archived_at` (`effort_default` é o nível do próprio modelo, como o Claude Code disse: `low` a `max`, `none` ou `NULL`, 7.4) |
 | `messages` | `id, crew_id, from_kind (owner/bot/system), from_bot_id, to_bot_id, kind (note/task/result/system), body, task_id, created_at`; `reply_item_id` e `reply_text` quando o dono respondeu a algo do chat (9.3; sem chave estrangeira, porque os itens saem antes das messages na exclusão, 7.6) |
 | `attachments` | `id, message_id, name, media_type, size, path, created_at` |
 | `deliveries` | `id, message_id, bot_id, state, attempts, next_attempt_at, lease_until, last_error, sent_generation, turn_uuid, read_at, updated_at` |
@@ -2633,3 +2633,37 @@ O dono não precisa abrir cada bot para saber como foi o dia. O **resumo diário
 | **RD1** Ferramenta | `crew_activity`: contagens, amostra, esperas do dono, rotinas; só o chefe; limites da janela | `crew_activity.rs`: um chefe e um bot, uma task concluída e uma aberta; uma pergunta ao dono contada; outro bot e `hours` fora de 1 a 168 recusados; `mcp.rs` com a ferramenta na lista |
 | **RD2** Cartão | o cartão "Resumo diário" na aba de rotinas da equipe, ligar, desligar, mudar, três idiomas | `FakeBotloft`: criar para o chefe todo dia no horário escolhido com o pedido que cita a ferramenta, desligar e ligar sem criar outra, equipe sem chefe sem o cartão; `pnpm check` |
 | **RD3** Teste real | o resumo com o Claude Code real numa equipe de teste | **A verificar** (seção 19): o chefe chama `crew_activity`, escreve o resumo no idioma do dono e não começa trabalho novo; a rotina "agora" fecha como `done` |
+
+## 30. Agentes (Codex e Antigravity)
+
+Decisão e contexto: `docs/adr/0003-agentes.md`. Um bot tem um **agente**, `Bot.agent` (`claude`, `codex` ou `agy`), escolhido ao criar e guardado em `bots.agent` (padrão `claude`; migration 0026). O dono usa a assinatura e o login que já tem em cada agente. A meta é paridade total com o bot Claude, entregue por passos.
+
+### 30.1 Estado
+
+| Passo | O que entra | Estado |
+|---|---|---|
+| **A0** | ADR, esta seção, `bots.agent` no banco e no protocolo; `bots.create` com `codex` ou `agy` dá `-32004` ("not available yet") | feito |
+| **A1** | A interface `Agent` no daemon, com o Claude por trás e os testes de hoje sem mudança | a fazer |
+| **A2** | AGY: lançamento, entrada e saída, MCP, aprovações, isolamento, modelos e esforço, testados com o `agy` real | a fazer |
+| **A3** | Codex por `codex app-server` | a fazer |
+| **A4** | Seletor de agente no app, conta e login de cada agente, paridade de rotinas, navegador, desktop e perguntas | a fazer |
+
+### 30.2 O que a interface `Agent` possui
+
+Descoberta e saúde (binário, versão mínima, login, comando de entrar); lançamento (argumentos, ambiente, arquivos da pasta do bot: instruções, regras, configuração de MCP, isolamento); entrada (turno do dono, de outro bot ou do daemon, imagens, recibo de leitura); saída (decodificador com estado para eventos normalizados: turno começou, resposta, ferramenta, turno acabou, contexto, limite, falha de login, sessão iniciada ou perdida, subagentes, modelo em uso); aprovações (pedido no formato comum `{tool_name, input, tool_use_id}` e a resposta de volta); capacidades (modelos, esforços, modos de permissão, vocabulário de ferramentas). Modelo e esforço passam a ser texto validado pelas capacidades do agente. O que um agente não faz aparece desligado no app.
+
+### 30.3 Isolamento
+
+Um agente só roda bots quando o Botloft impõe o que a seção 7.5 impõe no Claude: nada de ler as outras crews nem os dados do Botloft. Cada agente usa o seu mecanismo, e o resultado do teste real entra aqui antes de o agente ser liberado.
+
+### 30.4 O que foi visto (2026-10-09)
+
+| Item | Resultado | Teste real |
+|---|---|---|
+| `agy` 1.3.1: modo de impressão com `stream-json` | `agy --input-format stream-json --output-format stream-json --model <id> -p=` lê uma linha JSON por mensagem: `{"event":"user","message":{"role":"user","content":[{"type":"text","text":"..."}]}}`. Sem `event` ou sem `content` responde erro explícito. O `-p` precisa do `=` quando outras flags vêm depois | feito: um turno, `gemini-3.8-flash-low` |
+| `agy`: eventos de saída | `init` (`conversation_id`, `model`, `cwd`, `tools`, `permission_mode` = `request-review`), `step_update` (`step_type` `user_input` ou `agent_response`, `state` `ACTIVE` ou `DONE`, `text_delta`, `usage`) e `result` (`status` `SUCCESS` ou `ERROR`, `response`, `usage` com `input_tokens`, `output_tokens`, `thinking_tokens`, `cache_read_tokens`, `total_tokens`). O processo saiu com o fim do stdin | feito: um turno |
+| `agy`: vários turnos num processo, ferramentas, pedido de aprovação, MCP por HTTP, `--conversation`, isolamento por `--sandbox` e `--add-dir` | **Não visto** | a fazer (A2) |
+| `agy models` | Lista `gemini-3.8-flash-{high,medium,low}`, `gemini-3.7-...`, `gemini-3.1-pro-{high,low}` e `claude-opus-5-5-{low,medium,high}`, entre outros: o nível de esforço faz parte do id do modelo | feito |
+| `codex` 0.148.0-alpha.9: `exec --json` | Um turno por processo: `thread.started`, `turn.started`, `item.completed` (`agent_message`), `turn.completed` com `usage` (`input_tokens`, `cached_input_tokens`, `output_tokens`, `reasoning_output_tokens`). Não serve para um bot que fica ligado | feito: um turno, `read-only` |
+| `codex app-server` | Experimental, JSON-RPC. `app-server generate-json-schema` gera o esquema, que traz pedidos de aprovação (`CommandExecutionRequestApprovalParams`, `FileChangeRequestApprovalParams`, `PermissionsRequestApprovalParams`, `McpServerElicitationRequestParams`) e `DynamicToolCallParams` | esquema gerado e lido; conversa **não vista** (A3) |
+| `codex`: pasta, sandbox e MCP | `-C`, `--add-dir`, `-s read-only\|workspace-write\|danger-full-access`, `codex mcp`, `-c chave=valor`, `AGENTS.md` | só o `--help` lido |

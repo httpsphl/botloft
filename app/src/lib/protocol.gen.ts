@@ -138,6 +138,11 @@ export type BotState = "offline" | "launching" | "idle" | "busy" | "needs_approv
 export type PermissionMode = "default" | "accept_edits" | "plan" | "auto" | "bypass_permissions";
 
 /**
+ * Which agent runs a bot (spec 30). Chosen when the bot is created.
+ */
+export type AgentKind = "claude" | "codex" | "agy";
+
+/**
  * Which Claude model a bot runs on (spec 7.4): Claude Code's `--model`
  * aliases, or the account's default.
  */
@@ -233,7 +238,11 @@ slug: string, role: string, instructions: string,
 /**
  * Avatar color, `#RRGGBB`.
  */
-color: string, paused: boolean, permissionMode: PermissionMode, model: BotModel, 
+color: string, paused: boolean, permissionMode: PermissionMode, 
+/**
+ * The agent behind the bot.
+ */
+agent: AgentKind, model: BotModel, 
 /**
  * The model id Claude Code reported when the bot last started a turn
  * (`claude-opus-5-5`); `null` before its first turn.
@@ -446,7 +455,11 @@ color?: string,
 /**
  * The account's default when absent.
  */
-model?: BotModel, };
+model?: BotModel, 
+/**
+ * `claude` when absent.
+ */
+agent?: AgentKind, };
 
 /**
  * Fields left out stay unchanged.

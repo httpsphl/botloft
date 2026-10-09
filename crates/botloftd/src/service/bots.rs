@@ -2,7 +2,7 @@
 
 use botloft_core::ids::{BotId, CrewId};
 use botloft_core::protocol::{
-    Bot, BotEffort, BotIdParams, BotModel, BotState, BotsCreateParams, BotsListParams,
+    AgentKind, Bot, BotEffort, BotIdParams, BotModel, BotState, BotsCreateParams, BotsListParams,
     BotsRestartParams, BotsSetPausedParams, BotsUpdateParams, Crew, PermissionMode,
 };
 use botloft_core::{avatar, now_ms, slug, validate};
@@ -38,6 +38,7 @@ pub fn create(daemon: &Daemon, params: BotsCreateParams) -> ApiResult<Bot> {
         &params.instructions,
         params.color,
         params.model,
+        params.agent,
     )?;
     let store = daemon.store();
     let crew = crews::active(&store, &params.crew_id)?;
@@ -53,6 +54,7 @@ pub(crate) struct NewBot {
     pub role: String,
     pub instructions: String,
     pub color: Option<String>,
+    pub agent: AgentKind,
     pub model: BotModel,
     pub effort: BotEffort,
 }
@@ -64,12 +66,21 @@ impl NewBot {
         instructions: &str,
         color: Option<String>,
         model: Option<BotModel>,
+        agent: Option<AgentKind>,
     ) -> ApiResult<Self> {
+        let agent = agent.unwrap_or(AgentKind::Claude);
+        if !agent.runs() {
+            return Err(ApiError::validation(format!(
+                "bots that run on {} are not available yet",
+                agent.as_str()
+            )));
+        }
         Ok(Self {
             name: validate::name("name", name)?,
             role: validate::role(role)?,
             instructions: validate::instructions(instructions)?,
             color: color.as_deref().map(parse_color).transpose()?,
+            agent,
             model: model.unwrap_or(BotModel::Default),
             effort: BotEffort::Default,
         })
@@ -109,6 +120,7 @@ pub(crate) fn insert(
         color,
         paused: false,
         permission_mode: PermissionMode::Default,
+        agent: new.agent,
         model: new.model,
         model_in_use: None,
         effort: new.effort,
@@ -231,6 +243,7 @@ pub(crate) fn to_protocol(daemon: &Daemon, store: &Store, crew: &Crew, record: B
         color: record.color,
         paused: record.paused,
         permission_mode: record.permission_mode,
+        agent: record.agent,
         model: record.model,
         model_in_use: record.model_in_use,
         effort: record.effort,

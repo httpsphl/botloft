@@ -169,6 +169,38 @@ async fn updates_refresh_the_rules_and_keep_the_bot_memory() {
 }
 
 #[tokio::test]
+async fn a_bot_has_an_agent_and_only_claude_runs_yet() {
+    let daemon = TestDaemon::start().await;
+    let mut app = daemon.session().await;
+    let crew = app
+        .call("crews.create", json!({ "name": "Docs" }))
+        .await
+        .expect("crew");
+    let make = |agent: serde_json::Value| json!({ "crewId": crew["id"], "name": "Scout", "role": "", "instructions": "", "agent": agent });
+    let bot = app
+        .call("bots.create", make(json!("claude")))
+        .await
+        .expect("claude bot");
+    assert_eq!(bot["agent"], "claude");
+    for other in ["codex", "agy"] {
+        let err = app
+            .call("bots.create", make(json!(other)))
+            .await
+            .expect_err("not available yet");
+        assert_eq!(err.code, VALIDATION);
+        assert!(err.message.contains("not available yet"), "{err:?}");
+    }
+    let plain = app
+        .call(
+            "bots.create",
+            json!({ "crewId": crew["id"], "name": "Writer", "role": "", "instructions": "" }),
+        )
+        .await
+        .expect("default bot");
+    assert_eq!(plain["agent"], "claude");
+}
+
+#[tokio::test]
 async fn archiving_a_crew_archives_its_bots() {
     let daemon = TestDaemon::start().await;
     let mut app = daemon.session().await;

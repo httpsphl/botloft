@@ -36,6 +36,7 @@ fn writer(s: &Setup) -> botloft_core::ids::BotId {
             instructions: String::new(),
             color: None,
             model: None,
+            agent: None,
         },
     )
     .expect("writer")
@@ -135,6 +136,7 @@ async fn only_enabled_routines_of_the_crew_hear_a_signal() {
             instructions: String::new(),
             color: None,
             model: None,
+            agent: None,
         },
     )
     .expect("bot");

@@ -44,6 +44,7 @@ pub async fn setup() -> Setup {
             instructions: String::new(),
             color: None,
             model: None,
+            agent: None,
         },
     )
     .expect("bot");

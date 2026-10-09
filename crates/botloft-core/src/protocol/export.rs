@@ -127,6 +127,7 @@ fn export_bindings() {
     out.decl::<Crew>();
     out.decl::<BotState>();
     out.decl::<PermissionMode>();
+    out.decl::<AgentKind>();
     out.decl::<BotModel>();
     out.decl::<ActivityKind>();
     out.decl::<Activity>();
