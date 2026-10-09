@@ -144,6 +144,13 @@ const SHEETS: &[(&str, &str)] = &[
     sheet!("playtest-analyst"),
     sheet!("game-audio-director"),
     sheet!("tabletop-game-master"),
+    sheet!("appointment-prep-assistant"),
+    sheet!("elder-care-companion"),
+    sheet!("clinic-front-desk-assistant"),
+    sheet!("medical-bill-helper"),
+    sheet!("wellness-habit-coach"),
+    sheet!("health-evidence-summarizer"),
+    sheet!("health-records-organizer"),
 ];
 
 /// What a sheet file holds.
