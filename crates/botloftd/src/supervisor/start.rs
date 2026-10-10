@@ -127,19 +127,27 @@ impl Supervisor {
         let generation = self
             .next_generation
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        // The agent of a launched bot runs; it may wrap the process to hold
+        // a conversation with it (spec 30).
+        let agent = agent::of(bot.agent).unwrap_or(&ClaudeAgent);
+        let crate::runtime::Process {
+            pid,
+            events,
+            control: raw,
+        } = process;
+        let (writer, decoder) = agent.attach(raw, launch.attach.clone());
         // What the session applies and how full it is (spec 9.2); Claude
         // Code answers as soon as it is up.
-        // The agent of a launched bot runs.
-        let speaks = agent::of(bot.agent).is_some_and(|agent| agent.speaks_control());
+        let speaks = agent.speaks_control();
         if speaks {
             for ask in [control::settings_request(), control::context_request()] {
-                let _ = process.control.write(ask);
+                let _ = writer.write(ask);
             }
         }
         // Each connected tool says whether it came up (spec 25.5).
         crate::service::mcp_state::forget(daemon, &bot.id);
         if launch.connected && speaks {
-            let _ = process.control.write(control::mcp_request());
+            let _ = writer.write(control::mcp_request());
         }
         context::process_started(daemon, &bot.id, launch.resumed);
         // A new conversation is on disk only once it has a turn (spec
@@ -156,7 +164,7 @@ impl Supervisor {
         slot.limited_until = None;
         tokens.insert(launch.token_hash.clone(), (bot.id.clone(), generation));
         slot.running = Some(Running {
-            control: process.control,
+            control: writer,
             started: Instant::now(),
             resumed: launch.resumed,
             token_hash: launch.token_hash,
@@ -166,11 +174,9 @@ impl Supervisor {
         self.count_busy(slot.state, BotState::Launching);
         slot.state = BotState::Launching;
         self.announce(&bot.id, slot);
-        debug!(bot = %bot.id, generation, pid = ?process.pid, resumed = launch.resumed, "bot started");
-        // The bot launched, so its agent runs.
-        let agent = agent::of(bot.agent).unwrap_or(&ClaudeAgent);
-        let reader = StreamReader::new(bot.id.clone(), generation, agent);
-        tokio::spawn(pump(self.daemon.clone(), reader, process.events));
+        debug!(bot = %bot.id, generation, pid = ?pid, resumed = launch.resumed, "bot started");
+        let reader = StreamReader::new(bot.id.clone(), generation, decoder);
+        tokio::spawn(pump(self.daemon.clone(), reader, events));
         tokio::spawn(settle(
             self.daemon.clone(),
             bot.id.clone(),

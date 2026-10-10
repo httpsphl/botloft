@@ -11,6 +11,7 @@
 use std::ffi::OsString;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{AgentKind, TokenUsage};
@@ -115,17 +116,7 @@ impl Agent for AgyAgent {
             cli.join("settings.json"),
             pretty(&settings(files.fenced, files.allowed_commands)),
         )?;
-        // The rules `prepare_bot` wrote for Claude Code are the bot's rules;
-        // `agy` reads `AGENTS.md` from its folder.
-        let rules = files
-            .workspace
-            .join(".claude")
-            .join("rules")
-            .join("botloft.md");
-        if let Ok(text) = std::fs::read_to_string(rules) {
-            std::fs::write(files.workspace.join("AGENTS.md"), text)?;
-        }
-        Ok(())
+        super::copy_rules_to_agents_md(files.workspace)
     }
 
     fn speaks_control(&self) -> bool {
@@ -209,7 +200,7 @@ impl OutputDecoder for AgyDecoder {
         Some(text)
     }
 
-    fn handle(&mut self, daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
+    fn handle(&mut self, daemon: &Arc<Daemon>, bot: &BotId, generation: u64, event: &Value) {
         if !daemon.supervisor.is_current(bot, generation) {
             return;
         }

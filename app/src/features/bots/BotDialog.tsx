@@ -148,12 +148,14 @@ export function BotDialog(props: Props) {
             />
             {agent !== "claude" && (
               <p role="note" className="rounded-lg bg-sunken p-2.5 text-ink-soft text-xs">
-                {t.bots.dialog.agent.experimental}
+                {agent === "codex"
+                  ? t.bots.dialog.agent.experimentalCodex
+                  : t.bots.dialog.agent.experimental}
               </p>
             )}
           </div>
         )}
-        {editing && editing.agent !== "claude" && (
+        {editing && editing.agent === "agy" && (
           <>
             <Toggle
               label={t.bots.dialog.fullAccess.title}

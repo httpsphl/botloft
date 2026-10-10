@@ -30,3 +30,21 @@ describe("choosing the agent of a new bot", () => {
     expect(dialog.queryByLabelText("Model")).toBeNull();
   });
 });
+
+describe("Codex in the new-bot dialog", () => {
+  test("says what it cannot do yet", async () => {
+    const fake = new FakeBotloft();
+    fake.system = { ...fake.system, enabledAgents: ["claude", "codex"] };
+    fake.addCrew("Ops");
+    renderApp(fake);
+    await crewOpened("Ops");
+    const [button] = await screen.findAllByRole("button", { name: "New bot" });
+    fireEvent.click(button as HTMLElement);
+    const dialog = within(await screen.findByRole("dialog", { name: "New bot" }));
+    fireEvent.change(dialog.getByLabelText("Agent"), { target: { value: "codex" } });
+    expect(dialog.getByRole("note").textContent).toMatch(
+      /asks you before it changes a file or runs a command/,
+    );
+    expect(dialog.queryByLabelText("Model")).toBeNull();
+  });
+});

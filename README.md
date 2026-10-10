@@ -32,13 +32,15 @@
   <img src="docs/assets/hero-light.png" alt="Botloft with the Research crew open: seven bots, each with its own color, state and job">
 </picture>
 
-Botloft keeps a crew of [Claude Code](https://code.claude.com) bots running on your computer. Each
-bot has its own folder, memory and conversation. They pass work to each other, keep going after you
+Botloft keeps a crew of bots running on your computer, each on the AI coding agent you choose:
+[Claude Code](https://code.claude.com), or, as experimental options,
+[Antigravity](https://antigravity.google) and [Codex](https://developers.openai.com/codex). Each bot
+has its own folder, memory and conversation. They pass work to each other, keep going after you
 close the window and pick up where they left off after a restart. You talk to each one like in a
 chat app, and you decide what they may do.
 
-[Antigravity](https://antigravity.google) works as an experimental second agent on `main`, but no
-release has it yet. Codex is next (see [Agents](#agents)).
+The latest release, 0.14.0, runs bots on Claude Code. Antigravity and Codex are on `main` and in no
+release yet (see [Agents](#agents)).
 
 ## What you can do
 
@@ -103,8 +105,8 @@ itself.
 
 ## Agents
 
-Antigravity is only on `main` for now: no release has it yet. In a build of `main`, the two agents
-compare like this:
+Antigravity and Codex are only on `main` for now: no release has them yet. In a build of `main`,
+Claude Code and Antigravity compare like this:
 
 | | Claude Code | Antigravity (experimental) |
 |---|---|---|
@@ -115,15 +117,18 @@ compare like this:
 | Usage meter and "Compact" | yes | an estimate of the conversation size; no compaction |
 | Isolation between crews | yes | folders are fenced for its file tools, not for commands you allow |
 
-Claude Code is the full experience. Antigravity is off until you add `experimental_agents = ["agy"]`
-to Botloft's `config.toml`; then a new bot can be made on it, and Settings has "Agent for new
-bots". Codex is the next agent. See [spec section 30](docs/spec.md) for what was checked.
+Claude Code is the full experience. Antigravity and Codex are off until you list them in Botloft's
+`config.toml` (`experimental_agents = ["agy"]`, `["codex"]` or both); then a new bot can be made on
+them, and Settings has "Agent for new bots". A Codex bot asks you before it changes a file or runs a
+command, like Claude Code, and shows the exact size of its conversation; it can still read any file,
+and it has no model picker or images yet. See [spec section 30](docs/spec.md) for what was
+checked.
 
 ## Get started
 
 You need [Claude Code](https://code.claude.com/docs/en/setup), installed and signed in once with
-your own account. Bots run on your own plan. (Antigravity, the experimental second agent, is only on
-`main` for now; see [Agents](#agents).)
+your own account. Bots run on your own plan. (Antigravity and Codex, the experimental agents, are
+only on `main` for now; see [Agents](#agents).)
 
 1. Download Botloft for your computer from the
    [latest release](https://github.com/httpsphl/botloft/releases/latest):
@@ -163,9 +168,9 @@ flowchart LR
 - **The daemon is the source of truth.** Closing the app never stops a bot. `botloftd` runs as a
   scheduled task of your Windows user, a systemd user service on Linux or a launch agent on macOS:
   it starts when you sign in and comes back soon if it dies.
-- **Your agent is the runtime.** Each bot is a real session of its agent (`claude -p` for Claude
-  Code; `agy -p` for Antigravity, on `main` only) with its own workspace, memory and conversation.
-  There is no custom agent SDK and no API key to manage.
+- **Your agent is the runtime.** Each bot is a real session of the agent you chose (`claude -p` for
+  Claude Code; `agy -p` for Antigravity and `codex app-server` for Codex, on `main` only) with its
+  own workspace, memory and conversation. There is no custom agent SDK and no API key to manage.
 - **One conversation per bot.** Your messages, messages from other bots and notices from the daemon
   reach the bot in order. What it does comes back as a chat: replies, tool use and requests you
   allow or deny.
@@ -262,8 +267,8 @@ Windows came first and has had the most use; if something does not work elsewher
 <details>
 <summary><b>Is Botloft made by Anthropic?</b></summary>
 
-No. Botloft is an independent project. It uses Claude Code (and, on `main`, Antigravity) as
-installed on your computer and is not affiliated with or endorsed by Anthropic or Google.
+No. Botloft is an independent project. It uses Claude Code (and, on `main`, Antigravity and Codex)
+as installed on your computer and is not affiliated with or endorsed by Anthropic, Google or OpenAI.
 </details>
 
 ## Status
@@ -273,8 +278,8 @@ that keep running in the background, the chat, crews with a Chief, ready-made bo
 agency, messages and tasks between bots, routines, the live browser, screens, "always allow" for
 requests, questions from bots, chat search, desktop use on Windows, connected tools, backups with an
 optional cloud copy, the phone page, the installer and updates. Still open: a code-signed installer.
-`main` is ahead of the latest release; among other things, it has Antigravity as an experimental
-agent.
+`main` is ahead of the latest release; among other things, it has Antigravity and Codex as
+experimental agents.
 
 <details>
 <summary><b>Development</b></summary>
@@ -282,7 +287,7 @@ agent.
 Requirements: Rust stable (the MSVC toolchain on Windows), Node.js 24 and pnpm. On Linux, the app
 also needs the desktop libraries Tauri uses (on Ubuntu: `libwebkit2gtk-4.1-dev`,
 `libayatana-appindicator3-dev`, `librsvg2-dev`, `libxdo-dev`). Running real bots also needs an agent
-installed and signed in: Claude Code (the native `claude` executable) or Antigravity (`agy`).
+installed and signed in: Claude Code (the native `claude` executable), Antigravity (`agy`) or Codex.
 
 ```powershell
 # Daemon and libraries

@@ -254,7 +254,7 @@ export const ChatComposer = memo(function ChatComposer({
                 <ModelPicker bot={bot} onLater={setLater} />
               </>
             ) : (
-              <AgentModelPicker bot={bot} onLater={setLater} />
+              bot.agent === "agy" && <AgentModelPicker bot={bot} onLater={setLater} />
             )}
             <button
               type="submit"

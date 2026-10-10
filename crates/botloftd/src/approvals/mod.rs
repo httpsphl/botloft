@@ -72,6 +72,33 @@ impl Approvals {
     }
 }
 
+/// How a request of an agent that asks in its own protocol ended (spec 30).
+pub(crate) enum Verdict {
+    Allow,
+    /// Denied, or never answered; the agent is told no.
+    Deny,
+}
+
+/// A request of an agent for the owner: a rule of the bot may already allow
+/// it, and otherwise the owner is asked in the chat like for Claude Code.
+/// `tool_use_id` is the id of the item the agent shows for it.
+pub(crate) async fn agent_request(
+    daemon: &Daemon,
+    bot: &BotId,
+    generation: u64,
+    tool_name: &str,
+    input: &Value,
+    tool_use_id: &str,
+) -> Verdict {
+    if always::allowed(daemon, bot, tool_name, input) {
+        return Verdict::Allow;
+    }
+    match ask(daemon, bot, generation, tool_name, input, tool_use_id).await {
+        Some(Answer::Allowed { .. }) => Verdict::Allow,
+        _ => Verdict::Deny,
+    }
+}
+
 /// Puts a request in the bot's chat and waits for the owner. `None` if it
 /// could not be saved.
 pub(crate) async fn ask(

@@ -114,6 +114,8 @@ export const bots: Messages["bots"] = {
       },
       experimental:
         "Experimental. Este bot no puede preguntarte antes de actuar. Trabaja con archivos de sus propias carpetas y usa las herramientas del equipo, pero no ejecuta comandos, y no tiene medidor de uso ni elección de modelo.",
+      experimentalCodex:
+        "Experimental. Este bot te pregunta antes de cambiar un archivo o ejecutar un comando, como Claude Code. Todavía puede leer cualquier archivo, y no tiene elección de modelo ni de imagen aún.",
     },
     color: "Color",
     swatch: (color: string) => `Color ${color}`,

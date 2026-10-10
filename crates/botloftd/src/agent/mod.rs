@@ -5,10 +5,14 @@
 
 mod agy;
 mod claude;
+mod codex;
+mod codex_decoder;
+mod codex_wire;
 
 use std::ffi::OsString;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{AgentKind, BotEffort, BotModel, PermissionMode};
@@ -17,7 +21,9 @@ use serde_json::Value;
 
 pub use agy::{AgyAgent, models as agy_models};
 pub use claude::ClaudeAgent;
+pub use codex::CodexAgent;
 
+use crate::runtime::ProcessControl;
 use crate::state::Daemon;
 
 /// One image that goes in the turn, already read and encoded.
@@ -64,6 +70,26 @@ pub struct LaunchFiles<'a> {
     pub allowed_commands: &'a [String],
 }
 
+/// What an agent that keeps a conversation with its process needs once the
+/// process exists (spec 30): where the bot works, its token, what to resume.
+#[derive(Debug, Clone)]
+pub struct AttachInput {
+    pub workspace: PathBuf,
+    pub port: u16,
+    /// The token of this process, in the clear: it goes to the agent's MCP
+    /// configuration.
+    pub token: String,
+    /// The conversation to resume; `None` starts a new one.
+    pub resume: Option<String>,
+    pub model: Option<String>,
+    pub effort: Option<String>,
+    /// Folders its tools must not touch (spec 7.5): a request that does is
+    /// refused without asking the owner.
+    pub fenced: Vec<PathBuf>,
+    /// Whether it may ask the owner at all; a plan only reads.
+    pub may_ask: bool,
+}
+
 /// Reads one process's output, line by line (already JSON). One per process,
 /// so it may keep what it needs between lines.
 pub trait OutputDecoder: Send {
@@ -75,7 +101,7 @@ pub trait OutputDecoder: Send {
     /// and tells the supervisor, through `chat::sink` for what every agent has
     /// and its own code for the rest. Lines from a process that was replaced
     /// say nothing about the new one.
-    fn handle(&mut self, daemon: &Daemon, bot: &BotId, generation: u64, event: &Value);
+    fn handle(&mut self, daemon: &Arc<Daemon>, bot: &BotId, generation: u64, event: &Value);
 }
 
 pub trait Agent: Send + Sync + 'static {
@@ -106,6 +132,39 @@ pub trait Agent: Send + Sync + 'static {
 
     /// A reader for the output of one process.
     fn decoder(&self) -> Box<dyn OutputDecoder>;
+
+    /// What the supervisor writes to and what reads the output, for a
+    /// process that was just created. An agent that has a conversation with
+    /// its process (Codex) wraps `control`; the others leave it as it is.
+    fn attach(
+        &self,
+        control: Box<dyn ProcessControl>,
+        _input: AttachInput,
+    ) -> (Box<dyn ProcessControl>, Box<dyn OutputDecoder>) {
+        (control, self.decoder())
+    }
+}
+
+/// Botloft's own line for a turn, for agents whose stdin is a protocol of
+/// their own that a wrapper speaks: text only, as `agy` takes it.
+pub(crate) fn neutral_turn(turn: &Turn) -> Bytes {
+    let event = serde_json::json!({
+        "event": "user",
+        "message": { "role": "user", "content": [{ "type": "text", "text": turn.text }] },
+    });
+    let mut line = event.to_string().into_bytes();
+    line.push(b'\n');
+    Bytes::from(line)
+}
+
+/// The rules `prepare_bot` wrote for Claude Code are the bot's rules; the
+/// other agents read `AGENTS.md` from the bot's folder.
+pub(crate) fn copy_rules_to_agents_md(workspace: &Path) -> io::Result<()> {
+    let rules = workspace.join(".claude").join("rules").join("botloft.md");
+    if let Ok(text) = std::fs::read_to_string(rules) {
+        std::fs::write(workspace.join("AGENTS.md"), text)?;
+    }
+    Ok(())
 }
 
 /// The first line `program --version` prints; `None` if it cannot run.
@@ -124,13 +183,15 @@ pub fn program_version(program: &Path) -> Option<String> {
 
 static CLAUDE: ClaudeAgent = ClaudeAgent;
 static AGY: AgyAgent = AgyAgent;
+static CODEX: CodexAgent = CodexAgent;
 
-/// The agent that runs bots of `kind`; `None` for one the daemon does not
-/// have yet (spec 30.1).
+/// The agent that runs bots of `kind`.
 pub fn of(kind: AgentKind) -> Option<&'static dyn Agent> {
+    // Every agent has an implementation; whether it may run is the daemon's
+    // setting (`Supervisor::agent_enabled`).
     match kind {
         AgentKind::Claude => Some(&CLAUDE),
         AgentKind::Agy => Some(&AGY),
-        AgentKind::Codex => None,
+        AgentKind::Codex => Some(&CODEX),
     }
 }

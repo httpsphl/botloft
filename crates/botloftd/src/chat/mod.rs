@@ -9,11 +9,13 @@ pub(crate) mod items;
 mod session;
 pub(crate) mod sink;
 
+use std::sync::Arc;
+
 use botloft_core::ids::BotId;
 use botloft_core::protocol::ChatDelta;
 use tracing::debug;
 
-use crate::agent::{Agent, OutputDecoder};
+use crate::agent::OutputDecoder;
 use crate::state::{Daemon, Event};
 
 /// Longest line kept; anything longer is dropped whole (spec 8.1).
@@ -41,11 +43,11 @@ pub struct StreamReader {
 }
 
 impl StreamReader {
-    pub fn new(bot: BotId, generation: u64, agent: &'static dyn Agent) -> Self {
+    pub fn new(bot: BotId, generation: u64, decoder: Box<dyn OutputDecoder>) -> Self {
         Self {
             bot,
             generation,
-            decoder: agent.decoder(),
+            decoder,
             buffer: Vec::new(),
             skipping: false,
             live: String::new(),
@@ -75,7 +77,7 @@ impl StreamReader {
         }
     }
 
-    pub fn feed(&mut self, daemon: &Daemon, data: &[u8]) {
+    pub fn feed(&mut self, daemon: &Arc<Daemon>, data: &[u8]) {
         let mut rest = data;
         while let Some(end) = rest.iter().position(|byte| *byte == b'\n') {
             if self.skipping {
@@ -98,7 +100,7 @@ impl StreamReader {
         }
     }
 
-    fn line(&mut self, daemon: &Daemon) {
+    fn line(&mut self, daemon: &Arc<Daemon>) {
         let line = self.buffer.strip_suffix(b"\r").unwrap_or(&self.buffer);
         if line.iter().all(u8::is_ascii_whitespace) {
             return;
