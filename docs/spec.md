@@ -8,7 +8,7 @@ Status: rascunho para implementação. Este documento é a fonte de verdade do p
 
 ## 1. Objetivo e princípios
 
-Botloft é um workspace desktop, Windows-first e com código público (licença FSL-1.1-ALv2, em `LICENSE`), para rodar vários agentes de código persistentes que colaboram entre si. O agente de cada bot é o Claude Code, o Antigravity (experimental) ou, em seguida, o Codex (seção 30).
+Botloft é um workspace desktop, Windows-first e com código público (licença FSL-1.1-ALv2, em `LICENSE`), para rodar vários agentes de código persistentes que colaboram entre si. O agente de cada bot é o Claude Code, o Antigravity ou o Codex (os dois últimos experimentais, seção 30).
 
 Princípios:
 
@@ -2650,7 +2650,9 @@ Decisão e contexto: `docs/adr/0003-agentes.md`. Um bot tem um **agente**, `Bot.
 | **A0** | ADR, esta seção, `bots.agent` no banco e no protocolo; `bots.create` com `codex` ou `agy` dá `-32004` ("not available yet") | feito |
 | **A1** | A interface `Agent` no daemon (`crates/botloftd/src/agent`), com o Claude por trás e os testes de hoje sem mudança. Em fatias: **A1a** argumentos do processo, ambiente extra e codificação do turno no stdin (feito); **A1b** leitura da saída: cada agente decodifica o próprio fluxo (`Agent::handle_output`, `Agent::live_text`) e grava no chat por `chat::sink` (resposta, ferramenta que começa e termina, fim de turno), o que todo agente tem; o que é só do Claude (contexto, compactação, parte do plano, rascunho de telas) fica no decodificador dele, `chat/claude.rs` (feito); **A1c** descoberta e login, arquivos da pasta do bot e aprovações | em andamento |
 | **A2** | AGY, **experimental**: só existe quando `experimental_agents = ["agy"]` no `config.toml`. Lançamento, entrada e saída, MCP do Botloft, isolamento por regras `deny`, retomada de conversa, no `agy` real. Sem aprovações do dono e sem comandos de shell (30.3); sem modelo e esforço escolhidos, contexto, compactação nem ferramentas conectadas do dono | feito (sem seletor no app) |
-| **A3** | Codex por `codex app-server` | a fazer |
+| **A3a** | Codex, **experimental** (`experimental_agents = ["codex"]`): um `codex app-server` por bot, a conversa por JSON-RPC, texto ao vivo, ferramentas, MCP do Botloft por conversa, contexto exato, retomada. Sandbox `read-only` e `approvalPolicy: never`: o bot lê e responde, não muda arquivos nem roda comandos que escrevam | feito |
+| **A3b** | Codex: os pedidos de aprovação viram os cartões do Botloft (com "sempre permitir"); alterações em pastas protegidas são recusadas sozinhas | a fazer |
+| **A3c** | Codex: lista de modelos e esforço, uso do plano, imagens | a fazer |
 | **A5** | **Lacunas do AGY**: comandos liberados por bot, bot AGY sobe sem o Claude Code, retomada conferida com o `agy` real (30.3, 30.4) | feito |
 | **A4** | Seletor de agente no app (**feito**: na criação do bot, aparece quando há mais de um agente em `enabledAgents`, com o aviso de experimental e sem a escolha de modelo; o medidor de contexto, o esforço e o modelo do campo de mensagem só aparecem para bots Claude). **Falta:** conta e login de cada agente, paridade de rotinas, navegador, desktop e perguntas | em andamento |
 
@@ -2674,6 +2676,16 @@ Descoberta e saúde (binário, versão mínima, login, comando de entrar); lanç
 - **Imagens:** a entrada do `agy` só aceita blocos de texto (outro tipo falha o turno inteiro). A imagem anexada vai como o caminho que o courier já lista no texto, e o bot a abre com `view_file`.
 - **Não faz:** pedidos de controle (`get_settings`, `get_context_usage`, `mcp_status`, `/compact`): o `agy` recusa o formato; por isso "Compactar" não existe para esses bots. Também não há cartão de plano, uso do plano nem ferramentas conectadas do dono.
 - **Eventos:** `init` dá o modelo; `step_update` `user_input` `DONE` é o recibo de leitura da mensagem mais antiga escrita (o `agy` não devolve o id) e grava a conversa a retomar (`--conversation`); `agent_response` `ACTIVE` é o texto ao vivo e `DONE` fecha a resposta; `tool` `ACTIVE`, `DONE` e `ERROR` são a ferramenta (`write_to_file`, `run_command`, `view_file`... aparecem como `Write`, `Bash`, `Read`); `result` fecha o turno, com `usage` e `status`.
+
+### 30.3.2 Codex (`codex app-server`), experimental
+
+- **Ligar:** `experimental_agents = ["codex"]` no `config.toml`; `codex_path` aponta para o executável (vazio procura em `%LOCALAPPDATA%\OpenAI\Codex\bin\<hash>\codex.exe` e no PATH).
+- **Processo:** `codex app-server -c features.apps=false -c features.hooks=false -c features.plugins=false -c notify=[] -c mcp_servers.<nome>.enabled=false` (um para cada MCP do `config.toml` do dono), na `CODEX_HOME` do dono: o login vale sem copiar o token. O invólucro `CodexControl` (`agent/codex_wire.rs`) recebe a linha neutra do Botloft e a vira `turn/start` quando a thread existe e nenhum turno roda; as mensagens esperam em fila.
+- **Aperto de mão:** `initialize`, `initialized`, `thread/start` (ou `thread/resume` com o id guardado; se não existir, `thread/start`). A thread leva `cwd` (a pasta do bot), `approvalPolicy: "never"`, `sandbox: "read-only"`, `model` (`Bot.agentModel`) e o servidor MCP `botloft` com o token deste processo em `http_headers`.
+- **Eventos:** `item/started` `userMessage` é o recibo de leitura da mensagem mais antiga escrita e grava a thread a retomar; `item/agentMessage/delta` é o texto ao vivo e `item/completed` `agentMessage` fecha a resposta; `commandExecution`, `fileChange` e `mcpToolCall` aparecem como `Bash`, `Write`/`Edit` e `mcp__<servidor>__<ferramenta>`; `thread/tokenUsage/updated` dá o contexto (a última requisição e `modelContextWindow`) e os tokens do turno (o total da thread menos o que era no começo); `turn/completed` fecha o turno com `durationMs` e o erro.
+- **Pedidos do servidor:** `mcpServer/elicitation/request` do servidor `botloft` é aceito (o bot precisa das ferramentas da equipe), de outro servidor é recusado; pedidos de aprovação de comando e de arquivo são recusados (A3b os leva ao dono); o resto recebe um erro.
+- **Verificado com o Codex real** (0.148.0-alpha.9, daemon de desenvolvimento): o bot soube o nome e a equipe pelo `AGENTS.md`, listou as ferramentas do `botloft`, chamou `crew_roster`, e a tentativa de criar um arquivo falhou como `Bash` falho.
+- **Limites desta fatia:** não escreve arquivos nem roda comandos que escrevam; a leitura não é limitada (`read-only` lê tudo); o `AGENTS.md` global e as skills da pasta pessoal do dono continuam visíveis para ele; sem seletor de modelo (usa o padrão do Codex) e sem imagens (a mensagem lista o caminho); o aviso do app diz o que ele ainda não faz.
 
 ### 30.3.1 Isolamento dos agentes
 

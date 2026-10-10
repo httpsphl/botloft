@@ -133,7 +133,7 @@ impl Supervisor {
 
     /// Whether bots of `kind` may be made: Claude Code always, an
     /// experimental agent only when the owner listed it in `config.toml`
-    /// (spec 30); Codex does not run yet.
+    /// (spec 30).
     pub fn agent_enabled(&self, kind: botloft_core::protocol::AgentKind) -> bool {
         use botloft_core::protocol::AgentKind;
         match kind {
@@ -143,13 +143,32 @@ impl Supervisor {
                 .experimental_agents
                 .iter()
                 .any(|name| name == "agy"),
-            AgentKind::Codex => false,
+            AgentKind::Codex => self
+                .settings
+                .experimental_agents
+                .iter()
+                .any(|name| name == "codex"),
         }
     }
 
     /// The `agy_path` of the config; empty looks in the usual places.
     pub fn agy_path(&self) -> &str {
         &self.settings.agy_path
+    }
+
+    /// The `codex_path` of the config; empty looks in the usual places.
+    pub fn codex_path(&self) -> &str {
+        &self.settings.codex_path
+    }
+
+    /// The configured program of an agent, to look for it.
+    pub fn program_setting(&self, kind: botloft_core::protocol::AgentKind) -> &str {
+        use botloft_core::protocol::AgentKind;
+        match kind {
+            AgentKind::Claude => "",
+            AgentKind::Agy => self.agy_path(),
+            AgentKind::Codex => self.codex_path(),
+        }
     }
 
     /// The Claude Code executable the bots run, once found.

@@ -13,7 +13,7 @@ use botloft_core::ids::BotId;
 use botloft_core::protocol::ChatDelta;
 use tracing::debug;
 
-use crate::agent::{Agent, OutputDecoder};
+use crate::agent::OutputDecoder;
 use crate::state::{Daemon, Event};
 
 /// Longest line kept; anything longer is dropped whole (spec 8.1).
@@ -41,11 +41,11 @@ pub struct StreamReader {
 }
 
 impl StreamReader {
-    pub fn new(bot: BotId, generation: u64, agent: &'static dyn Agent) -> Self {
+    pub fn new(bot: BotId, generation: u64, decoder: Box<dyn OutputDecoder>) -> Self {
         Self {
             bot,
             generation,
-            decoder: agent.decoder(),
+            decoder,
             buffer: Vec::new(),
             skipping: false,
             live: String::new(),

@@ -68,6 +68,7 @@ pub fn test_settings() -> SupervisorSettings {
             version: "2.1.284".to_owned(),
         }),
         agy_path: String::new(),
+        codex_path: String::new(),
         experimental_agents: Vec::new(),
         backoff_initial: Duration::from_millis(40),
         backoff_max: Duration::from_millis(200),

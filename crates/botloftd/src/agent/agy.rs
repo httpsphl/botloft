@@ -115,17 +115,7 @@ impl Agent for AgyAgent {
             cli.join("settings.json"),
             pretty(&settings(files.fenced, files.allowed_commands)),
         )?;
-        // The rules `prepare_bot` wrote for Claude Code are the bot's rules;
-        // `agy` reads `AGENTS.md` from its folder.
-        let rules = files
-            .workspace
-            .join(".claude")
-            .join("rules")
-            .join("botloft.md");
-        if let Ok(text) = std::fs::read_to_string(rules) {
-            std::fs::write(files.workspace.join("AGENTS.md"), text)?;
-        }
-        Ok(())
+        super::copy_rules_to_agents_md(files.workspace)
     }
 
     fn speaks_control(&self) -> bool {
