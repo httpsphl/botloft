@@ -244,6 +244,9 @@ export const account = {
     saveFailed: "Could not change the setting",
     pages: "Parts of Settings",
     general: "General",
+    defaultAgent: "Agent for new bots",
+    defaultAgentHint:
+      "Used for new bots, the chief of a new crew and the bots a template adds. Each bot keeps the agent it was made with.",
     chat: "Chat",
     enterSends: "Enter sends the message",
     enterSendsOn: "Shift+Enter starts a new line.",

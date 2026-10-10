@@ -29,7 +29,7 @@ pub fn add(daemon: &Daemon, params: CatalogAddParams) -> ApiResult<Bot> {
         &template.instructions,
         None,
         Some(template.model),
-        None,
+        Some(bots::default_agent(daemon)),
     )?;
     new.effort = template.effort;
     let store = daemon.store();

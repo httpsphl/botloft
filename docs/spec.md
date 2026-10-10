@@ -8,12 +8,12 @@ Status: rascunho para implementação. Este documento é a fonte de verdade do p
 
 ## 1. Objetivo e princípios
 
-Botloft é um workspace desktop, Windows-first e com código público (licença FSL-1.1-ALv2, em `LICENSE`), para rodar vários agentes Claude Code persistentes que colaboram entre si.
+Botloft é um workspace desktop, Windows-first e com código público (licença FSL-1.1-ALv2, em `LICENSE`), para rodar vários agentes de código persistentes que colaboram entre si. O agente de cada bot é o Claude Code, o Antigravity (experimental) ou, em seguida, o Codex (seção 30).
 
 Princípios:
 
 1. **Daemon independente do app.** Fechar o app não derruba bot nenhum. O daemon é a única fonte de verdade.
-2. **Claude Code é o runtime.** Cada bot é uma sessão do Claude Code em modo headless (`claude -p` com `stream-json` na entrada e na saída). Nada de SDK próprio de agente nem de loop reimplementado: o daemon só conversa com o processo pelo protocolo de linhas JSON.
+2. **O agente é o runtime.** Cada bot é uma sessão do agente que o dono escolheu, em modo headless (no Claude Code, `claude -p` com `stream-json` na entrada e na saída). Nada de SDK próprio de agente nem de loop reimplementado: o daemon só conversa com o processo pelo protocolo de linhas JSON.
 3. **Uma conversa por bot.** Tudo que o bot recebe (dono, outros bots, avisos do daemon) entra pelo stdin como mensagem, em ordem. Tudo que ele faz sai pelo stdout como eventos, que o daemon grava e o app mostra como chat.
 4. **Durável antes de entregar.** Toda mensagem é gravada antes de sair. Entrega é pelo menos uma vez, com retry.
 5. **Sem serviços externos.** SQLite local, sem Redis, sem nuvem, sem telemetria no MVP.
@@ -146,6 +146,7 @@ workspaces_root = ""          # vazio = %USERPROFILE%\Botloft
 claude_path = ""              # vazio = resolver pelo PATH
 agy_path = ""                 # vazio = %LOCALAPPDATA%\agy\bin e o PATH (seção 30)
 experimental_agents = []      # ["agy"] liga os bots Antigravity (seção 30)
+default_agent = "claude"       # o agente dos bots novos; muda nas Configurações (seção 30)
 start_with_windows = true     # o daemon sobe quando o dono entra no Windows (14)
 keep_awake = true             # impede suspensão enquanto houver bot busy
 log_level = "info"
@@ -2664,6 +2665,9 @@ Descoberta e saúde (binário, versão mínima, login, comando de entrar); lanç
 - **Regras do bot:** o texto que o Claude lê em `.claude/rules/botloft.md` é copiado para `AGENTS.md` na pasta do bot, que o `agy` carrega.
 - **Permissões:** em `-p` o `agy` não pergunta nada (30.4), então o Botloft decide de antemão: `allow` só `mcp(botloft/*)`; `deny` de `read_file(<pasta>)` e `write_file(<pasta>)` para cada pasta cercada (a mesma lista da seção 7.5: dados do Botloft e pastas de outras crews). Comandos de shell são negados pelo próprio `agy`, e o `result` traz `denied_actions`. O dono ainda não tem como liberar um comando.
 - **Comandos liberados:** `Bot.allowedCommands` (`bots.allowed_commands`, migration 0028; `bots.update { allowedCommands }`, só para bots que não são Claude) são prefixos de comando que o dono libera. Entram no `settings.json` do bot como `allow` `command(<prefixo>)`; o `agy` casa palavra por palavra, então `git status` libera `git status -s`. Um `*` libera tudo, e o diálogo avisa. Fora da lista, o `agy` nega sozinho e o chat mostra a ferramenta falhada com o comando. Mudou a lista, o bot reinicia quando nada estiver em andamento. Cada item tem uma linha, até 200 caracteres, sem `)`; até 50 itens.
+- **Agente padrão:** `Settings.defaultAgent` (`settings.get` e `settings.update`; `default_agent` no `config.toml`) é o agente de um bot criado sem escolha: o diálogo de novo bot, o chefe de uma equipe nova, os bots de um modelo de equipe e os que o chefe sugere. Se o agente escolhido não puder rodar (o experimental foi desligado), vale o Claude Code. Cada bot guarda o agente com que foi criado.
+- **Acesso total:** na edição de um bot que não é Claude, um interruptor "Rodar qualquer comando sem perguntar" põe `*` na lista de comandos (`command(*)`, que o `agy` real aceitou). O aviso diz que um comando pode ler ou mudar o que o dono pode.
+- **Boas-vindas:** `system.status.agentChecks` diz, para cada agente experimental ligado, a versão achada pelo `--version` (guardada por um minuto) ou `null`. A tela mostra uma linha por agente, e o Claude Code ausente deixa de ser um erro quando outro agente está pronto.
 - **Sem o Claude Code:** um bot que não roda nele sobe mesmo sem o Claude Code instalado; o supervisor só o exige dos bots Claude. O app mostra o aviso "bots não sobem" e o de login do Claude só quando há um bot Claude (ou nenhum bot ainda).
 - **Modelo:** `Bot.agentModel` (`bots.agent_model`, migration 0027) é um id de `agy models`, passado como `--model`; o esforço faz parte do id (`...-high`), então não há seletor de esforço. O app lista os modelos por `agents.models` e troca por `bots.setAgentModel`.
 - **Contexto:** o `agy` não responde ao pedido de uso. O Botloft usa o `usage` do último `step_update` de resposta (`input_tokens + cache_read_tokens + output_tokens`) como o que a conversa guarda, e a janela vem da família do modelo (`gemini` 1.000.000, `claude` 200.000, outros 128.000): é uma estimativa e o painel diz isso. Não há compactação nem limite para compactar sozinho.

@@ -70,10 +70,16 @@ export class FakeBotloft implements BotloftApi {
     deliveries: { pending: 0, dead: 0 },
     usage: null,
     enabledAgents: ["claude"],
+    agentChecks: [],
   };
   /** How many times the app asked for a new Claude Code check. */
   refreshes = 0;
-  settings: Settings = { startWithWindows: true, keepAwake: true, approvalWaitMinutes: 60 };
+  settings: Settings = {
+    startWithWindows: true,
+    keepAwake: true,
+    approvalWaitMinutes: 60,
+    defaultAgent: "claude",
+  };
   /** Folders the owner sent to the Recycle Bin with a delete, in order. */
   readonly recycled: string[] = [];
   /** Why the next folder cannot go to the bin, if it cannot. */
@@ -272,6 +278,7 @@ export class FakeBotloft implements BotloftApi {
         startWithWindows: change.startWithWindows ?? this.settings.startWithWindows,
         keepAwake: change.keepAwake ?? this.settings.keepAwake,
         approvalWaitMinutes: change.approvalWaitMinutes ?? this.settings.approvalWaitMinutes,
+        defaultAgent: change.defaultAgent ?? this.settings.defaultAgent,
       };
       return this.settings;
     },

@@ -3,6 +3,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::AgentKind;
+
 /// The daemon's part of the app's Settings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -16,6 +18,9 @@ pub struct Settings {
     /// How long a permission request waits for the owner before it is
     /// denied (spec 10.1).
     pub approval_wait_minutes: u32,
+    /// The agent bots are made for when nothing says otherwise: new bots,
+    /// the chief of a new crew, the bots of a template (spec 30).
+    pub default_agent: AgentKind,
 }
 
 /// The settings to change; the ones left out stay as they are.
@@ -33,6 +38,9 @@ pub struct SettingsUpdateParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub approval_wait_minutes: Option<u32>,
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub default_agent: Option<AgentKind>,
 }
 
 /// The longest a permission request may wait for the owner: a day.

@@ -16,6 +16,9 @@ pub struct Config {
     pub claude_path: String,
     /// Empty means look for `agy` in its installer's folder and on PATH.
     pub agy_path: String,
+    /// The agent for new bots: `"claude"`, or an enabled experimental one
+    /// (spec 30). Changed in the app's Settings.
+    pub default_agent: String,
     /// Agents not meant for everyone yet, by name (`"agy"`, spec 30). A bot
     /// can only be made for one of these when it is listed here.
     pub experimental_agents: Vec<String>,
@@ -39,6 +42,7 @@ impl Default for Config {
             workspaces_root: String::new(),
             claude_path: String::new(),
             agy_path: String::new(),
+            default_agent: "claude".to_owned(),
             experimental_agents: Vec::new(),
             start_with_windows: true,
             keep_awake: true,

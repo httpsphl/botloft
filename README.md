@@ -5,7 +5,7 @@
 <h1 align="center">Botloft</h1>
 
 <p align="center">
-  <b>A crew of Claude Code bots that stays on and works together on your computer.</b>
+  <b>A crew of AI coding bots that stays on and works together on your computer, on the agent you prefer.</b>
 </p>
 
 <p align="center">
@@ -32,8 +32,9 @@
   <img src="docs/assets/hero-light.png" alt="Botloft with the Research crew open: seven bots, each with its own color, state and job">
 </picture>
 
-Botloft keeps a crew of [Claude Code](https://code.claude.com) bots running on your computer. Each bot has
-its own folder, memory and conversation. They pass work to each other, keep going after you close the
+Botloft keeps a crew of bots running on your computer, each on the AI coding agent you choose:
+[Claude Code](https://code.claude.com), or [Antigravity](https://antigravity.google) as an experimental
+option, with Codex next. Each bot has its own folder, memory and conversation. They pass work to each other, keep going after you close the
 window and pick up where they left off after a restart. You talk to each one like in a chat app, and
 you decide what they may do.
 
@@ -55,8 +56,8 @@ you decide what they may do.
 - **Leave them running.** Bots keep working after you close Botloft. They start when you sign in,
   come back soon after a crash and keep the computer awake while they work. Botloft
   waits near the clock and tells you when a bot needs you.
-- **Choose per bot.** How much it asks before acting, and which Claude model it uses. See how much
-  of your plan's usage is left.
+- **Choose per bot.** Which agent it runs on, which model it uses, and how much it asks before
+  acting. With Claude Code, see how much of your plan's usage is left.
 - **Back up and move.** Save a sealed backup file, or sign in with your e-mail (no password) to keep
   a light copy in the cloud and restore it on another computer. The server cannot read it. Turn on
   automatic copies, every day or week and only when something changed, if you want them to go by
@@ -76,10 +77,26 @@ you decide what they may do.
 Botloft speaks English, Portuguese (Brazil) and Spanish, follows your light or dark theme and updates
 itself.
 
+## Agents
+
+| | Claude Code | Antigravity (experimental) |
+|---|---|---|
+| Chat, crew messages, tasks, routines, the live browser | yes | chat, crew messages and tasks; the rest is not checked yet |
+| Asks you before acting | yes: each tool, with "always allow" | no: it cannot ask. It works with files in its own folders; commands you list per bot (or "full access") |
+| Images | yes | yes, by file |
+| Model | your plan's default, or one you pick | its own list; the effort is part of the name |
+| Usage meter and "Compact" | yes | an estimate of the conversation size; no compaction |
+| Isolation between crews | yes | folders are fenced for its file tools, not for commands you allow |
+
+Claude Code is the full experience. Antigravity is off until you add `experimental_agents = ["agy"]`
+to Botloft's `config.toml`; then a new bot can be made on it, and Settings has "Agent for new
+bots". Codex is the next agent. See [spec section 30](docs/spec.md) for what was checked.
+
 ## Get started
 
-You need [Claude Code](https://code.claude.com/docs/en/setup), installed and signed in once with
-your Claude account. Bots run on your own Claude plan.
+You need at least one agent installed and signed in once, with your own account:
+[Claude Code](https://code.claude.com/docs/en/setup), or Antigravity (experimental, see
+[Agents](#agents)). Bots run on your own plan with that agent.
 
 1. Download Botloft for your computer from the
    [latest release](https://github.com/httpsphl/botloft/releases/latest):
@@ -112,15 +129,16 @@ app. Your bots and their files stay either way (see
 flowchart LR
   app["Botloft app<br/>Tauri + React"] -- "JSON-RPC over WebSocket<br/>127.0.0.1 only" --> daemon["botloftd<br/>Rust daemon"]
   daemon --> db[("SQLite")]
-  daemon -- "stdin and stdout<br/>stream-json" --> bots["One claude -p<br/>per bot"]
+  daemon -- "stdin and stdout<br/>stream-json" --> bots["One agent process<br/>per bot"]
   bots -- "Botloft's MCP tools<br/>messages, tasks, requests" --> daemon
 ```
 
 - **The daemon is the source of truth.** Closing the app never stops a bot. `botloftd` runs as a
   scheduled task of your Windows user, a systemd user service on Linux or a launch agent on macOS:
   it starts when you sign in and comes back soon if it dies.
-- **Claude Code is the runtime.** Each bot is a real `claude -p` session with its own workspace,
-  memory (`CLAUDE.md`) and conversation. There is no custom agent SDK and no API key to manage.
+- **Your agent is the runtime.** Each bot is a real session of the agent you chose (`claude -p` for
+  Claude Code, `agy -p` for Antigravity) with its own workspace, memory and conversation. There is
+  no custom agent SDK and no API key to manage.
 - **One conversation per bot.** Your messages, messages from other bots and notices from the daemon
   reach the bot in order. What it does comes back as a chat: replies, tool use and requests you
   allow or deny.
@@ -134,7 +152,7 @@ The full design, from the protocol to the states of a bot, lives in [`docs/spec.
 
 - **Local first.** The daemon listens on `127.0.0.1`, and there is no telemetry. An account is
   optional: without one, Botloft uses the network for nothing beyond updates and what bots send to
-  Claude, which goes through Claude Code as when you use it yourself. With one, the server only ever
+  the agent's provider, which goes through the agent as when you use it yourself. With one, the server only ever
   holds a backup sealed with a password that never leaves your computer (see the FAQ).
 - **You decide what bots may do.** Per bot: ask before anything, accept edits, plan only, or decide on
   its own what needs your OK. Unless it decides on its own, a bot also asks before its first visit
@@ -143,7 +161,7 @@ The full design, from the protocol to the states of a bot, lives in [`docs/spec.
   Each bot gets its own token per start, and the daemon keeps only its SHA-256 hash.
 - **Botloft is not a sandbox.** Every bot runs as your user account, so isolation between bots is
   cooperative: a bot can read other bots' folders if it decides to. Give bots only the permissions
-  you would give Claude Code directly.
+  you would give that agent directly.
 
 What Botloft sends over the network, what it changes on your computer and how to remove it are in
 the [code signing policy](docs/code-signing-policy.md).
@@ -154,8 +172,8 @@ the [code signing policy](docs/code-signing-policy.md).
 <summary><b>Does Botloft cost anything?</b></summary>
 
 No. Botloft is free to use, at home or at work, and its source code is public (see
-[License](#license)). The bots run on Claude Code with
-your own Claude account, so they use your plan's limits; Botloft shows how much is left.
+[License](#license)). The bots run on the agent you chose, with
+your own account, so they use your plan's limits; with Claude Code, Botloft shows how much is left.
 </details>
 
 <details>
@@ -212,8 +230,8 @@ Windows came first and has had the most use; if something does not work elsewher
 <details>
 <summary><b>Is Botloft made by Anthropic?</b></summary>
 
-No. Botloft is an independent project. It uses Claude Code as installed on your computer
-and is not affiliated with or endorsed by Anthropic.
+No. Botloft is an independent project. It uses Claude Code and Antigravity as installed on your
+computer and is not affiliated with or endorsed by Anthropic or Google.
 </details>
 
 ## Status
@@ -228,8 +246,8 @@ and a code-signed installer. `main` can be ahead of the latest release.
 
 Requirements: Rust stable (the MSVC toolchain on Windows), Node.js 24 and pnpm. On Linux, the app
 also needs the desktop libraries Tauri uses (on Ubuntu: `libwebkit2gtk-4.1-dev`,
-`libayatana-appindicator3-dev`, `librsvg2-dev`, `libxdo-dev`). Running real bots also needs Claude
-Code (the native `claude` executable) installed and signed in.
+`libayatana-appindicator3-dev`, `librsvg2-dev`, `libxdo-dev`). Running real bots also needs an agent
+installed and signed in: Claude Code (the native `claude` executable) or Antigravity (`agy`).
 
 ```powershell
 # Daemon and libraries

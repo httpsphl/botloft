@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};
 use std::time::Duration;
 
-use botloft_core::protocol::{Settings, SettingsUpdateParams};
+use botloft_core::protocol::{AgentKind, Settings, SettingsUpdateParams};
 use tokio::sync::watch;
 
 use crate::config::Config;
@@ -32,6 +32,8 @@ impl LiveSettings {
             start_with_windows: config.start_with_windows,
             keep_awake: config.keep_awake,
             approval_wait_minutes: minutes,
+            // A name this build does not know is Claude Code.
+            default_agent: config.default_agent.parse().unwrap_or(AgentKind::Claude),
         };
         Self {
             file,
@@ -86,6 +88,9 @@ impl LiveSettings {
             current.settings.approval_wait_minutes = minutes;
             current.approval_wait = minutes_to_wait(minutes);
         }
+        if let Some(agent) = update.default_agent {
+            current.settings.default_agent = agent;
+        }
         Ok(current.settings)
     }
 
@@ -116,6 +121,9 @@ fn write(file: &Path, update: SettingsUpdateParams) -> io::Result<()> {
     }
     if let Some(keep_awake) = update.keep_awake {
         set(config.as_table_mut(), "keep_awake", keep_awake);
+    }
+    if let Some(agent) = update.default_agent {
+        set(config.as_table_mut(), "default_agent", agent.as_str());
     }
     if let Some(minutes) = update.approval_wait_minutes {
         let bots = config["bots"]
@@ -164,6 +172,7 @@ mod tests {
                 start_with_windows: true,
                 keep_awake: false,
                 approval_wait_minutes: 30,
+                default_agent: AgentKind::Claude,
             }
         );
         assert!(awake.has_changed().expect("sender") && !*awake.borrow_and_update());
@@ -180,6 +189,7 @@ mod tests {
                 start_with_windows: Some(false),
                 keep_awake: Some(true),
                 approval_wait_minutes: Some(240),
+                default_agent: None,
             })
             .expect("save");
         let text = std::fs::read_to_string(&file).expect("read");
@@ -197,6 +207,7 @@ mod tests {
                 start_with_windows: false,
                 keep_awake: true,
                 approval_wait_minutes: 240,
+                default_agent: AgentKind::Claude,
             }
         );
         assert_eq!(settings.approval_wait(), Duration::from_secs(4 * 3600));

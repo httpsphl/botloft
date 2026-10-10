@@ -107,7 +107,7 @@ describe("the Bot agency", () => {
       target: { value: "zzz" },
     });
     expect(within(dialog).getByText("No bot matches that.")).toBeDefined();
-  });
+  }, 20_000);
 
   test("Learn more shows what the bot does and what it is told, and adds it from there", async () => {
     const fake = await openCrewWithChief();

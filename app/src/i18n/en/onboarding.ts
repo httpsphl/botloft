@@ -46,7 +46,7 @@ export const onboarding = {
   welcome: {
     title: "Welcome to Botloft",
     intro:
-      "A crew is a group of Claude Code bots that keep running, message each other and share a folder. Each crew starts with a chief: tell it what the crew is for, and it plans the work and suggests the bots it needs.",
+      "A crew is a group of bots that keep running, message each other and share a folder. Each bot runs on the agent you pick: Claude Code, or another one you turn on. Each crew starts with a chief: tell it what the crew is for, and it plans the work and suggests the bots it needs.",
     botloft: "Botloft",
     running: (system: string) =>
       `Running in the background. It starts with ${system}, so your bots keep working after you close this window.`,
@@ -66,6 +66,9 @@ export const onboarding = {
     askFirstBody:
       "When a bot wants to run a command or edit a file, it asks in its chat and waits for you to allow or deny it.",
     ideasTitle: "Or tap an idea",
+    claudeOptional: "Not installed. You only need it for bots that run on Claude Code.",
+    agentMissing: "Not found. Install it and open Botloft again.",
+    notNeeded: "not needed",
     createCrew: "Create your first crew",
   },
   claudeCode: {

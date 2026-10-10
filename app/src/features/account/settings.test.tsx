@@ -57,6 +57,7 @@ describe("settings", () => {
         startWithWindows: false,
         keepAwake: false,
         approvalWaitMinutes: 60,
+        defaultAgent: "claude",
       }),
     );
     expect(

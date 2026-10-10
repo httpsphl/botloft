@@ -249,6 +249,9 @@ export const account: Messages["account"] = {
     saveFailed: "No se pudo cambiar el ajuste",
     pages: "Partes de la configuración",
     general: "General",
+    defaultAgent: "Agente de los bots nuevos",
+    defaultAgentHint:
+      "Vale para los bots nuevos, el jefe de un equipo nuevo y los bots que añade una plantilla. Cada bot conserva el agente con el que se creó.",
     chat: "Chat",
     enterSends: "Enter envía el mensaje",
     enterSendsOn: "Shift+Enter empieza una nueva línea.",

@@ -81,6 +81,20 @@ pub struct SystemStatus {
     /// The agents a bot may be made for (spec 30): Claude Code, and the
     /// experimental ones the owner switched on.
     pub enabled_agents: Vec<AgentKind>,
+    /// Whether each enabled agent other than Claude Code is installed
+    /// (spec 30). Claude Code has its own fields above.
+    pub agent_checks: Vec<AgentCheck>,
+}
+
+/// What looking for an agent's program found.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct AgentCheck {
+    pub agent: AgentKind,
+    /// What `--version` said; `null` when the program was not found or did
+    /// not answer.
+    pub version: Option<String>,
 }
 
 /// The owner, as the app shows them in its account area (spec 15.1).

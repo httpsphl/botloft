@@ -32,6 +32,7 @@ export function settingsIndex(t: ReturnType<typeof useT>): Entry[] {
     ...entry(
       "general",
       s.language,
+      s.defaultAgent,
       s.background,
       s.keepWorking,
       s.tray,

@@ -45,7 +45,7 @@ export const onboarding: Messages["onboarding"] = {
   welcome: {
     title: "Te damos la bienvenida a Botloft",
     intro:
-      "Un equipo es un grupo de bots de Claude Code que siguen funcionando, se envían mensajes y comparten una carpeta. Cada equipo empieza con un jefe: dile para qué es el equipo, y planea el trabajo y sugiere los bots que necesita.",
+      "Un equipo es un grupo de bots que siguen funcionando, se escriben entre sí y comparten una carpeta. Cada bot corre en el agente que elijas: Claude Code, u otro que actives. Cada equipo empieza con un jefe: dile para qué sirve el equipo, y él planea el trabajo y sugiere los bots que necesita.",
     botloft: "Botloft",
     running: (system: string) =>
       `Funcionando en segundo plano. Se inicia con ${system}, así que tus bots siguen trabajando después de cerrar esta ventana.`,
@@ -66,6 +66,9 @@ export const onboarding: Messages["onboarding"] = {
     askFirstBody:
       "Cuando un bot quiere ejecutar un comando o editar un archivo, lo pregunta en su chat y espera a que lo permitas o lo deniegues.",
     ideasTitle: "O toca una idea",
+    claudeOptional: "No instalado. Solo lo necesitas para los bots que corren en Claude Code.",
+    agentMissing: "No encontrado. Instálalo y abre Botloft otra vez.",
+    notNeeded: "no hace falta",
     createCrew: "Crear tu primer equipo",
   },
   claudeCode: {
