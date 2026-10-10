@@ -17,7 +17,7 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
       }
       return fake.activeBots(crewId);
     },
-    "bots.create": ({ crewId, name, role, instructions, color, model }) => {
+    "bots.create": ({ crewId, name, role, instructions, color, model, agent }) => {
       const crew = fake.crew(crewId);
       const checked = checkName(name);
       const handle = fake.handle(checked, crewId);
@@ -33,7 +33,8 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
         color: color ?? AVATAR_PALETTE[index % AVATAR_PALETTE.length] ?? "#FF7A59",
         paused: false,
         permissionMode: "default",
-        agent: "claude",
+        agent: agent ?? "claude",
+        agentModel: null,
         model: model ?? "default",
         modelInUse: null,
         effort: "default",
@@ -78,6 +79,11 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
         // What a model does by itself is asked again of the new one.
         bot.effortDefault = null;
       }
+      return fake.changedBot(bot);
+    },
+    "bots.setAgentModel": ({ botId, model }) => {
+      const bot = fake.bot(botId);
+      bot.agentModel = model;
       return fake.changedBot(bot);
     },
     "bots.setEffort": ({ botId, effort }) => {

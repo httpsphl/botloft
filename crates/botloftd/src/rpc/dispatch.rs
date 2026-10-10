@@ -48,6 +48,8 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
             reply(modes::set_permission_mode(daemon, parse(params)?))
         }
         method::BOTS_SET_MODEL => reply(models::set_model(daemon, parse(params)?)),
+        method::BOTS_SET_AGENT_MODEL => reply(models::set_agent_model(daemon, parse(params)?)),
+        method::AGENTS_MODELS => reply(models::agent_models(daemon, parse(params)?)),
         method::BOTS_SET_EFFORT => reply(models::set_effort(daemon, parse(params)?)),
         method::BOTS_COMPACT => reply(crate::context::compact(daemon, parse(params)?)),
         method::BOTS_ARCHIVE => reply(bots::archive(daemon, parse(params)?)),

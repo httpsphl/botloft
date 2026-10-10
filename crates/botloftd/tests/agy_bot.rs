@@ -335,3 +335,76 @@ async fn the_next_start_resumes_the_conversation() {
         .expect("resumed");
     assert_eq!(args[at + 1], "c-3");
 }
+
+#[tokio::test(start_paused = true)]
+async fn the_model_the_owner_picks_goes_to_the_next_process() {
+    let agy = agy_bot().await;
+    let first = agy.runtime.process(1).await;
+    agy.until(BotState::Idle).await;
+    assert!(!first.args().contains(&"--model".to_owned()));
+
+    let bot = botloftd::service::models::set_agent_model(
+        &agy.daemon,
+        botloft_core::protocol::BotsSetAgentModelParams {
+            bot_id: agy.bot.clone(),
+            model: Some("gemini-3.8-flash-high".into()),
+        },
+    )
+    .expect("model");
+    assert_eq!(bot.agent_model.as_deref(), Some("gemini-3.8-flash-high"));
+
+    let second = agy.runtime.process(2).await;
+    let args = second.args();
+    let at = args
+        .iter()
+        .position(|a| a == "--model")
+        .expect("model flag");
+    assert_eq!(args[at + 1], "gemini-3.8-flash-high");
+
+    // Not a model id.
+    let refused = botloftd::service::models::set_agent_model(
+        &agy.daemon,
+        botloft_core::protocol::BotsSetAgentModelParams {
+            bot_id: agy.bot.clone(),
+            model: Some("bad id; rm".into()),
+        },
+    );
+    assert!(refused.is_err());
+}
+
+#[tokio::test(start_paused = true)]
+async fn the_usage_of_a_response_is_how_full_the_conversation_is() {
+    let agy = agy_bot().await;
+    let process = agy.runtime.process(1).await;
+    agy.until(BotState::Idle).await;
+    assert!(agy.daemon.contexts.get(&agy.bot).is_none());
+
+    agy.daemon
+        .supervisor
+        .write_message(&agy.bot, "u-1", "{}\n".into())
+        .expect("running");
+    process
+        .emit(json!({ "event": "init", "init": { "conversation_id": "c-9", "model": "gemini-3.8-flash-low" } }))
+        .await;
+    process
+        .emit(step("c-9", 0, "user_input", "DONE", json!({})))
+        .await;
+    process
+        .emit(step(
+            "c-9",
+            1,
+            "agent_response",
+            "DONE",
+            json!({ "usage": { "input_tokens": 1000, "cache_read_tokens": 500, "output_tokens": 50 } }),
+        ))
+        .await;
+    process
+        .emit(json!({ "event": "result", "result": { "status": "SUCCESS", "duration_seconds": 0.1, "usage": {} } }))
+        .await;
+    agy.until(BotState::Idle).await;
+
+    let context = agy.daemon.contexts.get(&agy.bot).expect("known now");
+    assert_eq!(context.used_tokens, 1550);
+    assert_eq!(context.window_tokens, 1_000_000);
+    assert_eq!(context.auto_compact_tokens, None);
+}

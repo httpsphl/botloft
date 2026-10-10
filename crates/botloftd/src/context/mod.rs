@@ -139,6 +139,20 @@ pub(crate) fn answered(daemon: &Daemon, bot: &BotId, body: &Value) {
     });
 }
 
+/// An agent that is not Claude Code says how much its conversation holds
+/// (spec 30): the daemon does not ask it.
+pub(crate) fn report(daemon: &Daemon, bot: &BotId, used: u64, window: u64) {
+    let at = daemon.clock.now_ms();
+    update(daemon, bot, |entry| {
+        entry.size = Some(Size {
+            used,
+            window,
+            auto_compact: None,
+            at,
+        });
+    });
+}
+
 /// The usage of one model request in the bot's conversation: what it sent
 /// is what the conversation holds. Only moves a size that is known.
 pub(crate) fn used(daemon: &Daemon, bot: &BotId, message: &Value) {

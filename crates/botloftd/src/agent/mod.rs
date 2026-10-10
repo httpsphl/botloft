@@ -15,7 +15,7 @@ use botloft_core::protocol::{AgentKind, BotEffort, BotModel, PermissionMode};
 use bytes::Bytes;
 use serde_json::Value;
 
-pub use agy::AgyAgent;
+pub use agy::{AgyAgent, models as agy_models};
 pub use claude::ClaudeAgent;
 
 use crate::state::Daemon;
@@ -48,6 +48,8 @@ pub struct LaunchPlan<'a> {
     pub permission_mode: PermissionMode,
     pub model: BotModel,
     pub effort: BotEffort,
+    /// The model of a bot not on Claude Code, as its agent names it.
+    pub agent_model: Option<&'a str>,
 }
 
 /// What an agent needs to write the files it reads at start, once the bot

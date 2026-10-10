@@ -127,6 +127,7 @@ pub(super) fn launch_spec(
         permission_mode: bot.permission_mode,
         model: bot.model,
         effort: bot.effort,
+        agent_model: bot.agent_model.as_deref(),
     });
 
     let mut env = platform::user_environment()?;

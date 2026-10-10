@@ -190,6 +190,16 @@ export const chat: Messages["chat"] = {
     later: (bot: string, model: string) =>
       `${bot} cambia a ${model} cuando termine lo que está haciendo.`,
   },
+  agentModel: {
+    title: "Modelo",
+    button: (model: string) => `Modelo: ${model}`,
+    short: "Predeterminado",
+    loading: "Cargando los modelos…",
+    listFailed: "No se pudo cargar la lista de modelos",
+    failed: "No se pudo cambiar el modelo",
+    defaultHint: (bot: string) => `${bot} usa el modelo predeterminado del propio agente`,
+    later: (bot: string, model: string) => `${bot} cambia a ${model}.`,
+  },
   effort: {
     title: "Esfuerzo",
     button: (level: string) => `Esfuerzo: ${level}`,
@@ -234,6 +244,8 @@ export const chat: Messages["chat"] = {
     autoLeft: (left: string, at: string) => `Faltan ${left} para que se compacte sola, en ${at}.`,
     autoNow: "Ya está lo bastante llena para compactarse sola en el próximo mensaje.",
     noAuto: "No se compacta sola.",
+    estimate:
+      "Una estimación: este agente no dice el tamaño de su ventana, así que el tamaño sale de la familia del modelo.",
     compact: "Compactar ahora",
     compactHint: (bot: string) =>
       `Cambia lo anterior por un resumen: ${bot} vuelve a tener espacio y cada mensaje gasta menos.`,

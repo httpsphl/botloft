@@ -76,6 +76,11 @@ impl Agent for AgyAgent {
         }
         args.push("--add-dir".into());
         args.push(plan.work_folder.as_os_str().to_owned());
+        // The effort is part of the model's id (`gemini-3.8-flash-low`).
+        if let Some(model) = plan.agent_model {
+            args.push("--model".into());
+            args.push(model.into());
+        }
         // `-p` takes the next argument as its prompt unless the value is
         // attached; there is none, the prompts come on stdin.
         args.push("-p=".into());
@@ -127,20 +132,15 @@ impl Agent for AgyAgent {
     }
 
     fn encode_turn(&self, _uuid: &str, turn: &Turn) -> Bytes {
-        let mut content = vec![json!({ "type": "text", "text": turn.text })];
-        content.extend(turn.images.iter().map(|image| {
-            json!({
-                "type": "image",
-                "source": {
-                    "type": "base64",
-                    "media_type": image.media_type,
-                    "data": image.data,
-                },
-            })
-        }));
+        // The input takes text blocks only (a block of another type fails
+        // the turn, spec 30.4). An image reaches the bot as the path the
+        // courier lists in the text; the bot opens the file itself.
         let event = json!({
             "event": "user",
-            "message": { "role": "user", "content": content },
+            "message": {
+                "role": "user",
+                "content": [{ "type": "text", "text": turn.text }],
+            },
         });
         let mut line = event.to_string().into_bytes();
         line.push(b'\n');
@@ -187,6 +187,8 @@ fn settings(fenced: &[PathBuf]) -> Value {
 struct AgyDecoder {
     /// The reply text written so far in the current response.
     pending: String,
+    /// The model of this process, from `init`; sizes the context window.
+    model: String,
 }
 
 impl OutputDecoder for AgyDecoder {
@@ -209,6 +211,7 @@ impl OutputDecoder for AgyDecoder {
         match event["event"].as_str() {
             Some("init") => {
                 if let Some(model) = event["init"]["model"].as_str() {
+                    self.model = model.to_owned();
                     crate::service::models::reported(daemon, bot, model);
                 }
             }
@@ -237,7 +240,10 @@ impl AgyDecoder {
                     sink::message_read(daemon, bot, &uuid);
                 }
             }
-            (Some("agent_response"), Some("DONE")) => self.flush(daemon, bot),
+            (Some("agent_response"), Some("DONE")) => {
+                self.flush(daemon, bot);
+                self.context(daemon, bot, &update["usage"]);
+            }
             (Some("tool"), Some("ACTIVE")) => {
                 // What came before the tool is a reply of its own.
                 self.flush(daemon, bot);
@@ -282,11 +288,56 @@ impl AgyDecoder {
         sink::finish_turn(daemon, bot, generation, failed);
     }
 
+    /// What the last request held is what the conversation holds: its
+    /// prompt, cached or not, and what it wrote.
+    fn context(&self, daemon: &Daemon, bot: &BotId, usage: &Value) {
+        let count = |key: &str| usage[key].as_u64().unwrap_or_default();
+        let used = count("input_tokens") + count("cache_read_tokens") + count("output_tokens");
+        if used > 0 {
+            crate::context::report(daemon, bot, used, window_of(&self.model));
+        }
+    }
+
     /// The reply written so far becomes a chat item.
     fn flush(&mut self, daemon: &Daemon, bot: &BotId) {
         let text = std::mem::take(&mut self.pending);
         sink::reply(daemon, bot, &text);
     }
+}
+
+/// How many tokens a conversation of `model` holds at most, by the family in
+/// its id: `agy` does not say (spec 30.4). A round figure, not a promise.
+fn window_of(model: &str) -> u64 {
+    if model.starts_with("gemini") {
+        1_000_000
+    } else if model.starts_with("claude") {
+        200_000
+    } else {
+        128_000
+    }
+}
+
+/// The models `agy models` lists: an id and a name for people, tab apart.
+pub fn models(program: &Path) -> io::Result<Vec<botloft_core::protocol::AgentModel>> {
+    let output = std::process::Command::new(program).arg("models").output()?;
+    if !output.status.success() {
+        return Err(io::Error::other("agy models failed"));
+    }
+    Ok(parse_models(&String::from_utf8_lossy(&output.stdout)))
+}
+
+fn parse_models(text: &str) -> Vec<botloft_core::protocol::AgentModel> {
+    text.lines()
+        .filter_map(|line| {
+            let (id, name) = line.split_once('\t')?;
+            let id = id.trim();
+            // The line "Fetching available models..." has no tab.
+            (!id.is_empty() && !id.contains(' ')).then(|| botloft_core::protocol::AgentModel {
+                id: id.to_owned(),
+                name: name.trim().to_owned(),
+            })
+        })
+        .collect()
 }
 
 /// An id for a tool step, unique among the bot's conversations.
@@ -338,7 +389,7 @@ mod tests {
     use crate::agent::TurnImage;
 
     #[test]
-    fn a_turn_is_one_user_event_with_its_images() {
+    fn a_turn_is_one_user_event_with_text_only() {
         let turn = Turn {
             text: "hi".into(),
             images: vec![TurnImage {
@@ -352,7 +403,21 @@ mod tests {
         assert_eq!(json["event"], "user");
         assert_eq!(json["message"]["role"], "user");
         assert_eq!(json["message"]["content"][0]["text"], "hi");
-        assert_eq!(json["message"]["content"][1]["source"]["data"], "AAAA");
+        // An image block would fail the turn: `agy` takes text only.
+        assert_eq!(json["message"]["content"].as_array().map(Vec::len), Some(1));
+    }
+
+    #[test]
+    fn the_model_list_skips_the_line_that_is_not_one() {
+        let models = parse_models(
+            "Fetching available models...\ngemini-3.8-flash-low\tGemini 3.8 Flash (Low)\n\
+             claude-opus-5-5-high\tClaude Opus 5.5 (High)\n",
+        );
+        assert_eq!(models.len(), 2);
+        assert_eq!(models[0].id, "gemini-3.8-flash-low");
+        assert_eq!(models[1].name, "Claude Opus 5.5 (High)");
+        assert_eq!(window_of("gemini-3.8-flash-low"), 1_000_000);
+        assert_eq!(window_of("claude-opus-5-5-high"), 200_000);
     }
 
     #[test]
@@ -365,6 +430,7 @@ mod tests {
             permission_mode: botloft_core::protocol::PermissionMode::Default,
             model: botloft_core::protocol::BotModel::Default,
             effort: botloft_core::protocol::BotEffort::Default,
+            agent_model: Some("gemini-3.8-flash-low"),
         };
         let text = |args: Vec<OsString>| -> Vec<String> {
             args.into_iter()
@@ -374,6 +440,8 @@ mod tests {
         let fresh = text(AgyAgent.args(&plan(false)));
         assert!(!fresh.contains(&"--conversation".to_owned()));
         assert_eq!(fresh.last().map(String::as_str), Some("-p="));
+        let at = fresh.iter().position(|a| a == "--model").expect("model");
+        assert_eq!(fresh[at + 1], "gemini-3.8-flash-low");
         let resumed = text(AgyAgent.args(&plan(true)));
         let at = resumed
             .iter()

@@ -38,6 +38,7 @@ export function ContextMeter({ bot, onLater }: { bot: Bot; onLater(text: string)
   const limit = autoCompactTokens ?? windowTokens;
   const near = usedTokens >= limit * NEAR;
   const left = autoCompactTokens === null ? null : autoCompactTokens - usedTokens;
+  const claude = bot.agent === "claude";
   const running = bot.state === "idle" || bot.state === "busy" || bot.state === "needs_approval";
 
   const compact = async () => {
@@ -76,26 +77,31 @@ export function ContextMeter({ bot, onLater }: { bot: Bot; onLater(text: string)
             )}
           </div>
           <p className="mt-2 text-ink-soft text-sm">
-            {left === null
-              ? m.noAuto
-              : left > 0
-                ? m.autoLeft(tokens(left), tokens(autoCompactTokens ?? 0))
-                : m.autoNow}
+            {!claude
+              ? m.estimate
+              : left === null
+                ? m.noAuto
+                : left > 0
+                  ? m.autoLeft(tokens(left), tokens(autoCompactTokens ?? 0))
+                  : m.autoNow}
           </p>
           <p className="mt-1.5 text-muted text-xs">{m.about(bot.name)}</p>
-          <div className="mt-3 border-line border-t pt-3">
-            <Button
-              size="sm"
-              disabled={compacting || !running}
-              aria-busy={compacting}
-              onClick={compact}
-            >
-              {compacting ? m.compacting : m.compact}
-            </Button>
-            <p className="mt-1.5 text-muted text-xs">
-              {running || compacting ? m.compactHint(bot.name) : m.notRunning(bot.name)}
-            </p>
-          </div>
+          {/* Only Claude Code answers a request to compact (spec 30). */}
+          {claude && (
+            <div className="mt-3 border-line border-t pt-3">
+              <Button
+                size="sm"
+                disabled={compacting || !running}
+                aria-busy={compacting}
+                onClick={compact}
+              >
+                {compacting ? m.compacting : m.compact}
+              </Button>
+              <p className="mt-1.5 text-muted text-xs">
+                {running || compacting ? m.compactHint(bot.name) : m.notRunning(bot.name)}
+              </p>
+            </div>
+          )}
         </div>
       )}
       <button

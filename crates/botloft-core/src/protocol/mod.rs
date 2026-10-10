@@ -130,6 +130,8 @@ pub mod method {
     pub const BOTS_SET_PAUSED: &str = "bots.setPaused";
     pub const BOTS_SET_PERMISSION_MODE: &str = "bots.setPermissionMode";
     pub const BOTS_SET_MODEL: &str = "bots.setModel";
+    pub const BOTS_SET_AGENT_MODEL: &str = "bots.setAgentModel";
+    pub const AGENTS_MODELS: &str = "agents.models";
     pub const BOTS_SET_EFFORT: &str = "bots.setEffort";
     pub const BOTS_COMPACT: &str = "bots.compact";
     pub const BOTS_ARCHIVE: &str = "bots.archive";

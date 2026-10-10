@@ -164,6 +164,7 @@ mod tests {
             permission_mode: PermissionMode::Default,
             model,
             effort,
+            agent_model: None,
         }
     }
 

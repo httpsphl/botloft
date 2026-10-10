@@ -288,6 +288,34 @@ pub struct BotsSetModelParams {
     pub model: BotModel,
 }
 
+/// Params of `bots.setAgentModel` (spec 30).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BotsSetAgentModelParams {
+    pub bot_id: BotId,
+    /// An id from `agents.models`; `null` goes back to the agent's default.
+    pub model: Option<String>,
+}
+
+/// Params of `agents.models`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct AgentsModelsParams {
+    pub agent: AgentKind,
+}
+
+/// A model an agent offers.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct AgentModel {
+    pub id: String,
+    /// As the agent names it for people.
+    pub name: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]

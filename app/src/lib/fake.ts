@@ -253,6 +253,10 @@ export class FakeBotloft implements BotloftApi {
       daemonVersion: this.system.daemonVersion,
       protocol: PROTOCOL_VERSION,
     }),
+    "agents.models": () => [
+      { id: "gemini-3.8-flash-low", name: "Gemini 3.8 Flash (Low)" },
+      { id: "gemini-3.8-flash-high", name: "Gemini 3.8 Flash (High)" },
+    ],
     "session.setLocale": ({ locale }) => {
       this.locale = locale;
       return null;
