@@ -97,7 +97,7 @@ pub(super) fn launch_spec(
     daemon: &Daemon,
     crew: &Crew,
     bot: &BotRecord,
-    claude: &Claude,
+    claude: Option<&Claude>,
     session: Option<&str>,
 ) -> io::Result<(SpawnSpec, Launch)> {
     // settings.json and the rules are rewritten on every start.
@@ -116,7 +116,10 @@ pub(super) fn launch_spec(
     let agent = agent::of(bot.agent).ok_or_else(|| {
         io::Error::other(format!("bots on {} cannot start yet", bot.agent.as_str()))
     })?;
-    let program = agent.locate(daemon.supervisor.agy_path(), &claude.path)?;
+    let program = agent.locate(
+        daemon.supervisor.agy_path(),
+        claude.map(|claude| claude.path.as_path()),
+    )?;
     let mcp = workspace.join(".botloft").join("mcp.json");
     let work_folder = daemon.paths.work_folder(crew);
     let args = agent.args(&LaunchPlan {
@@ -156,6 +159,7 @@ pub(super) fn launch_spec(
         port: daemon.port,
         token: &token,
         fenced: &fenced,
+        allowed_commands: &bot.allowed_commands,
     })?;
 
     // The values of the headers and variables of the bot's connected tools,

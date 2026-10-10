@@ -35,6 +35,7 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
         permissionMode: "default",
         agent: agent ?? "claude",
         agentModel: null,
+        allowedCommands: [],
         model: model ?? "default",
         modelInUse: null,
         effort: "default",
@@ -51,7 +52,7 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
       fake.bots.set(bot.id, bot);
       return fake.changedBot(bot);
     },
-    "bots.update": ({ botId, name, role, instructions, color }) => {
+    "bots.update": ({ botId, name, role, instructions, color, allowedCommands }) => {
       const bot = fake.bot(botId);
       if (name !== undefined) {
         bot.name = checkName(name);
@@ -60,6 +61,11 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
       bot.role = role?.trim() ?? bot.role;
       bot.instructions = instructions ?? bot.instructions;
       bot.color = color ?? bot.color;
+      if (allowedCommands !== undefined) {
+        bot.allowedCommands = [
+          ...new Set(allowedCommands.map((line) => line.trim()).filter(Boolean)),
+        ];
+      }
       return fake.changedBot(bot);
     },
     "bots.setPaused": ({ botId, paused }) => {

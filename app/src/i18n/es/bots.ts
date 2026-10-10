@@ -95,6 +95,11 @@ export const bots: Messages["bots"] = {
       "Cómo trabaja este bot, qué puede hacer por su cuenta y cuándo debe preguntar.",
     instructionsHint:
       "Se guardan ahora en las reglas del bot; el bot las lee la próxima vez que se inicie.",
+    commands: {
+      title: "Comandos que este bot puede ejecutar",
+      placeholder: "git status\nnpm test",
+      hint: "Un comando por línea; puede ejecutar estos y lo que empiece con ellos, sin preguntarte. No puede preguntar, así que todo lo demás se rechaza. Un * solo permite ejecutar cualquier cosa. El bot se reinicia para usar la lista.",
+    },
     agent: {
       title: "Agente",
       names: {

@@ -37,6 +37,8 @@ export function BotDialog(props: Props) {
   const custom = color !== undefined && !(AVATAR_PALETTE as readonly string[]).includes(color);
   const [picking, setPicking] = useState(custom);
   const [model, setModel] = useState<BotModel>(editing?.model ?? "default");
+  // One command prefix per line, for a bot whose agent cannot ask (spec 30).
+  const [commands, setCommands] = useState((editing?.allowedCommands ?? []).join("\n"));
   // Which agent runs the bot is chosen once, when it is made (spec 30).
   const agents = useApp((state) => state.system?.enabledAgents ?? CLAUDE_ONLY);
   const [agent, setAgent] = useState<AgentKind>("claude");
@@ -57,6 +59,10 @@ export function BotDialog(props: Props) {
           ...(role !== editing.role && { role }),
           ...(instructions !== editing.instructions && { instructions }),
           ...(color !== undefined && color !== editing.color && { color }),
+          ...(editing.agent !== "claude" &&
+            commands !== editing.allowedCommands.join("\n") && {
+              allowedCommands: commands.split("\n"),
+            }),
         });
         if (model !== editing.model) {
           // The bot restarts on it once nothing is in progress.
@@ -140,6 +146,16 @@ export function BotDialog(props: Props) {
               </p>
             )}
           </div>
+        )}
+        {editing && editing.agent !== "claude" && (
+          <TextArea
+            label={t.bots.dialog.commands.title}
+            value={commands}
+            rows={4}
+            onChange={(event) => setCommands(event.target.value)}
+            placeholder={t.bots.dialog.commands.placeholder}
+            hint={t.bots.dialog.commands.hint}
+          />
         )}
         {runsOn === "claude" && (
           <SelectField

@@ -408,3 +408,116 @@ async fn the_usage_of_a_response_is_how_full_the_conversation_is() {
     assert_eq!(context.window_tokens, 1_000_000);
     assert_eq!(context.auto_compact_tokens, None);
 }
+
+#[tokio::test(start_paused = true)]
+async fn an_agy_bot_starts_without_claude_code_and_a_claude_bot_stays_offline() {
+    let mut settings = test_settings();
+    settings.claude = botloftd::supervisor::ClaudeSource::Discover {
+        configured: r"C:\no\such\claude.exe".to_owned(),
+    };
+    settings.experimental_agents = vec!["agy".to_owned()];
+    settings.agy_path = r"C:\Agy\agy.exe".to_owned();
+    let parts = new_daemon(settings);
+    let crew = crews::create(
+        &parts.daemon,
+        CrewsCreateParams {
+            name: "Ops".into(),
+            work_folder: None,
+            lead: None,
+        },
+    )
+    .expect("crew");
+    let make = |name: &str, agent| {
+        bots::create(
+            &parts.daemon,
+            BotsCreateParams {
+                crew_id: crew.id.clone(),
+                name: name.into(),
+                role: String::new(),
+                instructions: String::new(),
+                color: None,
+                model: None,
+                agent,
+            },
+        )
+        .expect("bot")
+    };
+    let claude = make("Claude bot", None);
+    let agy = make("Agy bot", Some(AgentKind::Agy));
+    tokio::spawn(supervisor::run(Arc::clone(&parts.daemon)));
+
+    // Its process is up although Claude Code was never found.
+    let _process = parts.runtime.process(1).await;
+    for _ in 0..600 {
+        if parts.daemon.supervisor.status(&agy.id).map(|(s, _)| s) == Some(BotState::Idle) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert_eq!(
+        parts.daemon.supervisor.status(&agy.id).map(|(s, _)| s),
+        Some(BotState::Idle)
+    );
+    assert_eq!(
+        parts.daemon.supervisor.status(&claude.id).map(|(s, _)| s),
+        Some(BotState::Offline)
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn the_commands_the_owner_allows_reach_the_rules_of_the_next_process() {
+    let agy = agy_bot().await;
+    let first = agy.runtime.process(1).await;
+    agy.until(BotState::Idle).await;
+    let settings_path = first
+        .spec
+        .cwd
+        .join(".botloft/agy-home/.gemini/antigravity-cli/settings.json");
+    let before: Value =
+        serde_json::from_str(&std::fs::read_to_string(&settings_path).expect("file"))
+            .expect("json");
+    assert_eq!(
+        before["permissions"]["allow"].as_array().map(Vec::len),
+        Some(1)
+    );
+
+    let bot = bots::update(
+        &agy.daemon,
+        botloft_core::protocol::BotsUpdateParams {
+            bot_id: agy.bot.clone(),
+            name: None,
+            role: None,
+            instructions: None,
+            color: None,
+            allowed_commands: Some(vec![
+                " git status ".into(),
+                "npm test".into(),
+                "git status".into(),
+            ]),
+        },
+    )
+    .expect("update");
+    assert_eq!(bot.allowed_commands, ["git status", "npm test"]);
+
+    let _second = agy.runtime.process(2).await;
+    let after: Value =
+        serde_json::from_str(&std::fs::read_to_string(&settings_path).expect("file"))
+            .expect("json");
+    let allow = after["permissions"]["allow"].as_array().expect("allow");
+    assert!(allow.contains(&json!("command(git status)")));
+    assert!(allow.contains(&json!("command(npm test)")));
+
+    // A line or a closing parenthesis would break the rule it goes into.
+    let refused = bots::update(
+        &agy.daemon,
+        botloft_core::protocol::BotsUpdateParams {
+            bot_id: agy.bot.clone(),
+            name: None,
+            role: None,
+            instructions: None,
+            color: None,
+            allowed_commands: Some(vec!["a) b".into()]),
+        },
+    );
+    assert!(refused.is_err());
+}

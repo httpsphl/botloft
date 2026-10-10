@@ -31,9 +31,11 @@ impl Agent for ClaudeAgent {
         AgentKind::Claude
     }
 
-    fn locate(&self, _configured: &str, claude: &Path) -> io::Result<PathBuf> {
+    fn locate(&self, _configured: &str, claude: Option<&Path>) -> io::Result<PathBuf> {
         // Found and checked by the supervisor, which keeps it up to date.
-        Ok(claude.to_path_buf())
+        claude
+            .map(Path::to_path_buf)
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Claude Code was not found"))
     }
 
     fn args(&self, plan: &LaunchPlan<'_>) -> Vec<OsString> {

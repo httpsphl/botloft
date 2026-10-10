@@ -33,7 +33,7 @@ impl Agent for AgyAgent {
         AgentKind::Agy
     }
 
-    fn locate(&self, configured: &str, _claude: &Path) -> io::Result<PathBuf> {
+    fn locate(&self, configured: &str, _claude: Option<&Path>) -> io::Result<PathBuf> {
         let configured = configured.trim();
         if !configured.is_empty() {
             return Ok(PathBuf::from(configured));
@@ -111,7 +111,10 @@ impl Agent for AgyAgent {
             },
         });
         std::fs::write(config.join("mcp_config.json"), pretty(&mcp))?;
-        std::fs::write(cli.join("settings.json"), pretty(&settings(files.fenced)))?;
+        std::fs::write(
+            cli.join("settings.json"),
+            pretty(&settings(files.fenced, files.allowed_commands)),
+        )?;
         // The rules `prepare_bot` wrote for Claude Code are the bot's rules;
         // `agy` reads `AGENTS.md` from its folder.
         let rules = files
@@ -167,16 +170,18 @@ fn rule_path(path: &Path) -> String {
 /// `settings.json` (spec 30.3): only Botloft's MCP tools run without asking,
 /// since in `-p` nothing can ask; whatever else needs a permission is denied
 /// by `agy` itself. Reads and writes of the fenced folders are denied.
-fn settings(fenced: &[PathBuf]) -> Value {
+fn settings(fenced: &[PathBuf], commands: &[String]) -> Value {
     let mut deny = Vec::new();
     for folder in fenced {
         let folder = rule_path(folder);
         deny.push(format!("read_file({folder})"));
         deny.push(format!("write_file({folder})"));
     }
+    let mut allow = vec!["mcp(botloft/*)".to_owned()];
+    allow.extend(commands.iter().map(|command| format!("command({command})")));
     json!({
         "permissions": {
-            "allow": ["mcp(botloft/*)"],
+            "allow": allow,
             "deny": deny,
         },
     })
@@ -457,11 +462,12 @@ mod tests {
             "C:/Users/x/Botloft/a"
         );
         assert_eq!(rule_path(Path::new(r"\\?\C:\Users\x")), "C:/Users/x");
-        let settings = settings(&[PathBuf::from(r"C:\Data")]);
+        let settings = settings(&[PathBuf::from(r"C:\Data")], &["git status".to_owned()]);
         let deny = settings["permissions"]["deny"].as_array().expect("deny");
         assert!(deny.contains(&json!("write_file(C:/Data)")));
         assert!(deny.contains(&json!("read_file(C:/Data)")));
         assert_eq!(settings["permissions"]["allow"][0], "mcp(botloft/*)");
+        assert_eq!(settings["permissions"]["allow"][1], "command(git status)");
     }
 
     #[test]

@@ -262,6 +262,10 @@ pub struct BotsUpdateParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub color: Option<String>,
+    /// For a bot not on Claude Code; replaces the whole list.
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub allowed_commands: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

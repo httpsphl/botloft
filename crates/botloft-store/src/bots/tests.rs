@@ -35,6 +35,7 @@ fn bot(crew: &CrewId, handle: &str, created_at: i64) -> BotRecord {
         permission_mode: PermissionMode::Default,
         agent: AgentKind::Claude,
         agent_model: None,
+        allowed_commands: Vec::new(),
         model: BotModel::Default,
         model_in_use: None,
         effort: BotEffort::Default,

@@ -40,8 +40,15 @@ export function Workspace() {
   const loadError = useApp((state) => state.loadError);
   const hasCrews = useApp((state) => Object.keys(state.crews).length > 0);
   const page = useApp((state) => state.page);
-  const runtimeError = useApp((state) => state.system?.runtimeError ?? null);
-  const signedOut = useApp((state) => state.system?.claudeSignedIn === false);
+  // Claude Code missing or signed out only matters to bots that run on it.
+  const needsClaude = useApp((state) => {
+    const bots = Object.values(state.bots);
+    return bots.length === 0 || bots.some((bot) => bot.agent === "claude");
+  });
+  const runtimeError = useApp((state) =>
+    needsClaude ? (state.system?.runtimeError ?? null) : null,
+  );
+  const signedOut = useApp((state) => needsClaude && state.system?.claudeSignedIn === false);
   useAttentionMark();
   useTray();
   useBotAlerts();

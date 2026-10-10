@@ -166,7 +166,7 @@ pub fn agent_models(daemon: &Daemon, params: AgentsModelsParams) -> ApiResult<Ve
     let agent = crate::agent::of(AgentKind::Agy)
         .ok_or_else(|| ApiError::validation("agy is not available"))?;
     let program = agent
-        .locate(daemon.supervisor.agy_path(), std::path::Path::new(""))
+        .locate(daemon.supervisor.agy_path(), None)
         .map_err(|err| ApiError::Conflict(err.to_string()))?;
     let models = crate::agent::agy_models(&program)
         .map_err(|err| ApiError::Conflict(format!("could not list the models: {err}")))?;
