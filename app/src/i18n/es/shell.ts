@@ -13,8 +13,8 @@ export const shell: Messages["shell"] = {
     home: "Inicio",
   },
   sidebar: {
-    hide: "Ocultar la lista de bots",
-    show: "Mostrar la lista de bots",
+    hide: "Ocultar la lista de agentes",
+    show: "Mostrar la lista de agentes",
   },
   zoom: {
     level: (percent: number, isDefault: boolean) =>
@@ -30,9 +30,9 @@ export const shell: Messages["shell"] = {
   },
   loadFailed: "No se pudieron cargar tus equipos",
   recycleFailed: (path: string) => `La carpeta ${path} no fue a la Papelera y sigue allí`,
-  botsCantStart: "Los bots no pueden iniciar",
+  botsCantStart: "Los agentes no pueden iniciar",
   signIn: {
     title: "Inicia sesión en Claude",
-    body: "Tus bots trabajan con tu cuenta de Claude. Inicia sesión una vez y empiezan solos.",
+    body: "Tus agentes trabajan con tu cuenta de Claude. Inicia sesión una vez y empiezan solos.",
   },
 };

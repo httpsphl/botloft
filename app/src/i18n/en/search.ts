@@ -9,7 +9,7 @@ export const search = {
   placeholder: "Find words in your chats",
   scope: "Where to search",
   allCrews: "All crews",
-  hint: "Finds words in what you, other bots and Botloft wrote to your bots, in what they replied and in their questions.",
+  hint: "Finds words in what you, other agents and Botloft wrote to your agents, in what they replied and in their questions.",
   tooShort: "Type at least 2 letters",
   results: "Results",
   nothing: (query: string) => `Nothing found for “${query}”`,
@@ -20,6 +20,6 @@ export const search = {
   /** Who wrote what was found. */
   you: "You",
   botloft: "Botloft",
-  goneBot: "A bot no longer in the crew",
+  goneBot: "An agent no longer in the crew",
   openHere: (bot: string) => `Open the chat with ${bot} here`,
 };

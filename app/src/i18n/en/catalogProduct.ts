@@ -46,8 +46,8 @@ export const product = {
     summary:
       "Keeps the crew's work moving in small steps, with regular check-ins and honest looks back",
     about:
-      "Keeps a simple board of what is next, in progress and done, asks the bots for quick updates and leads a look back at the end of each round to change one thing.",
-    when: "When the crew has many bots and work keeps getting stuck or forgotten.",
+      "Keeps a simple board of what is next, in progress and done, asks the agents for quick updates and leads a look back at the end of each round to change one thing.",
+    when: "When the crew has many agents and work keeps getting stuck or forgotten.",
     pairs: "Project Manager, for the plan, and Meeting Secretary.",
   },
   "goals-coach": {

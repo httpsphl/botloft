@@ -18,7 +18,7 @@ function crew() {
 const messages = () => screen.getByRole("list", { name: "Messages" });
 
 describe("messages", () => {
-  test("the crew timeline shows what bots send and what the owner writes", async () => {
+  test("the crew timeline shows what agents send and what the owner writes", async () => {
     const { fake, lead, writer } = crew();
     const { delivery } = fake.conversation.say({
       from: lead.id,
@@ -39,7 +39,7 @@ describe("messages", () => {
     const sent = await within(messages()).findByText("Ship it today");
     const sentRow = sent.closest("li") as HTMLElement;
     expect(within(sentRow).getByText("You")).toBeDefined();
-    expect(within(sentRow).getByText("Waiting for the bot")).toBeDefined();
+    expect(within(sentRow).getByText("Waiting for the agent")).toBeDefined();
     expect(fake.calls.at(-1)).toEqual({
       method: "messages.send",
       params: { botId: writer.id, body: "Ship it today" },
@@ -51,7 +51,7 @@ describe("messages", () => {
     expect(within(sentRow).getByText("Delivered")).toBeDefined();
   });
 
-  test("a message the bot has read gets its two marks in blue, with the word beside them", async () => {
+  test("a message the agent has read gets its two marks in blue, with the word beside them", async () => {
     const { fake, lead, writer } = crew();
     const { delivery } = fake.conversation.say({
       from: lead.id,
@@ -101,12 +101,12 @@ describe("messages", () => {
   test("a message that was not delivered can be retried from the title bar", async () => {
     const { fake, lead, writer } = crew();
     const { delivery } = fake.conversation.say({ from: lead.id, to: writer.id, body: "lost note" });
-    fake.conversation.deliver(delivery.id, "dead", "the bot's inbox did not answer");
+    fake.conversation.deliver(delivery.id, "dead", "the agent's inbox did not answer");
     const { host } = renderApp(fake);
     fireEvent.click(await screen.findByRole("button", { name: "1 not delivered" }));
     const dialog = screen.getByRole("dialog", { name: "Messages not delivered" });
     expect(await within(dialog).findByText("lost note")).toBeDefined();
-    expect(within(dialog).getByText("the bot's inbox did not answer")).toBeDefined();
+    expect(within(dialog).getByText("the agent's inbox did not answer")).toBeDefined();
     expect(host.attention).toBe(true);
     fireEvent.click(within(dialog).getByRole("button", { name: "Retry all" }));
     await vi.waitFor(() =>
@@ -126,10 +126,10 @@ describe("messages", () => {
     const row = (await within(messages()).findByText("stuck")).closest("li") as HTMLElement;
     expect(within(row).getByText("Not delivered")).toBeDefined();
     fireEvent.click(within(row).getByRole("button", { name: "Retry" }));
-    expect(await within(row).findByText("Waiting for the bot")).toBeDefined();
+    expect(await within(row).findByText("Waiting for the agent")).toBeDefined();
   });
 
-  test("a bot waiting for approval marks the taskbar icon", async () => {
+  test("an agent waiting for approval marks the taskbar icon", async () => {
     const { fake, lead } = crew();
     const { host } = renderApp(fake);
     await crewOpened("Ops");

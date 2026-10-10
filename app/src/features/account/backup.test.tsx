@@ -57,7 +57,7 @@ describe("backup", () => {
 
     type(field, FAKE_PASSPHRASE);
     fireEvent.click(within(dialog).getByRole("button", { name: "Open" }));
-    expect(await within(dialog).findByText("Ops: 2 bots")).toBeDefined();
+    expect(await within(dialog).findByText("Ops: 2 agents")).toBeDefined();
     fireEvent.click(within(dialog).getByRole("button", { name: "Restore and restart" }));
     await waitFor(() => expect(host.installs).toContain("restart"));
     expect(fake.calls.some((each) => each.method === "backup.confirm")).toBe(true);

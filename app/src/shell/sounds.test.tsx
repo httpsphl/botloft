@@ -81,7 +81,7 @@ describe("app sounds", () => {
     expect(played()).toEqual(["reply", "file"]);
   });
 
-  test("a spark for a new bot, and nothing while Botloft is behind", async () => {
+  test("a spark for a new agent, and nothing while Botloft is behind", async () => {
     const { fake, host, ops } = await scoutOpen();
     act(() => {
       fake.addBot(ops.id, "Clerk", "Files things");
@@ -95,7 +95,7 @@ describe("app sounds", () => {
     expect(played()).toEqual(["spark"]);
   });
 
-  test("never two within a moment, except a bot that needs the owner", () => {
+  test("never two within a moment, except an agent that needs the owner", () => {
     playSound("reply");
     playSound("file");
     playSound("needs");

@@ -4,7 +4,7 @@ export const updates = {
   available: "Update available",
   title: "Update Botloft",
   ready: (version: string) =>
-    `Botloft ${version} is ready. Botloft closes, installs the update and opens again. Your bots pause for a moment and pick up where they left off.`,
+    `Botloft ${version} is ready. Botloft closes, installs the update and opens again. Your agents pause for a moment and pick up where they left off.`,
   whatsNew: "What's new",
   later: "Later",
   updateNow: "Update now",

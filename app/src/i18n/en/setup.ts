@@ -1,7 +1,7 @@
 // The window people install Botloft with (spec 15.7).
 
 export const setup = {
-  tagline: "Always-on bots that work together for you.",
+  tagline: "Always-on agents that work together for you.",
   install: "Install",
   update: "Update",
   forYou: "Installs just for you, without asking for an administrator.",
@@ -10,7 +10,7 @@ export const setup = {
   newer: (installed: string) => `You already have a newer version (${installed}).`,
   open: "Open Botloft",
   reinstall: "Install again",
-  appOpen: "Botloft is open and closes to install. Your bots keep working.",
+  appOpen: "Botloft is open and closes to install. Your agents keep working.",
   installing: "Installing Botloft…",
   installingLine: "This takes a few seconds.",
   progress: "Installing",

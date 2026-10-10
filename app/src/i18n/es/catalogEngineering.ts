@@ -66,7 +66,7 @@ export const engineering: typeof en = {
     role: "Revisa tu propio código y tu configuración en busca de fallos de seguridad y explica cómo corregirlos",
     summary: "Busca fallos de seguridad en tu código y tu configuración y explica cómo corregirlos",
     about:
-      "Revisa tu código y tu configuración en busca de fallos, explica cada uno con palabras sencillas, su gravedad y la corrección más pequeña. Trabaja a la defensiva, solo sobre lo que es tuyo, y nunca repite un secreto que encuentre. Piensa más a fondo que la mayoría de los bots, así que gasta un poco más de tu plan.",
+      "Revisa tu código y tu configuración en busca de fallos, explica cada uno con palabras sencillas, su gravedad y la corrección más pequeña. Trabaja a la defensiva, solo sobre lo que es tuyo, y nunca repite un secreto que encuentre. Piensa más a fondo que la mayoría de los agentes, así que gasta un poco más de tu plan.",
     when: "Antes de lanzar, después de un cambio grande, o cuando manejas datos de otras personas.",
     pairs: "Desarrollador e Ingeniero DevOps, que aplican las correcciones, y Revisor de código.",
   },

@@ -27,7 +27,7 @@ export function seedChief(fake: FakeBotloft): void {
       workFolder: "D:\\Projects\\Bakery site",
       lead: {
         name: "Chief",
-        role: "Leads the crew: plans the work, suggests new bots and hands out tasks",
+        role: "Leads the crew: plans the work, suggests new agents and hands out tasks",
         instructions: "Build and keep up the website of my bakery.",
       },
     })

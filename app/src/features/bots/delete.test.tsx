@@ -26,13 +26,13 @@ const inSidebar = (name: string) =>
 
 /** Picks Delete in the open bot's menu and returns the confirmation. */
 function askToDelete(name: string) {
-  fireEvent.click(screen.getByRole("button", { name: "More bot actions" }));
-  fireEvent.click(screen.getByRole("menuitem", { name: "Delete bot" }));
+  fireEvent.click(screen.getByRole("button", { name: "More agent actions" }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "Delete agent" }));
   return screen.getByRole("dialog", { name: `Delete ${name}?` });
 }
 
-describe("deleting a bot", () => {
-  test("says what goes and what stays, then removes the bot", async () => {
+describe("deleting an agent", () => {
+  test("says what goes and what stays, then removes the agent", async () => {
     const { fake, scout } = await twoBots();
     openBot("Scout");
     await screen.findByRole("heading", { level: 1, name: "Scout" });
@@ -44,7 +44,7 @@ describe("deleting a bot", () => {
     expect(within(dialog).getByText(scout.workspace)).toBeDefined();
     expect(dialog.textContent).not.toContain("without a chief");
 
-    fireEvent.click(within(dialog).getByRole("button", { name: "Delete bot" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete agent" }));
     // Back on the crew's page, without the bot.
     await waitFor(() => expect(inSidebar("Scout")).toBeNull());
     expect(screen.getByRole("heading", { level: 1, name: "Ops" })).toBeDefined();
@@ -53,7 +53,7 @@ describe("deleting a bot", () => {
     expect(inSidebar("Writer")).not.toBeNull();
   });
 
-  test("cancelling keeps the bot", async () => {
+  test("cancelling keeps the agent", async () => {
     const { fake, scout } = await twoBots();
     openBot("Scout");
     await screen.findByRole("heading", { level: 1, name: "Scout" });
@@ -64,17 +64,17 @@ describe("deleting a bot", () => {
     expect(fake.calls.some((call) => call.method === "bots.delete")).toBe(false);
   });
 
-  test("works from the right-click menu, for a bot that is not open", async () => {
+  test("works from the right-click menu, for an agent that is not open", async () => {
     const { fake, scout } = await twoBots();
     openBot("Writer");
     await screen.findByRole("heading", { level: 1, name: "Writer" });
     fireEvent.contextMenu(inSidebar("Scout") as HTMLElement, { clientX: 80, clientY: 120 });
     const menu = screen.getByRole("menu", { name: "Actions for Scout" });
     // Delete comes last, after Archive.
-    expect(within(menu).getAllByRole("menuitem").at(-1)?.textContent).toBe("Delete bot");
-    fireEvent.click(within(menu).getByRole("menuitem", { name: "Delete bot" }));
+    expect(within(menu).getAllByRole("menuitem").at(-1)?.textContent).toBe("Delete agent");
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "Delete agent" }));
     const dialog = screen.getByRole("dialog", { name: "Delete Scout?" });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Delete bot" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete agent" }));
     await waitFor(() => expect(inSidebar("Scout")).toBeNull());
     expect(fake.bots.has(scout.id)).toBe(false);
     expect(screen.getByRole("heading", { level: 1, name: "Writer" })).toBeDefined();
@@ -89,26 +89,26 @@ describe("deleting a bot", () => {
     expect(dialog.textContent).toContain("Ops will be left without a chief.");
   });
 
-  test("a delete that fails says so and keeps the bot", async () => {
+  test("a delete that fails says so and keeps the agent", async () => {
     const { fake, scout } = await twoBots();
     openBot("Scout");
     await screen.findByRole("heading", { level: 1, name: "Scout" });
     const dialog = askToDelete("Scout");
     fake.failNext("bots.delete", new RpcError(-32603, "internal error"));
-    fireEvent.click(within(dialog).getByRole("button", { name: "Delete bot" }));
-    await screen.findByText(/Could not delete the bot/);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete agent" }));
+    await screen.findByText(/Could not delete the agent/);
     expect(fake.bots.has(scout.id)).toBe(true);
     expect(inSidebar("Scout")).not.toBeNull();
   });
 
-  test("what it sent stays in the timeline, from a bot no longer in the crew", async () => {
+  test("what it sent stays in the timeline, from an agent no longer in the crew", async () => {
     const { fake, scout, writer } = await twoBots();
     fake.conversation.say({ from: scout.id, to: writer.id, body: "The draft is in shared/." });
     await fake.call("bots.delete", { botId: scout.id });
     openTab("Timeline");
     const timeline = screen.getByRole("tabpanel", { name: "Timeline" });
     const message = (await within(timeline).findByText("The draft is in shared/.")).closest("li");
-    expect(message?.textContent).toContain("a bot no longer in the crew");
+    expect(message?.textContent).toContain("an agent no longer in the crew");
   });
 });
 
@@ -119,7 +119,7 @@ describe("deleting a crew", () => {
     return screen.getByRole("dialog", { name: `Delete ${name}?` });
   }
 
-  test("says what goes and what stays, then removes the crew and its bots", async () => {
+  test("says what goes and what stays, then removes the crew and its agents", async () => {
     const { fake, crew, scout } = await twoBots();
     const docs = fake.addCrew("Docs");
     await waitFor(() =>
@@ -127,7 +127,7 @@ describe("deleting a crew", () => {
     );
     const dialog = askToDeleteCrew("Ops");
     expect(dialog.textContent).toContain(
-      "Ops and its 2 bots stop now and leave Botloft for good, with their conversations, routines and tasks. This can't be undone.",
+      "Ops and its 2 agents stop now and leave Botloft for good, with their conversations, routines and tasks. This can't be undone.",
     );
     expect(dialog.textContent).toContain("The folders stay on your computer");
     expect(within(dialog).getByText(crew.workFolder)).toBeDefined();
@@ -154,7 +154,7 @@ describe("deleting a crew", () => {
 
     fake.addBot(crew.id, "Scout");
     await waitFor(() => expect(inSidebar("Scout")).not.toBeNull());
-    expect(askToDeleteCrew("Ops").textContent).toContain("Ops and its bot stop now");
+    expect(askToDeleteCrew("Ops").textContent).toContain("Ops and its agent stop now");
   });
 
   test("the last crew gone, the app is back at the start", async () => {
@@ -170,7 +170,7 @@ describe("sending the folder to the Recycle Bin", () => {
   const box = (dialog: HTMLElement, name: string) =>
     within(dialog).getByRole("checkbox", { name }) as HTMLInputElement;
 
-  test("is off until the owner asks, then the bot's folder goes with it", async () => {
+  test("is off until the owner asks, then the agent's folder goes with it", async () => {
     const { fake, scout } = await twoBots();
     openBot("Scout");
     await screen.findByRole("heading", { level: 1, name: "Scout" });
@@ -185,7 +185,7 @@ describe("sending the folder to the Recycle Bin", () => {
     expect(dialog.textContent).not.toContain("stays on your computer");
     expect(within(dialog).getByText(scout.workspace)).toBeDefined();
 
-    fireEvent.click(within(dialog).getByRole("button", { name: "Delete bot" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete agent" }));
     await waitFor(() => expect(inSidebar("Scout")).toBeNull());
     expect(lastCall(fake)).toEqual({
       method: "bots.delete",
@@ -201,7 +201,7 @@ describe("sending the folder to the Recycle Bin", () => {
     await screen.findByRole("heading", { level: 1, name: "Scout" });
     const dialog = askToDelete("Scout");
     fireEvent.click(box(dialog, "Move this folder to the Recycle Bin"));
-    fireEvent.click(within(dialog).getByRole("button", { name: "Delete bot" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete agent" }));
 
     const notice = await screen.findByText(/did not go to the Recycle Bin/);
     expect(notice.textContent).toBe(

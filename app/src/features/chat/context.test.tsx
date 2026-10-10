@@ -115,7 +115,7 @@ describe("conversation space", () => {
     expect(within(sidebar()).queryByText(/compacted/)).toBeNull();
   });
 
-  test("a busy bot compacts when it finishes what it is doing", async () => {
+  test("a busy agent compacts when it finishes what it is doing", async () => {
     const { fake, scout } = await openScout();
     act(() => fake.setBotState(scout.id, "busy"));
     fireEvent.click(within(open()).getByRole("button", { name: "Compact now" }));
@@ -124,7 +124,7 @@ describe("conversation space", () => {
     ).toBeDefined();
   });
 
-  test("a bot that is not running cannot compact", async () => {
+  test("an agent that is not running cannot compact", async () => {
     const { fake, scout } = await openScout();
     act(() => fake.setBotState(scout.id, "offline"));
     const menu = open();

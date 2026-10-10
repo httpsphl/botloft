@@ -43,7 +43,7 @@ describe("what waits for the owner", () => {
     expect(screen.getByText("Nothing is waiting for you")).toBeTruthy();
   });
 
-  test("shows a request with what the bot says it is for, and the whole of it a tap away", async () => {
+  test("shows a request with what the agent says it is for, and the whole of it a tap away", async () => {
     const phone = new FakePhone();
     phone.add(approval());
     render(<PhoneApp api={phone} />);
@@ -56,7 +56,7 @@ describe("what waits for the owner", () => {
     expect(screen.getByText("git status --short")).toBeTruthy();
   });
 
-  test("warns when the bot did not say what a command is for", () => {
+  test("warns when the agent did not say what a command is for", () => {
     const phone = new FakePhone();
     const { explanation: _unsaid, ...unexplained } = approval();
     phone.add(unexplained);
@@ -68,7 +68,7 @@ describe("what waits for the owner", () => {
     const phone = new FakePhone();
     phone.add(approval());
     render(<PhoneApp api={phone} />);
-    fireEvent.change(screen.getByLabelText("Note for the bot (optional)"), {
+    fireEvent.change(screen.getByLabelText("Note for the agent (optional)"), {
       target: { value: "go on" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Allow" }));

@@ -34,7 +34,7 @@ const answered = (fake: FakeBotloft) =>
     | { allow: boolean; input?: string; note?: string }
     | undefined;
 
-describe("a bot changing or deleting its routine", () => {
+describe("an agent changing or deleting its routine", () => {
   test("the change shows before and after, and goes as asked", async () => {
     const { fake, mail } = await openMail();
     const after = {

@@ -25,13 +25,13 @@ describe("app updates", () => {
   test("a new version installs in one click, in plain words", async () => {
     const host = new FakeHost();
     const update = new FakeUpdate("0.2.0");
-    update.notes = "Bots start faster.";
+    update.notes = "Agents start faster.";
     host.update = update;
     renderApp(host);
     fireEvent.click(await screen.findByRole("button", { name: "Update available" }));
     const dialog = screen.getByRole("dialog", { name: "Update Botloft" });
     expect(dialog.textContent).toContain("Botloft 0.2.0 is ready");
-    expect(dialog.textContent).toContain("Bots start faster.");
+    expect(dialog.textContent).toContain("Agents start faster.");
     fireEvent.click(within(dialog).getByRole("button", { name: "Update now" }));
     expect(await within(dialog).findByText("Downloading… 50%")).toBeDefined();
     expect(update.installs).toBe(1);

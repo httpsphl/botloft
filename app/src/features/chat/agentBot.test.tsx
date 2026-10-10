@@ -25,7 +25,7 @@ async function agyBot() {
   return fake;
 }
 
-describe("a bot that runs on another agent", () => {
+describe("an agent that runs on another agent", () => {
   test("shows its models, not Claude's, and picks one", async () => {
     const fake = await agyBot();
     expect(screen.queryByRole("button", { name: /^Effort:/ })).toBeNull();
@@ -51,7 +51,7 @@ describe("a bot that runs on another agent", () => {
 });
 
 describe("what an agent that cannot ask needs from the owner", () => {
-  test("the commands it may run are a list in the bot's edit dialog", async () => {
+  test("the commands it may run are a list in the agent's edit dialog", async () => {
     const fake = await agyBot();
     const bot = [...fake.bots.values()][0];
     expect(bot?.allowedCommands).toEqual([]);
@@ -63,7 +63,7 @@ describe("what an agent that cannot ask needs from the owner", () => {
     const menu = await screen.findByRole("menu", { name: "Actions for Zed" });
     fireEvent.click(within(menu).getByRole("menuitem", { name: "Edit" }));
     const dialog = within(await screen.findByRole("dialog", { name: /Edit Zed/ }));
-    fireEvent.change(dialog.getByLabelText("Commands this bot may run"), {
+    fireEvent.change(dialog.getByLabelText("Commands this agent may run"), {
       target: { value: "git status\n npm test \ngit status" },
     });
     fireEvent.click(dialog.getByRole("button", { name: "Save" }));
@@ -72,7 +72,7 @@ describe("what an agent that cannot ask needs from the owner", () => {
 });
 
 describe("Claude Code missing", () => {
-  test("is only a warning for someone who has a bot that runs on it", async () => {
+  test("is only a warning for someone who has an agent that runs on it", async () => {
     const make = async (agent: "claude" | "agy") => {
       const fake = new FakeBotloft();
       fake.system = { ...fake.system, runtimeError: "Claude Code was not found" };
@@ -82,14 +82,14 @@ describe("Claude Code missing", () => {
       await crewOpened("Ops");
     };
     await make("agy");
-    expect(screen.queryByText("Bots can't start")).toBeNull();
+    expect(screen.queryByText("Agents can't start")).toBeNull();
     cleanup();
     await make("claude");
-    expect(await screen.findByText("Bots can't start")).toBeDefined();
+    expect(await screen.findByText("Agents can't start")).toBeDefined();
   });
 });
 
-describe("a Codex bot", () => {
+describe("a Codex agent", () => {
   test("has an effort and a model list under the message box", async () => {
     const fake = new FakeBotloft();
     const crew = fake.addCrew("Ops");

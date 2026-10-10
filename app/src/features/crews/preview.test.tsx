@@ -5,7 +5,7 @@ import { crewOpened, renderApp, sidebar } from "../../test/app";
 
 afterEach(cleanup);
 
-test("a bot's last reply shows in the list as plain words, a command as it is", async () => {
+test("an agent's last reply shows in the list as plain words, a command as it is", async () => {
   const fake = new FakeBotloft();
   const crew = fake.addCrew("Bakery");
   const sales = fake.addBot(crew.id, "Sales");

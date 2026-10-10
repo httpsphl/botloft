@@ -42,8 +42,8 @@ const address = () => within(panel()).getByRole("textbox", { name: "Address" }) 
 const called = (fake: FakeBotloft, method: string) =>
   fake.calls.filter((call) => call.method === method).map((call) => call.params);
 
-describe("the tabs of the bot's browser", () => {
-  test("show what the bot has open, by title and site, and only show until the owner takes it", async () => {
+describe("the tabs of the agent's browser", () => {
+  test("show what the agent has open, by title and site, and only show until the owner takes it", async () => {
     const { fake, scout } = crew();
     await openPanel(fake, scout.id);
     expect(selected()).toEqual([

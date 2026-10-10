@@ -26,7 +26,7 @@ describe("color space", () => {
   });
 });
 
-describe("picking a bot's color", () => {
+describe("picking an agent's color", () => {
   async function editScout() {
     const fake = new FakeBotloft();
     const crew = fake.addCrew("Ops");
@@ -35,7 +35,7 @@ describe("picking a bot's color", () => {
     await crewOpened("Ops");
     openBot("Scout");
     await screen.findByRole("heading", { level: 1, name: "Scout" });
-    fireEvent.click(screen.getByRole("button", { name: "More bot actions" }));
+    fireEvent.click(screen.getByRole("button", { name: "More agent actions" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Edit" }));
     return { fake, scout, dialog: screen.getByRole("dialog", { name: "Edit Scout" }) };
   }
@@ -69,7 +69,7 @@ describe("picking a bot's color", () => {
     await waitFor(() => expect(fake.bots.get(scout.id)?.color).toBe("#0080FF"));
   });
 
-  test("a bot with a color outside the palette opens with the picker", async () => {
+  test("an agent with a color outside the palette opens with the picker", async () => {
     const fake = new FakeBotloft();
     const crew = fake.addCrew("Ops");
     const scout = fake.addBot(crew.id, "Scout");
@@ -78,7 +78,7 @@ describe("picking a bot's color", () => {
     await crewOpened("Ops");
     openBot("Scout");
     await screen.findByRole("heading", { level: 1, name: "Scout" });
-    fireEvent.click(screen.getByRole("button", { name: "More bot actions" }));
+    fireEvent.click(screen.getByRole("button", { name: "More agent actions" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Edit" }));
     const dialog = screen.getByRole("dialog", { name: "Edit Scout" });
     expect((within(dialog).getByLabelText("Hex") as HTMLInputElement).value).toBe("#123ABC");

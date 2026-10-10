@@ -33,7 +33,7 @@ describe("settings", () => {
     });
     const start = within(dialog).getByRole("switch", { name: `Start with ${SYSTEM}` });
     const awake = within(dialog).getByRole("switch", {
-      name: "Keep the computer awake while bots work",
+      name: "Keep the computer awake while agents work",
     });
     await waitFor(() => expect(start.hasAttribute("disabled")).toBe(false));
     expect([keep, start, awake].map((s) => s.getAttribute("aria-checked"))).toEqual([
@@ -41,16 +41,16 @@ describe("settings", () => {
       "true",
       "true",
     ]);
-    expect(dialog.textContent).toContain("Your bots go on working and answering");
+    expect(dialog.textContent).toContain("Your agents go on working and answering");
 
     fireEvent.click(keep);
     expect(keep.getAttribute("aria-checked")).toBe("false");
-    expect(dialog.textContent).toContain("Closing Botloft stops every bot.");
+    expect(dialog.textContent).toContain("Closing Botloft stops every agent.");
     expect(localStorage.getItem("botloft.whenClosed")).toBe("stop");
 
     fireEvent.click(start);
     expect(start.getAttribute("aria-checked")).toBe("false");
-    expect(dialog.textContent).toContain("the bots wait until you open Botloft");
+    expect(dialog.textContent).toContain("the agents wait until you open Botloft");
     fireEvent.click(awake);
     await waitFor(() =>
       expect(fake.settings).toEqual({
@@ -95,12 +95,12 @@ describe("settings", () => {
     fireEvent.click(within(dialog).getByRole("tab", { name: "Notifications" }));
     const on = (name: string) =>
       within(dialog).getByRole("switch", { name }).getAttribute("aria-checked");
-    expect([on("When a bot needs you"), on("When a bot finishes"), on("Play a sound")]).toEqual([
-      "true",
-      "false",
-      "true",
-    ]);
-    fireEvent.click(within(dialog).getByRole("switch", { name: "When a bot finishes" }));
+    expect([
+      on("When an agent needs you"),
+      on("When an agent finishes"),
+      on("Play a sound"),
+    ]).toEqual(["true", "false", "true"]);
+    fireEvent.click(within(dialog).getByRole("switch", { name: "When an agent finishes" }));
     expect(prefs.notifyDone.get()).toBe(true);
     expect(dialog.textContent).not.toContain("notifications only come");
     act(() => prefs.tray.set(false));
@@ -136,7 +136,7 @@ describe("settings", () => {
 });
 
 describe("closing the window", () => {
-  test("leaves the bots working: near the clock, or closed without the icon", async () => {
+  test("leaves the agents working: near the clock, or closed without the icon", async () => {
     const { host } = renderApp();
     await screen.findByRole("heading", { name: "Welcome to Botloft" });
     await waitFor(() => expect(host.tray).not.toBeNull());
@@ -147,7 +147,7 @@ describe("closing the window", () => {
     expect([host.closed, host.stops]).toEqual([true, 0]);
   });
 
-  test("stops the bots, with the window out of sight first, when chosen", async () => {
+  test("stops the agents, with the window out of sight first, when chosen", async () => {
     const { host } = renderApp();
     await screen.findByRole("heading", { name: "Welcome to Botloft" });
     prefs.whenClosed.set("stop");
@@ -157,7 +157,7 @@ describe("closing the window", () => {
     expect(host.closed).toBe(true);
   });
 
-  test("opening Botloft again starts the bots it stopped", async () => {
+  test("opening Botloft again starts the agents it stopped", async () => {
     prefs.whenClosed.set("stop");
     const host = new FakeHost();
     host.status = { state: "stopped", port: 45710, home: "C:\\data" };
@@ -168,7 +168,7 @@ describe("closing the window", () => {
         finish = () => resolve(installed as never);
       });
     renderApp(new FakeBotloft(), host);
-    expect(await screen.findByText("Starting your bots…")).toBeDefined();
+    expect(await screen.findByText("Starting your agents…")).toBeDefined();
     expect(screen.queryByText(/In Settings you choose/)).toBeNull();
     await act(async () => finish());
     expect(await screen.findByText(/Running while this window is open/)).toBeDefined();
@@ -180,7 +180,7 @@ describe("closing the window", () => {
     renderApp(fake);
     expect(
       await screen.findByText(
-        "Running in the background, so your bots keep working after you close this window.",
+        "Running in the background, so your agents keep working after you close this window.",
       ),
     ).toBeDefined();
   });

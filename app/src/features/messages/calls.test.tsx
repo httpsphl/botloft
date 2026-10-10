@@ -46,7 +46,7 @@ function delivery(messageId: string, changes: Partial<Delivery> = {}): Delivery 
 }
 
 describe("calls", () => {
-  test("only a bot's message to another bot is a call", () => {
+  test("only an agent's message to another agent is a call", () => {
     const empty = { calls: {}, deliveries: {} };
     expect(withCall(empty, message("m1", { fromKind: "owner", fromBotId: null }))).toBeNull();
     expect(withCall(empty, message("m1", { toBotId: "bot_a" }))).toBeNull();
@@ -66,7 +66,7 @@ describe("calls", () => {
     expect(at({ m1: delivery("m1", { state: "dead" }) }, NOW + 1000)).toEqual([]);
   });
 
-  test("one pill per pair of bots, the latest call", () => {
+  test("one pill per pair of agents, the latest call", () => {
     let state = { calls: {}, deliveries: {} };
     state = { ...state, ...withCall(state, message("m1"), NOW) };
     state = { ...state, ...withCall(state, message("m2", { createdAt: NOW + 5 }), NOW) };
@@ -94,14 +94,14 @@ describe("in the app", () => {
     act(() => {
       sent = fake.conversation.say({ from: scout.id, to: writer.id, body: "Draft the report" });
     });
-    const pills = () => screen.getByRole("list", { name: "Bots calling each other" });
+    const pills = () => screen.getByRole("list", { name: "Agents calling each other" });
     expect(within(pills()).getByText("Calling Writer")).toBeDefined();
     expect(within(pills()).getByText("Scout:")).toBeDefined();
 
     // The crew page shows it too.
     fireEvent.click(screen.getAllByRole("button", { name: "Ops" })[0] as HTMLElement);
     expect(
-      within(await screen.findByRole("list", { name: "Bots calling each other" })).getByText(
+      within(await screen.findByRole("list", { name: "Agents calling each other" })).getByText(
         "Calling Writer",
       ),
     ).toBeDefined();

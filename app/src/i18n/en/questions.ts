@@ -22,16 +22,16 @@ export const questions = {
     /** The entry on the left, with how many questions wait. */
     open: (count: number) =>
       count === 0
-        ? "Questions from your bots"
+        ? "Questions from your agents"
         : count === 1
           ? "1 question waits for you"
           : `${count} questions wait for you`,
-    title: "Questions from your bots",
+    title: "Questions from your agents",
     intro:
-      "When a bot needs your decision to go on, it asks here and carries on. Your answer goes to it as a message.",
+      "When an agent needs your decision to go on, it asks here and carries on. Your answer goes to it as a message.",
     emptyTitle: "No question is waiting for you",
     emptyBody:
-      "Bots ask here when they need you, also at night, in a routine. Answer whenever you can.",
+      "Agents ask here when they need you, also at night, in a routine. Answer whenever you can.",
     openChat: (bot: string) => `Open the chat with ${bot}`,
     inCrew: (crew: string) => `in ${crew}`,
   },

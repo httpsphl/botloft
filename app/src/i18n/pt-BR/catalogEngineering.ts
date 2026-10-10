@@ -68,7 +68,7 @@ export const engineering: typeof en = {
     summary:
       "Procura falhas de segurança no seu código e na sua configuração e explica como corrigir",
     about:
-      "Revisa o seu código e a sua configuração atrás de falhas, explica cada uma em palavras simples com a gravidade e a menor correção. Trabalha na defesa, só no que é seu, e nunca repete um segredo que encontrar. Pensa mais fundo que a maioria dos bots, então gasta um pouco mais do seu plano.",
+      "Revisa o seu código e a sua configuração atrás de falhas, explica cada uma em palavras simples com a gravidade e a menor correção. Trabalha na defesa, só no que é seu, e nunca repete um segredo que encontrar. Pensa mais fundo que a maioria dos agentes, então gasta um pouco mais do seu plano.",
     when: "Antes de lançar, depois de uma mudança grande, ou quando você lida com dados de outras pessoas.",
     pairs: "Desenvolvedor e Engenheiro DevOps, que aplicam as correções, e Revisor de código.",
   },

@@ -31,7 +31,7 @@ export const browser = {
     "When it searches or uses a site, you'll see it here live: every page it opens, every click.",
   starting: "Opening the browser…",
   closed: "Browser closed",
-  closedBody: "It opens again when the bot needs it. Logins stay.",
+  closedBody: "It opens again when the agent needs it. Logins stay.",
   openForMe: "Open it for me",
   openForMeWhy: (bot: string) =>
     `To see what ${bot} left open and use it yourself. ${bot} is not woken or told; give it back when you are done and it rests again.`,
@@ -39,8 +39,8 @@ export const browser = {
   failedTitle: "The browser couldn't open",
   failedBody: (system: string): string =>
     system === "Windows"
-      ? "Botloft uses Microsoft Edge, which comes with Windows. Check that it's installed, then ask the bot to try again."
-      : "Botloft uses Google Chrome, Chromium or Microsoft Edge. Check that one of them is installed, then ask the bot to try again.",
+      ? "Botloft uses Microsoft Edge, which comes with Windows. Check that it's installed, then ask the agent to try again."
+      : "Botloft uses Google Chrome, Chromium or Microsoft Edge. Check that one of them is installed, then ask the agent to try again.",
   details: "Details",
   tabs: {
     label: "Tabs",
@@ -130,7 +130,7 @@ export const browser = {
   help: {
     needs: (bot: string) => `${bot} needs you in the browser`,
     asks: (bot: string, task: string) => `${bot} asks: ${task}`,
-    why: "Take control, do it on the page yourself and give it back. If the site won't let you sign in there, use Sign in in a window in the browser panel. The bot doesn't see what you type in password fields.",
+    why: "Take control, do it on the page yourself and give it back. If the site won't let you sign in there, use Sign in in a window in the browser panel. The agent doesn't see what you type in password fields.",
     take: "Take the browser",
     done: "Done",
     wontDo: "I won't do it",

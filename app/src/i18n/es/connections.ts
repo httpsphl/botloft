@@ -3,12 +3,12 @@ import type { Messages } from "../en";
 export const connections: Messages["connections"] = {
   title: "Herramientas conectadas",
   intro:
-    "Herramientas tuyas que tus bots pueden usar además de las que Botloft ya les da, como un lector de LinkedIn o un sistema de tu empresa. Cada bot recibe solo las que activas para él, y aun así te pregunta antes de usarlas.",
+    "Herramientas tuyas que tus agentes pueden usar además de las que Botloft ya les da, como un lector de LinkedIn o un sistema de tu empresa. Cada agente recibe solo las que activas para él, y aun así te pregunta antes de usarlas.",
   loadFailed: "No se pudieron leer las herramientas conectadas",
   none: "Aún no hay herramientas conectadas.",
   add: "Conectar una herramienta…",
   usedBy: (names) => `La usan ${names}`,
-  unused: "Ningún bot la usa todavía",
+  unused: "Ningún agente la usa todavía",
   kinds: {
     stdio: "Un programa en este equipo",
     http: "Una herramienta en una dirección",
@@ -22,12 +22,12 @@ export const connections: Messages["connections"] = {
     name: "Nombre",
     nameHint: "Solo hace falta cuando la configuración pegada viene sin nombre.",
     purpose: "¿Para qué sirve? (opcional)",
-    purposeHint: "Tus bots leen esto para saber cuándo usarla.",
+    purposeHint: "Tus agentes leen esto para saber cuándo usarla.",
     found: (count) => (count === 1 ? "Encontré 1 herramienta." : `Encontré ${count} herramientas.`),
     program: (name) =>
-      `${name} es un programa. Se ejecutará en tu equipo con tus permisos, fuera de las carpetas que Botloft guarda para tus bots. Conecta solo programas en los que confíes.`,
+      `${name} es un programa. Se ejecutará en tu equipo con tus permisos, fuera de las carpetas que Botloft guarda para tus agentes. Conecta solo programas en los que confíes.`,
     address: (name) =>
-      `${name} es una herramienta en una dirección. Lo que tu bot le envíe sale de este equipo.`,
+      `${name} es una herramienta en una dirección. Lo que tu agente le envíe sale de este equipo.`,
     command: "Lo que ejecuta",
     understood: "Lo entiendo y confío en ella",
     connect: "Conectar",
@@ -53,7 +53,7 @@ export const connections: Messages["connections"] = {
   },
   removing: {
     title: (name) => `¿Quitar ${name}?`,
-    text: "Los bots que la usan la pierden y arrancan de nuevo cuando estén libres. Lo que permitiste para siempre con ella se olvida.",
+    text: "Los agentes que la usan la pierden y arrancan de nuevo cuando estén libres. Lo que permitiste para siempre con ella se olvida.",
     confirm: "Quitar",
     failed: "No se pudo quitar la herramienta",
   },
@@ -61,7 +61,7 @@ export const connections: Messages["connections"] = {
     title: "Herramientas conectadas",
     none: "Aún no hay herramientas conectadas. Puedes conectarlas en Ajustes, en Herramientas conectadas.",
     toggle: (tool, bot) => `${bot} puede usar ${tool}`,
-    failed: "No se pudieron cambiar las herramientas de este bot",
+    failed: "No se pudieron cambiar las herramientas de este agente",
     reason: "Por qué",
   },
   states: {

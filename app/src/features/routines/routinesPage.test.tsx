@@ -68,7 +68,7 @@ describe("the routines page", () => {
     expect(screen.getByRole("dialog", { name: "Edit Morning summary" })).toBeDefined();
   });
 
-  test("groups each bot's routines under its mascot, folded on demand", async () => {
+  test("groups each agent's routines under its mascot, folded on demand", async () => {
     await openPage(setup());
     const watcher = screen.getByRole("region", { name: "Watcher" });
     const list = within(watcher).getByRole("list", { name: "Watcher's routines" });

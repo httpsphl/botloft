@@ -20,7 +20,7 @@ async function openScout() {
 const details = () => screen.getByRole("complementary", { name: "About Scout" });
 
 describe("Allow always", () => {
-  test("allows the request for good and lists it in the bot's details, where it can go", async () => {
+  test("allows the request for good and lists it in the agent's details, where it can go", async () => {
     const { fake, scout } = await openScout();
     act(() => {
       fake.chat.ask(scout.id, "Bash", "git status", '{"command":"git status"}');

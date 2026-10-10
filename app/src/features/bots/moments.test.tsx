@@ -20,7 +20,7 @@ afterEach(() => {
 const svgOf = (container: HTMLElement) => container.querySelector("svg") as SVGSVGElement;
 
 describe("moments", () => {
-  test("wakes when its bot comes back, not when it shows up awake", () => {
+  test("wakes when its agent comes back, not when it shows up awake", () => {
     vi.useFakeTimers();
     const { container, rerender } = render(<BotAvatar color="#5ec8ff" mood="idle" />);
     expect(svgOf(container).hasAttribute("data-wake")).toBe(false);
@@ -72,7 +72,7 @@ describe("moments", () => {
     expect(svgOf(container).hasAttribute("data-cheer")).toBe(true);
   });
 
-  test("a new bot that starts up while it pops in does not wake on top of it", () => {
+  test("a new agent that starts up while it pops in does not wake on top of it", () => {
     vi.useFakeTimers();
     vi.setSystemTime(APP_OPENED + 60_000);
     const created = { id: "bot_new" as BotId, color: "#9be564", paused: false };
@@ -91,7 +91,7 @@ describe("moments", () => {
     expect(svgOf(container).hasAttribute("data-wake")).toBe(false);
   });
 
-  test("a bot created a moment ago pops in once; an older one does not", () => {
+  test("an agent created a moment ago pops in once; an older one does not", () => {
     vi.useFakeTimers();
     vi.setSystemTime(APP_OPENED + 60_000);
     const bot = (createdAt: number) => ({
@@ -132,7 +132,7 @@ describe("moments", () => {
 });
 
 describe("glances", () => {
-  test("two bots look at each other when one writes to the other", async () => {
+  test("two agents look at each other when one writes to the other", async () => {
     const fake = new FakeBotloft();
     const crew = fake.addCrew("Ops");
     const scout = fake.addBot(crew.id, "Scout");

@@ -64,7 +64,7 @@ describe("the schedule in words", () => {
 });
 
 describe("routines", () => {
-  test("a bot with none says what a routine is", async () => {
+  test("an agent with none says what a routine is", async () => {
     await openRoutines();
     expect(screen.getByText("Scout has no routines yet.")).toBeDefined();
   });
@@ -185,7 +185,7 @@ describe("routines", () => {
     expect(within(chat).getByText(prompt)).toBeDefined();
   });
 
-  test("the crew's page lists every bot's routines", async () => {
+  test("the crew's page lists every agent's routines", async () => {
     const fake = new FakeBotloft();
     const ops = fake.addCrew("Ops");
     const scout = fake.addBot(ops.id, "Scout");
@@ -202,7 +202,7 @@ describe("routines", () => {
 });
 
 describe("failed runs", () => {
-  test("mark the taskbar until the owner opens the bot", async () => {
+  test("mark the taskbar until the owner opens the agent", async () => {
     const fake = new FakeBotloft();
     const ops = fake.addCrew("Ops");
     const scout = fake.addBot(ops.id, "Scout");

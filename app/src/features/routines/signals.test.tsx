@@ -25,11 +25,11 @@ async function openRoutines() {
 describe("routines that wait for a signal", () => {
   test("the schedule reads as the signal", () => {
     expect(describeSchedule({ kind: "signal", name: "report-ready" }, en.routines.when)).toBe(
-      "When a bot signals “report-ready”",
+      "When an agent signals “report-ready”",
     );
   });
 
-  test("the owner makes one, and a bot's signal runs it", async () => {
+  test("the owner makes one, and an agent's signal runs it", async () => {
     const { fake, writer } = await openRoutines();
     fireEvent.click(screen.getByRole("button", { name: "New routine" }));
     const dialog = screen.getByRole("dialog", { name: "New routine for Scout" });
@@ -37,9 +37,9 @@ describe("routines that wait for a signal", () => {
     fireEvent.change(within(dialog).getByLabelText("What should Scout do?"), {
       target: { value: "Review the report" },
     });
-    fireEvent.click(within(dialog).getByRole("radio", { name: "When a bot signals" }));
+    fireEvent.click(within(dialog).getByRole("radio", { name: "When an agent signals" }));
     expect(within(dialog).queryByLabelText("At")).toBeNull();
-    expect(within(dialog).getByText(/Scout runs this when a bot of the crew/)).toBeDefined();
+    expect(within(dialog).getByText(/Scout runs this when an agent of the crew/)).toBeDefined();
     fireEvent.change(within(dialog).getByLabelText("Signal"), {
       target: { value: "Report Ready" },
     });
@@ -52,7 +52,7 @@ describe("routines that wait for a signal", () => {
     await screen.findByText("Review");
     const params = fake.calls.find((call) => call.method === "routines.create")?.params;
     expect(params).toMatchObject({ schedule: { kind: "signal", name: "Report Ready" } });
-    expect(screen.getByText(/When a bot signals “report-ready”/)).toBeDefined();
+    expect(screen.getByText(/When an agent signals “report-ready”/)).toBeDefined();
     expect(screen.getByText(/Waits for a signal/)).toBeDefined();
 
     act(() => {
@@ -76,7 +76,7 @@ describe("routines that wait for a signal", () => {
     fireEvent.click(await screen.findByRole("button", { name: "More actions for Review" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Edit" }));
     const dialog = screen.getByRole("dialog", { name: "Edit Review" });
-    expect(within(dialog).getByRole("radio", { name: "When a bot signals" })).toHaveProperty(
+    expect(within(dialog).getByRole("radio", { name: "When an agent signals" })).toHaveProperty(
       "checked",
       true,
     );

@@ -4,7 +4,7 @@ export const updates: Messages["updates"] = {
   available: "Atualização disponível",
   title: "Atualizar o Botloft",
   ready: (version: string) =>
-    `O Botloft ${version} está pronto. O Botloft fecha, instala a atualização e abre de novo. Seus bots pausam por um instante e continuam de onde pararam.`,
+    `O Botloft ${version} está pronto. O Botloft fecha, instala a atualização e abre de novo. Seus agentes pausam por um instante e continuam de onde pararam.`,
   whatsNew: "Novidades",
   later: "Depois",
   updateNow: "Atualizar agora",

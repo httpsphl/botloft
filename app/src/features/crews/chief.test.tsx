@@ -35,7 +35,7 @@ function suggest(fake: FakeBotloft, chiefId: string) {
   act(() => {
     fake.chat.ask(chiefId, SUGGEST_TOOL, "Designer", JSON.stringify(DESIGNER));
   });
-  return screen.getByRole("region", { name: "Chief suggests a new bot" });
+  return screen.getByRole("region", { name: "Chief suggests a new agent" });
 }
 
 const answer = (fake: FakeBotloft) =>
@@ -67,12 +67,12 @@ describe("the crew's chief", () => {
     expect(screen.getAllByTitle(/^Leads Bakery/)).toHaveLength(2);
   });
 
-  test("the owner creates the bot the chief suggests", async () => {
+  test("the owner creates the agent the chief suggests", async () => {
     const { fake, chiefId } = await openChief();
     const card = suggest(fake, chiefId);
     expect(within(card).getByText(DESIGNER.reason)).toBeDefined();
     expect((within(card).getByLabelText("Name") as HTMLInputElement).value).toBe("Designer");
-    fireEvent.click(within(card).getByRole("button", { name: "Create bot" }));
+    fireEvent.click(within(card).getByRole("button", { name: "Create agent" }));
 
     expect(await screen.findByText("You created Designer")).toBeDefined();
     expect(answer(fake)).toEqual({ approvalId: expect.any(String), allow: true });
@@ -84,7 +84,7 @@ describe("the crew's chief", () => {
     const card = suggest(fake, chiefId);
     fireEvent.change(within(card).getByLabelText("Name"), { target: { value: "Illustrator" } });
     fireEvent.change(within(card).getByLabelText("Model"), { target: { value: "haiku" } });
-    fireEvent.click(within(card).getByRole("button", { name: "Create bot" }));
+    fireEvent.click(within(card).getByRole("button", { name: "Create agent" }));
 
     expect(await screen.findByText("You created Illustrator")).toBeDefined();
     const sent = answer(fake) as { input: string };
@@ -106,21 +106,21 @@ describe("the crew's chief", () => {
     expect([...fake.bots.values()].some((bot) => bot.name === "Designer")).toBe(false);
   });
 
-  test("the owner moves the chief to another bot", async () => {
+  test("the owner moves the chief to another agent", async () => {
     const { fake, crew } = await openChief();
     act(() => {
       fake.setBotState(fake.addBot(crew.id, "Writer").id, "idle");
     });
     openBot("Writer");
     await screen.findByRole("heading", { level: 1, name: "Writer" });
-    fireEvent.click(screen.getByRole("button", { name: "More bot actions" }));
+    fireEvent.click(screen.getByRole("button", { name: "More agent actions" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Make crew chief" }));
 
     // The header and the conversation list of the new chief.
     await screen.findByText("Chief", { selector: "header span" });
     const moved = fake.calls.find((call) => call.method === "crews.setLead");
     expect(moved?.params).toMatchObject({ crewId: crew.id });
-    fireEvent.click(screen.getByRole("button", { name: "More bot actions" }));
+    fireEvent.click(screen.getByRole("button", { name: "More agent actions" }));
     expect(screen.getByRole("menuitem", { name: "Stop being chief" })).toBeDefined();
   });
 });

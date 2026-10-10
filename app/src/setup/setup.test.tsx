@@ -57,9 +57,9 @@ describe("setup window", () => {
     expect(host.calls).not.toContain("install");
   });
 
-  test("says the open app closes and the bots keep working", async () => {
+  test("says the open app closes and the agents keep working", async () => {
     await open({ relation: "older", appRunning: true });
-    expect(screen.getByText(/closes to install\. Your bots keep working/)).toBeDefined();
+    expect(screen.getByText(/closes to install\. Your agents keep working/)).toBeDefined();
   });
 
   test("a failed install offers to retry or the classic installer", async () => {

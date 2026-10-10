@@ -38,7 +38,7 @@ function slideTo(slider: HTMLElement | null, stop: number) {
 }
 
 describe("effort", () => {
-  test("a bot runs at its model's own level until the owner moves the slider", async () => {
+  test("an agent runs at its model's own level until the owner moves the slider", async () => {
     const { fake, scout } = await openScout();
     expect(picker().getAttribute("aria-label")).toBe("Effort: Medium");
     const { menu, slider } = open();
@@ -72,7 +72,7 @@ describe("effort", () => {
     await waitFor(() => expect(efforts(fake)).toEqual([{ botId: scout.id, effort: "default" }]));
   });
 
-  test("several stops in a row tell the bot only the last", async () => {
+  test("several stops in a row tell the agent only the last", async () => {
     const { fake, scout } = await openScout();
     const { slider } = open();
     slideTo(slider, 2);
@@ -90,7 +90,7 @@ describe("effort", () => {
     await waitFor(() => expect(efforts(fake)).toEqual([{ botId: scout.id, effort: "low" }]));
   });
 
-  test("a busy bot changes effort when it finishes what it is doing", async () => {
+  test("a busy agent changes effort when it finishes what it is doing", async () => {
     const { fake, scout } = await openScout();
     act(() => fake.setBotState(scout.id, "busy"));
     const { slider } = open();

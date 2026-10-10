@@ -30,7 +30,7 @@ function choose(name: RegExp) {
 }
 
 describe("models", () => {
-  test("a bot runs on the plan's default until the owner picks a model", async () => {
+  test("an agent runs on the plan's default until the owner picks a model", async () => {
     const { fake, scout } = await openScout();
     expect(picker().getAttribute("aria-label")).toBe("Model: Default");
     fireEvent.click(picker());
@@ -54,7 +54,7 @@ describe("models", () => {
     expect(screen.getByText("Scout uses your plan's default model, now Opus 5.5")).toBeDefined();
   });
 
-  test("a busy bot changes model when it finishes what it is doing", async () => {
+  test("a busy agent changes model when it finishes what it is doing", async () => {
     const { fake, scout } = await openScout();
     act(() => fake.setBotState(scout.id, "busy"));
     choose(/Sonnet/);
@@ -70,23 +70,23 @@ describe("models", () => {
         kind: "notice",
         level: "error",
         code: "model_unavailable",
-        text: "Claude Code could not use this bot's model.",
+        text: "Claude Code could not use this agent's model.",
       });
     });
     expect(await screen.findByText(/may not be on your Claude plan/)).toBeDefined();
   });
 
-  test("a new bot can start on a chosen model", async () => {
+  test("a new agent can start on a chosen model", async () => {
     const fake = new FakeBotloft();
     fake.addCrew("Ops");
     renderApp(fake);
     await crewOpened("Ops");
-    const [headerButton] = await screen.findAllByRole("button", { name: "New bot" });
+    const [headerButton] = await screen.findAllByRole("button", { name: "New agent" });
     fireEvent.click(headerButton as HTMLElement);
-    const dialog = screen.getByRole("dialog", { name: "New bot" });
+    const dialog = screen.getByRole("dialog", { name: "New agent" });
     fireEvent.change(within(dialog).getByLabelText("Name"), { target: { value: "Writer" } });
     fireEvent.change(within(dialog).getByLabelText("Model"), { target: { value: "sonnet" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Create bot" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Create agent" }));
     await screen.findByRole("button", { name: "Model: Sonnet" });
     const create = fake.calls.find((call) => call.method === "bots.create");
     expect(create?.params).toMatchObject({ name: "Writer", model: "sonnet" });

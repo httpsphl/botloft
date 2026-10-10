@@ -36,7 +36,7 @@ const panel = (name: string) => screen.getByRole("complementary", { name });
 const dock = (name: string) =>
   within(screen.getByRole("navigation", { name: "Computer" })).getByRole("button", { name });
 
-describe("the bot's terminal", () => {
+describe("the agent's terminal", () => {
   test("a command in the chat opens it, with each command, what it is for and what it printed", async () => {
     const { fake, scout } = await setup();
     fireEvent.click(screen.getByRole("button", { name: "Show in terminal: npm test" }));

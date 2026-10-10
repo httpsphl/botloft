@@ -31,8 +31,8 @@ async function started(fake: FakeBotloft) {
 const panel = (name: string) => screen.queryByRole("complementary", { name });
 const button = (name: RegExp) => screen.getByRole("button", { name });
 
-describe("the panel beside a bot's chat", () => {
-  test("comes back with the bot, each bot with its own", async () => {
+describe("the panel beside an agent's chat", () => {
+  test("comes back with the agent, each agent with its own", async () => {
     const { fake, scout } = crew();
     await started(fake);
     fireEvent.click(button(/^Show browser/));
@@ -92,7 +92,7 @@ describe("the panel beside a bot's chat", () => {
     expect(panel("Scout's screens")).not.toBeNull();
   });
 
-  test("what the bot did while the owner was away stays behind its button, beside the panel that came back", async () => {
+  test("what the agent did while the owner was away stays behind its button, beside the panel that came back", async () => {
     const { fake, scout } = crew();
     await started(fake);
     fireEvent.click(button(/^Show files/));

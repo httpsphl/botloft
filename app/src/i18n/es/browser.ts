@@ -32,7 +32,7 @@ export const browser: Messages["browser"] = {
     "Cuando busque o use un sitio, lo verás aquí en vivo: cada página que abre, cada clic.",
   starting: "Abriendo el navegador…",
   closed: "Navegador cerrado",
-  closedBody: "Se abre de nuevo cuando el bot lo necesite. Las sesiones iniciadas siguen.",
+  closedBody: "Se abre de nuevo cuando el agente lo necesite. Las sesiones iniciadas siguen.",
   openForMe: "Abrirlo para mí",
   openForMeWhy: (bot) =>
     `Para ver lo que ${bot} dejó abierto y usarlo tú mismo. ${bot} no se despierta ni se entera; devuélvelo cuando termines y el navegador vuelve a descansar.`,
@@ -40,8 +40,8 @@ export const browser: Messages["browser"] = {
   failedTitle: "El navegador no se abrió",
   failedBody: (system: string) =>
     system === "Windows"
-      ? "Botloft usa Microsoft Edge, que viene con Windows. Comprueba que esté instalado y pide al bot que lo intente de nuevo."
-      : "Botloft usa Google Chrome, Chromium o Microsoft Edge. Comprueba que uno de ellos esté instalado y pide al bot que lo intente de nuevo.",
+      ? "Botloft usa Microsoft Edge, que viene con Windows. Comprueba que esté instalado y pide al agente que lo intente de nuevo."
+      : "Botloft usa Google Chrome, Chromium o Microsoft Edge. Comprueba que uno de ellos esté instalado y pide al agente que lo intente de nuevo.",
   details: "Detalles",
   tabs: {
     label: "Pestañas",
@@ -126,7 +126,7 @@ export const browser: Messages["browser"] = {
   help: {
     needs: (bot) => `${bot} te necesita en el navegador`,
     asks: (bot, task) => `${bot} pide: ${task}`,
-    why: "Toma el control, hazlo en la página y devuélvelo. Si el sitio no te deja iniciar sesión ahí, usa Iniciar sesión en una ventana en el panel del navegador. El bot no ve lo que escribes en campos de contraseña.",
+    why: "Toma el control, hazlo en la página y devuélvelo. Si el sitio no te deja iniciar sesión ahí, usa Iniciar sesión en una ventana en el panel del navegador. El agente no ve lo que escribes en campos de contraseña.",
     take: "Tomar el navegador",
     done: "Listo",
     wontDo: "No lo haré",

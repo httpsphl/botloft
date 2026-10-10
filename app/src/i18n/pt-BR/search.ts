@@ -9,7 +9,7 @@ export const search: Messages["search"] = {
   placeholder: "Procure palavras nas suas conversas",
   scope: "Onde buscar",
   allCrews: "Todas as equipes",
-  hint: "Acha palavras no que você, outros bots e o Botloft escreveram para seus bots, no que eles responderam e nas perguntas deles.",
+  hint: "Acha palavras no que você, outros agentes e o Botloft escreveram para seus agentes, no que eles responderam e nas perguntas deles.",
   tooShort: "Digite pelo menos 2 letras",
   results: "Resultados",
   nothing: (query: string) => `Nada encontrado para “${query}”`,
@@ -19,6 +19,6 @@ export const search: Messages["search"] = {
   inCrew: (crew: string) => `em ${crew}`,
   you: "Você",
   botloft: "Botloft",
-  goneBot: "Um bot que não está mais na equipe",
+  goneBot: "Um agente que não está mais na equipe",
   openHere: (bot: string) => `Abrir a conversa com ${bot} neste ponto`,
 };

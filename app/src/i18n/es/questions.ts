@@ -21,16 +21,16 @@ export const questions: Messages["questions"] = {
     label: "Preguntas",
     open: (count: number) =>
       count === 0
-        ? "Preguntas de tus bots"
+        ? "Preguntas de tus agentes"
         : count === 1
           ? "1 pregunta te espera"
           : `${count} preguntas te esperan`,
-    title: "Preguntas de tus bots",
+    title: "Preguntas de tus agentes",
     intro:
-      "Cuando un bot necesita una decisión tuya para seguir, pregunta aquí y sigue trabajando. Tu respuesta le llega como mensaje.",
+      "Cuando un agente necesita una decisión tuya para seguir, pregunta aquí y sigue trabajando. Tu respuesta le llega como mensaje.",
     emptyTitle: "Ninguna pregunta te espera",
     emptyBody:
-      "Los bots preguntan aquí cuando te necesitan, incluso de madrugada, en una rutina. Responde cuando puedas.",
+      "Los agentes preguntan aquí cuando te necesitan, incluso de madrugada, en una rutina. Responde cuando puedas.",
     openChat: (bot: string) => `Abrir el chat con ${bot}`,
     inCrew: (crew: string) => `en ${crew}`,
   },

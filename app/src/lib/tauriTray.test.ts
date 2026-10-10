@@ -31,8 +31,8 @@ vi.mock("@tauri-apps/api/tray", () => ({
 }));
 
 const view: TrayView = {
-  status: "No bot working",
-  tooltip: "Botloft: No bot working",
+  status: "No agent working",
+  tooltip: "Botloft: No agent working",
   open: "Open",
   pause: "Pause",
   quit: "Quit",

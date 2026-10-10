@@ -20,11 +20,11 @@ function type(label: string, value: string) {
 const sidebar = () => screen.getByRole("navigation", { name: "Crews" });
 
 async function newBot(name: string) {
-  const [headerButton] = await screen.findAllByRole("button", { name: "New bot" });
+  const [headerButton] = await screen.findAllByRole("button", { name: "New agent" });
   fireEvent.click(headerButton as HTMLElement);
   type("Name", name);
   type("Role", `${name} role`);
-  fireEvent.click(screen.getByRole("button", { name: "Create bot" }));
+  fireEvent.click(screen.getByRole("button", { name: "Create agent" }));
 }
 
 describe("app", () => {
@@ -41,7 +41,7 @@ describe("app", () => {
     expect(within(sidebar()).getByRole("button", { name: "Ops" })).toBeDefined();
   });
 
-  test("a new bot opens with its handle and follows its state", async () => {
+  test("a new agent opens with its handle and follows its state", async () => {
     const fake = new FakeBotloft();
     fake.addCrew("Ops");
     renderApp(fake);
@@ -68,7 +68,7 @@ describe("app", () => {
     expect((await screen.findByRole("alert")).textContent).toBe(
       "@scout is already used in this crew",
     );
-    expect(screen.getByRole("dialog", { name: "New bot" })).toBeDefined();
+    expect(screen.getByRole("dialog", { name: "New agent" })).toBeDefined();
   });
 
   test("the app sets itself up on the first run, without asking", async () => {
@@ -93,17 +93,17 @@ describe("app", () => {
     expect(host.installs).toEqual(["install", "install"]);
   });
 
-  test("archiving a bot asks first", async () => {
+  test("archiving an agent asks first", async () => {
     const fake = new FakeBotloft();
     const crew = fake.addCrew("Ops");
     fake.addBot(crew.id, "Scout");
     renderApp(fake);
     await screen.findByRole("heading", { level: 1, name: "Ops" });
     fireEvent.click(within(sidebar()).getByRole("button", { name: /Scout/ }));
-    fireEvent.click(screen.getByRole("button", { name: "More bot actions" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Archive bot" }));
+    fireEvent.click(screen.getByRole("button", { name: "More agent actions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Archive agent" }));
     const dialog = screen.getByRole("dialog", { name: "Archive Scout?" });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Archive bot" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Archive agent" }));
     expect(await screen.findByRole("heading", { level: 1, name: "Ops" })).toBeDefined();
     expect(within(sidebar()).queryByRole("button", { name: /Scout/ })).toBeNull();
     expect(fake.calls.filter((call) => call.method !== "catalog.list").at(-1)?.method).toBe(
@@ -122,7 +122,7 @@ describe("app", () => {
     expect(within(sidebar()).getAllByText("Paused")).toHaveLength(2);
   });
 
-  test("a missing Claude Code says why bots cannot start and where to get it", async () => {
+  test("a missing Claude Code says why agents cannot start and where to get it", async () => {
     const fake = new FakeBotloft();
     const host = new FakeHost();
     fake.addCrew("Ops");
@@ -132,7 +132,7 @@ describe("app", () => {
       runtimeError: "claude.exe was not found on PATH.",
     };
     renderApp(fake, host);
-    const banner = await screen.findByText("Bots can't start");
+    const banner = await screen.findByText("Agents can't start");
     const alert = banner.closest("[role=alert]") as HTMLElement;
     expect(alert.textContent).toContain("claude.exe was not found");
     fireEvent.click(within(alert).getByRole("button", { name: "How to install Claude Code" }));
@@ -147,7 +147,7 @@ describe("app", () => {
     act(() => fake.setConnection({ kind: "waiting", retryAt: 0 }));
     expect(screen.getByText("Reconnecting…")).toBeDefined();
   });
-  test("a bot opens on its chat, with its details in a side panel", async () => {
+  test("an agent opens on its chat, with its details in a side panel", async () => {
     const fake = new FakeBotloft();
     const crew = fake.addCrew("Ops");
     const scout = fake.addBot(crew.id, "Scout", "Finds sources");
@@ -163,7 +163,7 @@ describe("app", () => {
     expect(screen.queryByRole("complementary", { name: "About Scout" })).toBeNull();
   });
 
-  test("a paused bot still takes messages, and says they wait", async () => {
+  test("a paused agent still takes messages, and says they wait", async () => {
     const fake = new FakeBotloft();
     const crew = fake.addCrew("Ops");
     await fake.call("crews.setPaused", { crewId: crew.id, paused: true });

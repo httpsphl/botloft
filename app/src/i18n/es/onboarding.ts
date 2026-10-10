@@ -9,18 +9,18 @@ export const onboarding: Messages["onboarding"] = {
     install: "Preparando Botloft…",
     update: "Actualizando Botloft…",
     restart: "Reiniciando Botloft…",
-    start: "Iniciando tus bots…",
+    start: "Iniciando tus agentes…",
   },
   installNote: (system: string) =>
-    `Botloft ejecuta tus bots en segundo plano. En Configuración eliges si siguen trabajando después de cerrar esta ventana y si Botloft se inicia con ${system}.`,
+    `Botloft ejecuta tus agentes en segundo plano. En Configuración eliges si siguen trabajando después de cerrar esta ventana y si Botloft se inicia con ${system}.`,
   stopped: {
     title: "Botloft no pudo iniciar",
-    body: "Botloft ejecuta tus bots en segundo plano, y esa parte no se inició.",
+    body: "Botloft ejecuta tus agentes en segundo plano, y esa parte no se inició.",
     notRunning: "No está en ejecución.",
   },
   outdated: {
     title: "Botloft no pudo terminar de actualizarse",
-    body: "La parte que ejecuta tus bots en segundo plano sigue en la versión anterior.",
+    body: "La parte que ejecuta tus agentes en segundo plano sigue en la versión anterior.",
     running: (version: string) => `Versión en ejecución: ${version}.`,
     stillOld: (version: string) => `Sigue informando la versión ${version}.`,
   },
@@ -45,34 +45,35 @@ export const onboarding: Messages["onboarding"] = {
   welcome: {
     title: "Te damos la bienvenida a Botloft",
     intro:
-      "Un equipo es un grupo de bots que siguen funcionando, se escriben entre sí y comparten una carpeta. Cada bot corre en el agente que elijas: Claude Code, u otro que actives. Cada equipo empieza con un jefe: dile para qué sirve el equipo, y él planea el trabajo y sugiere los bots que necesita.",
+      "Un equipo es un grupo de agentes que siguen funcionando, se escriben entre sí y comparten una carpeta. Cada agente corre en el motor que elijas: Claude Code, u otro que actives. Cada equipo empieza con un jefe: dile para qué sirve el equipo, y él planea el trabajo y sugiere los agentes que necesita.",
     botloft: "Botloft",
     running: (system: string) =>
-      `Funcionando en segundo plano. Se inicia con ${system}, así que tus bots siguen trabajando después de cerrar esta ventana.`,
+      `Funcionando en segundo plano. Se inicia con ${system}, así que tus agentes siguen trabajando después de cerrar esta ventana.`,
     runningNotAtStart:
-      "Funcionando en segundo plano, así que tus bots siguen trabajando después de cerrar esta ventana.",
+      "Funcionando en segundo plano, así que tus agentes siguen trabajando después de cerrar esta ventana.",
     runningWhileOpen:
-      "Funcionando mientras esta ventana está abierta. Al cerrarla, tus bots se detienen.",
+      "Funcionando mientras esta ventana está abierta. Al cerrarla, tus agentes se detienen.",
     claudeCode: "Claude Code",
     checking: "Comprobando…",
     version: (version: string) => `Versión ${version}`,
     account: "Cuenta de Claude",
     signedIn: "Sesión iniciada.",
-    signedOut: "Tus bots trabajan con tu cuenta de Claude. Inicia sesión una vez y quedan listos.",
+    signedOut:
+      "Tus agentes trabajan con tu cuenta de Claude. Inicia sesión una vez y quedan listos.",
     ready: "listo",
     notReady: "no está listo",
     stillChecking: "comprobando",
-    askFirstTitle: "Los bots preguntan antes de cambiar cosas",
+    askFirstTitle: "Los agentes preguntan antes de cambiar cosas",
     askFirstBody:
-      "Cuando un bot quiere ejecutar un comando o editar un archivo, lo pregunta en su chat y espera a que lo permitas o lo deniegues.",
+      "Cuando un agente quiere ejecutar un comando o editar un archivo, lo pregunta en su chat y espera a que lo permitas o lo deniegues.",
     ideasTitle: "O toca una idea",
-    claudeOptional: "No instalado. Solo lo necesitas para los bots que corren en Claude Code.",
+    claudeOptional: "No instalado. Solo lo necesitas para los agentes que corren en Claude Code.",
     agentMissing: "No encontrado. Instálalo y abre Botloft otra vez.",
     notNeeded: "no hace falta",
     createCrew: "Crear tu primer equipo",
   },
   claudeCode: {
-    help: "Botloft ejecuta tus bots con Claude Code. Instálalo o actualízalo, ábrelo una vez para iniciar sesión, y Botloft lo detecta en menos de 30 segundos.",
+    help: "Botloft ejecuta tus agentes con Claude Code. Instálalo o actualízalo, ábrelo una vez para iniciar sesión, y Botloft lo detecta en menos de 30 segundos.",
     install: "Cómo instalar Claude Code",
     openFailed: "No se pudo abrir el enlace",
   },

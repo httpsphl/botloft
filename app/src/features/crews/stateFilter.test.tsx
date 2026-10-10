@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 describe("state filters in the conversation list", () => {
-  test("a chip narrows the list to the bots in that state, with counts", async () => {
+  test("a chip narrows the list to the agents in that state, with counts", async () => {
     const fake = new FakeBotloft();
     const ops = fake.addCrew("Ops");
     const calm = fake.addCrew("Calm");

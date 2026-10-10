@@ -4,12 +4,12 @@
 export const connections = {
   title: "Connected tools",
   intro:
-    "Tools of your own that your bots can use besides the ones Botloft gives them, like a LinkedIn reader or a system of your company. Each bot gets only the ones you turn on for it, and it still asks you before using them.",
+    "Tools of your own that your agents can use besides the ones Botloft gives them, like a LinkedIn reader or a system of your company. Each agent gets only the ones you turn on for it, and it still asks you before using them.",
   loadFailed: "Could not read the connected tools",
   none: "No tools connected yet.",
   add: "Connect a tool…",
   usedBy: (names: string) => `Used by ${names}`,
-  unused: "No bot uses it yet",
+  unused: "No agent uses it yet",
   kinds: {
     stdio: "A program on this computer",
     http: "A tool at an address",
@@ -23,12 +23,12 @@ export const connections = {
     name: "Name",
     nameHint: "Only needed when the settings you pasted come without a name.",
     purpose: "What is it for? (optional)",
-    purposeHint: "Your bots read this to know when to use it.",
+    purposeHint: "Your agents read this to know when to use it.",
     found: (count: number) => (count === 1 ? "Found 1 tool." : `Found ${count} tools.`),
     program: (name: string) =>
-      `${name} is a program. It will run on your computer with your permissions, outside the folders Botloft keeps for your bots. Only connect programs you trust.`,
+      `${name} is a program. It will run on your computer with your permissions, outside the folders Botloft keeps for your agents. Only connect programs you trust.`,
     address: (name: string) =>
-      `${name} is a tool at an address. What your bot sends to it leaves this computer.`,
+      `${name} is a tool at an address. What your agent sends to it leaves this computer.`,
     command: "What it runs",
     understood: "I understand and I trust it",
     connect: "Connect",
@@ -55,7 +55,7 @@ export const connections = {
   },
   removing: {
     title: (name: string) => `Remove ${name}?`,
-    text: "Bots that use it lose it and start again when they are free. What you allowed them to do with it for good is forgotten.",
+    text: "Agents that use it lose it and start again when they are free. What you allowed them to do with it for good is forgotten.",
     confirm: "Remove",
     failed: "Could not remove the tool",
   },
@@ -63,7 +63,7 @@ export const connections = {
     title: "Connected tools",
     none: "No tools connected yet. You can connect them in Settings, under Connected tools.",
     toggle: (tool: string, bot: string) => `${bot} can use ${tool}`,
-    failed: "Could not change the tools of this bot",
+    failed: "Could not change the tools of this agent",
     reason: "Why",
   },
   states: {

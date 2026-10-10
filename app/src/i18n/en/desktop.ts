@@ -33,7 +33,7 @@ export const desktop = {
     stoppedBody: (bot: string) => `${bot} cannot read or use your apps until you let it go on.`,
     emptyTitle: (bot: string) => `${bot} has not used your desktop yet`,
     emptyBody: "When it reads or uses a window of an app you allowed, the window shows here, live.",
-    shortcut: "Ctrl+Alt+Esc stops every bot on your desktop, even with Botloft closed.",
+    shortcut: "Ctrl+Alt+Esc stops every agent on your desktop, even with Botloft closed.",
     waiting: "Waiting for the picture…",
     read: "Read the window",
     click: (target: string) => `Clicked "${target}"`,
@@ -63,7 +63,7 @@ export const desktop = {
     realPoints: (bot: string) => [
       `When accessibility cannot do something in this app, ${bot} moves your cursor and types as if it were you.`,
       `While it acts, your mouse and keyboard are its, and a notice on your screen says so.`,
-      `Move the mouse or press a key and it stops at once. Ctrl+Alt+Esc stops every bot on your desktop.`,
+      `Move the mouse or press a key and it stops at once. Ctrl+Alt+Esc stops every agent on your desktop.`,
       `It never types in password fields and never presses Windows' own keys, like the Windows key or Alt+Tab.`,
     ],
     realConfirm: "Turn on",

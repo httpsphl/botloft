@@ -29,8 +29,8 @@ const labels = (menu: HTMLElement) =>
     .getAllByRole("menuitem")
     .map((item) => item.textContent);
 
-describe("a bot's right-click menu", () => {
-  test("offers what the header's menu offers, without opening the bot", async () => {
+describe("an agent's right-click menu", () => {
+  test("offers what the header's menu offers, without opening the agent", async () => {
     await twoBots();
     const menu = rightClick("Scout");
     const offered = labels(menu);
@@ -40,8 +40,8 @@ describe("a bot's right-click menu", () => {
       "Restart with a new conversation",
       "Open folder",
       "Mark as unread",
-      "Archive bot",
-      "Delete bot",
+      "Archive agent",
+      "Delete agent",
     ]);
     // The crew's page is still the one open.
     expect(screen.getByRole("heading", { level: 1, name: "Ops" })).toBeDefined();
@@ -51,11 +51,11 @@ describe("a bot's right-click menu", () => {
     fireEvent.keyDown(window, { key: "Escape" });
     expect(screen.queryByRole("menu")).toBeNull();
     openBot("Scout");
-    fireEvent.click(screen.getByRole("button", { name: "More bot actions" }));
+    fireEvent.click(screen.getByRole("button", { name: "More agent actions" }));
     expect(labels(screen.getByRole("menu"))).toEqual(offered);
   });
 
-  test("acts on the bot that was clicked, not the one that is open", async () => {
+  test("acts on the agent that was clicked, not the one that is open", async () => {
     const { fake, host, crew, scout, writer } = await twoBots();
     openBot("Writer");
     await screen.findByRole("heading", { level: 1, name: "Writer" });
@@ -69,10 +69,10 @@ describe("a bot's right-click menu", () => {
     expect(labels(rightClick("Scout"))).toContain("Stop being chief");
     expect(labels(rightClick("Writer"))).toContain("Make crew chief");
 
-    fireEvent.click(within(rightClick("Scout")).getByRole("menuitem", { name: "Archive bot" }));
+    fireEvent.click(within(rightClick("Scout")).getByRole("menuitem", { name: "Archive agent" }));
     const dialog = screen.getByRole("dialog", { name: "Archive Scout?" });
     expect(sidebar().contains(dialog)).toBe(false);
-    fireEvent.click(within(dialog).getByRole("button", { name: "Archive bot" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Archive agent" }));
     await waitFor(() =>
       expect(within(sidebar()).queryByRole("button", { name: /Scout/ })).toBeNull(),
     );
@@ -85,7 +85,7 @@ describe("a bot's right-click menu", () => {
     expect(fake.bots.get(writer.id)?.archivedAt).toBeNull();
   });
 
-  test("edits from the menu and keeps a paused bot from restarting", async () => {
+  test("edits from the menu and keeps a paused agent from restarting", async () => {
     const { fake, scout } = await twoBots();
     await fake.call("bots.setPaused", { botId: scout.id, paused: true });
     const menu = rightClick("Scout");
@@ -117,7 +117,7 @@ describe("a bot's right-click menu", () => {
     expect(document.activeElement).toBe(scout);
   });
 
-  test("closes on a click elsewhere, and another bot's menu takes its place", async () => {
+  test("closes on a click elsewhere, and another agent's menu takes its place", async () => {
     await twoBots();
     rightClick("Scout");
     fireEvent.pointerDown(row("Writer"));

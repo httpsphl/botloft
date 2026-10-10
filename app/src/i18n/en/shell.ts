@@ -15,8 +15,8 @@ export const shell = {
     home: "Home",
   },
   sidebar: {
-    hide: "Hide the bots list",
-    show: "Show the bots list",
+    hide: "Hide the agents list",
+    show: "Show the agents list",
   },
   zoom: {
     level: (percent: number, isDefault: boolean) =>
@@ -35,9 +35,9 @@ export const shell = {
   /** A deleted bot's or crew's folder that could not go to the Recycle Bin. */
   recycleFailed: (path: string) =>
     `The folder ${path} did not go to the Recycle Bin and is still there`,
-  botsCantStart: "Bots can't start",
+  botsCantStart: "Agents can't start",
   signIn: {
     title: "Sign in to Claude",
-    body: "Your bots work with your Claude account. Sign in once and they start by themselves.",
+    body: "Your agents work with your Claude account. Sign in once and they start by themselves.",
   },
 };

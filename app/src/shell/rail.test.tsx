@@ -36,7 +36,7 @@ describe("the rail", () => {
     const scout = fake.addBot(fake.addCrew("Ops").id, "Scout");
     renderApp(fake);
     await crewOpened("Ops");
-    fireEvent.click(screen.getByRole("button", { name: "Hide the bots list" }));
+    fireEvent.click(screen.getByRole("button", { name: "Hide the agents list" }));
     expect(slot().dataset.open).toBe("false");
     act(() => {
       fake.questions.ask(scout.id, "Which client first?");

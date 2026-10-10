@@ -47,7 +47,7 @@ const answer = (fake: FakeBotloft) =>
 
 const routines = (fake: FakeBotloft) => [...fake.routines.routines.values()];
 
-describe("a bot asking for a routine", () => {
+describe("an agent asking for a routine", () => {
   test("the owner creates it as asked", async () => {
     const { fake, chiefId } = await openChief();
     const card = ask(fake, chiefId, INBOX, "Chief wants to set up a routine");
@@ -79,7 +79,7 @@ describe("a bot asking for a routine", () => {
     expect(routines(fake)[0]?.schedule).toEqual(sent.schedule);
   });
 
-  test("a routine for another bot of the crew goes to that bot", async () => {
+  test("a routine for another agent of the crew goes to that agent", async () => {
     const { fake, chiefId, mail } = await openChief();
     const card = ask(
       fake,

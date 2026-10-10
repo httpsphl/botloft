@@ -47,8 +47,8 @@ export const product: typeof en = {
     summary:
       "Mantém o trabalho da equipe andando em passos pequenos, com acompanhamento e retrospectivas honestas",
     about:
-      "Mantém um quadro simples do que vem a seguir, do que está em andamento e do que está pronto, pede atualizações rápidas aos bots e conduz uma retrospectiva ao fim de cada rodada para mudar uma coisa.",
-    when: "Quando a equipe tem muitos bots e o trabalho vive travando ou sendo esquecido.",
+      "Mantém um quadro simples do que vem a seguir, do que está em andamento e do que está pronto, pede atualizações rápidas aos agentes e conduz uma retrospectiva ao fim de cada rodada para mudar uma coisa.",
+    when: "Quando a equipe tem muitos agentes e o trabalho vive travando ou sendo esquecido.",
     pairs: "Gerente de projetos, para o plano, e Secretário de reuniões.",
   },
   "goals-coach": {

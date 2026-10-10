@@ -27,7 +27,7 @@ async function openScout() {
 const panel = () => screen.getByRole("complementary", { name: "Scout's browser" });
 
 describe("the browser in a window of its own", () => {
-  test("opens for signing in, says the bot waits, and goes back when the window closes", async () => {
+  test("opens for signing in, says the agent waits, and goes back when the window closes", async () => {
     const { fake, scout } = await openScout();
     // Why is folded until the owner asks.
     expect(within(panel()).queryByText(/like Google/)).toBeNull();
@@ -57,7 +57,7 @@ describe("the browser in a window of its own", () => {
     expect(within(panel()).getByRole("button", { name: "Sign in in a window" })).toBeDefined();
   });
 
-  test("is offered when the bot asks for a hand", async () => {
+  test("is offered when the agent asks for a hand", async () => {
     const { fake, scout } = await openScout();
     act(() => {
       fake.browser.ask(scout.id, "Sign in to your Google account");

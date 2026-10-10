@@ -31,7 +31,7 @@ describe("a group of tool calls", () => {
     expect(toolSummary([done("mcp__other__frobnicate")], en.chat.tools.group)).toBe("Used 1 tool");
   });
 
-  test("says what the bot does now, then folds into its summary", async () => {
+  test("says what the agent does now, then folds into its summary", async () => {
     const fake = new FakeBotloft();
     const ops = fake.addCrew("Ops");
     const scout = fake.addBot(ops.id, "Scout", "Finds sources");

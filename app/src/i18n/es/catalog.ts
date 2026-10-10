@@ -16,17 +16,17 @@ import { sectors } from "./catalogSectors";
 import { security } from "./catalogSecurity";
 
 export const catalog: Messages["catalog"] = {
-  title: "Agencia de bots",
-  open: "Agencia de bots",
-  openHint: "Bots listos que puedes añadir a este equipo",
+  title: "Agencia de agentes",
+  open: "Agencia de agentes",
+  openHint: "Agentes listos que puedes añadir a este equipo",
   intro:
-    "Elige un bot para el trabajo. Entra en este equipo listo para trabajar, y después puedes cambiar lo que quieras de él.",
+    "Elige un agente para el trabajo. Entra en este equipo listo para trabajar, y después puedes cambiar lo que quieras de él.",
   invite: {
     title: "¿A quién quieres en tu equipo?",
-    body: "¿No sabes qué crear? Elige un bot para el trabajo. Después puedes cambiar lo que quieras de él.",
+    body: "¿No sabes qué crear? Elige un agente para el trabajo. Después puedes cambiar lo que quieras de él.",
   },
-  search: "Buscar bots",
-  filter: "Tipos de bot",
+  search: "Buscar agentes",
+  filter: "Tipos de agente",
   categories: {
     all: "Todos",
     code: "Código",
@@ -44,23 +44,23 @@ export const catalog: Messages["catalog"] = {
     games: "Juegos",
     legal: "Jurídico",
   },
-  none: "Ningún bot coincide con eso.",
-  loading: "Cargando los bots…",
+  none: "Ningún agente coincide con eso.",
+  loading: "Cargando los agentes…",
   add: "Añadir al equipo",
   learnMore: "Saber más",
-  back: "Volver a todos los bots",
-  seeAll: "Ver todos los bots",
+  back: "Volver a todos los agentes",
+  seeAll: "Ver todos los agentes",
   joined: (name) => `${name} entró en el equipo`,
   customize: "Personalizar",
   failed: {
-    load: "No se pudieron cargar los bots",
-    add: "No se pudo añadir el bot",
+    load: "No se pudieron cargar los agentes",
+    add: "No se pudo añadir el agente",
   },
   detail: {
     what: "Qué hace",
     when: "Cuándo llamarlo",
     pairs: "Combina bien con",
-    technical: "Lo que recibe el bot cuando empieza",
+    technical: "Lo que recibe el agente cuando empieza",
   },
   roles: {
     ...base,

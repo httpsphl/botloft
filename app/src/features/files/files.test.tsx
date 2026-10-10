@@ -26,7 +26,7 @@ const toggle = () => screen.getByRole("button", { name: /Show files|Hide files/ 
 const panel = () => screen.getByRole("complementary", { name: "Files from Scout" });
 
 describe("files panel", () => {
-  test("shows what the bot made, newest first, and previews text", async () => {
+  test("shows what the agent made, newest first, and previews text", async () => {
     const { fake, scout } = crew();
     const now = fake.now;
     fake.files.add(scout.id, "sources.md", { text: "# Sources\n\n- one", at: now - 60_000 });
@@ -70,7 +70,7 @@ describe("files panel", () => {
     expect(fake.calls.some((call) => call.method === "files.read")).toBe(false);
   });
 
-  test("an empty bot says it has made nothing yet", async () => {
+  test("an empty agent says it has made nothing yet", async () => {
     const { fake } = crew();
     await openScout(fake);
     fireEvent.click(toggle());

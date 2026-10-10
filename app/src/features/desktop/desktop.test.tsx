@@ -72,7 +72,7 @@ describe("the desktop", () => {
     expect(await screen.findByText("Scout may not use Notepad")).toBeDefined();
   });
 
-  test("the bot's details list what it may see on the desktop, and it can be taken back", async () => {
+  test("the agent's details list what it may see on the desktop, and it can be taken back", async () => {
     const { fake, scout } = await openScout();
     fireEvent.click(screen.getByRole("button", { name: /^Show details/ }));
     expect(

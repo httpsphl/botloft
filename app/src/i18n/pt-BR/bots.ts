@@ -16,7 +16,7 @@ export const bots: Messages["bots"] = {
     },
     auth_error: {
       label: "Precisa entrar",
-      hint: "O Claude Code não está conectado a uma conta, ou a conta não pode ser usada. Entre no Claude e o bot volta a iniciar sozinho. Já entrou? Confira seu plano do Claude e depois reinicie o bot.",
+      hint: "O Claude Code não está conectado a uma conta, ou a conta não pode ser usada. Entre no Claude e o agente volta a iniciar sozinho. Já entrou? Confira seu plano do Claude e depois reinicie o agente.",
     },
     backoff: {
       label: "Reiniciando",
@@ -27,7 +27,7 @@ export const bots: Messages["bots"] = {
   },
   chief: {
     badge: "Chefe",
-    hint: (crew: string) => `Lidera ${crew}: planeja o trabalho e sugere bots novos`,
+    hint: (crew: string) => `Lidera ${crew}: planeja o trabalho e sugere agentes novos`,
   },
   header: {
     noRole: "Sem função definida",
@@ -36,7 +36,7 @@ export const bots: Messages["bots"] = {
     restart: "Reiniciar",
     showDetails: "Mostrar detalhes",
     hideDetails: "Ocultar detalhes",
-    more: "Mais ações do bot",
+    more: "Mais ações do agente",
     menuOf: (name: string) => `Ações de ${name}`,
     edit: "Editar",
     restartFresh: "Reiniciar com uma nova conversa",
@@ -45,16 +45,16 @@ export const bots: Messages["bots"] = {
     stopChief: "Deixar de ser chefe",
     markUnread: "Marcar como não lida",
     markRead: "Marcar como lida",
-    archive: "Arquivar bot",
-    delete: "Excluir bot",
+    archive: "Arquivar agente",
+    delete: "Excluir agente",
     failed: {
-      pause: "Não foi possível pausar o bot",
-      resume: "Não foi possível retomar o bot",
-      restart: "Não foi possível reiniciar o bot",
+      pause: "Não foi possível pausar o agente",
+      resume: "Não foi possível retomar o agente",
+      restart: "Não foi possível reiniciar o agente",
       openFolder: "Não foi possível abrir a pasta",
       chief: "Não foi possível trocar o chefe",
-      archive: "Não foi possível arquivar o bot",
-      delete: "Não foi possível excluir o bot",
+      archive: "Não foi possível arquivar o agente",
+      delete: "Não foi possível excluir o agente",
     },
     fresh: {
       title: "Começar uma nova conversa?",
@@ -64,12 +64,12 @@ export const bots: Messages["bots"] = {
     },
     archiveConfirm: {
       title: (name: string) => `Arquivar ${name}?`,
-      confirm: "Arquivar bot",
-      body: "O bot para e sai da equipe. As mensagens que ainda esperam por ele não são entregues.",
+      confirm: "Arquivar agente",
+      body: "O agente para e sai da equipe. As mensagens que ainda esperam por ele não são entregues.",
     },
     deleteConfirm: {
       title: (name: string) => `Excluir ${name}?`,
-      confirm: "Excluir bot",
+      confirm: "Excluir agente",
       removed: (name: string, running: boolean) =>
         `${name} ${running ? "para agora e sai" : "sai"} do Botloft de vez, com a conversa, as rotinas e as tarefas de que fazia parte. Não dá para desfazer.`,
       chief: (crew: string) => `${crew} fica sem chefe.`,
@@ -81,44 +81,44 @@ export const bots: Messages["bots"] = {
     },
   },
   dialog: {
-    newTitle: "Novo bot",
+    newTitle: "Novo agente",
     editTitle: (name: string) => `Editar ${name}`,
-    create: "Criar bot",
+    create: "Criar agente",
     save: "Salvar",
     name: "Nome",
     namePlaceholder: "Revisor",
-    nameHint: "Os outros bots falam com ele pelo @ criado a partir deste nome.",
+    nameHint: "Os outros agentes falam com ele pelo @ criado a partir deste nome.",
     role: "Função",
     rolePlaceholder: "Revisa pull requests antes do merge",
     instructions: "Instruções",
     instructionsPlaceholder:
-      "Como este bot trabalha, o que ele pode fazer sozinho e quando deve perguntar.",
-    instructionsHint: "Salvas agora nas regras do bot; ele as lê na próxima vez que iniciar.",
+      "Como este agente trabalha, o que ele pode fazer sozinho e quando deve perguntar.",
+    instructionsHint: "Salvas agora nas regras do agente; ele as lê na próxima vez que iniciar.",
     fullAccess: {
       title: "Rodar qualquer comando sem perguntar",
       off: "Desligado: ele só roda os comandos da lista abaixo.",
-      on: "Ligado: ele roda qualquer comando sem perguntar a você, e um comando pode ler ou mudar tudo o que você pode. Só para um bot em que você confia.",
+      on: "Ligado: ele roda qualquer comando sem perguntar a você, e um comando pode ler ou mudar tudo o que você pode. Só para um agente em que você confia.",
     },
     commands: {
-      title: "Comandos que este bot pode rodar",
+      title: "Comandos que este agente pode rodar",
       placeholder: "git status\nnpm test",
-      hint: "Um comando por linha; ele pode rodar estes e o que começar com eles, sem perguntar a você. Ele não consegue perguntar, então todo o resto é recusado. Um * sozinho deixa rodar qualquer coisa. O bot reinicia para usar a lista.",
+      hint: "Um comando por linha; ele pode rodar estes e o que começar com eles, sem perguntar a você. Ele não consegue perguntar, então todo o resto é recusado. Um * sozinho deixa rodar qualquer coisa. O agente reinicia para usar a lista.",
     },
     agent: {
-      title: "Agente",
+      title: "Roda em",
       names: {
         claude: "Claude Code",
         agy: "Antigravity (experimental)",
         codex: "Codex",
       },
       experimental:
-        "Experimental. Este bot não consegue perguntar a você antes de agir. Ele trabalha com arquivos das próprias pastas e usa as ferramentas da equipe, mas não roda comandos, e não tem medidor de uso nem escolha de modelo.",
+        "Experimental. Este agente não consegue perguntar a você antes de agir. Ele trabalha com arquivos das próprias pastas e usa as ferramentas da equipe, mas não roda comandos, e não tem medidor de uso nem escolha de modelo.",
       experimentalCodex:
-        "Experimental. Este bot pergunta a você antes de mudar um arquivo ou rodar um comando, como o Claude Code. Ele ainda pode ler qualquer arquivo.",
+        "Experimental. Este agente pergunta a você antes de mudar um arquivo ou rodar um comando, como o Claude Code. Ele ainda pode ler qualquer arquivo.",
     },
     color: "Cor",
     swatch: (color: string) => `Cor ${color}`,
-    colorUnset: "Se você não escolher, o bot recebe a próxima cor da equipe.",
+    colorUnset: "Se você não escolher, o agente recebe a próxima cor da equipe.",
     custom: "Escolher qualquer cor",
     picker: {
       area: "Saturação e brilho",
@@ -131,7 +131,7 @@ export const bots: Messages["bots"] = {
   },
   notices: {
     crewPaused: (crew: string) => `A equipe ${crew} está pausada`,
-    crewPausedBody: "Os bots dela ficam parados até você retomar a equipe.",
+    crewPausedBody: "Os agentes dela ficam parados até você retomar a equipe.",
   },
   details: {
     title: (name: string) => `Sobre ${name}`,
