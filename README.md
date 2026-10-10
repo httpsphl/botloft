@@ -5,7 +5,7 @@
 <h1 align="center">Botloft</h1>
 
 <p align="center">
-  <b>A crew of AI coding bots that stays on and works together on your computer, on the agent you prefer.</b>
+  <b>A crew of AI coding bots that stays on and works together on your computer.</b>
 </p>
 
 <p align="center">
@@ -32,36 +32,60 @@
   <img src="docs/assets/hero-light.png" alt="Botloft with the Research crew open: seven bots, each with its own color, state and job">
 </picture>
 
-Botloft keeps a crew of bots running on your computer, each on the AI coding agent you choose:
-[Claude Code](https://code.claude.com), or [Antigravity](https://antigravity.google) as an experimental
-option, with Codex next. Each bot has its own folder, memory and conversation. They pass work to each other, keep going after you close the
-window and pick up where they left off after a restart. You talk to each one like in a chat app, and
-you decide what they may do.
+Botloft keeps a crew of [Claude Code](https://code.claude.com) bots running on your computer. Each
+bot has its own folder, memory and conversation. They pass work to each other, keep going after you
+close the window and pick up where they left off after a restart. You talk to each one like in a
+chat app, and you decide what they may do.
+
+[Antigravity](https://antigravity.google) works as an experimental second agent on `main`, but no
+release has it yet. Codex is next (see [Agents](#agents)).
 
 ## What you can do
 
 - **Start a crew from a goal.** Say what the crew is for. Its Chief plans the work and suggests the
   bots it needs; you create each one with a click, or say why not.
+- **Pick ready-made bots.** The Bot agency has dozens of bots ready for a job, like a developer, a
+  designer, a writer, a researcher or customer support. Add one to a crew with a click and change
+  anything about it afterwards. The Chief uses the same list when it suggests a bot.
 - **Chat with every bot.** Replies stream in as they are written. Send images and files. When a bot
   wants to run a command, edit a file or open a website, a card asks you first, unless you told that
-  bot it may.
+  bot it may. Search every chat with Ctrl+K.
+- **Answer their questions.** A bot that needs your decision asks in its chat and in the Questions
+  box, and goes on with what it can, even in a routine at night. Your answer reaches it as a message
+  whenever you reply.
 - **Let them hand work to each other.** Bots send messages and tasks to each other. Every message is
   saved before it is sent and retried until it arrives.
 - **Watch them work.** See every page a bot opens in its browser, live, and take control to sign in
   for it. Sites that refuse to sign in there, like Google, take one click more: sign in in a real
   window of the bot's browser, close it, and the bot keeps the login. Watch the screens it designs
   take shape while it writes them. Open the files it made.
+- **Let them use your desktop apps (Windows).** A bot can read and use the apps open on your
+  computer, like a spreadsheet or an old program with no website, but only those you allow. It asks
+  in the chat, and seeing an app and using it are separate permissions. You watch it live, and
+  Ctrl+Alt+Esc stops every bot on your desktop. Giving a bot the whole desktop, or letting it work
+  while you are away, first shows a screen that spells out the risks. Botloft itself, terminals,
+  password managers and password fields are never shared.
 - **Schedule routines.** Weekday mornings, every two hours or any cron schedule, with missed runs
   and overlaps handled.
 - **Leave them running.** Bots keep working after you close Botloft. They start when you sign in,
   come back soon after a crash and keep the computer awake while they work. Botloft
   waits near the clock and tells you when a bot needs you.
-- **Choose per bot.** Which agent it runs on, which model it uses, and how much it asks before
-  acting. With Claude Code, see how much of your plan's usage is left.
+- **Choose per bot.** Which model it uses and how much it asks before acting. See how much of your
+  plan's usage is left.
+- **Connect your own tools.** Add a tool of yours in Settings > Connected tools, like a LinkedIn
+  reader or your company's system, and turn it on only for the bots that need it. They still ask you
+  before using it.
 - **Back up and move.** Save a sealed backup file, or sign in with your e-mail (no password) to keep
   a light copy in the cloud and restore it on another computer. The server cannot read it. Turn on
   automatic copies, every day or week and only when something changed, if you want them to go by
   themselves (Windows for now).
+- **Keep up from your phone.** Choose "Connect a phone" in Settings > Account and phone and scan the
+  code with your phone's camera: Botloft opens there as a web page you can add to the Home Screen.
+  Approve requests, answer questions and chat with your bots from anywhere, with a notice when one
+  needs you. What passes between the phone and your computer is sealed end to end: the server
+  carries it but cannot read it. Anyone holding the phone unlocked can do the same, so you can lock
+  the page with a PIN. It uses the same account; files stay on your computer. Checked on Android,
+  not yet on iPhone.
 
 <table>
   <tr>
@@ -79,6 +103,9 @@ itself.
 
 ## Agents
 
+Antigravity is only on `main` for now: no release has it yet. In a build of `main`, the two agents
+compare like this:
+
 | | Claude Code | Antigravity (experimental) |
 |---|---|---|
 | Chat, crew messages, tasks, routines, the live browser | yes | chat, crew messages and tasks; the rest is not checked yet |
@@ -94,9 +121,9 @@ bots". Codex is the next agent. See [spec section 30](docs/spec.md) for what was
 
 ## Get started
 
-You need at least one agent installed and signed in once, with your own account:
-[Claude Code](https://code.claude.com/docs/en/setup), or Antigravity (experimental, see
-[Agents](#agents)). Bots run on your own plan with that agent.
+You need [Claude Code](https://code.claude.com/docs/en/setup), installed and signed in once with
+your own account. Bots run on your own plan. (Antigravity, the experimental second agent, is only on
+`main` for now; see [Agents](#agents).)
 
 1. Download Botloft for your computer from the
    [latest release](https://github.com/httpsphl/botloft/releases/latest):
@@ -136,9 +163,9 @@ flowchart LR
 - **The daemon is the source of truth.** Closing the app never stops a bot. `botloftd` runs as a
   scheduled task of your Windows user, a systemd user service on Linux or a launch agent on macOS:
   it starts when you sign in and comes back soon if it dies.
-- **Your agent is the runtime.** Each bot is a real session of the agent you chose (`claude -p` for
-  Claude Code, `agy -p` for Antigravity) with its own workspace, memory and conversation. There is
-  no custom agent SDK and no API key to manage.
+- **Your agent is the runtime.** Each bot is a real session of its agent (`claude -p` for Claude
+  Code; `agy -p` for Antigravity, on `main` only) with its own workspace, memory and conversation.
+  There is no custom agent SDK and no API key to manage.
 - **One conversation per bot.** Your messages, messages from other bots and notices from the daemon
   reach the bot in order. What it does comes back as a chat: replies, tool use and requests you
   allow or deny.
@@ -151,9 +178,11 @@ The full design, from the protocol to the states of a bot, lives in [`docs/spec.
 ## Privacy and security
 
 - **Local first.** The daemon listens on `127.0.0.1`, and there is no telemetry. An account is
-  optional: without one, Botloft uses the network for nothing beyond updates and what bots send to
-  the agent's provider, which goes through the agent as when you use it yourself. With one, the server only ever
-  holds a backup sealed with a password that never leaves your computer (see the FAQ).
+  optional. Without one, Botloft uses the network for nothing beyond updates and your bots' work:
+  what they send to the agent's provider, which goes through the agent as when you use it yourself,
+  and the websites and connected tools they use. With one, the server holds only backups sealed with
+  a password that never leaves your computer, and passes along what a connected phone and your
+  computer say to each other, sealed end to end (see the FAQ).
 - **You decide what bots may do.** Per bot: ask before anything, accept edits, plan only, or decide on
   its own what needs your OK. Unless it decides on its own, a bot also asks before its first visit
   to each website.
@@ -199,13 +228,16 @@ yours. Botloft's own data (SQLite, logs, secrets) is in `%LOCALAPPDATA%\Botloft`
 You sign in with a link sent to your e-mail; there is no account password. The cloud copy is the
 light one: your crews' structure, the bots' memory and the routines, not the chats or files. Botloft
 seals it on your computer with the backup password before sending, so the server stores bytes it
-cannot open. It also knows your e-mail, the computers you signed in on, and the size and date of each
-copy. Lose the backup password and the cloud copies cannot be recovered. Nothing is sent unless you
-send it or turn on automatic copies. Those go every day or week, only when something changed; for
-them Windows keeps your backup password in its credential store, on this computer only, so use a
-password just for this. You can delete the copies or the whole account from the app. The server is this
-repository's `botloft-cloud` crate: you can [run your own](docs/cloud-deploy.md) and point the app at
-it.
+cannot open. It also knows your e-mail, the computers you signed in on, the phones you connected
+(and, if you turn on notices, where to send them), and the size and date of each copy. Lose the
+backup password and the cloud copies cannot be recovered. Nothing is sent unless you send it, turn
+on automatic copies or connect a phone. Automatic copies go every day or week, only when something
+changed; for them Windows keeps your backup password in its credential store, on this computer
+only, so use a password just for this. A connected phone talks to your computer through the server,
+sealed end to end with keys only the two of them have: the server sees when and how much passes,
+never what, and the notices it sends the phone are empty. You can delete the copies or the whole
+account from the app, and disconnect a phone at any time. The server is this repository's
+`botloft-cloud` crate: you can [run your own](docs/cloud-deploy.md) and point the app at it.
 </details>
 
 <details>
@@ -230,16 +262,19 @@ Windows came first and has had the most use; if something does not work elsewher
 <details>
 <summary><b>Is Botloft made by Anthropic?</b></summary>
 
-No. Botloft is an independent project. It uses Claude Code and Antigravity as installed on your
-computer and is not affiliated with or endorsed by Anthropic or Google.
+No. Botloft is an independent project. It uses Claude Code (and, on `main`, Antigravity) as
+installed on your computer and is not affiliated with or endorsed by Anthropic or Google.
 </details>
 
 ## Status
 
-Botloft is young (version 0.x) and moves fast. The daemon, the chat, crews with a Chief, messages
-and tasks between bots, routines, the live browser, screens, "always allow" for requests, the
-installer and updates are in place. Planned next: a question box where bots ask you things, search,
-and a code-signed installer. `main` can be ahead of the latest release.
+Botloft is young (version 0.x) and moves fast. The latest release, 0.14.0 (2026-10-08), has bots
+that keep running in the background, the chat, crews with a Chief, ready-made bots in the Bot
+agency, messages and tasks between bots, routines, the live browser, screens, "always allow" for
+requests, questions from bots, chat search, desktop use on Windows, connected tools, backups with an
+optional cloud copy, the phone page, the installer and updates. Still open: a code-signed installer.
+`main` is ahead of the latest release; among other things, it has Antigravity as an experimental
+agent.
 
 <details>
 <summary><b>Development</b></summary>
