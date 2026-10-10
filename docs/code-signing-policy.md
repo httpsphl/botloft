@@ -57,12 +57,22 @@ listens on `127.0.0.1` only. What goes over the network:
   information about you or your bots is sent.
 - **Your bots.** Each bot is Claude Code running on your computer with your own Claude account. What
   it sends to Anthropic, and the websites it opens when its work needs them, are the same as when
-  you use Claude Code yourself.
+  you use Claude Code yourself. So is what it sends to a tool you connect and turn on for it
+  (Settings > Connected tools); a tool at an address is outside your computer.
 - **The optional cloud account.** Only if you sign in, and only when you send a copy or turn on automatic copies (every day or week, and only when something changed). The server gets your
   e-mail address, the name of your computer, and the light backup you choose to upload: it is sealed
   on your computer with the backup password, which never leaves it, so the server cannot read it. For automatic copies Windows keeps that password in its credential store, readable only by your user account.
   Signing out, deleting a copy or deleting the account is in the app. The server is the
   `botloft-cloud` crate in this repository, and the address is a setting, so you can run your own.
+- **A connected phone.** Only if you connect one (Settings > Account and phone), which needs the
+  account. While a phone is connected, or you are connecting one, the background service keeps one
+  outgoing connection to the server, which carries what the phone and the computer say to each
+  other: requests, questions, answers and the bots' chats. It is sealed end to end with keys only
+  the two of them have, so the server sees when and how much passes, never what. The server keeps
+  the phone's name and, if you turn on notices on the phone, the address its browser gave for them.
+  Each notice is empty and goes through that browser's push service, which learns only that a
+  notice arrived. Disconnecting the phone, from the computer or from the phone itself, cuts it off
+  at once, and signing out of the account disconnects every phone.
 
 ## What Botloft changes on your computer
 

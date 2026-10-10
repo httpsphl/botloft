@@ -2353,7 +2353,7 @@ Testes: `crates/botloft-store` (a impressão digital muda com o que o dono faz e
 
 ## 28. Celular
 
-Status: **CE1 (spec).** Vem depois de 27 e usa a conta dela. É o "celular" que 27.9 deixou para depois.
+Status: **CE1 a CE6 implementados**, no 0.14.0. Do CE7 (teste real), o que já se viu e o que falta está em "A verificar" (28.10). Vem depois de 27 e usa a conta dela. É o "celular" que 27.9 deixou para depois.
 
 ### 28.1 O que é
 
@@ -2520,7 +2520,7 @@ Arquivos e anexos, tarefas e rotinas no celular (conversa, só de texto, está e
 
 ### 28.12 Conversas
 
-Status: **CH3 (PWA feito)**. O celular, que só aprovava e respondia (28.1), passa a **ler as conversas dos bots e a mandar texto a eles**. O que ele continua sem fazer: anexos e arquivos (ver, mandar ou abrir), telas e navegador do bot, tarefas, rotinas, reações, busca, e qualquer configuração.
+Status: **CH1 a CH3 feitos**, no 0.14.0; o CH4 foi visto no Android e falta o iPhone. O celular, que só aprovava e respondia (28.1), passa a **ler as conversas dos bots e a mandar texto a eles**. O que ele continua sem fazer: anexos e arquivos (ver, mandar ou abrir), telas e navegador do bot, tarefas, rotinas, reações, busca, e qualquer configuração.
 
 **O que muda na privacidade (28.9).** Até aqui só passavam pedidos e perguntas. Agora passa **o texto das conversas**, e continua selado de ponta a ponta: o servidor não o lê. Ele vê um pouco mais do ritmo (mais mensagens, de tamanhos variados, quando alguém conversa), mas nada do que se diz. E um celular desbloqueado e conectado passa a **ler o histórico dos bots e a falar com eles**: por isso o aviso do app (28.7) diz isso também, e a regra abaixo protege o que há de pior.
 
@@ -2563,7 +2563,7 @@ Status: **CH3 (PWA feito)**. O celular, que só aprovava e respondia (28.1), pas
 
 ### 28.13 Trava com PIN
 
-Status: **LK1 (spec)**. Um celular desbloqueado e conectado aprova pedidos (28.5) e, com as conversas (28.12), lê e fala com os bots: quem o segurar faz o que o dono faria. A trava é um **PIN do próprio app**, que o dono **liga se quiser**. O app **não obriga**: explica o motivo e deixa a decisão com o dono.
+Status: **LK1 e LK2 feitos**, no 0.14.0 (o que já foi visto e o que falta, no fim desta seção). Um celular desbloqueado e conectado aprova pedidos (28.5) e, com as conversas (28.12), lê e fala com os bots: quem o segurar faz o que o dono faria. A trava é um **PIN do próprio app**, que o dono **liga se quiser**. O app **não obriga**: explica o motivo e deixa a decisão com o dono.
 
 **O que o app diz, em palavras do dia a dia.** Na tela do celular (28.7): "Com um PIN, quem pegar este celular desbloqueado não consegue ler suas conversas nem aprovar pedidos. Sem ele, o celular fica aberto para quem o segurar." Depois de conectar, e enquanto não houver PIN, a caixa mostra um aviso curto com o mesmo motivo, **"Proteger com um PIN"** e **"Agora não"** (o "agora não" é lembrado no aparelho e o aviso não volta; o PIN segue em "Este celular").
 
