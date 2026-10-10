@@ -4,15 +4,15 @@ export const crewTemplates: typeof en = {
   title: "Começar com um modelo de equipe",
   intro: "Escolha um modelo de equipe pronto para trabalhar, ou comece com uma equipe vazia.",
   scratch: "Começar com uma equipe vazia",
-  scratchHint: "Só o chefe. Você adiciona os bots.",
-  bots: (count: number) => (count === 1 ? "1 bot" : `${count} bots`),
+  scratchHint: "Só o chefe. Você adiciona os agentes.",
+  bots: (count: number) => (count === 1 ? "1 agente" : `${count} agentes`),
   adds: "Este modelo traz",
   change: "Escolher outro modelo",
   back: "Voltar",
   partial: (failed: number) =>
     failed === 1
-      ? "A equipe foi criada, mas 1 bot não pôde ser adicionado. Você pode adicioná-lo pela Agência de bots."
-      : `A equipe foi criada, mas ${failed} bots não puderam ser adicionados. Você pode adicioná-los pela Agência de bots.`,
+      ? "A equipe foi criada, mas 1 agente não pôde ser adicionado. Você pode adicioná-lo pela Agência de agentes."
+      : `A equipe foi criada, mas ${failed} agentes não puderam ser adicionados. Você pode adicioná-los pela Agência de agentes.`,
   loadFailed: "Não foi possível carregar os modelos",
   items: {
     "content-studio": {

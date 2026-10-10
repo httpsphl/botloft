@@ -52,7 +52,7 @@ async function openChat(phone: FakePhone, items: PhoneItem[], more = false) {
 }
 
 describe("the list of conversations", () => {
-  test("shows each bot with its last words, working, and a dot for a reply not seen", () => {
+  test("shows each agent with its last words, working, and a dot for a reply not seen", () => {
     const phone = new FakePhone();
     phone.receive({
       t: "chats",
@@ -85,12 +85,12 @@ describe("the list of conversations", () => {
     const phone = new FakePhone();
     render(<PhoneApp api={phone} />);
     fireEvent.click(screen.getByRole("tab", { name: /Chats/ }));
-    expect(screen.getByText("Loading the bots…")).toBeTruthy();
+    expect(screen.getByText("Loading the agents…")).toBeTruthy();
     act(() => phone.receive({ t: "chats", bots: [], first: true }));
-    expect(screen.getByText("No bots yet")).toBeTruthy();
+    expect(screen.getByText("No agents yet")).toBeTruthy();
   });
 
-  test("a line that changes moves the bot up", () => {
+  test("a line that changes moves the agent up", () => {
     const quiet = line({ botId: "bot_2", name: "Writer" });
     delete quiet.last;
     const phone = withList(line(), quiet);
@@ -108,7 +108,7 @@ describe("the list of conversations", () => {
     expect(names[0]).toContain("Writer");
   });
 
-  test("the number kept for each bot is a time and never a text", async () => {
+  test("the number kept for each agent is a time and never a text", async () => {
     const kept: Record<string, number>[] = [];
     const store: SeenStore = { load: () => ({}), save: (seen) => kept.push(seen) };
     const phone = new FakePhone(store);
@@ -121,7 +121,7 @@ describe("the list of conversations", () => {
 });
 
 describe("a conversation", () => {
-  test("opens with the newest items, asks to be told what happens and says what the bot does", async () => {
+  test("opens with the newest items, asks to be told what happens and says what the agent does", async () => {
     const phone = withList(line({ state: "busy" }));
     await openChat(phone, [
       you("itm_1", "Hello"),
@@ -255,7 +255,7 @@ describe("a conversation", () => {
   });
 });
 
-describe("writing to a bot", () => {
+describe("writing to an agent", () => {
   const box = () => screen.getByLabelText("Message to Scout") as HTMLTextAreaElement;
   const write = (value: string) => fireEvent.change(box(), { target: { value } });
   const sendButton = () => screen.getByRole("button", { name: "Send" }) as HTMLButtonElement;
@@ -274,7 +274,7 @@ describe("writing to a bot", () => {
     const clientId = asked?.t === "send" ? asked.clientId : "";
 
     act(() => phone.receive({ t: "sent", clientId, ok: true }));
-    expect(screen.getByText("Sent. The bot will see it when it can.")).toBeTruthy();
+    expect(screen.getByText("Sent. The agent will see it when it can.")).toBeTruthy();
     act(() => phone.receive({ t: "item", botId: "bot_1", item: you("itm_9", "Do the report", 9) }));
     // One bubble only: the pending one is gone.
     expect(screen.getAllByText("Do the report")).toHaveLength(1);
@@ -318,7 +318,7 @@ describe("finding the way around", () => {
     line({ botId: "bot_3", name: "Editor", crew: "Marketing", lastReplyAt: 1 }),
   ];
 
-  test("groups the bots by crew, and the chips narrow the list to one", () => {
+  test("groups the agents by crew, and the chips narrow the list to one", () => {
     const phone = withList(...many());
     act(() => phone.set({ seen: { bot_1: 100, bot_2: 1, bot_3: 1 } }));
     const sections = screen.getAllByRole("region");
@@ -326,7 +326,7 @@ describe("finding the way around", () => {
       "Marketing",
       "Ops",
     ]);
-    expect(within(sections[0] as HTMLElement).getByText("2 bots")).toBeTruthy();
+    expect(within(sections[0] as HTMLElement).getByText("2 agents")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /^Ops/ }));
     expect(screen.queryByRole("button", { name: /Writer/ })).toBeNull();
     expect(screen.getByRole("button", { name: /Scout/ })).toBeTruthy();

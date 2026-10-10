@@ -11,21 +11,21 @@ async function openNewBot(agents: ("claude" | "agy")[]) {
   fake.addCrew("Ops");
   renderApp(fake);
   await crewOpened("Ops");
-  const [button] = await screen.findAllByRole("button", { name: "New bot" });
+  const [button] = await screen.findAllByRole("button", { name: "New agent" });
   fireEvent.click(button as HTMLElement);
-  return within(await screen.findByRole("dialog", { name: "New bot" }));
+  return within(await screen.findByRole("dialog", { name: "New agent" }));
 }
 
-describe("choosing the agent of a new bot", () => {
+describe("choosing the agent of a new agent", () => {
   test("with only Claude Code there is no choice to make", async () => {
     const dialog = await openNewBot(["claude"]);
-    expect(dialog.queryByLabelText("Agent")).toBeNull();
+    expect(dialog.queryByLabelText("Runs on")).toBeNull();
     expect(dialog.getByLabelText("Model")).toBeDefined();
   });
 
   test("an experimental agent comes with its warning and no model choice", async () => {
     const dialog = await openNewBot(["claude", "agy"]);
-    fireEvent.change(dialog.getByLabelText("Agent"), { target: { value: "agy" } });
+    fireEvent.change(dialog.getByLabelText("Runs on"), { target: { value: "agy" } });
     expect(dialog.getByRole("note").textContent).toMatch(/cannot ask you/);
     expect(dialog.queryByLabelText("Model")).toBeNull();
   });
@@ -38,10 +38,10 @@ describe("Codex in the new-bot dialog", () => {
     fake.addCrew("Ops");
     renderApp(fake);
     await crewOpened("Ops");
-    const [button] = await screen.findAllByRole("button", { name: "New bot" });
+    const [button] = await screen.findAllByRole("button", { name: "New agent" });
     fireEvent.click(button as HTMLElement);
-    const dialog = within(await screen.findByRole("dialog", { name: "New bot" }));
-    fireEvent.change(dialog.getByLabelText("Agent"), { target: { value: "codex" } });
+    const dialog = within(await screen.findByRole("dialog", { name: "New agent" }));
+    fireEvent.change(dialog.getByLabelText("Runs on"), { target: { value: "codex" } });
     expect(dialog.getByRole("note").textContent).toMatch(
       /asks you before it changes a file or runs a command/,
     );

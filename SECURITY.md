@@ -16,16 +16,16 @@ The app updates itself, so staying on it is one click.
 
 ## Scope
 
-Botloft runs Claude Code bots on your computer, with your account. Some things are by design and not
+Botloft runs AI agents on your computer, with your account. Some things are by design and not
 vulnerabilities:
 
-- Bots run as your user, without a sandbox. Keeping them apart is cooperative: a bot that may run
+- Agents run as your user, without a sandbox. Keeping them apart is cooperative: an agent that may run
   any command (or one set to skip permission prompts) can read what your user can read, including
-  other bots' folders and Botloft's own data. The app warns about this before you turn that on.
+  other agents' folders and Botloft's own data. The app warns about this before you turn that on.
 - The background service listens on `127.0.0.1` only and asks every client for a token, which only
   your user can read. Other programs running as your user are trusted as much as you are.
 
-A way around what a bot was allowed to do, a page or a message that gets a bot past a permission
+A way around what an agent was allowed to do, a page or a message that gets an agent past a permission
 prompt, or a program reaching the service without the token is in scope and very welcome.
 
 Antivirus detections of the releases are not security reports: see the

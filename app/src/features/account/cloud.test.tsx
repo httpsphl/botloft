@@ -88,7 +88,7 @@ describe("the account and the copies in the cloud", () => {
     const field = await within(dialog).findByLabelText("The copy's passphrase");
     type(field, FAKE_PASSPHRASE);
     fireEvent.click(within(dialog).getByRole("button", { name: "Open" }));
-    expect(await within(dialog).findByText("Ops: 2 bots")).toBeDefined();
+    expect(await within(dialog).findByText("Ops: 2 agents")).toBeDefined();
     expect(within(dialog).getByText(/The chats and files are not in it/)).toBeDefined();
     fireEvent.click(within(dialog).getByRole("button", { name: "Restore and restart" }));
     await waitFor(() => expect(host.installs).toContain("restart"));

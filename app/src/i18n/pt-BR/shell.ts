@@ -13,8 +13,8 @@ export const shell: Messages["shell"] = {
     home: "Início",
   },
   sidebar: {
-    hide: "Esconder a lista de bots",
-    show: "Mostrar a lista de bots",
+    hide: "Esconder a lista de agentes",
+    show: "Mostrar a lista de agentes",
   },
   zoom: {
     level: (percent: number, isDefault: boolean) =>
@@ -30,9 +30,9 @@ export const shell: Messages["shell"] = {
   },
   loadFailed: "Não foi possível carregar suas equipes",
   recycleFailed: (path: string) => `A pasta ${path} não foi para a Lixeira e continua lá`,
-  botsCantStart: "Os bots não conseguem iniciar",
+  botsCantStart: "Os agentes não conseguem iniciar",
   signIn: {
     title: "Entre no Claude",
-    body: "Seus bots trabalham com a sua conta do Claude. Entre uma vez e eles começam sozinhos.",
+    body: "Seus agentes trabalham com a sua conta do Claude. Entre uma vez e eles começam sozinhos.",
   },
 };

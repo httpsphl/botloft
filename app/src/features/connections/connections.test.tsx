@@ -50,7 +50,7 @@ describe("connected tools", () => {
       expect(screen.queryByRole("dialog", { name: "Connect a tool" })).toBeNull(),
     );
     expect(within(dialog).getByText("LinkedIn".toLowerCase())).toBeDefined();
-    expect(within(dialog).getByText("No bot uses it yet")).toBeDefined();
+    expect(within(dialog).getByText("No agent uses it yet")).toBeDefined();
     const saved = fake.calls.find((each) => each.method === "mcp.save");
     expect(saved?.params).toMatchObject({
       name: "linkedin",
@@ -95,7 +95,7 @@ describe("connected tools", () => {
     );
   });
 
-  test("a bot gets a tool when the owner turns it on, and shows how it came up", async () => {
+  test("an agent gets a tool when the owner turns it on, and shows how it came up", async () => {
     const { fake, scout, dialog } = await openTools();
     fireEvent.click(await within(dialog).findByRole("button", { name: "Connect a tool…" }));
     const adding = screen.getByRole("dialog", { name: "Connect a tool" });

@@ -7,8 +7,8 @@ afterEach(cleanup);
 
 const panel = () => screen.getByRole("complementary", { name: "Scout's browser" });
 
-describe("the owner opens the bot's closed browser", () => {
-  test("on its last page, in their hands, without telling the bot", async () => {
+describe("the owner opens the agent's closed browser", () => {
+  test("on its last page, in their hands, without telling the agent", async () => {
     const fake = new FakeBotloft();
     const ops = fake.addCrew("Ops");
     const scout = fake.addBot(ops.id, "Scout", "Finds sources");

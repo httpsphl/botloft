@@ -14,7 +14,7 @@ async function synced(fake: FakeBotloft) {
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("app store", () => {
-  test("loads crews, bots and the system status, and selects the first crew", async () => {
+  test("loads crews, agents and the system status, and selects the first crew", async () => {
     const fake = new FakeBotloft();
     const ops = fake.addCrew("Ops");
     const research = fake.addCrew("Research");
@@ -28,7 +28,7 @@ describe("app store", () => {
     expect(state.selectedCrewId).toBe(ops.id);
   });
 
-  test("a chat item moves the bot's list line, not the bot", async () => {
+  test("a chat item moves the agent's list line, not the agent", async () => {
     const fake = new FakeBotloft();
     const crew = fake.addCrew("Ops");
     const scout = fake.addBot(crew.id, "Scout");
@@ -64,7 +64,7 @@ describe("app store", () => {
     expect(store.getState().selectedCrewId).toBeNull();
   });
 
-  test("a deleted bot leaves with its routines, tasks and deliveries", async () => {
+  test("a deleted agent leaves with its routines, tasks and deliveries", async () => {
     const fake = new FakeBotloft();
     const crew = fake.addCrew("Ops");
     const scout = fake.addBot(crew.id, "Scout");
@@ -100,7 +100,7 @@ describe("app store", () => {
     await expect(fake.call("bots.delete", { botId: scout.id })).rejects.toThrow();
   });
 
-  test("a deleted crew leaves with its bots, archived or not", async () => {
+  test("a deleted crew leaves with its agents, archived or not", async () => {
     const fake = new FakeBotloft();
     const ops = fake.addCrew("Ops");
     const docs = fake.addCrew("Docs");

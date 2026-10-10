@@ -29,7 +29,7 @@ function choose(name: RegExp) {
 }
 
 describe("permission modes", () => {
-  test("a bot starts in Manual and the owner picks another mode", async () => {
+  test("an agent starts in Manual and the owner picks another mode", async () => {
     const { fake, scout } = await openScout();
     expect(picker().getAttribute("aria-label")).toBe("Mode: Manual");
     fireEvent.click(picker());
@@ -45,11 +45,11 @@ describe("permission modes", () => {
     expect(screen.queryByText(/switches to/)).toBeNull();
   });
 
-  test("bypassing permissions asks first, then marks the bot in red", async () => {
+  test("bypassing permissions asks first, then marks the agent in red", async () => {
     const { fake } = await openScout();
     choose(/Bypass permissions/);
     const dialog = screen.getByRole("dialog", { name: "Let Scout do anything without asking?" });
-    expect(within(dialog).getByText(/other bots' files/)).toBeDefined();
+    expect(within(dialog).getByText(/other agents' files/)).toBeDefined();
     fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
     expect(modeCalls(fake)).toHaveLength(0);
     expect(screen.queryByText("Asks nothing")).toBeNull();
@@ -61,7 +61,7 @@ describe("permission modes", () => {
     expect(modeCalls(fake).at(-1)?.params).toMatchObject({ mode: "bypass_permissions" });
   });
 
-  test("a busy bot changes mode when it finishes what it is doing", async () => {
+  test("a busy agent changes mode when it finishes what it is doing", async () => {
     const { fake, scout } = await openScout();
     act(() => fake.setBotState(scout.id, "busy"));
     choose(/Plan/);
@@ -83,7 +83,7 @@ describe("plans", () => {
     return screen.getByRole("region", { name: "Scout made a plan and wants to go ahead" });
   }
 
-  test("the plan shows in full and approving it lets the bot go ahead", async () => {
+  test("the plan shows in full and approving it lets the agent go ahead", async () => {
     const { fake, scout } = await openScout();
     await act(() => fake.call("bots.setPermissionMode", { botId: scout.id, mode: "plan" }));
     const card = askToGoAhead(fake, scout.id);

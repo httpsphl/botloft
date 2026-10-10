@@ -15,8 +15,8 @@ export const account: Messages["account"] = {
   usage: {
     title: "Uso",
     intro:
-      "Quanto do seu plano do Claude os seus bots já usaram. Atualiza sempre que um bot trabalha.",
-    empty: "O uso aparece depois da primeira resposta de um bot.",
+      "Quanto do seu plano do Claude os seus agentes já usaram. Atualiza sempre que um agente trabalha.",
+    empty: "O uso aparece depois da primeira resposta de um agente.",
     windows: {
       five_hour: "Janela de 5 horas",
       seven_day: "Esta semana",
@@ -25,12 +25,12 @@ export const account: Messages["account"] = {
     },
     used: (percent: number) => `${percent}% usado`,
     resets: (relative: string) => `Renova ${relative}`,
-    limited: "Limite atingido. Seus bots esperam até ele renovar.",
+    limited: "Limite atingido. Seus agentes esperam até ele renovar.",
     updated: (relative: string) => `Atualizado ${relative}`,
     tokens: {
-      title: "Uso por bot",
+      title: "Uso por agente",
       intro:
-        "Quanto do seu plano semanal cada bot usou, e os tokens por trás disso: os pedaços de texto que um bot lê e escreve.",
+        "Quanto do seu plano semanal cada agente usou, e os tokens por trás disso: os pedaços de texto que um agente lê e escreve.",
       period: "Período",
       periods: {
         hour: "Última hora",
@@ -39,25 +39,25 @@ export const account: Messages["account"] = {
         month: "30 dias",
         all: "Tudo",
       },
-      empty: "Nenhum bot trabalhou nesse período.",
+      empty: "Nenhum agente trabalhou nesse período.",
       failed: "Não deu para carregar os tokens",
       archived: "arquivado",
       /** `crew` is null on the total of all bots. */
       detail: (crew: string | null, times: number) =>
         `${crew === null ? "" : `${crew} · `}Trabalhou ${times === 1 ? "1 vez" : `${times} vezes`}`,
-      total: "Todos os bots",
+      total: "Todos os agentes",
       share: (percent) => `≈ ${percent} da semana`,
       tokensUsed: (count) => `${count} tokens`,
       estimate:
-        "≈ Estimativa: o Botloft aprende quanto do seu plano o trabalho dos bots consome pelo quanto o plano semanal sobe enquanto eles trabalham. O que você usa fora do Botloft também faz o plano subir, então os bots podem aparecer com um pouco mais do que usaram.",
+        "≈ Estimativa: o Botloft aprende quanto do seu plano o trabalho dos agentes consome pelo quanto o plano semanal sobe enquanto eles trabalham. O que você usa fora do Botloft também faz o plano subir, então os agentes podem aparecer com um pouco mais do que usaram.",
       learning:
-        "A parte de cada bot no seu plano semanal aparece depois que o plano subir alguns pontos com os bots trabalhando. Até lá, os tokens.",
+        "A parte de cada agente no seu plano semanal aparece depois que o plano subir alguns pontos com os agentes trabalhando. Até lá, os tokens.",
     },
   },
   backup: {
     exportTitle: "Salvar uma cópia",
     exportIntro:
-      "Guarda suas equipes, bots, conversas e a memória de cada bot num arquivo trancado com uma senha, para trazer de volta depois de reinstalar ou em outro computador. Pastas de trabalho que você escolheu fora do Botloft não entram.",
+      "Guarda suas equipes, agentes, conversas e a memória de cada agente num arquivo trancado com uma senha, para trazer de volta depois de reinstalar ou em outro computador. Pastas de trabalho que você escolheu fora do Botloft não entram.",
     passphrase: "Senha",
     passphraseHint:
       "Ao menos 8 caracteres. Sem ela a cópia não abre, e o Botloft não a guarda em lugar nenhum.",
@@ -79,7 +79,7 @@ export const account: Messages["account"] = {
     opening: "Abrindo…",
     from: (when) => `Cópia de ${when}`,
     crew: (name, bots) =>
-      `${name}: ${bots === 0 ? "nenhum bot" : bots === 1 ? "1 bot" : `${bots} bots`}`,
+      `${name}: ${bots === 0 ? "nenhum agente" : bots === 1 ? "1 agente" : `${bots} agentes`}`,
     workFolders:
       "Estas pastas de trabalho não estão na cópia. Se este é outro computador, ponha os arquivos delas de volta:",
     replaces: "Tudo neste Botloft é trocado. O Botloft reinicia para isso.",
@@ -89,7 +89,7 @@ export const account: Messages["account"] = {
     openFailed: "Não foi possível abrir a cópia",
     restoreFailed: "Não foi possível restaurar a cópia",
     lightNote:
-      "Esta cópia tem as equipes, os bots, a memória deles e as rotinas. As conversas e os arquivos não estão nela.",
+      "Esta cópia tem as equipes, os agentes, a memória deles e as rotinas. As conversas e os arquivos não estão nela.",
     reasons: {
       short_passphrase: "A senha precisa de ao menos 8 caracteres.",
       wrong_passphrase: "A senha está errada, ou o arquivo está danificado.",
@@ -117,7 +117,7 @@ export const account: Messages["account"] = {
     usage: (used: string, quota: string) => `${used} de ${quota} usados`,
     uploadTitle: "Enviar uma cópia para a nuvem",
     uploadIntro:
-      "Sobem: suas equipes, os bots, a memória de cada um e as rotinas. As conversas e os arquivos ficam só neste computador. A cópia é trancada com uma senha que nunca sai dele.",
+      "Sobem: suas equipes, os agentes, a memória de cada um e as rotinas. As conversas e os arquivos ficam só neste computador. A cópia é trancada com uma senha que nunca sai dele.",
     upload: "Enviar uma cópia agora",
     uploading: "Enviando…",
     uploaded: (size: string) => `Cópia enviada (${size}).`,
@@ -180,10 +180,10 @@ export const account: Messages["account"] = {
   mobile: {
     title: "Celular",
     intro:
-      "Aprove os pedidos dos seus bots, responda às perguntas deles e converse com eles de qualquer lugar. Os arquivos ficam só neste computador.",
+      "Aprove os pedidos dos seus agentes, responda às perguntas deles e converse com eles de qualquer lugar. Os arquivos ficam só neste computador.",
     needAccount: "Entre na conta acima para usar o celular.",
     warning:
-      "Quem estiver com um celular conectado e desbloqueado pode ler as conversas dos seus bots, escrever para eles e permitir pedidos até você desconectá-lo. Um PIN no celular ajuda; você liga nele.",
+      "Quem estiver com um celular conectado e desbloqueado pode ler as conversas dos seus agentes, escrever para eles e permitir pedidos até você desconectá-lo. Um PIN no celular ajuda; você liga nele.",
     connect: "Conectar um celular",
     starting: "Preparando…",
     qrLabel: "Código para ler com o celular",
@@ -210,55 +210,57 @@ export const account: Messages["account"] = {
     title: "Configurações",
     background: "Em segundo plano",
     keepWorking: "Continuar trabalhando depois de fechar o Botloft",
-    keepWorkingOn: "Seus bots seguem trabalhando e respondendo depois que você fecha esta janela.",
+    keepWorkingOn:
+      "Seus agentes seguem trabalhando e respondendo depois que você fecha esta janela.",
     keepWorkingOff:
-      "Ao fechar o Botloft, todos os bots param. Eles continuam de onde pararam quando você abrir de novo.",
+      "Ao fechar o Botloft, todos os agentes param. Eles continuam de onde pararam quando você abrir de novo.",
     tray: "Mostrar o Botloft perto do relógio",
     trayOn:
-      "Com a janela fechada, o ícone fica perto do relógio: um clique abre o Botloft, e ele avisa quando um bot precisa de você.",
-    trayOff: "Fechar a janela fecha o Botloft. Os bots seguem trabalhando, sem ícone nem avisos.",
+      "Com a janela fechada, o ícone fica perto do relógio: um clique abre o Botloft, e ele avisa quando um agente precisa de você.",
+    trayOff:
+      "Fechar a janela fecha o Botloft. Os agentes seguem trabalhando, sem ícone nem avisos.",
     startWithSystem: (system: string) => `Iniciar com o ${system}`,
     startWithSystemOn: (system: string) =>
-      `Quando você entra no ${system}, seus bots voltam a trabalhar sozinhos, sem abrir esta janela.`,
+      `Quando você entra no ${system}, seus agentes voltam a trabalhar sozinhos, sem abrir esta janela.`,
     startWithSystemOff:
-      "Depois que você reinicia o computador, os bots esperam você abrir o Botloft.",
+      "Depois que você reinicia o computador, os agentes esperam você abrir o Botloft.",
     openAtSignIn: (system: string) => `Abrir a janela ao entrar no ${system}`,
     openAtSignInOn: (system: string) => `A janela do Botloft abre quando você entra no ${system}.`,
     openAtSignInNearClock: "O Botloft começa perto do relógio, sem abrir a janela.",
     openAtSignInOff: "A janela só abre quando você abrir o Botloft.",
     alerts: "Avisos",
-    notifyNeeds: "Quando um bot precisar de você",
+    notifyNeeds: "Quando um agente precisar de você",
     notifyNeedsHint: (system: string) =>
-      `Um aviso do ${system} quando um bot pede permissão ou precisa que você entre na conta, se o Botloft não estiver na frente.`,
-    notifyDone: "Quando um bot terminar",
-    notifyDoneHint: "Um aviso quando um bot termina o que estava fazendo.",
-    markReplies: "Marcar o ícone quando um bot responder",
+      `Um aviso do ${system} quando um agente pede permissão ou precisa que você entre na conta, se o Botloft não estiver na frente.`,
+    notifyDone: "Quando um agente terminar",
+    notifyDoneHint: "Um aviso quando um agente termina o que estava fazendo.",
+    markReplies: "Marcar o ícone quando um agente responder",
     markRepliesHint:
       "Um ponto no ícone do Botloft na barra de tarefas enquanto houver conversa que você não leu.",
     sound: "Tocar um som",
     soundHint: "Um som curto com cada aviso, também com o Botloft na frente.",
     appSounds: "Sons do app",
     appSoundsHint:
-      "Sons suaves com o Botloft na frente: mensagem enviada, resposta ou arquivo no chat aberto, bot ou equipe nova.",
+      "Sons suaves com o Botloft na frente: mensagem enviada, resposta ou arquivo no chat aberto, agente ou equipe nova.",
     alertsNeedTray:
       "Com a janela fechada, os avisos só chegam com o Botloft perto do relógio (em Geral).",
-    keepAwake: "Não deixar o computador dormir enquanto os bots trabalham",
+    keepAwake: "Não deixar o computador dormir enquanto os agentes trabalham",
     keepAwakeHint: "Ele ainda dorme quando você fecha a tampa ou escolhe Suspender.",
     saveFailed: "Não foi possível mudar a configuração",
     pages: "Partes das configurações",
     general: "Geral",
-    defaultAgent: "Agente dos bots novos",
+    defaultAgent: "Os agentes novos rodam em",
     defaultAgentHint:
-      "Vale para bots novos, o chefe de uma equipe nova e os bots que um modelo de equipe adiciona. Cada bot guarda o agente com que foi criado.",
+      "Vale para agentes novos, o chefe de uma equipe nova e os agentes que um modelo de equipe adiciona. Cada agente guarda o motor com que foi criado.",
     chat: "Conversa",
     enterSends: "Enter envia a mensagem",
     enterSendsOn: "Shift+Enter começa uma nova linha.",
     enterSendsOff: "Enter começa uma nova linha, e Ctrl+Enter envia.",
-    followBot: "Abrir o navegador e as telas quando um bot começar a usar",
-    followBotOn: "O painel abre ao lado da conversa, para você ver o que o bot faz.",
+    followBot: "Abrir o navegador e as telas quando um agente começar a usar",
+    followBotOn: "O painel abre ao lado da conversa, para você ver o que o agente faz.",
     followBotOff: "O botão do painel ganha um ponto, e você abre quando quiser.",
     approvalWait: "Quanto tempo um pedido de permissão espera por você",
-    approvalWaitHint: "Sem resposta nesse tempo, o pedido do bot é negado e ele segue sem isso.",
+    approvalWaitHint: "Sem resposta nesse tempo, o pedido do agente é negado e ele segue sem isso.",
     waitFor: (minutes: number) =>
       minutes < 60 || minutes % 60 !== 0
         ? `${minutes} min`
@@ -276,12 +278,12 @@ export const account: Messages["account"] = {
     language: "Idioma",
     archived: "Arquivados",
     archivedIntro:
-      "Os bots e as equipes que você arquivou estão parados e fora da vista, e o Botloft ainda guarda as conversas deles. Exclua um para tirá-lo de vez.",
+      "Os agentes e as equipes que você arquivou estão parados e fora da vista, e o Botloft ainda guarda as conversas deles. Exclua um para tirá-lo de vez.",
     archivedEmpty: "Nada está arquivado.",
     archivedLoadFailed: "Não foi possível carregar o que está arquivado",
     archivedCrew: (bots: number, when: string) =>
-      `Equipe · ${bots === 1 ? "1 bot" : `${bots} bots`} · arquivada ${when}`,
-    archivedBot: (crew: string, when: string) => `Bot de ${crew} · arquivado ${when}`,
+      `Equipe · ${bots === 1 ? "1 agente" : `${bots} agentes`} · arquivada ${when}`,
+    archivedBot: (crew: string, when: string) => `Agente de ${crew} · arquivado ${when}`,
     deleteArchived: "Excluir",
     deleteArchivedOne: (name: string) => `Excluir ${name}`,
     about: "Sobre",

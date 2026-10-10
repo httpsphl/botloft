@@ -19,17 +19,17 @@ import { security } from "./catalogSecurity";
 // each. Plain words: "bot" and "crew", never "template" or "prompt".
 
 export const catalog = {
-  title: "Bot agency",
-  open: "Bot agency",
-  openHint: "Ready-made bots you can add to this crew",
+  title: "Agent agency",
+  open: "Agent agency",
+  openHint: "Ready-made agents you can add to this crew",
   intro:
-    "Pick a bot for the job. It joins this crew ready to work, and you can change anything about it afterwards.",
+    "Pick an agent for the job. It joins this crew ready to work, and you can change anything about it afterwards.",
   invite: {
     title: "Who do you want on your crew?",
-    body: "Not sure what to create? Pick a bot for the job. You can change anything about it afterwards.",
+    body: "Not sure what to create? Pick an agent for the job. You can change anything about it afterwards.",
   },
-  search: "Search bots",
-  filter: "Kinds of bots",
+  search: "Search agents",
+  filter: "Kinds of agents",
   categories: {
     all: "All",
     code: "Code",
@@ -47,23 +47,23 @@ export const catalog = {
     games: "Games",
     legal: "Legal",
   },
-  none: "No bot matches that.",
-  loading: "Loading the bots…",
+  none: "No agent matches that.",
+  loading: "Loading the agents…",
   add: "Add to crew",
   learnMore: "Learn more",
-  back: "Back to all bots",
-  seeAll: "See all bots",
+  back: "Back to all agents",
+  seeAll: "See all agents",
   joined: (name: string) => `${name} joined the crew`,
   customize: "Customize",
   failed: {
-    load: "Could not load the bots",
-    add: "Could not add the bot",
+    load: "Could not load the agents",
+    add: "Could not add the agent",
   },
   detail: {
     what: "What it does",
     when: "When to call it",
     pairs: "Works well with",
-    technical: "What the bot is told when it starts",
+    technical: "What the agent is told when it starts",
   },
   roles: {
     ...base,

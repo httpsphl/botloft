@@ -59,7 +59,7 @@ describe("signing in to Claude", () => {
     ).toBeDefined();
   });
 
-  test("a bot stopped by a sign-in error offers the sign-in", async () => {
+  test("an agent stopped by a sign-in error offers the sign-in", async () => {
     const fake = new FakeBotloft();
     const crew = fake.addCrew("Ops");
     const bot = fake.addBot(crew.id, "Scout");

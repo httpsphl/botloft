@@ -31,7 +31,7 @@ function edit(file: string | null, changes: Partial<ToolItem> = {}): ChatItem {
 }
 
 describe("whose memory an edit wrote", () => {
-  test("the bot's own, in any case and with either slash", () => {
+  test("the agent's own, in any case and with either slash", () => {
     expect(memoryOf(edit(`${WORKSPACE}\\CLAUDE.md`), places, WORKSPACE)).toBe("bot");
     expect(memoryOf(edit("c:/users/owner/botloft/ops/scout/claude.md"), places, WORKSPACE)).toBe(
       "bot",
@@ -48,7 +48,7 @@ describe("whose memory an edit wrote", () => {
     expect(memoryOf(edit("D:\\Projects\\site\\CLAUDE.md"), places, WORKSPACE)).toBe("crew");
   });
 
-  test("nothing for other files, other bots, or calls that did not finish", () => {
+  test("nothing for other files, other agents, or calls that did not finish", () => {
     expect(memoryOf(edit(`${WORKSPACE}\\notes.md`), places, WORKSPACE)).toBeNull();
     expect(
       memoryOf(edit("C:\\Users\\owner\\Botloft\\ops\\writer\\CLAUDE.md"), places, WORKSPACE),

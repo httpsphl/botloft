@@ -13,10 +13,10 @@ export const base: typeof en = {
   },
   "code-reviewer": {
     name: "Revisor de código",
-    role: "Revisa lo que cambiaron otros bots y señala errores, riesgos y complicaciones innecesarias",
+    role: "Revisa lo que cambiaron otros agentes y señala errores, riesgos y complicaciones innecesarias",
     summary: "Lee los cambios con ojo crítico y dice qué está mal o es arriesgado",
     about:
-      "Lee los cambios que hizo otro bot y enumera lo que puede romperse, lo que es arriesgado y lo que está más complicado de lo necesario. Nunca edita el código, solo informa, y la decisión es tuya. Piensa más a fondo que la mayoría de los bots, así que gasta un poco más de tu plan.",
+      "Lee los cambios que hizo otro agente y enumera lo que puede romperse, lo que es arriesgado y lo que está más complicado de lo necesario. Nunca edita el código, solo informa, y la decisión es tuya. Piensa más a fondo que la mayoría de los agentes, así que gasta un poco más de tu plan.",
     when: "Después de que un Desarrollador cambie algo importante: un pago, un acceso, cualquier cosa difícil de deshacer.",
     pairs: "Desarrollador, cuyo trabajo revisa, y Tester.",
   },

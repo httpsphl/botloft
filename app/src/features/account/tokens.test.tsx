@@ -16,8 +16,8 @@ async function openUsage(fake: FakeBotloft) {
   return screen.getByRole("dialog", { name: "Usage" });
 }
 
-describe("tokens by bot", () => {
-  test("each bot's tokens add up over the period chosen, with the total", async () => {
+describe("tokens by agent", () => {
+  test("each agent's tokens add up over the period chosen, with the total", async () => {
     const fake = new FakeBotloft();
     const ops = fake.addCrew("Ops");
     const scout = fake.addBot(ops.id, "Scout", "Finds sources");
@@ -31,19 +31,19 @@ describe("tokens by bot", () => {
     fake.chat.turn(writer.id);
 
     const dialog = await openUsage(fake);
-    const list = await within(dialog).findByRole("list", { name: "Use by bot" });
+    const list = await within(dialog).findByRole("list", { name: "Use by agent" });
     const rows = within(list).getAllByRole("listitem");
     // Each turn: 12 new, 1,800 into the cache and 640 written count; 24,000 reread do not.
     expect(rows.map((row) => row.textContent)).toEqual([
       "Scout4.9kOps · Worked 2 times",
       "Writer2.5kOps · Worked once",
-      "All bots7.4kWorked 3 times",
+      "All agents7.4kWorked 3 times",
     ]);
 
     fireEvent.click(within(dialog).getByRole("radio", { name: "7 days" }));
     expect(await within(dialog).findByText("4.9k")).toBeDefined();
     expect(dialog.textContent).toContain("Writer4.9kOps · Worked 2 times");
-    expect(dialog.textContent).toContain("All bots9.8k");
+    expect(dialog.textContent).toContain("All agents9.8k");
   });
 
   test("the conversation sent again after a pause counts in the total", async () => {
@@ -60,7 +60,7 @@ describe("tokens by bot", () => {
     fake.chat.turn(scout.id);
 
     const dialog = await openUsage(fake);
-    const list = await within(dialog).findByRole("list", { name: "Use by bot" });
+    const list = await within(dialog).findByRole("list", { name: "Use by agent" });
     expect(
       within(list)
         .getAllByRole("listitem")
@@ -68,7 +68,7 @@ describe("tokens by bot", () => {
     ).toEqual(["Scout76.1kOps · Worked 2 times"]);
   });
 
-  test("bots with the same name in two crews show their crew", async () => {
+  test("agents with the same name in two crews show their crew", async () => {
     const fake = new FakeBotloft();
     const ops = fake.addCrew("Ops");
     const news = fake.addCrew("Newsroom");
@@ -76,7 +76,7 @@ describe("tokens by bot", () => {
     fake.chat.turn(fake.addBot(news.id, "Scout", "Finds stories").id);
 
     const dialog = await openUsage(fake);
-    const list = await within(dialog).findByRole("list", { name: "Use by bot" });
+    const list = await within(dialog).findByRole("list", { name: "Use by agent" });
     expect(
       within(list)
         .getAllByRole("listitem")
@@ -84,13 +84,13 @@ describe("tokens by bot", () => {
     ).toEqual([
       "Scout2.5kNewsroom · Worked once",
       "Scout2.5kOps · Worked once",
-      "All bots4.9kWorked 2 times",
+      "All agents4.9kWorked 2 times",
     ]);
   });
 
   test("a period with no work says so", async () => {
     const dialog = await openUsage(new FakeBotloft());
-    expect(await within(dialog).findByText("No bot worked in this period.")).toBeDefined();
+    expect(await within(dialog).findByText("No agent worked in this period.")).toBeDefined();
   });
 
   test("today starts at midnight; the others count back from now", () => {
@@ -101,7 +101,7 @@ describe("tokens by bot", () => {
   });
 });
 
-describe("each bot's share of the weekly plan", () => {
+describe("each agent's share of the weekly plan", () => {
   test("shows once learned, with the tokens beside it, and says it is an estimate", async () => {
     const fake = new FakeBotloft();
     const ops = fake.addCrew("Ops");
@@ -112,7 +112,7 @@ describe("each bot's share of the weekly plan", () => {
     fake.planSharePerToken = 0.000_001;
 
     const dialog = await openUsage(fake);
-    const list = await within(dialog).findByRole("list", { name: "Use by bot" });
+    const list = await within(dialog).findByRole("list", { name: "Use by agent" });
     expect(within(list).getByRole("listitem").textContent).toBe(
       "Scout≈ 0.5% of the weekOps · Worked 2 times · 4.9k tokens",
     );

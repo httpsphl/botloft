@@ -1,6 +1,6 @@
 [package]
 name = "botloftd"
-description = "Botloft daemon: runs and supervises always-on Claude Code bots"
+description = "Botloft daemon: runs and supervises always-on AI agents"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

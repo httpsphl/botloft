@@ -37,7 +37,7 @@ describe("a crew's right-click menu", () => {
         .getAllByRole("menuitem")
         .map((one) => one.textContent),
     ).toEqual([
-      "New bot",
+      "New agent",
       "Pause crew",
       "Move up",
       "Rename",

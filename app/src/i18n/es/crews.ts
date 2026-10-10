@@ -2,7 +2,7 @@ import type { Messages } from "../en";
 
 export const crews: Messages["crews"] = {
   newCrew: "Nuevo equipo",
-  newBot: "Nuevo bot",
+  newBot: "Nuevo agente",
   rename: "Renombrar",
   paused: "En pausa",
   sidebar: {
@@ -20,7 +20,7 @@ export const crews: Messages["crews"] = {
     expandAll: "Expandir todos los equipos",
     collapse: (crew: string) => `Contraer ${crew}`,
     expand: (crew: string) => `Expandir ${crew}`,
-    waiting: "un bot te necesita",
+    waiting: "un agente te necesita",
     filters: {
       label: "Filtrar conversaciones",
       all: "Todas",
@@ -34,14 +34,14 @@ export const crews: Messages["crews"] = {
     working: (count: number) => (count === 1 ? "1 trabajando" : `${count} trabajando`),
     waiting: (count: number) => (count === 1 ? "1 te necesita" : `${count} te necesitan`),
     calm: "Todo tranquilo",
-    noBots: "Ningún bot todavía",
+    noBots: "Ningún agente todavía",
   },
   dialog: {
     color: "Color",
     noColor: "Sin color",
     swatch: (color: string) => `Color ${color}`,
     folder: "Carpeta de trabajo",
-    folderHint: "Donde los bots guardan lo que hacen. Puede ser una carpeta que ya usas.",
+    folderHint: "Donde los agentes guardan lo que hacen. Puede ser una carpeta que ya usas.",
     folderDefault: "Una carpeta nueva dentro de Botloft",
     chooseFolder: "Elegir carpeta…",
     pickTitle: "Elige dónde trabaja el equipo",
@@ -49,20 +49,20 @@ export const crews: Messages["crews"] = {
     goal: "¿Para qué es este equipo?",
     goalPlaceholder: "Crear y mantener la web de mi panadería",
     goalHint:
-      "El equipo empieza con un jefe, que lee esto, planea el trabajo y sugiere los bots que necesita.",
+      "El equipo empieza con un jefe, que lee esto, planea el trabajo y sugiere los agentes que necesita.",
     chiefModel: "Modelo del jefe",
     chiefName: "Jefe",
-    chiefRole: "Dirige el equipo: planea el trabajo, sugiere bots nuevos y reparte las tareas",
+    chiefRole: "Dirige el equipo: planea el trabajo, sugiere agentes nuevos y reparte las tareas",
     renameTitle: "Renombrar equipo",
     create: "Crear equipo",
     name: "Nombre",
     namePlaceholder: "Investigación",
-    createHint: "Los bots de un equipo pueden enviarse mensajes y comparten una carpeta.",
+    createHint: "Los agentes de un equipo pueden enviarse mensajes y comparten una carpeta.",
     renameHint: (slug: string) => `La carpeta conserva su nombre (${slug}).`,
   },
   view: {
-    bots: (count: number) => (count === 1 ? "1 bot" : `${count} bots`),
-    pausedNote: "en pausa: sus bots siguen detenidos hasta que lo reanudes",
+    bots: (count: number) => (count === 1 ? "1 agente" : `${count} agentes`),
+    pausedNote: "en pausa: sus agentes siguen detenidos hasta que lo reanudes",
     pause: "Pausar equipo",
     resume: "Reanudar equipo",
     moreActions: "Más acciones del equipo",
@@ -72,35 +72,35 @@ export const crews: Messages["crews"] = {
     changeFolder: "Cambiar carpeta de trabajo…",
     moveTitle: (crew: string) => `¿Mover ${crew} a otra carpeta?`,
     moveBody: (path: string) =>
-      `Los bots trabajarán en ${path}. Cada uno se reinicia cuando termine lo que está haciendo. Lo que ya hicieron se queda donde está.`,
+      `Los agentes trabajarán en ${path}. Cada uno se reinicia cuando termine lo que está haciendo. Lo que ya hicieron se queda donde está.`,
     move: "Mover",
     archive: "Archivar equipo",
     delete: "Eliminar equipo",
     tabs: {
       label: "Vistas del equipo",
-      bots: "Bots",
+      bots: "Agentes",
       timeline: "Línea de tiempo",
       tasks: "Tareas",
     },
     timelineEmpty:
-      "Aún no hay mensajes. Escríbele a un bot abajo; lo que los bots se envían entre sí también aparece aquí.",
+      "Aún no hay mensajes. Escríbele a un agente abajo; lo que los agentes se envían entre sí también aparece aquí.",
     archiveTitle: (crew: string) => `¿Archivar ${crew}?`,
     archiveBody: (bots: number) =>
       bots === 0
         ? "El equipo sale de la app."
-        : `El equipo sale de la app. ${bots === 1 ? "Su bot se detiene" : `Sus ${bots} bots se detienen`}, y los mensajes que aún ${bots === 1 ? "lo" : "los"} esperan no se entregan.`,
+        : `El equipo sale de la app. ${bots === 1 ? "Su agente se detiene" : `Sus ${bots} agentes se detienen`}, y los mensajes que aún ${bots === 1 ? "lo" : "los"} esperan no se entregan.`,
     deleteTitle: (crew: string) => `¿Eliminar ${crew}?`,
     deleteBody: (crew: string, bots: number, running: boolean) =>
       bots === 0
         ? `${crew} sale de Botloft para siempre. No se puede deshacer.`
-        : `${crew} y ${bots === 1 ? "su bot" : `sus ${bots} bots`} ${running ? "se detienen ahora y salen" : "salen"} de Botloft para siempre, con sus conversaciones, rutinas y tareas. No se puede deshacer.`,
+        : `${crew} y ${bots === 1 ? "su agente" : `sus ${bots} agentes`} ${running ? "se detienen ahora y salen" : "salen"} de Botloft para siempre, con sus conversaciones, rutinas y tareas. No se puede deshacer.`,
     deleteKept:
-      "Las carpetas siguen en tu ordenador, con todo lo que contienen: la carpeta de cada bot y la carpeta de trabajo del equipo:",
+      "Las carpetas siguen en tu ordenador, con todo lo que contienen: la carpeta de cada agente y la carpeta de trabajo del equipo:",
     deleteRecycle: "Enviar las carpetas del equipo a la Papelera",
     deleteRecycled:
-      "La carpeta del equipo va a la Papelera, con la carpeta de cada bot y la carpeta de trabajo dentro. Todavía puedes recuperarla de allí:",
+      "La carpeta del equipo va a la Papelera, con la carpeta de cada agente y la carpeta de trabajo dentro. Todavía puedes recuperarla de allí:",
     deleteRecycledChosen:
-      "La carpeta de cada bot va a la Papelera, de donde todavía puedes recuperarla. La carpeta de trabajo que elegiste se queda donde está:",
+      "La carpeta de cada agente va a la Papelera, de donde todavía puedes recuperarla. La carpeta de trabajo que elegiste se queda donde está:",
     failed: {
       pause: "No se pudo pausar el equipo",
       resume: "No se pudo reanudar el equipo",
@@ -111,9 +111,9 @@ export const crews: Messages["crews"] = {
     },
   },
   bots: {
-    empty: (crew: string) => `Aún no hay bots en ${crew}.`,
+    empty: (crew: string) => `Aún no hay agentes en ${crew}.`,
     emptyHint:
-      "Un bot es una sesión de Claude Code que sigue en marcha, con su propia carpeta y su rol.",
+      "Un agente es una sesión de Claude Code que sigue en marcha, con su propia carpeta y su rol.",
     noRole: "Aún sin rol.",
   },
   tasks: {
@@ -121,8 +121,8 @@ export const crews: Messages["crews"] = {
     open: "Abiertas",
     all: "Todas",
     list: "Tareas",
-    noOpen: "No hay tareas abiertas. Los bots se crean tareas entre sí con send_message.",
-    none: "Aún no hay tareas. Los bots se crean tareas entre sí con send_message.",
+    noOpen: "No hay tareas abiertas. Los agentes se crean tareas entre sí con send_message.",
+    none: "Aún no hay tareas. Los agentes se crean tareas entre sí con send_message.",
     status: {
       open: "Abierta",
       done: "Completada",
@@ -130,7 +130,7 @@ export const crews: Messages["crews"] = {
       cancelled: "Cancelada",
       expired: "Vencida",
     },
-    archivedBot: "un bot archivado",
+    archivedBot: "un agente archivado",
     asked: "le pidió a",
     hop: (hops: number) => `paso ${hops}`,
     hopHint: "Posición en una cadena de delegaciones",

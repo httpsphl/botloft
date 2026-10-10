@@ -5,7 +5,7 @@ export const phone = {
   pair: {
     title: "Connect this phone",
     intro:
-      "This phone will approve your bots' requests and answer their questions and talk with them, from anywhere. Files stay on your computer.",
+      "This phone will approve your agents' requests and answer their questions and talk with them, from anywhere. Files stay on your computer.",
     nameLabel: "Name of this phone",
     connect: "Connect",
     connecting: "Connecting…",
@@ -22,7 +22,7 @@ export const phone = {
   inbox: {
     title: "Waiting for you",
     empty: "Nothing is waiting for you",
-    emptyBody: "When a bot needs you, it shows up here.",
+    emptyBody: "When an agent needs you, it shows up here.",
     loading: "Checking what is waiting…",
     computerOff: "Your computer is off or has no internet. Requests keep waiting there.",
     noConnection: "No connection. Trying again…",
@@ -31,9 +31,9 @@ export const phone = {
   },
   tabs: { requests: "Requests", chats: "Chats", newReply: "new reply" },
   chats: {
-    empty: "No bots yet",
-    emptyBody: "When you create a bot on your computer, it shows up here.",
-    loading: "Loading the bots…",
+    empty: "No agents yet",
+    emptyBody: "When you create an agent on your computer, it shows up here.",
+    loading: "Loading the agents…",
     working: "working…",
     kind: {
       owner: "You",
@@ -47,7 +47,7 @@ export const phone = {
     inCrew: (crew: string) => `in ${crew}`,
     allCrews: "All",
     crewsLabel: "Crews",
-    bots: (n: number) => `${n} ${n === 1 ? "bot" : "bots"}`,
+    bots: (n: number) => `${n} ${n === 1 ? "agent" : "agents"}`,
     back: "Chats",
     loadingChat: "Loading the conversation…",
     nothing: "Nothing here yet. Write the first message.",
@@ -68,19 +68,19 @@ export const phone = {
     },
     pending: {
       sending: "Sending…",
-      sent: "Sent. The bot will see it when it can.",
+      sent: "Sent. The agent will see it when it can.",
       notSent: "Not sent.",
       reasons: {
         offline: "Check the connection and try again.",
         timeout: "The computer did not answer. Check it is on and try again.",
-        invalid: "The bot cannot take this text.",
-        not_found: "This bot is gone.",
+        invalid: "The agent cannot take this text.",
+        not_found: "This agent is gone.",
         rate_limited: "Too many messages in a minute. Wait a bit.",
         failed: "Something went wrong. Try again.",
       } as Record<string, string>,
     },
     reach:
-      "A phone that is connected and unlocked can read your bots' conversations and write to them.",
+      "A phone that is connected and unlocked can read your agents' conversations and write to them.",
   },
   approval: {
     asks: (bot: string) => `${bot} asks to`,
@@ -92,7 +92,7 @@ export const phone = {
     allow: "Allow",
     deny: "Deny",
     sending: "Sending…",
-    noteLabel: "Note for the bot (optional)",
+    noteLabel: "Note for the agent (optional)",
     cut: "Too long to read on a phone. You can deny it here, or answer it at the computer.",
     atComputer: "This one needs you at the computer. Here you can only deny it.",
     failed: "Not sent. Check the connection and try again.",
@@ -115,7 +115,7 @@ export const phone = {
     notices: {
       turnOn: "Turn on notices",
       turnOff: "Turn off notices",
-      on: "Notices are on. You get one when a bot needs you.",
+      on: "Notices are on. You get one when an agent needs you.",
       off: "Notices are off.",
       blocked: "Notices are blocked for this page. Allow them in the browser's settings.",
       unsupported: "This browser cannot give notices.",

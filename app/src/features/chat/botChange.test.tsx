@@ -31,8 +31,8 @@ const answered = (fake: FakeBotloft) =>
     | { allow: boolean; note?: string }
     | undefined;
 
-describe("a bot asking to change a bot", () => {
-  test("the chief's request shows the other bot, before and after, and why", async () => {
+describe("an agent asking to change an agent", () => {
+  test("the chief's request shows the other agent, before and after, and why", async () => {
     const { fake, chief } = await openChief();
     act(() => {
       fake.chat.ask(
@@ -67,7 +67,7 @@ describe("a bot asking to change a bot", () => {
     await waitFor(() => expect(answered(fake)).toMatchObject({ allow: true }));
   });
 
-  test("a bot changing itself, declined with a note", async () => {
+  test("an agent changing itself, declined with a note", async () => {
     const { fake, chief } = await openChief();
     act(() => {
       fake.chat.ask(

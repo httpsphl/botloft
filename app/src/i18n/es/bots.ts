@@ -16,7 +16,7 @@ export const bots: Messages["bots"] = {
     },
     auth_error: {
       label: "Necesita iniciar sesión",
-      hint: "Claude Code no tiene una sesión iniciada, o la cuenta no se puede usar. Inicia sesión en Claude y el bot vuelve a iniciarse solo. ¿Ya iniciaste sesión? Revisa tu plan de Claude y luego reinicia el bot.",
+      hint: "Claude Code no tiene una sesión iniciada, o la cuenta no se puede usar. Inicia sesión en Claude y el agente vuelve a iniciarse solo. ¿Ya iniciaste sesión? Revisa tu plan de Claude y luego reinicia el agente.",
     },
     backoff: {
       label: "Reiniciando",
@@ -27,7 +27,7 @@ export const bots: Messages["bots"] = {
   },
   chief: {
     badge: "Jefe",
-    hint: (crew: string) => `Dirige ${crew}: planea el trabajo y sugiere bots nuevos`,
+    hint: (crew: string) => `Dirige ${crew}: planea el trabajo y sugiere agentes nuevos`,
   },
   header: {
     noRole: "Sin rol",
@@ -36,7 +36,7 @@ export const bots: Messages["bots"] = {
     restart: "Reiniciar",
     showDetails: "Mostrar detalles",
     hideDetails: "Ocultar detalles",
-    more: "Más acciones del bot",
+    more: "Más acciones del agente",
     menuOf: (name: string) => `Acciones de ${name}`,
     edit: "Editar",
     restartFresh: "Reiniciar con una conversación nueva",
@@ -45,16 +45,16 @@ export const bots: Messages["bots"] = {
     stopChief: "Dejar de ser jefe",
     markUnread: "Marcar como no leído",
     markRead: "Marcar como leído",
-    archive: "Archivar bot",
-    delete: "Eliminar bot",
+    archive: "Archivar agente",
+    delete: "Eliminar agente",
     failed: {
-      pause: "No se pudo pausar el bot",
-      resume: "No se pudo reanudar el bot",
-      restart: "No se pudo reiniciar el bot",
+      pause: "No se pudo pausar el agente",
+      resume: "No se pudo reanudar el agente",
+      restart: "No se pudo reiniciar el agente",
       openFolder: "No se pudo abrir la carpeta",
       chief: "No se pudo cambiar el jefe",
-      archive: "No se pudo archivar el bot",
-      delete: "No se pudo eliminar el bot",
+      archive: "No se pudo archivar el agente",
+      delete: "No se pudo eliminar el agente",
     },
     fresh: {
       title: "¿Empezar una conversación nueva?",
@@ -64,12 +64,12 @@ export const bots: Messages["bots"] = {
     },
     archiveConfirm: {
       title: (name: string) => `¿Archivar ${name}?`,
-      confirm: "Archivar bot",
-      body: "El bot se detiene y sale del equipo. Los mensajes que aún lo esperan no se entregan.",
+      confirm: "Archivar agente",
+      body: "El agente se detiene y sale del equipo. Los mensajes que aún lo esperan no se entregan.",
     },
     deleteConfirm: {
       title: (name: string) => `¿Eliminar ${name}?`,
-      confirm: "Eliminar bot",
+      confirm: "Eliminar agente",
       removed: (name: string, running: boolean) =>
         `${name} ${running ? "se detiene ahora y sale" : "sale"} de Botloft para siempre, con su conversación, sus rutinas y las tareas en las que participaba. No se puede deshacer.`,
       chief: (crew: string) => `${crew} se queda sin jefe.`,
@@ -81,45 +81,45 @@ export const bots: Messages["bots"] = {
     },
   },
   dialog: {
-    newTitle: "Nuevo bot",
+    newTitle: "Nuevo agente",
     editTitle: (name: string) => `Editar ${name}`,
-    create: "Crear bot",
+    create: "Crear agente",
     save: "Guardar",
     name: "Nombre",
     namePlaceholder: "Revisor",
-    nameHint: "Los otros bots lo llaman por el @ que se forma con este nombre.",
+    nameHint: "Los otros agentes lo llaman por el @ que se forma con este nombre.",
     role: "Rol",
     rolePlaceholder: "Revisa los pull requests antes de fusionarlos",
     instructions: "Instrucciones",
     instructionsPlaceholder:
-      "Cómo trabaja este bot, qué puede hacer por su cuenta y cuándo debe preguntar.",
+      "Cómo trabaja este agente, qué puede hacer por su cuenta y cuándo debe preguntar.",
     instructionsHint:
-      "Se guardan ahora en las reglas del bot; el bot las lee la próxima vez que se inicie.",
+      "Se guardan ahora en las reglas del agente; el agente las lee la próxima vez que se inicie.",
     fullAccess: {
       title: "Ejecutar cualquier comando sin preguntar",
       off: "Desactivado: solo ejecuta los comandos de la lista de abajo.",
-      on: "Activado: ejecuta cualquier comando sin preguntarte, y un comando puede leer o cambiar todo lo que tú puedes. Solo para un bot de confianza.",
+      on: "Activado: ejecuta cualquier comando sin preguntarte, y un comando puede leer o cambiar todo lo que tú puedes. Solo para un agente de confianza.",
     },
     commands: {
-      title: "Comandos que este bot puede ejecutar",
+      title: "Comandos que este agente puede ejecutar",
       placeholder: "git status\nnpm test",
-      hint: "Un comando por línea; puede ejecutar estos y lo que empiece con ellos, sin preguntarte. No puede preguntar, así que todo lo demás se rechaza. Un * solo permite ejecutar cualquier cosa. El bot se reinicia para usar la lista.",
+      hint: "Un comando por línea; puede ejecutar estos y lo que empiece con ellos, sin preguntarte. No puede preguntar, así que todo lo demás se rechaza. Un * solo permite ejecutar cualquier cosa. El agente se reinicia para usar la lista.",
     },
     agent: {
-      title: "Agente",
+      title: "Funciona con",
       names: {
         claude: "Claude Code",
         agy: "Antigravity (experimental)",
         codex: "Codex",
       },
       experimental:
-        "Experimental. Este bot no puede preguntarte antes de actuar. Trabaja con archivos de sus propias carpetas y usa las herramientas del equipo, pero no ejecuta comandos, y no tiene medidor de uso ni elección de modelo.",
+        "Experimental. Este agente no puede preguntarte antes de actuar. Trabaja con archivos de sus propias carpetas y usa las herramientas del equipo, pero no ejecuta comandos, y no tiene medidor de uso ni elección de modelo.",
       experimentalCodex:
-        "Experimental. Este bot te pregunta antes de cambiar un archivo o ejecutar un comando, como Claude Code. Todavía puede leer cualquier archivo.",
+        "Experimental. Este agente te pregunta antes de cambiar un archivo o ejecutar un comando, como Claude Code. Todavía puede leer cualquier archivo.",
     },
     color: "Color",
     swatch: (color: string) => `Color ${color}`,
-    colorUnset: "Si no eliges uno, el bot recibe el siguiente color del equipo.",
+    colorUnset: "Si no eliges uno, el agente recibe el siguiente color del equipo.",
     custom: "Elegir cualquier color",
     picker: {
       area: "Saturación y brillo",
@@ -132,7 +132,7 @@ export const bots: Messages["bots"] = {
   },
   notices: {
     crewPaused: (crew: string) => `El equipo ${crew} está en pausa`,
-    crewPausedBody: "Sus bots siguen detenidos hasta que reanudes el equipo.",
+    crewPausedBody: "Sus agentes siguen detenidos hasta que reanudes el equipo.",
   },
   details: {
     title: (name: string) => `Acerca de ${name}`,

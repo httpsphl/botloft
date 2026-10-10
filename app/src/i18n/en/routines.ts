@@ -6,7 +6,7 @@ export const routines = {
   empty: (bot: string) => `${bot} has no routines yet.`,
   emptyHint: (bot: string) =>
     `A routine makes ${bot} work on its own at set times, like "weekdays at 09:00", and the result shows up in the chat.`,
-  crewEmpty: "No bot in this crew has a routine yet. Open a bot to give it one.",
+  crewEmpty: "No agent in this crew has a routine yet. Open an agent to give it one.",
   newRoutine: "New routine",
   toggle: (name: string) => `${name} on or off`,
   runNow: "Run now",
@@ -24,7 +24,7 @@ export const routines = {
     done: "Last run went fine",
     failed: "Last run failed",
     overlap: "Last time was skipped: the run before hadn't finished",
-    bot_paused: "Last time was skipped: the bot was paused",
+    bot_paused: "Last time was skipped: the agent was paused",
     too_soon: "Last signal was skipped: it came less than 5 minutes after the one before",
     signalFrom: (bot: string) => `signal from ${bot}`,
     missed: (count: number) =>
@@ -35,7 +35,7 @@ export const routines = {
   /** Every routine of every bot, a page of the sidebar. */
   page: {
     title: "Routines",
-    lead: "What your bots do on their own, in every crew.",
+    lead: "What your agents do on their own, in every crew.",
     upcoming: "Coming up",
     watching: "Keeping watch",
     showMore: (count: number) => `Show ${count} more`,
@@ -43,7 +43,7 @@ export const routines = {
     of: (bot: string) => `${bot}'s routines`,
     emptyTitle: "No routines yet",
     emptyBody:
-      "A routine makes a bot work on its own at set times. Ask a bot in the chat, or open a bot's Routines tab.",
+      "A routine makes an agent work on its own at set times. Ask an agent in the chat, or open an agent's Routines tab.",
   },
   when: {
     everyDay: (time: string) => `Every day at ${time}`,
@@ -53,7 +53,7 @@ export const routines = {
     everyMinutes: (count: number) => (count === 1 ? "Every minute" : `Every ${count} minutes`),
     everyHours: (count: number) => (count === 1 ? "Every hour" : `Every ${count} hours`),
     cron: (expr: string) => `Cron: ${expr}`,
-    signal: (name: string) => `When a bot signals “${name}”`,
+    signal: (name: string) => `When an agent signals “${name}”`,
   },
   tag: (name: string) => `Routine · ${name}`,
   dialog: {
@@ -69,7 +69,7 @@ export const routines = {
       weekdays: "Weekdays",
       days: "Chosen days",
       interval: "Every…",
-      signal: "When a bot signals",
+      signal: "When an agent signals",
     },
     at: "At",
     every: "Every",
@@ -89,7 +89,7 @@ export const routines = {
     signal: "Signal",
     signalPlaceholder: "report-ready",
     signalHint: (bot: string) =>
-      `${bot} runs this when a bot of the crew sends this signal. Tell that bot, in its instructions, when to send it, like “send report-ready when the report is saved”.`,
+      `${bot} runs this when an agent of the crew sends this signal. Tell that agent, in its instructions, when to send it, like “send report-ready when the report is saved”.`,
     cronHint: "Minute, hour, day of the month, month and day of the week. It replaces When.",
     create: "Create routine",
     save: "Save",
@@ -108,12 +108,12 @@ export const routines = {
   /** The daily summary the chief writes (spec 29.2), a routine made for the owner. */
   summary: {
     title: "Daily summary",
-    hint: "Every day the chief tells you what each bot did, what is stuck and what is waiting for you.",
+    hint: "Every day the chief tells you what each agent did, what is stuck and what is waiting for you.",
     name: "Daily summary",
     // Sent to the chief every day. It names the tool, which is also how the app
     // recognizes this routine.
     prompt:
-      "The day is ending. Use crew_activity (the last 24 hours) and write me a short summary of the day: what each bot finished, what is still open or late, what failed, and what is waiting for me (approvals and questions), the most important first. Plain words, no more than 12 lines. If nothing happened, say so in one line. Do not start new work and do not message other bots for this.",
+      "The day is ending. Use crew_activity (the last 24 hours) and write me a short summary of the day: what each agent finished, what is still open or late, what failed, and what is waiting for me (approvals and questions), the most important first. Plain words, no more than 12 lines. If nothing happened, say so in one line. Do not start new work and do not message other agents for this.",
     time: "Time",
     turnOn: "Turn on",
     turnOff: "Turn off",

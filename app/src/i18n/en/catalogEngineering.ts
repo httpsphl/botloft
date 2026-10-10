@@ -62,7 +62,7 @@ export const engineering = {
     role: "Reviews your own code and setup for security weaknesses and explains how to fix them",
     summary: "Looks for security holes in your own code and setup and explains how to fix them",
     about:
-      "Reviews your own code and setup for weaknesses, explains each one in plain words with how serious it is and the smallest fix. It works defensively, only on what is yours, and never repeats a secret it finds. It thinks harder than most bots, so it uses a bit more of your plan.",
+      "Reviews your own code and setup for weaknesses, explains each one in plain words with how serious it is and the smallest fix. It works defensively, only on what is yours, and never repeats a secret it finds. It thinks harder than most agents, so it uses a bit more of your plan.",
     when: "Before you launch, after a big change, or when you handle other people's data.",
     pairs: "Developer and DevOps Engineer, who apply the fixes, and Code Reviewer.",
   },

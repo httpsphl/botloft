@@ -39,7 +39,7 @@ describe("the crew templates", () => {
     expect(within(chooser).getByRole("button", { name: /Start with an empty crew/ })).toBeDefined();
   });
 
-  test("picking a template fills the form and says which bots it adds", async () => {
+  test("picking a template fills the form and says which agents it adds", async () => {
     const { chooser } = await openTemplates();
     fireEvent.click(within(chooser).getByRole("button", { name: /Game studio/ }));
 
@@ -56,7 +56,7 @@ describe("the crew templates", () => {
     expect(screen.getByRole("dialog", { name: "Start from a template" })).toBeDefined();
   });
 
-  test("creating from a template makes the crew with its chief and then each bot", async () => {
+  test("creating from a template makes the crew with its chief and then each agent", async () => {
     const { fake, chooser } = await openTemplates();
     fireEvent.click(within(chooser).getByRole("button", { name: /Online store/ }));
     const dialog = screen.getByRole("dialog", { name: "New crew" });
@@ -77,7 +77,7 @@ describe("the crew templates", () => {
     expect(await within(sidebar()).findByRole("button", { name: /^Bookkeeper/ })).toBeDefined();
   });
 
-  test("a bot that cannot be added is told, and the crew stays", async () => {
+  test("an agent that cannot be added is told, and the crew stays", async () => {
     const { fake, chooser } = await openTemplates();
     fireEvent.click(within(chooser).getByRole("button", { name: /Research desk/ }));
     fake.failNext("catalog.add", new RpcError(-32603, "no room"));
@@ -87,7 +87,7 @@ describe("the crew templates", () => {
       }),
     );
 
-    expect(await screen.findByText(/1 bot could not be added/)).toBeDefined();
+    expect(await screen.findByText(/1 agent could not be added/)).toBeDefined();
     expect(fake.calls.filter((call) => call.method === "catalog.add")).toHaveLength(6);
     expect(await screen.findByRole("heading", { level: 1, name: "Chief" })).toBeDefined();
   });

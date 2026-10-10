@@ -8,7 +8,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-test("the bot in the middle lands, works, cheers, then the row moves on", () => {
+test("the agent in the middle lands, works, cheers, then the row moves on", () => {
   const { container } = render(<Reel />);
   const middle = () => container.querySelector("[data-center] svg") as SVGElement;
   const color = () => middle().querySelector("rect")?.getAttribute("fill");

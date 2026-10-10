@@ -8,7 +8,7 @@ export const routines: Messages["routines"] = {
   empty: (bot: string) => `${bot} todavía no tiene rutinas.`,
   emptyHint: (bot: string) =>
     `Una rutina hace que ${bot} trabaje solo a horas fijas, como "días laborables a las 09:00", y el resultado aparece en el chat.`,
-  crewEmpty: "Ningún bot de este equipo tiene rutinas todavía. Abre un bot para crear una.",
+  crewEmpty: "Ningún agente de este equipo tiene rutinas todavía. Abre un agente para crear una.",
   newRoutine: "Nueva rutina",
   toggle: (name: string) => `${name} encendida o apagada`,
   runNow: "Ejecutar ahora",
@@ -26,7 +26,7 @@ export const routines: Messages["routines"] = {
     done: "La última salió bien",
     failed: "La última falló",
     overlap: "La última vez se saltó: la anterior no había terminado",
-    bot_paused: "La última vez se saltó: el bot estaba en pausa",
+    bot_paused: "La última vez se saltó: el agente estaba en pausa",
     too_soon: "El último aviso se saltó: llegó menos de 5 minutos después del anterior",
     signalFrom: (bot: string) => `aviso de ${bot}`,
     missed: (count: number) =>
@@ -36,7 +36,7 @@ export const routines: Messages["routines"] = {
   },
   page: {
     title: "Rutinas",
-    lead: "Lo que tus bots hacen solos, en todos los equipos.",
+    lead: "Lo que tus agentes hacen solos, en todos los equipos.",
     upcoming: "Próximas",
     watching: "Vigilando",
     showMore: (count) => `Mostrar ${count} más`,
@@ -44,7 +44,7 @@ export const routines: Messages["routines"] = {
     of: (bot) => `Rutinas de ${bot}`,
     emptyTitle: "Aún no hay rutinas",
     emptyBody:
-      "Una rutina hace que un bot trabaje solo a horas fijas. Pídeselo a un bot en el chat, o abre la pestaña Rutinas de un bot.",
+      "Una rutina hace que un agente trabaje solo a horas fijas. Pídeselo a un agente en el chat, o abre la pestaña Rutinas de un agente.",
   },
   when: {
     everyDay: (time: string) => `Todos los días a las ${time}`,
@@ -54,7 +54,7 @@ export const routines: Messages["routines"] = {
     everyMinutes: (count: number) => (count === 1 ? "Cada minuto" : `Cada ${count} minutos`),
     everyHours: (count: number) => (count === 1 ? "Cada hora" : `Cada ${count} horas`),
     cron: (expr: string) => `Cron: ${expr}`,
-    signal: (name: string) => `Cuando un bot avise “${name}”`,
+    signal: (name: string) => `Cuando un agente avise “${name}”`,
   },
   tag: (name: string) => `Rutina · ${name}`,
   dialog: {
@@ -70,7 +70,7 @@ export const routines: Messages["routines"] = {
       weekdays: "Días laborables",
       days: "Días elegidos",
       interval: "Cada…",
-      signal: "Cuando un bot avise",
+      signal: "Cuando un agente avise",
     },
     at: "A las",
     every: "Cada",
@@ -90,7 +90,7 @@ export const routines: Messages["routines"] = {
     signal: "Aviso",
     signalPlaceholder: "informe-listo",
     signalHint: (bot: string) =>
-      `${bot} hace esto cuando un bot del equipo manda este aviso. Dile a ese bot, en sus instrucciones, cuándo avisar, como “avisa informe-listo cuando guardes el informe”.`,
+      `${bot} hace esto cuando un agente del equipo manda este aviso. Dile a ese agente, en sus instrucciones, cuándo avisar, como “avisa informe-listo cuando guardes el informe”.`,
     cronHint: "Minuto, hora, día del mes, mes y día de la semana. Sustituye a Cuándo.",
     create: "Crear rutina",
     save: "Guardar",
@@ -108,10 +108,10 @@ export const routines: Messages["routines"] = {
   },
   summary: {
     title: "Resumen diario",
-    hint: "Cada día el jefe te cuenta qué hizo cada bot, qué está parado y qué te está esperando.",
+    hint: "Cada día el jefe te cuenta qué hizo cada agente, qué está parado y qué te está esperando.",
     name: "Resumen diario",
     prompt:
-      "El día se acaba. Usa crew_activity (las últimas 24 horas) y escríbeme un resumen corto del día: qué terminó cada bot, qué sigue abierto o atrasado, qué falló y qué me está esperando (aprobaciones y preguntas), lo más importante primero. Palabras sencillas, como máximo 12 líneas. Si no pasó nada, dilo en una línea. No empieces trabajo nuevo ni escribas a otros bots por esto.",
+      "El día se acaba. Usa crew_activity (las últimas 24 horas) y escríbeme un resumen corto del día: qué terminó cada agente, qué sigue abierto o atrasado, qué falló y qué me está esperando (aprobaciones y preguntas), lo más importante primero. Palabras sencillas, como máximo 12 líneas. Si no pasó nada, dilo en una línea. No empieces trabajo nuevo ni escribas a otros agentes por esto.",
     time: "Hora",
     turnOn: "Activar",
     turnOff: "Desactivar",

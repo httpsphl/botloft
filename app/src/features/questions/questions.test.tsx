@@ -67,7 +67,7 @@ describe("questions to the owner", () => {
     fireEvent.click(entry());
     const box = await screen.findByRole("region", { name: "Questions" });
     expect(
-      screen.getByRole("heading", { level: 1, name: "Questions from your bots" }),
+      screen.getByRole("heading", { level: 1, name: "Questions from your agents" }),
     ).toBeDefined();
     const cards = within(box).getAllByRole("region", { name: /asks$/ });
     expect(cards.map((card) => card.getAttribute("aria-label"))).toEqual([
@@ -91,7 +91,7 @@ describe("questions to the owner", () => {
     await waitFor(() => expect(host.attention).toBe(false));
   });
 
-  test("a question in the box leads to its bot's chat", async () => {
+  test("a question in the box leads to its agent's chat", async () => {
     const { fake, scout } = crew();
     renderApp(fake);
     await crewOpened("Ops");

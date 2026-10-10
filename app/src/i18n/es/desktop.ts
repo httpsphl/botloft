@@ -34,7 +34,7 @@ export const desktop: Messages["desktop"] = {
     emptyBody:
       "Cuando lea o use una ventana de una app que permitiste, la ventana aparece aquí, en vivo.",
     shortcut:
-      "Ctrl+Alt+Esc detiene a todos los bots en tu escritorio, incluso con Botloft cerrado.",
+      "Ctrl+Alt+Esc detiene a todos los agentes en tu escritorio, incluso con Botloft cerrado.",
     waiting: "Esperando la imagen…",
     read: "Leyó la ventana",
     click: (target) => `Hizo clic en "${target}"`,
@@ -63,7 +63,7 @@ export const desktop: Messages["desktop"] = {
     realPoints: (bot) => [
       `Cuando la accesibilidad no alcanza algo en esa app, ${bot} mueve tu cursor y escribe como si fueras tú.`,
       `Mientras actúa, el mouse y el teclado son suyos, y un aviso en tu pantalla lo dice.`,
-      `Mueve el mouse o presiona una tecla y se detiene al instante. Ctrl+Alt+Esc detiene a todos los bots en tu escritorio.`,
+      `Mueve el mouse o presiona una tecla y se detiene al instante. Ctrl+Alt+Esc detiene a todos los agentes en tu escritorio.`,
       `Nunca escribe en campos de contraseña ni presiona teclas propias de Windows, como la tecla Windows o Alt+Tab.`,
     ],
     realConfirm: "Activar",

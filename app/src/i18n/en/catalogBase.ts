@@ -13,10 +13,10 @@ export const base = {
   },
   "code-reviewer": {
     name: "Code Reviewer",
-    role: "Reviews what other bots changed and points out bugs, risks and needless complexity",
+    role: "Reviews what other agents changed and points out bugs, risks and needless complexity",
     summary: "Reads changes with a critical eye and says what is wrong or risky",
     about:
-      "Reads the changes another bot made and lists what could break, what is risky and what is more complicated than it needs to be. It never edits the code itself, it only reports, so you decide. It thinks harder than most bots, so it uses a bit more of your plan.",
+      "Reads the changes another agent made and lists what could break, what is risky and what is more complicated than it needs to be. It never edits the code itself, it only reports, so you decide. It thinks harder than most agents, so it uses a bit more of your plan.",
     when: "After a Developer changes something that matters: a payment, a login, anything hard to undo.",
     pairs: "Developer, whose work it reviews, and QA Tester.",
   },

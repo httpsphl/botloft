@@ -3,7 +3,7 @@
 
 export const crews = {
   newCrew: "New crew",
-  newBot: "New bot",
+  newBot: "New agent",
   rename: "Rename",
   paused: "Paused",
   sidebar: {
@@ -27,7 +27,7 @@ export const crews = {
     collapse: (crew: string) => `Fold ${crew}`,
     expand: (crew: string) => `Unfold ${crew}`,
     /** Beside a folded crew's name, when one of its bots needs the owner. */
-    waiting: "a bot needs you",
+    waiting: "an agent needs you",
     filters: {
       label: "Filter conversations",
       all: "All",
@@ -42,14 +42,14 @@ export const crews = {
     working: (count: number) => `${count} working`,
     waiting: (count: number) => (count === 1 ? "1 needs you" : `${count} need you`),
     calm: "All quiet",
-    noBots: "No bots yet",
+    noBots: "No agents yet",
   },
   dialog: {
     color: "Color",
     noColor: "No color",
     swatch: (color: string) => `Color ${color}`,
     folder: "Work folder",
-    folderHint: "Where the bots put what they make. It can be a folder you already use.",
+    folderHint: "Where the agents put what they make. It can be a folder you already use.",
     folderDefault: "A new folder inside Botloft",
     chooseFolder: "Choose folder…",
     pickTitle: "Choose where the crew works",
@@ -57,20 +57,20 @@ export const crews = {
     goal: "What is this crew for?",
     goalPlaceholder: "Build and keep up my bakery's website",
     goalHint:
-      "The crew starts with a chief, who reads this, plans the work and suggests the bots it needs.",
+      "The crew starts with a chief, who reads this, plans the work and suggests the agents it needs.",
     chiefModel: "Chief's model",
     chiefName: "Chief",
-    chiefRole: "Leads the crew: plans the work, suggests new bots and hands out tasks",
+    chiefRole: "Leads the crew: plans the work, suggests new agents and hands out tasks",
     renameTitle: "Rename crew",
     create: "Create crew",
     name: "Name",
     namePlaceholder: "Research",
-    createHint: "Bots in a crew can message each other and share a folder.",
+    createHint: "Agents in a crew can message each other and share a folder.",
     renameHint: (slug: string) => `The folder keeps its name (${slug}).`,
   },
   view: {
-    bots: (count: number) => (count === 1 ? "1 bot" : `${count} bots`),
-    pausedNote: "paused: its bots stay stopped until you resume it",
+    bots: (count: number) => (count === 1 ? "1 agent" : `${count} agents`),
+    pausedNote: "paused: its agents stay stopped until you resume it",
     pause: "Pause crew",
     resume: "Resume crew",
     moreActions: "More crew actions",
@@ -80,36 +80,36 @@ export const crews = {
     changeFolder: "Change work folder…",
     moveTitle: (crew: string) => `Move ${crew} to another folder?`,
     moveBody: (path: string) =>
-      `The bots will work in ${path}. Each one restarts when it finishes what it's doing. Files already made stay where they are.`,
+      `The agents will work in ${path}. Each one restarts when it finishes what it's doing. Files already made stay where they are.`,
     move: "Move",
     archive: "Archive crew",
     delete: "Delete crew",
     tabs: {
       label: "Crew views",
-      bots: "Bots",
+      bots: "Agents",
       timeline: "Timeline",
       tasks: "Tasks",
     },
     timelineEmpty:
-      "No messages yet. Write to a bot below; what the bots send each other shows up here too.",
+      "No messages yet. Write to an agent below; what the agents send each other shows up here too.",
     archiveTitle: (crew: string) => `Archive ${crew}?`,
     archiveBody: (bots: number) =>
       bots === 0
         ? "The crew leaves the app."
-        : `The crew leaves the app. ${bots === 1 ? "Its bot stops" : `Its ${bots} bots stop`}, and messages still waiting for them are not delivered.`,
+        : `The crew leaves the app. ${bots === 1 ? "Its agent stops" : `Its ${bots} agents stop`}, and messages still waiting for them are not delivered.`,
     deleteTitle: (crew: string) => `Delete ${crew}?`,
     /** `running` is false for an archived crew, which stopped long ago. */
     deleteBody: (crew: string, bots: number, running: boolean) =>
       bots === 0
         ? `${crew} leaves Botloft for good. This can't be undone.`
-        : `${crew} and ${bots === 1 ? "its bot" : `its ${bots} bots`} ${running ? "stop now and leave" : "leave"} Botloft for good, with their conversations, routines and tasks. This can't be undone.`,
+        : `${crew} and ${bots === 1 ? "its agent" : `its ${bots} agents`} ${running ? "stop now and leave" : "leave"} Botloft for good, with their conversations, routines and tasks. This can't be undone.`,
     deleteKept:
-      "The folders stay on your computer, with everything in them: each bot's own folder and the crew's work folder:",
+      "The folders stay on your computer, with everything in them: each agent's own folder and the crew's work folder:",
     deleteRecycle: "Move the crew's folders to the Recycle Bin",
     deleteRecycled:
-      "The crew's folder goes to the Recycle Bin, with each bot's folder and the work folder in it. You can still get it back from there:",
+      "The crew's folder goes to the Recycle Bin, with each agent's folder and the work folder in it. You can still get it back from there:",
     deleteRecycledChosen:
-      "Each bot's own folder goes to the Recycle Bin, where you can still get it back. The work folder you chose stays where it is:",
+      "Each agent's own folder goes to the Recycle Bin, where you can still get it back. The work folder you chose stays where it is:",
     failed: {
       pause: "Could not pause the crew",
       resume: "Could not resume the crew",
@@ -120,8 +120,9 @@ export const crews = {
     },
   },
   bots: {
-    empty: (crew: string) => `No bots in ${crew} yet.`,
-    emptyHint: "A bot is a Claude Code session that keeps running, with its own folder and role.",
+    empty: (crew: string) => `No agents in ${crew} yet.`,
+    emptyHint:
+      "An agent is a Claude Code session that keeps running, with its own folder and role.",
     noRole: "No role yet.",
   },
   tasks: {
@@ -129,8 +130,8 @@ export const crews = {
     open: "Open",
     all: "All",
     list: "Tasks",
-    noOpen: "No open tasks. Bots create tasks for each other with send_message.",
-    none: "No tasks yet. Bots create tasks for each other with send_message.",
+    noOpen: "No open tasks. Agents create tasks for each other with send_message.",
+    none: "No tasks yet. Agents create tasks for each other with send_message.",
     status: {
       open: "Open",
       done: "Done",
@@ -138,7 +139,7 @@ export const crews = {
       cancelled: "Cancelled",
       expired: "Expired",
     },
-    archivedBot: "an archived bot",
+    archivedBot: "an archived agent",
     /** Read between the requester and the assignee. */
     asked: "asked",
     hop: (hops: number) => `hop ${hops}`,

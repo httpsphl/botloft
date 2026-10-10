@@ -3,10 +3,10 @@
 export const alerts = {
   tray: {
     tooltip: (status: string) => `Botloft: ${status}`,
-    working: (count: number) => (count === 1 ? "1 bot working" : `${count} bots working`),
+    working: (count: number) => (count === 1 ? "1 agent working" : `${count} agents working`),
     needsYou: (bot: string) => `${bot} needs you`,
     waiting: "Something is waiting for you",
-    idle: "No bot working",
+    idle: "No agent working",
     open: "Open Botloft",
     pause: "Pause every crew",
     resume: "Resume every crew",

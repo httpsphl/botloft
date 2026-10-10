@@ -25,7 +25,7 @@ const panel = () => screen.getByRole("complementary", { name: "Scout's desktop" 
 const NOTES = { id: 42, title: "Shopping list - Notepad", app: "Notepad" };
 
 describe("the desktop panel", () => {
-  test("opens from a desktop tool in the chat and shows the window the bot uses, live", async () => {
+  test("opens from a desktop tool in the chat and shows the window the agent uses, live", async () => {
     const { fake, scout } = await openScout();
     fireEvent.click(
       screen.getByRole("button", { name: "Watch on the desktop panel: Read a window" }),
@@ -65,7 +65,7 @@ describe("the desktop panel", () => {
     await waitFor(() => expect(fake.desktop.watching).toBeNull());
   });
 
-  test("stops the bot on the desktop and lets it go on", async () => {
+  test("stops the agent on the desktop and lets it go on", async () => {
     const { fake, scout } = await openScout();
     fireEvent.click(
       screen.getByRole("button", { name: "Watch on the desktop panel: Read a window" }),
@@ -82,7 +82,7 @@ describe("the desktop panel", () => {
     expect(within(panel()).queryByText("You stopped Scout on your desktop")).toBeNull();
   });
 
-  test("opens by itself when the bot starts using the desktop, once per run", async () => {
+  test("opens by itself when the agent starts using the desktop, once per run", async () => {
     const { fake, scout } = await openScout();
     expect(screen.queryByRole("complementary", { name: "Scout's desktop" })).toBeNull();
     act(() => {

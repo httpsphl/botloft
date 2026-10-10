@@ -5,7 +5,7 @@
 export const messages = {
   /** Bots calling each other, live. */
   calls: {
-    label: "Bots calling each other",
+    label: "Agents calling each other",
     /** Before the call, for screen readers: the mascots show it. */
     caller: (bot: string) => `${bot}:`,
     calling: (bot: string) => `Calling ${bot}`,
@@ -14,15 +14,16 @@ export const messages = {
   composer: {
     messageTo: "Message to",
     recipient: "Recipient",
-    placeholder: (handle: string | undefined) => `Write to @${handle ?? "bot"}. Ctrl+Enter sends.`,
+    placeholder: (handle: string | undefined) =>
+      `Write to @${handle ?? "agent"}. Ctrl+Enter sends.`,
     send: "Send",
   },
   delivery: {
     delivered: "Delivered",
     read: "Read",
-    readTitle: "The bot began working on it",
+    readTitle: "The agent began working on it",
     delivering: "Delivering",
-    waiting: "Waiting for the bot",
+    waiting: "Waiting for the agent",
     retrying: (when: string, attempts: number) =>
       `Retrying ${when}, after ${attempts} failed ${attempts === 1 ? "try" : "tries"}`,
     notDelivered: "Not delivered",
@@ -34,14 +35,14 @@ export const messages = {
     title: "Messages not delivered",
     retryAll: "Retry all",
     explanation:
-      "Botloft stopped trying after several attempts. Retrying puts a message back in line; it goes out when the bot is ready.",
+      "Botloft stopped trying after several attempts. Retrying puts a message back in line; it goes out when the agent is ready.",
     to: (name: string) => `To ${name}`,
     tries: (count: number) => `${count} ${count === 1 ? "try" : "tries"}`,
   },
   row: {
     you: "You",
     system: "Botloft",
-    goneBot: "a bot no longer in the crew",
+    goneBot: "an agent no longer in the crew",
     to: "to",
     task: "Task",
     result: "Result",

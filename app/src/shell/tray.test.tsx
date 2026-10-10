@@ -22,20 +22,20 @@ function crews() {
 const view = (host: FakeHost) => host.tray?.view;
 
 describe("the icon near the clock", () => {
-  test("says what the bots are doing, with a dot when something waits", async () => {
+  test("says what the agents are doing, with a dot when something waits", async () => {
     const { fake, scout } = crews();
     const { host } = renderApp(fake);
     await crewOpened("Ops");
-    await waitFor(() => expect(view(host)?.status).toBe("No bot working"));
+    await waitFor(() => expect(view(host)?.status).toBe("No agent working"));
     expect(view(host)).toMatchObject({
-      tooltip: "Botloft: No bot working",
+      tooltip: "Botloft: No agent working",
       attention: false,
       open: "Open Botloft",
       pause: "Pause every crew",
       quit: "Quit Botloft",
     });
     act(() => fake.setBotState(scout.id, "busy"));
-    expect(view(host)?.status).toBe("1 bot working");
+    expect(view(host)?.status).toBe("1 agent working");
     act(() => fake.setBotState(scout.id, "needs_approval"));
     expect(view(host)).toMatchObject({ status: "Scout needs you", attention: true });
   });
@@ -89,7 +89,7 @@ describe("opening at sign-in", () => {
     expect(host.openAtSignIn).toBe(true);
   });
 
-  test("does not open the app when the bots do not start with Windows", async () => {
+  test("does not open the app when the agents do not start with Windows", async () => {
     const { fake } = crews();
     fake.settings = { ...fake.settings, startWithWindows: false };
     const { host } = renderApp(fake);

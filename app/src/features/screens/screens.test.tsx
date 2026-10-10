@@ -29,7 +29,7 @@ const frames = (within_: HTMLElement) =>
   [...within_.querySelectorAll("iframe")].map((frame) => frame.getAttribute("src"));
 
 describe("design area", () => {
-  test("says when the bot has made no screens", async () => {
+  test("says when the agent has made no screens", async () => {
     const { fake } = crew();
     await openScout(fake);
     fireEvent.click(toggle());

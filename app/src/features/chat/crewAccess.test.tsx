@@ -32,8 +32,8 @@ const request = (bot: string | null) =>
     why: "To get this week's post.",
   });
 
-describe("a bot asking to reach another crew", () => {
-  test("for one bot: only now, always that bot, always the crew or deny", async () => {
+describe("an agent asking to reach another crew", () => {
+  test("for one agent: only now, always that agent, always the crew or deny", async () => {
     const { fake, scout } = await openScout();
     act(() => {
       fake.chat.ask(scout.id, CREW_ACCESS_TOOL, "Blog", request("Writer"));
@@ -51,7 +51,7 @@ describe("a bot asking to reach another crew", () => {
     expect(JSON.parse(answered(fake)?.input as string)).toEqual({ scope: "bot" });
   });
 
-  test("for the whole crew there is no bot to always allow", async () => {
+  test("for the whole crew there is no agent to always allow", async () => {
     const { fake, scout } = await openScout();
     act(() => {
       fake.chat.ask(scout.id, CREW_ACCESS_TOOL, "Blog", request(null));
@@ -65,7 +65,7 @@ describe("a bot asking to reach another crew", () => {
     );
   });
 
-  test("lasting access shows in the bot's details and can be taken back", async () => {
+  test("lasting access shows in the agent's details and can be taken back", async () => {
     const { fake, scout } = await openScout();
     fake.crewAccess.add(scout.id, "Blog");
     fake.crewAccess.add(scout.id, "Shop", { id: "bot_clerk", name: "Clerk" }, { edit: true });

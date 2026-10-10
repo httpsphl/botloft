@@ -6,7 +6,7 @@ export const phone: Messages["phone"] = {
   pair: {
     title: "Conectar este celular",
     intro:
-      "Este celular vai aprovar os pedidos dos seus bots responder às perguntas deles e conversar com eles, de qualquer lugar. Os arquivos ficam no seu computador.",
+      "Este celular vai aprovar os pedidos dos seus agentes responder às perguntas deles e conversar com eles, de qualquer lugar. Os arquivos ficam no seu computador.",
     nameLabel: "Nome deste celular",
     connect: "Conectar",
     connecting: "Conectando…",
@@ -23,7 +23,7 @@ export const phone: Messages["phone"] = {
   inbox: {
     title: "Esperando você",
     empty: "Nada esperando você",
-    emptyBody: "Quando um bot precisar de você, aparece aqui.",
+    emptyBody: "Quando um agente precisar de você, aparece aqui.",
     loading: "Vendo o que está esperando…",
     computerOff: "O computador está desligado ou sem internet. Os pedidos continuam esperando lá.",
     noConnection: "Sem conexão. Tentando de novo…",
@@ -32,9 +32,9 @@ export const phone: Messages["phone"] = {
   },
   tabs: { requests: "Pedidos", chats: "Conversas", newReply: "resposta nova" },
   chats: {
-    empty: "Nenhum bot ainda",
-    emptyBody: "Quando você criar um bot no computador, ele aparece aqui.",
-    loading: "Carregando os bots…",
+    empty: "Nenhum agente ainda",
+    emptyBody: "Quando você criar um agente no computador, ele aparece aqui.",
+    loading: "Carregando os agentes…",
     working: "trabalhando…",
     kind: {
       owner: "Você",
@@ -48,7 +48,7 @@ export const phone: Messages["phone"] = {
     inCrew: (crew: string) => `em ${crew}`,
     allCrews: "Todas",
     crewsLabel: "Equipes",
-    bots: (n: number) => `${n} ${n === 1 ? "bot" : "bots"}`,
+    bots: (n: number) => `${n} ${n === 1 ? "agente" : "agentes"}`,
     back: "Conversas",
     loadingChat: "Carregando a conversa…",
     nothing: "Nada aqui ainda. Escreva a primeira mensagem.",
@@ -69,19 +69,19 @@ export const phone: Messages["phone"] = {
     },
     pending: {
       sending: "Enviando…",
-      sent: "Enviada. O bot vai ver quando puder.",
+      sent: "Enviada. O agente vai ver quando puder.",
       notSent: "Não enviada.",
       reasons: {
         offline: "Veja a conexão e tente de novo.",
         timeout: "O computador não respondeu. Veja se está ligado e tente de novo.",
-        invalid: "O bot não aceita este texto.",
-        not_found: "Este bot não existe mais.",
+        invalid: "O agente não aceita este texto.",
+        not_found: "Este agente não existe mais.",
         rate_limited: "Mensagens demais em um minuto. Espere um pouco.",
         failed: "Algo deu errado. Tente de novo.",
       } as Record<string, string>,
     },
     reach:
-      "Um celular conectado e desbloqueado pode ler as conversas dos seus bots e escrever para eles.",
+      "Um celular conectado e desbloqueado pode ler as conversas dos seus agentes e escrever para eles.",
   },
   approval: {
     asks: (bot: string) => `${bot} pede para`,
@@ -92,7 +92,7 @@ export const phone: Messages["phone"] = {
     allow: "Permitir",
     deny: "Negar",
     sending: "Enviando…",
-    noteLabel: "Recado para o bot (opcional)",
+    noteLabel: "Recado para o agente (opcional)",
     cut: "Longo demais para ler no celular. Aqui você só pode negar, ou responder no computador.",
     atComputer: "Este pedido precisa de você no computador. Aqui você só pode negar.",
     failed: "Não foi enviado. Confira a conexão e tente de novo.",
@@ -114,7 +114,7 @@ export const phone: Messages["phone"] = {
     notices: {
       turnOn: "Ligar os avisos",
       turnOff: "Desligar os avisos",
-      on: "Os avisos estão ligados. Você recebe um quando um bot precisar de você.",
+      on: "Os avisos estão ligados. Você recebe um quando um agente precisar de você.",
       off: "Os avisos estão desligados.",
       blocked:
         "Os avisos estão bloqueados para esta página. Libere nas configurações do navegador.",

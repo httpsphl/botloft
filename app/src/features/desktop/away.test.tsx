@@ -65,7 +65,7 @@ describe("use while the owner is away", () => {
     await waitFor(() => expect(fake.desktop.grants[0]?.unattended).toBe(false));
   }, 15_000);
 
-  test("the owner hears, when back, what each bot used and opens its chat", async () => {
+  test("the owner hears, when back, what each agent used and opens its chat", async () => {
     const { fake, scout } = await opened();
     act(() => {
       fake.desktop.usedAway(scout.id, "Notepad");

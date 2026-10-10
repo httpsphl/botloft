@@ -21,15 +21,15 @@ async function oneCrew() {
   return { fake, scout };
 }
 
-describe("hiding the bots list", () => {
+describe("hiding the agents list", () => {
   test("the title bar button hides the list and brings it back, and it is remembered", async () => {
     await oneCrew();
     expect(slot().dataset.open).toBe("true");
-    fireEvent.click(screen.getByRole("button", { name: "Hide the bots list" }));
+    fireEvent.click(screen.getByRole("button", { name: "Hide the agents list" }));
     expect(slot().dataset.open).toBe("false");
     expect(slot().hasAttribute("inert")).toBe(true);
     expect(localStorage.getItem("botloft.sidebar")).toBe("false");
-    fireEvent.click(screen.getByRole("button", { name: "Show the bots list" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show the agents list" }));
     expect(slot().dataset.open).toBe("true");
     expect(slot().hasAttribute("inert")).toBe(false);
   });
@@ -44,10 +44,10 @@ describe("hiding the bots list", () => {
     expect(slot().dataset.open).toBe("true");
   });
 
-  test("with the list hidden, a dot on the button says a bot is waiting", async () => {
+  test("with the list hidden, a dot on the button says an agent is waiting", async () => {
     const { fake, scout } = await oneCrew();
-    fireEvent.click(screen.getByRole("button", { name: "Hide the bots list" }));
-    const button = screen.getByRole("button", { name: "Show the bots list" });
+    fireEvent.click(screen.getByRole("button", { name: "Hide the agents list" }));
+    const button = screen.getByRole("button", { name: "Show the agents list" });
     expect(button.parentElement?.querySelector(".live-dot")).toBeNull();
     fake.setBotState(scout.id, "needs_approval");
     await waitFor(() => expect(button.parentElement?.querySelector(".live-dot")).not.toBeNull());

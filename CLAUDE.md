@@ -1,6 +1,6 @@
 # Botloft
 
-Workspace desktop Windows-first, com código público sob a FSL (vira Apache 2.0 após dois anos), para rodar bots de agentes de código sempre ligados que colaboram entre si: Claude Code, Antigravity e Codex (os dois últimos experimentais). A seção 30 da spec e o ADR 0003 dizem como cada agente entra. Daemon Rust (`botloftd`) + app Tauri v2 + React.
+Workspace desktop Windows-first, com código público sob a FSL (vira Apache 2.0 após dois anos), para rodar agentes de IA sempre ligados que colaboram entre si, sobre Claude Code, Antigravity e Codex (os dois últimos experimentais). A seção 30 da spec e o ADR 0003 dizem como cada agente entra. Daemon Rust (`botloftd`) + app Tauri v2 + React.
 
 ## Fonte de verdade
 
@@ -65,6 +65,7 @@ Em dev, use `$env:BOTLOFT_HOME = "$PWD\.dev\home"` (caminho absoluto) no daemon 
 - A UI depende só da interface `BotloftApi` (`app/src/lib/api.ts`). Testes de componente usam `FakeBotloft`.
 - Nenhum texto de interface escrito direto no componente: tudo vai em `app/src/i18n/{en,pt-BR,es}/<área>.ts` e é lido com `useT()` (ou `t()` fora do React). Texto novo entra nos três idiomas no mesmo commit; o TypeScript acusa o que faltar (spec 15.6). Palavras simples, sem "daemon" nem outro jargão.
 - Nunca edite `app/src/lib/protocol.gen.ts` à mão.
+- No texto que o dono lê (app, README, notas de release) cada um é um **agente**; "bot" fica só no nome Botloft e em identificadores (`bot_`, `bots.create`). O que roda por baixo (Claude Code, Antigravity, Codex) é o **motor**.
 - Commits pequenos, no formato Conventional Commits (`feat(courier): ...`).
 
 ## Windows: armadilhas conhecidas

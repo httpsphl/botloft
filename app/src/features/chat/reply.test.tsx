@@ -26,7 +26,7 @@ const sent = (fake: FakeBotloft) =>
   fake.calls.filter((call) => call.method === "messages.send").map((call) => call.params);
 
 describe("replying to a message", () => {
-  test("quotes the bot's reply over the composer, sends it, and shows it on the bubble", async () => {
+  test("quotes the agent's reply over the composer, sends it, and shows it on the bubble", async () => {
     const { fake, scout, said } = await setup();
     fireEvent.click(screen.getByRole("button", { name: "Reply to Scout" }));
     expect(screen.getByText("Replying to Scout")).toBeDefined();
@@ -43,7 +43,7 @@ describe("replying to a message", () => {
     expect(quote.title).toBe("Show what this replies to");
   });
 
-  test("replies to another bot's message too, and Esc or X cancels", async () => {
+  test("replies to another agent's message too, and Esc or X cancels", async () => {
     const { fake } = await setup();
     fireEvent.click(screen.getByRole("button", { name: "Reply to Writer" }));
     const bar = screen.getByText("Replying to Writer").parentElement as HTMLElement;

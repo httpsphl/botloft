@@ -63,7 +63,7 @@ describe("mascot", () => {
     }
   });
 
-  test("only a working bot's mascot moves on and on", () => {
+  test("only a working agent's mascot moves on and on", () => {
     const forever = [...moodRules.matchAll(/([^{}]+)\{[^{}]*infinite[^{}]*\}/g)].map((rule) =>
       (rule[1] ?? "").trim(),
     );
@@ -99,7 +99,7 @@ describe("mascot", () => {
     expect(used).toEqual(clips.map((id) => `url(#${id})`));
   });
 
-  test("the mood drives the motion, and only a working bot throws embers", () => {
+  test("the mood drives the motion, and only a working agent throws embers", () => {
     const { container, rerender } = render(<BotAvatar color="#ff7a59" mood="idle" />);
     const svg = () => container.querySelector("svg");
     expect(svg()?.dataset.mood).toBe("idle");
@@ -112,7 +112,7 @@ describe("mascot", () => {
     expect(svg()?.dataset.mood).toBeUndefined();
   });
 
-  test("cheers once when its bot finishes, not when it shows up idle", () => {
+  test("cheers once when its agent finishes, not when it shows up idle", () => {
     vi.useFakeTimers();
     try {
       const { container, rerender } = render(<BotAvatar color="#ff7a59" mood="idle" />);
@@ -174,7 +174,7 @@ describe("state badge", () => {
     expect(container.querySelector(".state-trace")?.getAttribute("pathLength")).toBe("100");
   });
 
-  test("fades in when the bot starts working, not when it was already working", () => {
+  test("fades in when the agent starts working, not when it was already working", () => {
     const { container, rerender } = render(
       <BotStateBadge bot={{ state: "busy", paused: false }} />,
     );
@@ -193,7 +193,7 @@ describe("ListAvatar", () => {
     paused: false,
   });
 
-  test("shows the bot's mood: idle, stopped or working", () => {
+  test("shows the agent's mood: idle, stopped or working", () => {
     const { container, rerender } = render(
       <ListAvatar bot={bot("idle")} crewPaused={false} size={32} />,
     );

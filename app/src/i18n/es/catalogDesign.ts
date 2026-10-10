@@ -7,7 +7,7 @@ export const design: typeof en = {
     summary: "Escribe una guía breve de la marca con tu material y revisa que todo la siga",
     about:
       "Reúne tu logo, colores, fuentes y ejemplos en una guía de una página, marcando lo que vio y lo que sugiere. Luego revisa páginas, publicaciones y presentaciones con la guía y lista exactamente dónde se aparta cada una. Nunca inventa un dato de la marca ni cambia una regla sin preguntarte.",
-    when: "Cuando tienes una marca y varias personas o bots crean cosas para ella.",
+    when: "Cuando tienes una marca y varias personas o agentes crean cosas para ella.",
     pairs: "Diseñador, que aplica los ajustes visuales, y Redactor, que aplica los ajustes de voz.",
   },
   "ui-designer": {

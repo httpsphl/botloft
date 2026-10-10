@@ -78,7 +78,7 @@ describe("teaching a task", () => {
     );
   });
 
-  test("a lesson records live and goes to the bot to remember, without the steps taken out", async () => {
+  test("a lesson records live and goes to the agent to remember, without the steps taken out", async () => {
     const { fake, scout } = await inHands();
     const dialog = await finish(fake, scout.id);
     fireEvent.click(within(dialog).getByRole("button", { name: "Remove step 2" }));

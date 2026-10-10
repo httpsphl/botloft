@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { FakeBotloft } from "./fake";
 
-describe("the fake's bot catalog", () => {
+describe("the fake's agent catalog", () => {
   it("lists the roles, by category too, and reads one with its instructions", async () => {
     const fake = new FakeBotloft();
     expect(await fake.call("catalog.list", {})).toHaveLength(129);
@@ -31,7 +31,7 @@ describe("the fake's bot catalog", () => {
     await expect(fake.call("catalog.get", { id: "wizard" })).rejects.toThrow();
   });
 
-  it("adds a role as a plain bot, with the name and role the app wrote", async () => {
+  it("adds a role as a plain agent, with the name and role the app wrote", async () => {
     const fake = new FakeBotloft();
     const crew = fake.addCrew("Studio");
     const seen: string[] = [];
@@ -41,7 +41,7 @@ describe("the fake's bot catalog", () => {
       crewId: crew.id,
       templateId: "code-reviewer",
       name: "Revisor de código",
-      role: "Revisa o que os outros bots mudaram",
+      role: "Revisa o que os outros agents mudaram",
     });
     const sheet = await fake.call("catalog.get", { id: "code-reviewer" });
     expect(bot.name).toBe("Revisor de código");

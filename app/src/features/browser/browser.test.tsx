@@ -29,7 +29,7 @@ const toggle = () => screen.getByRole("button", { name: /Show browser|Hide brows
 const panel = () => screen.getByRole("complementary", { name: "Scout's browser" });
 
 describe("browser panel", () => {
-  test("watches the bot's browser while open, and says when it has not opened one", async () => {
+  test("watches the agent's browser while open, and says when it has not opened one", async () => {
     const { fake, scout } = crew();
     await openScout(fake);
     fireEvent.click(toggle());
@@ -41,7 +41,7 @@ describe("browser panel", () => {
     expect(fake.browser.watches).toEqual([scout.id, null]);
   });
 
-  test("shows the live page, its address, and the bot's cursor where it clicks", async () => {
+  test("shows the live page, its address, and the agent's cursor where it clicks", async () => {
     const { fake, scout } = crew();
     fake.browser.open(scout.id, "https://example.com/signin", "Sign in");
     await openScout(fake);
@@ -135,7 +135,7 @@ describe("browser panel", () => {
     expect(fake.browser.state(scout.id).resting).toBe(false);
   });
 
-  test("closes when the browser rests and opens again when the bot wakes it, but not out of the owner's hands", async () => {
+  test("closes when the browser rests and opens again when the agent wakes it, but not out of the owner's hands", async () => {
     const { fake, scout } = crew();
     await openScout(fake);
     act(() => {
@@ -169,7 +169,7 @@ describe("browser panel", () => {
     expect(toggle().getAttribute("aria-label")).toBe("Hide browser");
   });
 
-  test("opens by itself when the bot starts browsing, and the button marks it once closed", async () => {
+  test("opens by itself when the agent starts browsing, and the button marks it once closed", async () => {
     const { fake, scout } = crew();
     await openScout(fake);
     fireEvent.click(screen.getByRole("button", { name: "Show files" }));
@@ -190,7 +190,7 @@ describe("browser panel", () => {
     expect(screen.queryByRole("complementary", { name: "Scout's browser" })).toBeNull();
   });
 
-  test("a browser already open when the bot is opened stays behind its button", async () => {
+  test("a browser already open when the agent is opened stays behind its button", async () => {
     const { fake, scout } = crew();
     fake.browser.open(scout.id, "https://example.com/", "Example");
     await openScout(fake);

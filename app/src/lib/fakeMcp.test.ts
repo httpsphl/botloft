@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { FakeBotloft } from "./fake";
 
 describe("the fake's connected tools", () => {
-  it("registers a tool, attaches it to a bot and lets it go with the tool", async () => {
+  it("registers a tool, attaches it to an agent and lets it go with the tool", async () => {
     const fake = new FakeBotloft();
     const seen: string[] = [];
     fake.subscribe((event) => seen.push(event.name));

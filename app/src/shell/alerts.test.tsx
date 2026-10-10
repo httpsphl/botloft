@@ -25,7 +25,7 @@ async function scoutBehind() {
 }
 
 describe("notifications", () => {
-  test("say which bot needs the owner and for what, with the Windows sound", async () => {
+  test("say which agent needs the owner and for what, with the Windows sound", async () => {
     const { fake, host, scout } = await scoutBehind();
     act(() => {
       fake.chat.ask(scout.id, "Bash", "npm test", '{"command":"npm test"}');
@@ -42,7 +42,7 @@ describe("notifications", () => {
     });
   });
 
-  test("tell when a bot finishes only if the owner wants it, and stay quiet without sound", async () => {
+  test("tell when an agent finishes only if the owner wants it, and stay quiet without sound", async () => {
     const { fake, host, scout } = await scoutBehind();
     act(() => fake.setBotState(scout.id, "busy"));
     act(() => fake.setBotState(scout.id, "idle"));
@@ -70,7 +70,7 @@ describe("notifications", () => {
     expect(host.notices).toEqual([]);
   });
 
-  test("opening Botloft from one goes to its bot", async () => {
+  test("opening Botloft from one goes to its agent", async () => {
     const { fake, host, writer } = await scoutBehind();
     act(() => fake.setBotState(writer.id, "needs_approval"));
     expect(host.notices).toHaveLength(1);

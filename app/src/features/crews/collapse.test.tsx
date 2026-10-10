@@ -26,7 +26,7 @@ function twoCrews() {
 }
 
 describe("folding a crew in the sidebar", () => {
-  test("hides its bots, keeps the open one, and is remembered", async () => {
+  test("hides its agents, keeps the open one, and is remembered", async () => {
     const { fake, ops, scout } = twoCrews();
     renderApp(fake);
     await crewOpened("Ops");
@@ -42,7 +42,7 @@ describe("folding a crew in the sidebar", () => {
     // A bot waiting for the owner shows on the folded crew.
     act(() => fake.setBotState(scout.id, "needs_approval"));
     expect(within(sidebar()).getByRole("button", { name: /^Ops/ }).textContent).toContain(
-      "a bot needs you",
+      "an agent needs you",
     );
 
     const unfold = within(sidebar()).getByRole("button", { name: "Unfold Ops" });
@@ -76,7 +76,7 @@ describe("the page of all crews", () => {
     fireEvent.click(within(sidebar()).getByRole("button", { name: "Crews" }));
     await crewOpened("Crews");
     const page = screen.getByRole("region", { name: "Crews" });
-    expect(page.textContent).toContain("2 crews · 3 bots");
+    expect(page.textContent).toContain("2 crews · 3 agents");
     const docs = within(page).getByRole("button", { name: /^Docs/ });
     expect(docs.textContent).toContain("1 working");
     expect(within(page).getByRole("button", { name: /^Ops/ }).textContent).toContain("All quiet");

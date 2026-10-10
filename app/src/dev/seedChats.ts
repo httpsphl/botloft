@@ -174,7 +174,7 @@ export function seedChats(fake: FakeBotloft, crew: Crew): void {
     to: crew.reviewer,
     body: "Two of the links in the draft moved; the new ones are in shared/links.md.",
   });
-  talk.deliver(late.delivery.id, "dead", "the bot did not start in time");
+  talk.deliver(late.delivery.id, "dead", "the agent did not start in time");
 
   at(30);
   void fake.call("messages.send", {

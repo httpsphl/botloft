@@ -29,7 +29,7 @@ function say(data: unknown, source: Window | null) {
   });
 }
 
-describe("the bot's cursor on a screen", () => {
+describe("the agent's cursor on a screen", () => {
   test("follows what the draft's script says, scaled to the artboard", () => {
     const { view, frame } = draw();
     expect(view.container.querySelector(".bot-cursor")).toBeNull();
@@ -75,7 +75,7 @@ describe("the bot's cursor on a screen", () => {
     expect(cursor.style.left).toBe("200px");
   });
 
-  test("hears only its own frames, and only while the bot writes", () => {
+  test("hears only its own frames, and only while the agent writes", () => {
     const { view, frame } = draw();
     say({ botloft: "cursor", view: VIEW, point: { x: 10, y: 10 }, box: null }, window);
     expect(view.container.querySelector(".bot-cursor")).toBeNull();

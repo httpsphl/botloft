@@ -1,7 +1,7 @@
 import type { Messages } from "../en";
 
 export const setup: Messages["setup"] = {
-  tagline: "Bots sempre ligados, trabalhando juntos para você.",
+  tagline: "Agentes sempre ligados, trabalhando juntos para você.",
   install: "Instalar",
   update: "Atualizar",
   forYou: "Instala só para você, sem pedir administrador.",
@@ -10,7 +10,7 @@ export const setup: Messages["setup"] = {
   newer: (installed: string) => `Você já tem uma versão mais nova (${installed}).`,
   open: "Abrir o Botloft",
   reinstall: "Instalar de novo",
-  appOpen: "O Botloft está aberto e fecha para instalar. Seus bots continuam trabalhando.",
+  appOpen: "O Botloft está aberto e fecha para instalar. Seus agentes continuam trabalhando.",
   installing: "Instalando o Botloft…",
   installingLine: "Leva só alguns segundos.",
   progress: "Instalando",

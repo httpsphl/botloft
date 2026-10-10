@@ -5,10 +5,10 @@ import type { Messages } from "../en";
 export const alerts: Messages["alerts"] = {
   tray: {
     tooltip: (status) => `Botloft: ${status}`,
-    working: (count) => (count === 1 ? "1 bot trabalhando" : `${count} bots trabalhando`),
+    working: (count) => (count === 1 ? "1 agente trabalhando" : `${count} agentes trabalhando`),
     needsYou: (bot) => `${bot} precisa de você`,
     waiting: "Algo está esperando por você",
-    idle: "Nenhum bot trabalhando",
+    idle: "Nenhum agente trabalhando",
     open: "Abrir o Botloft",
     pause: "Pausar todas as equipes",
     resume: "Retomar todas as equipes",

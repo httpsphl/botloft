@@ -7,7 +7,7 @@ export const design = {
     summary: "Writes a short brand guide from your material and checks that everything follows it",
     about:
       "Gathers your logo, colors, fonts and examples into a one-page brand guide, marking what it saw and what it suggests. Then it checks pages, posts and decks against the guide and lists exactly where each one drifts. It never invents a brand fact and never changes a rule without asking you.",
-    when: "When you have a brand and several people or bots make things for it.",
+    when: "When you have a brand and several people or agents make things for it.",
     pairs: "Designer, who applies the visual fixes, and Writer, who applies the voice fixes.",
   },
   "ui-designer": {

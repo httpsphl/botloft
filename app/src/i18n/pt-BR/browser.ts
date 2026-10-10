@@ -33,7 +33,7 @@ export const browser: Messages["browser"] = {
     "Quando ele pesquisar ou usar um site, você vê aqui ao vivo: cada página que ele abre, cada clique.",
   starting: "Abrindo o navegador…",
   closed: "Navegador fechado",
-  closedBody: "Ele abre de novo quando o bot precisar. Os logins continuam.",
+  closedBody: "Ele abre de novo quando o agente precisar. Os logins continuam.",
   openForMe: "Abrir para mim",
   openForMeWhy: (bot) =>
     `Para ver o que ${bot} deixou aberto e mexer você mesmo. ${bot} não é acordado nem avisado; devolva quando terminar e o navegador volta a descansar.`,
@@ -41,8 +41,8 @@ export const browser: Messages["browser"] = {
   failedTitle: "O navegador não abriu",
   failedBody: (system: string) =>
     system === "Windows"
-      ? "O Botloft usa o Microsoft Edge, que vem com o Windows. Confira se ele está instalado e peça ao bot para tentar de novo."
-      : "O Botloft usa o Google Chrome, o Chromium ou o Microsoft Edge. Confira se um deles está instalado e peça ao bot para tentar de novo.",
+      ? "O Botloft usa o Microsoft Edge, que vem com o Windows. Confira se ele está instalado e peça ao agente para tentar de novo."
+      : "O Botloft usa o Google Chrome, o Chromium ou o Microsoft Edge. Confira se um deles está instalado e peça ao agente para tentar de novo.",
   details: "Detalhes",
   tabs: {
     label: "Abas",
@@ -130,7 +130,7 @@ export const browser: Messages["browser"] = {
   help: {
     needs: (bot) => `${bot} precisa de você no navegador`,
     asks: (bot, task) => `${bot} pede: ${task}`,
-    why: "Assuma o controle, faça isso na página e devolva. Se o site não deixar entrar por ali, use Entrar numa janela no painel do navegador. O bot não vê o que você digita em campos de senha.",
+    why: "Assuma o controle, faça isso na página e devolva. Se o site não deixar entrar por ali, use Entrar numa janela no painel do navegador. O agente não vê o que você digita em campos de senha.",
     take: "Assumir o navegador",
     done: "Pronto",
     wontDo: "Não vou fazer",

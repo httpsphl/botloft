@@ -69,7 +69,7 @@ describe("chat", () => {
     expect(bubble.textContent).toBe("Find three sources\non retrieval");
     expect(field().value).toBe("");
     const row = bubble.closest("li") as HTMLElement;
-    expect(within(row).getByText("Waiting for the bot")).toBeDefined();
+    expect(within(row).getByText("Waiting for the agent")).toBeDefined();
     const sent = fake.conversation.messages.at(-1);
     act(() => {
       fake.conversation.read(fake.conversation.deliveryOf(sent?.id ?? "").id);
@@ -78,7 +78,7 @@ describe("chat", () => {
     expect(within(sidebar()).getByText("You: Find three sources on retrieval")).toBeDefined();
   });
 
-  test("the reply streams in, then tools and the turn show under the bot", async () => {
+  test("the reply streams in, then tools and the turn show under the agent", async () => {
     const { fake, scout } = crew();
     await openScout(fake);
     act(() => {
@@ -153,7 +153,7 @@ describe("chat", () => {
     expect(await within(chat()).findByText("Allowed: write a file")).toBeDefined();
   });
 
-  test("a command request leads with the bot's explanation and keeps the command a click away", async () => {
+  test("a command request leads with the agent's explanation and keeps the command a click away", async () => {
     const { fake, scout } = crew();
     await openScout(fake);
     const script = "cd C:/Work && python - <<'EOF'\nprint('hello')\nEOF";
@@ -252,7 +252,7 @@ describe("chat", () => {
     );
   });
 
-  test("images sent earlier are read back from the bot's folder", async () => {
+  test("images sent earlier are read back from the agent's folder", async () => {
     const { fake, scout } = crew();
     await fake.call("messages.send", {
       botId: scout.id,

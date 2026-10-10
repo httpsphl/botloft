@@ -81,11 +81,11 @@ describe("account area", () => {
     expect(dialog.textContent).toContain("92% used");
   });
 
-  test("usage waits for a bot's first reply", async () => {
+  test("usage waits for an agent's first reply", async () => {
     renderApp();
     await openAccount();
     fireEvent.click(screen.getByRole("menuitem", { name: "Usage" }));
-    expect(screen.getByText("Usage shows up after a bot's first reply.")).toBeDefined();
+    expect(screen.getByText("Usage shows up after an agent's first reply.")).toBeDefined();
   });
 
   test("settings change the theme and the language", async () => {

@@ -8,7 +8,7 @@ import { SeenSince, useArrival } from "./motion";
 afterEach(cleanup);
 
 describe("the mascot's mood", () => {
-  test("follows what the bot does", () => {
+  test("follows what the agent does", () => {
     const bot = (state: Parameters<typeof moodOf>[0]["state"], paused = false) =>
       moodOf({ state, paused });
     expect(bot("idle")).toBe("idle");
@@ -62,7 +62,7 @@ describe("arrivals", () => {
 });
 
 describe("switching views", () => {
-  test("the new bot's pane rises in, and the window around it stays", async () => {
+  test("the new agent's pane rises in, and the window around it stays", async () => {
     const fake = new FakeBotloft();
     const ops = fake.addCrew("Ops");
     for (const name of ["Scout", "Writer"]) {

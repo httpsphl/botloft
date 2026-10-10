@@ -33,7 +33,7 @@ export const desktop: Messages["desktop"] = {
     emptyTitle: (bot) => `${bot} ainda não usou seu desktop`,
     emptyBody:
       "Quando ele ler ou usar uma janela de um app que você liberou, a janela aparece aqui, ao vivo.",
-    shortcut: "Ctrl+Alt+Esc para todos os bots no seu desktop, mesmo com o Botloft fechado.",
+    shortcut: "Ctrl+Alt+Esc para todos os agentes no seu desktop, mesmo com o Botloft fechado.",
     waiting: "Esperando a imagem…",
     read: "Leu a janela",
     click: (target) => `Clicou em "${target}"`,
@@ -62,7 +62,7 @@ export const desktop: Messages["desktop"] = {
     realPoints: (bot) => [
       `Quando a acessibilidade não alcança algo nesse app, ${bot} move o seu cursor e digita como se fosse você.`,
       `Enquanto ele age, o mouse e o teclado são dele, e um aviso na sua tela diz isso.`,
-      `Mexa o mouse ou aperte uma tecla e ele para na hora. Ctrl+Alt+Esc para todos os bots no seu desktop.`,
+      `Mexa o mouse ou aperte uma tecla e ele para na hora. Ctrl+Alt+Esc para todos os agentes no seu desktop.`,
       `Ele nunca digita em campos de senha e nunca aperta teclas do próprio Windows, como a tecla Windows ou Alt+Tab.`,
     ],
     realConfirm: "Ligar",

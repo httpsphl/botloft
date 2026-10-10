@@ -9,7 +9,7 @@ afterEach(cleanup);
 
 const read = (input: string, name = "Read") => ({ name, input }) as ToolItem;
 
-describe("the image a bot reads", () => {
+describe("the image an agent reads", () => {
   test("is found in a Read of a picture, even with its input cut short", () => {
     expect(readImagePath(read(JSON.stringify({ file_path: "C:\\Work\\q10.png" })))).toBe(
       "C:\\Work\\q10.png",
@@ -51,7 +51,7 @@ describe("the image a bot reads", () => {
     expect(within(chat).getAllByRole("img", { name: "q10.png" })).toHaveLength(2);
   });
 
-  test("an image outside the bot's folders keeps the plain line", async () => {
+  test("an image outside the agent's folders keeps the plain line", async () => {
     const fake = new FakeBotloft();
     const ops = fake.addCrew("Ops");
     const scout = fake.addBot(ops.id, "Scout", "Finds sources");

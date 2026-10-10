@@ -19,7 +19,7 @@ export const bots = {
     },
     auth_error: {
       label: "Sign-in needed",
-      hint: "Claude Code is not signed in, or the account can't be used. Sign in to Claude and the bot starts again by itself. Already signed in? Check your Claude plan, then restart the bot.",
+      hint: "Claude Code is not signed in, or the account can't be used. Sign in to Claude and the agent starts again by itself. Already signed in? Check your Claude plan, then restart the agent.",
     },
     backoff: {
       label: "Restarting",
@@ -31,7 +31,7 @@ export const bots = {
   },
   chief: {
     badge: "Chief",
-    hint: (crew: string) => `Leads ${crew}: plans the work and suggests new bots`,
+    hint: (crew: string) => `Leads ${crew}: plans the work and suggests new agents`,
   },
   header: {
     noRole: "No role",
@@ -40,7 +40,7 @@ export const bots = {
     restart: "Restart",
     showDetails: "Show details",
     hideDetails: "Hide details",
-    more: "More bot actions",
+    more: "More agent actions",
     menuOf: (name: string) => `Actions for ${name}`,
     edit: "Edit",
     restartFresh: "Restart with a new conversation",
@@ -49,16 +49,16 @@ export const bots = {
     stopChief: "Stop being chief",
     markUnread: "Mark as unread",
     markRead: "Mark as read",
-    archive: "Archive bot",
-    delete: "Delete bot",
+    archive: "Archive agent",
+    delete: "Delete agent",
     failed: {
-      pause: "Could not pause the bot",
-      resume: "Could not resume the bot",
-      restart: "Could not restart the bot",
+      pause: "Could not pause the agent",
+      resume: "Could not resume the agent",
+      restart: "Could not restart the agent",
       openFolder: "Could not open the folder",
       chief: "Could not change the chief",
-      archive: "Could not archive the bot",
-      delete: "Could not delete the bot",
+      archive: "Could not archive the agent",
+      delete: "Could not delete the agent",
     },
     fresh: {
       title: "Start a new conversation?",
@@ -68,12 +68,12 @@ export const bots = {
     },
     archiveConfirm: {
       title: (name: string) => `Archive ${name}?`,
-      confirm: "Archive bot",
-      body: "The bot stops and leaves the crew. Messages still waiting for it are not delivered.",
+      confirm: "Archive agent",
+      body: "The agent stops and leaves the crew. Messages still waiting for it are not delivered.",
     },
     deleteConfirm: {
       title: (name: string) => `Delete ${name}?`,
-      confirm: "Delete bot",
+      confirm: "Delete agent",
       /** `running` is false for an archived bot, which stopped long ago. */
       removed: (name: string, running: boolean) =>
         `${name} ${running ? "stops now and leaves" : "leaves"} Botloft for good, with its conversation, its routines and the tasks it was part of. This can't be undone.`,
@@ -85,43 +85,44 @@ export const bots = {
     },
   },
   dialog: {
-    newTitle: "New bot",
+    newTitle: "New agent",
     editTitle: (name: string) => `Edit ${name}`,
-    create: "Create bot",
+    create: "Create agent",
     save: "Save",
     name: "Name",
     namePlaceholder: "Reviewer",
-    nameHint: "Other bots reach it by the handle made from this name.",
+    nameHint: "Other agents reach it by the handle made from this name.",
     role: "Role",
     rolePlaceholder: "Reviews pull requests before they merge",
     instructions: "Instructions",
-    instructionsPlaceholder: "How this bot works, what it may do on its own and when to ask.",
-    instructionsHint: "Saved to the bot's rules now; the bot reads them the next time it starts.",
+    instructionsPlaceholder: "How this agent works, what it may do on its own and when to ask.",
+    instructionsHint:
+      "Saved to the agent's rules now; the agent reads them the next time it starts.",
     fullAccess: {
       title: "Run any command without asking",
       off: "Off: it may run only the commands listed below.",
-      on: "On: it runs any command without asking you, and a command can read or change anything you can. Only for a bot you trust.",
+      on: "On: it runs any command without asking you, and a command can read or change anything you can. Only for an agent you trust.",
     },
     commands: {
-      title: "Commands this bot may run",
+      title: "Commands this agent may run",
       placeholder: "git status\nnpm test",
-      hint: "One command per line; it may run these and anything that starts with them, without asking you. It cannot ask, so everything else is refused. A single * lets it run anything. The bot restarts to use the list.",
+      hint: "One command per line; it may run these and anything that starts with them, without asking you. It cannot ask, so everything else is refused. A single * lets it run anything. The agent restarts to use the list.",
     },
     agent: {
-      title: "Agent",
+      title: "Runs on",
       names: {
         claude: "Claude Code",
         agy: "Antigravity (experimental)",
         codex: "Codex",
       },
       experimental:
-        "Experimental. This bot cannot ask you before it acts. It can work with files in its own folders and use the crew's tools, but it cannot run commands, and it has no usage meter or model choice.",
+        "Experimental. This agent cannot ask you before it acts. It can work with files in its own folders and use the crew's tools, but it cannot run commands, and it has no usage meter or model choice.",
       experimentalCodex:
-        "Experimental. This bot asks you before it changes a file or runs a command, like Claude Code. It can still read any file.",
+        "Experimental. This agent asks you before it changes a file or runs a command, like Claude Code. It can still read any file.",
     },
     color: "Color",
     swatch: (color: string) => `Color ${color}`,
-    colorUnset: "Left unset, the bot gets the crew's next color.",
+    colorUnset: "Left unset, the agent gets the crew's next color.",
     custom: "Pick any color",
     picker: {
       area: "Saturation and brightness",
@@ -134,7 +135,7 @@ export const bots = {
   },
   notices: {
     crewPaused: (crew: string) => `${crew} is paused`,
-    crewPausedBody: "Its bots stay stopped until you resume the crew.",
+    crewPausedBody: "Its agents stay stopped until you resume the crew.",
   },
   details: {
     title: (name: string) => `About ${name}`,

@@ -54,7 +54,7 @@ describe("window visibility", () => {
     stop();
   });
 
-  test("a working bot's files are read over and over only while their panel is in sight", async () => {
+  test("a working agent's files are read over and over only while their panel is in sight", async () => {
     vi.useFakeTimers();
     const fake = new FakeBotloft();
     const crew = fake.addCrew("Ops");

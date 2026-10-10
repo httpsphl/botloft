@@ -18,7 +18,7 @@ describe("the first screen for someone who does not use Claude Code", () => {
     renderApp(fake);
     expect(await screen.findByText("Antigravity (experimental)")).toBeDefined();
     expect(screen.getByText("Version 1.3.1")).toBeDefined();
-    expect(screen.getByText(/only need it for bots that run on Claude Code/)).toBeDefined();
+    expect(screen.getByText(/only need it for agents that run on Claude Code/)).toBeDefined();
     expect(screen.queryByText(/Install Claude Code/i)).toBeNull();
   });
 
@@ -34,7 +34,7 @@ describe("the first screen for someone who does not use Claude Code", () => {
   });
 });
 
-describe("the agent for new bots", () => {
+describe("the agent for new agents", () => {
   test("the new-bot dialog starts on the owner's choice", async () => {
     const fake = new FakeBotloft();
     fake.system = { ...fake.system, enabledAgents: ["claude", "agy"] };
@@ -42,10 +42,10 @@ describe("the agent for new bots", () => {
     fake.addCrew("Ops");
     renderApp(fake);
     await crewOpened("Ops");
-    const [button] = await screen.findAllByRole("button", { name: "New bot" });
+    const [button] = await screen.findAllByRole("button", { name: "New agent" });
     fireEvent.click(button as HTMLElement);
-    const dialog = within(await screen.findByRole("dialog", { name: "New bot" }));
-    expect((dialog.getByLabelText("Agent") as HTMLSelectElement).value).toBe("agy");
+    const dialog = within(await screen.findByRole("dialog", { name: "New agent" }));
+    expect((dialog.getByLabelText("Runs on") as HTMLSelectElement).value).toBe("agy");
   });
 
   test("full access is a switch over the command list", async () => {
@@ -68,7 +68,7 @@ describe("the agent for new bots", () => {
     );
     const dialog = within(await screen.findByRole("dialog", { name: /Edit Zed/ }));
     fireEvent.click(dialog.getByRole("switch", { name: "Run any command without asking" }));
-    expect(dialog.queryByLabelText("Commands this bot may run")).toBeNull();
+    expect(dialog.queryByLabelText("Commands this agent may run")).toBeNull();
     fireEvent.click(dialog.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(fake.bot(bot.id).allowedCommands).toEqual(["*"]));
   });

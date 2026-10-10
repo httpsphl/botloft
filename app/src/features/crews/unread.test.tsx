@@ -22,7 +22,7 @@ const row = (name: string) =>
   within(sidebar()).getByRole("button", { name: new RegExp(`^${name},`) });
 
 describe("unread replies in the conversation list", () => {
-  test("a bot that replied stays marked until the owner opens its chat", async () => {
+  test("an agent that replied stays marked until the owner opens its chat", async () => {
     const fake = new FakeBotloft();
     const crew = fake.addCrew("Ops");
     const scout = fake.addBot(crew.id, "Scout");
@@ -77,7 +77,7 @@ describe("unread replies in the conversation list", () => {
     expect(row("Scout").getAttribute("aria-label")).toBe("Scout, Idle");
   });
 
-  test("the owner marks a bot unread from its menu, and read again", async () => {
+  test("the owner marks an agent unread from its menu, and read again", async () => {
     const fake = new FakeBotloft();
     const crew = fake.addCrew("Ops");
     const scout = fake.addBot(crew.id, "Scout");
@@ -107,7 +107,7 @@ describe("unread replies in the conversation list", () => {
     expect(row("Scout").getAttribute("aria-label")).toBe("Scout, Idle");
   });
 
-  test("an unread bot marks the app's icon, unless the owner turned that off", async () => {
+  test("an unread agent marks the app's icon, unless the owner turned that off", async () => {
     const fake = new FakeBotloft();
     const crew = fake.addCrew("Ops");
     const scout = fake.addBot(crew.id, "Scout");

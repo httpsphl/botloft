@@ -68,14 +68,19 @@ describe("shared files", () => {
   test("a file the panel's list leaves out still previews from the card", async () => {
     const { fake, scout } = crew();
     // The list skips files older than the bot; the card still knows it.
-    const old = fake.files.add(scout.id, "old.md", { text: "# Older than the bot", listed: false });
+    const old = fake.files.add(scout.id, "old.md", {
+      text: "# Older than the agent",
+      listed: false,
+    });
     share(fake, scout.id, [old]);
     await openScout(fake);
 
     const list = await cards();
     fireEvent.click(within(list).getByRole("button", { name: /^Preview/ }));
     const panel = await screen.findByRole("complementary", { name: "Files from Scout" });
-    expect(await within(panel).findByRole("heading", { name: "Older than the bot" })).toBeDefined();
+    expect(
+      await within(panel).findByRole("heading", { name: "Older than the agent" }),
+    ).toBeDefined();
   });
 
   test("a share that failed stays a tool line with its error", async () => {

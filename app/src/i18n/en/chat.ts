@@ -43,13 +43,13 @@ export const chat = {
     showInFolder: (file: string) => `Show ${file} in its folder`,
     showInFolderHint: "Show in folder",
     openFolderFailed: "Could not open the folder",
-    missing: "No longer in the bot's folder",
+    missing: "No longer in the agent's folder",
     loading: (file: string) => `Loading ${file}`,
   },
   inbound: {
     task: "Task",
     result: "Result",
-    goneBot: "A bot no longer in the crew",
+    goneBot: "An agent no longer in the crew",
     routine: "Show what the routine asks",
   },
   run: {
@@ -60,7 +60,7 @@ export const chat = {
       `Took ${time}${
         tokens === null ? "" : `. Read ${tokens.read} tokens and wrote ${tokens.wrote}.`
       }`,
-    stopped: (reason: string) => `The bot stopped working on this: ${reason}`,
+    stopped: (reason: string) => `The agent stopped working on this: ${reason}`,
   },
   tools: {
     label: "Tool calls",
@@ -120,7 +120,7 @@ export const chat = {
       `${bot} did not say what this command is for. If you are not sure, deny it and ask.`,
     command: "See the command",
     noteLabel: (bot: string) => `Note for ${bot} if you deny`,
-    notePlaceholder: "Why not? Sent to the bot if you deny (optional)",
+    notePlaceholder: "Why not? Sent to the agent if you deny (optional)",
     allow: "Allow",
     deny: "Deny",
     /** "Allow always" (spec 10.1), by what it covers. */
@@ -163,14 +163,14 @@ export const chat = {
     bypassBody: (bot: string) =>
       `${bot} will edit files, run commands and use the internet on this computer without asking you first.`,
     bypassRisk:
-      "It is not limited to its folder: it can read and change your other files, other bots' files and Botloft's own files. A message from someone else could get it to do something you did not want.",
+      "It is not limited to its folder: it can read and change your other files, other agents' files and Botloft's own files. A message from someone else could get it to do something you did not want.",
     bypassChief: (bot: string) =>
-      `${bot} leads its crew, so it will also create new bots without asking you.`,
+      `${bot} leads its crew, so it will also create new agents without asking you.`,
     bypassAdvice:
-      "Turn this on only for a bot you trust with everything, and only while you need it.",
+      "Turn this on only for an agent you trust with everything, and only while you need it.",
     badge: "Asks nothing",
     badgeHint:
-      "This bot does everything without asking. Change it in the mode picker below the chat.",
+      "This agent does everything without asking. Change it in the mode picker below the chat.",
   },
   model: {
     title: "Model",
@@ -205,7 +205,7 @@ export const chat = {
     loading: "Loading the models…",
     listFailed: "Could not load the list of models",
     failed: "Could not change the model",
-    defaultHint: (bot: string) => `${bot} uses the agent's own default model`,
+    defaultHint: (bot: string) => `${bot} uses the engine's own default model`,
     later: (bot: string, model: string) => `${bot} switches to ${model}.`,
   },
   effort: {
@@ -254,7 +254,7 @@ export const chat = {
     noAuto: "It does not compact by itself.",
     byItself: "Codex compacts it by itself when it gets close to full.",
     estimate:
-      "An estimate: this agent does not say how large its window is, so the size comes from its model family.",
+      "An estimate: this engine does not say how large its window is, so the size comes from its model family.",
     compact: "Compact now",
     compactHint: (bot: string) =>
       `Replaces what came before with a summary, so ${bot} has room again and each message uses less.`,
@@ -264,7 +264,7 @@ export const chat = {
     failed: "Could not compact the conversation",
   },
   suggestion: {
-    title: (bot: string) => `${bot} suggests a new bot`,
+    title: (bot: string) => `${bot} suggests a new agent`,
     why: "Why",
     name: "Name",
     role: "Role",
@@ -273,9 +273,9 @@ export const chat = {
     startsNow: (bot: string) => `It starts right away and gets its work from ${bot}.`,
     noteLabel: (bot: string) => `What to tell ${bot} if you say no`,
     notePlaceholder: (bot: string) => `If you say no, tell ${bot} why (optional)`,
-    create: "Create bot",
+    create: "Create agent",
     decline: "Not now",
-    createFailed: "Could not create the bot",
+    createFailed: "Could not create the agent",
     declineFailed: "Could not send the answer",
     created: (name: string) => `You created ${name}`,
     declined: (name: string) => `You said no to ${name}`,
@@ -341,7 +341,7 @@ export const chat = {
     read: (whom: string) => `Read the files of ${whom} and of its work folder`,
     edit: (whom: string) => `Change and add files of ${whom} and of its work folder`,
     why: (bot: string) => `Why, says ${bot}:`,
-    explain: "Crews do not see each other. Only now lasts until the bot ends this turn.",
+    explain: "Crews do not see each other. Only now lasts until the agent ends this turn.",
     once: "Only now",
     alwaysBot: (other: string) => `Always ${other}`,
     alwaysCrew: (crew: string) => `Always the crew ${crew}`,
@@ -363,7 +363,7 @@ export const chat = {
     reason: (bot: string) => `Why, says ${bot}:`,
     newInstructions: "See the new instructions",
     explain:
-      "The new role, instructions, model and effort count from the bot's next start, once it finishes what it's doing.",
+      "The new role, instructions, model and effort count from the agent's next start, once it finishes what it's doing.",
     apply: "Change",
     decline: "Not now",
     noteLabel: (bot: string) => `What to tell ${bot} if you say no`,
@@ -376,7 +376,7 @@ export const chat = {
   plan: {
     ready: (bot: string) => `${bot} made a plan and wants to go ahead`,
     noteLabel: (bot: string) => `What ${bot} should change in the plan`,
-    notePlaceholder: "What should change? Sent to the bot if you keep planning (optional)",
+    notePlaceholder: "What should change? Sent to the agent if you keep planning (optional)",
     approve: "Approve plan",
     keepPlanning: "Keep planning",
     approveFailed: "Could not approve the plan",
@@ -394,8 +394,8 @@ export const chat = {
       "Claude Code is not signed in, or the account can't be used right now. Sign in to Claude, or check your Claude plan.",
     usageLimit: "Your Claude plan reached its usage limit. Messages wait until it resets.",
     modelUnavailable:
-      "This bot's model isn't available: it may not be on your Claude plan. Pick another model below the chat.",
-    turnFailed: (detail: string) => `The bot couldn't finish this: ${detail}`,
+      "This agent's model isn't available: it may not be on your Claude plan. Pick another model below the chat.",
+    turnFailed: (detail: string) => `The agent couldn't finish this: ${detail}`,
     compacted:
       "The conversation was compacted: what came before is now a summary, and there is room again.",
     autoCompacted:

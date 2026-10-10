@@ -16,17 +16,17 @@ import { sectors } from "./catalogSectors";
 import { security } from "./catalogSecurity";
 
 export const catalog: Messages["catalog"] = {
-  title: "Agência de bots",
-  open: "Agência de bots",
-  openHint: "Bots prontos que você pode adicionar a esta equipe",
+  title: "Agência de agentes",
+  open: "Agência de agentes",
+  openHint: "Agentes prontos que você pode adicionar a esta equipe",
   intro:
-    "Escolha um bot para o trabalho. Ele entra nesta equipe pronto para trabalhar, e depois você pode mudar o que quiser nele.",
+    "Escolha um agente para o trabalho. Ele entra nesta equipe pronto para trabalhar, e depois você pode mudar o que quiser nele.",
   invite: {
     title: "Quem você quer na sua equipe?",
-    body: "Não sabe o que criar? Escolha um bot para o trabalho. Depois você pode mudar o que quiser nele.",
+    body: "Não sabe o que criar? Escolha um agente para o trabalho. Depois você pode mudar o que quiser nele.",
   },
-  search: "Buscar bots",
-  filter: "Tipos de bot",
+  search: "Buscar agentes",
+  filter: "Tipos de agente",
   categories: {
     all: "Todos",
     code: "Código",
@@ -44,23 +44,23 @@ export const catalog: Messages["catalog"] = {
     games: "Jogos",
     legal: "Jurídico",
   },
-  none: "Nenhum bot combina com isso.",
-  loading: "Carregando os bots…",
+  none: "Nenhum agente combina com isso.",
+  loading: "Carregando os agentes…",
   add: "Adicionar na equipe",
   learnMore: "Saber mais",
-  back: "Voltar para todos os bots",
-  seeAll: "Ver todos os bots",
+  back: "Voltar para todos os agentes",
+  seeAll: "Ver todos os agentes",
   joined: (name) => `${name} entrou na equipe`,
   customize: "Personalizar",
   failed: {
-    load: "Não deu para carregar os bots",
-    add: "Não deu para adicionar o bot",
+    load: "Não deu para carregar os agentes",
+    add: "Não deu para adicionar o agente",
   },
   detail: {
     what: "O que faz",
     when: "Quando chamar",
     pairs: "Combina bem com",
-    technical: "O que o bot recebe quando começa",
+    technical: "O que o agente recebe quando começa",
   },
   roles: {
     ...base,

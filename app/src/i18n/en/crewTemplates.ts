@@ -7,8 +7,8 @@ export const crewTemplates = {
   title: "Start from a template",
   intro: "Pick a team that is ready to work, or start with an empty crew.",
   scratch: "Start with an empty crew",
-  scratchHint: "Only the chief. You add the bots yourself.",
-  bots: (count: number) => (count === 1 ? "1 bot" : `${count} bots`),
+  scratchHint: "Only the chief. You add the agents yourself.",
+  bots: (count: number) => (count === 1 ? "1 agent" : `${count} agents`),
   /** Above the list of bots a team adds. */
   adds: "This team adds",
   change: "Pick another template",
@@ -16,8 +16,8 @@ export const crewTemplates = {
   /** After the crew is made but some bots could not be added. */
   partial: (failed: number) =>
     failed === 1
-      ? "The crew was created, but 1 bot could not be added. You can add it from the Bot agency."
-      : `The crew was created, but ${failed} bots could not be added. You can add them from the Bot agency.`,
+      ? "The crew was created, but 1 agent could not be added. You can add it from the Agent agency."
+      : `The crew was created, but ${failed} agents could not be added. You can add them from the Agent agency.`,
   loadFailed: "Could not load the templates",
   items: {
     "content-studio": {
