@@ -521,3 +521,60 @@ async fn the_commands_the_owner_allows_reach_the_rules_of_the_next_process() {
     );
     assert!(refused.is_err());
 }
+
+#[tokio::test(start_paused = true)]
+async fn new_bots_and_the_chief_follow_the_default_agent() {
+    let agy = agy_bot().await;
+    let make = |agent| BotsCreateParams {
+        crew_id: agy.daemon.store().crews(false).expect("crews")[0]
+            .id
+            .clone(),
+        name: "Fresh".into(),
+        role: String::new(),
+        instructions: String::new(),
+        color: None,
+        model: None,
+        agent,
+    };
+    // Nothing chosen: Claude Code, until the owner says otherwise.
+    assert_eq!(
+        bots::create(&agy.daemon, make(None)).expect("bot").agent,
+        AgentKind::Claude
+    );
+    agy.daemon
+        .settings
+        .save(botloft_core::protocol::SettingsUpdateParams {
+            default_agent: Some(AgentKind::Agy),
+            ..Default::default()
+        })
+        .expect("save");
+    let mut other = make(None);
+    other.name = "Second".into();
+    assert_eq!(
+        bots::create(&agy.daemon, other).expect("bot").agent,
+        AgentKind::Agy
+    );
+
+    // A crew made now has a chief on the same agent.
+    let crew = crews::create(
+        &agy.daemon,
+        CrewsCreateParams {
+            name: "Docs".into(),
+            work_folder: None,
+            lead: Some(botloft_core::protocol::NewLead {
+                name: "Chief".into(),
+                role: String::new(),
+                instructions: String::new(),
+                model: None,
+            }),
+        },
+    )
+    .expect("crew");
+    let chief = agy
+        .daemon
+        .store()
+        .bot(crew.lead_bot_id.as_ref().expect("chief"))
+        .expect("read")
+        .expect("bot");
+    assert_eq!(chief.agent, AgentKind::Agy);
+}

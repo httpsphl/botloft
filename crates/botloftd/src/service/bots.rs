@@ -31,6 +31,17 @@ pub fn list(daemon: &Daemon, params: BotsListParams) -> ApiResult<Vec<Bot>> {
         .collect()
 }
 
+/// The agent a bot is made for when nobody chose: the owner's setting, if
+/// that agent can run bots, and Claude Code otherwise (spec 30).
+pub(crate) fn default_agent(daemon: &Daemon) -> AgentKind {
+    let agent = daemon.settings.get().default_agent;
+    if daemon.supervisor.agent_enabled(agent) {
+        agent
+    } else {
+        AgentKind::Claude
+    }
+}
+
 pub fn create(daemon: &Daemon, params: BotsCreateParams) -> ApiResult<Bot> {
     let new = NewBot::check(
         &params.name,
@@ -38,7 +49,7 @@ pub fn create(daemon: &Daemon, params: BotsCreateParams) -> ApiResult<Bot> {
         &params.instructions,
         params.color,
         params.model,
-        params.agent,
+        Some(params.agent.unwrap_or_else(|| default_agent(daemon))),
     )?;
     if !daemon.supervisor.agent_enabled(new.agent) {
         return Err(ApiError::validation(format!(

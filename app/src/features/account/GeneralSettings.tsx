@@ -9,11 +9,15 @@ import {
   useLocale,
   useT,
 } from "../../i18n";
+import type { AgentKind } from "../../lib/protocol.gen";
 import { SYSTEM } from "../../lib/system";
 import { prefs, usePref } from "../../shell/prefs";
+import { useApp } from "../../store/context";
 import { Select } from "../../ui/Select";
 import { Section, Toggle } from "./settingsParts";
 import { useDaemonSettings } from "./useDaemonSettings";
+
+const NO_AGENTS: AgentKind[] = [];
 
 export function GeneralSettings() {
   const t = useT();
@@ -23,6 +27,7 @@ export function GeneralSettings() {
   const openAtSignIn = usePref(prefs.openAtSignIn);
   const nearClock = whenClosed === "keep" && tray;
   const { settings, change } = useDaemonSettings();
+  const enabledAgents = useApp((state) => state.system?.enabledAgents ?? NO_AGENTS);
   const startWithWindows = settings?.startWithWindows ?? true;
   const { choice: locale } = useLocale();
   const systemName = LOCALES.find((entry) => entry.id === systemLocale())?.name ?? "English";
@@ -36,6 +41,20 @@ export function GeneralSettings() {
       <Section title={s.language}>
         <Select label={s.language} value={locale} options={languages} onChange={setLocaleChoice} />
       </Section>
+      {settings && enabledAgents.length > 1 && (
+        <Section title={s.defaultAgent}>
+          <Select
+            label={s.defaultAgent}
+            value={settings.defaultAgent}
+            options={enabledAgents.map((agent) => ({
+              value: agent,
+              label: t.bots.dialog.agent.names[agent],
+            }))}
+            onChange={(agent) => change({ defaultAgent: agent })}
+          />
+          <p className="text-muted text-xs leading-relaxed">{s.defaultAgentHint}</p>
+        </Section>
+      )}
       <Section title={s.background}>
         <Toggle
           label={s.keepWorking}

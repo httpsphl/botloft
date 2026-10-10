@@ -45,7 +45,7 @@ pub fn create(daemon: &Daemon, params: CrewsCreateParams) -> ApiResult<Crew> {
                 &lead.instructions,
                 None,
                 lead.model,
-                None,
+                Some(bots::default_agent(daemon)),
             )
         })
         .transpose()?;

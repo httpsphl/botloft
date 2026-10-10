@@ -94,6 +94,11 @@ export const bots: Messages["bots"] = {
     instructionsPlaceholder:
       "Como este bot trabalha, o que ele pode fazer sozinho e quando deve perguntar.",
     instructionsHint: "Salvas agora nas regras do bot; ele as lê na próxima vez que iniciar.",
+    fullAccess: {
+      title: "Rodar qualquer comando sem perguntar",
+      off: "Desligado: ele só roda os comandos da lista abaixo.",
+      on: "Ligado: ele roda qualquer comando sem perguntar a você, e um comando pode ler ou mudar tudo o que você pode. Só para um bot em que você confia.",
+    },
     commands: {
       title: "Comandos que este bot pode rodar",
       placeholder: "git status\nnpm test",

@@ -23,6 +23,7 @@ export function useDaemonSettings(): {
         startWithWindows: update.startWithWindows ?? before.startWithWindows,
         keepAwake: update.keepAwake ?? before.keepAwake,
         approvalWaitMinutes: update.approvalWaitMinutes ?? before.approvalWaitMinutes,
+        defaultAgent: update.defaultAgent ?? before.defaultAgent,
       });
     }
     attempt(failed, async () => putSettings(await api.call("settings.update", update))).then(

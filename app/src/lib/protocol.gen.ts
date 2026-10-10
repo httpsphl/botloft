@@ -413,7 +413,12 @@ usage: AccountUsage | null,
  * The agents a bot may be made for (spec 30): Claude Code, and the
  * experimental ones the owner switched on.
  */
-enabledAgents: Array<AgentKind>, };
+enabledAgents: Array<AgentKind>, 
+/**
+ * Whether each enabled agent other than Claude Code is installed
+ * (spec 30). Claude Code has its own fields above.
+ */
+agentChecks: Array<AgentCheck>, };
 
 export type CrewsCreateParams = { name: string, 
 /**
@@ -513,6 +518,16 @@ export type AgentModel = { id: string,
  * As the agent names it for people.
  */
 name: string, };
+
+/**
+ * What looking for an agent's program found.
+ */
+export type AgentCheck = { agent: AgentKind, 
+/**
+ * What `--version` said; `null` when the program was not found or did
+ * not answer.
+ */
+version: string | null, };
 
 export type BotIdParams = { botId: BotId, };
 
@@ -1850,7 +1865,12 @@ keepAwake: boolean,
  * How long a permission request waits for the owner before it is
  * denied (spec 10.1).
  */
-approvalWaitMinutes: number, };
+approvalWaitMinutes: number, 
+/**
+ * The agent bots are made for when nothing says otherwise: new bots,
+ * the chief of a new crew, the bots of a template (spec 30).
+ */
+defaultAgent: AgentKind, };
 
 /**
  * The settings to change; the ones left out stay as they are.
@@ -1859,7 +1879,7 @@ export type SettingsUpdateParams = { startWithWindows?: boolean, keepAwake?: boo
 /**
  * From 1 to [`APPROVAL_WAIT_MAX_MINUTES`].
  */
-approvalWaitMinutes?: number, };
+approvalWaitMinutes?: number, defaultAgent?: AgentKind, };
 
 /**
  * When a routine runs (spec 20.2), kept as structure rather than cron text

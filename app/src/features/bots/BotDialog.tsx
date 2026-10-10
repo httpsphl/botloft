@@ -14,6 +14,7 @@ import { useApi, useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Dialog } from "../../ui/Dialog";
 import { SelectField, TextArea, TextField } from "../../ui/Field";
+import { Toggle } from "../account/settingsParts";
 import { BotAvatar } from "./BotAvatar";
 import { ColorPicker } from "./ColorPicker";
 
@@ -41,8 +42,13 @@ export function BotDialog(props: Props) {
   const [commands, setCommands] = useState((editing?.allowedCommands ?? []).join("\n"));
   // Which agent runs the bot is chosen once, when it is made (spec 30).
   const agents = useApp((state) => state.system?.enabledAgents ?? CLAUDE_ONLY);
-  const [agent, setAgent] = useState<AgentKind>("claude");
+  const preferred = useApp((state) => state.settings?.defaultAgent ?? "claude");
+  const [agent, setAgent] = useState<AgentKind>(agents.includes(preferred) ? preferred : "claude");
   const runsOn: AgentKind = editing?.agent ?? agent;
+  const fullAccess = commands
+    .split("\n")
+    .map((line) => line.trim())
+    .includes("*");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -148,14 +154,24 @@ export function BotDialog(props: Props) {
           </div>
         )}
         {editing && editing.agent !== "claude" && (
-          <TextArea
-            label={t.bots.dialog.commands.title}
-            value={commands}
-            rows={4}
-            onChange={(event) => setCommands(event.target.value)}
-            placeholder={t.bots.dialog.commands.placeholder}
-            hint={t.bots.dialog.commands.hint}
-          />
+          <>
+            <Toggle
+              label={t.bots.dialog.fullAccess.title}
+              hint={fullAccess ? t.bots.dialog.fullAccess.on : t.bots.dialog.fullAccess.off}
+              checked={fullAccess}
+              onChange={(on) => setCommands(on ? "*" : "")}
+            />
+            {!fullAccess && (
+              <TextArea
+                label={t.bots.dialog.commands.title}
+                value={commands}
+                rows={4}
+                onChange={(event) => setCommands(event.target.value)}
+                placeholder={t.bots.dialog.commands.placeholder}
+                hint={t.bots.dialog.commands.hint}
+              />
+            )}
+          </>
         )}
         {runsOn === "claude" && (
           <SelectField

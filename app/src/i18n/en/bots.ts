@@ -97,6 +97,11 @@ export const bots = {
     instructions: "Instructions",
     instructionsPlaceholder: "How this bot works, what it may do on its own and when to ask.",
     instructionsHint: "Saved to the bot's rules now; the bot reads them the next time it starts.",
+    fullAccess: {
+      title: "Run any command without asking",
+      off: "Off: it may run only the commands listed below.",
+      on: "On: it runs any command without asking you, and a command can read or change anything you can. Only for a bot you trust.",
+    },
     commands: {
       title: "Commands this bot may run",
       placeholder: "git status\nnpm test",

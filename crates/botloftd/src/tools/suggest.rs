@@ -5,7 +5,9 @@
 
 use botloft_core::chat::SUGGEST_TOOL;
 use botloft_core::ids::BotId;
-use botloft_core::protocol::{Bot, BotEffort, BotModel, BotsSetEffortParams, PermissionMode};
+use botloft_core::protocol::{
+    AgentKind, Bot, BotEffort, BotModel, BotsSetEffortParams, PermissionMode,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
@@ -57,7 +59,7 @@ async fn run(
 ) -> Result<Value, String> {
     let mut suggestion: Suggestion = parse(arguments)?;
     resolve(&mut suggestion)?;
-    let new = check(&suggestion)?;
+    let new = check(&suggestion, bots::default_agent(daemon))?;
     // Nothing impossible goes to the owner.
     lead::check_suggestion(daemon, bot, &new).map_err(explain)?;
     let mode = bots::find(&daemon.store(), bot)
@@ -82,7 +84,12 @@ async fn run(
         }) => {
             let changed: Suggestion = serde_json::from_str(&changed)
                 .map_err(|err| format!("the owner's changes could not be read: {err}"))?;
-            let created = create(daemon, bot, check(&changed)?, &changed)?;
+            let created = create(
+                daemon,
+                bot,
+                check(&changed, bots::default_agent(daemon))?,
+                &changed,
+            )?;
             Ok(created_note(
                 &created,
                 "The owner changed the suggestion before approving it: read the name, role, \
@@ -174,7 +181,7 @@ fn effort_of(suggestion: &Suggestion) -> Result<BotEffort, String> {
 
 /// The suggestion as a new bot, with the limits of this tool on top of a
 /// bot's own.
-fn check(suggestion: &Suggestion) -> Result<NewBot, String> {
+fn check(suggestion: &Suggestion, agent: AgentKind) -> Result<NewBot, String> {
     effort_of(suggestion)?;
     if suggestion.instructions.chars().count() > INSTRUCTIONS_MAX {
         return Err(format!(
@@ -199,7 +206,7 @@ fn check(suggestion: &Suggestion) -> Result<NewBot, String> {
         &suggestion.instructions,
         None,
         model,
-        None,
+        Some(agent),
     )
     .map_err(explain)
 }

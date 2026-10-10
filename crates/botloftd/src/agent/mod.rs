@@ -108,6 +108,20 @@ pub trait Agent: Send + Sync + 'static {
     fn decoder(&self) -> Box<dyn OutputDecoder>;
 }
 
+/// The first line `program --version` prints; `None` if it cannot run.
+pub fn program_version(program: &Path) -> Option<String> {
+    let output = std::process::Command::new(program)
+        .arg("--version")
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let text = String::from_utf8_lossy(&output.stdout);
+    let line = text.lines().next()?.trim();
+    (!line.is_empty()).then(|| line.to_owned())
+}
+
 static CLAUDE: ClaudeAgent = ClaudeAgent;
 static AGY: AgyAgent = AgyAgent;
 

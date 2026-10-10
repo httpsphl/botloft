@@ -1,6 +1,7 @@
-import { CircleCheck, CircleX, LoaderCircle, Plus } from "lucide-react";
+import { CircleCheck, CircleX, LoaderCircle, Minus, Plus } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useT } from "../../i18n";
+import type { AgentCheck } from "../../lib/protocol.gen";
 import { SYSTEM } from "../../lib/system";
 import { prefs, usePref } from "../../shell/prefs";
 import { useApp } from "../../store/context";
@@ -11,6 +12,8 @@ import { CrewDialog } from "../crews/CrewDialog";
 import { CREW_TEMPLATES, type CrewTemplate } from "../crews/crewTemplates";
 import { ClaudeCodeHelp } from "./ClaudeCodeHelp";
 import { SignInButton } from "./SignIn";
+
+const NO_CHECKS: AgentCheck[] = [];
 
 /** Templates shown as ideas on the first screen. */
 const IDEAS = 4;
@@ -23,6 +26,8 @@ export function Welcome() {
   const system = useApp((state) => state.system);
   const [creating, setCreating] = useState(false);
   const [idea, setIdea] = useState<CrewTemplate | undefined>(undefined);
+  const checks = useApp((state) => state.system?.agentChecks ?? NO_CHECKS);
+  const otherReady = checks.some((check) => check.version !== null);
   const whenClosed = usePref(prefs.whenClosed);
   const { settings } = useDaemonSettings();
   const running =
@@ -35,6 +40,9 @@ export function Welcome() {
   let claude: ReactNode;
   if (!system || (system.claudeVersion === null && system.runtimeError === null)) {
     claude = <Check state="pending" title={w.claudeCode} detail={w.checking} />;
+  } else if (system.runtimeError && otherReady) {
+    // Another agent is ready: Claude Code is only for the bots that use it.
+    claude = <Check state="skipped" title={w.claudeCode} detail={w.claudeOptional} />;
   } else if (system.runtimeError) {
     claude = (
       <Check
@@ -48,6 +56,15 @@ export function Welcome() {
       <Check state="ok" title={w.claudeCode} detail={w.version(system.claudeVersion ?? "")} />
     );
   }
+
+  const agents = checks.map((check) => (
+    <Check
+      key={check.agent}
+      state={check.version === null ? "bad" : "ok"}
+      title={t.bots.dialog.agent.names[check.agent]}
+      detail={check.version === null ? w.agentMissing : w.version(check.version)}
+    />
+  ));
 
   // Only once Claude Code is there: signing in needs it.
   let account: ReactNode = null;
@@ -84,6 +101,7 @@ export function Welcome() {
           <Check state="ok" title={w.botloft} detail={running} />
           {claude}
           {account}
+          {agents}
         </ul>
         <div className="mt-4 rounded-xl border border-line bg-panel p-4 text-sm leading-relaxed">
           <p className="font-semibold">{w.askFirstTitle}</p>
@@ -134,12 +152,19 @@ function Check({
   title,
   detail,
 }: {
-  state: "ok" | "bad" | "pending";
+  state: "ok" | "bad" | "pending" | "skipped";
   title: string;
   detail: ReactNode;
 }) {
   const w = useT().onboarding.welcome;
-  const Icon = state === "ok" ? CircleCheck : state === "bad" ? CircleX : LoaderCircle;
+  const Icon =
+    state === "ok"
+      ? CircleCheck
+      : state === "bad"
+        ? CircleX
+        : state === "skipped"
+          ? Minus
+          : LoaderCircle;
   const tone = state === "ok" ? "text-ok" : state === "bad" ? "text-danger" : "text-muted";
   return (
     <li className="flex items-start gap-3 border-line border-b px-4 py-3 last:border-b-0">
@@ -152,7 +177,14 @@ function Check({
         <p className="font-semibold">
           {title}
           <span className="sr-only">
-            : {state === "ok" ? w.ready : state === "bad" ? w.notReady : w.stillChecking}
+            :{" "}
+            {state === "ok"
+              ? w.ready
+              : state === "bad"
+                ? w.notReady
+                : state === "skipped"
+                  ? w.notNeeded
+                  : w.stillChecking}
           </span>
         </p>
         <div className="text-ink-soft" data-selectable>
