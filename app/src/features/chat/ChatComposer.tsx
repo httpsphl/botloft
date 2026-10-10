@@ -253,8 +253,13 @@ export const ChatComposer = memo(function ChatComposer({
                 <EffortPicker bot={bot} onLater={setLater} />
                 <ModelPicker bot={bot} onLater={setLater} />
               </>
+            ) : bot.agent === "codex" ? (
+              <>
+                <EffortPicker bot={bot} onLater={setLater} />
+                <AgentModelPicker bot={bot} onLater={setLater} />
+              </>
             ) : (
-              bot.agent === "agy" && <AgentModelPicker bot={bot} onLater={setLater} />
+              <AgentModelPicker bot={bot} onLater={setLater} />
             )}
             <button
               type="submit"

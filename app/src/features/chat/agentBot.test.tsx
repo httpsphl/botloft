@@ -88,3 +88,20 @@ describe("Claude Code missing", () => {
     expect(await screen.findByText("Bots can't start")).toBeDefined();
   });
 });
+
+describe("a Codex bot", () => {
+  test("has an effort and a model list under the message box", async () => {
+    const fake = new FakeBotloft();
+    const crew = fake.addCrew("Ops");
+    const bot = fake.addBot(crew.id, "Cody");
+    fake.bot(bot.id).agent = "codex";
+    fake.setBotState(bot.id, "idle");
+    renderApp(fake);
+    await crewOpened("Ops");
+    openBot("Cody");
+    await screen.findByRole("list", { name: "Messages" });
+    expect(screen.getByRole("button", { name: /^Effort:/ })).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Model: Default" }));
+    expect(await screen.findByRole("menu", { name: "Model" })).toBeDefined();
+  });
+});
