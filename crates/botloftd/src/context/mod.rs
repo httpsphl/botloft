@@ -291,7 +291,8 @@ pub(crate) fn process_ended(daemon: &Daemon, bot: &BotId) {
 pub fn compact(daemon: &Daemon, params: BotIdParams) -> ApiResult<Bot> {
     let store = daemon.store();
     let (crew, record) = active(&store, &params.bot_id)?;
-    if !crate::agent::of(record.agent).is_some_and(|agent| agent.speaks_control()) {
+    let agent = crate::agent::of(record.agent);
+    if !agent.is_some_and(|agent| agent.can_compact()) {
         return Err(ApiError::validation(format!(
             "bots that run on {} cannot compact their conversation",
             record.agent.as_str()
@@ -306,16 +307,25 @@ pub fn compact(daemon: &Daemon, params: BotIdParams) -> ApiResult<Bot> {
         if !ready {
             return Err(not_running());
         }
-        let uuid = random_uuid();
-        let line = json!({
-            "type": "user",
-            "uuid": uuid,
-            "message": { "role": "user", "content": [{ "type": "text", "text": COMPACT }] },
-        });
-        daemon
-            .supervisor
-            .write_message(&record.id, &uuid, Bytes::from(format!("{line}\n")))
-            .map_err(|_| not_running())?;
+        if record.agent == botloft_core::protocol::AgentKind::Codex {
+            // Codex compacts as a turn of its own, asked by its wrapper.
+            let line = Bytes::from("{\"event\":\"compact\"}\n");
+            daemon
+                .supervisor
+                .write_control(&record.id, line)
+                .map_err(|_| not_running())?;
+        } else {
+            let uuid = random_uuid();
+            let line = json!({
+                "type": "user",
+                "uuid": uuid,
+                "message": { "role": "user", "content": [{ "type": "text", "text": COMPACT }] },
+            });
+            daemon
+                .supervisor
+                .write_message(&record.id, &uuid, Bytes::from(format!("{line}\n")))
+                .map_err(|_| not_running())?;
+        }
         update(daemon, &record.id, |entry| entry.compacting = true);
     }
     Ok(to_protocol(daemon, &store, &crew, record))

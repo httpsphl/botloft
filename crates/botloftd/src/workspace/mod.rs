@@ -2,7 +2,7 @@
 //! idempotent: running it again refreshes the generated files and keeps the
 //! bot's own `CLAUDE.md`.
 
-mod connected;
+pub mod connected;
 mod files;
 pub mod folder;
 mod memory;

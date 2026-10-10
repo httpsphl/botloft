@@ -575,3 +575,174 @@ async fn the_next_start_resumes_the_thread_and_a_lost_one_starts_again() {
         .await;
     sent(&second, "thread/start").await;
 }
+
+#[tokio::test(start_paused = true)]
+async fn a_bot_whose_codex_is_signed_out_stops_and_says_so() {
+    let codex = codex_bot().await;
+    let process = codex.runtime.process(1).await;
+    let init = sent(&process, "initialize").await;
+    process
+        .emit(json!({ "id": init["id"], "result": {} }))
+        .await;
+    let account = sent(&process, "account/read").await;
+    process
+        .emit(json!({ "id": account["id"], "result": { "account": null, "requiresOpenaiAuth": true } }))
+        .await;
+    codex.until(BotState::AuthError).await;
+    let said = codex.items().into_iter().any(
+        |body| matches!(body, ChatBody::Notice(notice) if notice.text.contains("not signed in")),
+    );
+    assert!(said);
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_usage_limit_pauses_the_bot_until_the_account_resets() {
+    let codex = codex_bot().await;
+    let process = codex.runtime.process(1).await;
+    handshake(&process, "th-1").await;
+    codex.until(BotState::Idle).await;
+    codex.message("u-1", "hello");
+    let turn = sent(&process, "turn/start").await;
+    process
+        .emit(json!({ "id": turn["id"], "result": {} }))
+        .await;
+    process
+        .emit(notify("account/rateLimits/updated", json!({ "rateLimits": {
+            "primary": { "usedPercent": 100, "windowDurationMins": 43200, "resetsAt": 4_102_444_800_i64 } } })))
+        .await;
+    process
+        .emit(notify(
+            "item/started",
+            json!({ "threadId": "th-1", "item": { "type": "userMessage", "id": "i" } }),
+        ))
+        .await;
+    process
+        .emit(notify(
+            "turn/completed",
+            json!({ "threadId": "th-1", "turn": {
+            "id": "t", "status": "failed", "durationMs": 5,
+            "error": { "message": "limit", "codexErrorInfo": "usageLimitExceeded" } } }),
+        ))
+        .await;
+    codex.until(BotState::RateLimited).await;
+    let said = codex.items().into_iter().any(
+        |body| matches!(body, ChatBody::Notice(notice) if notice.text.contains("usage limit")),
+    );
+    assert!(said);
+}
+
+#[tokio::test(start_paused = true)]
+async fn the_owner_can_compact_a_codex_conversation() {
+    let codex = codex_bot().await;
+    let process = codex.runtime.process(1).await;
+    handshake(&process, "th-1").await;
+    codex.until(BotState::Idle).await;
+
+    botloftd::context::compact(
+        &codex.daemon,
+        botloft_core::protocol::BotIdParams {
+            bot_id: codex.bot.clone(),
+        },
+    )
+    .expect("compact");
+    let request = sent(&process, "thread/compact/start").await;
+    assert_eq!(request["params"]["threadId"], "th-1");
+
+    process
+        .emit(json!({ "id": request["id"], "result": {} }))
+        .await;
+    process
+        .emit(notify(
+            "turn/started",
+            json!({ "threadId": "th-1", "turn": { "id": "c" } }),
+        ))
+        .await;
+    process
+        .emit(notify(
+            "item/started",
+            json!({ "threadId": "th-1", "item": { "type": "contextCompaction", "id": "k" } }),
+        ))
+        .await;
+    process
+        .emit(notify(
+            "item/completed",
+            json!({ "threadId": "th-1", "item": { "type": "contextCompaction", "id": "k" } }),
+        ))
+        .await;
+    process
+        .emit(notify("turn/completed", json!({ "threadId": "th-1", "turn": { "id": "c", "status": "completed", "durationMs": 9 } })))
+        .await;
+    // The bot was idle all along, so wait for the notice itself.
+    let mut items = codex.items();
+    for _ in 0..600 {
+        if items.iter().any(|body| matches!(body, ChatBody::Notice(_))) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+        items = codex.items();
+    }
+    assert!(
+        items.iter().any(|body| matches!(body, ChatBody::Notice(_))),
+        "the notice of the compaction"
+    );
+    // Let the end of the turn of the compaction come through, too.
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    assert!(
+        !codex
+            .items()
+            .iter()
+            .any(|body| matches!(body, ChatBody::Turn(_))),
+        "no line for the compaction itself"
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn the_owners_connected_tools_are_in_the_thread_with_their_secrets() {
+    use botloft_core::protocol::{BotMcpSetParams, McpKind, McpSaveParams};
+    let codex = codex_bot().await;
+    let first = codex.runtime.process(1).await;
+    handshake(&first, "th-1").await;
+    codex.until(BotState::Idle).await;
+    let overview = botloftd::service::mcp::save(
+        &codex.daemon,
+        McpSaveParams {
+            server_id: None,
+            name: "LinkedIn".into(),
+            kind: McpKind::Http,
+            url: Some("http://127.0.0.1:8000/mcp".into()),
+            command: None,
+            args: Vec::new(),
+            headers: std::collections::BTreeMap::from([(
+                "Authorization".to_owned(),
+                "Bearer super-secret".to_owned(),
+            )]),
+            env: std::collections::BTreeMap::new(),
+            description: String::new(),
+        },
+    )
+    .expect("save");
+    botloftd::service::mcp::set_bot(
+        &codex.daemon,
+        BotMcpSetParams {
+            bot_id: codex.bot.clone(),
+            server_ids: vec![overview.servers[0].id.clone()],
+        },
+    )
+    .expect("attach");
+    // The bot restarts to read its new tools.
+    let process = codex.runtime.process(2).await;
+    assert!(first.killed());
+    let init = sent(&process, "initialize").await;
+    process
+        .emit(json!({ "id": init["id"], "result": {} }))
+        .await;
+    let start = sent(&process, "thread/start").await;
+    let servers = &start["params"]["config"]["mcp_servers"];
+    assert_eq!(servers["linkedin"]["url"], "http://127.0.0.1:8000/mcp");
+    assert_eq!(
+        servers["linkedin"]["http_headers"]["Authorization"],
+        "Bearer super-secret"
+    );
+    // The crew's own server is still there, with the bot's token.
+    assert!(servers["botloft"]["url"].is_string());
+}

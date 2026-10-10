@@ -9,13 +9,15 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use botloft_core::ids::BotId;
-use botloft_core::protocol::{PermissionMode, TokenUsage};
+use botloft_core::protocol::{
+    ChatBody, NoticeCode, NoticeItem, NoticeLevel, PermissionMode, TokenUsage,
+};
 use serde_json::{Value, json};
 
 use super::OutputDecoder;
 use super::codex_wire::{Answer, Shared};
 use crate::approvals::{self, Verdict};
-use crate::chat::sink;
+use crate::chat::{items, sink};
 use crate::state::Daemon;
 
 /// Reads what the server prints and tells the daemon.
@@ -33,6 +35,10 @@ pub(super) struct CodexDecoder {
     /// command, or the files a change touches.
     commands: HashMap<String, String>,
     changes: HashMap<String, Vec<(String, bool)>>,
+    /// When the usage limit resets, in Unix ms, from `account/rateLimits/updated`.
+    limit_resets_at: Option<i64>,
+    /// The running turn is a compaction: no line of its own for it.
+    compacting: bool,
 }
 
 impl CodexDecoder {
@@ -46,6 +52,8 @@ impl CodexDecoder {
             base: (0, 0, 0, 0),
             commands: HashMap::new(),
             changes: HashMap::new(),
+            limit_resets_at: None,
+            compacting: false,
         }
     }
 }
@@ -109,6 +117,7 @@ impl CodexDecoder {
             Answer::Failed(message) => {
                 tracing::warn!(bot = %bot, "codex could not start a thread: {message:?}");
             }
+            Answer::SignedOut => self.signed_out(daemon, bot, generation),
             Answer::Lost | Answer::None => {}
         }
     }
@@ -133,7 +142,7 @@ impl CodexDecoder {
             }
             "mcpServer/elicitation/request" => {
                 let server = params["serverName"].as_str().unwrap_or("mcp");
-                let tool = params["_meta"]["tool_name"].as_str().unwrap_or("tool");
+                let tool = tool_in(params["message"].as_str().unwrap_or_default());
                 (
                     format!("mcp__{server}__{tool}"),
                     params["_meta"]["tool_params"].clone(),
@@ -206,6 +215,13 @@ impl CodexDecoder {
             "item/started" => self.item_started(daemon, bot, generation, params),
             "item/completed" => self.item_completed(daemon, bot, &params["item"]),
             "thread/tokenUsage/updated" => self.token_usage(daemon, bot, &params["tokenUsage"]),
+            "account/rateLimits/updated" => {
+                // Seconds in Codex, milliseconds here.
+                self.limit_resets_at = params["rateLimits"]["primary"]["resetsAt"]
+                    .as_i64()
+                    .map(|seconds| seconds * 1000)
+                    .or(self.limit_resets_at);
+            }
             "turn/completed" => self.turn_completed(daemon, bot, generation, &params["turn"]),
             _ => {}
         }
@@ -260,6 +276,10 @@ impl CodexDecoder {
                     &json!({ "file_path": change["path"] }),
                 );
             }
+            Some("contextCompaction") => {
+                self.compacting = true;
+                crate::context::status(daemon, bot, &json!({ "status": "compacting" }));
+            }
             Some("mcpToolCall") => {
                 let name = format!(
                     "mcp__{}__{}",
@@ -276,6 +296,16 @@ impl CodexDecoder {
         let id = item["id"].as_str().unwrap_or_default();
         let ok = item["status"].as_str() == Some("completed");
         match item["type"].as_str() {
+            Some("contextCompaction") => {
+                // The owner asked, or it was full and Codex did it by itself.
+                let asked = daemon.contexts.get(bot).is_some_and(|c| c.compacting);
+                let trigger = if asked { "manual" } else { "auto" };
+                crate::context::compacted(
+                    daemon,
+                    bot,
+                    &json!({ "compact_metadata": { "trigger": trigger } }),
+                );
+            }
             Some("agentMessage") => {
                 sink::reply(daemon, bot, item["text"].as_str().unwrap_or_default());
             }
@@ -326,6 +356,26 @@ impl CodexDecoder {
 
     fn turn_completed(&mut self, daemon: &Daemon, bot: &BotId, generation: u64, turn: &Value) {
         let failed = turn["status"].as_str() != Some("completed");
+        // A compaction ends like a turn; its notice says what happened.
+        if std::mem::take(&mut self.compacting) && !failed {
+            self.usage_base();
+            self.shared.turn_done();
+            sink::finish_turn(daemon, bot, generation, false);
+            return;
+        }
+        match turn["error"]["codexErrorInfo"].as_str() {
+            Some("unauthorized") => {
+                self.signed_out(daemon, bot, generation);
+                self.shared.turn_done();
+                return;
+            }
+            Some("usageLimitExceeded") => {
+                self.limit_reached(daemon, bot, generation);
+                self.shared.turn_done();
+                return;
+            }
+            _ => {}
+        }
         let error = failed.then(|| {
             turn["error"]["message"]
                 .as_str()
@@ -351,6 +401,58 @@ impl CodexDecoder {
         self.shared.turn_done();
         sink::finish_turn(daemon, bot, generation, failed);
     }
+}
+
+impl CodexDecoder {
+    /// What the thread used so far is the base of the next turn.
+    fn usage_base(&mut self) {
+        self.base = self.usage;
+    }
+
+    fn notice(&self, daemon: &Daemon, bot: &BotId, text: &str) {
+        items::add(
+            daemon,
+            bot,
+            ChatBody::Notice(NoticeItem {
+                level: NoticeLevel::Error,
+                code: Some(NoticeCode::TurnFailed),
+                text: text.to_owned(),
+            }),
+        );
+    }
+
+    /// Nobody is signed in to Codex: only the owner can fix that, so the bot
+    /// stops until they restart it (spec 7.3).
+    fn signed_out(&self, daemon: &Daemon, bot: &BotId, generation: u64) {
+        self.notice(
+            daemon,
+            bot,
+            "Codex is not signed in. Sign in to Codex (codex login), then restart this bot.",
+        );
+        daemon.supervisor.signed_out(bot, generation);
+    }
+
+    /// The account reached its usage limit: messages wait until it resets.
+    fn limit_reached(&self, daemon: &Daemon, bot: &BotId, generation: u64) {
+        self.notice(
+            daemon,
+            bot,
+            "Codex reached its usage limit. Messages wait until it resets.",
+        );
+        let until = self
+            .limit_resets_at
+            .unwrap_or_else(|| daemon.clock.now_ms() + 5 * 60 * 1000);
+        daemon.supervisor.rate_limited(bot, generation, until);
+    }
+}
+
+/// The tool a request of an MCP server is about: the name in quotes in its
+/// message ("Allow the x MCP server to run tool \"y\"?").
+fn tool_in(message: &str) -> &str {
+    message
+        .split_once("tool \"")
+        .and_then(|(_, rest)| rest.split_once('"'))
+        .map_or("tool", |(name, _)| name)
 }
 
 /// Whether the request goes ahead: the bot's mode, a rule of the bot, or the
@@ -382,6 +484,15 @@ async fn decide(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_tool_is_the_name_in_quotes_of_the_message() {
+        assert_eq!(
+            tool_in("Allow the linkedin MCP server to run tool \"read_profile\"?"),
+            "read_profile"
+        );
+        assert_eq!(tool_in("something else"), "tool");
+    }
 
     #[test]
     fn a_text_that_names_a_fenced_folder_is_caught_whatever_the_slashes_and_case() {

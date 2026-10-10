@@ -244,6 +244,7 @@ export const chat: Messages["chat"] = {
     autoLeft: (left: string, at: string) => `Faltan ${left} para que se compacte sola, en ${at}.`,
     autoNow: "Ya está lo bastante llena para compactarse sola en el próximo mensaje.",
     noAuto: "No se compacta sola.",
+    byItself: "Codex la compacta solo cuando se acerca a llenarse.",
     estimate:
       "Una estimación: este agente no dice el tamaño de su ventana, así que el tamaño sale de la familia del modelo.",
     compact: "Compactar ahora",

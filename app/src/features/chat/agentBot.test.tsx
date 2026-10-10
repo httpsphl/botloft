@@ -104,4 +104,27 @@ describe("a Codex bot", () => {
     fireEvent.click(screen.getByRole("button", { name: "Model: Default" }));
     expect(await screen.findByRole("menu", { name: "Model" })).toBeDefined();
   });
+
+  test("can compact its conversation, and says Codex does it by itself", async () => {
+    const fake = new FakeBotloft();
+    const crew = fake.addCrew("Ops");
+    const bot = fake.addBot(crew.id, "Cody");
+    fake.bot(bot.id).agent = "codex";
+    fake.setBotState(bot.id, "idle");
+    fake.setContext(bot.id, {
+      usedTokens: 90_000,
+      windowTokens: 258_400,
+      autoCompactTokens: null,
+      compacting: false,
+      updatedAt: 0,
+    });
+    renderApp(fake);
+    await crewOpened("Ops");
+    openBot("Cody");
+    await screen.findByRole("list", { name: "Messages" });
+    fireEvent.click(screen.getByRole("button", { name: /Conversation space/ }));
+    const panel = within(await screen.findByRole("dialog", { name: "Conversation space" }));
+    expect(panel.getByText(/Codex compacts it by itself/)).toBeDefined();
+    expect(panel.getByRole("button", { name: "Compact now" })).toBeDefined();
+  });
 });
