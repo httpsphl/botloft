@@ -247,7 +247,12 @@ agent: AgentKind,
  * The model of a bot that does not run on Claude Code, as its agent
  * names it; `null` for the agent's default (spec 30).
  */
-agentModel: string | null, model: BotModel, 
+agentModel: string | null, 
+/**
+ * Command prefixes a bot not on Claude Code may run without asking:
+ * its agent cannot ask in headless mode (spec 30). `*` is every command.
+ */
+allowedCommands: Array<string>, model: BotModel, 
 /**
  * The model id Claude Code reported when the bot last started a turn
  * (`claude-opus-5-5`); `null` before its first turn.
@@ -474,7 +479,11 @@ agent?: AgentKind, };
 /**
  * Fields left out stay unchanged.
  */
-export type BotsUpdateParams = { botId: BotId, name?: string, role?: string, instructions?: string, color?: string, };
+export type BotsUpdateParams = { botId: BotId, name?: string, role?: string, instructions?: string, color?: string, 
+/**
+ * For a bot not on Claude Code; replaces the whole list.
+ */
+allowedCommands?: Array<string>, };
 
 export type BotsSetPausedParams = { botId: BotId, paused: boolean, };
 

@@ -97,6 +97,11 @@ export const bots = {
     instructions: "Instructions",
     instructionsPlaceholder: "How this bot works, what it may do on its own and when to ask.",
     instructionsHint: "Saved to the bot's rules now; the bot reads them the next time it starts.",
+    commands: {
+      title: "Commands this bot may run",
+      placeholder: "git status\nnpm test",
+      hint: "One command per line; it may run these and anything that starts with them, without asking you. It cannot ask, so everything else is refused. A single * lets it run anything. The bot restarts to use the list.",
+    },
     agent: {
       title: "Agent",
       names: {

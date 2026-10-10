@@ -60,6 +60,8 @@ pub struct LaunchFiles<'a> {
     pub token: &'a str,
     /// Folders the bot must not read or edit with its own tools (spec 7.5).
     pub fenced: &'a [PathBuf],
+    /// Command prefixes the owner lets the bot run without asking.
+    pub allowed_commands: &'a [String],
 }
 
 /// Reads one process's output, line by line (already JSON). One per process,
@@ -80,7 +82,8 @@ pub trait Agent: Send + Sync + 'static {
     fn kind(&self) -> AgentKind;
 
     /// The executable, from the configured path or the usual places.
-    fn locate(&self, configured: &str, claude: &Path) -> io::Result<PathBuf>;
+    /// `claude` is the Claude Code the supervisor found, when it found one.
+    fn locate(&self, configured: &str, claude: Option<&Path>) -> io::Result<PathBuf>;
 
     /// The arguments of the process, after the program.
     fn args(&self, plan: &LaunchPlan<'_>) -> Vec<OsString>;

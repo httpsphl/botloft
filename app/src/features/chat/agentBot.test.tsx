@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 import { FakeBotloft } from "../../lib/fake";
-import { crewOpened, openBot, renderApp } from "../../test/app";
+import { crewOpened, openBot, renderApp, sidebar } from "../../test/app";
 
 afterEach(cleanup);
 
@@ -47,5 +47,44 @@ describe("a bot that runs on another agent", () => {
     const panel = await screen.findByRole("dialog", { name: "Conversation space" });
     expect(within(panel).getByText(/An estimate/)).toBeDefined();
     expect(within(panel).queryByRole("button", { name: "Compact now" })).toBeNull();
+  });
+});
+
+describe("what an agent that cannot ask needs from the owner", () => {
+  test("the commands it may run are a list in the bot's edit dialog", async () => {
+    const fake = await agyBot();
+    const bot = [...fake.bots.values()][0];
+    expect(bot?.allowedCommands).toEqual([]);
+    // The bot's right-click menu in the list opens its edit dialog.
+    fireEvent.contextMenu(within(sidebar()).getByRole("button", { name: /^Zed,/ }), {
+      clientX: 120,
+      clientY: 200,
+    });
+    const menu = await screen.findByRole("menu", { name: "Actions for Zed" });
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "Edit" }));
+    const dialog = within(await screen.findByRole("dialog", { name: /Edit Zed/ }));
+    fireEvent.change(dialog.getByLabelText("Commands this bot may run"), {
+      target: { value: "git status\n npm test \ngit status" },
+    });
+    fireEvent.click(dialog.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(bot?.allowedCommands).toEqual(["git status", "npm test"]));
+  });
+});
+
+describe("Claude Code missing", () => {
+  test("is only a warning for someone who has a bot that runs on it", async () => {
+    const make = async (agent: "claude" | "agy") => {
+      const fake = new FakeBotloft();
+      fake.system = { ...fake.system, runtimeError: "Claude Code was not found" };
+      const crew = fake.addCrew("Ops");
+      fake.bot(fake.addBot(crew.id, "Zed").id).agent = agent;
+      renderApp(fake);
+      await crewOpened("Ops");
+    };
+    await make("agy");
+    expect(screen.queryByText("Bots can't start")).toBeNull();
+    cleanup();
+    await make("claude");
+    expect(await screen.findByText("Bots can't start")).toBeDefined();
   });
 });

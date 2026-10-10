@@ -152,6 +152,9 @@ pub struct Bot {
     /// The model of a bot that does not run on Claude Code, as its agent
     /// names it; `null` for the agent's default (spec 30).
     pub agent_model: Option<String>,
+    /// Command prefixes a bot not on Claude Code may run without asking:
+    /// its agent cannot ask in headless mode (spec 30). `*` is every command.
+    pub allowed_commands: Vec<String>,
     pub model: BotModel,
     /// The model id Claude Code reported when the bot last started a turn
     /// (`claude-opus-5-5`); `null` before its first turn.

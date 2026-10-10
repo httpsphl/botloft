@@ -121,6 +121,7 @@ pub(crate) fn insert(
         permission_mode: PermissionMode::Default,
         agent: new.agent,
         agent_model: None,
+        allowed_commands: Vec::new(),
         model: new.model,
         model_in_use: None,
         effort: new.effort,
@@ -152,11 +153,52 @@ pub fn update(daemon: &Daemon, params: BotsUpdateParams) -> ApiResult<Bot> {
     if let Some(color) = params.color {
         record.color = parse_color(&color)?;
     }
+    let mut commands_changed = false;
+    if let Some(commands) = params.allowed_commands {
+        if record.agent == AgentKind::Claude {
+            return Err(ApiError::validation(
+                "a Claude Code bot asks the owner; allowed_commands is for other agents",
+            ));
+        }
+        let commands = clean_commands(commands)?;
+        commands_changed = commands != record.allowed_commands;
+        record.allowed_commands = commands;
+    }
     // Rules first: if the disk write fails, nothing is saved. A running bot
     // reads them at its next start.
     super::mcp::write_rules(daemon, &store, &crew, &record).map_err(ApiError::Workspace)?;
     store.update_bot(&record)?;
-    Ok(changed(daemon, &store, &crew, record))
+    let id = record.id.clone();
+    let bot = changed(daemon, &store, &crew, record);
+    drop(store);
+    if commands_changed {
+        // The agent reads its rules when it starts.
+        daemon.supervisor.launch_settings_changed(&id);
+    }
+    Ok(bot)
+}
+
+/// The command prefixes as saved: trimmed, one line each, without repeats.
+fn clean_commands(commands: Vec<String>) -> ApiResult<Vec<String>> {
+    const MAX: usize = 50;
+    const LONGEST: usize = 200;
+    let mut clean: Vec<String> = Vec::new();
+    for command in commands {
+        let command = command.trim().to_owned();
+        if command.is_empty() || clean.contains(&command) {
+            continue;
+        }
+        if command.len() > LONGEST || command.contains(['\n', '\r', ')']) {
+            return Err(ApiError::validation(
+                "a command is one line of at most 200 characters, without a closing parenthesis",
+            ));
+        }
+        clean.push(command);
+    }
+    if clean.len() > MAX {
+        return Err(ApiError::validation("at most 50 commands"));
+    }
+    Ok(clean)
 }
 
 pub fn set_paused(daemon: &Daemon, params: BotsSetPausedParams) -> ApiResult<Bot> {
@@ -245,6 +287,7 @@ pub(crate) fn to_protocol(daemon: &Daemon, store: &Store, crew: &Crew, record: B
         permission_mode: record.permission_mode,
         agent: record.agent,
         agent_model: record.agent_model,
+        allowed_commands: record.allowed_commands,
         model: record.model,
         model_in_use: record.model_in_use,
         effort: record.effort,

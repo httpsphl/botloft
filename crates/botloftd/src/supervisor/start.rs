@@ -6,7 +6,7 @@
 use std::io;
 use std::sync::Arc;
 
-use botloft_core::protocol::{BotState, Crew};
+use botloft_core::protocol::{AgentKind, BotState, Crew};
 use botloft_store::BotRecord;
 use tokio::time::Instant;
 use tracing::{debug, warn};
@@ -25,7 +25,8 @@ use crate::state::Daemon;
 pub(super) struct Start {
     crew: Crew,
     bot: BotRecord,
-    claude: Claude,
+    /// Claude Code, for the bots that run on it; others start without.
+    claude: Option<Claude>,
     /// The conversation to resume; `None` starts a new one.
     session: Option<String>,
 }
@@ -46,9 +47,14 @@ impl Supervisor {
             ..
         } = inner;
         let slot = slots.get_mut(&bot.id)?;
-        let ClaudeStatus::Ready(claude) = claude else {
-            self.set_state(&bot.id, slot, BotState::Offline);
-            return None;
+        let claude = match claude {
+            ClaudeStatus::Ready(claude) => Some(claude.clone()),
+            // A bot on another agent does not need Claude Code (spec 30).
+            _ if bot.agent != AgentKind::Claude => None,
+            _ => {
+                self.set_state(&bot.id, slot, BotState::Offline);
+                return None;
+            }
         };
         slot.launching = true;
         // This start reads the bot's launch settings.
@@ -61,7 +67,7 @@ impl Supervisor {
         Some(Start {
             crew: crew.clone(),
             bot: bot.clone(),
-            claude: claude.clone(),
+            claude,
             session,
         })
     }
@@ -73,7 +79,7 @@ impl Supervisor {
             daemon,
             &start.crew,
             &start.bot,
-            &start.claude,
+            start.claude.as_ref(),
             start.session.as_deref(),
         )
         .and_then(|(spec, launch)| Ok((self.runtime.spawn(spec)?, launch)));

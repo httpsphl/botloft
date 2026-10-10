@@ -162,6 +162,7 @@ mod tests {
             permission_mode: botloft_core::protocol::PermissionMode::Default,
             agent: botloft_core::protocol::AgentKind::Claude,
             agent_model: None,
+            allowed_commands: Vec::new(),
             model: botloft_core::protocol::BotModel::Default,
             model_in_use: None,
             effort: botloft_core::protocol::BotEffort::Default,

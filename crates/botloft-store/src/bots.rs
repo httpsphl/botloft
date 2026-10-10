@@ -23,6 +23,8 @@ pub struct BotRecord {
     pub agent: AgentKind,
     /// The model of a bot not on Claude Code; `None` for the default.
     pub agent_model: Option<String>,
+    /// Command prefixes the bot may run without asking (spec 30).
+    pub allowed_commands: Vec<String>,
     pub model: BotModel,
     /// What Claude Code last reported; written by [`Store::set_model_in_use`]
     /// and left alone by [`Store::update_bot`].
@@ -36,7 +38,7 @@ pub struct BotRecord {
 }
 
 const COLUMNS: &str = "id, crew_id, name, handle, slug, role, instructions, color, paused, created_at, archived_at, \
-     permission_mode, model, model_in_use, effort, effort_default, agent, agent_model";
+     permission_mode, model, model_in_use, effort, effort_default, agent, agent_model, allowed_commands";
 
 fn from_row(row: &Row<'_>) -> rusqlite::Result<BotRecord> {
     Ok(BotRecord {
@@ -61,7 +63,12 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<BotRecord> {
             .and_then(|level| level.parse().ok()),
         agent: parse_column(row, 16)?,
         agent_model: row.get(17)?,
+        allowed_commands: serde_json::from_str(&row.get::<_, String>(18)?).unwrap_or_default(),
     })
+}
+
+fn commands_json(commands: &[String]) -> String {
+    serde_json::to_string(commands).unwrap_or_else(|_| "[]".to_owned())
 }
 
 impl Store {
@@ -70,7 +77,7 @@ impl Store {
             .execute(
                 &format!(
                     "INSERT INTO bots ({COLUMNS}) \
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)"
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)"
                 ),
                 params![
                     bot.id.as_str(),
@@ -90,7 +97,8 @@ impl Store {
                     bot.effort.as_str(),
                     bot.effort_default.map(ModelEffort::as_str),
                     bot.agent.as_str(),
-                    bot.agent_model
+                    bot.agent_model,
+                    commands_json(&bot.allowed_commands)
                 ],
             )
             .map_err(|err| unique_as_duplicate(err, "bot handle or slug"))?;
@@ -159,7 +167,7 @@ impl Store {
             .execute(
                 "UPDATE bots SET name = ?2, handle = ?3, role = ?4, instructions = ?5, \
                  color = ?6, paused = ?7, archived_at = ?8, permission_mode = ?9, model = ?10, \
-                 effort = ?11, agent_model = ?12 WHERE id = ?1",
+                 effort = ?11, agent_model = ?12, allowed_commands = ?13 WHERE id = ?1",
                 params![
                     bot.id.as_str(),
                     bot.name,
@@ -172,7 +180,8 @@ impl Store {
                     bot.permission_mode.as_str(),
                     bot.model.as_str(),
                     bot.effort.as_str(),
-                    bot.agent_model
+                    bot.agent_model,
+                    commands_json(&bot.allowed_commands)
                 ],
             )
             .map_err(|err| unique_as_duplicate(err, "bot handle"))?;
