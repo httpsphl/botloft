@@ -39,6 +39,8 @@ export function ContextMeter({ bot, onLater }: { bot: Bot; onLater(text: string)
   const near = usedTokens >= limit * NEAR;
   const left = autoCompactTokens === null ? null : autoCompactTokens - usedTokens;
   const claude = bot.agent === "claude";
+  // Claude Code and Codex answer a request to compact (spec 30).
+  const compactable = claude || bot.agent === "codex";
   const running = bot.state === "idle" || bot.state === "busy" || bot.state === "needs_approval";
 
   const compact = async () => {
@@ -77,17 +79,19 @@ export function ContextMeter({ bot, onLater }: { bot: Bot; onLater(text: string)
             )}
           </div>
           <p className="mt-2 text-ink-soft text-sm">
-            {!claude
+            {!compactable
               ? m.estimate
-              : left === null
-                ? m.noAuto
-                : left > 0
-                  ? m.autoLeft(tokens(left), tokens(autoCompactTokens ?? 0))
-                  : m.autoNow}
+              : bot.agent === "codex"
+                ? m.byItself
+                : left === null
+                  ? m.noAuto
+                  : left > 0
+                    ? m.autoLeft(tokens(left), tokens(autoCompactTokens ?? 0))
+                    : m.autoNow}
           </p>
           <p className="mt-1.5 text-muted text-xs">{m.about(bot.name)}</p>
           {/* Only Claude Code answers a request to compact (spec 30). */}
-          {claude && (
+          {compactable && (
             <div className="mt-3 border-line border-t pt-3">
               <Button
                 size="sm"

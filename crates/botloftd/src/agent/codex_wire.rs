@@ -19,9 +19,11 @@ use crate::runtime::ProcessControl;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Pending {
     Initialize,
+    Account,
     ThreadStart,
     ThreadResume,
     Turn,
+    Compact,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -35,12 +37,20 @@ pub(super) enum Phase {
     Failed,
 }
 
+/// One thing for the thread to do.
+enum Work {
+    /// A message: the input of a `turn/start`.
+    Turn(Vec<Value>),
+    /// Compact the conversation (it runs as a turn of its own).
+    Compact,
+}
+
 pub(super) struct State {
     next_id: u64,
     phase: Phase,
     pending: HashMap<u64, Pending>,
-    /// The input of messages waiting for the thread or for the running turn.
-    queue: VecDeque<Vec<Value>>,
+    /// What waits for the thread or for the running turn.
+    queue: VecDeque<Work>,
     turn_active: bool,
 }
 
@@ -117,6 +127,9 @@ impl Shared {
         if let Some(model) = &self.input.model {
             params["model"] = json!(model);
         }
+        for (slug, entry) in &self.input.connected {
+            params["config"]["mcp_servers"][slug] = entry.clone();
+        }
         params
     }
 
@@ -125,6 +138,12 @@ impl Shared {
     pub(super) fn enqueue(&self, line: &[u8]) -> io::Result<()> {
         let event: Value = serde_json::from_slice(line)
             .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
+        if event["event"] == "compact" {
+            let mut state = self.lock();
+            state.queue.push_back(Work::Compact);
+            self.pump(&mut state);
+            return Ok(());
+        }
         // Text as it is; an image as the data URL `turn/start` takes.
         let input: Vec<Value> = event["message"]["content"]
             .as_array()
@@ -147,7 +166,7 @@ impl Shared {
             })
             .unwrap_or_default();
         let mut state = self.lock();
-        state.queue.push_back(input);
+        state.queue.push_back(Work::Turn(input));
         self.pump(&mut state);
         Ok(())
     }
@@ -159,8 +178,17 @@ impl Shared {
         if state.turn_active {
             return;
         }
-        let Some(input) = state.queue.pop_front() else {
+        let Some(work) = state.queue.pop_front() else {
             return;
+        };
+        let input = match work {
+            Work::Turn(input) => input,
+            Work::Compact => {
+                let params = json!({ "threadId": thread });
+                state.turn_active = true;
+                self.request(state, "thread/compact/start", params, Pending::Compact);
+                return;
+            }
         };
         let mut params = json!({
             "threadId": thread,
@@ -187,6 +215,8 @@ impl Shared {
         match kind {
             Pending::Initialize if !failed => {
                 self.send(&json!({ "method": "initialized", "params": {} }));
+                // Whether Codex is signed in: asked in parallel with the thread.
+                self.request(&mut state, "account/read", json!({}), Pending::Account);
                 let params = self.thread_params();
                 match &self.input.resume {
                     Some(thread) => {
@@ -218,6 +248,20 @@ impl Shared {
                     model: event["result"]["model"].as_str().map(str::to_owned),
                 }
             }
+            Pending::Account => {
+                // `account` is null when nobody is signed in.
+                if !failed && event["result"]["account"].is_null() {
+                    Answer::SignedOut
+                } else {
+                    Answer::None
+                }
+            }
+            Pending::Compact if failed => {
+                state.turn_active = false;
+                self.pump(&mut state);
+                Answer::None
+            }
+            Pending::Compact => Answer::None,
             Pending::Turn if failed => {
                 state.turn_active = false;
                 self.pump(&mut state);
@@ -263,6 +307,8 @@ pub(super) enum Answer {
     TurnRefused(Option<String>),
     /// The process cannot start a thread.
     Failed(Option<String>),
+    /// Nobody is signed in to Codex.
+    SignedOut,
 }
 
 /// What the supervisor writes to: Botloft's turn lines in, JSON-RPC out.
@@ -315,6 +361,7 @@ mod tests {
             effort: None,
             fenced: Vec::new(),
             may_ask: true,
+            connected: Vec::new(),
         }
     }
 
@@ -345,8 +392,11 @@ mod tests {
         assert_eq!(methods(), ["initialize"]);
 
         shared.answered(&json!({ "id": 1, "result": {} }));
-        assert_eq!(methods(), ["initialize", "initialized", "thread/start"]);
-        let start = written.lock().expect("lock")[2].clone();
+        assert_eq!(
+            methods(),
+            ["initialize", "initialized", "account/read", "thread/start"]
+        );
+        let start = written.lock().expect("lock")[3].clone();
         assert_eq!(start["params"]["approvalPolicy"], "on-request");
         assert_eq!(start["params"]["sandbox"], "read-only");
         assert_eq!(start["params"]["model"], "gpt-5.5");
@@ -355,7 +405,8 @@ mod tests {
             "Bearer tok"
         );
 
-        let answer = shared.answered(&json!({ "id": 2, "result": { "thread": { "id": "th-1" } } }));
+        shared.answered(&json!({ "id": 2, "result": { "account": { "type": "chatgpt" } } }));
+        let answer = shared.answered(&json!({ "id": 3, "result": { "thread": { "id": "th-1" } } }));
         assert!(matches!(answer, Answer::Thread { thread, .. } if thread == "th-1"));
         // Only the first message goes; the second waits for its turn.
         let turns: Vec<Value> = written
@@ -391,11 +442,11 @@ mod tests {
         let written = Arc::clone(&sink.0);
         let shared = Shared::begin(Box::new(sink), input(Some("old")));
         shared.answered(&json!({ "id": 1, "result": {} }));
-        let resume = written.lock().expect("lock")[2].clone();
+        let resume = written.lock().expect("lock")[3].clone();
         assert_eq!(resume["method"], "thread/resume");
         assert_eq!(resume["params"]["threadId"], "old");
 
-        let answer = shared.answered(&json!({ "id": 2, "error": { "message": "no rollout" } }));
+        let answer = shared.answered(&json!({ "id": 3, "error": { "message": "no rollout" } }));
         assert!(matches!(answer, Answer::Lost));
         let last = written.lock().expect("lock").last().cloned().expect("line");
         assert_eq!(last["method"], "thread/start");
@@ -407,7 +458,7 @@ mod tests {
         let written = Arc::clone(&sink.0);
         let shared = Shared::begin(Box::new(sink), input(None));
         shared.answered(&json!({ "id": 1, "result": {} }));
-        shared.answered(&json!({ "id": 2, "result": { "thread": { "id": "th" } } }));
+        shared.answered(&json!({ "id": 3, "result": { "thread": { "id": "th" } } }));
         let line = json!({ "event": "user", "message": { "role": "user", "content": [
             { "type": "text", "text": "look" },
             { "type": "image", "media_type": "image/png", "data": "AAAA" },

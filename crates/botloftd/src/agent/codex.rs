@@ -99,6 +99,10 @@ impl Agent for CodexAgent {
         false
     }
 
+    fn can_compact(&self) -> bool {
+        true
+    }
+
     fn encode_turn(&self, _uuid: &str, turn: &Turn) -> Bytes {
         // The wrapper turns this neutral line into a `turn/start`.
         super::neutral_turn_with_images(turn)

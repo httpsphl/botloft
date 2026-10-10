@@ -50,6 +50,58 @@ fn entry(server: &McpServer) -> Value {
     }
 }
 
+/// The servers as Codex's own MCP configuration for a thread, with the
+/// secrets in place: `env` is the bot's environment, which holds each one
+/// under the name `connected_var` gives (spec 25.2, 30). Botloft's own
+/// server is never one of them.
+pub fn codex_entries(
+    servers: &[McpServer],
+    env: &[(std::ffi::OsString, std::ffi::OsString)],
+) -> Vec<(String, Value)> {
+    let value = |name: &str| -> String {
+        env.iter()
+            .find(|(key, _)| key.to_string_lossy() == name)
+            .map(|(_, value)| value.to_string_lossy().into_owned())
+            .unwrap_or_default()
+    };
+    let named = |id: &McpServerId, kind: char, names: &[String]| -> Value {
+        let map: Map<String, Value> = names
+            .iter()
+            .enumerate()
+            .map(|(index, name)| {
+                (
+                    name.clone(),
+                    Value::String(value(&connected_var(id, kind, index))),
+                )
+            })
+            .collect();
+        Value::Object(map)
+    };
+    servers
+        .iter()
+        .filter(|server| server.slug != "botloft")
+        .map(|server| {
+            let entry = match server.kind {
+                McpKind::Http => {
+                    let mut entry = json!({ "url": server.url });
+                    if !server.header_names.is_empty() {
+                        entry["http_headers"] = named(&server.id, 'H', &server.header_names);
+                    }
+                    entry
+                }
+                McpKind::Stdio => {
+                    let mut entry = json!({ "command": server.command, "args": server.args });
+                    if !server.env_names.is_empty() {
+                        entry["env"] = named(&server.id, 'E', &server.env_names);
+                    }
+                    entry
+                }
+            };
+            (server.slug.clone(), entry)
+        })
+        .collect()
+}
+
 /// Adds `servers` to the `mcpServers` of `mcp.json`. The server of Botloft
 /// is never replaced: its slug is reserved when one is registered.
 pub fn add_to(mcp: &mut Value, servers: &[McpServer]) {
@@ -135,6 +187,24 @@ mod tests {
                 .is_some_and(|value| value.starts_with("${BOTLOFT_MCP_"))
         );
         assert!(entry.get("command").is_none());
+    }
+
+    #[test]
+    fn codex_gets_the_secrets_in_place_and_never_the_botloft_server() {
+        use std::ffi::OsString;
+        let http = server(McpKind::Http);
+        let var = connected_var(&http.id, 'H', 0);
+        let env = vec![(OsString::from(var), OsString::from("Bearer s3cret"))];
+        let mut mine = server(McpKind::Http);
+        mine.slug = "botloft".to_owned();
+        let entries = codex_entries(&[http, mine], &env);
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].0, "linkedin");
+        assert_eq!(entries[0].1["url"], "http://127.0.0.1:8000/mcp");
+        assert_eq!(
+            entries[0].1["http_headers"]["Authorization"],
+            "Bearer s3cret"
+        );
     }
 
     #[test]

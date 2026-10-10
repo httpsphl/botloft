@@ -168,6 +168,8 @@ pub(super) fn launch_spec(
     // which its `mcp.json` expands (spec 25.2).
     env.extend(mcp_secrets::environment(&daemon.paths.secrets(), &servers)?);
 
+    // The connected tools in the agent's own configuration, secrets in place.
+    let connected = workspace::connected::codex_entries(&servers, &env);
     let spec = SpawnSpec {
         program,
         args,
@@ -186,6 +188,7 @@ pub(super) fn launch_spec(
                 effort: bot.effort.cli_value().map(str::to_owned),
                 fenced: fenced.clone(),
                 may_ask: bot.permission_mode != botloft_core::protocol::PermissionMode::Plan,
+                connected,
             },
             token_hash: TokenHash::of(&token).to_hex(),
             resumed,

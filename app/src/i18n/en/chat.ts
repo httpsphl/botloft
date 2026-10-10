@@ -252,6 +252,7 @@ export const chat = {
     autoLeft: (left: string, at: string) => `${left} left before it compacts by itself, at ${at}.`,
     autoNow: "It is full enough to compact by itself on the next message.",
     noAuto: "It does not compact by itself.",
+    byItself: "Codex compacts it by itself when it gets close to full.",
     estimate:
       "An estimate: this agent does not say how large its window is, so the size comes from its model family.",
     compact: "Compact now",

@@ -88,6 +88,9 @@ pub struct AttachInput {
     pub fenced: Vec<PathBuf>,
     /// Whether it may ask the owner at all; a plan only reads.
     pub may_ask: bool,
+    /// The owner's connected tools (spec 25) as the agent's own MCP
+    /// configuration, secrets in place: by slug.
+    pub connected: Vec<(String, Value)>,
 }
 
 /// Reads one process's output, line by line (already JSON). One per process,
@@ -120,6 +123,12 @@ pub trait Agent: Send + Sync + 'static {
     /// Writes what the agent reads from the bot's folder at start and that
     /// `workspace::prepare_bot` does not (spec 30.2).
     fn write_launch_files(&self, files: &LaunchFiles<'_>) -> io::Result<()>;
+
+    /// Whether the conversation can be compacted on the owner's request
+    /// (spec 8.6): Claude Code answers `/compact`, and Codex has its own.
+    fn can_compact(&self) -> bool {
+        self.speaks_control()
+    }
 
     /// Whether the process answers Botloft's own requests on stdin (its
     /// settings, how full its conversation is, the state of its MCP servers,
