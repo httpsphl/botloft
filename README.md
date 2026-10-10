@@ -33,8 +33,8 @@
 </picture>
 
 Botloft keeps a crew of bots running on your computer, each on the AI coding agent you choose:
-[Claude Code](https://code.claude.com), or [Antigravity](https://antigravity.google) as an experimental
-option, with Codex next. Each bot has its own folder, memory and conversation. They pass work to each other, keep going after you close the
+[Claude Code](https://code.claude.com), or, as experimental options,
+[Antigravity](https://antigravity.google) and [Codex](https://developers.openai.com/codex). Each bot has its own folder, memory and conversation. They pass work to each other, keep going after you close the
 window and pick up where they left off after a restart. You talk to each one like in a chat app, and
 you decide what they may do.
 
@@ -88,15 +88,18 @@ itself.
 | Usage meter and "Compact" | yes | an estimate of the conversation size; no compaction |
 | Isolation between crews | yes | folders are fenced for its file tools, not for commands you allow |
 
-Claude Code is the full experience. Antigravity is off until you add `experimental_agents = ["agy"]`
-to Botloft's `config.toml`; then a new bot can be made on it, and Settings has "Agent for new
-bots". Codex is the next agent. See [spec section 30](docs/spec.md) for what was checked.
+Claude Code is the full experience. Antigravity and Codex are off until you list them in Botloft's
+`config.toml` (`experimental_agents = ["agy"]`, `["codex"]` or both); then a new bot can be made on
+them, and Settings has "Agent for new bots". A Codex bot reads files, uses the crew's tools and
+answers, with the exact size of its conversation; it cannot change files or run commands yet, and
+asking you before it acts is the next step. See [spec section 30](docs/spec.md) for what was
+checked.
 
 ## Get started
 
 You need at least one agent installed and signed in once, with your own account:
-[Claude Code](https://code.claude.com/docs/en/setup), or Antigravity (experimental, see
-[Agents](#agents)). Bots run on your own plan with that agent.
+[Claude Code](https://code.claude.com/docs/en/setup), Antigravity or Codex
+(experimental, see [Agents](#agents)). Bots run on your own plan with that agent.
 
 1. Download Botloft for your computer from the
    [latest release](https://github.com/httpsphl/botloft/releases/latest):
@@ -137,7 +140,7 @@ flowchart LR
   scheduled task of your Windows user, a systemd user service on Linux or a launch agent on macOS:
   it starts when you sign in and comes back soon if it dies.
 - **Your agent is the runtime.** Each bot is a real session of the agent you chose (`claude -p` for
-  Claude Code, `agy -p` for Antigravity) with its own workspace, memory and conversation. There is
+  Claude Code, `agy -p` for Antigravity, `codex app-server` for Codex) with its own workspace, memory and conversation. There is
   no custom agent SDK and no API key to manage.
 - **One conversation per bot.** Your messages, messages from other bots and notices from the daemon
   reach the bot in order. What it does comes back as a chat: replies, tool use and requests you
@@ -230,8 +233,8 @@ Windows came first and has had the most use; if something does not work elsewher
 <details>
 <summary><b>Is Botloft made by Anthropic?</b></summary>
 
-No. Botloft is an independent project. It uses Claude Code and Antigravity as installed on your
-computer and is not affiliated with or endorsed by Anthropic or Google.
+No. Botloft is an independent project. It uses Claude Code, Antigravity and Codex as installed on your
+computer and is not affiliated with or endorsed by Anthropic, Google or OpenAI.
 </details>
 
 ## Status
@@ -247,7 +250,7 @@ and a code-signed installer. `main` can be ahead of the latest release.
 Requirements: Rust stable (the MSVC toolchain on Windows), Node.js 24 and pnpm. On Linux, the app
 also needs the desktop libraries Tauri uses (on Ubuntu: `libwebkit2gtk-4.1-dev`,
 `libayatana-appindicator3-dev`, `librsvg2-dev`, `libxdo-dev`). Running real bots also needs an agent
-installed and signed in: Claude Code (the native `claude` executable) or Antigravity (`agy`).
+installed and signed in: Claude Code (the native `claude` executable), Antigravity (`agy`) or Codex.
 
 ```powershell
 # Daemon and libraries

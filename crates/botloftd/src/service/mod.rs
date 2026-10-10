@@ -142,15 +142,19 @@ fn agent_checks(daemon: &Daemon) -> Vec<AgentCheck> {
         return checks.clone();
     }
     let mut checks = Vec::new();
-    if daemon.supervisor.agent_enabled(AgentKind::Agy)
-        && let Some(agent) = crate::agent::of(AgentKind::Agy)
-    {
+    for kind in [AgentKind::Agy, AgentKind::Codex] {
+        if !daemon.supervisor.agent_enabled(kind) {
+            continue;
+        }
+        let Some(agent) = crate::agent::of(kind) else {
+            continue;
+        };
         let version = agent
-            .locate(daemon.supervisor.agy_path(), None)
+            .locate(daemon.supervisor.program_setting(kind), None)
             .ok()
             .and_then(|program| crate::agent::program_version(&program));
         checks.push(AgentCheck {
-            agent: AgentKind::Agy,
+            agent: kind,
             version,
         });
     }

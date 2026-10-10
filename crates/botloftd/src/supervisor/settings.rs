@@ -18,6 +18,8 @@ pub struct SupervisorSettings {
     pub claude: ClaudeSource,
     /// `agy_path` from the config; empty looks in the usual places (spec 30).
     pub agy_path: String,
+    /// `codex_path` from the config; empty looks in the usual places.
+    pub codex_path: String,
     /// Agents the owner switched on although they are experimental.
     pub experimental_agents: Vec<String>,
     pub backoff_initial: Duration,
@@ -35,6 +37,7 @@ impl SupervisorSettings {
                 configured: config.claude_path.clone(),
             },
             agy_path: config.agy_path.clone(),
+            codex_path: config.codex_path.clone(),
             experimental_agents: config.experimental_agents.clone(),
             backoff_initial: Duration::from_millis(config.supervisor.restart_backoff_initial_ms),
             backoff_max: Duration::from_millis(config.supervisor.restart_backoff_max_ms),

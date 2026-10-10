@@ -13,7 +13,7 @@ use tracing::debug;
 
 use super::slot::StopIntent;
 use super::{Inner, STABLE_AFTER, Supervisor};
-use crate::agent::{self, LaunchFiles, LaunchPlan};
+use crate::agent::{self, AttachInput, LaunchFiles, LaunchPlan};
 use crate::chat::{LIVE_TEXT_EVERY, StreamReader};
 use crate::platform;
 use crate::runtime::claude::Claude;
@@ -85,6 +85,8 @@ impl Supervisor {
 }
 
 pub(super) struct Launch {
+    /// What the agent needs once the process exists.
+    pub attach: AttachInput,
     pub token_hash: String,
     pub resumed: bool,
     /// Whether the bot starts with connected tools (spec 25).
@@ -117,7 +119,7 @@ pub(super) fn launch_spec(
         io::Error::other(format!("bots on {} cannot start yet", bot.agent.as_str()))
     })?;
     let program = agent.locate(
-        daemon.supervisor.agy_path(),
+        daemon.supervisor.program_setting(bot.agent),
         claude.map(|claude| claude.path.as_path()),
     )?;
     let mcp = workspace.join(".botloft").join("mcp.json");
@@ -175,6 +177,14 @@ pub(super) fn launch_spec(
     Ok((
         spec,
         Launch {
+            attach: AttachInput {
+                workspace: workspace.clone(),
+                port: daemon.port,
+                token: token.clone(),
+                resume: resumed.then(|| session.clone()),
+                model: bot.agent_model.clone(),
+                effort: bot.effort.cli_value().map(str::to_owned),
+            },
             token_hash: TokenHash::of(&token).to_hex(),
             resumed,
             connected: !servers.is_empty(),
