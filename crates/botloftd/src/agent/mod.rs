@@ -6,11 +6,13 @@
 mod agy;
 mod claude;
 mod codex;
+mod codex_decoder;
 mod codex_wire;
 
 use std::ffi::OsString;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{AgentKind, BotEffort, BotModel, PermissionMode};
@@ -81,6 +83,11 @@ pub struct AttachInput {
     pub resume: Option<String>,
     pub model: Option<String>,
     pub effort: Option<String>,
+    /// Folders its tools must not touch (spec 7.5): a request that does is
+    /// refused without asking the owner.
+    pub fenced: Vec<PathBuf>,
+    /// Whether it may ask the owner at all; a plan only reads.
+    pub may_ask: bool,
 }
 
 /// Reads one process's output, line by line (already JSON). One per process,
@@ -94,7 +101,7 @@ pub trait OutputDecoder: Send {
     /// and tells the supervisor, through `chat::sink` for what every agent has
     /// and its own code for the rest. Lines from a process that was replaced
     /// say nothing about the new one.
-    fn handle(&mut self, daemon: &Daemon, bot: &BotId, generation: u64, event: &Value);
+    fn handle(&mut self, daemon: &Arc<Daemon>, bot: &BotId, generation: u64, event: &Value);
 }
 
 pub trait Agent: Send + Sync + 'static {

@@ -184,6 +184,8 @@ pub(super) fn launch_spec(
                 resume: resumed.then(|| session.clone()),
                 model: bot.agent_model.clone(),
                 effort: bot.effort.cli_value().map(str::to_owned),
+                fenced: fenced.clone(),
+                may_ask: bot.permission_mode != botloft_core::protocol::PermissionMode::Plan,
             },
             token_hash: TokenHash::of(&token).to_hex(),
             resumed,

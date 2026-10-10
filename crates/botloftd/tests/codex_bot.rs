@@ -163,7 +163,7 @@ async fn a_codex_bot_starts_its_server_with_the_owners_things_off_and_its_own_mc
 
     handshake(&process, "th-1").await;
     let start = sent(&process, "thread/start").await;
-    assert_eq!(start["params"]["approvalPolicy"], "never");
+    assert_eq!(start["params"]["approvalPolicy"], "on-request");
     assert_eq!(start["params"]["sandbox"], "read-only");
     let server = &start["params"]["config"]["mcp_servers"]["botloft"];
     assert_eq!(server["url"], "http://127.0.0.1:45710/mcp");
@@ -326,48 +326,221 @@ async fn what_codex_prints_becomes_the_chat() {
     assert_eq!(bot.model_in_use.as_deref(), Some("gpt-5.5"));
 }
 
+/// The approval card waiting in the chat, once it is there.
+async fn card(codex: &Codex) -> botloft_core::protocol::ApprovalItem {
+    for _ in 0..600 {
+        let found = codex.items().into_iter().find_map(|body| match body {
+            ChatBody::Approval(item)
+                if item.status == botloft_core::protocol::ApprovalStatus::Pending =>
+            {
+                Some(item)
+            }
+            _ => None,
+        });
+        if let Some(item) = found {
+            return item;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    panic!("no approval card");
+}
+
+fn answer_of(process: &FakeProcess, id: u64) -> Option<Value> {
+    process
+        .input_lines()
+        .into_iter()
+        .find(|line| line["id"] == id)
+}
+
+async fn answer_for(process: &FakeProcess, id: u64) -> Value {
+    for _ in 0..600 {
+        if let Some(line) = answer_of(process, id) {
+            return line;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    panic!("no answer to {id}");
+}
+
+fn file_started(
+    process: &FakeProcess,
+    id: &str,
+    path: &str,
+) -> impl std::future::Future<Output = ()> {
+    process.emit(notify(
+        "item/started",
+        json!({ "threadId": "th-1", "item": { "type": "fileChange", "id": id,
+            "changes": [{ "path": path, "kind": { "type": "add" }, "diff": "x\n" }], "status": "inProgress" } }),
+    ))
+}
+
+fn owner(codex: &Codex, approval: &botloft_core::protocol::ApprovalItem, allow: bool) {
+    botloftd::approvals::answer(
+        &codex.daemon,
+        botloft_core::protocol::ApprovalsAnswerParams {
+            approval_id: approval.approval_id.clone(),
+            allow,
+            note: None,
+            input: None,
+            always: None,
+        },
+    )
+    .expect("answered");
+}
+
 #[tokio::test(start_paused = true)]
-async fn requests_for_approval_are_declined_for_now_and_the_crew_tools_are_allowed() {
+async fn a_change_waits_for_the_owner_who_allows_or_denies_it() {
+    let codex = codex_bot().await;
+    let process = codex.runtime.process(1).await;
+    handshake(&process, "th-1").await;
+    codex.until(BotState::Idle).await;
+
+    file_started(&process, "f1", r"C:\work\a.txt").await;
+    process
+        .emit(json!({ "id": 90, "method": "item/fileChange/requestApproval", "params": { "itemId": "f1" } }))
+        .await;
+    let shown = card(&codex).await;
+    assert_eq!(shown.tool_name, "Write");
+    assert!(shown.input.contains("a.txt"));
+    // Nothing is answered while the owner has not.
+    assert!(answer_of(&process, 90).is_none());
+    owner(&codex, &shown, true);
+    assert_eq!(
+        answer_for(&process, 90).await["result"]["decision"],
+        "accept"
+    );
+
+    file_started(&process, "f2", r"C:\work\b.txt").await;
+    process
+        .emit(json!({ "id": 91, "method": "item/fileChange/requestApproval", "params": { "itemId": "f2" } }))
+        .await;
+    let second = loop {
+        let shown = card(&codex).await;
+        if shown.input.contains("b.txt") {
+            break shown;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    };
+    owner(&codex, &second, false);
+    assert_eq!(
+        answer_for(&process, 91).await["result"]["decision"],
+        "decline"
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_command_asks_and_the_crew_tools_do_not() {
     let codex = codex_bot().await;
     let process = codex.runtime.process(1).await;
     handshake(&process, "th-1").await;
     codex.until(BotState::Idle).await;
 
     process
-        .emit(json!({ "id": 90, "method": "item/fileChange/requestApproval", "params": { "itemId": "f1" } }))
+        .emit(notify("item/started", json!({ "threadId": "th-1", "item": {
+            "type": "commandExecution", "id": "c1", "command": "powershell -Command 'rm x'",
+            "commandActions": [{ "type": "unknown", "command": "rm x" }], "status": "inProgress" } })))
         .await;
     process
-        .emit(json!({ "id": 91, "method": "mcpServer/elicitation/request", "params": { "serverName": "botloft", "threadId": "th-1" } }))
+        .emit(json!({ "id": 80, "method": "item/commandExecution/requestApproval", "params": { "itemId": "c1", "command": "rm x" } }))
         .await;
+    let shown = card(&codex).await;
+    assert_eq!(shown.tool_name, "Bash");
+    assert!(shown.input.contains("rm x"));
+    owner(&codex, &shown, true);
+    assert_eq!(
+        answer_for(&process, 80).await["result"]["decision"],
+        "accept"
+    );
+
+    // Botloft's own tools go through; another server's tool asks.
     process
-        .emit(json!({ "id": 92, "method": "mcpServer/elicitation/request", "params": { "serverName": "other", "threadId": "th-1" } }))
+        .emit(json!({ "id": 81, "method": "mcpServer/elicitation/request", "params": { "serverName": "botloft", "threadId": "th-1" } }))
         .await;
+    assert_eq!(answer_for(&process, 81).await["result"]["action"], "accept");
+    // What the server asks that Botloft does not take gets an error.
     process
-        .emit(json!({ "id": 93, "method": "item/tool/call", "params": {} }))
+        .emit(json!({ "id": 82, "method": "item/tool/call", "params": {} }))
         .await;
-    for _ in 0..200 {
-        if process
-            .input_lines()
+    assert!(answer_for(&process, 82).await["error"].is_object());
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_folder_botloft_fences_is_refused_without_asking() {
+    let codex = codex_bot().await;
+    // Another crew's folder.
+    let other = crews::create(
+        &codex.daemon,
+        CrewsCreateParams {
+            name: "Other".into(),
+            work_folder: None,
+            lead: None,
+        },
+    )
+    .expect("crew");
+    let theirs = codex.daemon.paths.crew_dir(&other.slug).join("notes.txt");
+    let process = codex.runtime.process(1).await;
+    handshake(&process, "th-1").await;
+    codex.until(BotState::Idle).await;
+
+    file_started(&process, "f9", &theirs.to_string_lossy()).await;
+    process
+        .emit(json!({ "id": 70, "method": "item/fileChange/requestApproval", "params": { "itemId": "f9" } }))
+        .await;
+    assert_eq!(
+        answer_for(&process, 70).await["result"]["decision"],
+        "decline"
+    );
+
+    // A command that names it too.
+    process
+        .emit(
+            json!({ "id": 71, "method": "item/commandExecution/requestApproval", "params": {
+            "itemId": "c9", "command": format!("type {}", theirs.to_string_lossy()) } }),
+        )
+        .await;
+    assert_eq!(
+        answer_for(&process, 71).await["result"]["decision"],
+        "decline"
+    );
+    // No card was made for either.
+    assert!(
+        !codex
+            .items()
             .iter()
-            .filter(|l| l["id"].as_u64() >= Some(90))
-            .count()
-            == 4
-        {
-            break;
-        }
-        tokio::time::sleep(Duration::from_millis(10)).await;
-    }
-    let answer = |id: u64| -> Value {
-        process
-            .input_lines()
-            .into_iter()
-            .find(|line| line["id"] == id)
-            .unwrap_or_else(|| panic!("no answer to {id}"))
-    };
-    assert_eq!(answer(90)["result"]["decision"], "decline");
-    assert_eq!(answer(91)["result"]["action"], "accept");
-    assert_eq!(answer(92)["result"]["action"], "decline");
-    assert!(answer(93)["error"].is_object());
+            .any(|body| matches!(body, ChatBody::Approval(_)))
+    );
+}
+
+#[tokio::test(start_paused = true)]
+async fn the_bots_mode_decides_what_is_not_asked() {
+    use botloft_core::protocol::{BotsSetPermissionModeParams, PermissionMode};
+    let codex = codex_bot().await;
+    botloftd::service::modes::set_permission_mode(
+        &codex.daemon,
+        BotsSetPermissionModeParams {
+            bot_id: codex.bot.clone(),
+            mode: PermissionMode::AcceptEdits,
+        },
+    )
+    .expect("mode");
+    let process = codex.runtime.process(1).await;
+    handshake(&process, "th-1").await;
+    codex.until(BotState::Idle).await;
+
+    file_started(&process, "f1", r"C:\work\a.txt").await;
+    process
+        .emit(json!({ "id": 60, "method": "item/fileChange/requestApproval", "params": { "itemId": "f1" } }))
+        .await;
+    assert_eq!(
+        answer_for(&process, 60).await["result"]["decision"],
+        "accept"
+    );
+    // A command still asks.
+    process
+        .emit(json!({ "id": 61, "method": "item/commandExecution/requestApproval", "params": { "itemId": "c1", "command": "rm x" } }))
+        .await;
+    let _ = card(&codex).await;
+    assert!(answer_of(&process, 61).is_none());
 }
 
 #[tokio::test(start_paused = true)]

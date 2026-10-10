@@ -11,6 +11,7 @@
 use std::ffi::OsString;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{AgentKind, TokenUsage};
@@ -199,7 +200,7 @@ impl OutputDecoder for AgyDecoder {
         Some(text)
     }
 
-    fn handle(&mut self, daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
+    fn handle(&mut self, daemon: &Arc<Daemon>, bot: &BotId, generation: u64, event: &Value) {
         if !daemon.supervisor.is_current(bot, generation) {
             return;
         }
