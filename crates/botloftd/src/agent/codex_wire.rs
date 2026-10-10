@@ -39,8 +39,8 @@ pub(super) struct State {
     next_id: u64,
     phase: Phase,
     pending: HashMap<u64, Pending>,
-    /// Owner messages (text) waiting for the thread or for the running turn.
-    queue: VecDeque<String>,
+    /// The input of messages waiting for the thread or for the running turn.
+    queue: VecDeque<Vec<Value>>,
     turn_active: bool,
 }
 
@@ -125,12 +125,29 @@ impl Shared {
     pub(super) fn enqueue(&self, line: &[u8]) -> io::Result<()> {
         let event: Value = serde_json::from_slice(line)
             .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
-        let text = event["message"]["content"][0]["text"]
-            .as_str()
-            .unwrap_or_default()
-            .to_owned();
+        // Text as it is; an image as the data URL `turn/start` takes.
+        let input: Vec<Value> = event["message"]["content"]
+            .as_array()
+            .map(|blocks| {
+                blocks
+                    .iter()
+                    .filter_map(|block| match block["type"].as_str() {
+                        Some("text") => Some(json!({ "type": "text", "text": block["text"] })),
+                        Some("image") => Some(json!({
+                            "type": "image",
+                            "url": format!(
+                                "data:{};base64,{}",
+                                block["media_type"].as_str().unwrap_or("image/png"),
+                                block["data"].as_str().unwrap_or_default()
+                            ),
+                        })),
+                        _ => None,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
         let mut state = self.lock();
-        state.queue.push_back(text);
+        state.queue.push_back(input);
         self.pump(&mut state);
         Ok(())
     }
@@ -142,12 +159,12 @@ impl Shared {
         if state.turn_active {
             return;
         }
-        let Some(text) = state.queue.pop_front() else {
+        let Some(input) = state.queue.pop_front() else {
             return;
         };
         let mut params = json!({
             "threadId": thread,
-            "input": [{ "type": "text", "text": text }],
+            "input": input,
         });
         if let Some(effort) = &self.input.effort {
             params["effort"] = json!(effort);
@@ -382,5 +399,33 @@ mod tests {
         assert!(matches!(answer, Answer::Lost));
         let last = written.lock().expect("lock").last().cloned().expect("line");
         assert_eq!(last["method"], "thread/start");
+    }
+
+    #[test]
+    fn an_image_goes_as_a_data_url_with_the_text() {
+        let sink = Sink::default();
+        let written = Arc::clone(&sink.0);
+        let shared = Shared::begin(Box::new(sink), input(None));
+        shared.answered(&json!({ "id": 1, "result": {} }));
+        shared.answered(&json!({ "id": 2, "result": { "thread": { "id": "th" } } }));
+        let line = json!({ "event": "user", "message": { "role": "user", "content": [
+            { "type": "text", "text": "look" },
+            { "type": "image", "media_type": "image/png", "data": "AAAA" },
+        ] } })
+        .to_string();
+        shared.enqueue(line.as_bytes()).expect("queued");
+        let turn = written
+            .lock()
+            .expect("lock")
+            .iter()
+            .find(|line| line["method"] == "turn/start")
+            .cloned()
+            .expect("turn");
+        assert_eq!(turn["params"]["input"][0]["text"], "look");
+        assert_eq!(turn["params"]["input"][1]["type"], "image");
+        assert_eq!(
+            turn["params"]["input"][1]["url"],
+            "data:image/png;base64,AAAA"
+        );
     }
 }

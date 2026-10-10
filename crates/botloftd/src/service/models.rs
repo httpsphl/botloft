@@ -144,32 +144,41 @@ pub fn set_agent_model(daemon: &Daemon, params: BotsSetAgentModelParams) -> ApiR
     Ok(bot)
 }
 
-/// The models the agent offers, as it lists them. Kept for a while: asking
-/// takes seconds.
+/// The models the agent offers, as it lists them. Kept for a while, for each
+/// agent: asking takes seconds.
 pub fn agent_models(daemon: &Daemon, params: AgentsModelsParams) -> ApiResult<Vec<AgentModel>> {
     use std::sync::Mutex;
     use std::time::{Duration, Instant};
-    static CACHE: Mutex<Option<(Instant, Vec<AgentModel>)>> = Mutex::new(None);
-    if params.agent != AgentKind::Agy {
-        return Err(ApiError::validation(
-            "only agy lists its models; Claude Code's are fixed",
-        ));
-    }
+    type Cached = Option<(Instant, Vec<AgentModel>)>;
+    static CACHE: Mutex<[Cached; 2]> = Mutex::new([None, None]);
+    let slot = match params.agent {
+        AgentKind::Agy => 0,
+        AgentKind::Codex => 1,
+        AgentKind::Claude => {
+            return Err(ApiError::validation(
+                "Claude Code's models are fixed; only the other agents list theirs",
+            ));
+        }
+    };
     let mut cache = CACHE
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
-    if let Some((at, models)) = cache.as_ref()
+    if let Some((at, models)) = cache[slot].as_ref()
         && at.elapsed() < Duration::from_secs(600)
     {
         return Ok(models.clone());
     }
-    let agent = crate::agent::of(AgentKind::Agy)
-        .ok_or_else(|| ApiError::validation("agy is not available"))?;
+    let agent = crate::agent::of(params.agent)
+        .ok_or_else(|| ApiError::validation("that agent is not available"))?;
     let program = agent
-        .locate(daemon.supervisor.agy_path(), None)
+        .locate(daemon.supervisor.program_setting(params.agent), None)
         .map_err(|err| ApiError::Conflict(err.to_string()))?;
-    let models = crate::agent::agy_models(&program)
-        .map_err(|err| ApiError::Conflict(format!("could not list the models: {err}")))?;
-    *cache = Some((Instant::now(), models.clone()));
+    let listed = match params.agent {
+        AgentKind::Codex => crate::agent::codex_models(&program),
+        _ => crate::agent::agy_models(&program),
+    };
+    let models =
+        listed.map_err(|err| ApiError::Conflict(format!("could not list the models: {err}")))?;
+    cache[slot] = Some((Instant::now(), models.clone()));
     Ok(models)
 }

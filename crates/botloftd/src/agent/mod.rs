@@ -21,7 +21,7 @@ use serde_json::Value;
 
 pub use agy::{AgyAgent, models as agy_models};
 pub use claude::ClaudeAgent;
-pub use codex::CodexAgent;
+pub use codex::{CodexAgent, models as codex_models};
 
 use crate::runtime::ProcessControl;
 use crate::state::Daemon;
@@ -145,12 +145,21 @@ pub trait Agent: Send + Sync + 'static {
     }
 }
 
-/// Botloft's own line for a turn, for agents whose stdin is a protocol of
-/// their own that a wrapper speaks: text only, as `agy` takes it.
-pub(crate) fn neutral_turn(turn: &Turn) -> Bytes {
+/// Botloft's own line for a turn, for an agent whose stdin is a protocol of
+/// its own that a wrapper speaks (Codex): the text, then each image as a block
+/// with its media type and base64 data.
+pub(crate) fn neutral_turn_with_images(turn: &Turn) -> Bytes {
+    let mut content = vec![serde_json::json!({ "type": "text", "text": turn.text })];
+    content.extend(turn.images.iter().map(|image| {
+        serde_json::json!({
+            "type": "image",
+            "media_type": image.media_type,
+            "data": image.data,
+        })
+    }));
     let event = serde_json::json!({
         "event": "user",
-        "message": { "role": "user", "content": [{ "type": "text", "text": turn.text }] },
+        "message": { "role": "user", "content": content },
     });
     let mut line = event.to_string().into_bytes();
     line.push(b'\n');

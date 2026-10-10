@@ -117,7 +117,7 @@ export const bots = {
       experimental:
         "Experimental. This bot cannot ask you before it acts. It can work with files in its own folders and use the crew's tools, but it cannot run commands, and it has no usage meter or model choice.",
       experimentalCodex:
-        "Experimental. This bot asks you before it changes a file or runs a command, like Claude Code. It can still read any file, and it has no model or image choice yet.",
+        "Experimental. This bot asks you before it changes a file or runs a command, like Claude Code. It can still read any file.",
     },
     color: "Color",
     swatch: (color: string) => `Color ${color}`,
