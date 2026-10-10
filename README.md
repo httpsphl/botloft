@@ -39,8 +39,8 @@ has its own folder, memory and conversation. They pass work to each other, keep 
 close the window and pick up where they left off after a restart. You talk to each one like in a
 chat app, and you decide what they may do.
 
-The latest release, 0.14.0, runs bots on Claude Code. Antigravity and Codex are on `main` and in no
-release yet (see [Agents](#agents)).
+Claude Code is the full experience. Antigravity and Codex came in 0.15.0 as experimental agents,
+off until you turn them on (see [Agents](#agents)).
 
 ## What you can do
 
@@ -105,8 +105,8 @@ itself.
 
 ## Agents
 
-Antigravity and Codex are only on `main` for now: no release has them yet. In a build of `main`,
-Claude Code and Antigravity compare like this:
+Antigravity and Codex are experimental and off by default. Claude Code and Antigravity compare
+like this:
 
 | | Claude Code | Antigravity (experimental) |
 |---|---|---|
@@ -127,8 +127,8 @@ checked.
 ## Get started
 
 You need [Claude Code](https://code.claude.com/docs/en/setup), installed and signed in once with
-your own account. Bots run on your own plan. (Antigravity and Codex, the experimental agents, are
-only on `main` for now; see [Agents](#agents).)
+your own account. Bots run on your own plan. (Antigravity and Codex, the experimental agents, work
+the same way with their own accounts; see [Agents](#agents).)
 
 1. Download Botloft for your computer from the
    [latest release](https://github.com/httpsphl/botloft/releases/latest):
@@ -169,7 +169,7 @@ flowchart LR
   scheduled task of your Windows user, a systemd user service on Linux or a launch agent on macOS:
   it starts when you sign in and comes back soon if it dies.
 - **Your agent is the runtime.** Each bot is a real session of the agent you chose (`claude -p` for
-  Claude Code; `agy -p` for Antigravity and `codex app-server` for Codex, on `main` only) with its
+  Claude Code; `agy -p` for Antigravity and `codex app-server` for Codex) with its
   own workspace, memory and conversation. There is no custom agent SDK and no API key to manage.
 - **One conversation per bot.** Your messages, messages from other bots and notices from the daemon
   reach the bot in order. What it does comes back as a chat: replies, tool use and requests you
@@ -267,19 +267,18 @@ Windows came first and has had the most use; if something does not work elsewher
 <details>
 <summary><b>Is Botloft made by Anthropic?</b></summary>
 
-No. Botloft is an independent project. It uses Claude Code (and, on `main`, Antigravity and Codex)
+No. Botloft is an independent project. It uses Claude Code, Antigravity and Codex
 as installed on your computer and is not affiliated with or endorsed by Anthropic, Google or OpenAI.
 </details>
 
 ## Status
 
-Botloft is young (version 0.x) and moves fast. The latest release, 0.14.0 (2026-10-08), has bots
+Botloft is young (version 0.x) and moves fast. The latest release, 0.15.0 (2026-10-10), has bots
 that keep running in the background, the chat, crews with a Chief, ready-made bots in the Bot
 agency, messages and tasks between bots, routines, the live browser, screens, "always allow" for
 requests, questions from bots, chat search, desktop use on Windows, connected tools, backups with an
-optional cloud copy, the phone page, the installer and updates. Still open: a code-signed installer.
-`main` is ahead of the latest release; among other things, it has Antigravity and Codex as
-experimental agents.
+optional cloud copy, the phone page, the installer and updates, and Antigravity and Codex as
+experimental agents. Still open: a code-signed installer.
 
 <details>
 <summary><b>Development</b></summary>
