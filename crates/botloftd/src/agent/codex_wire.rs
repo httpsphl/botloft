@@ -101,7 +101,9 @@ impl Shared {
     fn thread_params(&self) -> Value {
         let mut params = json!({
             "cwd": self.input.workspace,
-            "approvalPolicy": "never",
+            // A plan only reads; otherwise whatever needs more than reading
+            // is asked, and Botloft asks the owner (spec 30).
+            "approvalPolicy": if self.input.may_ask { "on-request" } else { "never" },
             "sandbox": "read-only",
             "config": {
                 "mcp_servers": {
@@ -294,6 +296,8 @@ mod tests {
             resume: resume.map(str::to_owned),
             model: Some("gpt-5.5".into()),
             effort: None,
+            fenced: Vec::new(),
+            may_ask: true,
         }
     }
 
@@ -326,7 +330,7 @@ mod tests {
         shared.answered(&json!({ "id": 1, "result": {} }));
         assert_eq!(methods(), ["initialize", "initialized", "thread/start"]);
         let start = written.lock().expect("lock")[2].clone();
-        assert_eq!(start["params"]["approvalPolicy"], "never");
+        assert_eq!(start["params"]["approvalPolicy"], "on-request");
         assert_eq!(start["params"]["sandbox"], "read-only");
         assert_eq!(start["params"]["model"], "gpt-5.5");
         assert_eq!(

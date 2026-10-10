@@ -42,7 +42,9 @@ describe("Codex in the new-bot dialog", () => {
     fireEvent.click(button as HTMLElement);
     const dialog = within(await screen.findByRole("dialog", { name: "New bot" }));
     fireEvent.change(dialog.getByLabelText("Agent"), { target: { value: "codex" } });
-    expect(dialog.getByRole("note").textContent).toMatch(/cannot change files or run commands yet/);
+    expect(dialog.getByRole("note").textContent).toMatch(
+      /asks you before it changes a file or runs a command/,
+    );
     expect(dialog.queryByLabelText("Model")).toBeNull();
   });
 });
