@@ -245,9 +245,14 @@ export const ChatComposer = memo(function ChatComposer({
               : text && (enterSends ? t.chat.composer.keys : t.chat.composer.keysWithCtrl)}
           </span>
           <div className="ml-auto flex min-w-0 max-w-full items-center gap-1">
-            <ContextMeter bot={bot} onLater={setLater} />
-            <EffortPicker bot={bot} onLater={setLater} />
-            <ModelPicker bot={bot} onLater={setLater} />
+            {/* Claude Code's own: other agents report none of it (spec 30). */}
+            {bot.agent === "claude" && (
+              <>
+                <ContextMeter bot={bot} onLater={setLater} />
+                <EffortPicker bot={bot} onLater={setLater} />
+                <ModelPicker bot={bot} onLater={setLater} />
+              </>
+            )}
             <button
               type="submit"
               aria-label={t.chat.composer.send}

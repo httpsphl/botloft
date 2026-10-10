@@ -94,6 +94,16 @@ export const bots: Messages["bots"] = {
     instructionsPlaceholder:
       "Como este bot trabalha, o que ele pode fazer sozinho e quando deve perguntar.",
     instructionsHint: "Salvas agora nas regras do bot; ele as lê na próxima vez que iniciar.",
+    agent: {
+      title: "Agente",
+      names: {
+        claude: "Claude Code",
+        agy: "Antigravity (experimental)",
+        codex: "Codex",
+      },
+      experimental:
+        "Experimental. Este bot não consegue perguntar a você antes de agir. Ele trabalha com arquivos das próprias pastas e usa as ferramentas da equipe, mas não roda comandos, e não tem medidor de uso nem escolha de modelo.",
+    },
     color: "Cor",
     swatch: (color: string) => `Cor ${color}`,
     colorUnset: "Se você não escolher, o bot recebe a próxima cor da equipe.",

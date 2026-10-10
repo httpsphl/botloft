@@ -97,6 +97,16 @@ export const bots = {
     instructions: "Instructions",
     instructionsPlaceholder: "How this bot works, what it may do on its own and when to ask.",
     instructionsHint: "Saved to the bot's rules now; the bot reads them the next time it starts.",
+    agent: {
+      title: "Agent",
+      names: {
+        claude: "Claude Code",
+        agy: "Antigravity (experimental)",
+        codex: "Codex",
+      },
+      experimental:
+        "Experimental. This bot cannot ask you before it acts. It can work with files in its own folders and use the crew's tools, but it cannot run commands, and it has no usage meter or model choice.",
+    },
     color: "Color",
     swatch: (color: string) => `Color ${color}`,
     colorUnset: "Left unset, the bot gets the crew's next color.",
