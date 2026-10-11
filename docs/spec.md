@@ -145,7 +145,7 @@ port = 45710                  # só 127.0.0.1 no MVP
 workspaces_root = ""          # vazio = %USERPROFILE%\Botloft
 claude_path = ""              # vazio = resolver pelo PATH
 agy_path = ""                 # vazio = %LOCALAPPDATA%\agy\bin e o PATH (seção 30)
-experimental_agents = []      # ["agy"] liga os bots Antigravity (seção 30)
+experimental_agents = []      # ["agy", "codex"] liga os agentes experimentais (seção 30); a tela de Configurações escreve isto
 default_agent = "claude"       # o agente dos bots novos; muda nas Configurações (seção 30)
 start_with_windows = true     # o daemon sobe quando o dono entra no Windows (14)
 keep_awake = true             # impede suspensão enquanto houver bot busy
@@ -2663,7 +2663,7 @@ Descoberta e saúde (binário, versão mínima, login, comando de entrar); lanç
 
 ### 30.3 Antigravity (`agy`), experimental
 
-- **Ligar:** `experimental_agents = ["agy"]` no `config.toml`; sem isso, `bots.create` com `agent: "agy"` dá `-32004`. O app ainda não tem o seletor (A4).
+- **Ligar:** `experimental_agents = ["agy"]` no `config.toml`, ou o interruptor "Deixar-me escolher Antigravity e Codex" em Configurações (`settings.update { showExperimentalAgents }`, que escreve `["agy", "codex"]` ou `[]` e vale na hora); sem isso, `bots.create` com `agent: "agy"` dá `-32004`. Desligar não mexe nos agentes que já existem, e o agente padrão volta para o Claude Code se era um experimental.
 - **Casa própria:** o processo roda com `USERPROFILE` e `HOME` em `<pasta do bot>\.botloft\agy-home`. Lá o Botloft escreve a cada start `.gemini/config/mcp_config.json` (o servidor `botloft`, com o token do bot no cabeçalho) e `.gemini/antigravity-cli/settings.json`. Assim o `GEMINI.md`, os servidores MCP e as configurações pessoais do dono ficam de fora (o login não mora ali e continua valendo).
 - **Regras do bot:** o texto que o Claude lê em `.claude/rules/botloft.md` é copiado para `AGENTS.md` na pasta do bot, que o `agy` carrega.
 - **Permissões:** em `-p` o `agy` não pergunta nada (30.4), então o Botloft decide de antemão: `allow` só `mcp(botloft/*)`; `deny` de `read_file(<pasta>)` e `write_file(<pasta>)` para cada pasta cercada (a mesma lista da seção 7.5: dados do Botloft e pastas de outras crews). Comandos de shell são negados pelo próprio `agy`, e o `result` traz `denied_actions`. O dono ainda não tem como liberar um comando.
@@ -2680,7 +2680,7 @@ Descoberta e saúde (binário, versão mínima, login, comando de entrar); lanç
 
 ### 30.3.2 Codex (`codex app-server`), experimental
 
-- **Ligar:** `experimental_agents = ["codex"]` no `config.toml`; `codex_path` aponta para o executável (vazio procura em `%LOCALAPPDATA%\OpenAI\Codex\bin\<hash>\codex.exe` e no PATH).
+- **Ligar:** como o AGY (interruptor em Configurações ou `experimental_agents = ["codex"]` no `config.toml`); `codex_path` aponta para o executável (vazio procura em `%LOCALAPPDATA%\OpenAI\Codex\bin\<hash>\codex.exe` e no PATH).
 - **Processo:** `codex app-server -c features.apps=false -c features.hooks=false -c features.plugins=false -c notify=[] -c mcp_servers.<nome>.enabled=false` (um para cada MCP do `config.toml` do dono), na `CODEX_HOME` do dono: o login vale sem copiar o token. O invólucro `CodexControl` (`agent/codex_wire.rs`) recebe a linha neutra do Botloft e a vira `turn/start` quando a thread existe e nenhum turno roda; as mensagens esperam em fila.
 - **Aperto de mão:** `initialize`, `initialized`, `thread/start` (ou `thread/resume` com o id guardado; se não existir, `thread/start`). A thread leva `cwd` (a pasta do bot), `approvalPolicy: "never"`, `sandbox: "read-only"`, `model` (`Bot.agentModel`) e o servidor MCP `botloft` com o token deste processo em `http_headers`.
 - **Eventos:** `item/started` `userMessage` é o recibo de leitura da mensagem mais antiga escrita e grava a thread a retomar; `item/agentMessage/delta` é o texto ao vivo e `item/completed` `agentMessage` fecha a resposta; `commandExecution`, `fileChange` e `mcpToolCall` aparecem como `Bash`, `Write`/`Edit` e `mcp__<servidor>__<ferramenta>`; `thread/tokenUsage/updated` dá o contexto (a última requisição e `modelContextWindow`) e os tokens do turno (o total da thread menos o que era no começo); `turn/completed` fecha o turno com `durationMs` e o erro.

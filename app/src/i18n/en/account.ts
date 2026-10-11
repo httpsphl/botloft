@@ -246,6 +246,11 @@ export const account = {
     pages: "Parts of Settings",
     general: "General",
     defaultAgent: "New agents run on",
+    experimentalAgents: "Experimental agents",
+    showExperimental: "Let me choose Antigravity and Codex",
+    showExperimentalOff: "Off: new agents always run on Claude Code.",
+    showExperimentalOn:
+      "Still being tested. An agent that runs on Codex can read any file on this computer, and one that runs on Antigravity cannot ask you before it acts. Agents already made on them keep working either way.",
     defaultAgentHint:
       "Used for new agents, the chief of a new crew and the agents a template adds. Each agent keeps the engine it was made with.",
     chat: "Chat",

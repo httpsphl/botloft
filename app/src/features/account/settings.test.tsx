@@ -58,11 +58,32 @@ describe("settings", () => {
         keepAwake: false,
         approvalWaitMinutes: 60,
         defaultAgent: "claude",
+        showExperimentalAgents: false,
       }),
     );
     expect(
       fake.calls.filter((call) => call.method === "settings.update").map((c) => c.params),
     ).toEqual([{ startWithWindows: false }, { keepAwake: false }]);
+  });
+
+  test("the experimental agents are switched on here, with what that means", async () => {
+    const { fake } = renderApp();
+    const dialog = await openSettings();
+    const show = within(dialog).getByRole("switch", {
+      name: "Let me choose Antigravity and Codex",
+    });
+    await waitFor(() => expect(show.hasAttribute("disabled")).toBe(false));
+    expect(dialog.textContent).toContain("new agents always run on Claude Code");
+    expect(within(dialog).queryByText("New agents run on")).toBeNull();
+
+    fireEvent.click(show);
+    expect(show.getAttribute("aria-checked")).toBe("true");
+    expect(dialog.textContent).toContain("can read any file on this computer");
+    // The choice of agent for new agents appears without waiting.
+    expect(await within(dialog).findByText("New agents run on")).toBeDefined();
+    expect(
+      fake.calls.filter((call) => call.method === "settings.update").map((c) => c.params),
+    ).toEqual([{ showExperimentalAgents: true }]);
   });
 
   test("the icon and the window at sign-in show only where they apply", async () => {

@@ -12,6 +12,10 @@ use tokio::sync::watch;
 
 use crate::config::Config;
 
+/// The agents the "experimental agents" setting switches on, by their name
+/// in `config.toml`.
+pub const EXPERIMENTAL_AGENTS: [&str; 2] = ["agy", "codex"];
+
 pub struct LiveSettings {
     /// Where they are saved; `None` keeps them in memory (tests).
     file: Option<PathBuf>,
@@ -34,6 +38,7 @@ impl LiveSettings {
             approval_wait_minutes: minutes,
             // A name this build does not know is Claude Code.
             default_agent: config.default_agent.parse().unwrap_or(AgentKind::Claude),
+            show_experimental_agents: !config.experimental_agents.is_empty(),
         };
         Self {
             file,
@@ -91,6 +96,9 @@ impl LiveSettings {
         if let Some(agent) = update.default_agent {
             current.settings.default_agent = agent;
         }
+        if let Some(show) = update.show_experimental_agents {
+            current.settings.show_experimental_agents = show;
+        }
         Ok(current.settings)
     }
 
@@ -124,6 +132,13 @@ fn write(file: &Path, update: SettingsUpdateParams) -> io::Result<()> {
     }
     if let Some(agent) = update.default_agent {
         set(config.as_table_mut(), "default_agent", agent.as_str());
+    }
+    if let Some(show) = update.show_experimental_agents {
+        let mut names = toml_edit::Array::new();
+        if show {
+            names.extend(EXPERIMENTAL_AGENTS);
+        }
+        set(config.as_table_mut(), "experimental_agents", names);
     }
     if let Some(minutes) = update.approval_wait_minutes {
         let bots = config["bots"]
@@ -173,6 +188,7 @@ mod tests {
                 keep_awake: false,
                 approval_wait_minutes: 30,
                 default_agent: AgentKind::Claude,
+                show_experimental_agents: false,
             }
         );
         assert!(awake.has_changed().expect("sender") && !*awake.borrow_and_update());
@@ -190,6 +206,7 @@ mod tests {
                 keep_awake: Some(true),
                 approval_wait_minutes: Some(240),
                 default_agent: None,
+                show_experimental_agents: None,
             })
             .expect("save");
         let text = std::fs::read_to_string(&file).expect("read");
@@ -208,9 +225,39 @@ mod tests {
                 keep_awake: true,
                 approval_wait_minutes: 240,
                 default_agent: AgentKind::Claude,
+                show_experimental_agents: false,
             }
         );
         assert_eq!(settings.approval_wait(), Duration::from_secs(4 * 3600));
+    }
+
+    #[test]
+    fn the_experimental_agents_are_listed_in_the_file_and_taken_out_again() {
+        let dir = tempfile::tempdir().expect("dir");
+        let file = dir.path().join("config.toml");
+        let settings = LiveSettings::new(Some(file.clone()), &Config::default());
+        assert!(!settings.get().show_experimental_agents);
+        let on = SettingsUpdateParams {
+            show_experimental_agents: Some(true),
+            ..SettingsUpdateParams::default()
+        };
+        assert!(settings.save(on).expect("save").show_experimental_agents);
+        let config = Config::parse(&std::fs::read_to_string(&file).expect("read")).expect("parse");
+        assert_eq!(config.experimental_agents, ["agy", "codex"]);
+        // A daemon started now shows them.
+        assert!(
+            LiveSettings::new(None, &config)
+                .get()
+                .show_experimental_agents
+        );
+
+        let off = SettingsUpdateParams {
+            show_experimental_agents: Some(false),
+            ..SettingsUpdateParams::default()
+        };
+        assert!(!settings.save(off).expect("save").show_experimental_agents);
+        let config = Config::parse(&std::fs::read_to_string(&file).expect("read")).expect("parse");
+        assert!(config.experimental_agents.is_empty());
     }
 
     #[test]

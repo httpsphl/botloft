@@ -117,9 +117,10 @@ like this:
 | Usage meter and "Compact" | yes | an estimate of the conversation size; no compaction |
 | Isolation between crews | yes | folders are fenced for its file tools, not for commands you allow |
 
-Claude Code is the full experience. Antigravity and Codex are off until you list them in Botloft's
-`config.toml` (`experimental_agents = ["agy"]`, `["codex"]` or both); then a new agent can be made on
-them, and Settings has "New agents run on". A Codex agent asks you before it changes a file or runs a
+Claude Code is the full experience. Antigravity and Codex are off until you turn on "Let me choose
+Antigravity and Codex" in Settings (or list them in Botloft's `config.toml`, `experimental_agents =
+["agy"]`, `["codex"]` or both); then a new agent can be made on them, and Settings has "New agents run
+on". A Codex agent asks you before it changes a file or runs a
 command, like Claude Code, and shows the exact size of its conversation; it can still read any file.
 It has its own model list and effort picker, and understands images. See [spec section 30](docs/spec.md) for what was
 checked.

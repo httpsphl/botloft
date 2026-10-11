@@ -15,6 +15,7 @@ export function useDaemonSettings(): {
   const failed = useT().account.settings.saveFailed;
   const settings = useApp((state) => state.settings);
   const putSettings = useApp((state) => state.putSettings);
+  const putSystem = useApp((state) => state.putSystem);
 
   const change = (update: SettingsUpdateParams) => {
     const before = settings;
@@ -24,11 +25,17 @@ export function useDaemonSettings(): {
         keepAwake: update.keepAwake ?? before.keepAwake,
         approvalWaitMinutes: update.approvalWaitMinutes ?? before.approvalWaitMinutes,
         defaultAgent: update.defaultAgent ?? before.defaultAgent,
+        showExperimentalAgents: update.showExperimentalAgents ?? before.showExperimentalAgents,
       });
     }
-    attempt(failed, async () => putSettings(await api.call("settings.update", update))).then(
-      (saved) => saved || putSettings(before),
-    );
+    attempt(failed, async () => {
+      putSettings(await api.call("settings.update", update));
+      // The agents to choose from follow this setting; the status has no
+      // notification, so it is read again now.
+      if (update.showExperimentalAgents !== undefined) {
+        putSystem(await api.call("system.status"));
+      }
+    }).then((saved) => saved || putSettings(before));
   };
 
   return { settings, change };

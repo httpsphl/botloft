@@ -48,6 +48,9 @@ pub struct Supervisor {
     daemon: Weak<Daemon>,
     runtime: Arc<dyn Runtime>,
     settings: SupervisorSettings,
+    /// The experimental agents the owner switched on: `settings` has what
+    /// `config.toml` said at start, the Settings screen changes this.
+    experimental: Mutex<Vec<String>>,
     events: broadcast::Sender<Event>,
     inner: Mutex<Inner>,
     /// Generations are unique across bots and daemon restarts, so a client
@@ -96,6 +99,7 @@ impl Supervisor {
         Self {
             daemon,
             runtime,
+            experimental: Mutex::new(settings.experimental_agents.clone()),
             settings,
             events,
             inner: Mutex::default(),
@@ -132,23 +136,29 @@ impl Supervisor {
     }
 
     /// Whether bots of `kind` may be made: Claude Code always, an
-    /// experimental agent only when the owner listed it in `config.toml`
-    /// (spec 30).
+    /// experimental agent only when the owner switched it on, in Settings
+    /// or by listing it in `config.toml` (spec 30).
     pub fn agent_enabled(&self, kind: botloft_core::protocol::AgentKind) -> bool {
         use botloft_core::protocol::AgentKind;
-        match kind {
-            AgentKind::Claude => true,
-            AgentKind::Agy => self
-                .settings
-                .experimental_agents
-                .iter()
-                .any(|name| name == "agy"),
-            AgentKind::Codex => self
-                .settings
-                .experimental_agents
-                .iter()
-                .any(|name| name == "codex"),
-        }
+        let name = match kind {
+            AgentKind::Claude => return true,
+            AgentKind::Agy => "agy",
+            AgentKind::Codex => "codex",
+        };
+        self.experimental
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .iter()
+            .any(|listed| listed == name)
+    }
+
+    /// Switches the experimental agents on (the names listed) or off. Bots
+    /// that already exist keep their agent.
+    pub fn set_experimental_agents(&self, names: Vec<String>) {
+        *self
+            .experimental
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = names;
     }
 
     /// The `agy_path` of the config; empty looks in the usual places.

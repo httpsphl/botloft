@@ -252,6 +252,11 @@ export const account: Messages["account"] = {
     pages: "Partes de la configuración",
     general: "General",
     defaultAgent: "Los agentes nuevos funcionan con",
+    experimentalAgents: "Agentes experimentales",
+    showExperimental: "Poder elegir Antigravity y Codex",
+    showExperimentalOff: "Apagado: los agentes nuevos siempre funcionan con Claude Code.",
+    showExperimentalOn:
+      "Todavía en pruebas. Un agente que funciona con Codex puede leer cualquier archivo de este equipo, y uno que funciona con Antigravity no puede preguntarte antes de actuar. Los agentes ya creados con ellos siguen funcionando igual.",
     defaultAgentHint:
       "Vale para los agentes nuevos, el jefe de un equipo nuevo y los agentes que añade una plantilla. Cada agente conserva el motor con el que se creó.",
     chat: "Chat",
