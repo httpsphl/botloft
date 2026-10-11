@@ -102,6 +102,7 @@ export interface AppState {
   putRoutine(routine: Routine): void;
   putBrowser(browser: BrowserState): void;
   putSettings(settings: Settings | null): void;
+  putSystem(system: SystemStatus): void;
 }
 
 export type AppStore = StoreApi<AppState>;
@@ -202,6 +203,7 @@ export function createAppStore(api: BotloftApi): AppStore {
       putRoutine: (routine) => set((state) => withRoutine(state, routine)),
       putBrowser: (browser) => set((state) => withBrowser(state, browser)),
       putSettings: (settings) => set({ settings }),
+      putSystem: (system) => set({ system }),
       putDelivery: (delivery) =>
         set((state) => ({ deliveries: { ...state.deliveries, [delivery.messageId]: delivery } })),
     };

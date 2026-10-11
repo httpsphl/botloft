@@ -1,7 +1,9 @@
 //! `settings.get` and `settings.update` (spec 11.2): what the owner
 //! changes in the app's Settings.
 
-use botloft_core::protocol::{APPROVAL_WAIT_MAX_MINUTES, Settings, SettingsUpdateParams};
+use botloft_core::protocol::{
+    APPROVAL_WAIT_MAX_MINUTES, AgentKind, Settings, SettingsUpdateParams,
+};
 use tracing::info;
 
 use super::{ApiError, ApiResult};
@@ -38,6 +40,29 @@ pub fn update(daemon: &Daemon, params: SettingsUpdateParams) -> ApiResult<Settin
         .settings
         .save(params)
         .map_err(|err| ApiError::Settings(err.to_string()))?;
+    if let Some(show) = params.show_experimental_agents {
+        let names = if show {
+            crate::settings::EXPERIMENTAL_AGENTS
+                .iter()
+                .map(|name| (*name).to_owned())
+                .collect()
+        } else {
+            Vec::new()
+        };
+        daemon.supervisor.set_experimental_agents(names);
+    }
+    // Switched off, the default cannot stay an agent that cannot be chosen.
+    let after = if !daemon.supervisor.agent_enabled(after.default_agent) {
+        daemon
+            .settings
+            .save(SettingsUpdateParams {
+                default_agent: Some(AgentKind::Claude),
+                ..SettingsUpdateParams::default()
+            })
+            .map_err(|err| ApiError::Settings(err.to_string()))?
+    } else {
+        after
+    };
     if after.approval_wait_minutes > before.approval_wait_minutes {
         daemon.supervisor.workspace_settings_changed();
     }

@@ -41,6 +41,15 @@ export function GeneralSettings() {
       <Section title={s.language}>
         <Select label={s.language} value={locale} options={languages} onChange={setLocaleChoice} />
       </Section>
+      <Section title={s.experimentalAgents}>
+        <Toggle
+          label={s.showExperimental}
+          hint={settings?.showExperimentalAgents ? s.showExperimentalOn : s.showExperimentalOff}
+          checked={settings?.showExperimentalAgents ?? false}
+          disabled={!settings}
+          onChange={(on) => change({ showExperimentalAgents: on })}
+        />
+      </Section>
       {settings && enabledAgents.length > 1 && (
         <Section title={s.defaultAgent}>
           <Select

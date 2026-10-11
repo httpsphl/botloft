@@ -21,6 +21,9 @@ pub struct Settings {
     /// The agent bots are made for when nothing says otherwise: new bots,
     /// the chief of a new crew, the bots of a template (spec 30).
     pub default_agent: AgentKind,
+    /// The experimental agents (Antigravity and Codex) can be chosen for
+    /// new bots. Off, bots that already use one keep working (spec 30).
+    pub show_experimental_agents: bool,
 }
 
 /// The settings to change; the ones left out stay as they are.
@@ -41,6 +44,9 @@ pub struct SettingsUpdateParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub default_agent: Option<AgentKind>,
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub show_experimental_agents: Option<bool>,
 }
 
 /// The longest a permission request may wait for the owner: a day.

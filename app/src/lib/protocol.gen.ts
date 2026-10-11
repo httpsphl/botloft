@@ -1870,7 +1870,12 @@ approvalWaitMinutes: number,
  * The agent bots are made for when nothing says otherwise: new bots,
  * the chief of a new crew, the bots of a template (spec 30).
  */
-defaultAgent: AgentKind, };
+defaultAgent: AgentKind, 
+/**
+ * The experimental agents (Antigravity and Codex) can be chosen for
+ * new bots. Off, bots that already use one keep working (spec 30).
+ */
+showExperimentalAgents: boolean, };
 
 /**
  * The settings to change; the ones left out stay as they are.
@@ -1879,7 +1884,7 @@ export type SettingsUpdateParams = { startWithWindows?: boolean, keepAwake?: boo
 /**
  * From 1 to [`APPROVAL_WAIT_MAX_MINUTES`].
  */
-approvalWaitMinutes?: number, defaultAgent?: AgentKind, };
+approvalWaitMinutes?: number, defaultAgent?: AgentKind, showExperimentalAgents?: boolean, };
 
 /**
  * When a routine runs (spec 20.2), kept as structure rather than cron text

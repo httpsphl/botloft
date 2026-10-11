@@ -79,6 +79,7 @@ export class FakeBotloft implements BotloftApi {
     keepAwake: true,
     approvalWaitMinutes: 60,
     defaultAgent: "claude",
+    showExperimentalAgents: false,
   };
   /** Folders the owner sent to the Recycle Bin with a delete, in order. */
   readonly recycled: string[] = [];
@@ -279,7 +280,15 @@ export class FakeBotloft implements BotloftApi {
         keepAwake: change.keepAwake ?? this.settings.keepAwake,
         approvalWaitMinutes: change.approvalWaitMinutes ?? this.settings.approvalWaitMinutes,
         defaultAgent: change.defaultAgent ?? this.settings.defaultAgent,
+        showExperimentalAgents:
+          change.showExperimentalAgents ?? this.settings.showExperimentalAgents,
       };
+      if (change.showExperimentalAgents !== undefined) {
+        this.system = {
+          ...this.system,
+          enabledAgents: change.showExperimentalAgents ? ["claude", "agy", "codex"] : ["claude"],
+        };
+      }
       return this.settings;
     },
     "archive.list": () => ({
