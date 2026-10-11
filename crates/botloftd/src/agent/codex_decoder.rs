@@ -86,14 +86,24 @@ impl OutputDecoder for CodexDecoder {
     }
 }
 
-/// Whether `text` names a folder of `fenced` (slashes and case aside).
+/// Whether `text` names a folder of `fenced` (slashes and case aside). A
+/// folder whose name only starts like a fenced one (`Docs` and `Docs2`,
+/// `Ana` and `Ana2`) is another folder.
 fn touches(fenced: &[PathBuf], text: &str) -> bool {
     let flat = |value: &str| value.replace('\\', "/").to_lowercase();
     let text = flat(text);
     fenced
         .iter()
         .map(|folder| flat(&folder.to_string_lossy()))
-        .any(|folder| !folder.is_empty() && text.contains(&folder))
+        .filter(|folder| !folder.is_empty())
+        .any(|folder| {
+            text.match_indices(&folder).any(|(at, _)| {
+                text[at + folder.len()..]
+                    .chars()
+                    .next()
+                    .is_none_or(|next| !(next.is_alphanumeric() || matches!(next, '_' | '-' | '.')))
+            })
+        })
 }
 
 impl CodexDecoder {
@@ -507,5 +517,20 @@ mod tests {
         ));
         assert!(!touches(&fenced, r"C:\Users\Ana\Botloft\Mine\a.txt"));
         assert!(!touches(&[], "anything"));
+    }
+
+    #[test]
+    fn a_folder_that_only_starts_like_a_fenced_one_is_not_caught() {
+        let fenced = vec![PathBuf::from(r"C:\Users\Ana\Botloft\Suite")];
+        assert!(!touches(&fenced, r"C:\Users\Ana\Botloft\Suite2\Ana\a.txt"));
+        assert!(!touches(&fenced, r"C:\Users\Ana\Botloft\Suite.old\a.txt"));
+        assert!(touches(&fenced, r"C:\Users\Ana\Botloft\Suite\Ana\a.txt"));
+        assert!(touches(&fenced, r"dir C:\Users\Ana\Botloft\Suite"));
+        assert!(touches(&fenced, r"type 'C:\Users\Ana\Botloft\Suite'"));
+        // A fenced mention still counts after a harmless look-alike.
+        assert!(touches(
+            &fenced,
+            r"copy C:\Users\Ana\Botloft\Suite2\a C:\Users\Ana\Botloft\Suite\b"
+        ));
     }
 }
