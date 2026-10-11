@@ -7,6 +7,7 @@ mod agy;
 mod claude;
 mod codex;
 mod codex_decoder;
+mod codex_usage;
 mod codex_wire;
 
 use std::ffi::OsString;

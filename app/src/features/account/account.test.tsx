@@ -81,6 +81,44 @@ describe("account area", () => {
     expect(dialog.textContent).toContain("92% used");
   });
 
+  test("usage of another agent comes under its own name, with its plan and its limit", async () => {
+    const fake = new FakeBotloft();
+    const now = Date.now();
+    fake.system = {
+      ...fake.system,
+      usage: {
+        status: "allowed",
+        resetsAt: null,
+        observedAt: now,
+        windows: [{ name: "five_hour", utilization: 0.2, resetsAt: null }],
+      },
+      agentUsage: [
+        {
+          agent: "codex",
+          plan: "free",
+          usage: {
+            status: "rejected",
+            resetsAt: now + 3 * 86_400_000,
+            observedAt: now,
+            windows: [{ name: "thirty_day", utilization: 1, resetsAt: now + 3 * 86_400_000 }],
+          },
+        },
+      ],
+    };
+    renderApp(fake);
+    await openAccount();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Usage" }));
+    const dialog = screen.getByRole("dialog", { name: "Usage" });
+    expect(within(dialog).getByRole("heading", { name: /^Claude Code/ })).toBeDefined();
+    expect(within(dialog).getByRole("heading", { name: /^Codex/ })).toBeDefined();
+    expect(dialog.textContent).toContain("Plan: free");
+    expect(within(dialog).getByRole("progressbar", { name: "30-day window" })).toBeDefined();
+    expect(dialog.textContent).toContain("100% used");
+    expect(dialog.textContent).toContain("Agents on Codex wait until it resets.");
+    // Claude Code is not limited: its own warning does not show.
+    expect(dialog.textContent).not.toContain("Your agents wait until it resets.");
+  });
+
   test("usage waits for an agent's first reply", async () => {
     renderApp();
     await openAccount();

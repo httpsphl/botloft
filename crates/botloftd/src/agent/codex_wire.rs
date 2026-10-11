@@ -24,6 +24,7 @@ enum Pending {
     ThreadResume,
     Turn,
     Compact,
+    RateLimits,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -226,6 +227,13 @@ impl Shared {
                     }
                     None => self.request(&mut state, "thread/start", params, Pending::ThreadStart),
                 }
+                // After the thread, so the thread's request keeps its place.
+                self.request(
+                    &mut state,
+                    "account/rateLimits/read",
+                    json!({}),
+                    Pending::RateLimits,
+                );
                 Answer::None
             }
             Pending::ThreadResume if failed => {
@@ -256,6 +264,8 @@ impl Shared {
                     Answer::None
                 }
             }
+            Pending::RateLimits if !failed => Answer::Usage(event["result"]["rateLimits"].clone()),
+            Pending::RateLimits => Answer::None,
             Pending::Compact if failed => {
                 state.turn_active = false;
                 self.pump(&mut state);
@@ -273,6 +283,17 @@ impl Shared {
             }
             Pending::Turn => Answer::None,
         }
+    }
+
+    /// Asks for the account's rate limits again; the answer is `Answer::Usage`.
+    pub(super) fn read_rate_limits(&self) {
+        let mut state = self.lock();
+        self.request(
+            &mut state,
+            "account/rateLimits/read",
+            json!({}),
+            Pending::RateLimits,
+        );
     }
 
     /// The turn ended: the next queued message may go.
@@ -309,6 +330,8 @@ pub(super) enum Answer {
     Failed(Option<String>),
     /// Nobody is signed in to Codex.
     SignedOut,
+    /// The account's rate limits, as `account/rateLimits/read` gave them.
+    Usage(Value),
 }
 
 /// What the supervisor writes to: Botloft's turn lines in, JSON-RPC out.
@@ -394,7 +417,13 @@ mod tests {
         shared.answered(&json!({ "id": 1, "result": {} }));
         assert_eq!(
             methods(),
-            ["initialize", "initialized", "account/read", "thread/start"]
+            [
+                "initialize",
+                "initialized",
+                "account/read",
+                "thread/start",
+                "account/rateLimits/read"
+            ]
         );
         let start = written.lock().expect("lock")[3].clone();
         assert_eq!(start["params"]["approvalPolicy"], "on-request");

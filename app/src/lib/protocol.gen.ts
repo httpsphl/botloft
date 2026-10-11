@@ -418,7 +418,12 @@ enabledAgents: Array<AgentKind>,
  * Whether each enabled agent other than Claude Code is installed
  * (spec 30). Claude Code has its own fields above.
  */
-agentChecks: Array<AgentCheck>, };
+agentChecks: Array<AgentCheck>, 
+/**
+ * The account usage of the agents other than Claude Code, as each last
+ * reported it (spec 30); `usage` above is Claude's.
+ */
+agentUsage: Array<AgentUsage>, };
 
 export type CrewsCreateParams = { name: string, 
 /**
@@ -528,6 +533,15 @@ export type AgentCheck = { agent: AgentKind,
  * not answer.
  */
 version: string | null, };
+
+/**
+ * The usage of an agent's account, with the plan it is on.
+ */
+export type AgentUsage = { agent: AgentKind, 
+/**
+ * The plan the agent names (`free`, `plus`...); `null` when it does not.
+ */
+plan: string | null, usage: AccountUsage, };
 
 export type BotIdParams = { botId: BotId, };
 

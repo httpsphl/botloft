@@ -23,10 +23,13 @@ export const account = {
       seven_day: "This week",
       seven_day_opus: "This week, Opus",
       seven_day_sonnet: "This week, Sonnet",
+      thirty_day: "30-day window",
     } as Record<string, string>,
     used: (percent: number) => `${percent}% used`,
     resets: (relative: string) => `Resets ${relative}`,
     limited: "Limit reached. Your agents wait until it resets.",
+    limitedAgent: (agent: string) => `Limit reached. Agents on ${agent} wait until it resets.`,
+    plan: (plan: string) => `Plan: ${plan}`,
     updated: (relative: string) => `Updated ${relative}`,
     tokens: {
       title: "Use by agent",

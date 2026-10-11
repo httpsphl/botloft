@@ -22,10 +22,14 @@ export const account: Messages["account"] = {
       seven_day: "Esta semana",
       seven_day_opus: "Esta semana, Opus",
       seven_day_sonnet: "Esta semana, Sonnet",
+      thirty_day: "Ventana de 30 días",
     },
     used: (percent: number) => `${percent}% usado`,
     resets: (relative: string) => `Se renueva ${relative}`,
     limited: "Límite alcanzado. Tus agentes esperan hasta que se renueve.",
+    limitedAgent: (agent: string) =>
+      `Límite alcanzado. Los agentes en ${agent} esperan hasta que se renueve.`,
+    plan: (plan: string) => `Plan: ${plan}`,
     updated: (relative: string) => `Actualizado ${relative}`,
     tokens: {
       title: "Uso por agente",
