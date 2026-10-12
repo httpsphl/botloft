@@ -65,6 +65,41 @@ describe("unread replies in the conversation list", () => {
     expect(row("Scout").getAttribute("aria-label")).toBe("Scout, Idle, unread");
   });
 
+  test("what the daemon says was read stays read when the app forgot what it saw", async () => {
+    const fake = new FakeBotloft();
+    const crew = fake.addCrew("Ops");
+    const scout = fake.addBot(crew.id, "Scout");
+    const writer = fake.addBot(crew.id, "Writer");
+    fake.setBotState(scout.id, "idle");
+    fake.setBotState(writer.id, "idle");
+    // Both replied at 5000; the owner read only Writer's, and the app's own
+    // storage (cleared in beforeEach) knows nothing of it.
+    fake.bot(scout.id).lastReplyAt = 5000;
+    fake.bot(writer.id).lastReplyAt = 5000;
+    fake.bot(writer.id).readThrough = 5000;
+    renderApp(fake);
+    await crewOpened("Ops");
+    expect(row("Scout").getAttribute("aria-label")).toBe("Scout, Idle, unread");
+    expect(row("Writer").getAttribute("aria-label")).toBe("Writer, Idle");
+  });
+
+  test("seeing a chat tells the daemon, which keeps it", async () => {
+    const fake = new FakeBotloft();
+    const crew = fake.addCrew("Ops");
+    const scout = fake.addBot(crew.id, "Scout");
+    fake.setBotState(scout.id, "idle");
+    renderApp(fake);
+    await crewOpened("Ops");
+    act(() => {
+      fake.chat.reply(scout.id, "Found three sources.");
+    });
+    openBot("Scout");
+    await screen.findByRole("list", { name: "Messages" });
+    expect(
+      fake.calls.filter((call) => call.method === "chat.read").map((call) => call.params),
+    ).toContainEqual({ botId: scout.id });
+  });
+
   test("replies from before the first start with unread marks count as seen", async () => {
     localStorage.removeItem("botloft.seenSince");
     const fake = new FakeBotloft();

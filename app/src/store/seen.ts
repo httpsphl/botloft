@@ -4,6 +4,7 @@
 // after it marks the app's icon (`unseenFailures`).
 
 import type { StoreApi } from "zustand/vanilla";
+import type { BotloftApi } from "../lib/api";
 import type { BotId, CrewId, Routine } from "../lib/protocol.gen";
 import type { AppState } from "./app";
 
@@ -79,12 +80,17 @@ export function withReply(
 export function seenActions(
   get: StoreApi<AppState>["getState"],
   set: StoreApi<AppState>["setState"],
+  api: BotloftApi,
 ): Pick<AppState, "markSeen" | "markUnread"> {
   return {
     markSeen: (botId) => {
       const { seenAt, replyAt, markedUnread } = get();
       const next = { ...seenAt, [botId]: Math.max(Date.now(), replyAt[botId] ?? 0) };
       saveSeen(next);
+      // The daemon keeps it too: this app's own storage has gone back to an
+      // older state before, and the mark came back. A phone connected to
+      // this computer also stops marking the chat new (spec 28.12).
+      api.call("chat.read", { botId }).catch(() => {});
       const { [botId]: wasMarked, ...marked } = markedUnread;
       if (wasMarked) {
         saveMarked(marked);
@@ -120,7 +126,8 @@ export function isUnread(state: AppState, botId: BotId): boolean {
     return true;
   }
   const at = state.replyAt[botId];
-  return at !== undefined && at > Math.max(state.seenAt[botId] ?? 0, state.seenSince);
+  const read = state.bots[botId]?.readThrough ?? 0;
+  return at !== undefined && at > Math.max(state.seenAt[botId] ?? 0, state.seenSince, read);
 }
 
 /** How many bots of `crewId` are unread. */
@@ -141,7 +148,8 @@ export function unseenFailures(state: AppState): Routine[] {
     return (
       last?.status === "failed" &&
       routine.botId !== state.selectedBotId &&
-      (last.finishedAt ?? 0) > (state.seenAt[routine.botId] ?? 0)
+      (last.finishedAt ?? 0) >
+        Math.max(state.seenAt[routine.botId] ?? 0, state.bots[routine.botId]?.readThrough ?? 0)
     );
   });
 }

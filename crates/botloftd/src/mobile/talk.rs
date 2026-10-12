@@ -66,6 +66,10 @@ impl Mobile {
         let Some(upto) = line.last_reply_at else {
             return;
         };
+        // Kept first: the app's own memory of it can be lost.
+        if let Err(err) = daemon.store().set_read_through(bot, upto) {
+            tracing::warn!(bot = %bot, "could not keep what the owner read: {err}");
+        }
         {
             let mut talk = Talk::lock(&self.talk);
             if talk.read.get(bot).is_some_and(|known| *known >= upto) {

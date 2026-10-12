@@ -194,7 +194,7 @@ export function createAppStore(api: BotloftApi): AppStore {
           set({ page, selectedCrewId: null, selectedBotId: null });
         }
       },
-      ...seenActions(get, set),
+      ...seenActions(get, set, api),
       setPanel: (botId, panel) => set((state) => ({ panels: { ...state.panels, [botId]: panel } })),
       putCrew: (crew) => set((state) => withCrew(state, crew)),
       putBot: (bot) => set((state) => withBot(state, bot)),
