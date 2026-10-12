@@ -121,7 +121,7 @@ Claude Code is the full experience. Antigravity and Codex are off until you turn
 Antigravity and Codex" in Settings (or list them in Botloft's `config.toml`, `experimental_agents =
 ["agy"]`, `["codex"]` or both); then a new agent can be made on them, and Settings has "New agents run
 on". A Codex agent asks you before it changes a file or runs a
-command, like Claude Code, and shows the exact size of its conversation; it can still read any file.
+command, like Claude Code, and shows the exact size of its conversation and the use of its plan; it can still read any file.
 It has its own model list and effort picker, and understands images. See [spec section 30](docs/spec.md) for what was
 checked.
 

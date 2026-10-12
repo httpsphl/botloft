@@ -84,6 +84,20 @@ pub struct SystemStatus {
     /// Whether each enabled agent other than Claude Code is installed
     /// (spec 30). Claude Code has its own fields above.
     pub agent_checks: Vec<AgentCheck>,
+    /// The account usage of the agents other than Claude Code, as each last
+    /// reported it (spec 30); `usage` above is Claude's.
+    pub agent_usage: Vec<AgentUsage>,
+}
+
+/// The usage of an agent's account, with the plan it is on.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct AgentUsage {
+    pub agent: AgentKind,
+    /// The plan the agent names (`free`, `plus`...); `null` when it does not.
+    pub plan: Option<String>,
+    pub usage: AccountUsage,
 }
 
 /// What looking for an agent's program found.

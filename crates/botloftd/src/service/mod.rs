@@ -124,6 +124,7 @@ pub fn status(daemon: &Daemon) -> ApiResult<SystemStatus> {
             .filter(|kind| daemon.supervisor.agent_enabled(*kind))
             .collect(),
         agent_checks: agent_checks(daemon),
+        agent_usage: daemon.agent_usage(),
     })
 }
 

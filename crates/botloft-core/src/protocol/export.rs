@@ -161,6 +161,7 @@ fn export_bindings() {
     out.decl::<AgentsModelsParams>();
     out.decl::<AgentModel>();
     out.decl::<AgentCheck>();
+    out.decl::<AgentUsage>();
     out.decl::<BotIdParams>();
     out.decl::<BotsRestartParams>();
     out.decl::<BotStateChanged>();

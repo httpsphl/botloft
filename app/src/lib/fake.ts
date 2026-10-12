@@ -71,6 +71,7 @@ export class FakeBotloft implements BotloftApi {
     usage: null,
     enabledAgents: ["claude"],
     agentChecks: [],
+    agentUsage: [],
   };
   /** How many times the app asked for a new Claude Code check. */
   refreshes = 0;

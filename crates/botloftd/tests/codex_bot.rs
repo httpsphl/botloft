@@ -746,3 +746,60 @@ async fn the_owners_connected_tools_are_in_the_thread_with_their_secrets() {
     // The crew's own server is still there, with the bot's token.
     assert!(servers["botloft"]["url"].is_string());
 }
+
+#[tokio::test]
+async fn the_codex_account_usage_reaches_the_status_and_follows_the_updates() {
+    let codex = codex_bot().await;
+    let process = codex.runtime.process(1).await;
+    handshake(&process, "th_usage").await;
+    // What Codex 0.148 answered for a full free plan.
+    let read = sent(&process, "account/rateLimits/read").await;
+    process
+        .emit(json!({ "id": read["id"], "result": { "rateLimits": {
+            "primary": { "usedPercent": 100, "windowDurationMins": 43200, "resetsAt": 1794165867 },
+            "secondary": null,
+            "planType": "free",
+            "rateLimitReachedType": "rate_limit_reached",
+        } } }))
+        .await;
+    let usage = wait_for_usage(&codex).await;
+    assert_eq!(usage.plan.as_deref(), Some("free"));
+    assert_eq!(usage.usage.status, "rejected");
+    assert_eq!(usage.usage.windows[0].name, "thirty_day");
+    assert_eq!(usage.usage.resets_at, Some(1_794_165_867_000));
+
+    // An update is sparse, so the whole snapshot is asked for again.
+    let before = process
+        .input_lines()
+        .iter()
+        .filter(|line| line["method"] == "account/rateLimits/read")
+        .count();
+    process
+        .emit(notify(
+            "account/rateLimits/updated",
+            json!({ "rateLimits": { "primary": { "usedPercent": 10, "resetsAt": 1 } } }),
+        ))
+        .await;
+    for _ in 0..600 {
+        let now = process
+            .input_lines()
+            .iter()
+            .filter(|line| line["method"] == "account/rateLimits/read")
+            .count();
+        if now > before {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    panic!("the limits were not read again");
+}
+
+async fn wait_for_usage(codex: &Codex) -> botloft_core::protocol::AgentUsage {
+    for _ in 0..600 {
+        if let Some(usage) = codex.daemon.agent_usage().into_iter().next() {
+            return usage;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    panic!("no usage reported");
+}

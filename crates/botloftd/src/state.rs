@@ -6,8 +6,8 @@ use std::sync::{Arc, Mutex, MutexGuard, TryLockError};
 use std::time::Instant;
 
 use botloft_core::protocol::{
-    AccountUsage, AutoBackupStatus, Bot, BotContextChanged, BotDeleted, BotDesktop, BotMcp,
-    BotRules, BotStateChanged, BrowserAction, BrowserState, ChatDelta, ChatItemChanged,
+    AccountUsage, AgentUsage, AutoBackupStatus, Bot, BotContextChanged, BotDeleted, BotDesktop,
+    BotMcp, BotRules, BotStateChanged, BrowserAction, BrowserState, ChatDelta, ChatItemChanged,
     CloudProgress, CloudSignedIn, Crew, CrewDeleted, Delivery, DesktopAwayUse, DesktopState,
     FolderRecycled, McpOverview, Message, MobilePairRequest, MobileStatus, Question,
     ReactionChanged, Routine, RoutineRun, ScreenDraft, Task,
@@ -149,6 +149,8 @@ pub struct Daemon {
     owner_token: TokenHash,
     events: broadcast::Sender<Event>,
     usage: Mutex<Option<AccountUsage>>,
+    /// The usage the other agents last reported, one per agent.
+    agent_usage: Mutex<Vec<AgentUsage>>,
     started: Instant,
 }
 
@@ -198,6 +200,7 @@ impl Daemon {
             owner_token: options.owner_token,
             events,
             usage: Mutex::new(None),
+            agent_usage: Mutex::new(Vec::new()),
             started: Instant::now(),
         })
     }
@@ -255,6 +258,23 @@ impl Daemon {
             .usage
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(usage);
+    }
+
+    /// The account usage the agents other than Claude Code last reported.
+    pub fn agent_usage(&self) -> Vec<AgentUsage> {
+        self.agent_usage
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clone()
+    }
+
+    pub(crate) fn set_agent_usage(&self, usage: AgentUsage) {
+        let mut all = self
+            .agent_usage
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        all.retain(|have| have.agent != usage.agent);
+        all.push(usage);
     }
 
     pub fn uptime_ms(&self) -> i64 {

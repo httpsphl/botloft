@@ -128,6 +128,11 @@ impl CodexDecoder {
                 tracing::warn!(bot = %bot, "codex could not start a thread: {message:?}");
             }
             Answer::SignedOut => self.signed_out(daemon, bot, generation),
+            Answer::Usage(limits) => {
+                if let Some(usage) = super::codex_usage::parse(&limits, daemon.clock.now_ms()) {
+                    daemon.set_agent_usage(usage);
+                }
+            }
             Answer::Lost | Answer::None => {}
         }
     }
@@ -231,6 +236,8 @@ impl CodexDecoder {
                     .as_i64()
                     .map(|seconds| seconds * 1000)
                     .or(self.limit_resets_at);
+                // The update is sparse: the whole snapshot is read again.
+                self.shared.read_rate_limits();
             }
             "turn/completed" => self.turn_completed(daemon, bot, generation, &params["turn"]),
             _ => {}
