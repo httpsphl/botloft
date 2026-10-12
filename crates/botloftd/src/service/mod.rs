@@ -1,6 +1,7 @@
 //! What the RPC methods do, independent of JSON-RPC. Each operation runs
 //! under the store lock, so checks and writes cannot interleave.
 
+pub mod agents;
 pub mod archive;
 pub mod attachments;
 pub mod autobackup;
@@ -32,9 +33,7 @@ pub mod settings;
 pub mod tasks;
 pub mod usage;
 
-use botloft_core::protocol::{
-    AgentCheck, AgentKind, OwnerAccount, PROTOCOL_VERSION, SystemStatus, error_code,
-};
+use botloft_core::protocol::{AgentKind, OwnerAccount, PROTOCOL_VERSION, SystemStatus, error_code};
 use botloft_core::slug;
 use botloft_core::validate::ValidationError;
 use botloft_store::StoreError;
@@ -123,44 +122,9 @@ pub fn status(daemon: &Daemon) -> ApiResult<SystemStatus> {
             .into_iter()
             .filter(|kind| daemon.supervisor.agent_enabled(*kind))
             .collect(),
-        agent_checks: agent_checks(daemon),
+        agent_checks: agents::checks(daemon),
         agent_usage: daemon.agent_usage(),
     })
-}
-
-/// Whether the other agents the owner enabled are installed. Asking runs the
-/// program, so the answer is kept for a minute.
-fn agent_checks(daemon: &Daemon) -> Vec<AgentCheck> {
-    use std::sync::Mutex;
-    use std::time::{Duration, Instant};
-    static CACHE: Mutex<Option<(Instant, Vec<AgentCheck>)>> = Mutex::new(None);
-    let mut cache = CACHE
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
-    if let Some((at, checks)) = cache.as_ref()
-        && at.elapsed() < Duration::from_secs(60)
-    {
-        return checks.clone();
-    }
-    let mut checks = Vec::new();
-    for kind in [AgentKind::Agy, AgentKind::Codex] {
-        if !daemon.supervisor.agent_enabled(kind) {
-            continue;
-        }
-        let Some(agent) = crate::agent::of(kind) else {
-            continue;
-        };
-        let version = agent
-            .locate(daemon.supervisor.program_setting(kind), None)
-            .ok()
-            .and_then(|program| crate::agent::program_version(&program));
-        checks.push(AgentCheck {
-            agent: kind,
-            version,
-        });
-    }
-    *cache = Some((Instant::now(), checks.clone()));
-    checks
 }
 
 /// [`slug::unique`] for checks that can fail.

@@ -256,6 +256,16 @@ export const account = {
       "Still being tested. An agent that runs on Codex can read any file on this computer, and one that runs on Antigravity cannot ask you before it acts. Agents already made on them keep working either way.",
     defaultAgentHint:
       "Used for new agents, the chief of a new crew and the agents a template adds. Each agent keeps the engine it was made with.",
+    programFound: (version: string, path: string) => `Found: ${path} (${version})`,
+    programFoundNoVersion: (path: string) => `Found: ${path}`,
+    programMissing: (name: string) =>
+      `${name} was not found on this computer. Install it, or say below where it is.`,
+    programPath: (name: string) => `Where ${name} is`,
+    programPlaceholder: "Full path to the program",
+    programSave: "Save",
+    programFailed: "Could not save the path",
+    programHint:
+      "Leave it alone if the agent was found. If you installed it with a manager like mise or npm, paste the full path of its program.",
     chat: "Chat",
     enterSends: "Enter sends the message",
     enterSendsOn: "Shift+Enter starts a new line.",

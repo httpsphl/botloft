@@ -1,15 +1,16 @@
 //! Which browser a bot runs (spec 21.2): the one in the config, else the
-//! Edge that comes with Windows, or the first Edge, Chrome or Chromium
-//! installed on macOS (Chrome or Chromium first on Linux).
+//! Edge that comes with Windows, then Chrome, then Brave; the first Edge,
+//! Chrome, Brave or Chromium installed on macOS (Chrome or Chromium first
+//! on Linux).
 
 use std::path::PathBuf;
 
 /// What is missing when no browser is found.
 #[cfg(windows)]
-pub const NOT_FOUND: &str = "Microsoft Edge was not found on this computer";
+pub const NOT_FOUND: &str = "no Microsoft Edge, Google Chrome or Brave was found on this computer";
 #[cfg(not(windows))]
 pub const NOT_FOUND: &str =
-    "no Microsoft Edge, Google Chrome or Chromium was found on this computer";
+    "no Microsoft Edge, Google Chrome, Brave or Chromium was found on this computer";
 
 /// The browser to run: `configured`, or one installed on the computer.
 pub fn find(configured: &str) -> Option<PathBuf> {
@@ -23,15 +24,25 @@ pub fn find(configured: &str) -> Option<PathBuf> {
 
 #[cfg(windows)]
 fn installed() -> Vec<PathBuf> {
-    ["ProgramFiles(x86)", "ProgramFiles", "LOCALAPPDATA"]
+    // Edge first: it comes with Windows. Then Chrome, then Brave.
+    const BROWSERS: &[&[&str]] = &[
+        &["Microsoft", "Edge", "Application", "msedge.exe"],
+        &["Google", "Chrome", "Application", "chrome.exe"],
+        &["BraveSoftware", "Brave-Browser", "Application", "brave.exe"],
+    ];
+    let bases: Vec<PathBuf> = ["ProgramFiles(x86)", "ProgramFiles", "LOCALAPPDATA"]
         .iter()
         .filter_map(std::env::var_os)
-        .map(|base| {
-            PathBuf::from(base)
-                .join("Microsoft")
-                .join("Edge")
-                .join("Application")
-                .join("msedge.exe")
+        .map(PathBuf::from)
+        .collect();
+    BROWSERS
+        .iter()
+        .flat_map(|parts| {
+            bases.iter().map(move |base| {
+                parts
+                    .iter()
+                    .fold(base.clone(), |path, part| path.join(part))
+            })
         })
         .collect()
 }
@@ -42,6 +53,7 @@ fn installed() -> Vec<PathBuf> {
     const APPS: &[&str] = &[
         "Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
         "Google Chrome.app/Contents/MacOS/Google Chrome",
+        "Brave Browser.app/Contents/MacOS/Brave Browser",
         "Chromium.app/Contents/MacOS/Chromium",
     ];
     let folders = [
@@ -66,6 +78,8 @@ fn installed() -> Vec<PathBuf> {
         "google-chrome",
         "chromium",
         "chromium-browser",
+        "brave-browser",
+        "brave",
         "microsoft-edge-stable",
         "microsoft-edge",
     ];

@@ -263,6 +263,16 @@ export const account: Messages["account"] = {
       "Todavía en pruebas. Un agente que funciona con Codex puede leer cualquier archivo de este equipo, y uno que funciona con Antigravity no puede preguntarte antes de actuar. Los agentes ya creados con ellos siguen funcionando igual.",
     defaultAgentHint:
       "Vale para los agentes nuevos, el jefe de un equipo nuevo y los agentes que añade una plantilla. Cada agente conserva el motor con el que se creó.",
+    programFound: (version: string, path: string) => `Encontrado: ${path} (${version})`,
+    programFoundNoVersion: (path: string) => `Encontrado: ${path}`,
+    programMissing: (name: string) =>
+      `${name} no se encontró en este equipo. Instálalo o indica abajo dónde está.`,
+    programPath: (name: string) => `Dónde está ${name}`,
+    programPlaceholder: "Ruta completa del programa",
+    programSave: "Guardar",
+    programFailed: "No se pudo guardar la ruta",
+    programHint:
+      "Déjalo como está si se encontró el agente. Si lo instalaste con un gestor como mise o npm, pega la ruta completa de su programa.",
     chat: "Chat",
     enterSends: "Enter envía el mensaje",
     enterSendsOn: "Shift+Enter empieza una nueva línea.",

@@ -109,6 +109,18 @@ pub struct AgentCheck {
     /// What `--version` said; `null` when the program was not found or did
     /// not answer.
     pub version: Option<String>,
+    /// The program Botloft would run for it; `null` when none was found.
+    pub path: Option<String>,
+}
+
+/// The program of an agent, set by the owner.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct AgentsSetPathParams {
+    pub agent: AgentKind,
+    /// The executable; empty goes back to looking for it.
+    pub path: String,
 }
 
 /// The owner, as the app shows them in its account area (spec 15.1).

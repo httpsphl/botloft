@@ -51,6 +51,9 @@ pub struct Supervisor {
     /// The experimental agents the owner switched on: `settings` has what
     /// `config.toml` said at start, the Settings screen changes this.
     experimental: Mutex<Vec<String>>,
+    /// The programs of `agy` and `codex` the owner set: the config at
+    /// start, then what the Settings screen says.
+    programs: Mutex<(String, String)>,
     events: broadcast::Sender<Event>,
     inner: Mutex<Inner>,
     /// Generations are unique across bots and daemon restarts, so a client
@@ -100,6 +103,7 @@ impl Supervisor {
             daemon,
             runtime,
             experimental: Mutex::new(settings.experimental_agents.clone()),
+            programs: Mutex::new((settings.agy_path.clone(), settings.codex_path.clone())),
             settings,
             events,
             inner: Mutex::default(),
@@ -161,23 +165,32 @@ impl Supervisor {
             .unwrap_or_else(|poisoned| poisoned.into_inner()) = names;
     }
 
-    /// The `agy_path` of the config; empty looks in the usual places.
-    pub fn agy_path(&self) -> &str {
-        &self.settings.agy_path
-    }
-
-    /// The `codex_path` of the config; empty looks in the usual places.
-    pub fn codex_path(&self) -> &str {
-        &self.settings.codex_path
-    }
-
-    /// The configured program of an agent, to look for it.
-    pub fn program_setting(&self, kind: botloft_core::protocol::AgentKind) -> &str {
+    /// The program of an agent the owner set; empty looks in the usual
+    /// places.
+    pub fn program_setting(&self, kind: botloft_core::protocol::AgentKind) -> String {
         use botloft_core::protocol::AgentKind;
+        let programs = self
+            .programs
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         match kind {
-            AgentKind::Claude => "",
-            AgentKind::Agy => self.agy_path(),
-            AgentKind::Codex => self.codex_path(),
+            AgentKind::Claude => String::new(),
+            AgentKind::Agy => programs.0.clone(),
+            AgentKind::Codex => programs.1.clone(),
+        }
+    }
+
+    /// Uses `path` as the program of `kind` from the next start on.
+    pub fn set_program(&self, kind: botloft_core::protocol::AgentKind, path: String) {
+        use botloft_core::protocol::AgentKind;
+        let mut programs = self
+            .programs
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        match kind {
+            AgentKind::Claude => {}
+            AgentKind::Agy => programs.0 = path,
+            AgentKind::Codex => programs.1 = path,
         }
     }
 

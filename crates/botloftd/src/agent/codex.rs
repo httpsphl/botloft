@@ -31,8 +31,8 @@ impl Agent for CodexAgent {
         if !configured.is_empty() {
             return Ok(PathBuf::from(configured));
         }
-        let mut candidates = Vec::new();
         // The desktop app keeps the executable in a folder named by a hash.
+        let mut first = Vec::new();
         if let Some(local) = std::env::var_os("LOCALAPPDATA") {
             let bin = PathBuf::from(local)
                 .join("OpenAI")
@@ -42,27 +42,22 @@ impl Agent for CodexAgent {
                 .into_iter()
                 .flatten()
                 .flatten()
-                .map(|entry| entry.path().join("codex.exe"))
-                .filter(|path| path.is_file())
+                .map(|entry| entry.path())
+                .filter(|dir| dir.join("codex.exe").is_file())
                 .collect();
-            found.sort_by_key(|path| std::fs::metadata(path).and_then(|m| m.modified()).ok());
-            candidates.extend(found.into_iter().rev());
+            found.sort_by_key(|dir| {
+                std::fs::metadata(dir.join("codex.exe"))
+                    .and_then(|m| m.modified())
+                    .ok()
+            });
+            first.extend(found.into_iter().rev());
         }
-        if let Some(path) = std::env::var_os("PATH") {
-            for dir in std::env::split_paths(&path) {
-                candidates.push(dir.join("codex.exe"));
-                candidates.push(dir.join("codex"));
-            }
-        }
-        candidates
-            .into_iter()
-            .find(|candidate| candidate.is_file())
-            .ok_or_else(|| {
-                io::Error::new(
-                    io::ErrorKind::NotFound,
-                    "codex was not found; install Codex or set codex_path in config.toml",
-                )
-            })
+        super::find::program("codex", Some("@openai/codex"), &first).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::NotFound,
+                "codex was not found; install Codex or set codex_path in config.toml",
+            )
+        })
     }
 
     fn args(&self, _plan: &LaunchPlan<'_>) -> Vec<OsString> {

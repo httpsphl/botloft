@@ -93,3 +93,69 @@ async fn the_experimental_agents_are_switched_on_and_off_in_settings() {
         .expect("status");
     assert_eq!(agents(status), json!(["claude"]));
 }
+
+#[tokio::test]
+async fn the_owner_tells_where_an_agents_program_is() {
+    let t = TestDaemon::start().await;
+    std::fs::create_dir_all(&t.paths.home).expect("home");
+    let mut app = t.session().await;
+    app.call("settings.update", json!({ "showExperimentalAgents": true }))
+        .await
+        .expect("on");
+
+    // A file that is not there is refused, and Claude Code has its own key.
+    let missing = app
+        .call(
+            "agents.setPath",
+            json!({ "agent": "codex", "path": "C:/nowhere/codex.exe" }),
+        )
+        .await;
+    assert!(missing.is_err(), "no file, no path");
+    let claude = app
+        .call("agents.setPath", json!({ "agent": "claude", "path": "x" }))
+        .await;
+    assert!(claude.is_err());
+
+    let program = t.paths.home.join("my-codex.exe");
+    std::fs::write(&program, b"").expect("file");
+    let check = app
+        .call(
+            "agents.setPath",
+            json!({ "agent": "codex", "path": program.display().to_string() }),
+        )
+        .await
+        .expect("set");
+    assert_eq!(check["agent"], json!("codex"));
+    assert_eq!(check["path"], json!(program.display().to_string()));
+    assert_eq!(
+        t.daemon
+            .supervisor
+            .program_setting(botloft_core::protocol::AgentKind::Codex),
+        program.display().to_string()
+    );
+
+    // The status shows it at once, not after the minute of its cache.
+    let status = app
+        .call("system.status", json!(null))
+        .await
+        .expect("status");
+    let codex = status["agentChecks"]
+        .as_array()
+        .expect("checks")
+        .iter()
+        .find(|check| check["agent"] == json!("codex"))
+        .expect("codex check")
+        .clone();
+    assert_eq!(codex["path"], json!(program.display().to_string()));
+
+    // Empty goes back to looking for it.
+    app.call("agents.setPath", json!({ "agent": "codex", "path": "" }))
+        .await
+        .expect("clear");
+    assert_eq!(
+        t.daemon
+            .supervisor
+            .program_setting(botloft_core::protocol::AgentKind::Codex),
+        ""
+    );
+}

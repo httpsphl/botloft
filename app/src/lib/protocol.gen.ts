@@ -532,7 +532,11 @@ export type AgentCheck = { agent: AgentKind,
  * What `--version` said; `null` when the program was not found or did
  * not answer.
  */
-version: string | null, };
+version: string | null, 
+/**
+ * The program Botloft would run for it; `null` when none was found.
+ */
+path: string | null, };
 
 /**
  * The usage of an agent's account, with the plan it is on.
@@ -542,6 +546,15 @@ export type AgentUsage = { agent: AgentKind,
  * The plan the agent names (`free`, `plus`...); `null` when it does not.
  */
 plan: string | null, usage: AccountUsage, };
+
+/**
+ * The program of an agent, set by the owner.
+ */
+export type AgentsSetPathParams = { agent: AgentKind, 
+/**
+ * The executable; empty goes back to looking for it.
+ */
+path: string, };
 
 export type BotIdParams = { botId: BotId, };
 
@@ -2245,6 +2258,7 @@ export interface RpcMethods {
   "system.refresh": { params: undefined; result: SystemStatus };
   "settings.get": { params: undefined; result: Settings };
   "settings.update": { params: SettingsUpdateParams; result: Settings };
+  "agents.setPath": { params: AgentsSetPathParams; result: AgentCheck };
   "crews.list": { params: undefined; result: Array<Crew> };
   "crews.create": { params: CrewsCreateParams; result: Crew };
   "crews.rename": { params: CrewsRenameParams; result: Crew };

@@ -261,6 +261,18 @@ export class FakeBotloft implements BotloftApi {
       daemonVersion: this.system.daemonVersion,
       protocol: PROTOCOL_VERSION,
     }),
+    "agents.setPath": ({ agent, path }) => {
+      const check = {
+        agent,
+        version: path === "" ? null : "1.0.0",
+        path: path === "" ? null : path,
+      };
+      this.system = {
+        ...this.system,
+        agentChecks: this.system.agentChecks.map((have) => (have.agent === agent ? check : have)),
+      };
+      return check;
+    },
     "agents.models": () => [
       { id: "gemini-3.8-flash-low", name: "Gemini 3.8 Flash (Low)" },
       { id: "gemini-3.8-flash-high", name: "Gemini 3.8 Flash (High)" },

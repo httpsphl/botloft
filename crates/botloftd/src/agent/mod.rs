@@ -9,6 +9,7 @@ mod codex;
 mod codex_decoder;
 mod codex_usage;
 mod codex_wire;
+mod find;
 
 use std::ffi::OsString;
 use std::io;

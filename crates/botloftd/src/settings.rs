@@ -102,6 +102,21 @@ impl LiveSettings {
         Ok(current.settings)
     }
 
+    /// Saves the program of `kind` in `config.toml` (`agy_path` or
+    /// `codex_path`); empty goes back to looking for it.
+    pub fn save_program(&self, kind: AgentKind, path: &str) -> io::Result<()> {
+        let key = match kind {
+            AgentKind::Agy => "agy_path",
+            AgentKind::Codex => "codex_path",
+            AgentKind::Claude => return Ok(()),
+        };
+        let _guard = self.lock();
+        match &self.file {
+            Some(file) => write_text(file, key, path),
+            None => Ok(()),
+        }
+    }
+
     fn lock(&self) -> MutexGuard<'_, Current> {
         self.current
             .lock()
@@ -147,6 +162,22 @@ fn write(file: &Path, update: SettingsUpdateParams) -> io::Result<()> {
             .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "bots is not a table"))?;
         set(bots, "approval_timeout_minutes", i64::from(minutes));
     }
+    let staged = file.with_extension("toml.new");
+    std::fs::write(&staged, config.to_string())?;
+    std::fs::rename(&staged, file)
+}
+
+/// Sets one text key of `config.toml` and leaves the rest as it was.
+fn write_text(file: &Path, key: &str, value: &str) -> io::Result<()> {
+    let text = match std::fs::read_to_string(file) {
+        Ok(text) => text,
+        Err(err) if err.kind() == io::ErrorKind::NotFound => String::new(),
+        Err(err) => return Err(err),
+    };
+    let mut config: toml_edit::DocumentMut = text
+        .parse()
+        .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))?;
+    set(config.as_table_mut(), key, value);
     let staged = file.with_extension("toml.new");
     std::fs::write(&staged, config.to_string())?;
     std::fs::rename(&staged, file)
@@ -258,6 +289,35 @@ mod tests {
         assert!(!settings.save(off).expect("save").show_experimental_agents);
         let config = Config::parse(&std::fs::read_to_string(&file).expect("read")).expect("parse");
         assert!(config.experimental_agents.is_empty());
+    }
+
+    #[test]
+    fn an_agents_program_is_saved_as_its_own_key_and_cleared() {
+        let dir = tempfile::tempdir().expect("dir");
+        let file = dir.path().join("config.toml");
+        std::fs::write(
+            &file,
+            "# mine
+port = 45999
+",
+        )
+        .expect("write");
+        let settings = LiveSettings::new(Some(file.clone()), &Config::default());
+        settings
+            .save_program(AgentKind::Codex, "C:/tools/codex.exe")
+            .expect("save");
+        let text = std::fs::read_to_string(&file).expect("read");
+        assert!(text.starts_with(
+            "# mine
+port = 45999
+"
+        ));
+        let config = Config::parse(&text).expect("valid");
+        assert_eq!(config.codex_path, "C:/tools/codex.exe");
+        assert_eq!(config.agy_path, "");
+        settings.save_program(AgentKind::Codex, "").expect("clear");
+        let config = Config::parse(&std::fs::read_to_string(&file).expect("read")).expect("valid");
+        assert_eq!(config.codex_path, "");
     }
 
     #[test]

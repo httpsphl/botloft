@@ -50,6 +50,8 @@ pub fn update(daemon: &Daemon, params: SettingsUpdateParams) -> ApiResult<Settin
             Vec::new()
         };
         daemon.supervisor.set_experimental_agents(names);
+        // Which agents are checked just changed.
+        super::agents::forget_checks();
     }
     // Switched off, the default cannot stay an agent that cannot be chosen.
     let after = if !daemon.supervisor.agent_enabled(after.default_agent) {

@@ -5,6 +5,7 @@
 import { X } from "lucide-react";
 import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
+import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { SidePanel } from "../../ui/SidePanel";
@@ -26,6 +27,19 @@ export function Notices({
 }) {
   const t = useT();
   const notices = [];
+  const checks = useApp((state) => state.system?.agentChecks);
+  // An agent that is not on the computer is restarted over and over: say why.
+  const missing =
+    bot.agent !== "claude" &&
+    checks?.some((check) => check.agent === bot.agent && check.path === null) === true;
+  if (missing) {
+    const name = t.bots.dialog.agent.names[bot.agent];
+    notices.push(
+      <Callout key="program" tone="warn" title={t.bots.notices.programMissing(name)}>
+        {t.bots.notices.programMissingBody}
+      </Callout>,
+    );
+  }
   if (crew.paused && !bot.paused) {
     notices.push(
       <Callout key="crew" title={t.bots.notices.crewPaused(crew.name)}>
