@@ -48,3 +48,23 @@ describe("Codex in the new-bot dialog", () => {
     expect(dialog.queryByLabelText("Model")).toBeNull();
   });
 });
+
+describe("an agent whose program is not on the computer", () => {
+  test("its chat says why it keeps restarting", async () => {
+    const fake = new FakeBotloft();
+    fake.system = {
+      ...fake.system,
+      enabledAgents: ["claude", "codex"],
+      agentChecks: [{ agent: "codex", version: null, path: null }],
+    };
+    const crew = fake.addCrew("Ops");
+    const bot = fake.addBot(crew.id, "Cody");
+    fake.bot(bot.id).agent = "codex";
+    fake.setBotState(bot.id, "backoff");
+    renderApp(fake);
+    await crewOpened("Ops");
+    fireEvent.click(await screen.findByRole("button", { name: /^Cody,/ }));
+    expect(await screen.findByText("Codex was not found")).toBeDefined();
+    expect(screen.getByText(/tell Botloft where it is in Settings/)).toBeDefined();
+  });
+});

@@ -86,6 +86,30 @@ describe("settings", () => {
     ).toEqual([{ showExperimentalAgents: true }]);
   });
 
+  test("an agent that is not found says so, and the path the owner gives is used", async () => {
+    const fake = new FakeBotloft();
+    fake.settings = { ...fake.settings, showExperimentalAgents: true };
+    fake.system = {
+      ...fake.system,
+      enabledAgents: ["claude", "codex"],
+      agentChecks: [{ agent: "codex", version: null, path: null }],
+    };
+    renderApp(fake);
+    const dialog = await openSettings();
+    expect(await within(dialog).findByText(/Codex was not found on this computer/)).toBeDefined();
+    const save = within(dialog).getByRole("button", { name: "Save" });
+    expect(save.hasAttribute("disabled")).toBe(true);
+
+    fireEvent.change(within(dialog).getByLabelText("Where Codex is"), {
+      target: { value: "C:/tools/mise/codex.exe" },
+    });
+    fireEvent.click(save);
+    expect(await within(dialog).findByText(/Found: C:\/tools\/mise\/codex\.exe/)).toBeDefined();
+    expect(
+      fake.calls.filter((call) => call.method === "agents.setPath").map((c) => c.params),
+    ).toEqual([{ agent: "codex", path: "C:/tools/mise/codex.exe" }]);
+  });
+
   test("the icon and the window at sign-in show only where they apply", async () => {
     renderApp();
     const dialog = await openSettings();

@@ -171,7 +171,7 @@ pub fn agent_models(daemon: &Daemon, params: AgentsModelsParams) -> ApiResult<Ve
     let agent = crate::agent::of(params.agent)
         .ok_or_else(|| ApiError::validation("that agent is not available"))?;
     let program = agent
-        .locate(daemon.supervisor.program_setting(params.agent), None)
+        .locate(&daemon.supervisor.program_setting(params.agent), None)
         .map_err(|err| ApiError::Conflict(err.to_string()))?;
     let listed = match params.agent {
         AgentKind::Codex => crate::agent::codex_models(&program),

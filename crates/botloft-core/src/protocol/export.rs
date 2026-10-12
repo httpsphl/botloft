@@ -162,6 +162,7 @@ fn export_bindings() {
     out.decl::<AgentModel>();
     out.decl::<AgentCheck>();
     out.decl::<AgentUsage>();
+    out.decl::<AgentsSetPathParams>();
     out.decl::<BotIdParams>();
     out.decl::<BotsRestartParams>();
     out.decl::<BotStateChanged>();
@@ -259,6 +260,11 @@ fn export_bindings() {
         method::SETTINGS_UPDATE,
         &out.name::<SettingsUpdateParams>(),
         &out.name::<Settings>(),
+    );
+    out.method(
+        method::AGENTS_SET_PATH,
+        &out.name::<AgentsSetPathParams>(),
+        &out.name::<AgentCheck>(),
     );
     out.method(method::CREWS_LIST, "undefined", &crews);
     out.method(

@@ -39,25 +39,16 @@ impl Agent for AgyAgent {
         if !configured.is_empty() {
             return Ok(PathBuf::from(configured));
         }
-        let mut candidates = Vec::new();
+        let mut first = Vec::new();
         if let Some(local) = std::env::var_os("LOCALAPPDATA") {
-            candidates.push(PathBuf::from(local).join("agy").join("bin").join("agy.exe"));
+            first.push(PathBuf::from(local).join("agy").join("bin"));
         }
-        if let Some(path) = std::env::var_os("PATH") {
-            for dir in std::env::split_paths(&path) {
-                candidates.push(dir.join("agy.exe"));
-                candidates.push(dir.join("agy"));
-            }
-        }
-        candidates
-            .into_iter()
-            .find(|candidate| candidate.is_file())
-            .ok_or_else(|| {
-                io::Error::new(
-                    io::ErrorKind::NotFound,
-                    "agy was not found; install Antigravity or set agy_path in config.toml",
-                )
-            })
+        super::find::program("agy", None, &first).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::NotFound,
+                "agy was not found; install Antigravity or set agy_path in config.toml",
+            )
+        })
     }
 
     fn args(&self, plan: &LaunchPlan<'_>) -> Vec<OsString> {

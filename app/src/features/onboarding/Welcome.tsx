@@ -27,7 +27,7 @@ export function Welcome() {
   const [creating, setCreating] = useState(false);
   const [idea, setIdea] = useState<CrewTemplate | undefined>(undefined);
   const checks = useApp((state) => state.system?.agentChecks ?? NO_CHECKS);
-  const otherReady = checks.some((check) => check.version !== null);
+  const otherReady = checks.some((check) => check.path !== null);
   const whenClosed = usePref(prefs.whenClosed);
   const { settings } = useDaemonSettings();
   const running =
@@ -60,9 +60,15 @@ export function Welcome() {
   const agents = checks.map((check) => (
     <Check
       key={check.agent}
-      state={check.version === null ? "bad" : "ok"}
+      state={check.path === null ? "bad" : "ok"}
       title={t.bots.dialog.agent.names[check.agent]}
-      detail={check.version === null ? w.agentMissing : w.version(check.version)}
+      detail={
+        check.version !== null
+          ? w.version(check.version)
+          : check.path !== null
+            ? check.path
+            : w.agentMissing
+      }
     />
   ));
 

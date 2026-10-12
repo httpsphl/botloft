@@ -220,6 +220,7 @@ pub mod method {
     pub const REACTIONS_SET: &str = "reactions.set";
     pub const SETTINGS_GET: &str = "settings.get";
     pub const SETTINGS_UPDATE: &str = "settings.update";
+    pub const AGENTS_SET_PATH: &str = "agents.setPath";
     pub const USAGE_TOKENS: &str = "usage.tokens";
 }
 

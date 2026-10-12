@@ -147,7 +147,7 @@ impl Default for CloudConfig {
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct BrowserConfig {
-    /// Empty means the Microsoft Edge that comes with Windows.
+    /// Empty means the Edge that comes with Windows, then Chrome or Brave.
     pub path: String,
     /// Closes a browser nobody used or watched for this long.
     pub idle_minutes: u64,

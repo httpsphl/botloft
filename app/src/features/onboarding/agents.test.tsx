@@ -13,7 +13,7 @@ describe("the first screen for someone who does not use Claude Code", () => {
       claudeVersion: null,
       runtimeError: "Claude Code was not found",
       enabledAgents: ["claude", "agy"],
-      agentChecks: [{ agent: "agy", version: "1.3.1" }],
+      agentChecks: [{ agent: "agy", version: "1.3.1", path: "C:agyagy.exe" }],
     };
     renderApp(fake);
     expect(await screen.findByText("Antigravity (experimental)")).toBeDefined();
@@ -27,7 +27,7 @@ describe("the first screen for someone who does not use Claude Code", () => {
     fake.system = {
       ...fake.system,
       enabledAgents: ["claude", "agy"],
-      agentChecks: [{ agent: "agy", version: null }],
+      agentChecks: [{ agent: "agy", version: null, path: null }],
     };
     renderApp(fake);
     expect(await screen.findByText(/Not found\. Install it/)).toBeDefined();

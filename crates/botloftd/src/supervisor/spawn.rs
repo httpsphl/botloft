@@ -119,7 +119,7 @@ pub(super) fn launch_spec(
         io::Error::other(format!("bots on {} cannot start yet", bot.agent.as_str()))
     })?;
     let program = agent.locate(
-        daemon.supervisor.program_setting(bot.agent),
+        &daemon.supervisor.program_setting(bot.agent),
         claude.map(|claude| claude.path.as_path()),
     )?;
     let mcp = workspace.join(".botloft").join("mcp.json");

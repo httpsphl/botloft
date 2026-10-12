@@ -14,6 +14,7 @@ import { SYSTEM } from "../../lib/system";
 import { prefs, usePref } from "../../shell/prefs";
 import { useApp } from "../../store/context";
 import { Select } from "../../ui/Select";
+import { AgentPrograms } from "./AgentPrograms";
 import { Section, Toggle } from "./settingsParts";
 import { useDaemonSettings } from "./useDaemonSettings";
 
@@ -49,6 +50,7 @@ export function GeneralSettings() {
           disabled={!settings}
           onChange={(on) => change({ showExperimentalAgents: on })}
         />
+        {settings?.showExperimentalAgents && <AgentPrograms />}
       </Section>
       {settings && enabledAgents.length > 1 && (
         <Section title={s.defaultAgent}>

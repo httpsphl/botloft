@@ -8,9 +8,9 @@ use serde_json::Value;
 use super::jsonrpc::{RpcError, empty_params};
 use crate::approvals;
 use crate::service::{
-    self, ApiError, ApiResult, archive, attachments, autobackup, backup, bots, catalog, chat,
-    cloud, crew_access, crews, delete, deliveries, desktop, files, lead, mcp, messages, mobile,
-    models, modes, questions, reactions, routines, rules, screens, settings, tasks, usage,
+    self, ApiError, ApiResult, agents, archive, attachments, autobackup, backup, bots, catalog,
+    chat, cloud, crew_access, crews, delete, deliveries, desktop, files, lead, mcp, messages,
+    mobile, models, modes, questions, reactions, routines, rules, screens, settings, tasks, usage,
 };
 use crate::state::Daemon;
 
@@ -135,6 +135,7 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::SCREENS_LIST => reply(screens::list(daemon, parse(params)?)),
         method::SETTINGS_GET => reply(settings::get(daemon)),
         method::SETTINGS_UPDATE => reply(settings::update(daemon, parse(params)?)),
+        method::AGENTS_SET_PATH => reply(agents::set_path(daemon, parse(params)?)),
         method::USAGE_TOKENS => reply(usage::tokens(daemon, parse(params)?)),
         method::SESSION_HELLO => Err(RpcError::new(
             error_code::CONFLICT,

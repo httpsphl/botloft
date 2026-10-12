@@ -132,6 +132,8 @@ export const bots: Messages["bots"] = {
   notices: {
     crewPaused: (crew: string) => `A equipe ${crew} está pausada`,
     crewPausedBody: "Os agentes dela ficam parados até você retomar a equipe.",
+    programMissing: (name: string) => `${name} não foi encontrado`,
+    programMissingBody: "Instale ou diga ao Botloft onde ele está, em Configurações.",
   },
   details: {
     title: (name: string) => `Sobre ${name}`,
