@@ -177,6 +177,9 @@ pub struct Bot {
     /// before its first. The app marks the bot unread when this is newer
     /// than the owner's last look (spec 15.1).
     pub last_reply_at: Option<i64>,
+    /// Until when the owner read the bot's replies, kept by the daemon so
+    /// the mark survives the app losing its storage; `null` if never.
+    pub read_through: Option<i64>,
     /// Unix time in milliseconds.
     pub created_at: i64,
     /// Unix time in milliseconds; `null` while the bot is active.

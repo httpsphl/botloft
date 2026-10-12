@@ -174,3 +174,16 @@ fn the_last_reply_is_found_behind_newer_items() {
         .expect("insert");
     assert_eq!(fx.store.last_reply_at(bot).expect("reply"), Some(9));
 }
+
+#[test]
+fn what_the_owner_read_is_kept_and_never_goes_back() {
+    let fx = Fixture::new();
+    let bot = &fx.bots[0].id;
+    assert_eq!(fx.store.read_through(bot).expect("none"), None);
+    fx.store.set_read_through(bot, 50).expect("set");
+    assert_eq!(fx.store.read_through(bot).expect("read"), Some(50));
+    fx.store.set_read_through(bot, 20).expect("older");
+    assert_eq!(fx.store.read_through(bot).expect("still"), Some(50));
+    fx.store.set_read_through(bot, 90).expect("newer");
+    assert_eq!(fx.store.read_through(bot).expect("newer"), Some(90));
+}

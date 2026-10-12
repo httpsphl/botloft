@@ -287,6 +287,11 @@ lastActivity: Activity | null,
  */
 lastReplyAt: number | null, 
 /**
+ * Until when the owner read the bot's replies, kept by the daemon so
+ * the mark survives the app losing its storage; `null` if never.
+ */
+readThrough: number | null, 
+/**
  * Unix time in milliseconds.
  */
 createdAt: number, 

@@ -178,6 +178,27 @@ impl Store {
         Ok(item.and_then(|item| activity(&item.body, item.updated_at)))
     }
 
+    /// The owner read the bot's replies up to `at`: kept, so the unread mark
+    /// does not come back when the app forgets what it saw. Never goes back.
+    pub fn set_read_through(&self, bot: &BotId, at: i64) -> Result<()> {
+        self.conn.prepare_cached(
+            "UPDATE bots SET read_through = ?2              WHERE id = ?1 AND (read_through IS NULL OR read_through < ?2)",
+        )?
+        .execute(params![bot.as_str(), at])?;
+        Ok(())
+    }
+
+    /// Until when the owner read the bot's replies; `None` if never.
+    pub fn read_through(&self, bot: &BotId) -> Result<Option<i64>> {
+        let mut stmt = self
+            .conn
+            .prepare_cached("SELECT read_through FROM bots WHERE id = ?1")?;
+        Ok(stmt
+            .query_row([bot.as_str()], |row| row.get(0))
+            .optional()?
+            .flatten())
+    }
+
     /// When the bot last finished a reply, for the unread mark in the
     /// conversation list (spec 15.1); `None` before its first.
     pub fn last_reply_at(&self, bot: &BotId) -> Result<Option<i64>> {

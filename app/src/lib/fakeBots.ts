@@ -46,6 +46,7 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
         workspace: `C:\\Users\\owner\\Botloft\\${crew.slug}\\${handle}`,
         lastActivity: null,
         lastReplyAt: null,
+        readThrough: null,
         createdAt: fake.now,
         archivedAt: null,
       };
