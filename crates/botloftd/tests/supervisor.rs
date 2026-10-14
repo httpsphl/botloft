@@ -198,6 +198,7 @@ async fn a_failed_spawn_backs_off_and_retries() {
     let crew = crews::create(
         &daemon,
         CrewsCreateParams {
+            auto_mode: None,
             name: "Ops".into(),
             work_folder: None,
             lead: None,

@@ -34,6 +34,7 @@ async fn codex_bot() -> Codex {
     let crew = crews::create(
         &parts.daemon,
         CrewsCreateParams {
+            auto_mode: None,
             name: "Ops".into(),
             work_folder: None,
             lead: None,
@@ -471,6 +472,7 @@ async fn a_folder_botloft_fences_is_refused_without_asking() {
     let other = crews::create(
         &codex.daemon,
         CrewsCreateParams {
+            auto_mode: None,
             name: "Other".into(),
             work_folder: None,
             lead: None,

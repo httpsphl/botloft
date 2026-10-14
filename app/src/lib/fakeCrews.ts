@@ -22,7 +22,7 @@ function checkFolder(folder: string): string {
 export function crewHandlers(fake: FakeBotloft): Pick<Handlers, CrewMethods> {
   return {
     "crews.list": () => [...fake.crews.values()].filter((crew) => crew.archivedAt === null),
-    "crews.create": ({ name, workFolder, lead }) => {
+    "crews.create": ({ name, workFolder, lead, autoMode }) => {
       const checked = checkName(name);
       const slug = slugify(checked, "crew");
       const crew: Crew = {
@@ -34,6 +34,7 @@ export function crewHandlers(fake: FakeBotloft): Pick<Handlers, CrewMethods> {
         leadBotId: null,
         color: null,
         paused: false,
+        autoMode: autoMode === true,
         createdAt: fake.now,
         archivedAt: null,
       };
@@ -67,6 +68,19 @@ export function crewHandlers(fake: FakeBotloft): Pick<Handlers, CrewMethods> {
     "crews.setPaused": ({ crewId, paused }) => {
       const crew = fake.crew(crewId);
       crew.paused = paused;
+      return fake.changedCrew(crew);
+    },
+    "crews.setAutoMode": ({ crewId, enabled }) => {
+      const crew = fake.crew(crewId);
+      crew.autoMode = enabled;
+      if (enabled) {
+        for (const bot of fake.activeBots(crewId)) {
+          if (bot.permissionMode !== "auto") {
+            bot.permissionMode = "auto";
+            fake.changedBot(bot);
+          }
+        }
+      }
       return fake.changedCrew(crew);
     },
     "crews.setWorkFolder": ({ crewId, workFolder }) => {

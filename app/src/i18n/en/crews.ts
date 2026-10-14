@@ -5,6 +5,12 @@ export const crews = {
   newCrew: "New crew",
   newBot: "New agent",
   rename: "Rename",
+  /** The crew's automatic mode (spec 7.4): a switch in the new-crew form and in the crew's header. */
+  autoMode: {
+    label: "Automatic mode",
+    hint: "Every agent in this crew works without asking at each step, including the ones you add later. Anything risky still comes to you.",
+    failed: "Could not change the automatic mode",
+  },
   paused: "Paused",
   sidebar: {
     /** The right-click menu of a crew in the list. */

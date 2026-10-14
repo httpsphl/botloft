@@ -129,7 +129,11 @@ pub(crate) fn insert(
         instructions: new.instructions,
         color,
         paused: false,
-        permission_mode: PermissionMode::Default,
+        permission_mode: if crew.auto_mode {
+            PermissionMode::Auto
+        } else {
+            PermissionMode::Default
+        },
         agent: new.agent,
         agent_model: None,
         allowed_commands: Vec::new(),

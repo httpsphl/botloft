@@ -14,6 +14,7 @@ fn setup() -> (Store, CrewId) {
         lead_bot_id: None,
         paused: false,
         color: None,
+        auto_mode: false,
         created_at: 1,
         archived_at: None,
     };
