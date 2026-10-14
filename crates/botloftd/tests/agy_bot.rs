@@ -34,6 +34,7 @@ async fn agy_bot() -> Agy {
     let crew = crews::create(
         &parts.daemon,
         CrewsCreateParams {
+            auto_mode: None,
             name: "Ops".into(),
             work_folder: None,
             lead: None,
@@ -421,6 +422,7 @@ async fn an_agy_bot_starts_without_claude_code_and_a_claude_bot_stays_offline() 
     let crew = crews::create(
         &parts.daemon,
         CrewsCreateParams {
+            auto_mode: None,
             name: "Ops".into(),
             work_folder: None,
             lead: None,
@@ -559,6 +561,7 @@ async fn new_bots_and_the_chief_follow_the_default_agent() {
     let crew = crews::create(
         &agy.daemon,
         CrewsCreateParams {
+            auto_mode: None,
             name: "Docs".into(),
             work_folder: None,
             lead: Some(botloft_core::protocol::NewLead {

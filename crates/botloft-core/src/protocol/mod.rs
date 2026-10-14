@@ -116,6 +116,7 @@ pub mod method {
     pub const CREWS_RENAME: &str = "crews.rename";
     pub const CREWS_SET_COLOR: &str = "crews.setColor";
     pub const CREWS_SET_PAUSED: &str = "crews.setPaused";
+    pub const CREWS_SET_AUTO_MODE: &str = "crews.setAutoMode";
     pub const CREWS_SET_WORK_FOLDER: &str = "crews.setWorkFolder";
     pub const CREWS_SET_LEAD: &str = "crews.setLead";
     pub const CREWS_ARCHIVE: &str = "crews.archive";

@@ -23,6 +23,9 @@ pub struct Crew {
     /// `null` when the crew has no chief.
     pub lead_bot_id: Option<BotId>,
     pub paused: bool,
+    /// Whether every bot of the crew runs in automatic mode, the ones it has
+    /// and the ones that join later (spec 7.4).
+    pub auto_mode: bool,
     /// Color `#RRGGBB` the owner gave the crew; `null` for none.
     pub color: Option<String>,
     /// Unix time in milliseconds.

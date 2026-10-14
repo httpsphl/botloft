@@ -39,6 +39,7 @@ const MIGRATIONS: &[(u32, &str)] = &[
         include_str!("../migrations/0028_bot_allowed_commands.sql"),
     ),
     (29, include_str!("../migrations/0029_read_through.sql")),
+    (30, include_str!("../migrations/0030_crew_auto_mode.sql")),
 ];
 
 /// Schema version after every migration has run.

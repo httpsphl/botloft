@@ -186,6 +186,10 @@ pub struct CrewsCreateParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub lead: Option<NewLead>,
+    /// Starts the crew with every bot in automatic mode; off when absent.
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub auto_mode: Option<bool>,
 }
 
 /// The bot that leads a new crew. The app writes its name and role in the
@@ -243,6 +247,14 @@ pub struct CrewsSetColorParams {
 pub struct CrewsSetPausedParams {
     pub crew_id: CrewId,
     pub paused: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct CrewsSetAutoModeParams {
+    pub crew_id: CrewId,
+    pub enabled: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

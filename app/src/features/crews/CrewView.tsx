@@ -13,6 +13,7 @@ import { Composer } from "../messages/Composer";
 import { Timeline } from "../messages/Timeline";
 import { CrewRoutines } from "../routines/RoutineList";
 import { TaskList } from "../tasks/TaskList";
+import { AutoModeSwitch } from "./AutoModeSwitch";
 import { CrewBots } from "./CrewBots";
 import { useCrewActions } from "./crewActions";
 
@@ -56,6 +57,7 @@ ${words.openFolderHint}`}
           </p>
         </div>
         <CallPills calls={calls} className="max-w-[45%] justify-end" />
+        <AutoModeSwitch checked={crew.autoMode} onChange={actions.setAutoMode} />
         <Button title={t.catalog.openHint} onClick={actions.agency.onSelect}>
           {actions.agency.label}
         </Button>

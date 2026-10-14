@@ -32,7 +32,7 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
         instructions,
         color: color ?? AVATAR_PALETTE[index % AVATAR_PALETTE.length] ?? "#FF7A59",
         paused: false,
-        permissionMode: "default",
+        permissionMode: crew.autoMode ? "auto" : "default",
         agent: agent ?? "claude",
         agentModel: null,
         allowedCommands: [],

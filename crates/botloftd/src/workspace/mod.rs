@@ -146,6 +146,7 @@ mod tests {
             lead_bot_id: None,
             paused: false,
             color: None,
+            auto_mode: false,
             created_at: 0,
             archived_at: None,
         };
@@ -248,6 +249,7 @@ mod tests {
             lead_bot_id: None,
             paused: false,
             color: None,
+            auto_mode: false,
             created_at: 0,
             archived_at: None,
         };

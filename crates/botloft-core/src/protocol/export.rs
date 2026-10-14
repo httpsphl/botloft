@@ -147,6 +147,7 @@ fn export_bindings() {
     out.decl::<CrewsRenameParams>();
     out.decl::<CrewsSetColorParams>();
     out.decl::<CrewsSetPausedParams>();
+    out.decl::<CrewsSetAutoModeParams>();
     out.decl::<CrewsSetWorkFolderParams>();
     out.decl::<NewLead>();
     out.decl::<CrewsSetLeadParams>();
@@ -285,6 +286,11 @@ fn export_bindings() {
     out.method(
         method::CREWS_SET_PAUSED,
         &out.name::<CrewsSetPausedParams>(),
+        &crew,
+    );
+    out.method(
+        method::CREWS_SET_AUTO_MODE,
+        &out.name::<CrewsSetAutoModeParams>(),
         &crew,
     );
     out.method(

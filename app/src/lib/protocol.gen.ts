@@ -114,6 +114,11 @@ workFolderChosen: boolean,
  */
 leadBotId: BotId | null, paused: boolean, 
 /**
+ * Whether every bot of the crew runs in automatic mode, the ones it has
+ * and the ones that join later (spec 7.4).
+ */
+autoMode: boolean, 
+/**
  * Color `#RRGGBB` the owner gave the crew; `null` for none.
  */
 color: string | null, 
@@ -439,7 +444,11 @@ workFolder?: string,
 /**
  * The chief, created with the crew (spec 10.2).
  */
-lead?: NewLead, };
+lead?: NewLead, 
+/**
+ * Starts the crew with every bot in automatic mode; off when absent.
+ */
+autoMode?: boolean, };
 
 export type CrewsRenameParams = { crewId: CrewId, name: string, };
 
@@ -450,6 +459,8 @@ export type CrewsSetColorParams = { crewId: CrewId,
 color: string | null, };
 
 export type CrewsSetPausedParams = { crewId: CrewId, paused: boolean, };
+
+export type CrewsSetAutoModeParams = { crewId: CrewId, enabled: boolean, };
 
 export type CrewsSetWorkFolderParams = { crewId: CrewId, 
 /**
@@ -2269,6 +2280,7 @@ export interface RpcMethods {
   "crews.rename": { params: CrewsRenameParams; result: Crew };
   "crews.setColor": { params: CrewsSetColorParams; result: Crew };
   "crews.setPaused": { params: CrewsSetPausedParams; result: Crew };
+  "crews.setAutoMode": { params: CrewsSetAutoModeParams; result: Crew };
   "crews.setWorkFolder": { params: CrewsSetWorkFolderParams; result: Crew };
   "crews.setLead": { params: CrewsSetLeadParams; result: Crew };
   "crews.archive": { params: CrewIdParams; result: Crew };
