@@ -179,4 +179,53 @@ export const marketing: typeof en = {
     pairs:
       "Analista de competencia, para el mercado, y Analista de datos, para los números de venta.",
   },
+  "strategy-advisor": {
+    name: "Asesor de estrategia",
+    role: "Mira el negocio como un todo, descubre qué lo frena y propone los pocos movimientos que más importan",
+    summary: "Mira todo tu negocio y elige los pocos movimientos que valen tu tiempo",
+    about:
+      "Pregunta por tu oferta, tus clientes y tus números, encuentra la una o dos cosas que frenan el negocio y propone hasta tres movimientos, cada uno con su costo, cuánto falta para saber si sirve y el número que muestra que funcionó. También dice qué dejar de lado.",
+    when: "Cuando te sientes atascado, o tienes muchas ideas y ninguna forma de elegir.",
+    pairs: "Analista de competencia, para el mercado, y Analista financiero, para los números.",
+  },
+  "go-to-market-planner": {
+    name: "Planificador de salida al mercado",
+    role: "Planifica cómo llevar un producto a sus primeros clientes: para quién es, el mensaje, los canales y los primeros pasos",
+    summary: "Planifica a quién vender, qué decir y dónde encontrarlos, con los primeros pasos",
+    about:
+      "Describe al cliente con quien debes empezar, qué prometerle y por qué eres diferente, compara dos o tres formas de llegar a él y escribe las primeras semanas, semana a semana, con qué medir. No inventa cifras de mercado.",
+    when: "Cuando un producto está listo, o casi, y no sabes cómo conseguir los primeros clientes.",
+    pairs:
+      "Analista de competencia, para las alternativas, y Redactor publicitario, para las palabras.",
+  },
+  "launch-planner": {
+    name: "Planificador de lanzamientos",
+    role: "Planifica el lanzamiento de un producto o función: la lista, el calendario, los mensajes y el día en sí",
+    summary:
+      "Planifica un lanzamiento desde las semanas previas hasta el día siguiente, con lista y calendario",
+    about:
+      "Arma el plan de un lanzamiento: qué debe estar listo, un calendario para el antes, el día y el después, los mensajes redactados y los números que dicen si funcionó. Nada se publica ni se envía por ti.",
+    when: "Cuando tienes una fecha para lanzar algo y no quieres olvidar nada.",
+    pairs:
+      "Redactor publicitario, para las palabras finales, y Redes sociales, para las publicaciones.",
+  },
+  "sop-writer": {
+    name: "Redactor de procedimientos",
+    role: "Convierte la forma de hacer una tarea en un procedimiento escrito y claro que cualquiera del equipo pueda seguir",
+    summary: "Escribe procedimientos paso a paso para que el trabajo no viva solo en tu cabeza",
+    about:
+      "Recorre una tarea contigo y la escribe en pasos cortos y numerados, con verificaciones y los errores comunes, para que una persona nueva pueda seguirla el primer día. Nunca escribe contraseñas ni datos privados en un procedimiento.",
+    when: "Cuando algo que solo tú sabes hacer sigue cayendo en tu escritorio.",
+    pairs:
+      "Analista de procesos, para encontrar los pasos débiles, y Redactor técnico, para documentar software.",
+  },
+  "outreach-specialist": {
+    name: "Especialista en contacto",
+    role: "Escribe primeros mensajes personales y secuencias de seguimiento para correo y redes; nunca los envía",
+    summary: "Escribe primeros mensajes y seguimientos que la gente responde, y no envía nada",
+    about:
+      "Escribe un primer mensaje corto, basado en un detalle verdadero sobre la persona, y dos o tres seguimientos que aportan algo nuevo cada uno. Nunca envía, nunca finge urgencia ni cercanía y te recuerda que las leyes sobre mensajes aplican.",
+    when: "Cuando quieres llegar a clientes, socios o prensa que aún no te conocen.",
+    pairs: "Investigador, para conocer a la persona, y Redactor publicitario, para el tono.",
+  },
 };
