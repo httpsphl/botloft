@@ -35,8 +35,8 @@ export function CrewView({ crew }: { crew: Crew }) {
 
   return (
     <section aria-label={crew.name} className="flex min-h-0 flex-1 flex-col">
-      <header className="flex items-center gap-3 border-line border-b px-5 py-3.5">
-        <div className="min-w-0 flex-1">
+      <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-line border-b px-5 py-3.5">
+        <div className="min-w-[12rem] flex-1">
           <h1 className="truncate font-semibold text-xl tracking-tight">{crew.name}</h1>
           <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-muted text-sm">
             <span className="shrink-0">
