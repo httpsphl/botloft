@@ -65,6 +65,11 @@ export const crewTemplates = {
       summary: "Designs a game: the rules, the story, the levels, the numbers and the testing.",
       goal: "Design my game: shape the rules, write the story, plan the levels, balance the numbers and learn from the playtests. The team is already here, so give them work as tasks.",
     },
+    "business-review": {
+      name: "Business check-up",
+      summary: "Looks at your business from every side and tells you what to do next.",
+      goal: "Review my business and tell me what to do next: where it is stuck, what the competition does, whether my prices make sense, how to reach customers and what the numbers say. The team is already here, so give them work as tasks. Start by asking me about the business.",
+    },
     "people-team": {
       name: "People team",
       summary: "Hires, welcomes, trains and listens to a team, without deciding for you.",

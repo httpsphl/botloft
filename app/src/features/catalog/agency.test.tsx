@@ -33,7 +33,7 @@ describe("the Agent agency", () => {
 
     fireEvent.click(within(invite).getByRole("button", { name: "See all agents" }));
     const dialog = await screen.findByRole("dialog", { name: "Agent agency" });
-    expect(await within(dialog).findAllByRole("listitem")).toHaveLength(129);
+    expect(await within(dialog).findAllByRole("listitem")).toHaveLength(134);
   });
 
   test("a crew with only its chief invites the owner to pick agents, and a click adds one", async () => {
@@ -82,10 +82,10 @@ describe("the Agent agency", () => {
     await openCrewWithChief();
     fireEvent.click(screen.getByRole("button", { name: "Agent agency" }));
     const dialog = await screen.findByRole("dialog", { name: "Agent agency" });
-    expect(await within(dialog).findAllByRole("listitem")).toHaveLength(129);
+    expect(await within(dialog).findAllByRole("listitem")).toHaveLength(134);
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Marketing & sales" }));
-    expect(within(dialog).getAllByRole("listitem")).toHaveLength(24);
+    expect(within(dialog).getAllByRole("listitem")).toHaveLength(27);
     fireEvent.click(within(dialog).getByRole("button", { name: "Product & management" }));
     expect(within(dialog).getAllByRole("listitem")).toHaveLength(14);
 
@@ -129,7 +129,7 @@ describe("the Agent agency", () => {
     expect(addCalls(fake)[0]).toMatchObject({ templateId: "code-reviewer" });
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Back to all agents" }));
-    expect(within(dialog).getAllByRole("listitem")).toHaveLength(129);
+    expect(within(dialog).getAllByRole("listitem")).toHaveLength(134);
   });
 
   test("the same role twice gets another name", async () => {

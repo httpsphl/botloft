@@ -2188,6 +2188,16 @@ instructions = """
 | `resume-tailor` | `people` | Casa a vaga com o que o dono fez de verdade, reescreve currículo e carta, prepara a entrevista com as histórias dele |
 | `career-coach` | `people` | Escuta, mostra opções com o que cada uma custa e vira a escolha em três passos pequenos; não é terapeuta nem consultor financeiro |
 
+**Avaliação do negócio** (5; `business` e `marketing`): papéis para olhar o negócio inteiro, escritos do zero a partir do que cada função faz. Nenhum inventa números de mercado nem envia, publica ou gasta nada: o dono executa e decide. Formam, com `competitor-analyst`, `pricing-analyst`, `conversion-optimizer` e `financial-analyst`, o modelo de equipe `business-review` (29.1).
+
+| `id` | Categoria | O que faz |
+|---|---|---|
+| `strategy-advisor` | `business` | Pergunta antes de aconselhar, acha uma ou duas restrições e propõe até três movimentos, cada um com custo, prazo e o número que mostra que funcionou; diz o que deixar de lado (`effort` `high`) |
+| `go-to-market-planner` | `marketing` | Define o primeiro cliente, o posicionamento e compara canais, e escreve as primeiras semanas com o que medir; sem números de mercado inventados |
+| `launch-planner` | `marketing` | Monta lista, cronograma (antes, o dia, depois) e mensagens redigidas; nunca publica nem pede voto ou avaliação falsos |
+| `sop-writer` | `business` | Escreve o procedimento como a tarefa acontece de verdade, em passos curtos com verificação; nunca põe senha ou dado pessoal nele |
+| `outreach-specialist` | `marketing` | Escreve a primeira mensagem e dois ou três acompanhamentos a partir de um detalhe verdadeiro; nunca envia nem finge urgência ou intimidade |
+
 ### 26.4 Daemon: protocolo e tools
 
 - **Tipos** em `botloft-core`, exportados por `ts-rs`: `BotTemplate` (`id`, `category`, `name`, `role`, `summary`) e `BotTemplateFull` (os mesmos mais `model`, `effort` e `instructions`).
@@ -2614,6 +2624,7 @@ Montar uma equipe do zero pede escolher cinco ou seis papéis, um por um, na Ag�
 | `personal-office` | `personal-assistant`, `travel-planner`, `bills-assistant`, `tax-organizer`, `goals-coach`, `meeting-secretary` |
 | `course-studio` | `course-creator`, `video-scriptwriter`, `presentation-designer`, `designer`, `editor`, `social-media` |
 | `game-studio` | `game-designer`, `game-narrative-designer`, `level-designer`, `game-economy-designer`, `playtest-analyst`, `designer` |
+| `business-review` | `strategy-advisor`, `competitor-analyst`, `pricing-analyst`, `go-to-market-planner`, `conversion-optimizer`, `financial-analyst` |
 | `people-team` | `recruiter`, `onboarding-coach`, `training-designer`, `hr-policy-writer`, `engagement-survey-analyst`, `performance-review-coach` |
 
 - **Só no app.** Não há método novo no daemon: o modelo é uma lista de `id` do catálogo, que o catálogo valida ao adicionar. Um teste confere que todo papel de todo modelo existe, sem repetição e com no máximo 11.
@@ -2622,7 +2633,7 @@ Montar uma equipe do zero pede escolher cinco ou seis papéis, um por um, na Ag�
 
 | Marco | O que entra | Teste |
 |---|---|---|
-| **TM1** Modelos | o passo de modelos em "Nova equipe", os 10 modelos, a criação em ordem e o aviso de falha parcial, três idiomas | `FakeBotloft`: a lista, o formulário preenchido, `crews.create` e um `catalog.add` por papel, e uma falha que não derruba a equipe; todo papel existe no catálogo; `pnpm check`. Manual (PR): criar uma equipe de 2 ou 3 modelos com o Claude Code real e dar ao chefe um pedido |
+| **TM1** Modelos | o passo de modelos em "Nova equipe", os 11 modelos, a criação em ordem e o aviso de falha parcial, três idiomas | `FakeBotloft`: a lista, o formulário preenchido, `crews.create` e um `catalog.add` por papel, e uma falha que não derruba a equipe; todo papel existe no catálogo; `pnpm check`. Manual (PR): criar uma equipe de 2 ou 3 modelos com o Claude Code real e dar ao chefe um pedido |
 
 ### 29.2 Resumo diário
 

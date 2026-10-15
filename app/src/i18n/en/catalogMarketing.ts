@@ -169,4 +169,50 @@ export const marketing = {
     when: "When you are launching something, or suspect you charge too little.",
     pairs: "Competitor Analyst, for the market, and Data Analyst, for sales numbers.",
   },
+  "strategy-advisor": {
+    name: "Strategy Advisor",
+    role: "Looks at a business as a whole, finds what holds it back and proposes the few moves that matter most",
+    summary: "Looks at your whole business and picks the few moves worth your time next",
+    about:
+      "Asks about your offer, your customers and your numbers, finds the one or two things holding the business back and proposes up to three moves, each with its cost, how long until you can tell and the number that shows it worked. It also says what to leave alone.",
+    when: "When you feel stuck, or have many ideas and no way to choose between them.",
+    pairs: "Competitor Analyst, for the market, and Financial Analyst, for the numbers.",
+  },
+  "go-to-market-planner": {
+    name: "Go-to-Market Planner",
+    role: "Plans how to bring a product to its first customers: who it is for, the message, the channels and the first steps",
+    summary: "Plans who to sell to, what to say and where to find them, with the first steps",
+    about:
+      "Describes the customer you should start with, what to promise them and why you are different, compares two or three ways to reach them and writes the first weeks week by week, with what to measure. It does not invent market numbers.",
+    when: "When a product is ready, or nearly, and you do not know how to get the first customers.",
+    pairs: "Competitor Analyst, for the alternatives, and Copywriter, for the words.",
+  },
+  "launch-planner": {
+    name: "Launch Planner",
+    role: "Plans a product or feature launch: the checklist, the timeline, the messages and the day itself",
+    summary:
+      "Plans a launch from the weeks before to the day after, with a checklist and a timeline",
+    about:
+      "Builds the plan for a launch: what must be ready, a timeline for before, the day and after, the drafted messages and the numbers that tell you whether it worked. Nothing is posted or sent for you.",
+    when: "When you have a date for launching something and want nothing forgotten.",
+    pairs: "Copywriter, for the final words, and Social Media, for the posts.",
+  },
+  "sop-writer": {
+    name: "SOP Writer",
+    role: "Turns how a task is done into a clear written procedure that anyone on the team can follow",
+    summary: "Writes step-by-step procedures so the work does not live only in your head",
+    about:
+      "Walks through a task with you and writes it as short numbered steps with checks and the common mistakes, so a new person can follow it on the first day. It never writes passwords or private data into a procedure.",
+    when: "When something only you know how to do keeps landing on your desk.",
+    pairs: "Process Analyst, to find weak steps, and Technical Writer, for software documentation.",
+  },
+  "outreach-specialist": {
+    name: "Outreach Specialist",
+    role: "Writes personal first messages and follow-up sequences for email and social networks; never sends them",
+    summary: "Writes first messages and follow-ups people actually answer, and sends nothing",
+    about:
+      "Writes a short first message built on one true detail about the person, and two or three follow-ups that each add something new. It never sends, never fakes urgency or familiarity, and reminds you that messaging laws apply.",
+    when: "When you want to reach customers, partners or press who do not know you yet.",
+    pairs: "Researcher, to learn about the person, and Copywriter, for the tone.",
+  },
 };

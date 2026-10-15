@@ -4,15 +4,15 @@ import { FakeBotloft } from "./fake";
 describe("the fake's agent catalog", () => {
   it("lists the roles, by category too, and reads one with its instructions", async () => {
     const fake = new FakeBotloft();
-    expect(await fake.call("catalog.list", {})).toHaveLength(129);
+    expect(await fake.call("catalog.list", {})).toHaveLength(134);
     const product = await fake.call("catalog.list", { category: "product" });
     expect(product).toHaveLength(14);
-    expect(await fake.call("catalog.list", { category: "marketing" })).toHaveLength(24);
+    expect(await fake.call("catalog.list", { category: "marketing" })).toHaveLength(27);
     expect(await fake.call("catalog.list", { category: "design" })).toHaveLength(9);
     expect(await fake.call("catalog.list", { category: "finance" })).toHaveLength(7);
     expect(await fake.call("catalog.list", { category: "people" })).toHaveLength(7);
     expect(await fake.call("catalog.list", { category: "security" })).toHaveLength(7);
-    expect(await fake.call("catalog.list", { category: "business" })).toHaveLength(10);
+    expect(await fake.call("catalog.list", { category: "business" })).toHaveLength(12);
     expect(await fake.call("catalog.list", { category: "legal" })).toHaveLength(7);
     expect(await fake.call("catalog.list", { category: "games" })).toHaveLength(7);
     expect(await fake.call("catalog.list", { category: "health" })).toHaveLength(7);

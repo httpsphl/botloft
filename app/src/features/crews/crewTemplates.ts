@@ -107,6 +107,17 @@ export const CREW_TEMPLATES: readonly CrewTemplate[] = [
     ],
   },
   {
+    id: "business-review",
+    roles: [
+      "strategy-advisor",
+      "competitor-analyst",
+      "pricing-analyst",
+      "go-to-market-planner",
+      "conversion-optimizer",
+      "financial-analyst",
+    ],
+  },
+  {
     id: "people-team",
     roles: [
       "recruiter",

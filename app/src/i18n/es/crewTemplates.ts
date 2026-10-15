@@ -64,6 +64,11 @@ export const crewTemplates: typeof en = {
       summary: "Diseña un juego: las reglas, la historia, los niveles, los números y las pruebas.",
       goal: "Diseña mi juego: da forma a las reglas, escribe la historia, planifica los niveles, equilibra los números y aprende de las pruebas. El equipo ya está aquí, así que reparte el trabajo como tareas.",
     },
+    "business-review": {
+      name: "Evaluación del negocio",
+      summary: "Mira tu negocio desde todos los lados y te dice qué hacer a continuación.",
+      goal: "Evalúa mi negocio y dime qué hacer a continuación: dónde está atascado, qué hace la competencia, si mis precios tienen sentido, cómo llegar a los clientes y qué dicen los números. El equipo ya está aquí, así que reparte el trabajo como tareas. Empieza preguntándome por el negocio.",
+    },
     "people-team": {
       name: "Equipo de personas",
       summary: "Contrata, acoge, forma y escucha a un equipo, sin decidir por ti.",
