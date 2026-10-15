@@ -6,7 +6,7 @@
 
 .sidebar-slot {
   position: relative;
-  width: 18rem;
+  width: var(--sidebar-width, 18rem);
 }
 
 .sidebar-slot[data-open="false"] {
