@@ -23,6 +23,7 @@ const tool = (name: string) =>
     status: "done",
     output: null,
     file: null,
+    lines: null,
   });
 const turn = () => item({ kind: "turn", durationMs: 1000, tokens: null, error: null });
 const inbound = (body: string, at?: number) =>

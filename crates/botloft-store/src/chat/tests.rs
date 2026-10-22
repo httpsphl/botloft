@@ -58,6 +58,7 @@ fn a_tool_item_is_found_and_updated() {
         status: ToolStatus::Running,
         output: None,
         file: None,
+        lines: None,
     };
     let entry = item(bot, ChatBody::Tool(running.clone()), 5);
     fx.store.insert_chat_item(&entry).expect("insert");
@@ -99,6 +100,7 @@ fn written_files_come_newest_first_without_repeats_or_failures() {
             status,
             output: None,
             file: file.map(str::to_owned),
+            lines: None,
         })
     };
     for (n, (file, status)) in [

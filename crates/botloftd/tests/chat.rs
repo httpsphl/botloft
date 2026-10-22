@@ -89,6 +89,7 @@ async fn what_the_bot_prints_becomes_the_chat() {
     // The app names the tool in the owner's language.
     assert_eq!(running["activity"]["text"], "Run the tests");
     assert_eq!(running["activity"]["tool"], "Bash");
+    assert_eq!(running["item"]["body"]["lines"], Value::Null);
     let done = kind(&mut c.app, "tool").await;
     assert_eq!(done["item"]["id"], running["item"]["id"]);
     assert_eq!(done["item"]["body"]["status"], "done");
@@ -129,6 +130,31 @@ async fn what_the_bot_prints_becomes_the_chat() {
     assert_eq!(listed[0]["lastActivity"]["text"], "All 12 tests pass.");
     // The newest reply, the one before the turn ended.
     assert_eq!(listed[0]["lastReplyAt"], history[1]["updatedAt"]);
+}
+
+#[tokio::test]
+async fn an_edit_counts_its_lines_before_the_input_is_cut() {
+    let mut c = two_bots().await;
+    let line = talk_to_lead(&mut c, "Fill the notes").await;
+    let p = &c.lead_process;
+    p.emit(stream::replay(&line)).await;
+    let notes: Vec<String> = (0..800).map(|n| format!("note {n}")).collect();
+    let edit = json!({
+        "file_path": "C:\\work\\notes.md",
+        "old_string": "# Notes\nTODO",
+        "new_string": format!("# Notes\n{}", notes.join("\n")),
+    });
+    p.emit(stream::tool_use("toolu_1", "Edit", edit)).await;
+    p.emit(stream::tool_result("toolu_1", "Updated", false))
+        .await;
+
+    let running = kind(&mut c.app, "tool").await;
+    let body = &running["item"]["body"];
+    assert!(body["input"].as_str().expect("input").ends_with('…'));
+    assert_eq!(body["lines"], json!({ "added": 800, "removed": 1 }));
+    let done = kind(&mut c.app, "tool").await;
+    assert_eq!(done["item"]["body"]["status"], "done");
+    assert_eq!(done["item"]["body"]["lines"], body["lines"]);
 }
 
 /// Starts a permission request for `tool_use_id` the way Claude Code does,

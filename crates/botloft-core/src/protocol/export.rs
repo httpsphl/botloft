@@ -201,6 +201,7 @@ fn export_bindings() {
     out.decl::<InboundItem>();
     out.decl::<ReplyItem>();
     out.decl::<ToolItem>();
+    out.decl::<EditLines>();
     rules::decls(&mut out);
     desktop::decls(&mut out);
     mcp::decls(&mut out);

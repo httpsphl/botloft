@@ -5,6 +5,7 @@
 
 use botloft_core::chat::{TOOL_OUTPUT_MAX, clip, tool_file, tool_input_max, tool_summary};
 use botloft_core::command::tool_explanation;
+use botloft_core::edits::edit_lines;
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{ChatBody, ReplyItem, TokenUsage, ToolItem, ToolStatus, TurnItem};
 use serde_json::Value;
@@ -43,6 +44,8 @@ pub(crate) fn tool_started(daemon: &Daemon, bot: &BotId, id: &str, name: &str, i
             status: ToolStatus::Running,
             output: None,
             file: tool_file(name, input),
+            // Counted before the input is cut (spec 8.2).
+            lines: edit_lines(name, input),
         }),
     );
 }

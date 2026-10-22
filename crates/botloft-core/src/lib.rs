@@ -4,6 +4,7 @@
 pub mod avatar;
 pub mod chat;
 pub mod command;
+pub mod edits;
 pub mod envelope;
 pub mod ids;
 pub mod protocol;

@@ -94,6 +94,7 @@ fn filters_paging_and_what_is_left_out() {
             status: ToolStatus::Done,
             output: Some("report".into()),
             file: None,
+            lines: None,
         }),
         created_at: 0,
         updated_at: 0,

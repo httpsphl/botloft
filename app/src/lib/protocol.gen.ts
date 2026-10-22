@@ -919,7 +919,18 @@ output: string | null,
  * The full path of the file a `Write`/`Edit`/`NotebookEdit` call
  * changes; absent for other tools and for items stored before it existed.
  */
-file: string | null, };
+file: string | null, 
+/**
+ * The lines a `Write`, `Edit` or `MultiEdit` call adds and removes,
+ * counted from its whole input; absent for other tools, when the input
+ * has no texts to count and for older items (spec 8.2).
+ */
+lines: EditLines | null, };
+
+/**
+ * How many lines an edit adds and removes (spec 8.2).
+ */
+export type EditLines = { added: number, removed: number, };
 
 /**
  * What an allow rule covers, besides its tool.
