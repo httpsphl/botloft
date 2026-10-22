@@ -124,6 +124,7 @@ export class FakeChat {
       status: "running",
       output: null,
       file: null,
+      lines: null,
       ...changes,
     });
   }

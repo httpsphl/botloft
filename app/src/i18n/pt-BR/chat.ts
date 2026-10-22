@@ -68,6 +68,10 @@ export const chat: Messages["chat"] = {
     error: "Erro",
     command: "Comando",
     commandCut: "Este comando é longo demais para aparecer inteiro.",
+    changes: "Mudanças",
+    changesCut: "Esta mudança é longa demais para aparecer aqui.",
+    added: (n: number) => (n === 1 ? "1 linha adicionada" : `${n} linhas adicionadas`),
+    removed: (n: number) => (n === 1 ? "1 linha removida" : `${n} linhas removidas`),
     group: {
       command: (n: number) => (n === 1 ? "1 comando rodado" : `${n} comandos rodados`),
       read: (n: number) => (n === 1 ? "1 arquivo lido" : `${n} arquivos lidos`),

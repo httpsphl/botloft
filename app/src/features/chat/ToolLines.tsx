@@ -27,7 +27,7 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-import { useContext, useState } from "react";
+import { useContext, useMemo, useState } from "react";
 import { useT } from "../../i18n";
 import type { ChatItem, ToolItem } from "../../lib/protocol.gen";
 import { useArrival } from "../../ui/motion";
@@ -37,6 +37,8 @@ import { ShowFile } from "../files/showFile";
 import { isScreenFile, ShowScreen } from "../screens/showScreen";
 import { ShowTerminal } from "../terminal/showTerminal";
 import { commandOf, isCommand } from "./command";
+import { EditCounts, EditDiff } from "./EditDiff";
+import { editDiffs, isEditTool } from "./lineDiff";
 import { ReadPicture, ReadThumb, useReadImage } from "./readImage";
 import { toolDetail, toolKey, toolTitle } from "./toolNames";
 
@@ -129,6 +131,11 @@ function ToolLine({
   const said = tool.explanation;
   const detail = said || toolDetail(tool, t.tools);
   const command = isCommand(tool.name) ? commandOf(tool.input) : null;
+  // Read only once the line opens: an edit's input can be 4 KB.
+  const diffs = useMemo(
+    () => (open && isEditTool(tool.name) ? editDiffs(tool.name, tool.input) : null),
+    [open, tool.name, tool.input],
+  );
   const Icon = iconOf(toolKey(tool.name));
   const block =
     "max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-lg border border-line bg-sunken px-2.5 py-1.5 font-mono text-xs leading-relaxed";
@@ -150,6 +157,7 @@ function ToolLine({
             {detail}
           </span>
           <ReadThumb source={picture} name={detail} />
+          {tool.lines && tool.status !== "failed" && <EditCounts lines={tool.lines} />}
           <Status status={tool.status} />
           <ChevronRight
             aria-hidden
@@ -216,13 +224,23 @@ function ToolLine({
       {open && (
         <div className="mt-1 mb-2 ml-7 flex animate-rise flex-col gap-1.5" data-selectable>
           <ReadPicture source={picture} name={detail} />
-          <p className="text-muted text-xs">
-            {command ? t.chat.tools.command : t.chat.tools.input}
-          </p>
-          <pre className={block}>{command ? command.text : pretty(tool.input)}</pre>
+          {diffs ? (
+            <>
+              <p className="text-muted text-xs">{t.chat.tools.changes}</p>
+              <EditDiff diffs={diffs} />
+            </>
+          ) : (
+            <>
+              <p className="text-muted text-xs">
+                {command ? t.chat.tools.command : t.chat.tools.input}
+              </p>
+              <pre className={block}>{command ? command.text : pretty(tool.input)}</pre>
+            </>
+          )}
           {command && !command.whole && (
             <p className="text-warn text-xs">{t.chat.tools.commandCut}</p>
           )}
+          {!diffs && tool.lines && <p className="text-warn text-xs">{t.chat.tools.changesCut}</p>}
           {tool.output !== null && (
             <>
               <p className={`text-xs ${tool.status === "failed" ? "text-danger" : "text-muted"}`}>

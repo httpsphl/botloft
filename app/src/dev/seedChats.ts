@@ -142,6 +142,20 @@ export function seedChats(fake: FakeBotloft, crew: Crew): void {
   at(90);
   chat.finish(chat.tool(crew.writer, "Read", { summary: "week-39.md" }), "42 lines");
   chat.reply(crew.writer, "Starting the draft. I'll keep the three highlights as sections.");
+  const draft = "C:\\Work\\reports\\week-39-report.md";
+  const outline = chat.tool(crew.writer, "Edit", {
+    summary: "week-39-report.md",
+    file: draft,
+    input: JSON.stringify({
+      file_path: draft,
+      old_string: "# Week 39\n\nTODO: highlights",
+      new_string:
+        "# Week 39\n\n## Retrieval at scale\n## Agents that plan\n## Small evals\n\nSources: shared/summaries/week-39.md",
+    }),
+    lines: { added: 5, removed: 1 },
+  });
+  chat.finish(outline, "The file has been updated.");
+  chat.reply(crew.writer, "The outline is in. Writing the sections now.");
   chat.tool(crew.writer, "Write", { summary: "week-39-report.md" });
 
   at(40);

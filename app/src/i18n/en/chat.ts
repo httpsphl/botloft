@@ -72,6 +72,11 @@ export const chat = {
     error: "Error",
     command: "Command",
     commandCut: "This command is too long to show in full.",
+    /** What an edit changed, line by line (spec 15.3). */
+    changes: "Changes",
+    changesCut: "This change is too long to show here.",
+    added: (n: number) => (n === 1 ? "1 line added" : `${n} lines added`),
+    removed: (n: number) => (n === 1 ? "1 line removed" : `${n} lines removed`),
     /** A finished group of calls in one line: "Ran 4 commands, read 2 files". */
     group: {
       command: (n: number) => (n === 1 ? "ran 1 command" : `ran ${n} commands`),

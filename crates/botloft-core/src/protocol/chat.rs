@@ -139,6 +139,20 @@ pub struct ToolItem {
     /// changes; absent for other tools and for items stored before it existed.
     #[serde(default)]
     pub file: Option<String>,
+    /// The lines a `Write`, `Edit` or `MultiEdit` call adds and removes,
+    /// counted from its whole input; absent for other tools, when the input
+    /// has no texts to count and for older items (spec 8.2).
+    #[serde(default)]
+    pub lines: Option<EditLines>,
+}
+
+/// How many lines an edit adds and removes (spec 8.2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct EditLines {
+    pub added: u32,
+    pub removed: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -314,12 +328,15 @@ mod tests {
             status: ToolStatus::Running,
             output: None,
             file: None,
+            lines: None,
         });
         let mut json = serde_json::to_value(&tool).expect("serialize");
         assert_eq!(json["kind"], "tool");
         assert_eq!(json["toolUseId"], "toolu_1");
         // Items stored before a field existed still read.
-        json.as_object_mut().expect("object").remove("explanation");
+        let object = json.as_object_mut().expect("object");
+        object.remove("explanation");
+        object.remove("lines");
         assert_eq!(serde_json::from_value::<ChatBody>(json).ok(), Some(tool));
     }
 }
