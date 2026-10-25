@@ -143,6 +143,8 @@ pub struct Daemon {
     pub contexts: Contexts,
     /// How each bot's connected tools stand since it started (spec 25.5).
     pub mcp_states: crate::service::mcp_state::McpStates,
+    /// The values of the agents' keys, read from their files (spec 32).
+    pub keys: crate::agent_keys::KeyVault,
     /// Time for everything stored or compared with stored times.
     pub clock: Arc<dyn Clock>,
     store: Mutex<Store>,
@@ -193,6 +195,7 @@ impl Daemon {
             trash: options.trash,
             contexts: Contexts::default(),
             mcp_states: Default::default(),
+            keys: Default::default(),
             clock: options.clock,
             paths: options.paths,
             port: options.port,

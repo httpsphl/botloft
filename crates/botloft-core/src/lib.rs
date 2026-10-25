@@ -7,6 +7,7 @@ pub mod command;
 pub mod edits;
 pub mod envelope;
 pub mod ids;
+pub mod keys;
 pub mod protocol;
 pub mod slug;
 pub mod validate;

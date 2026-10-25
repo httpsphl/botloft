@@ -1685,6 +1685,29 @@ lines: EditLines,
  */
 busiest: BusyBot | null, };
 
+/**
+ * A key of an agent, without its value (spec 32.2).
+ */
+export type AgentKey = { name: string, 
+/**
+ * What the key is, as the owner wrote it; empty without one.
+ */
+description: string, 
+/**
+ * When its value last changed, in Unix ms.
+ */
+setAt: number, 
+/**
+ * The value is not on this computer, e.g. after restoring a copy.
+ */
+missing: boolean, };
+
+export type KeysListParams = { botId: BotId, };
+
+export type KeysSetParams = { botId: BotId, name: string, value: string, description?: string, };
+
+export type KeysDeleteParams = { botId: BotId, name: string, };
+
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
 /**
  * What the bot says the command is for, as in `ToolItem`. The bot
@@ -2431,6 +2454,9 @@ export interface RpcMethods {
   "mobile.revoke": { params: MobileRevokeParams; result: MobileStatus };
   "cards.list": { params: undefined; result: Cards };
   "activity.today": { params: ActivityTodayParams; result: DayActivity };
+  "keys.list": { params: KeysListParams; result: Array<AgentKey> };
+  "keys.set": { params: KeysSetParams; result: Array<AgentKey> };
+  "keys.delete": { params: KeysDeleteParams; result: Array<AgentKey> };
   "routines.list": { params: RoutinesListParams; result: Array<Routine> };
   "routines.create": { params: RoutinesCreateParams; result: Routine };
   "routines.update": { params: RoutinesUpdateParams; result: Routine };

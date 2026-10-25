@@ -9,7 +9,9 @@ use crate::state::{Daemon, Event};
 
 /// Saves a new item for `bot` and announces it with the bot's new
 /// conversation-list line.
-pub(crate) fn add(daemon: &Daemon, bot: &BotId, body: ChatBody) -> Option<ChatItem> {
+pub(crate) fn add(daemon: &Daemon, bot: &BotId, mut body: ChatBody) -> Option<ChatItem> {
+    // An agent's key never gets kept as it is (spec 32.6).
+    crate::agent_keys::redact_body(daemon, bot, &mut body);
     let now = daemon.clock.now_ms();
     let item = ChatItem {
         id: ChatItemId::generate(),
@@ -42,7 +44,13 @@ pub(crate) fn changed(daemon: &Daemon, item: ChatItem) {
 }
 
 /// Replaces an item's body, e.g. a tool that finished, and announces it.
-pub(crate) fn update(daemon: &Daemon, id: &ChatItemId, body: ChatBody) -> Option<ChatItem> {
+pub(crate) fn update(
+    daemon: &Daemon,
+    bot: &BotId,
+    id: &ChatItemId,
+    mut body: ChatBody,
+) -> Option<ChatItem> {
+    crate::agent_keys::redact_body(daemon, bot, &mut body);
     let now = daemon.clock.now_ms();
     match daemon.store().update_chat_item(id, &body, now) {
         Ok(Some(item)) => {

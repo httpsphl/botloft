@@ -1144,6 +1144,7 @@ M2 a M4 foram entregues com ConPTY, terminal com replay, inbox por named pipe e 
 12. Catálogo de bots: modelos prontos de função (Designer, Pesquisador...) que o dono escolhe na Agência de bots e adiciona à equipe, e que o chefe usa para sugerir bots com instruções melhores. Desenho na seção 26.
 13. Modelos de equipe (começar uma equipe já com os bots certos) e resumo diário (o chefe conta, no fim do dia, o que cada bot fez). Desenho na seção 29.
 14. Ilha: o Botloft no topo da tela, uma pílula que vira painel, com os pedidos e as perguntas de todas as equipes, os agentes ao vivo, uma conversa rápida e o uso do plano, sem abrir o Botloft. Desenho na seção 31.
+15. Chaves dos agentes: o dono guarda fora da conversa as chaves de que um agente precisa, e o agente as usa pelo nome, como variável de ambiente. Desenho na seção 32.
 
 ## 19. Pontos a verificar na versão alvo do Claude Code
 
@@ -2856,3 +2857,82 @@ Textos nos três idiomas (15.6), sem jargão: "Precisa de você no Botloft", "Ab
 | **I3** Agentes ao vivo, comemoração e resumo | cartões dos agentes com passos e diff, texto ao vivo, "+2 trabalhando", comemoração, cartão Hoje | `FakeBotloft`: um agente edita e o cartão mostra o passo e o diff; outro termina e comemora; o resumo com os números do fake |
 | **I4** Conversa, arquivo e uso | aba Conversa com escolha do agente, texto ao vivo e envio; arrastar arquivo; aba Uso com plano e rotinas, "Rodar agora"; anel na pílula | `FakeBotloft`: mandar e ver a resposta; arquivo anexado e grande demais recusado; barras na cor de aviso a partir de 80%; rotinas na ordem com "em 25 min" |
 | **I5** Quando aparece e teste real | descer, pílula, espiar, janela principal na frente, tela cheia e apresentação, no lugar do aviso do Windows; Configurações; CPU medida | lógica de quando aparecer com relógio falso (`FakeHost`); `quiet.rs` com os estados do Windows; **a verificar** (19): sem foco ao aparecer, transparência no WebView2, sobre tela cheia; CPU pelo CDP (`webview-frame-measuring`); manual com o Claude Code real: com o Botloft atrás de outra janela, um agente pede um comando, a ilha desce sem foco, Permitir pela ilha, o chat mostra "Permitido"; outro agente termina e comemora |
+
+## 32. Chaves dos agentes
+
+Status: **K1 feito** (guardar, usar e esconder); K2 a K4 em desenho. A ideia veio do OpenBot (`docs/openbot-analysis.md`, fora do git); a implementação é nossa.
+
+### 32.1 O que é
+
+Alguns agentes precisam de uma chave ou senha de outro serviço para trabalhar: o token de um gateway de WhatsApp, uma chave do Stripe, do GitHub, de uma API de e-mail. Hoje o dono a cola no chat, e aí ela fica na conversa do Botloft (no banco), vai ao modelo junto com o resto, fica no histórico de sessão do Claude Code, entra na cópia na nuvem (27) e o agente pode repeti-la numa resposta ou mandá-la a outro agente.
+
+Com as **chaves**, o dono guarda a chave fora da conversa e o agente a usa **pelo nome**, sem nunca ver o valor no chat: ela chega ao processo do agente como variável de ambiente.
+
+### 32.2 Onde a chave fica
+
+- **Por agente.** Cada chave é de um agente (`bot_id`) e tem um **nome** e, se o dono quiser, uma **descrição** ("Token do gateway do WhatsApp"). Outro agente da mesma equipe não a recebe.
+- **Em `secrets\keys\<bot_id>.json`**, com a permissão só do usuário (ACL, 13), como os segredos das ferramentas conectadas (25.2). **Nunca** no banco, no log, no workspace do agente, na cópia de segurança (14.2) nem na nuvem (27). O banco guarda só os nomes, as descrições e quando mudaram, para a lista.
+- **Só de escrita.** O app nunca mostra o valor de volta: "Trocar" pede um valor novo. O daemon não tem método que devolva o valor.
+- **Computador novo.** Restaurar uma cópia traz os nomes e as descrições, sem os valores: cada chave aparece como "Falta o valor" até o dono colar de novo, e o agente sobe sem a variável.
+
+### 32.3 O nome
+
+- `[A-Z][A-Z0-9_]{1,63}`, único no agente, por exemplo `WHATSAPP_TOKEN`.
+- Recusados: `PATH`, `PATHEXT`, `SYSTEMROOT`, `COMSPEC`, `TEMP`, `TMP`, `USERPROFILE`, `HOME`, `APPDATA`, `LOCALAPPDATA`, e qualquer um que comece com `BOTLOFT_`, `CLAUDE`, `ANTHROPIC_`, `CODEX_`, `OPENAI_` ou `NODE_`: são do sistema, do Botloft ou do motor, e trocá-los mudaria como o agente roda (7.4).
+- Com o motor que lê do ambiente, o nome é o que o agente usa: `$env:WHATSAPP_TOKEN` no PowerShell, `$WHATSAPP_TOKEN` no Bash, ou um programa que lê a variável.
+
+### 32.4 Como o agente usa
+
+- **No ambiente do processo.** Ao subir o agente (7.4, passo 5), o daemon põe as chaves dele no ambiente, depois do bloco do usuário e antes das variáveis do Botloft, que não podem ser sobrescritas. Vale para os três motores (30).
+- **Mudou, reinicia.** Salvar, trocar ou apagar uma chave reinicia o agente com `--resume` quando nada estiver em andamento, como na troca de modo (7.4) e nas ferramentas conectadas (25.3): a conversa continua, e o processo novo já tem a variável.
+- **Regras do agente:** um arquivo próprio, `.claude/rules/keys.md`, escrito a cada início (e apagado sem chaves), com a lista dos nomes, as descrições, e a regra; os outros motores (30) recebem o mesmo texto no fim do `AGENTS.md`. A regra: use a chave pelo nome da variável; nunca escreva o valor numa resposta, num arquivo, numa mensagem a outro agente nem num comando que o imprima (`echo`, `Write-Output`); se uma chave faltar ou não funcionar, peça com `ask_key`, nunca no chat (até o K2, "diga ao dono qual, pelo nome").
+
+### 32.5 Como o agente pede
+
+- **A tool `ask_key {name, why}`** (10): `name` como em 32.3, `why` em até 500 caracteres, na língua do dono. Volta na hora, como `ask_owner` (23.2), com o lembrete de que a chave chega depois numa mensagem do Botloft e de que o agente não deve esperar: segue com o que não depende dela ou termina o turno. Até 5 pedidos abertos por agente; vale em qualquer modo de permissão.
+- **O cartão** no chat: "<agente> precisa de uma chave", o nome, o porquê, um campo de senha (com o olho para mostrar o que foi digitado), a descrição opcional, e **Salvar** e **Agora não**. Salvo, vira uma linha "Você guardou a chave WHATSAPP_TOKEN" (nunca o valor). "Agora não" fecha o pedido e o agente recebe "o dono não deu a chave agora".
+- **Depois de salva**, o agente reinicia (32.4) e recebe uma mensagem do Botloft: "A chave WHATSAPP_TOKEN está no seu ambiente." Uma chave que já existia e foi trocada diz isso também.
+- **O dono também cadastra sem pedido**, nos detalhes do agente (15.1), na parte **Chaves**: a lista com nome, descrição e quando mudou, "Trocar", "Apagar" e "Adicionar chave".
+- **Fora do celular e da ilha.** O pedido nunca vai ao celular (28.5) e, na ilha, aparece como "Precisa de você no Botloft" (31.5): colar uma senha é coisa do computador.
+
+### 32.6 O que o Botloft esconde
+
+- **Do que ele guarda.** Antes de gravar um item do chat (8.2: resposta, resumo, explicação, entrada e saída de ferramenta, pedido de aprovação, mensagem recebida, aviso) ou uma message (9), o daemon troca cada valor de chave do agente (com 8 caracteres ou mais, o mais longo primeiro) por `[chave NOME]` (`botloft_core::keys::redact`, chamado em `chat/items.rs`, na criação do pedido de aprovação e em `messages::post`). Numa message, valem as chaves de quem recebe e de quem manda. As chaves ficam num cache em memória do daemon, lido do arquivo uma vez e esquecido a cada mudança. Assim, um `echo` por engano não leva a chave ao banco, ao app, ao celular, à busca (8.8) nem à cópia na nuvem.
+- **Das mensagens do dono.** Se o dono colar no chat o valor de uma chave já guardada, a mensagem chega ao agente com `[chave NOME]` no lugar, e o app avisa que ela já está guardada.
+- **O que fica fora do alcance.** O histórico de sessão do próprio Claude Code (`%USERPROFILE%\.claude\projects\...`) e o que o modelo recebe são do motor: se o agente imprimir o valor apesar da regra, ele vai para lá. A regra de 32.4 e a troca de 32.6 reduzem isso; não é uma garantia, e o app diz isso na parte Chaves.
+
+### 32.7 Chaves que já foram coladas
+
+- **"Procurar chaves nas conversas"**, nas Configurações (parte Segurança): o daemon procura no banco, nas mensagens do dono e nos itens do chat, textos com cara de chave: prefixos conhecidos (`sk-`, `sk-ant-`, `ghp_`, `github_pat_`, `xoxb-`, `xoxp-`, `AKIA`, `AIza`, `rk_live_`, `sk_live_`, `whsec_`) e JWT (`eyJ...` com dois pontos). Mostra a lista com o agente, a data e só o começo e o fim (`sk-…a1b2`).
+- Para cada achado: **"Guardar como chave"** (escolhe o agente e o nome, guarda como em 32.2 e troca o texto no banco por `[chave NOME]`) ou **"Apagar do Botloft"** (troca por `[chave removida]`).
+- **O que isso não alcança**, dito na tela em palavras simples: o histórico de sessão do Claude Code (o Botloft não mexe nele, porque isso pode quebrar a conversa do agente; "Começar conversa nova" no agente deixa ela para trás) e as cópias na nuvem já feitas (a próxima sai sem a chave; apagar as antigas é em Conta, 27.6). E o mais importante: **trocar a chave no serviço de origem**, porque ela já passou por lugares que o Botloft não controla.
+
+### 32.8 Segurança
+
+- Nada de valor de chave no log, em nível nenhum (13); o daemon loga só "chave salva" com o nome.
+- O valor existe em três lugares: o arquivo em `secrets\`, a memória do daemon enquanto sobe o agente e o ambiente do processo do agente (e dos comandos que ele roda, que herdam o ambiente).
+- Um agente não lê as chaves de outro: o arquivo é por agente e só o daemon o abre; `secrets\` já está nas regras de negar leitura (7.5).
+- `ask_key` não salva nada: só abre o cartão. Só o dono, no app, grava uma chave.
+
+### 32.9 Protocolo e dados
+
+- **Métodos** (11.2, só do dono): `keys.list {botId}` → `[{name, description, setAt, missing}]`; `keys.set {botId, name, value, description?, requestId?}`; `keys.delete {botId, name}`; `keys.dismiss {requestId}`; `keys.scan` → achados de 32.7 (sem o valor inteiro); `keys.scrub {hits: [{id, as}]}`, com `as` o nome de uma chave nova ou `null` para apagar.
+- **Notificação** `key.changed {botId}`; o cartão é um item novo do chat, `key_request` (`requestId`, `name`, `why`, `status`: `open`, `saved`, `dismissed`), regravado quando o dono responde.
+- **Banco:** migration com `agent_keys` (`bot_id`, `name`, `description`, `set_at`) e `key_requests` (`id`, `bot_id`, `name`, `why`, `status`, `created_at`, `answered_at`). Nenhum valor.
+- **App:** o cartão em `features/chat/KeyRequestCard.tsx`, a parte Chaves nos detalhes do agente, a busca nas Configurações; textos nos três idiomas.
+
+### 32.10 Fora desta etapa
+
+- Chave da equipe inteira (por enquanto, cada agente tem as suas).
+- Chaves vindas de um cofre de fora (1Password, Bitwarden) e do cofre do Windows.
+- Validade e lembrete de troca.
+- Mexer no histórico de sessão do Claude Code.
+
+### 32.11 Marcos
+
+| Marco | O que entra | Teste |
+|---|---|---|
+| **K1** Guardar e usar | `secrets\keys`, `keys.list/set/delete`, o nome validado, a variável no ambiente do agente nos três motores, o reinício com `--resume`, as regras do agente com os nomes, a troca por `[chave NOME]` no que o daemon grava | `tests/agent_keys.rs`: o agente sobe com a variável e o `keys.md`, e sem eles depois de apagada; nomes reservados e valor vazio recusados; o comando, a saída, a resposta e a mensagem do dono com o valor ficam com `[chave NOME]`; `keys.rs` do núcleo (nome, valor, troca), `agent_keys.rs` do daemon e do store. **Feito** |
+| **K2** O pedido | a tool `ask_key`, o item `key_request`, `keys.dismiss`, a mensagem ao agente quando a chave chega, o limite de 5, fora do celular | `tests/`: pede, o dono salva pelo `requestId`, o agente reinicia e recebe a mensagem; "Agora não" avisa o agente; o celular não recebe o cartão |
+| **K3** No app | o cartão com o campo de senha, a parte Chaves nos detalhes, "Falta o valor", o aviso de chave já guardada colada no chat, três idiomas | `FakeBotloft`; `pnpm check` |
+| **K4** As já coladas e o teste real | `keys.scan`, `keys.scrub`, a tela nas Configurações | testes no store com textos de exemplo de cada padrão; manual com o Claude Code real: um agente pede uma chave, o dono salva, o agente roda um comando que usa `$env:NOME` e funciona; um `echo` dela aparece no chat como `[chave NOME]` |

@@ -68,7 +68,7 @@ pub(crate) fn tool_finished(daemon: &Daemon, bot: &BotId, id: &str, failed: bool
         output: (!output.is_empty()).then(|| clip(output, TOOL_OUTPUT_MAX)),
         ..tool
     });
-    items::update(daemon, &item.id, body);
+    items::update(daemon, bot, &item.id, body);
 }
 
 /// The line that closes a turn: how long it took, its tokens when the agent

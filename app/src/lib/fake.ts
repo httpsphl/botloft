@@ -17,6 +17,7 @@ import { crewHandlers } from "./fakeCrews";
 import { FakeDesktop } from "./fakeDesktop";
 import { FakeFiles } from "./fakeFiles";
 import { islandHandlers } from "./fakeIsland";
+import { FakeKeys } from "./fakeKeys";
 import { FakeLesson } from "./fakeLesson";
 import { FakeMcp } from "./fakeMcp";
 import { mobileHandlers } from "./fakeMobile";
@@ -102,6 +103,7 @@ export class FakeBotloft implements BotloftApi {
   readonly browser = new FakeBrowser(this);
   readonly screens = new FakeScreens(this);
   readonly questions = new FakeQuestions(this);
+  readonly keys = new FakeKeys(this);
   readonly reactions = new FakeReactions(this);
   readonly lesson = new FakeLesson(this);
   /** Clock for created and updated times. */
@@ -323,6 +325,7 @@ export class FakeBotloft implements BotloftApi {
     ...this.screens.handlers(),
     ...this.routines.handlers(),
     ...this.questions.handlers(),
+    ...this.keys.handlers(),
     ...this.reactions.handlers(),
     ...this.lesson.handlers(),
     ...usageHandlers(this),
