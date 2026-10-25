@@ -21,6 +21,7 @@ export const crews = {
     fromOwner: (text: string) => `You: ${text}`,
     /** The conversation-list line for an approval the bot is waiting on. */
     awaitingApproval: (text: string) => `Waiting for approval: ${text}`,
+    showedPlan: (text: string) => `Plan: ${text}`,
     unread: "unread",
     /** Beside a crew's name: how many of its bots are unread. */
     unreadCount: (count: number) => `${count} unread`,

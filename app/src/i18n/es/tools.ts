@@ -41,6 +41,7 @@ export const tools: Messages["tools"] = {
     ask_crew_access: "Acceder a otro equipo",
     share_file: "Compartir un archivo",
     ask_owner: "Hacerte una pregunta",
+    show_plan: "Mostrarte el plan",
     browser: "Usar un sitio",
     browser_help: "Pedir tu ayuda",
     browser_open: "Abrir una página",

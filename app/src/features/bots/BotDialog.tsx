@@ -40,6 +40,7 @@ export function BotDialog(props: Props) {
   const [model, setModel] = useState<BotModel>(editing?.model ?? "default");
   // One command prefix per line, for a bot whose agent cannot ask (spec 30).
   const [commands, setCommands] = useState((editing?.allowedCommands ?? []).join("\n"));
+  const [planFirst, setPlanFirst] = useState(editing?.planFirst ?? false);
   // Which agent runs the bot is chosen once, when it is made (spec 30).
   const agents = useApp((state) => state.system?.enabledAgents ?? CLAUDE_ONLY);
   const preferred = useApp((state) => state.settings?.defaultAgent ?? "claude");
@@ -65,6 +66,7 @@ export function BotDialog(props: Props) {
           ...(role !== editing.role && { role }),
           ...(instructions !== editing.instructions && { instructions }),
           ...(color !== undefined && color !== editing.color && { color }),
+          ...(planFirst !== editing.planFirst && { planFirst }),
           ...(editing.agent !== "claude" &&
             commands !== editing.allowedCommands.join("\n") && {
               allowedCommands: commands.split("\n"),
@@ -182,6 +184,14 @@ export function BotDialog(props: Props) {
             onChange={(event) => setModel(event.target.value as BotModel)}
             options={MODELS.map((value) => ({ value, label: t.chat.model.names[value] }))}
             hint={t.chat.model.cost}
+          />
+        )}
+        {editing && (
+          <Toggle
+            label={t.bots.dialog.planFirst.title}
+            hint={t.bots.dialog.planFirst.hint(editing.name)}
+            checked={planFirst}
+            onChange={setPlanFirst}
           />
         )}
         <fieldset className="flex flex-col gap-1.5">

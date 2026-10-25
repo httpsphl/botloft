@@ -2,6 +2,8 @@
 // files and the composer. Bot names, tool names and what the bots write
 // are data and never pass through here.
 
+import { startPlan } from "./startPlan";
+
 /** A turn's tokens, already written as numbers. */
 export interface TurnTokens {
   read: string;
@@ -378,6 +380,7 @@ export const chat = {
     declined: (name: string) => `You kept ${name} as it was`,
     expired: (name: string) => `The change to ${name} was not answered in time`,
   },
+  startPlan,
   plan: {
     ready: (bot: string) => `${bot} made a plan and wants to go ahead`,
     noteLabel: (bot: string) => `What ${bot} should change in the plan`,

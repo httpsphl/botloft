@@ -94,6 +94,11 @@ export const bots: Messages["bots"] = {
     instructionsPlaceholder:
       "Como este agente trabalha, o que ele pode fazer sozinho e quando deve perguntar.",
     instructionsHint: "Salvas agora nas regras do agente; ele as lê na próxima vez que iniciar.",
+    planFirst: {
+      title: "Mostrar o plano antes de tarefas longas",
+      hint: (bot: string) =>
+        `${bot} diz o que vai fazer antes de um trabalho longo e espera 20 segundos, para você mudar ou cancelar.`,
+    },
     fullAccess: {
       title: "Rodar qualquer comando sem perguntar",
       off: "Desligado: ele só roda os comandos da lista abaixo.",

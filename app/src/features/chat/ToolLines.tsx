@@ -56,6 +56,7 @@ const ICONS: Record<string, LucideIcon> = {
   WebSearch: Globe,
   TodoWrite: ListChecks,
   ExitPlanMode: ListTodo,
+  show_plan: ListChecks,
   Task: Users,
   Agent: Users,
   send_message: Send,

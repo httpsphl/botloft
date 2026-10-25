@@ -21,6 +21,7 @@ import { BotChangeCard, CHANGE_BOT_TOOL } from "./BotChangeCard";
 import { CREW_ACCESS_TOOL, CrewAccessCard } from "./CrewAccessCard";
 import { commandOf, isCommand } from "./command";
 import { PLAN_TOOL, PlanCard } from "./PlanCard";
+import { START_PLAN_TOOL, StartPlanCard } from "./StartPlanCard";
 import { SUGGEST_TOOL, SuggestionCard } from "./SuggestionCard";
 import { pretty } from "./ToolLines";
 import { toolAction } from "./toolNames";
@@ -67,6 +68,8 @@ export function ApprovalCard({ approval, bot }: { approval: ApprovalItem; bot: B
   switch (approval.toolName) {
     case PLAN_TOOL:
       return <PlanCard approval={approval} bot={bot} />;
+    case START_PLAN_TOOL:
+      return <StartPlanCard approval={approval} bot={bot} />;
     case SUGGEST_TOOL:
       return <SuggestionCard approval={approval} bot={bot} />;
     case ROUTINE_TOOL:

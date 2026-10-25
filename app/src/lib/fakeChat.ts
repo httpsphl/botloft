@@ -210,6 +210,10 @@ export class FakeChat {
         approval.status = allow ? "allowed" : "denied";
         approval.note = allow ? null : (note ?? null);
         approval.answeredAt = this.fake.now;
+        // The smaller way is kept with the plan, as the daemon does (spec 10.5).
+        if (allow && approval.toolName === "mcp__botloft__show_plan" && input !== undefined) {
+          approval.input = JSON.stringify({ ...JSON.parse(approval.input), ...JSON.parse(input) });
+        }
         // Claude Code leaves plan mode once the plan is approved.
         const bot = this.fake.bots.get(approval.botId);
         if (allow && approval.toolName === "ExitPlanMode" && bot?.permissionMode === "plan") {

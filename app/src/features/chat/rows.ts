@@ -13,12 +13,17 @@ export type Row =
   | { kind: "run"; key: string; items: ChatItem[] }
   | { kind: "notice"; key: string; item: ChatItem; notice: NoticeItem };
 
-/** The bot asking the owner (spec 23.2): its question card says it all. */
-const ASK_TOOL = "mcp__botloft__ask_owner";
+/**
+ * Tools whose card says it all: the bot asking the owner (spec 23.2) and
+ * the plan it shows before long work (spec 10.5).
+ */
+const CARD_TOOLS = new Set(["mcp__botloft__ask_owner", "mcp__botloft__show_plan"]);
 
-/** A call to ask the owner that worked; the card stands for it. */
+/** A call that worked and has its own card, which stands for it. */
 function isAskLine(item: ChatItem): boolean {
-  return item.body.kind === "tool" && item.body.name === ASK_TOOL && item.body.status !== "failed";
+  return (
+    item.body.kind === "tool" && CARD_TOOLS.has(item.body.name) && item.body.status !== "failed"
+  );
 }
 
 function dayOf(ms: number): string {
