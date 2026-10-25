@@ -16,6 +16,7 @@ import { FakeCrewAccess } from "./fakeCrewAccess";
 import { crewHandlers } from "./fakeCrews";
 import { FakeDesktop } from "./fakeDesktop";
 import { FakeFiles } from "./fakeFiles";
+import { islandHandlers } from "./fakeIsland";
 import { FakeLesson } from "./fakeLesson";
 import { FakeMcp } from "./fakeMcp";
 import { mobileHandlers } from "./fakeMobile";
@@ -325,6 +326,7 @@ export class FakeBotloft implements BotloftApi {
     ...this.reactions.handlers(),
     ...this.lesson.handlers(),
     ...usageHandlers(this),
+    ...islandHandlers(this),
     ...backupHandlers(this),
     ...cloudHandlers(this),
     ...autoBackupHandlers(this),

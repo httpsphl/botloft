@@ -26,6 +26,8 @@ mod cloud;
 mod crew_access;
 #[path = "export_desktop.rs"]
 mod desktop;
+#[path = "export_island.rs"]
+mod island;
 #[path = "export_mcp.rs"]
 mod mcp;
 #[path = "export_mobile.rs"]
@@ -210,6 +212,7 @@ fn export_bindings() {
     backup::decls(&mut out);
     cloud::decls(&mut out);
     mobile::decls(&mut out);
+    island::decls(&mut out);
     out.decl::<ApprovalItem>();
     usage::decls(&mut out);
     questions::decls(&mut out);
@@ -411,6 +414,7 @@ fn export_bindings() {
     backup::methods(&mut out);
     cloud::methods(&mut out);
     mobile::methods(&mut out);
+    island::methods(&mut out);
     routines::methods(&mut out);
     questions::methods(&mut out);
     reactions::methods(&mut out);

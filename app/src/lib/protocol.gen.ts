@@ -1630,6 +1630,61 @@ export type ToPhone = { "t": "snapshot", approvals: Array<ApprovalCard>, questio
  */
 export type FromPhone = { "t": "sync" } | { "t": "approval.answer", approvalId: ApprovalId, allow: boolean, note?: string, } | { "t": "question.answer", questionId: QuestionId, answer: string, } | { "t": "question.dismiss", questionId: QuestionId, } | { "t": "chats" } | { "t": "history", req: number, botId: BotId, before?: ChatItemId, } | { "t": "send", clientId: string, botId: BotId, text: string, } | { "t": "watch", botId?: BotId, };
 
+/**
+ * Every request and question waiting for the owner, oldest first, as the
+ * phone sees them (spec 31.5, 28.5).
+ */
+export type Cards = { approvals: Array<ApprovalCard>, questions: Array<QuestionCard>, };
+
+/**
+ * Params of `activity.today`.
+ */
+export type ActivityTodayParams = { 
+/**
+ * Where the day starts, in Unix ms: the app sends its local midnight.
+ */
+since: number, };
+
+export type BusyBot = { botId: BotId, name: string, color: string, crew: string, 
+/**
+ * Time in turns since `since`, in ms.
+ */
+workMs: number, };
+
+/**
+ * What every crew did since `since`, counted from the database without a
+ * bot's turn (spec 31.4).
+ */
+export type DayActivity = { 
+/**
+ * Tasks between bots that ended done.
+ */
+tasksDone: number, 
+/**
+ * Tasks that ended failed or expired.
+ */
+tasksFailed: number, 
+/**
+ * Messages one bot sent another.
+ */
+botMessages: number, 
+/**
+ * Requests the owner allowed or denied.
+ */
+requestsAnswered: number, 
+/**
+ * Distinct files that edits counted in `lines` changed.
+ */
+filesEdited: number, 
+/**
+ * Lines added and removed by the edits that finished well (spec 8.2).
+ */
+lines: EditLines, 
+/**
+ * The bot that spent the most time in turns; `None` on a quiet day.
+ */
+busiest: BusyBot | null, };
+
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
 /**
  * What the bot says the command is for, as in `ToolItem`. The bot
@@ -2374,6 +2429,8 @@ export interface RpcMethods {
   "mobile.pair_cancel": { params: MobilePairIdParams; result: null };
   "mobile.pair_confirm": { params: MobilePairConfirmParams; result: null };
   "mobile.revoke": { params: MobileRevokeParams; result: MobileStatus };
+  "cards.list": { params: undefined; result: Cards };
+  "activity.today": { params: ActivityTodayParams; result: DayActivity };
   "routines.list": { params: RoutinesListParams; result: Array<Routine> };
   "routines.create": { params: RoutinesCreateParams; result: Routine };
   "routines.update": { params: RoutinesUpdateParams; result: Routine };

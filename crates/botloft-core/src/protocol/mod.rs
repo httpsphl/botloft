@@ -60,6 +60,7 @@ mod desktop;
 #[cfg(test)]
 mod export;
 mod files;
+mod island;
 mod lesson;
 mod mcp;
 mod messaging;
@@ -85,6 +86,7 @@ pub use cloud::*;
 pub use crew_access::*;
 pub use desktop::*;
 pub use files::*;
+pub use island::*;
 pub use lesson::*;
 pub use mcp::*;
 pub use messaging::*;
@@ -214,6 +216,8 @@ pub mod method {
     /// The owner opens the bot's closed browser for themselves.
     pub const BROWSER_START: &str = "browser.start";
     pub const SCREENS_LIST: &str = "screens.list";
+    pub const CARDS_LIST: &str = "cards.list";
+    pub const ACTIVITY_TODAY: &str = "activity.today";
     pub const QUESTIONS_LIST: &str = "questions.list";
     pub const QUESTIONS_ANSWER: &str = "questions.answer";
     pub const QUESTIONS_DISMISS: &str = "questions.dismiss";

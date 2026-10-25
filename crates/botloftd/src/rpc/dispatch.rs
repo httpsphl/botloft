@@ -9,8 +9,9 @@ use super::jsonrpc::{RpcError, empty_params};
 use crate::approvals;
 use crate::service::{
     self, ApiError, ApiResult, agents, archive, attachments, autobackup, backup, bots, catalog,
-    chat, cloud, crew_access, crews, delete, deliveries, desktop, files, lead, mcp, messages,
-    mobile, models, modes, questions, reactions, routines, rules, screens, settings, tasks, usage,
+    chat, cloud, crew_access, crews, delete, deliveries, desktop, files, island, lead, mcp,
+    messages, mobile, models, modes, questions, reactions, routines, rules, screens, settings,
+    tasks, usage,
 };
 use crate::state::Daemon;
 
@@ -128,6 +129,8 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::ROUTINES_RUNS => reply(routines::runs(daemon, parse(params)?)),
         method::TASKS_LIST => reply(tasks::list(daemon, parse(params)?)),
         method::BROWSER_LIST => reply(Ok(daemon.browsers.list())),
+        method::CARDS_LIST => reply(Ok::<_, ApiError>(island::cards(daemon))),
+        method::ACTIVITY_TODAY => reply(island::today(daemon, parse(params)?)),
         method::QUESTIONS_LIST => reply(questions::list(daemon, parse(params)?)),
         method::QUESTIONS_ANSWER => reply(questions::answer(daemon, parse(params)?)),
         method::QUESTIONS_DISMISS => reply(questions::dismiss(daemon, parse(params)?)),
