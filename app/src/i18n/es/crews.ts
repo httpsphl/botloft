@@ -17,6 +17,7 @@ export const crews: Messages["crews"] = {
     noMessages: "Aún no hay mensajes",
     fromOwner: (text: string) => `Tú: ${text}`,
     awaitingApproval: (text: string) => `Esperando aprobación: ${text}`,
+    showedPlan: (text: string) => `Plan: ${text}`,
     unread: "sin leer",
     unreadCount: (count: number) => `${count} sin leer`,
     moveUp: "Mover arriba",

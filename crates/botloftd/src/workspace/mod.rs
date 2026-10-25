@@ -6,6 +6,7 @@ pub mod connected;
 mod files;
 pub mod folder;
 mod memory;
+mod sections;
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -164,6 +165,7 @@ mod tests {
             agent: botloft_core::protocol::AgentKind::Claude,
             agent_model: None,
             allowed_commands: Vec::new(),
+            plan_first: false,
             model: botloft_core::protocol::BotModel::Default,
             model_in_use: None,
             effort: botloft_core::protocol::BotEffort::Default,

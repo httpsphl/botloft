@@ -98,6 +98,11 @@ export const bots = {
     instructionsPlaceholder: "How this agent works, what it may do on its own and when to ask.",
     instructionsHint:
       "Saved to the agent's rules now; the agent reads them the next time it starts.",
+    planFirst: {
+      title: "Show the plan before long tasks",
+      hint: (bot: string) =>
+        `${bot} says what it will do before long work and waits 20 seconds, so you can change or cancel it.`,
+    },
     fullAccess: {
       title: "Run any command without asking",
       off: "Off: it may run only the commands listed below.",

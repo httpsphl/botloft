@@ -158,6 +158,9 @@ pub struct Bot {
     /// Command prefixes a bot not on Claude Code may run without asking:
     /// its agent cannot ask in headless mode (spec 30). `*` is every command.
     pub allowed_commands: Vec<String>,
+    /// Shows its plan before a long task and starts by itself after a few
+    /// seconds (spec 10.5).
+    pub plan_first: bool,
     pub model: BotModel,
     /// The model id Claude Code reported when the bot last started a turn
     /// (`claude-opus-5-5`); `null` before its first turn.

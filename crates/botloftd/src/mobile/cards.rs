@@ -1,7 +1,7 @@
 //! What the phone is shown (spec 28.5): a card for each request and question
 //! that waits, with only what the owner needs to decide.
 
-use botloft_core::chat::PLAN_TOOL;
+use botloft_core::chat::{PLAN_TOOL, SHOW_PLAN_TOOL};
 use botloft_core::ids::ApprovalId;
 use botloft_core::protocol::{
     ApprovalCard, ApprovalItem, ApprovalStatus, CARD_TEXT_MAX, CardBot, ChatBody, ChatItem,
@@ -30,6 +30,7 @@ pub fn may_allow(tool: &str) -> bool {
             | "MultiEdit"
             | "NotebookEdit"
     ) || tool == PLAN_TOOL
+        || tool == SHOW_PLAN_TOOL
 }
 
 /// The text to read before allowing, and whether it is not all of the
@@ -46,6 +47,7 @@ fn text_of(tool: &str, input: &str) -> (String, bool) {
     let (text, whole) = match tool {
         "Bash" | "PowerShell" => (field("command"), parsed.is_some()),
         PLAN_TOOL => (field("plan"), parsed.is_some()),
+        SHOW_PLAN_TOOL => (parsed.as_ref().map(plan_text), parsed.is_some()),
         _ => (None, parsed.is_some()),
     };
     // A request the daemon cut short (it does not parse) is shown as it is
@@ -59,6 +61,31 @@ fn text_of(tool: &str, input: &str) -> (String, bool) {
         end -= 1;
     }
     (text[..end].to_owned(), true)
+}
+
+/// A plan shown before a long task (spec 10.5) as one text: the summary,
+/// the numbered steps and the smaller way.
+fn plan_text(plan: &Value) -> String {
+    let mut text = plan["summary"].as_str().unwrap_or_default().to_owned();
+    let steps = plan["steps"]
+        .as_array()
+        .map(Vec::as_slice)
+        .unwrap_or_default();
+    for (number, step) in steps.iter().filter_map(Value::as_str).enumerate() {
+        text.push_str(&format!(
+            "
+{}. {step}",
+            number + 1
+        ));
+    }
+    if let Some(alternative) = plan["alternative"].as_str() {
+        text.push_str(&format!(
+            "
+
+{alternative}"
+        ));
+    }
+    text
 }
 
 fn bot_and_crew(daemon: &Daemon, bot: &botloft_core::ids::BotId) -> Option<(CardBot, String)> {
@@ -163,8 +190,36 @@ mod tests {
     use serde_json::json;
 
     #[test]
+    fn a_plan_before_long_work_reads_as_one_text_on_the_phone() {
+        let plan = json!({
+            "summary": "Fix the login",
+            "steps": ["Read the form", "Fix the check"],
+            "alternative": "Only list the problems",
+            "starts_at": 1,
+        });
+        let (text, cut) = text_of(SHOW_PLAN_TOOL, &plan.to_string());
+        assert_eq!(
+            text,
+            "Fix the login
+1. Read the form
+2. Fix the check
+
+Only list the problems"
+        );
+        assert!(!cut);
+    }
+
+    #[test]
     fn the_phone_allows_plain_tools_and_leaves_the_rest_to_the_computer() {
-        for tool in ["Bash", "PowerShell", "WebFetch", "Read", "Edit", PLAN_TOOL] {
+        for tool in [
+            "Bash",
+            "PowerShell",
+            "WebFetch",
+            "Read",
+            "Edit",
+            PLAN_TOOL,
+            SHOW_PLAN_TOOL,
+        ] {
             assert!(may_allow(tool), "{tool}");
         }
         for tool in [

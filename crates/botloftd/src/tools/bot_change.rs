@@ -198,6 +198,7 @@ fn apply(daemon: &Daemon, id: &BotId, before: &Profile, next: &Profile) -> ApiRe
             instructions: Some(next.instructions.clone()),
             color: None,
             allowed_commands: None,
+            plan_first: None,
         },
     )?;
     if next.model != before.model {

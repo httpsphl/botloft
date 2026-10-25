@@ -1,5 +1,6 @@
 import type { Messages } from "../en";
 import type { TurnTokens } from "../en/chat";
+import { startPlan } from "./startPlan";
 
 export const chat: Messages["chat"] = {
   view: {
@@ -364,6 +365,7 @@ export const chat: Messages["chat"] = {
     declined: (name) => `Dejaste a ${name} como estaba`,
     expired: (name) => `El cambio de ${name} quedó sin respuesta`,
   },
+  startPlan,
   plan: {
     ready: (bot: string) => `${bot} hizo un plan y quiere seguir con él`,
     noteLabel: (bot: string) => `Qué debe cambiar ${bot} en el plan`,

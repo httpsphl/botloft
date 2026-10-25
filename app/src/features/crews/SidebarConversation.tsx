@@ -13,6 +13,7 @@ import { BotStateBadge, stateView } from "../bots/BotStateBadge";
 import { useBotActions } from "../bots/botActions";
 import { ChiefBadge, isChief } from "../bots/ChiefBadge";
 import { ListAvatar } from "../bots/ListAvatar";
+import { START_PLAN_TOOL } from "../chat/StartPlanCard";
 import { toolAction, toolTitle } from "../chat/toolNames";
 import { row } from "./SidebarPages";
 
@@ -95,6 +96,10 @@ function activityText(activity: Activity, t: Messages): string {
     case "owner":
       return t.crews.sidebar.fromOwner(plainText(text));
     case "approval":
+      // A plan before long work starts by itself: nothing waits for the owner.
+      if (tool === START_PLAN_TOOL) {
+        return t.crews.sidebar.showedPlan(plainText(text));
+      }
       return t.crews.sidebar.awaitingApproval(tool ? toolAction(tool, t.tools) : text);
     case "question":
       return t.questions.activity(plainText(text));
