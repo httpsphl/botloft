@@ -12,6 +12,7 @@ import {
   sendNotification,
 } from "@tauri-apps/plugin-notification";
 import { check, type Update } from "@tauri-apps/plugin-updater";
+import { OPEN_BOT_EVENT } from "../island/event";
 import type { AppUpdate, DaemonStatus, Host } from "./host";
 import { hideTray, rebuildTray, showTray } from "./tauriTray";
 
@@ -171,6 +172,8 @@ export function tauriHost(): Host {
           }
         }),
       onReopened: (listener) => listen("botloft://reopened", () => listener()),
+      onOpenBot: (listener) =>
+        listen<string>(OPEN_BOT_EVENT, (event) => listener(event.payload || null)),
       isMaximized: () => window.isMaximized(),
       onResized: (listener) => window.onResized(() => listener()),
       setAttention: async (on) => {

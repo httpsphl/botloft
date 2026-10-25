@@ -121,6 +121,11 @@ pub struct MobilePairRequest {
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct CardBot {
+    /// Which bot, so the island can open its chat (spec 31.5). The daemon
+    /// always sends it; older phones and tests may leave it out.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, ts(optional))]
+    pub id: Option<BotId>,
     pub name: String,
     pub color: String,
 }

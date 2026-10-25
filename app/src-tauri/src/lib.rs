@@ -182,6 +182,13 @@ pub fn run() {
             }
             Ok(())
         })
+        // The island keeps the app alive while hidden: when the main window
+        // closes for good, the app ends with it (spec 31.3).
+        .on_window_event(|window, event| {
+            if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
+                tauri::Manager::app_handle(window).exit(0);
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             daemon_status,
             daemon_install,

@@ -72,6 +72,8 @@ export interface AppWindow {
    * the window already came forward. Returns the unsubscribe function.
    */
   onReopened(listener: () => void): Promise<() => void>;
+  /** The island asks to open an agent's chat, or just the window (`null`, spec 31.3). */
+  onOpenBot(listener: (botId: string | null) => void): Promise<() => void>;
   isMaximized(): Promise<boolean>;
   /** Called when the window is resized; returns the unsubscribe function. */
   onResized(listener: () => void): Promise<() => void>;

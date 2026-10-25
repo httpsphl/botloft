@@ -21,6 +21,19 @@
     "core:webview:allow-set-webview-zoom",
     "updater:default",
     "dialog:allow-open",
-    "notification:default"
+    "notification:default",
+    "allow-daemon-status",
+    "allow-daemon-install",
+    "allow-daemon-restart",
+    "allow-daemon-stop",
+    "allow-claude-sign-in",
+    "allow-read-owner-token",
+    "allow-open-path",
+    "allow-open-file",
+    "allow-reveal-file",
+    "allow-save-file-as",
+    "allow-open-url",
+    "allow-open-at-sign-in",
+    "allow-launched-at-sign-in"
   ]
 }

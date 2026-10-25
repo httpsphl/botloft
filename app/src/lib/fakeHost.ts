@@ -51,6 +51,7 @@ export class FakeHost implements Host {
   /** The icon near the clock, while shown, and what its menu does. */
   tray: { view: TrayView; actions: TrayActions } | null = null;
   private readonly reopenListeners = new Set<() => void>();
+  private readonly openBotListeners = new Set<(botId: string | null) => void>();
   /** Paths `signInToClaude` ran, and what it answers. */
   readonly signIns: string[] = [];
   signInResult: boolean | Error = true;
@@ -90,6 +91,13 @@ export class FakeHost implements Host {
       this.front = false;
     } else {
       this.closed = true;
+    }
+  }
+
+  /** The island asks for an agent's chat, or just the window. */
+  openBot(botId: string | null): void {
+    for (const listener of this.openBotListeners) {
+      listener(botId);
     }
   }
 
@@ -221,6 +229,12 @@ export class FakeHost implements Host {
       this.reopenListeners.add(listener);
       return Promise.resolve(() => {
         this.reopenListeners.delete(listener);
+      });
+    },
+    onOpenBot: (listener: (botId: string | null) => void) => {
+      this.openBotListeners.add(listener);
+      return Promise.resolve(() => {
+        this.openBotListeners.delete(listener);
       });
     },
     onCloseRequested: (before: () => Promise<"close" | "stay">) => {

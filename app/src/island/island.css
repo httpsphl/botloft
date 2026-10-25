@@ -1,0 +1,184 @@
+/* The island at the top of the screen (spec 31.2): black in both themes,
+   like a laptop's camera, with its own dark tokens as the terminal has. */
+
+:root {
+  --island-bg: #000;
+  --island-card: #161618;
+  --island-sunk: #0d0d0f;
+  --island-line: #26262b;
+  --island-tab: #232327;
+  --island-ink: #f4f4f5;
+  --island-soft: #d4d4d8;
+  --island-muted: #8e8e95;
+  --island-ok: #4ade80;
+  --island-work: #60a5fa;
+  --island-warn: #f5b83d;
+  --island-danger: #f87171;
+}
+
+/* The window is transparent around the shape. */
+html,
+body {
+  background: transparent;
+  overflow: hidden;
+}
+
+.island {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  translate: -50% 0;
+  background: var(--island-bg);
+  color: var(--island-ink);
+  border-radius: 0 0 22px 22px;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  transition:
+    width 320ms cubic-bezier(0.32, 1.25, 0.5, 1),
+    height 320ms cubic-bezier(0.32, 1.25, 0.5, 1),
+    border-radius 320ms ease;
+}
+
+.island[data-open="true"] {
+  border-radius: 0 0 28px 28px;
+}
+
+/* In the preview, a desktop behind it and a light shadow to see the edge. */
+[data-island-preview] body {
+  background:
+    radial-gradient(1200px 600px at 20% 110%, #3b2a6b 0%, transparent 60%),
+    radial-gradient(900px 500px at 90% 0%, #1d3557 0%, transparent 55%),
+    linear-gradient(160deg, #1b1830 0%, #0e0d18 60%, #151226 100%);
+  min-height: 100vh;
+}
+
+[data-island-preview] .island {
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.45);
+}
+
+.island-content {
+  animation: island-in 220ms 80ms both ease-out;
+}
+
+@keyframes island-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.island-card {
+  background: var(--island-card);
+  border-radius: 16px;
+}
+
+.island-sunk {
+  background: var(--island-sunk);
+  border-radius: 12px;
+}
+
+.island-muted {
+  color: var(--island-muted);
+}
+
+.island-soft {
+  color: var(--island-soft);
+}
+
+.island-tab {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 28px;
+  border-radius: 999px;
+  color: #a1a1aa;
+  transition:
+    background-color 150ms,
+    color 150ms;
+}
+
+.island-tab:hover,
+.island-tab:focus-visible {
+  color: #fff;
+}
+
+.island-tab[aria-selected="true"] {
+  background: var(--island-tab);
+  color: #fff;
+}
+
+.island-button {
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 13px;
+  transition:
+    background-color 150ms,
+    opacity 150ms;
+}
+
+.island-button:disabled {
+  opacity: 0.5;
+}
+
+.island-button[data-kind="allow"] {
+  background: #fff;
+  color: #000;
+  font-weight: 500;
+}
+
+.island-button[data-kind="deny"] {
+  border: 1px solid #3f3f46;
+  color: var(--island-danger);
+}
+
+.island-button[data-kind="quiet"] {
+  color: var(--island-muted);
+}
+
+.island-button[data-kind="quiet"]:hover {
+  color: #fff;
+}
+
+.island-button[data-kind="option"] {
+  border: 1px solid #3f3f46;
+  color: var(--island-ink);
+}
+
+.island-glow {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.island-glow::before {
+  content: "";
+  position: absolute;
+  inset: -14px;
+  border-radius: 999px;
+  background: radial-gradient(circle, var(--glow) 0%, transparent 68%);
+  opacity: 0.35;
+}
+
+.island-field {
+  background: var(--island-sunk);
+  border-radius: 999px;
+  color: var(--island-ink);
+}
+
+.island-field::placeholder {
+  color: var(--island-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .island,
+  .island-content {
+    transition: none;
+    animation: none;
+  }
+}
+
+:root[data-motion="less"] .island,
+:root[data-motion="less"] .island-content {
+  transition: none;
+  animation: none;
+}

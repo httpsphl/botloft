@@ -1562,7 +1562,12 @@ export type MobilePairRequest = { pairId: string, name: string, code: string, };
 /**
  * The bot that asks, as the phone shows it.
  */
-export type CardBot = { name: string, color: string, };
+export type CardBot = { 
+/**
+ * Which bot, so the island can open its chat (spec 31.5). The daemon
+ * always sends it; older phones and tests may leave it out.
+ */
+id?: BotId, name: string, color: string, };
 
 /**
  * A request waiting for the owner, as the phone shows it (spec 28.5). It
