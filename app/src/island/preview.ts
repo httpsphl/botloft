@@ -32,6 +32,30 @@ export function islandPreview(): { api: FakeBotloft; host: IslandHost } {
     `{"command": "python - <<'EOF'\\nimport re\\n${"x".repeat(60)}…`,
     "Confere os links do relatório.",
   );
+  // The plan, past the warning line, and two routines coming up.
+  const now = Date.now();
+  fake.system = {
+    ...fake.system,
+    usage: {
+      status: "allowed_warning",
+      resetsAt: now + 2 * 3600_000,
+      observedAt: now - 60_000,
+      windows: [
+        { name: "five_hour", utilization: 0.84, resetsAt: now + 2 * 3600_000 },
+        { name: "seven_day", utilization: 0.46, resetsAt: now + 3 * 86_400_000 },
+      ],
+    },
+  };
+  const routine = (botId: string, name: string, minutes: number) =>
+    fake.call("routines.create", {
+      botId,
+      name,
+      prompt: name,
+      schedule: { kind: "interval", minutes },
+      timezone: "America/Sao_Paulo",
+    });
+  void routine(scout.id, "Novos artigos", 25);
+  void routine(writer.id, "Resumo da semana", 300);
   // Earlier today: an edit and a turn, for the Today card.
   fake.chat.tool(writer.id, "Write", {
     summary: "week-40-outline.md",

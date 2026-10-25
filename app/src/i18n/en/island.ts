@@ -14,6 +14,25 @@ export const island = {
   tabs: {
     label: "Island tabs",
     home: "Home",
+    chat: "Chat",
+    usage: "Usage",
+  },
+  /** On the pill, once the 5-hour window passes 80%. */
+  planUsed: (percent: number) => `plan at ${percent}%`,
+  chat: {
+    pick: "Pick an agent",
+    files: "Files to send",
+    removeFile: (name: string) => `Remove ${name}`,
+    label: (bot: string) => `Message to ${bot}`,
+    placeholder: (bot: string) => `Write to ${bot}, or drop a file here`,
+    send: "Send",
+  },
+  usage: {
+    plan: "Claude plan",
+    routines: "Next routines",
+    noRoutines: "No routine coming up.",
+    runNow: "Run now",
+    started: "Started",
   },
   openApp: "Open Botloft",
   hide: "Hide",

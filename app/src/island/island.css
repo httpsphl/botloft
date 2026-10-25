@@ -185,6 +185,15 @@ body {
   }
 }
 
+/* Around the pill's mascot once the 5-hour window passes 80% (31.4). */
+.island-ring {
+  position: absolute;
+  inset: -3px;
+  border-radius: 999px;
+  background: conic-gradient(var(--island-warn) calc(var(--used) * 360deg), transparent 0);
+  mask: radial-gradient(circle, transparent 60%, #000 62%);
+}
+
 .island-field {
   background: var(--island-sunk);
   border-radius: 999px;

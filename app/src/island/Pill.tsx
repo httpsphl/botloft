@@ -3,6 +3,7 @@
 // finishes, it widens for a moment to say so, the mascot hopping (31.4).
 
 import { Check, LoaderCircle } from "lucide-react";
+import type { CSSProperties } from "react";
 import { BotAvatar } from "../features/bots/BotAvatar";
 import { useT } from "../i18n";
 import type { Cheer } from "./useCheer";
@@ -34,15 +35,22 @@ export function Pill({
   waiting,
   working,
   color,
+  used,
   onOpen,
 }: {
   waiting: number;
   working: number;
   color: string;
+  /** The 5-hour window's share once it passes the warning line (31.4). */
+  used: number | null;
   onOpen: () => void;
 }) {
   const t = useT();
-  const said = [waiting > 0 && t.island.waiting(waiting), working > 0 && t.island.working(working)]
+  const said = [
+    waiting > 0 && t.island.waiting(waiting),
+    working > 0 && t.island.working(working),
+    used !== null && t.island.planUsed(Math.round(used * 100)),
+  ]
     .filter(Boolean)
     .join(", ");
   return (
@@ -61,8 +69,17 @@ export function Pill({
           </>
         )}
       </span>
-      <span className={waiting > 0 ? "inline-grid" : "island-breathe inline-grid"}>
-        <BotAvatar color={color} size={24} mood={waiting > 0 ? "waiting" : "working"} still />
+      <span className="relative inline-grid">
+        {used !== null && (
+          <span
+            className="island-ring"
+            data-testid="plan-ring"
+            style={{ "--used": used } as CSSProperties}
+          />
+        )}
+        <span className={waiting > 0 ? "inline-grid" : "island-breathe inline-grid"}>
+          <BotAvatar color={color} size={24} mood={waiting > 0 ? "waiting" : "working"} still />
+        </span>
       </span>
       <span className="island-muted flex w-10 items-center justify-end gap-1">
         {working > 0 && (
