@@ -143,6 +143,10 @@ export const bots = {
     crewPausedBody: "Its agents stay stopped until you resume the crew.",
     programMissing: (name: string) => `${name} was not found`,
     programMissingBody: "Install it, or tell Botloft where it is in Settings.",
+    /** In `auth_error` with a key in the environment (spec 7.4). */
+    apiKey: "A key saved in Windows is in the way",
+    apiKeyBody:
+      "Your agents use ANTHROPIC_API_KEY, saved in the Windows environment variables, instead of your Claude account, and it does not work. Remove it (or fix it), then restart the agent.",
   },
   details: {
     title: (name: string) => `About ${name}`,

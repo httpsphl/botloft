@@ -24,6 +24,21 @@ pub use windows::{
     secret_load, secret_save, sign_in_id, stop_task, track_groups, user_environment,
 };
 
+/// Whether the bots' environment has a non-empty `ANTHROPIC_API_KEY`, which
+/// Claude Code uses instead of the owner's Claude account (spec 7.4). Only
+/// whether it is there: the value is never read out.
+pub fn api_key_in_env() -> bool {
+    user_environment().is_ok_and(|vars| has_api_key(&vars))
+}
+
+fn has_api_key(vars: &[(std::ffi::OsString, std::ffi::OsString)]) -> bool {
+    vars.iter().any(|(name, value)| {
+        name.to_str()
+            .is_some_and(|name| name.eq_ignore_ascii_case("ANTHROPIC_API_KEY"))
+            && !value.is_empty()
+    })
+}
+
 /// A program the system starts for the owner (spec 14).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TaskDefinition {
@@ -106,6 +121,19 @@ pub async fn shutdown_signal() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_api_key_counts_only_when_set() {
+        let var = |name: &str, value: &str| (name.into(), value.into());
+        assert!(has_api_key(&[
+            var("PATH", "x"),
+            var("ANTHROPIC_API_KEY", "sk-test")
+        ]));
+        // Windows names ignore case.
+        assert!(has_api_key(&[var("anthropic_api_key", "sk-test")]));
+        assert!(!has_api_key(&[var("ANTHROPIC_API_KEY", "")]));
+        assert!(!has_api_key(&[var("ANTHROPIC_BASE_URL", "https://x")]));
+    }
 
     #[test]
     fn user_environment_has_the_basics_and_no_claude_session() {

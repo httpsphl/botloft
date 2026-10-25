@@ -36,9 +36,35 @@ pub(super) fn failed_turn(
         .filter_map(|block| block["text"].as_str())
         .collect::<Vec<_>>()
         .join(" ");
-    // The code lets the app say it in the owner's language; the text stays
-    // for older apps and for the conversation list.
-    let (code, text) = if SIGN_IN_ERRORS.contains(&error) {
+    // A failed sign-in with a key in the environment is the key's fault.
+    let key = error == "authentication_failed" && crate::platform::api_key_in_env();
+    let (code, text) = notice_for(error, detail, key);
+    items::add(
+        daemon,
+        bot,
+        ChatBody::Notice(NoticeItem {
+            level: NoticeLevel::Error,
+            code: Some(code),
+            text,
+        }),
+    );
+    after_notice(daemon, bot, generation, error);
+}
+
+/// What the chat says about an API error. The code lets the app say it in
+/// the owner's language; the text stays for older apps and for the
+/// conversation list. `key_failed`: Claude Code signed in with an
+/// `ANTHROPIC_API_KEY` from the environment, and it did not work.
+fn notice_for(error: &str, detail: String, key_failed: bool) -> (NoticeCode, String) {
+    if key_failed {
+        (
+            NoticeCode::ApiKeyFailed,
+            "Claude Code used the ANTHROPIC_API_KEY saved in this computer's environment instead \
+             of the Claude account, and the key did not work. Remove or fix it, then restart the \
+             bot."
+                .to_owned(),
+        )
+    } else if SIGN_IN_ERRORS.contains(&error) {
         (
             NoticeCode::SignedOut,
             "Claude Code is not signed in or the account cannot be used. Sign in, then restart \
@@ -53,23 +79,19 @@ pub(super) fn failed_turn(
     } else if error == MODEL_NOT_FOUND {
         (
             NoticeCode::ModelUnavailable,
-            "Claude Code could not use this bot's model: it may not exist or not be on the              account's plan. Pick another model."
+            "Claude Code could not use this bot's model: it may not exist or not be on the \
+             account's plan. Pick another model."
                 .to_owned(),
         )
     } else if detail.is_empty() {
         (NoticeCode::TurnFailed, error.to_owned())
     } else {
         (NoticeCode::TurnFailed, detail)
-    };
-    items::add(
-        daemon,
-        bot,
-        ChatBody::Notice(NoticeItem {
-            level: NoticeLevel::Error,
-            code: Some(code),
-            text,
-        }),
-    );
+    }
+}
+
+/// Stops or pauses the bot when only the owner or time can fix the error.
+fn after_notice(daemon: &Daemon, bot: &BotId, generation: u64, error: &str) {
     if SIGN_IN_ERRORS.contains(&error) {
         daemon.supervisor.signed_out(bot, generation);
     } else if error == "rate_limit" {
@@ -112,5 +134,24 @@ pub(super) fn rate_limit(daemon: &Daemon, bot: &BotId, generation: u64, event: &
     if limited {
         let until = resets_at.unwrap_or_else(|| daemon.clock.now_ms() + DEFAULT_LIMIT_MS);
         daemon.supervisor.rate_limited(bot, generation, until);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_failed_key_in_the_environment_is_told_apart_from_signing_out() {
+        let (code, text) = notice_for("authentication_failed", String::new(), true);
+        assert_eq!(code, NoticeCode::ApiKeyFailed);
+        assert!(text.contains("ANTHROPIC_API_KEY"), "{text}");
+        let (code, _) = notice_for("authentication_failed", String::new(), false);
+        assert_eq!(code, NoticeCode::SignedOut);
+        let (code, _) = notice_for("billing_error", String::new(), false);
+        assert_eq!(code, NoticeCode::SignedOut);
+        // No run of spaces left inside a sentence.
+        let (_, text) = notice_for(MODEL_NOT_FOUND, String::new(), false);
+        assert!(!text.contains("  "), "{text}");
     }
 }
