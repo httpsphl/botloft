@@ -16,15 +16,26 @@ const SETTLE_MS = 200;
 export function useWaiting(api: BotloftApi): {
   waiting: Waiting[];
   working: Bot[];
+  bots: Bot[];
+  /** Crew names by id, for the agents' cards. */
+  crews: Map<string, string>;
+  /** Goes up each time the island reads again. */
+  version: number;
   refresh: () => void;
 } {
   const [waiting, setWaiting] = useState<Waiting[]>([]);
-  const [working, setWorking] = useState<Bot[]>([]);
+  const [bots, setBots] = useState<Bot[]>([]);
+  const [crews, setCrews] = useState<Map<string, string>>(new Map());
+  const [version, setVersion] = useState(0);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const load = useCallback(async () => {
     try {
-      const [cards, bots] = await Promise.all([api.call("cards.list"), api.call("bots.list", {})]);
+      const [cards, botList, crewList] = await Promise.all([
+        api.call("cards.list"),
+        api.call("bots.list", {}),
+        api.call("crews.list"),
+      ]);
       const all: Waiting[] = [
         ...cards.approvals.map((card) => ({
           kind: "approval" as const,
@@ -38,7 +49,9 @@ export function useWaiting(api: BotloftApi): {
         })),
       ];
       setWaiting(all.sort((a, b) => a.card.createdAt - b.card.createdAt));
-      setWorking(bots.filter((bot) => bot.archivedAt === null && bot.state === "busy"));
+      setBots(botList.filter((bot) => bot.archivedAt === null));
+      setCrews(new Map(crewList.map((crew) => [crew.id, crew.name])));
+      setVersion((before) => before + 1);
     } catch {
       // Not connected yet: the next connection reads again.
     }
@@ -74,5 +87,6 @@ export function useWaiting(api: BotloftApi): {
     };
   }, [api, load, refresh]);
 
-  return { waiting, working, refresh };
+  const working = bots.filter((bot) => bot.state === "busy");
+  return { waiting, working, bots, crews, version, refresh };
 }

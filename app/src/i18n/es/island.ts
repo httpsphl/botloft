@@ -15,6 +15,18 @@ export const island: Messages["island"] = {
   },
   openApp: "Abrir Botloft",
   hide: "Ocultar",
+  engines: { claude: "Claude Code", agy: "Antigravity", codex: "Codex" },
+  thinking: "Pensando",
+  moreWorking: (count) => (count === 1 ? "+1 trabajando" : `+${count} trabajando`),
+  finished: (bot) => `${bot} terminó`,
+  today: {
+    title: "Hoy",
+    since: "desde la medianoche",
+    tasks: (count) => (count === 1 ? "tarea" : "tareas"),
+    requests: (count) => (count === 1 ? "solicitud" : "solicitudes"),
+    lines: (files) => (files === 1 ? "líneas, 1 archivo" : `líneas, ${files} archivos`),
+    busiest: "trabajó más",
+  },
   card: {
     allow: "Permitir",
     deny: "Denegar",

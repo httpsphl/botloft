@@ -159,6 +159,32 @@ body {
   opacity: 0.35;
 }
 
+/* Who works breathes, gently and only with transform and opacity (31.8). */
+.island-breathe {
+  animation: island-breathe 2s ease-in-out infinite;
+}
+
+@keyframes island-breathe {
+  50% {
+    transform: scale(1.06);
+    opacity: 0.85;
+  }
+}
+
+/* The cheer: one hop. */
+.island-hop {
+  animation: island-hop 700ms ease-out;
+}
+
+@keyframes island-hop {
+  30% {
+    transform: translateY(-7px) scale(1.08, 0.94);
+  }
+  60% {
+    transform: translateY(0) scale(0.96, 1.04);
+  }
+}
+
 .island-field {
   background: var(--island-sunk);
   border-radius: 999px;
@@ -171,14 +197,18 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .island,
-  .island-content {
+  .island-content,
+  .island-breathe,
+  .island-hop {
     transition: none;
     animation: none;
   }
 }
 
 :root[data-motion="less"] .island,
-:root[data-motion="less"] .island-content {
+:root[data-motion="less"] .island-content,
+:root[data-motion="less"] .island-breathe,
+:root[data-motion="less"] .island-hop {
   transition: none;
   animation: none;
 }

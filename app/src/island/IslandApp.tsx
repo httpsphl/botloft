@@ -1,73 +1,24 @@
 // The island (spec 31): a pill at the top of the screen while agents work
-// or wait for the owner, that grows into a panel with what waits. The
-// window always has the size of what it shows (spec 31.3).
+// or wait for the owner, that grows into a panel: what waits first, then
+// who works, then today. The window always has the size of what it shows
+// (spec 31.3).
 
-import {
-  ChevronLeft,
-  ChevronRight,
-  House,
-  LoaderCircle,
-  SquareArrowOutUpRight,
-  X,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, House, SquareArrowOutUpRight, X } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
-import { BotAvatar } from "../features/bots/BotAvatar";
 import { useT } from "../i18n";
 import type { BotloftApi } from "../lib/api";
+import type { Bot, BotId, DayActivity } from "../lib/protocol.gen";
 import { AskCard, RequestCard } from "./Cards";
 import type { IslandHost } from "./host";
+import { LiveAgents, SHOWN } from "./LiveAgents";
+import { CHEER_WIDTH, CheerPill, PILL, Pill } from "./Pill";
+import { Today, useToday } from "./Today";
+import { useCheer } from "./useCheer";
+import { type Live, useLive } from "./useLive";
 import { useWaiting, type Waiting } from "./useWaiting";
 
-export const PILL = { width: 200, height: 36 };
+export { PILL } from "./Pill";
 export const PANEL_WIDTH = 720;
-
-function Pill({
-  waiting,
-  working,
-  color,
-  onOpen,
-}: {
-  waiting: number;
-  working: number;
-  color: string;
-  onOpen: () => void;
-}) {
-  const t = useT();
-  const said = [waiting > 0 && t.island.waiting(waiting), working > 0 && t.island.working(working)]
-    .filter(Boolean)
-    .join(", ");
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      aria-label={said}
-      title={said}
-      className="flex h-9 w-full items-center justify-between px-3.5 text-[13px]"
-    >
-      <span className="flex w-10 items-center gap-1.5">
-        {waiting > 0 && (
-          <>
-            <span className="size-2 rounded-full bg-[var(--island-warn)]" />
-            <span className="font-medium text-[var(--island-warn)]">{waiting}</span>
-          </>
-        )}
-      </span>
-      <BotAvatar color={color} size={24} mood={waiting > 0 ? "waiting" : "working"} still />
-      <span className="island-muted flex w-10 items-center justify-end gap-1">
-        {working > 0 && (
-          <>
-            <LoaderCircle
-              aria-hidden
-              size={12}
-              className="animate-spin text-[var(--island-work)]"
-            />
-            {working}
-          </>
-        )}
-      </span>
-    </button>
-  );
-}
 
 function Pager({ at, of, onMove }: { at: number; of: number; onMove: (to: number) => void }) {
   const t = useT();
@@ -97,25 +48,22 @@ function Pager({ at, of, onMove }: { at: number; of: number; onMove: (to: number
   );
 }
 
-function Home({
+function WaitingCard({
   api,
   host,
   waiting,
-  working,
   refresh,
 }: {
   api: BotloftApi;
   host: IslandHost;
   waiting: Waiting[];
-  working: number;
   refresh: () => void;
 }) {
-  const t = useT();
   const [at, setAt] = useState(0);
   const index = Math.min(at, waiting.length - 1);
   const shown = waiting[index];
   if (!shown) {
-    return <p className="island-muted px-2 py-3 text-[13px]">{t.island.working(working)}</p>;
+    return null;
   }
   const pager = <Pager at={index} of={waiting.length} onMove={setAt} />;
   const open = () => host.openApp(shown.card.bot.id).catch(() => {});
@@ -140,13 +88,47 @@ function Home({
   );
 }
 
+function Home({
+  api,
+  host,
+  waiting,
+  working,
+  crews,
+  live,
+  today,
+  refresh,
+}: {
+  api: BotloftApi;
+  host: IslandHost;
+  waiting: Waiting[];
+  working: Bot[];
+  crews: Map<string, string>;
+  live: Map<BotId, Live>;
+  today: DayActivity | null;
+  refresh: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <WaitingCard api={api} host={host} waiting={waiting} refresh={refresh} />
+      <LiveAgents working={working} crews={crews} live={live} />
+      {today && <Today today={today} />}
+    </div>
+  );
+}
+
 export function IslandApp({ api, host }: { api: BotloftApi; host: IslandHost }) {
   const t = useT();
-  const { waiting, working, refresh } = useWaiting(api);
+  const { waiting, working, bots, crews, version, refresh } = useWaiting(api);
+  const live = useLive(
+    api,
+    working.slice(0, SHOWN).map((bot) => bot.id),
+  );
+  const cheer = useCheer(api, bots);
+  const today = useToday(api, version);
   const [open, setOpen] = useState(false);
   const panel = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(PILL.height);
-  const visible = waiting.length > 0 || working.length > 0;
+  const visible = waiting.length > 0 || working.length > 0 || cheer !== null;
   const expanded = open && visible;
 
   useLayoutEffect(() => {
@@ -165,7 +147,7 @@ export function IslandApp({ api, host }: { api: BotloftApi; host: IslandHost }) 
     return () => watch.disconnect();
   }, [expanded]);
 
-  const width = expanded ? PANEL_WIDTH : PILL.width;
+  const width = expanded ? PANEL_WIDTH : cheer ? CHEER_WIDTH : PILL.width;
   useLayoutEffect(() => {
     (visible ? host.show(width, height) : host.hide()).catch(() => {});
   }, [host, visible, width, height]);
@@ -221,11 +203,16 @@ export function IslandApp({ api, host }: { api: BotloftApi; host: IslandHost }) 
               api={api}
               host={host}
               waiting={waiting}
-              working={working.length}
+              working={working}
+              crews={crews}
+              live={live}
+              today={today}
               refresh={refresh}
             />
           </div>
         </div>
+      ) : cheer ? (
+        <CheerPill cheer={cheer} onOpen={() => setOpen(true)} />
       ) : (
         <Pill
           waiting={waiting.length}

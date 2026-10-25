@@ -17,6 +17,21 @@ export const island = {
   },
   openApp: "Open Botloft",
   hide: "Hide",
+  engines: { claude: "Claude Code", agy: "Antigravity", codex: "Codex" },
+  /** An agent at work that has not used a tool yet in this turn. */
+  thinking: "Thinking",
+  moreWorking: (count: number) => (count === 1 ? "+1 more working" : `+${count} more working`),
+  /** The cheer, when an agent finishes. */
+  finished: (bot: string) => `${bot} finished`,
+  today: {
+    title: "Today",
+    since: "since midnight",
+    tasks: (count: number): string => (count === 1 ? "task" : "tasks"),
+    requests: (count: number): string => (count === 1 ? "request" : "requests"),
+    /** Under the lines added, with how many files. */
+    lines: (files: number) => (files === 1 ? "lines, 1 file" : `lines, ${files} files`),
+    busiest: "worked the most",
+  },
   card: {
     allow: "Allow",
     deny: "Deny",
