@@ -496,6 +496,7 @@ async fn the_commands_the_owner_allows_reach_the_rules_of_the_next_process() {
                 "npm test".into(),
                 "git status".into(),
             ]),
+            plan_first: None,
         },
     )
     .expect("update");
@@ -519,6 +520,7 @@ async fn the_commands_the_owner_allows_reach_the_rules_of_the_next_process() {
             instructions: None,
             color: None,
             allowed_commands: Some(vec!["a) b".into()]),
+            plan_first: None,
         },
     );
     assert!(refused.is_err());

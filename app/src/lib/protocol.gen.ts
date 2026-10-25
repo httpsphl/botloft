@@ -257,7 +257,12 @@ agentModel: string | null,
  * Command prefixes a bot not on Claude Code may run without asking:
  * its agent cannot ask in headless mode (spec 30). `*` is every command.
  */
-allowedCommands: Array<string>, model: BotModel, 
+allowedCommands: Array<string>, 
+/**
+ * Shows its plan before a long task and starts by itself after a few
+ * seconds (spec 10.5).
+ */
+planFirst: boolean, model: BotModel, 
 /**
  * The model id Claude Code reported when the bot last started a turn
  * (`claude-opus-5-5`); `null` before its first turn.
@@ -509,7 +514,11 @@ export type BotsUpdateParams = { botId: BotId, name?: string, role?: string, ins
 /**
  * For a bot not on Claude Code; replaces the whole list.
  */
-allowedCommands?: Array<string>, };
+allowedCommands?: Array<string>, 
+/**
+ * Show the plan before a long task (spec 10.5).
+ */
+planFirst?: boolean, };
 
 export type BotsSetPausedParams = { botId: BotId, paused: boolean, };
 

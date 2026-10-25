@@ -199,6 +199,7 @@ pub(crate) mod tests {
                         agent: botloft_core::protocol::AgentKind::Claude,
                         agent_model: None,
                         allowed_commands: Vec::new(),
+                        plan_first: false,
                         model: botloft_core::protocol::BotModel::Default,
                         model_in_use: None,
                         effort: botloft_core::protocol::BotEffort::Default,

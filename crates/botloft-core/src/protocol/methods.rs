@@ -318,6 +318,10 @@ pub struct BotsUpdateParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub allowed_commands: Option<Vec<String>>,
+    /// Show the plan before a long task (spec 10.5).
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub plan_first: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

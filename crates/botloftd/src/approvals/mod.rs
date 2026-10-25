@@ -8,10 +8,11 @@ mod prompt;
 
 use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard};
+use std::time::Duration;
 
 use botloft_core::chat::{
-    CHANGE_ROUTINE_TOOL, CREW_ACCESS_TOOL, ROUTINE_TOOL, SUGGEST_TOOL, clip, tool_input_max,
-    tool_summary,
+    CHANGE_ROUTINE_TOOL, CREW_ACCESS_TOOL, ROUTINE_TOOL, SHOW_PLAN_TOOL, SUGGEST_TOOL, clip,
+    tool_input_max, tool_summary,
 };
 use botloft_core::command::tool_explanation;
 use botloft_core::ids::{ApprovalId, BotId, ChatItemId};
@@ -133,18 +134,63 @@ pub(crate) async fn ask_with(
 ) -> Option<Answer> {
     let (pending, waiting) = open(daemon, bot, tool_name, input, tool_use_id)?;
     opened(&pending.record.approval.id);
-    daemon.supervisor.approval_opened(bot, generation);
+    let wait = Wait {
+        within: daemon.settings.approval_wait(),
+        needs_owner: true,
+    };
+    settle_after(daemon, bot, generation, &pending, waiting, wait).await
+}
+
+/// Puts a request in the bot's chat that settles by itself after `within`:
+/// the bot keeps working meanwhile, so it does not wait for the owner in
+/// the app's eyes (spec 10.5).
+pub(crate) async fn ask_briefly(
+    daemon: &Daemon,
+    bot: &BotId,
+    generation: u64,
+    tool_name: &str,
+    input: &Value,
+    within: Duration,
+) -> Option<Answer> {
+    let (pending, waiting) = open(daemon, bot, tool_name, input, "")?;
+    let wait = Wait {
+        within,
+        needs_owner: false,
+    };
+    settle_after(daemon, bot, generation, &pending, waiting, wait).await
+}
+
+/// How long a request waits, and whether its bot waits for the owner then.
+struct Wait {
+    within: Duration,
+    needs_owner: bool,
+}
+
+async fn settle_after(
+    daemon: &Daemon,
+    bot: &BotId,
+    generation: u64,
+    pending: &Pending,
+    waiting: oneshot::Receiver<Decision>,
+    wait: Wait,
+) -> Option<Answer> {
+    if wait.needs_owner {
+        daemon.supervisor.approval_opened(bot, generation);
+    }
     let mut guard = Guard {
         daemon,
         bot,
         generation,
         record: &pending.record,
+        needs_owner: wait.needs_owner,
         settled: false,
     };
-    let decision = tokio::time::timeout(daemon.settings.approval_wait(), waiting).await;
+    let decision = tokio::time::timeout(wait.within, waiting).await;
     guard.settled = true;
     daemon.approvals.lock().remove(&pending.record.approval.id);
-    daemon.supervisor.approval_closed(bot, generation);
+    if wait.needs_owner {
+        daemon.supervisor.approval_closed(bot, generation);
+    }
     Some(match decision {
         Ok(Ok(Decision {
             allow: true, input, ..
@@ -190,6 +236,9 @@ pub fn answer(daemon: &Daemon, params: ApprovalsAnswerParams) -> ApiResult<Appro
         ),
         Some(input) if params.allow && existing.approval.tool_name == CREW_ACCESS_TOOL => Some(
             crate::tools::check_crew_access_answer(&existing.approval.input, &input)?,
+        ),
+        Some(input) if params.allow && existing.approval.tool_name == SHOW_PLAN_TOOL => Some(
+            crate::tools::check_plan_answer(&existing.approval.input, &input)?,
         ),
         _ => None,
     };
@@ -367,6 +416,7 @@ struct Guard<'a> {
     bot: &'a BotId,
     generation: u64,
     record: &'a ApprovalRecord,
+    needs_owner: bool,
     settled: bool,
 }
 
@@ -386,8 +436,10 @@ impl Drop for Guard<'_> {
             None,
             None,
         );
-        self.daemon
-            .supervisor
-            .approval_closed(self.bot, self.generation);
+        if self.needs_owner {
+            self.daemon
+                .supervisor
+                .approval_closed(self.bot, self.generation);
+        }
     }
 }

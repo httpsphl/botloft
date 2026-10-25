@@ -137,6 +137,7 @@ pub(crate) fn insert(
         agent: new.agent,
         agent_model: None,
         allowed_commands: Vec::new(),
+        plan_first: false,
         model: new.model,
         model_in_use: None,
         effort: new.effort,
@@ -168,7 +169,7 @@ pub fn update(daemon: &Daemon, params: BotsUpdateParams) -> ApiResult<Bot> {
     if let Some(color) = params.color {
         record.color = parse_color(&color)?;
     }
-    let mut commands_changed = false;
+    let mut relaunch = false;
     if let Some(commands) = params.allowed_commands {
         if record.agent == AgentKind::Claude {
             return Err(ApiError::validation(
@@ -176,8 +177,13 @@ pub fn update(daemon: &Daemon, params: BotsUpdateParams) -> ApiResult<Bot> {
             ));
         }
         let commands = clean_commands(commands)?;
-        commands_changed = commands != record.allowed_commands;
+        relaunch = commands != record.allowed_commands;
         record.allowed_commands = commands;
+    }
+    if let Some(plan_first) = params.plan_first {
+        // The rules say when to show the plan; the agent reads them at start.
+        relaunch |= plan_first != record.plan_first;
+        record.plan_first = plan_first;
     }
     // Rules first: if the disk write fails, nothing is saved. A running bot
     // reads them at its next start.
@@ -186,7 +192,7 @@ pub fn update(daemon: &Daemon, params: BotsUpdateParams) -> ApiResult<Bot> {
     let id = record.id.clone();
     let bot = changed(daemon, &store, &crew, record);
     drop(store);
-    if commands_changed {
+    if relaunch {
         // The agent reads its rules when it starts.
         daemon.supervisor.launch_settings_changed(&id);
     }
@@ -307,6 +313,7 @@ pub(crate) fn to_protocol(daemon: &Daemon, store: &Store, crew: &Crew, record: B
         agent: record.agent,
         agent_model: record.agent_model,
         allowed_commands: record.allowed_commands,
+        plan_first: record.plan_first,
         model: record.model,
         model_in_use: record.model_in_use,
         effort: record.effort,
