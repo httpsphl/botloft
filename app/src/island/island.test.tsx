@@ -92,7 +92,8 @@ describe("the island", () => {
         status: "allowed",
       }),
     );
-    await waitFor(() => expect(screen.queryByRole("region")).toBeNull(), { timeout: 2000 });
+    // Opened by the owner, the panel stays; the answered request leaves it.
+    await waitFor(() => expect(within(island).queryByText("Run a command")).toBeNull());
   });
 
   test("only denies what it cannot show whole or what belongs to Botloft", async () => {

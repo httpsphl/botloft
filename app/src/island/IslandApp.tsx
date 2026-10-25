@@ -42,7 +42,7 @@ export function IslandApp({ api, host }: { api: BotloftApi; host: IslandHost }) 
   const usage = useUsage(api, version);
   const files = useFiles();
   const [tab, setTab] = useState<Tab>("home");
-  const { open, setOpen, hover } = useAppear({
+  const { open, pinned, setOpen, hover } = useAppear({
     host,
     enabled,
     loaded: version > 0,
@@ -52,9 +52,15 @@ export function IslandApp({ api, host }: { api: BotloftApi; host: IslandHost }) 
   const [talkTo, setTalkTo] = useState<BotId | null>(null);
   const panel = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(PILL.height);
+  // Pinned open, it stays until the owner hides it, even once nobody
+  // works: they may be reading what an agent just answered.
   const visible =
     enabled &&
-    (waiting.length > 0 || working.length > 0 || cheer !== null || files.files.length > 0);
+    ((open && pinned) ||
+      waiting.length > 0 ||
+      working.length > 0 ||
+      cheer !== null ||
+      files.files.length > 0);
   const expanded = open && visible;
 
   useLayoutEffect(() => {
@@ -112,7 +118,7 @@ export function IslandApp({ api, host }: { api: BotloftApi; host: IslandHost }) 
           event.preventDefault();
           void files.add([...event.dataTransfer.files]);
           setTab("chat");
-          setOpen(true);
+          setOpen(true, true);
         }
       }}
     >
@@ -157,14 +163,22 @@ export function IslandApp({ api, host }: { api: BotloftApi; host: IslandHost }) 
           </div>
         </div>
       ) : cheer ? (
-        <CheerPill cheer={cheer} onOpen={() => setOpen(true)} />
+        <CheerPill
+          cheer={cheer}
+          onOpen={() => {
+            // To read the whole answer.
+            setTalkTo(cheer.bot.id);
+            setTab("chat");
+            setOpen(true, true);
+          }}
+        />
       ) : (
         <Pill
           waiting={waiting.length}
           working={working.length}
           color={color}
           used={used >= WARN_AT ? used : null}
-          onOpen={() => setOpen(true)}
+          onOpen={() => setOpen(true, true)}
         />
       )}
     </section>

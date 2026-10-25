@@ -2,6 +2,8 @@
 // a new request or question arrives, unless the main window is in front or
 // Windows keeps the screen quiet; and it peeks while the mouse rests on the
 // pill, closing a second after it leaves unless the owner clicked inside.
+// Once the owner opened it or clicked in it, it is pinned: it stays until
+// they hide it, even after the agents are done.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { IslandHost } from "./host";
@@ -13,7 +15,10 @@ export const LEAVE_MS = 1000;
 
 export interface Appear {
   open: boolean;
-  setOpen: (open: boolean) => void;
+  /** The owner opened it or clicked in it. */
+  pinned: boolean;
+  /** Opens or closes it; `pinned` when the owner did it. */
+  setOpen: (open: boolean, pinned?: boolean) => void;
   /** Mouse handlers for the island's outline. */
   hover: {
     onMouseEnter: () => void;
@@ -38,16 +43,18 @@ export function useAppear({
   onArrive: () => void;
 }): Appear {
   const [open, setOpenState] = useState(false);
+  const [pinned, setPinned] = useState(false);
   const peeking = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const seen = useRef<Set<string> | null>(null);
   const arrive = useRef(onArrive);
   arrive.current = onArrive;
 
-  const setOpen = useCallback((next: boolean) => {
+  const setOpen = useCallback((next: boolean, pin = false) => {
     clearTimeout(timer.current);
     peeking.current = false;
     setOpenState(next);
+    setPinned(next && pin);
   }, []);
 
   const key = waitingIds.join(",");
@@ -101,14 +108,18 @@ export function useAppear({
         timer.current = setTimeout(() => {
           peeking.current = false;
           setOpenState(false);
+          setPinned(false);
         }, LEAVE_MS);
       }
     },
     // A click inside keeps a peek open.
     onPointerDown: () => {
       peeking.current = false;
+      if (open) {
+        setPinned(true);
+      }
     },
   };
 
-  return { open, setOpen, hover };
+  return { open, pinned, setOpen, hover };
 }

@@ -114,3 +114,36 @@ describe("the island's agents at work", () => {
     expect(localMidnight(noon)).toBe(new Date(2026, 9, 25).getTime());
   });
 });
+
+describe("after an agent finishes", () => {
+  test("an open panel stays until the owner hides it", async () => {
+    const { fake, writer } = crew();
+    fake.setBotState(writer.id, "busy");
+    render(<IslandApp api={fake} host={host} />);
+    const island = await openPanel();
+    act(() => {
+      fake.chat.reply(writer.id, "The draft is ready.");
+      fake.setBotState(writer.id, "idle");
+    });
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(within(island).getByRole("tablist")).toBeDefined();
+    fireEvent.click(within(island).getByRole("button", { name: "Hide" }));
+    await waitFor(() => expect(screen.queryByRole("tablist")).toBeNull());
+  });
+
+  test("the cheer opens that agent's chat, to read the whole answer", async () => {
+    const { fake, writer, review } = crew();
+    fake.setBotState(writer.id, "busy");
+    fake.setBotState(review.id, "busy");
+    render(<IslandApp api={fake} host={host} />);
+    await screen.findByRole("button", { name: "2 working" });
+    act(() => {
+      fake.chat.reply(review.id, "All 18 links work.");
+      fake.setBotState(review.id, "idle");
+    });
+    fireEvent.click(await screen.findByText("Review finished", {}, { timeout: 4000 }));
+    const island = await screen.findByRole("region", { name: "Botloft at the top of the screen" });
+    expect(await within(island).findByRole("textbox", { name: "Message to Review" })).toBeDefined();
+    expect(within(island).getByText("All 18 links work.")).toBeDefined();
+  });
+});
