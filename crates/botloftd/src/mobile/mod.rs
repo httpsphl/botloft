@@ -3,7 +3,7 @@
 //! or being connected, and nothing of what passes goes in the log.
 
 mod bridge;
-mod cards;
+pub(crate) mod cards;
 mod chats;
 mod kdf;
 mod pair;

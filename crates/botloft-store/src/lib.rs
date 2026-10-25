@@ -29,6 +29,7 @@ mod routines;
 mod search;
 mod signals;
 mod tasks;
+mod today;
 mod usage;
 
 use std::path::Path;

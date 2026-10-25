@@ -743,6 +743,8 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `tasks.list` | `crewId?, status?` | `Task[]` |
 | `browser.list`, `browser.watch`, `browser.unwatch`, `browser.take`, `browser.release`, `browser.input` | seção 21.7 | o navegador dos bots, a tela ao vivo e o dono no controle |
 | `screens.list` | seção 22.4 | as telas HTML do bot |
+| `cards.list` | — | `{approvals: ApprovalCard[], questions: QuestionCard[]}`: os pedidos e as perguntas que esperam o dono, do mais velho ao mais novo, como o celular os vê (31.5, 28.5), sem exigir conta |
+| `activity.today` | `since` (ms Unix, a meia-noite local do app) | `DayActivity`: o que as equipes fizeram desde `since`, sem turno de agente (31.4) |
 | `questions.list` | `status?` (`open` se ausente) | `Question[]` de bots e crews ativos, da mais nova à mais velha (23.5) |
 | `questions.answer` | `questionId, answer` | `Question`; a resposta vai ao bot como message do dono (23.3) |
 | `questions.dismiss` | `questionId` | `Question`; fecha sem avisar o bot (23.3) |
@@ -1141,6 +1143,7 @@ M2 a M4 foram entregues com ConPTY, terminal com replay, inbox por named pipe e 
 11. Ferramentas conectadas: o dono liga servidores MCP próprios (LinkedIn, sistemas internos) a bots escolhidos, sem tirar o `--strict-mcp-config`. Desenho na seção 25.
 12. Catálogo de bots: modelos prontos de função (Designer, Pesquisador...) que o dono escolhe na Agência de bots e adiciona à equipe, e que o chefe usa para sugerir bots com instruções melhores. Desenho na seção 26.
 13. Modelos de equipe (começar uma equipe já com os bots certos) e resumo diário (o chefe conta, no fim do dia, o que cada bot fez). Desenho na seção 29.
+14. Ilha: o Botloft no topo da tela, uma pílula que vira painel, com os pedidos e as perguntas de todas as equipes, os agentes ao vivo, uma conversa rápida e o uso do plano, sem abrir o Botloft. Desenho na seção 31.
 
 ## 19. Pontos a verificar na versão alvo do Claude Code
 
@@ -2750,3 +2753,106 @@ Um agente só roda bots quando o Botloft impõe o que a seção 7.5 impõe no Cl
 | `codex`: leitura de arquivos | Segue **aberta**: o sandbox `read-only` deixa ler qualquer arquivo sem perguntar (`C:\Windows\win.ini` foi lido por comando). Um perfil de permissão (`default_permissions` e `permissions.<nome>.filesystem` com `deny`) só vale com `windows.sandbox = "elevated"`, que precisa da configuração de administrador do Codex; mesmo onde ela existe, pastas novas dentro do perfil do usuário ficam ilegíveis para o usuário do sandbox (a pasta de trabalho falhou com `CreateProcessWithLogonW failed: 267`). Por isso o aviso do diálogo continua ("ainda pode ler qualquer arquivo") | não resolvido |
 | `codex`: uso do plano | `account/rateLimits/read` (sem custo de cota) devolveu, com o `codex-cli` 0.148.0-alpha.9 e o plano gratuito, `rateLimits.primary { usedPercent: 100, windowDurationMins: 43200, resetsAt: 1794165867 }` (segundos), `planType: "free"` e `rateLimitReachedType: "rate_limit_reached"`. O daemon lê isso depois do `initialize` e de novo a cada `account/rateLimits/updated` (que é esparso), e a janela de uso do app mostra o Codex com o nome e o plano, ao lado do Claude Code (`SystemStatus.agentUsage`). Janelas de 300 e 10080 minutos têm os nomes das do Claude Code; 43200 é `thirty_day` | feito |
 | `codex`: cerca por nome parecido | A cerca de pastas casava por texto: uma crew `Suite` fechava a pasta `Suite2\Ana` e a edição era negada sem cartão. Agora o nome da pasta tem que terminar ali (`Suite2` e `Suite.old` são outras pastas) | feito |
+
+## 31. Ilha
+
+Status: **I1 feito** (os dois métodos do daemon); I2 a I5 em desenho. A ideia e a aparência vêm do Coucou (`docs/coucou-analysis.md`, fora do git): uma ilha preta presa na borda de cima da tela, que cresce da pílula até um painel. Daqui só sai a ideia; o desenho, o mascote, os sons, os textos e o código são nossos (regra de autoria). O Mochi e os sons do Coucou têm direitos reservados e nunca entram.
+
+### 31.1 O que é
+
+Os agentes trabalham enquanto o dono faz outra coisa. A **ilha** é o Botloft no topo da tela: uma forma preta que sai da borda de cima, no meio, sempre por cima das outras janelas. Encolhida, é uma **pílula** com o mascote de quem trabalha ou espera. Aberta, é um **painel** com abas: os agentes ao vivo, os pedidos e as perguntas, uma conversa rápida e o uso do plano. Quando um agente precisa do dono, ela **desce sozinha** com o pedido; quando um termina, o mascote **comemora**.
+
+O dono acompanha e responde sem trocar de janela. O que não cabe na ilha (pedido longo, decisão durável, a conversa inteira) tem "Abrir no Botloft", que leva ao lugar certo.
+
+No texto que o dono lê, a ilha não tem nome próprio: a opção é "Mostrar o Botloft no topo da tela" (Configurações → Avisos).
+
+### 31.2 Aparência
+
+A ilha parece uma extensão da borda da tela, não uma janela.
+
+- **Forma.** Preta de verdade (`#000`) nos dois temas, como a câmera de um notebook. Os cantos de cima são retos e encostam na borda da tela; os de baixo são redondos (raio de 22 px na pílula, 28 px no painel). Sem borda, sem sombra pesada: uma sombra leve embaixo só para separar de um fundo escuro.
+- **Pílula** (encolhida): 200 × 36 px. No meio, o mascote do agente mais importante (quem espera > quem trabalha), em 24 px. Dos lados, sinais pequenos: à esquerda, o ponto de aviso com o número de quem espera; à direita, quantos trabalham. Sem nada acontecendo, a pílula some.
+- **Painel** (aberta): 720 px de largura, altura pelo conteúdo, até 60% da tela. Em cima, uma **barra de abas** de ícones (Início, Conversa, Uso) à esquerda e, à direita, Pausar todas as equipes, som ligado/desligado e Abrir o Botloft. Embaixo, os **cartões**: cinza muito escuro sobre o preto, raio de 16 px, com espaço de 8 px entre eles.
+- **Mascote grande.** No cartão de um agente, o mascote em 72 px à esquerda, com um brilho suave da cor dele por trás, o nome e o motor embaixo ("Scout · Claude Code"), e a lista de passos.
+- **Tipografia e cor.** A do app (15.3), em texto claro sobre o escuro. Os tons de estado (`ok`, `work`, `warn`, `danger`) são os do tema escuro; o "+N −M" e o diff usam as cores de 15.3 (8.2). Código em letra mono, com números de linha.
+- **Tokens próprios**, `--island-*` em `island.css`, escuros nos dois temas como os do terminal (`--terminal*`, 15.1): fundo, cartão, linha, texto, texto apagado.
+- **Crescer e encolher.** A pílula vira painel crescendo a partir do topo (largura e altura com mola curta, 320 ms; o conteúdo aparece 80 ms depois). Fechar faz o caminho de volta. Com "Menos animações" ou `prefers-reduced-motion`, troca sem crescer.
+
+### 31.3 Onde ela mora
+
+- **No app, não no daemon.** É uma segunda janela do Tauri (rótulo `island`), criada pelo processo do app ao subir. Sem o app aberto (nem janela, nem ícone perto do relógio), não há ilha; o aviso do Windows segue como hoje.
+- **Página própria**, `island.html` com `src/island/`, no mesmo build do Vite que o `index.html`. Abre a própria conexão com o daemon (o token por `read_owner_token`, 15.2) e usa só `BotloftApi` e `Host` (15.1). Os testes usam `FakeBotloft`.
+- **Janela:** `decorations: false`, `transparent: true`, `alwaysOnTop: true`, `skipTaskbar: true`, `resizable: false`, `shadow: false` e **sem foco ao aparecer** (`focus: false`). A janela tem sempre o tamanho do que mostra (a pílula ou o painel), porque a parte transparente não deixa o clique passar no Windows; a página mede e pede o tamanho (`setSize`, `setPosition`) antes de crescer, e a forma cresce dentro dela.
+- **Capacidade própria** (`capabilities/island.json`, `windows: ["island"]`): mostrar, esconder, tamanho e posição dela mesma, `read_owner_token`, o evento que abre a janela principal num chat e o arrastar de arquivos para dentro. Nada de abrir arquivo, link ou pasta.
+
+### 31.4 Abas e utilidades
+
+**Início.** O que pede o dono vem primeiro, depois quem trabalha.
+
+- **Pedidos e perguntas.** Um por vez, o mais antigo primeiro, com "2 de 3" e setas. Cada um com o mascote e o nome do agente, a equipe, a ação no idioma do dono ("Rodar um comando"), a explicação, o comando, o arquivo com "+N −M" (8.2) ou o plano, e os botões. Uma pergunta mostra o texto, as opções como botões e um campo para responder com as próprias palavras. Regras em 31.5.
+- **Agentes ao vivo.** Um cartão por agente trabalhando (`busy`), de todas as equipes, os que começaram antes primeiro, até três (o resto vira "+2 trabalhando", que abre a lista). No cartão: o mascote grande, o nome, o motor e a equipe; à esquerda, os **passos** do turno, as últimas quatro ferramentas como linhas curtas ("Ler um arquivo", "Editar um arquivo", "Rodar um comando") com o estado (feito, rodando, falhou); à direita, o que ele está fazendo agora: numa edição, o **diff** com o nome do arquivo numa aba e os números de linha quando a entrada veio inteira (8.2, 15.3); num comando, o comando e a explicação; numa resposta, o texto ao vivo (`chat.delta`), cortado nas últimas linhas. Um clique no cartão abre o chat dele no Botloft.
+- **Comemoração.** Quando um agente passa de trabalhando a disponível, o mascote dele pula na pílula (o pulo de 15.3, `cheer`), e a ilha mostra por 4 s "Scout terminou" com a primeira linha da resposta. Com o som ligado, um som curto nosso, feito na hora como os de 15.1. Se o dono desligou "Avisar quando um agente terminar" (15.1), não comemora.
+- **Resumo do dia.** No fim da aba, sem agentes trabalhando: um cartão "Hoje" com o que as equipes fizeram desde a meia-noite, contado pelo daemon, sem turno de agente e sem gastar plano: tarefas concluídas e com falha, mensagens entre agentes, pedidos respondidos, arquivos editados com o total de "+N −M", e o agente que mais trabalhou. Um método novo, `activity.today {since}`, soma isso do banco (`today.rs` do store): `since` é a meia-noite local que o app manda, porque o fuso é do computador do dono. Tarefas contam pelo `updated_at` (concluídas; com falha ou vencidas); mensagens, as de `from_kind = bot`; pedidos, os permitidos ou negados com `answered_at` no dia; edições, os itens `tool` terminados bem com `lines` (8.2), e os arquivos distintos pelo `file`; quem mais trabalhou, a soma do `durationMs` dos turnos.
+
+**Conversa.** Uma conversa rápida com qualquer agente.
+
+- Em cima, o agente escolhido (mascote, nome e equipe), que troca num menu com todos os agentes, os que esperam ou trabalham primeiro. Embaixo, as últimas falas dos dois, a resposta chegando ao vivo, e o campo em forma de pílula com o botão de enviar. Enviar é `messages.send`, como o compositor (15.1). As ferramentas aparecem como uma linha só ("Rodou 2 comandos"), e "Abrir no Botloft" leva ao chat inteiro.
+- **Arquivo.** Arrastar um arquivo para a pílula ou para o painel abre a Conversa com ele anexado ao agente escolhido (o mascote abre a boca enquanto o arquivo está em cima). Valem os limites dos anexos (9.5): até 10 arquivos, `attachment_max_mb` cada.
+
+**Uso.**
+
+- **Plano.** As duas janelas do plano do Claude (5 horas e semana, `system.status.usage`, 8.1) como barras, com quanto foi usado e quando renovam; os outros motores (30) embaixo, quando houver. As barras ficam na cor de aviso a partir de 80%. Na pílula, a de 5 horas aparece como um anel fino em volta do mascote quando passa de 80%.
+- **Rotinas.** As próximas três rotinas de todas as equipes (`nextRunAt`, 20.3), com o agente, o nome e quanto falta ("em 25 min"); "Rodar agora" usa o mesmo método das Rotinas (20.8).
+
+### 31.5 Os pedidos na ilha
+
+- **Do daemon, como o celular.** Um método novo, `cards.list`, devolve `{approvals: ApprovalCard[], questions: QuestionCard[]}`, os mesmos cartões que o celular recebe (28.5), montados pela mesma função (`mobile::cards::waiting`), com `cut` e `atComputer`. Não exige conta nem celular conectado. A página relê a lista quando chega `chat.item` de pedido ou pergunta, `question.changed` ou `bot.state`, juntando os avisos de 200 ms.
+- **As mesmas regras do celular** (28.5), aplicadas pelo daemon:
+  1. Só permite o que mostra inteiro: cartão `cut` tem só "Negar" e "Abrir no Botloft".
+  2. Só "uma vez": a ilha não grava "Permitir sempre" nem edita a entrada; "Abrir no Botloft" leva ao cartão do chat, que tem tudo.
+  3. O que muda o computador de forma durável (`atComputer`: sugestão de agente, rotina, acesso a outra equipe, desktop, ferramentas conectadas, navegador em mãos) aparece como "Precisa de você no Botloft", com "Negar" quando couber e "Abrir no Botloft".
+  4. Responder chama `approvals.answer` e `questions.answer` como o chat: `conflict` se já foi respondido em outro lugar, e o cartão some.
+
+### 31.6 Quando ela aparece
+
+- **Desce** aberta na aba Início quando chega um pedido ou pergunta, se a janela principal do Botloft não está em primeiro plano. Com ela na frente, o pedido já aparece no chat e a ilha fica na pílula.
+- **Fica na pílula** enquanto agentes trabalham e nada espera o dono, e **some** quando não há nada. "Esconder" (ou Esc, depois de clicar nela) volta à pílula.
+- **Abre** com um clique na pílula, e **espia** com o mouse parado na borda de cima, sobre a pílula, por 300 ms; fecha 1 s depois de o mouse sair, se o dono não clicou dentro. O app lê a posição do mouse a cada 120 ms (`cursor_position` do Tauri, sem Win32 no código), só com a ilha ligada.
+- **Não desce sobre tela cheia nem apresentação.** Quando o Windows não mostraria um aviso (`SHQueryUserNotificationState` diferente de `QUNS_ACCEPTS_NOTIFICATIONS`: jogo ou vídeo em tela cheia, apresentação, "Não incomodar"), a ilha só mostra a pílula, sem texto de pedido nem comemoração. A chamada fica num módulo do app só para Windows (`src-tauri/src/quiet.rs`).
+- **Monitor:** o principal, ou "onde está o mouse" (Configurações), no meio da borda de cima da área de trabalho.
+- **No lugar do aviso do Windows.** Com a ilha ligada e podendo descer, os avisos de "precisa de você" e de "terminou" (15.1) não saem, para nada aparecer duas vezes; o som toca do mesmo jeito. Quando a ilha só pode mostrar a pílula, os avisos seguem a regra do Windows, que é não incomodar.
+
+### 31.7 Segurança
+
+- **Nunca rouba o foco.** A ilha aparece sem foco, então um Enter digitado em outro programa não aprova nada nem envia mensagem. O teclado só age na ilha depois de o dono clicar nela.
+- **Clique por engano.** Um cartão de pedido que acabou de aparecer ignora cliques nos botões por 600 ms.
+- **Nada novo no log** (13): a página não loga cartão, resposta, conversa nem arquivo; `cards.list` e `activity.today` não logam conteúdo.
+- **O que aparece na tela** é o que o chat mostra. Em tela compartilhada sem modo apresentação, o texto aparece: a opção pode ser desligada.
+
+### 31.8 Movimento e CPU
+
+A chama trabalhando (15.3) é a animação mais cara do app (#162), e a ilha fica sempre à vista: ela **não usa a chama animada**. Na pílula e nos cartões, o mascote é o desenho parado do estado, e quem trabalha "respira" (escala e opacidade, 2 s, só `transform` e `opacity`); os passos usam o círculo girando do chat. Comemoração, crescer e encolher tocam uma vez. Com "Menos animações", nada se mexe sozinho. Meta, medida no I5: a ilha na pílula com dois agentes trabalhando gasta menos de 1% de CPU, e escondida, nada além dos avisos do daemon.
+
+### 31.9 Configurações e dados
+
+Configurações → Avisos: **"Mostrar o Botloft no topo da tela"** (`botloft.island`, ligada por padrão), **"Em qual tela"** (principal ou onde está o mouse, `botloft.islandScreen`) e **"Comemorar quando um agente terminar"** (`botloft.islandCheer`, ligada). Ficam no `localStorage` como as outras escolhas do app (15.1). Nada muda no banco; o protocolo ganha `cards.list` e `activity.today`.
+
+Textos nos três idiomas (15.6), sem jargão: "Precisa de você no Botloft", "Abrir no Botloft", "Esconder", "3 esperando", "3 trabalhando", "Scout terminou", "Hoje".
+
+### 31.10 Fora desta etapa
+
+- Linux e macOS: a opção fica escondida até a janela ser vista nos dois (Wayland sem posição livre, macOS com o notch de verdade).
+- Atalho global para abrir a ilha e responder pelo teclado.
+- "Permitir sempre" na ilha.
+- O mascote solto na área de trabalho.
+- Serviços de fora (GitHub, Vercel) e música.
+
+### 31.11 Marcos
+
+| Marco | O que entra | Teste |
+|---|---|---|
+| **I1** Daemon | `cards.list` com os cartões do celular, sem exigir conta; `activity.today` | `tests/`: um pedido e uma pergunta abertos aparecem; cortado com `cut`; sugestão de agente com `atComputer`; respondido some; `activity.today` conta tarefas, mensagens, pedidos e "+N −M" de hoje e ignora ontem (`tests/island.rs`, `today.rs`). **Feito** |
+| **I2** Janela, forma e pedidos | a janela `island`, a capacidade própria, `island.html`, os tokens `--island-*`, pílula e painel, a aba Início com os pedidos, "Abrir no Botloft", três idiomas | `FakeBotloft`: pedido aparece e responde; `cut` e `atComputer` só com Negar e Abrir; `conflict` some sem erro; cliques nos primeiros 600 ms ignorados; pílula com o número certo; `pnpm check`; a forma vista na prévia (`pnpm dev`, `?island`) nos dois temas |
+| **I3** Agentes ao vivo, comemoração e resumo | cartões dos agentes com passos e diff, texto ao vivo, "+2 trabalhando", comemoração, cartão Hoje | `FakeBotloft`: um agente edita e o cartão mostra o passo e o diff; outro termina e comemora; o resumo com os números do fake |
+| **I4** Conversa, arquivo e uso | aba Conversa com escolha do agente, texto ao vivo e envio; arrastar arquivo; aba Uso com plano e rotinas, "Rodar agora"; anel na pílula | `FakeBotloft`: mandar e ver a resposta; arquivo anexado e grande demais recusado; barras na cor de aviso a partir de 80%; rotinas na ordem com "em 25 min" |
+| **I5** Quando aparece e teste real | descer, pílula, espiar, janela principal na frente, tela cheia e apresentação, no lugar do aviso do Windows; Configurações; CPU medida | lógica de quando aparecer com relógio falso (`FakeHost`); `quiet.rs` com os estados do Windows; **a verificar** (19): sem foco ao aparecer, transparência no WebView2, sobre tela cheia; CPU pelo CDP (`webview-frame-measuring`); manual com o Claude Code real: com o Botloft atrás de outra janela, um agente pede um comando, a ilha desce sem foco, Permitir pela ilha, o chat mostra "Permitido"; outro agente termina e comemora |
