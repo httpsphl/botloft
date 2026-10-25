@@ -588,6 +588,7 @@ Transporte: Streamable HTTP, só POST e resposta `application/json`, sem sessão
 | `share_file` | `files` (1 a 10 caminhos, absolutos ou relativos à pasta do bot) | `shown` (um `BotFile` por arquivo, 8.4) e um lembrete de que o dono vê cada um como cartão no chat; um arquivo fora das pastas do bot e não escrito por ele, ou que não existe, recusa a chamada inteira e diz qual e por quê |
 | `send_signal` | `name`, `note?` (até 2 000 caracteres) | o aviso normalizado e, para cada rotina da crew que o espera, se rodou e por que não (20.13) |
 | `ask_owner` | `question` (até 2 000 caracteres), `options?` (2 a 5, até 100 caracteres cada) | `question_id` e o lembrete de que a resposta chega depois, como mensagem; a tool não espera (23.2) |
+| `ask_key` | `name` (o nome da variável, 32.3), `why` (até 500 caracteres) | `request_id` e o lembrete de que a chave chega depois, num reinício com a variável e numa mensagem do Botloft; a tool não espera (32.5) |
 | `show_plan` | `summary` (até 300 caracteres), `steps` (2 a 8, até 200 caracteres cada), `alternative?` (até 300) | `start` (`plan`, `alternative` ou `false`) e o que fazer; espera até 20 s pelo dono (10.5) |
 | `permission_prompt` | `tool_name`, `input`, `tool_use_id` | decisão do dono (10.1). Chamada pelo Claude Code, não pelo modelo |
 | `browser_*` | seção 21.4 | o navegador do bot: abrir, ler, clicar, digitar, rolar, ver a tela, pedir a mão do dono |
@@ -2860,7 +2861,7 @@ Textos nos três idiomas (15.6), sem jargão: "Precisa de você no Botloft", "Ab
 
 ## 32. Chaves dos agentes
 
-Status: **K1 feito** (guardar, usar e esconder); K2 a K4 em desenho. A ideia veio do OpenBot (`docs/openbot-analysis.md`, fora do git); a implementação é nossa.
+Status: **K1 e K2 feitos** (guardar, usar e esconder; o pedido pelo agente); K3 e K4 em desenho. A ideia veio do OpenBot (`docs/openbot-analysis.md`, fora do git); a implementação é nossa.
 
 ### 32.1 O que é
 
@@ -2885,7 +2886,7 @@ Com as **chaves**, o dono guarda a chave fora da conversa e o agente a usa **pel
 
 - **No ambiente do processo.** Ao subir o agente (7.4, passo 5), o daemon põe as chaves dele no ambiente, depois do bloco do usuário e antes das variáveis do Botloft, que não podem ser sobrescritas. Vale para os três motores (30).
 - **Mudou, reinicia.** Salvar, trocar ou apagar uma chave reinicia o agente com `--resume` quando nada estiver em andamento, como na troca de modo (7.4) e nas ferramentas conectadas (25.3): a conversa continua, e o processo novo já tem a variável.
-- **Regras do agente:** um arquivo próprio, `.claude/rules/keys.md`, escrito a cada início (e apagado sem chaves), com a lista dos nomes, as descrições, e a regra; os outros motores (30) recebem o mesmo texto no fim do `AGENTS.md`. A regra: use a chave pelo nome da variável; nunca escreva o valor numa resposta, num arquivo, numa mensagem a outro agente nem num comando que o imprima (`echo`, `Write-Output`); se uma chave faltar ou não funcionar, peça com `ask_key`, nunca no chat (até o K2, "diga ao dono qual, pelo nome").
+- **Regras do agente:** um arquivo próprio, `.claude/rules/keys.md`, escrito a cada início (e apagado sem chaves), com a lista dos nomes, as descrições, e a regra; os outros motores (30) recebem o mesmo texto no fim do `AGENTS.md`. A regra: use a chave pelo nome da variável; nunca escreva o valor numa resposta, num arquivo, numa mensagem a outro agente nem num comando que o imprima (`echo`, `Write-Output`); se uma chave faltar ou não funcionar, peça com `ask_key`, nunca no chat.
 
 ### 32.5 Como o agente pede
 
@@ -2917,8 +2918,8 @@ Com as **chaves**, o dono guarda a chave fora da conversa e o agente a usa **pel
 ### 32.9 Protocolo e dados
 
 - **Métodos** (11.2, só do dono): `keys.list {botId}` → `[{name, description, setAt, missing}]`; `keys.set {botId, name, value, description?, requestId?}`; `keys.delete {botId, name}`; `keys.dismiss {requestId}`; `keys.scan` → achados de 32.7 (sem o valor inteiro); `keys.scrub {hits: [{id, as}]}`, com `as` o nome de uma chave nova ou `null` para apagar.
-- **Notificação** `key.changed {botId}`; o cartão é um item novo do chat, `key_request` (`requestId`, `name`, `why`, `status`: `open`, `saved`, `dismissed`), regravado quando o dono responde.
-- **Banco:** migration com `agent_keys` (`bot_id`, `name`, `description`, `set_at`) e `key_requests` (`id`, `bot_id`, `name`, `why`, `status`, `created_at`, `answered_at`). Nenhum valor.
+- **Notificação** `key.changed {botId}`; o cartão é um item novo do chat, `key_request` (`name`, `why`, `status`: `open`, `saved`, `dismissed`), regravado quando o dono responde. O pedido **é** esse item: o `requestId` é o id dele.
+- **Banco:** migration com `agent_keys` (`bot_id`, `name`, `description`, `set_at`). Nenhum valor. O pedido não tem tabela própria: vive em `chat_items` (tipo `key_request`), e o limite de 5 conta os abertos ali. Uma tabela à parte repetiria o item sem ganho.
 - **App:** o cartão em `features/chat/KeyRequestCard.tsx`, a parte Chaves nos detalhes do agente, a busca nas Configurações; textos nos três idiomas.
 
 ### 32.10 Fora desta etapa
@@ -2933,6 +2934,6 @@ Com as **chaves**, o dono guarda a chave fora da conversa e o agente a usa **pel
 | Marco | O que entra | Teste |
 |---|---|---|
 | **K1** Guardar e usar | `secrets\keys`, `keys.list/set/delete`, o nome validado, a variável no ambiente do agente nos três motores, o reinício com `--resume`, as regras do agente com os nomes, a troca por `[chave NOME]` no que o daemon grava | `tests/agent_keys.rs`: o agente sobe com a variável e o `keys.md`, e sem eles depois de apagada; nomes reservados e valor vazio recusados; o comando, a saída, a resposta e a mensagem do dono com o valor ficam com `[chave NOME]`; `keys.rs` do núcleo (nome, valor, troca), `agent_keys.rs` do daemon e do store. **Feito** |
-| **K2** O pedido | a tool `ask_key`, o item `key_request`, `keys.dismiss`, a mensagem ao agente quando a chave chega, o limite de 5, fora do celular | `tests/`: pede, o dono salva pelo `requestId`, o agente reinicia e recebe a mensagem; "Agora não" avisa o agente; o celular não recebe o cartão |
+| **K2** O pedido | a tool `ask_key`, o item `key_request`, `keys.dismiss`, a mensagem ao agente quando a chave chega, o limite de 5, fora do celular | `tests/key_requests.rs`: pede, o nome errado é recusado, o dono salva pelo `requestId`, o agente reinicia com a variável e recebe a mensagem sem o valor; "Agora não" avisa o agente; nomes e motivos ruins voltam ao agente; o sexto pedido aberto é recusado; `fakeKeys.test.ts`. O celular pula o item no `mobile/chats.rs`. **Feito** |
 | **K3** No app | o cartão com o campo de senha, a parte Chaves nos detalhes, "Falta o valor", o aviso de chave já guardada colada no chat, três idiomas | `FakeBotloft`; `pnpm check` |
 | **K4** As já coladas e o teste real | `keys.scan`, `keys.scrub`, a tela nas Configurações | testes no store com textos de exemplo de cada padrão; manual com o Claude Code real: um agente pede uma chave, o dono salva, o agente roda um comando que usa `$env:NOME` e funciona; um `echo` dela aparece no chat como `[chave NOME]` |

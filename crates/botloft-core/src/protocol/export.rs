@@ -222,6 +222,8 @@ fn export_bindings() {
     reactions::decls(&mut out);
     out.decl::<TurnItem>();
     out.decl::<NoticeItem>();
+    out.decl::<KeyRequestStatus>();
+    out.decl::<KeyRequestItem>();
     out.decl::<ChatBody>();
     out.decl::<ChatItem>();
     out.decl::<ChatItemChanged>();

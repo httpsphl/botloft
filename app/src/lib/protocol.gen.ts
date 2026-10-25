@@ -1704,9 +1704,18 @@ missing: boolean, };
 
 export type KeysListParams = { botId: BotId, };
 
-export type KeysSetParams = { botId: BotId, name: string, value: string, description?: string, };
+export type KeysSetParams = { botId: BotId, name: string, value: string, description?: string, 
+/**
+ * The bot's request this answers (spec 32.5); its name must match.
+ */
+requestId?: ChatItemId, };
 
 export type KeysDeleteParams = { botId: BotId, name: string, };
+
+/**
+ * `keys.dismiss`: the owner does not give the key now.
+ */
+export type KeysDismissParams = { requestId: ChatItemId, };
 
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
 /**
@@ -1877,9 +1886,24 @@ code?: NoticeCode,
 text: string, };
 
 /**
+ * Where a request for a key stands (spec 32.5).
+ */
+export type KeyRequestStatus = "open" | "saved" | "dismissed";
+
+export type KeyRequestItem = { 
+/**
+ * The key's name, as in spec 32.3.
+ */
+name: string, 
+/**
+ * What the bot needs it for, in its own words.
+ */
+why: string, status: KeyRequestStatus, };
+
+/**
  * What a chat item holds, by `kind`.
  */
-export type ChatBody = { "kind": "inbound" } & InboundItem | { "kind": "reply" } & ReplyItem | { "kind": "tool" } & ToolItem | { "kind": "approval" } & ApprovalItem | { "kind": "question" } & QuestionItem | { "kind": "turn" } & TurnItem | { "kind": "notice" } & NoticeItem;
+export type ChatBody = { "kind": "inbound" } & InboundItem | { "kind": "reply" } & ReplyItem | { "kind": "tool" } & ToolItem | { "kind": "approval" } & ApprovalItem | { "kind": "question" } & QuestionItem | { "kind": "turn" } & TurnItem | { "kind": "notice" } & NoticeItem | { "kind": "key_request" } & KeyRequestItem;
 
 /**
  * One entry of a bot's chat.
@@ -2457,6 +2481,7 @@ export interface RpcMethods {
   "keys.list": { params: KeysListParams; result: Array<AgentKey> };
   "keys.set": { params: KeysSetParams; result: Array<AgentKey> };
   "keys.delete": { params: KeysDeleteParams; result: Array<AgentKey> };
+  "keys.dismiss": { params: KeysDismissParams; result: null };
   "routines.list": { params: RoutinesListParams; result: Array<Routine> };
   "routines.create": { params: RoutinesCreateParams; result: Routine };
   "routines.update": { params: RoutinesUpdateParams; result: Routine };

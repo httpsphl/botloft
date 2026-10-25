@@ -19,6 +19,7 @@ fn set(name: &str, value: &str) -> KeysSetParams {
         name: name.to_owned(),
         value: value.to_owned(),
         description: None,
+        request_id: None,
     }
 }
 
@@ -36,6 +37,7 @@ async fn a_saved_key_reaches_the_agent_by_name_and_goes_when_deleted() {
             name: "WA_TOKEN".to_owned(),
             value: format!("  {TOKEN} "),
             description: Some("Token do gateway do WhatsApp".to_owned()),
+            request_id: None,
         },
     )
     .expect("set");

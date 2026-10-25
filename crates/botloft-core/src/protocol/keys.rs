@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::ids::BotId;
+use crate::ids::{BotId, ChatItemId};
 
 /// A key of an agent, without its value (spec 32.2).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -36,6 +36,18 @@ pub struct KeysSetParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub description: Option<String>,
+    /// The bot's request this answers (spec 32.5); its name must match.
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub request_id: Option<ChatItemId>,
+}
+
+/// `keys.dismiss`: the owner does not give the key now.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct KeysDismissParams {
+    pub request_id: ChatItemId,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

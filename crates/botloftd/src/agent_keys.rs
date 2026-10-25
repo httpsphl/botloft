@@ -162,6 +162,7 @@ fn redact_with(pairs: &Pairs, body: &mut ChatBody) {
         }
         ChatBody::Inbound(inbound) => clean(&mut inbound.message.body),
         ChatBody::Notice(notice) => clean(&mut notice.text),
+        ChatBody::KeyRequest(request) => clean(&mut request.why),
         ChatBody::Question(_) | ChatBody::Turn(_) => {}
     }
 }
@@ -192,7 +193,7 @@ pub fn write_rules(workspace: &Path, keys: &[botloft_core::protocol::AgentKey]) 
     text.push_str(
         "\nNever write a key's value in a reply, a file, a message to another bot, or a \
          command that prints it (echo, Write-Output). If a key is missing or does not work, \
-         tell the owner which one, by its name.\n",
+         ask the owner for it with ask_key, by its name.\n",
     );
     std::fs::create_dir_all(path.parent().unwrap_or(workspace))?;
     std::fs::write(path, text)

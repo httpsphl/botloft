@@ -43,6 +43,19 @@ impl Store {
         Ok(())
     }
 
+    /// How many of the bot's requests for a key the owner has not answered
+    /// (spec 32.5).
+    pub fn open_key_requests(&self, bot: &BotId) -> Result<u32> {
+        let open: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM chat_items \
+             WHERE bot_id = ?1 AND kind = 'key_request' \
+               AND json_extract(data, '$.status') = 'open'",
+            params![bot.to_string()],
+            |row| row.get(0),
+        )?;
+        Ok(u32::try_from(open).unwrap_or(u32::MAX))
+    }
+
     /// Whether there was such a key.
     pub fn delete_agent_key(&self, bot: &BotId, name: &str) -> Result<bool> {
         let gone = self.conn.execute(

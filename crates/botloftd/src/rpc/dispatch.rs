@@ -134,6 +134,9 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::KEYS_LIST => reply(keys::list(daemon, parse(params)?)),
         method::KEYS_SET => reply(keys::set(daemon, parse(params)?)),
         method::KEYS_DELETE => reply(keys::delete(daemon, parse(params)?)),
+        method::KEYS_DISMISS => {
+            reply(service::key_requests::dismiss(daemon, parse(params)?).map(|()| Value::Null))
+        }
         method::QUESTIONS_LIST => reply(questions::list(daemon, parse(params)?)),
         method::QUESTIONS_ANSWER => reply(questions::answer(daemon, parse(params)?)),
         method::QUESTIONS_DISMISS => reply(questions::dismiss(daemon, parse(params)?)),

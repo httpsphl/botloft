@@ -102,6 +102,29 @@ pub enum ChatBody {
     /// The end of a turn.
     Turn(TurnItem),
     Notice(NoticeItem),
+    /// The bot asks the owner for a key (spec 32.5); the item's id is the
+    /// request's.
+    KeyRequest(KeyRequestItem),
+}
+
+text_enum!(
+    /// Where a request for a key stands (spec 32.5).
+    KeyRequestStatus, "key request status" {
+        Open => "open",
+        Saved => "saved",
+        Dismissed => "dismissed",
+    }
+);
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct KeyRequestItem {
+    /// The key's name, as in spec 32.3.
+    pub name: String,
+    /// What the bot needs it for, in its own words.
+    pub why: String,
+    pub status: KeyRequestStatus,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

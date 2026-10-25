@@ -17,6 +17,7 @@ pub mod deliveries;
 pub mod desktop;
 pub mod files;
 pub mod island;
+pub mod key_requests;
 pub mod keys;
 pub mod lead;
 pub mod mcp;

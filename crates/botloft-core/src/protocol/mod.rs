@@ -223,6 +223,7 @@ pub mod method {
     pub const KEYS_LIST: &str = "keys.list";
     pub const KEYS_SET: &str = "keys.set";
     pub const KEYS_DELETE: &str = "keys.delete";
+    pub const KEYS_DISMISS: &str = "keys.dismiss";
     pub const QUESTIONS_LIST: &str = "questions.list";
     pub const QUESTIONS_ANSWER: &str = "questions.answer";
     pub const QUESTIONS_DISMISS: &str = "questions.dismiss";

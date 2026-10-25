@@ -8,6 +8,7 @@ pub(super) fn decls(out: &mut Out) {
     out.decl::<KeysListParams>();
     out.decl::<KeysSetParams>();
     out.decl::<KeysDeleteParams>();
+    out.decl::<KeysDismissParams>();
 }
 
 pub(super) fn methods(out: &mut Out) {
@@ -15,4 +16,9 @@ pub(super) fn methods(out: &mut Out) {
     out.method(method::KEYS_LIST, &out.name::<KeysListParams>(), &keys);
     out.method(method::KEYS_SET, &out.name::<KeysSetParams>(), &keys);
     out.method(method::KEYS_DELETE, &out.name::<KeysDeleteParams>(), &keys);
+    out.method(
+        method::KEYS_DISMISS,
+        &out.name::<KeysDismissParams>(),
+        "null",
+    );
 }

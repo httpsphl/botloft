@@ -34,6 +34,7 @@ fn kind(body: &ChatBody) -> &'static str {
         ChatBody::Question(_) => "question",
         ChatBody::Turn(_) => "turn",
         ChatBody::Notice(_) => "notice",
+        ChatBody::KeyRequest(_) => "key_request",
     }
 }
 

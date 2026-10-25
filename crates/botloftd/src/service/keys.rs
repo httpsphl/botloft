@@ -5,10 +5,12 @@
 
 use botloft_core::ids::BotId;
 use botloft_core::keys;
-use botloft_core::protocol::{AgentKey, KeysDeleteParams, KeysListParams, KeysSetParams};
+use botloft_core::protocol::{
+    AgentKey, KeyRequestStatus, KeysDeleteParams, KeysListParams, KeysSetParams,
+};
 use tracing::info;
 
-use super::{ApiError, ApiResult};
+use super::{ApiError, ApiResult, key_requests};
 use crate::state::Daemon;
 
 fn known(daemon: &Daemon, bot: &BotId) -> ApiResult<()> {
@@ -44,6 +46,17 @@ pub fn set(daemon: &Daemon, params: KeysSetParams) -> ApiResult<Vec<AgentKey>> {
         .as_deref()
         .map(keys::description)
         .transpose()?;
+    // Answering the bot's request: checked before anything is saved.
+    let request = params
+        .request_id
+        .as_ref()
+        .map(|id| key_requests::open(daemon, bot, id, &name).map(|request| (id, request)))
+        .transpose()?;
+    let replaced = daemon
+        .keys
+        .pairs(&daemon.paths.secrets(), bot)
+        .iter()
+        .any(|(have, _)| have == &name);
     daemon
         .keys
         .set(&daemon.paths.secrets(), bot, &name, &value)
@@ -53,7 +66,12 @@ pub fn set(daemon: &Daemon, params: KeysSetParams) -> ApiResult<Vec<AgentKey>> {
         .store()
         .set_agent_key(bot, &name, description.as_deref(), now)?;
     info!(bot = %bot, key = %name, "agent key saved");
+    // Restarted first, so the note reaches a process that has the key.
     daemon.supervisor.launch_settings_changed(bot);
+    if let Some((id, request)) = request {
+        let note = key_requests::saved_note(&name, replaced);
+        key_requests::close(daemon, bot, id, request, KeyRequestStatus::Saved, note)?;
+    }
     listed(daemon, bot)
 }
 
