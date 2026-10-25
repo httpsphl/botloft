@@ -34,6 +34,7 @@
     "allow-save-file-as",
     "allow-open-url",
     "allow-open-at-sign-in",
-    "allow-launched-at-sign-in"
+    "allow-launched-at-sign-in",
+    "allow-quiet-now"
   ]
 }

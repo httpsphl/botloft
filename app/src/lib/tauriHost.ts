@@ -130,6 +130,7 @@ export function tauriHost(): Host {
     setZoom: (factor) => getCurrentWebview().setZoom(factor),
     checkForUpdate,
     readOwnerToken: () => invoke<string>("read_owner_token"),
+    quiet: () => invoke<boolean>("quiet_now"),
     openPath: (path) => invoke<void>("open_path", { path }),
     openFile: (path) => invoke<void>("open_file", { path }),
     revealFile: (path) => invoke<void>("reveal_file", { path }),

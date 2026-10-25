@@ -2,9 +2,9 @@
 // /island.html), with a fake daemon where two agents wait and one works.
 
 import { FakeBotloft } from "../lib/fake";
-import type { IslandHost } from "./host";
+import { FakeIslandHost } from "./fakeHost";
 
-export function islandPreview(): { api: FakeBotloft; host: IslandHost } {
+export function islandPreview(): { api: FakeBotloft; host: FakeIslandHost } {
   document.documentElement.dataset.islandPreview = "";
   const fake = new FakeBotloft();
   const research = fake.addCrew("Research");
@@ -89,13 +89,6 @@ export function islandPreview(): { api: FakeBotloft; host: IslandHost } {
     fake.chat.reply(review.id, "Todos os 18 links do relatório funcionam.");
     fake.setBotState(review.id, "idle");
   }, 6000);
-  const host: IslandHost = {
-    daemon: async () => ({ port: 0, token: "" }),
-    show: async () => {},
-    hide: async () => {},
-    openApp: async (botId) => {
-      console.info("open Botloft", botId ?? "");
-    },
-  };
+  const host = new FakeIslandHost();
   return { api: fake, host };
 }

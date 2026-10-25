@@ -1,17 +1,12 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 import { FakeBotloft } from "../lib/fake";
-import type { IslandHost } from "./host";
+import { FakeIslandHost } from "./fakeHost";
 import { IslandApp } from "./IslandApp";
 
 afterEach(cleanup);
 
-const host: IslandHost = {
-  daemon: async () => ({ port: 0, token: "" }),
-  show: async () => {},
-  hide: async () => {},
-  openApp: async () => {},
-};
+const host = new FakeIslandHost();
 
 function crew() {
   const fake = new FakeBotloft();

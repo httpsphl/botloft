@@ -36,6 +36,17 @@ function pref<T extends Value>(key: string, fallback: T, allowed: readonly T[]):
       listener();
     }
   };
+  // Another window of the app (the island, spec 31.3) changed it.
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", (event) => {
+      if (event.key === key) {
+        current = read();
+        for (const listener of listeners) {
+          listener();
+        }
+      }
+    });
+  }
   return {
     get: () => current,
     set,
@@ -68,6 +79,10 @@ export const prefs = {
   notifyNeeds: pref<boolean>("botloft.notifyNeeds", true, ON_OFF),
   /** A Windows notification when a bot finishes what it was doing. */
   notifyDone: pref<boolean>("botloft.notifyDone", false, ON_OFF),
+  /** The island at the top of the screen (spec 31). */
+  island: pref<boolean>("botloft.island", true, ON_OFF),
+  /** Which screen the island sits on: the main one, or where the mouse is. */
+  islandScreen: pref<"primary" | "mouse">("botloft.islandScreen", "primary", ["primary", "mouse"]),
   /** The island cheers when an agent finishes (spec 31.4). */
   islandCheer: pref<boolean>("botloft.islandCheer", true, ON_OFF),
   /** The mark on the app's icon also shows while a bot is unread. */

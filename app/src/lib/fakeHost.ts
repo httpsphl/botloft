@@ -44,6 +44,8 @@ export class FakeHost implements Host {
   hidden = false;
   /** Whether the window is on screen with the focus. */
   front = true;
+  /** Whether Windows would hold back a notification (spec 31.6). */
+  quietNow = false;
   /** Whether Windows opens the app at sign-in, as the app last set it. */
   openAtSignIn: boolean | null = null;
   atSignIn = false;
@@ -162,6 +164,10 @@ export class FakeHost implements Host {
     }
     this.status = this.afterInstall;
     return Promise.resolve(this.status);
+  }
+
+  quiet(): Promise<boolean> {
+    return Promise.resolve(this.quietNow);
   }
 
   readOwnerToken(): Promise<string> {

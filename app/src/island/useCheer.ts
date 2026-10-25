@@ -1,11 +1,13 @@
 // The cheer (spec 31.4): when an agent goes from working to free, the island
 // shows "<agent> finished" with the first line of its last reply for a few
-// seconds, unless the owner turned the cheer off (31.9).
+// seconds, unless the owner turned the cheer off (31.9) or the screen is
+// quiet (31.6).
 
 import { useEffect, useRef, useState } from "react";
 import type { BotloftApi } from "../lib/api";
 import type { Bot, BotId, BotState } from "../lib/protocol.gen";
 import { prefs } from "../shell/prefs";
+import type { IslandHost } from "./host";
 
 export interface Cheer {
   bot: Bot;
@@ -15,7 +17,7 @@ export interface Cheer {
 
 export const CHEER_SHOWN_MS = 4000;
 
-export function useCheer(api: BotloftApi, bots: Bot[]): Cheer | null {
+export function useCheer(api: BotloftApi, bots: Bot[], host: IslandHost): Cheer | null {
   const [cheer, setCheer] = useState<Cheer | null>(null);
   const known = useRef(bots);
   known.current = bots;
@@ -43,9 +45,10 @@ export function useCheer(api: BotloftApi, bots: Bot[]): Cheer | null {
       if (before !== "busy" || state !== "idle" || !bot || !prefs.islandCheer.get()) {
         return;
       }
-      api.call("chat.history", { botId, limit: 5 }).then(
-        (newestFirst) => {
-          if (!alive) {
+      // A quiet screen (full screen, presentation) gets no cheer (31.6).
+      Promise.all([api.call("chat.history", { botId, limit: 5 }), host.quiet()]).then(
+        ([newestFirst, quiet]) => {
+          if (!alive || quiet) {
             return;
           }
           const reply = newestFirst.find((item) => item.body.kind === "reply");
@@ -63,7 +66,7 @@ export function useCheer(api: BotloftApi, bots: Bot[]): Cheer | null {
       off();
       clearTimeout(timer);
     };
-  }, [api]);
+  }, [api, host]);
 
   return cheer;
 }

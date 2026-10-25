@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { FakeBotloft } from "../lib/fake";
 import { GUARD_MS } from "./Cards";
-import type { IslandHost } from "./host";
+import { FakeIslandHost } from "./fakeHost";
 import { IslandApp, PANEL_WIDTH, PILL } from "./IslandApp";
 
 let now = 1_000_000;
@@ -18,20 +18,8 @@ afterEach(() => {
 });
 
 function fakeHost() {
-  const calls: string[] = [];
-  const host: IslandHost = {
-    daemon: async () => ({ port: 0, token: "" }),
-    show: async (width, height) => {
-      calls.push(`show ${width}x${height}`);
-    },
-    hide: async () => {
-      calls.push("hide");
-    },
-    openApp: async (botId) => {
-      calls.push(`open ${botId ?? ""}`);
-    },
-  };
-  return { host, calls };
+  const host = new FakeIslandHost();
+  return { host, calls: host.calls };
 }
 
 function crew() {
@@ -65,7 +53,7 @@ describe("the island", () => {
     render(<IslandApp api={fake} host={host} />);
 
     const pill = await screen.findByRole("button", { name: "2 waiting, 1 working" });
-    await waitFor(() => expect(calls).toContain(`show ${PILL.width}x${PILL.height}`));
+    await waitFor(() => expect(calls).toContain(`show ${PILL.width}x${PILL.height} primary`));
     fireEvent.click(pill);
     await screen.findByText("Run a command");
     await waitFor(() =>

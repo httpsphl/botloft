@@ -100,6 +100,8 @@ export interface Host {
   setOpenAtSignIn(on: boolean): Promise<void>;
   /** Whether Windows opened the app at sign-in, with its window hidden. */
   launchedAtSignIn(): Promise<boolean>;
+  /** Windows would hold back a notification now: full screen, a presentation, "Do not disturb" (spec 31.6). */
+  quiet(): Promise<boolean>;
   /** A Windows notification; `sound` plays the Windows notification sound. */
   notify(notice: { title: string; body: string; sound: boolean }): Promise<void>;
   /** Shows the icon near the clock, or updates it. */

@@ -530,6 +530,7 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tauri-plugin-updater",
  "toml 1.1.6+spec-1.1.0",
+ "windows",
  "winreg",
 ]
 

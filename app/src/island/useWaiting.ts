@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { BotloftApi } from "../lib/api";
-import type { ApprovalCard, Bot, QuestionCard } from "../lib/protocol.gen";
+import type { ApprovalCard, Bot, Crew, QuestionCard } from "../lib/protocol.gen";
 
 export type Waiting =
   | { kind: "approval"; id: string; card: ApprovalCard }
@@ -19,19 +19,20 @@ export function useWaiting(api: BotloftApi): {
   bots: Bot[];
   /** Crew names by id, for the agents' cards. */
   crews: Map<string, string>;
+  crewList: Crew[];
   /** Goes up each time the island reads again. */
   version: number;
   refresh: () => void;
 } {
   const [waiting, setWaiting] = useState<Waiting[]>([]);
   const [bots, setBots] = useState<Bot[]>([]);
-  const [crews, setCrews] = useState<Map<string, string>>(new Map());
+  const [crewList, setCrewList] = useState<Crew[]>([]);
   const [version, setVersion] = useState(0);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const load = useCallback(async () => {
     try {
-      const [cards, botList, crewList] = await Promise.all([
+      const [cards, botList, crewsRead] = await Promise.all([
         api.call("cards.list"),
         api.call("bots.list", {}),
         api.call("crews.list"),
@@ -50,7 +51,7 @@ export function useWaiting(api: BotloftApi): {
       ];
       setWaiting(all.sort((a, b) => a.card.createdAt - b.card.createdAt));
       setBots(botList.filter((bot) => bot.archivedAt === null));
-      setCrews(new Map(crewList.map((crew) => [crew.id, crew.name])));
+      setCrewList(crewsRead);
       setVersion((before) => before + 1);
     } catch {
       // Not connected yet: the next connection reads again.
@@ -67,6 +68,7 @@ export function useWaiting(api: BotloftApi): {
     const offEvents = api.subscribe((event) => {
       const news =
         event.name === "bot.state" ||
+        event.name === "crew.changed" ||
         event.name === "question.changed" ||
         (event.name === "chat.item" &&
           (event.params.item.body.kind === "approval" ||
@@ -88,5 +90,6 @@ export function useWaiting(api: BotloftApi): {
   }, [api, load, refresh]);
 
   const working = bots.filter((bot) => bot.state === "busy");
-  return { waiting, working, bots, crews, version, refresh };
+  const crews = new Map(crewList.map((crew) => [crew.id, crew.name]));
+  return { waiting, working, bots, crews, crewList, version, refresh };
 }

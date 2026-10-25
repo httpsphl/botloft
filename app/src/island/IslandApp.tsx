@@ -1,14 +1,16 @@
 // The island (spec 31): a pill at the top of the screen while agents work
 // or wait for the owner, that grows into a panel with three tabs: Home,
-// Chat and Usage. Files dropped on it go to the Chat. The window always has
-// the size of what it shows (spec 31.3).
+// Chat and Usage. It comes down by itself when something new waits, peeks
+// under the mouse, and takes files dropped on it to the Chat. The window
+// always has the size of what it shows (spec 31.3).
 
-import { Gauge, House, MessageCircle, SquareArrowOutUpRight, X } from "lucide-react";
-import { type DragEvent, type ReactNode, useLayoutEffect, useRef, useState } from "react";
+import { type DragEvent, useLayoutEffect, useRef, useState } from "react";
 import { useFiles } from "../features/chat/useFiles";
 import { useT } from "../i18n";
 import type { BotloftApi } from "../lib/api";
 import type { BotId } from "../lib/protocol.gen";
+import { prefs, usePref } from "../shell/prefs";
+import { Bar, type Tab } from "./Bar";
 import { ChatTab } from "./ChatTab";
 import { Home } from "./Home";
 import type { IslandHost } from "./host";
@@ -16,6 +18,7 @@ import { SHOWN } from "./LiveAgents";
 import { CHEER_WIDTH, CheerPill, PILL, Pill } from "./Pill";
 import { useToday } from "./Today";
 import { fiveHour, UsageTab, useUsage, WARN_AT } from "./UsageTab";
+import { useAppear } from "./useAppear";
 import { useCheer } from "./useCheer";
 import { useLive } from "./useLive";
 import { useWaiting } from "./useWaiting";
@@ -23,28 +26,35 @@ import { useWaiting } from "./useWaiting";
 export { PILL } from "./Pill";
 export const PANEL_WIDTH = 720;
 
-type Tab = "home" | "chat" | "usage";
-
 const hasFiles = (event: DragEvent) => event.dataTransfer.types.includes("Files");
 
 export function IslandApp({ api, host }: { api: BotloftApi; host: IslandHost }) {
   const t = useT();
-  const { waiting, working, bots, crews, version, refresh } = useWaiting(api);
+  const enabled = usePref(prefs.island) && host.supported;
+  const screen = usePref(prefs.islandScreen);
+  const { waiting, working, bots, crews, crewList, version, refresh } = useWaiting(api);
   const live = useLive(
     api,
     working.slice(0, SHOWN).map((bot) => bot.id),
   );
-  const cheer = useCheer(api, bots);
+  const cheer = useCheer(api, bots, host);
   const today = useToday(api, version);
   const usage = useUsage(api, version);
   const files = useFiles();
-  const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("home");
+  const { open, setOpen, hover } = useAppear({
+    host,
+    enabled,
+    loaded: version > 0,
+    waitingIds: waiting.map((item) => item.id),
+    onArrive: () => setTab("home"),
+  });
   const [talkTo, setTalkTo] = useState<BotId | null>(null);
   const panel = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(PILL.height);
   const visible =
-    waiting.length > 0 || working.length > 0 || cheer !== null || files.files.length > 0;
+    enabled &&
+    (waiting.length > 0 || working.length > 0 || cheer !== null || files.files.length > 0);
   const expanded = open && visible;
 
   useLayoutEffect(() => {
@@ -65,8 +75,8 @@ export function IslandApp({ api, host }: { api: BotloftApi; host: IslandHost }) 
 
   const width = expanded ? PANEL_WIDTH : cheer ? CHEER_WIDTH : PILL.width;
   useLayoutEffect(() => {
-    (visible ? host.show(width, height) : host.hide()).catch(() => {});
-  }, [host, visible, width, height]);
+    (visible ? host.show(width, height, screen) : host.hide()).catch(() => {});
+  }, [host, visible, width, height, screen]);
 
   if (!visible) {
     return null;
@@ -78,11 +88,6 @@ export function IslandApp({ api, host }: { api: BotloftApi; host: IslandHost }) 
     ...bots.filter((bot) => bot.state !== "needs_approval" && bot.state !== "busy"),
   ];
   const openApp = (botId?: BotId) => host.openApp(botId).catch(() => {});
-  const tabs: [Tab, string, ReactNode][] = [
-    ["home", t.island.tabs.home, <House key="home" aria-hidden size={16} />],
-    ["chat", t.island.tabs.chat, <MessageCircle key="chat" aria-hidden size={16} />],
-    ["usage", t.island.tabs.usage, <Gauge key="usage" aria-hidden size={16} />],
-  ];
   const color = waiting[0]?.card.bot.color ?? working[0]?.color ?? bots[0]?.color ?? "#FF7A59";
   const used = fiveHour(usage);
   return (
@@ -91,6 +96,12 @@ export function IslandApp({ api, host }: { api: BotloftApi; host: IslandHost }) 
       className="island"
       data-open={expanded}
       style={{ width, height }}
+      {...hover}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          setOpen(false);
+        }
+      }}
       onDragOver={(event) => {
         if (hasFiles(event)) {
           event.preventDefault();
@@ -107,44 +118,15 @@ export function IslandApp({ api, host }: { api: BotloftApi; host: IslandHost }) 
     >
       {expanded ? (
         <div ref={panel} className="island-content flex flex-col">
-          <div className="flex items-center justify-between px-3 pt-2.5 pb-2">
-            <div role="tablist" aria-label={t.island.tabs.label} className="flex gap-1">
-              {tabs.map(([id, name, icon]) => (
-                <button
-                  key={id}
-                  type="button"
-                  role="tab"
-                  aria-selected={tab === id}
-                  aria-label={name}
-                  title={name}
-                  className="island-tab"
-                  onClick={() => setTab(id)}
-                >
-                  {icon}
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-1">
-              <button
-                type="button"
-                className="island-tab"
-                title={t.island.openApp}
-                aria-label={t.island.openApp}
-                onClick={() => openApp()}
-              >
-                <SquareArrowOutUpRight aria-hidden size={15} />
-              </button>
-              <button
-                type="button"
-                className="island-tab"
-                title={t.island.hide}
-                aria-label={t.island.hide}
-                onClick={() => setOpen(false)}
-              >
-                <X aria-hidden size={15} />
-              </button>
-            </div>
-          </div>
+          <Bar
+            api={api}
+            crews={crewList}
+            tab={tab}
+            onTab={setTab}
+            onOpenApp={() => openApp()}
+            onHide={() => setOpen(false)}
+            onChanged={refresh}
+          />
           <div className="px-3 pb-3">
             {tab === "home" && (
               <Home

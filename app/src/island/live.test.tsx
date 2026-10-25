@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, describe, expect, test } from "vitest";
 import { FakeBotloft } from "../lib/fake";
 import { prefs, resetPrefs } from "../shell/prefs";
-import type { IslandHost } from "./host";
+import { FakeIslandHost } from "./fakeHost";
 import { IslandApp } from "./IslandApp";
 import { localMidnight } from "./Today";
 
@@ -11,12 +11,7 @@ afterEach(() => {
   resetPrefs();
 });
 
-const host: IslandHost = {
-  daemon: async () => ({ port: 0, token: "" }),
-  show: async () => {},
-  hide: async () => {},
-  openApp: async () => {},
-};
+const host = new FakeIslandHost();
 
 function crew() {
   const fake = new FakeBotloft();
