@@ -292,6 +292,7 @@ export const account = {
     sizeHint: "Ctrl+= and Ctrl+- change the size too, and Ctrl+0 goes back to the default.",
     language: "Language",
     archived: "Archived",
+    security: "Security",
     archivedIntro:
       "Agents and crews you archived are stopped and out of sight, and Botloft still keeps their conversations. Delete one to remove it for good.",
     archivedEmpty: "Nothing is archived.",

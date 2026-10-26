@@ -4,6 +4,7 @@
 //! One [`Store`] wraps one connection. The daemon keeps a single store behind
 //! a mutex; queries are short, so there is no connection pool.
 
+mod agent_keys;
 mod allow_rules;
 mod approvals;
 mod bots;
@@ -15,6 +16,7 @@ mod delete;
 mod deliveries;
 mod desktop_grants;
 mod fingerprint;
+mod key_scan;
 mod light;
 mod mcp_servers;
 mod messages;
@@ -43,6 +45,7 @@ pub use approvals::ApprovalRecord;
 pub use bots::BotRecord;
 pub use crew_access::{AccessKinds, CrewAccessRecord};
 pub use deliveries::DeliveryOutcome;
+pub use key_scan::{Pasted, pasted_id};
 pub use messages::MessageFilter;
 pub use migrate::LATEST_VERSION;
 pub use plan::PlanReading;

@@ -28,6 +28,8 @@ mod crew_access;
 mod desktop;
 #[path = "export_island.rs"]
 mod island;
+#[path = "export_keys.rs"]
+mod keys;
 #[path = "export_mcp.rs"]
 mod mcp;
 #[path = "export_mobile.rs"]
@@ -213,12 +215,15 @@ fn export_bindings() {
     cloud::decls(&mut out);
     mobile::decls(&mut out);
     island::decls(&mut out);
+    keys::decls(&mut out);
     out.decl::<ApprovalItem>();
     usage::decls(&mut out);
     questions::decls(&mut out);
     reactions::decls(&mut out);
     out.decl::<TurnItem>();
     out.decl::<NoticeItem>();
+    out.decl::<KeyRequestStatus>();
+    out.decl::<KeyRequestItem>();
     out.decl::<ChatBody>();
     out.decl::<ChatItem>();
     out.decl::<ChatItemChanged>();
@@ -415,6 +420,7 @@ fn export_bindings() {
     cloud::methods(&mut out);
     mobile::methods(&mut out);
     island::methods(&mut out);
+    keys::methods(&mut out);
     routines::methods(&mut out);
     questions::methods(&mut out);
     reactions::methods(&mut out);

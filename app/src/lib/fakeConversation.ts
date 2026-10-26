@@ -148,7 +148,7 @@ export class FakeConversation {
           fromBotId: null,
           toBotId: botId,
           kind: "note",
-          body: body.trim(),
+          body: this.fake.keys.redact(botId, body.trim()),
           taskId: null,
           routineId: null,
           questionId: null,

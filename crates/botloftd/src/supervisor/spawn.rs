@@ -109,6 +109,9 @@ pub(super) fn launch_spec(
         .bot_mcp_servers(&bot.id)
         .map_err(io::Error::other)?;
     let workspace = workspace::prepare_bot(daemon.workspace_env(), crew, &crews, bot, &servers)?;
+    // The names of its keys, for its rules (spec 32.4).
+    let keys = crate::service::keys::listed(daemon, &bot.id).map_err(io::Error::other)?;
+    crate::agent_keys::write_rules(&workspace, &keys)?;
     let token = secrets::random_token()?;
     let (session, resumed) = match session {
         Some(session) => (session.to_owned(), true),
@@ -142,6 +145,12 @@ pub(super) fn launch_spec(
             .to_ascii_uppercase()
             .starts_with("BOTLOFT_")
     });
+    // The agent's keys, before the Botloft's own variables, whose names a key
+    // cannot take (spec 32.3, 32.4).
+    for (name, value) in crate::agent_keys::environment(daemon, &bot.id) {
+        env.retain(|(have, _)| !have.eq_ignore_ascii_case(&name));
+        env.push((name, value));
+    }
     for (name, value) in [
         ("BOTLOFT_BOT_ID", OsString::from(bot.id.as_str())),
         ("BOTLOFT_BOT_TOKEN", OsString::from(&token)),

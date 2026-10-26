@@ -17,6 +17,7 @@ import { seedChief } from "./seedChief";
 import { seedContext } from "./seedContext";
 import { seedDesktop } from "./seedDesktop";
 import { seedHands } from "./seedHands";
+import { seedKeys } from "./seedKeys";
 import { activeTab, drawPage } from "./seedPage";
 import { seedPlan } from "./seedPlan";
 import { seedQuestions } from "./seedQuestions";
@@ -128,6 +129,7 @@ function seed(fake: FakeBotloft): void {
   });
   seedRoutines(fake, { scout: scout.id, analyst: analyst.id });
   seedQuestions(fake, { scout: scout.id, analyst: analyst.id });
+  seedKeys(fake, analyst.id, scout.id);
   seedPlan(fake, writer.id);
   seedBrowser(fake, scout.id);
   // Analyst hit the limit in the middle of a search: its browser rests.

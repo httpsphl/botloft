@@ -13,6 +13,7 @@ import { crews } from "./crews";
 import { crewTemplates } from "./crewTemplates";
 import { desktop } from "./desktop";
 import { files } from "./files";
+import { keys } from "./keys";
 import { messages } from "./messages";
 import { onboarding } from "./onboarding";
 import { phone } from "./phone";
@@ -42,6 +43,7 @@ export const es: Messages = {
   crewTemplates,
   desktop,
   files,
+  keys,
   messages,
   phone,
   questions,

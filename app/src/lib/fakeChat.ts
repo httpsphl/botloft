@@ -76,6 +76,10 @@ export function activityLine(
       kind = "notice";
       text = body.text;
       break;
+    case "key_request":
+      kind = "question";
+      text = body.why;
+      break;
     case "turn":
       return null;
   }

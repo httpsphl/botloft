@@ -22,6 +22,7 @@ import { type Bot, FIELD_LIMITS } from "../../lib/protocol.gen";
 import { prefs, usePref } from "../../shell/prefs";
 import { playSound } from "../../shell/sounds";
 import { useApi } from "../../store/context";
+import { pastedKeys } from "../keys/pasted";
 import { AgentModelPicker } from "./AgentModelPicker";
 import { ContextMeter } from "./ContextMeter";
 import { draftOf, keepDraft } from "./drafts";
@@ -85,7 +86,10 @@ export const ChatComposer = memo(function ChatComposer({
   const setText = (value: string) => {
     setShown(value);
     keepDraft(botId, value);
+    setKept(null);
   };
+  /** Saved keys the owner pasted in the last message, sent by name (spec 32.6). */
+  const [kept, setKept] = useState<string[] | null>(null);
   const [busy, setBusy] = useState(false);
   /** A new mode, model or effort, or a compaction, that waits for the bot to finish what it is doing. */
   const [later, setLater] = useState<string | null>(null);
@@ -144,6 +148,8 @@ export const ChatComposer = memo(function ChatComposer({
         }
       });
       setText("");
+      const pasted = pastedKeys(text, message.body);
+      setKept(pasted.length > 0 ? pasted : null);
       files.clear();
       onCancelReply?.();
       playSound("sent");
@@ -185,6 +191,11 @@ export const ChatComposer = memo(function ChatComposer({
     <form onSubmit={send} className="shrink-0 px-5 pt-2 pb-5">
       {stopped && (
         <p className="mb-1.5 px-2 text-muted text-xs">{t.chat.composer.paused(bot.name)}</p>
+      )}
+      {kept && (
+        <p role="status" className="mb-1.5 animate-fade px-2 text-warn text-xs">
+          {t.keys.pasted(kept, bot.name)}
+        </p>
       )}
       {later && (
         <p role="status" className="mb-1.5 animate-fade px-2 text-muted text-xs">

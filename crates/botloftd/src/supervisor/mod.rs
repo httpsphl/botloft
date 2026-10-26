@@ -230,7 +230,9 @@ impl Supervisor {
         let (Some(running), Some(generation)) = (&slot.running, slot.generation) else {
             return Err(NotRunning);
         };
-        if slot.stop.is_some() {
+        // New settings wait for the running turn to end: what comes now goes
+        // to the process that has them, like a key it was told about.
+        if slot.stop.is_some() || slot.restart_when_idle {
             return Err(NotRunning);
         }
         running.control.write(line).map_err(|_| NotRunning)?;

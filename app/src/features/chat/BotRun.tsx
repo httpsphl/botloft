@@ -12,6 +12,7 @@ import { useArrival } from "../../ui/motion";
 import { BotAvatar, moodOf } from "../bots/BotAvatar";
 import { QuestionCard } from "../questions/QuestionCard";
 import { ApprovalCard } from "./ApprovalCard";
+import { KeyRequestCard } from "./KeyRequestCard";
 import { Markdown } from "./Markdown";
 import { MemoryNote } from "./MemoryNote";
 import { memoryOf, memoryPlaces } from "./memory";
@@ -180,6 +181,12 @@ function BotRunView({
               return (
                 <Arriving key={head.id} at={head.createdAt}>
                   <QuestionCard question={head.body.question} bot={bot.name} />
+                </Arriving>
+              );
+            case "key_request":
+              return (
+                <Arriving key={head.id} at={head.createdAt}>
+                  <KeyRequestCard id={head.id} request={head.body} bot={bot} />
                 </Arriving>
               );
             case "turn":

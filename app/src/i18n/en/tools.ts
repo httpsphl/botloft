@@ -40,6 +40,7 @@ export const tools = {
     ask_crew_access: "Reach another crew",
     share_file: "Share a file",
     ask_owner: "Ask you a question",
+    ask_key: "Ask you for a key",
     show_plan: "Show you the plan",
     browser: "Use a site",
     browser_help: "Ask for your hand",

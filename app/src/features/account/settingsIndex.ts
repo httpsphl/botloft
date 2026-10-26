@@ -12,6 +12,7 @@ export type Page =
   | "account"
   | "tools"
   | "backup"
+  | "security"
   | "archived"
   | "about";
 
@@ -46,6 +47,7 @@ export function settingsIndex(t: ReturnType<typeof useT>): Entry[] {
     ...entry("account", t.account.cloud.title, t.account.mobile.title, t.account.mobile.connect),
     ...entry("tools", s.tools),
     ...entry("backup", t.account.backup.exportTitle, t.account.backup.importTitle, s.copiesTitle),
+    ...entry("security", t.keys.scan.title, t.keys.scan.run),
     ...entry("archived", s.archived),
     ...entry("about", s.about, s.checkUpdates),
   ];

@@ -322,10 +322,12 @@ fn open(
         tool_explanation(tool_name, input),
         always::scope_of(tool_name, input),
     );
+    let mut body = ChatBody::Approval(shown);
+    crate::agent_keys::redact_body(daemon, bot, &mut body);
     let item = ChatItem {
         id: ChatItemId::generate(),
         bot_id: bot.clone(),
-        body: ChatBody::Approval(shown),
+        body,
         created_at: now,
         updated_at: now,
     };
@@ -406,7 +408,12 @@ fn show(daemon: &Daemon, record: &ApprovalRecord) {
         _ => (None, None),
     };
     let shown = item_of(&record.approval, explanation, always);
-    items::update(daemon, item, ChatBody::Approval(shown));
+    items::update(
+        daemon,
+        &record.approval.bot_id,
+        item,
+        ChatBody::Approval(shown),
+    );
 }
 
 /// Expires the request if the MCP call goes away before it is settled,

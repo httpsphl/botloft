@@ -92,9 +92,15 @@ fn quote(store: &Store, bot: &BotId, item_id: &ChatItemId) -> ApiResult<MessageR
 pub(crate) fn post(
     daemon: &Daemon,
     store: &Store,
-    message: Message,
+    mut message: Message,
     task: Option<Task>,
 ) -> ApiResult<Message> {
+    // Neither the sender's keys nor the receiver's are kept or passed on as
+    // they are (spec 32.6).
+    crate::agent_keys::redact_text(daemon, &message.to_bot_id, &mut message.body);
+    if let Some(from) = &message.from_bot_id {
+        crate::agent_keys::redact_text(daemon, from, &mut message.body);
+    }
     let delivery = pending_delivery(&message);
     let item = store.insert_message(&message, &delivery, task.as_ref())?;
     let reactions = reactions::sent_with(store, &message)?;

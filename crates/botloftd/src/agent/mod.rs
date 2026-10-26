@@ -180,8 +180,13 @@ pub(crate) fn neutral_turn_with_images(turn: &Turn) -> Bytes {
 /// The rules `prepare_bot` wrote for Claude Code are the bot's rules; the
 /// other agents read `AGENTS.md` from the bot's folder.
 pub(crate) fn copy_rules_to_agents_md(workspace: &Path) -> io::Result<()> {
-    let rules = workspace.join(".claude").join("rules").join("botloft.md");
-    if let Ok(text) = std::fs::read_to_string(rules) {
+    let rules = workspace.join(".claude").join("rules");
+    if let Ok(mut text) = std::fs::read_to_string(rules.join("botloft.md")) {
+        // The agent's keys, when it has any (spec 32.4).
+        if let Ok(keys) = std::fs::read_to_string(rules.join("keys.md")) {
+            text.push('\n');
+            text.push_str(&keys);
+        }
         std::fs::write(workspace.join("AGENTS.md"), text)?;
     }
     Ok(())

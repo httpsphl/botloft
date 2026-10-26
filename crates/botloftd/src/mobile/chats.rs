@@ -140,6 +140,8 @@ pub fn item(daemon: &Daemon, item: &ChatItem) -> Option<PhoneItem> {
             text: cut(&shown.question.text).0,
             status: shown.question.status,
         },
+        // Pasting a key is for the computer (spec 32.5).
+        ChatBody::KeyRequest(_) => return None,
         ChatBody::Turn(turn) => {
             let error = turn.error.as_deref()?;
             PhoneItem::Failed {

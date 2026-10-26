@@ -1,9 +1,11 @@
+import { Eye, EyeOff } from "lucide-react";
 import {
   type InputHTMLAttributes,
   type ReactNode,
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
   useId,
+  useState,
 } from "react";
 
 interface Framing {
@@ -55,6 +57,45 @@ export function TextField({
   return (
     <Frame id={id} label={label} hint={hint} max={max} length={length}>
       <input id={id} className={`${control} h-8`} spellCheck={false} {...input} />
+    </Frame>
+  );
+}
+
+/**
+ * A password-like field, with an eye that shows what was typed. `show` and
+ * `hide` name the eye's two states.
+ */
+export function SecretField({
+  label,
+  hint,
+  show,
+  hide,
+  ...input
+}: Framing & { show: string; hide: string } & InputHTMLAttributes<HTMLInputElement>) {
+  const id = useId();
+  const [shown, setShown] = useState(false);
+  const Icon = shown ? EyeOff : Eye;
+  return (
+    <Frame id={id} label={label} hint={hint}>
+      <div className="relative">
+        <input
+          id={id}
+          type={shown ? "text" : "password"}
+          autoComplete="off"
+          spellCheck={false}
+          className={`${control} h-8 pr-9 font-mono`}
+          {...input}
+        />
+        <button
+          type="button"
+          aria-label={shown ? hide : show}
+          title={shown ? hide : show}
+          onClick={() => setShown((now) => !now)}
+          className="absolute inset-y-0 right-0 grid w-8 place-items-center rounded-r-lg text-muted hover:text-ink"
+        >
+          <Icon aria-hidden size={14} />
+        </button>
+      </div>
     </Frame>
   );
 }

@@ -299,6 +299,7 @@ export const account: Messages["account"] = {
     sizeHint: "Ctrl+= y Ctrl+- también cambian el tamaño, y Ctrl+0 vuelve al predeterminado.",
     language: "Idioma",
     archived: "Archivados",
+    security: "Seguridad",
     archivedIntro:
       "Los agentes y los equipos que archivaste están detenidos y fuera de la vista, y Botloft todavía guarda sus conversaciones. Elimina uno para quitarlo para siempre.",
     archivedEmpty: "No hay nada archivado.",
