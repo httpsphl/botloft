@@ -6,6 +6,8 @@ mod common;
 
 use common::bots::{ready_bot, text_of};
 use common::mcp::Mcp;
+use common::stream;
+use common::supervised::session_of;
 use common::{Client, TestDaemon};
 use serde_json::{Value, json};
 
@@ -160,4 +162,56 @@ async fn bad_requests_come_back_to_the_bot_and_open_ones_are_capped() {
         .await
         .expect_err("capped");
     assert!(err.contains("wait for an answer"), "{err}");
+}
+
+#[tokio::test]
+async fn a_key_saved_mid_turn_reaches_the_restarted_bot_not_the_old_one() {
+    let (t, mut app, bot, first, mut mcp) = one_bot().await;
+    let asked = mcp
+        .tool(
+            "ask_key",
+            json!({ "name": "GITHUB_TOKEN", "why": "To open the PR" }),
+        )
+        .await
+        .expect("asked");
+    // The owner writes while the bot is still in its turn.
+    app.call(
+        "messages.send",
+        json!({ "botId": bot["id"], "body": "and then?" }),
+    )
+    .await
+    .expect("sent");
+    let sent = first.wait_lines(1).await;
+    app.call(
+        "keys.set",
+        json!({
+            "botId": bot["id"], "name": "GITHUB_TOKEN", "value": TOKEN,
+            "requestId": asked["request_id"],
+        }),
+    )
+    .await
+    .expect("saved");
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    assert_eq!(
+        first.input_lines().len(),
+        1,
+        "the old process gets nothing more"
+    );
+
+    let session = session_of(&first);
+    first.emit(stream::init(&session)).await;
+    first.emit(stream::replay(&sent[0])).await;
+    first.emit(stream::result(false)).await;
+    for _ in 0..500 {
+        if first.killed() && t.runtime.processes().len() > 1 {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    assert!(first.killed(), "the turn ended, so the bot restarts");
+    let second = t.process_of(&bot).await;
+    assert_eq!(second.env("GITHUB_TOKEN").as_deref(), Some(TOKEN));
+    let lines = second.wait_lines(1).await;
+    let text = text_of(&lines[0]);
+    assert!(text.contains("saved the key GITHUB_TOKEN"), "{text}");
 }
