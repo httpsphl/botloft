@@ -17,6 +17,17 @@ export class FakeKeys {
     return this.fake.chat.add(botId, { kind: "key_request", name, why, status: "open" });
   }
 
+  /**
+   * `text` with each of the bot's saved values, 8 characters or more and the
+   * longest first, swapped for `[chave NAME]`, as the daemon does (spec 32.6).
+   */
+  redact(botId: BotId, text: string): string {
+    const values = [...(this.saved.get(botId)?.values() ?? [])]
+      .filter((key) => key.value.length >= 8)
+      .sort((a, b) => b.value.length - a.value.length);
+    return values.reduce((done, key) => done.replaceAll(key.value, `[chave ${key.name}]`), text);
+  }
+
   private list(botId: BotId): AgentKey[] {
     this.fake.bot(botId);
     const keys = [...(this.saved.get(botId)?.values() ?? [])];

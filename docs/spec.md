@@ -2861,7 +2861,7 @@ Textos nos três idiomas (15.6), sem jargão: "Precisa de você no Botloft", "Ab
 
 ## 32. Chaves dos agentes
 
-Status: **K1 e K2 feitos** (guardar, usar e esconder; o pedido pelo agente); K3 e K4 em desenho. A ideia veio do OpenBot (`docs/openbot-analysis.md`, fora do git); a implementação é nossa.
+Status: **K1, K2 e K3 feitos** (guardar, usar e esconder; o pedido pelo agente; o app); K4 em desenho. A ideia veio do OpenBot (`docs/openbot-analysis.md`, fora do git); a implementação é nossa.
 
 ### 32.1 O que é
 
@@ -2894,12 +2894,12 @@ Com as **chaves**, o dono guarda a chave fora da conversa e o agente a usa **pel
 - **O cartão** no chat: "<agente> precisa de uma chave", o nome, o porquê, um campo de senha (com o olho para mostrar o que foi digitado), a descrição opcional, e **Salvar** e **Agora não**. Salvo, vira uma linha "Você guardou a chave WHATSAPP_TOKEN" (nunca o valor). "Agora não" fecha o pedido e o agente recebe "o dono não deu a chave agora".
 - **Depois de salva**, o agente reinicia (32.4) e recebe uma mensagem do Botloft: "A chave WHATSAPP_TOKEN está no seu ambiente." Uma chave que já existia e foi trocada diz isso também.
 - **O dono também cadastra sem pedido**, nos detalhes do agente (15.1), na parte **Chaves**: a lista com nome, descrição e quando mudou, "Trocar", "Apagar" e "Adicionar chave".
-- **Fora do celular e da ilha.** O pedido nunca vai ao celular (28.5) e, na ilha, aparece como "Precisa de você no Botloft" (31.5): colar uma senha é coisa do computador.
+- **Fora do celular e da ilha.** O pedido nunca vai ao celular (28.5): colar uma senha é coisa do computador. Na ilha, ele deve aparecer como "Precisa de você no Botloft" (31.5); isso ainda falta e entra junto com a janela da ilha. Na lista de agentes, a última atividade dele é uma pergunta.
 
 ### 32.6 O que o Botloft esconde
 
 - **Do que ele guarda.** Antes de gravar um item do chat (8.2: resposta, resumo, explicação, entrada e saída de ferramenta, pedido de aprovação, mensagem recebida, aviso) ou uma message (9), o daemon troca cada valor de chave do agente (com 8 caracteres ou mais, o mais longo primeiro) por `[chave NOME]` (`botloft_core::keys::redact`, chamado em `chat/items.rs`, na criação do pedido de aprovação e em `messages::post`). Numa message, valem as chaves de quem recebe e de quem manda. As chaves ficam num cache em memória do daemon, lido do arquivo uma vez e esquecido a cada mudança. Assim, um `echo` por engano não leva a chave ao banco, ao app, ao celular, à busca (8.8) nem à cópia na nuvem.
-- **Das mensagens do dono.** Se o dono colar no chat o valor de uma chave já guardada, a mensagem chega ao agente com `[chave NOME]` no lugar, e o app avisa que ela já está guardada.
+- **Das mensagens do dono.** Se o dono colar no chat o valor de uma chave já guardada, a mensagem chega ao agente com `[chave NOME]` no lugar, e o app avisa, acima da caixa de mensagem, que ela já está guardada (compara o que foi digitado com a mensagem que o daemon devolve).
 - **O que fica fora do alcance.** O histórico de sessão do próprio Claude Code (`%USERPROFILE%\.claude\projects\...`) e o que o modelo recebe são do motor: se o agente imprimir o valor apesar da regra, ele vai para lá. A regra de 32.4 e a troca de 32.6 reduzem isso; não é uma garantia, e o app diz isso na parte Chaves.
 
 ### 32.7 Chaves que já foram coladas
@@ -2918,7 +2918,7 @@ Com as **chaves**, o dono guarda a chave fora da conversa e o agente a usa **pel
 ### 32.9 Protocolo e dados
 
 - **Métodos** (11.2, só do dono): `keys.list {botId}` → `[{name, description, setAt, missing}]`; `keys.set {botId, name, value, description?, requestId?}`; `keys.delete {botId, name}`; `keys.dismiss {requestId}`; `keys.scan` → achados de 32.7 (sem o valor inteiro); `keys.scrub {hits: [{id, as}]}`, com `as` o nome de uma chave nova ou `null` para apagar.
-- **Notificação** `key.changed {botId}`; o cartão é um item novo do chat, `key_request` (`name`, `why`, `status`: `open`, `saved`, `dismissed`), regravado quando o dono responde. O pedido **é** esse item: o `requestId` é o id dele.
+- **Sem notificação própria:** a parte Chaves lê de novo depois de cada mudança do dono e quando um pedido do agente fica `saved`, que chega como `chat.item`. O cartão é um item novo do chat, `key_request` (`name`, `why`, `status`: `open`, `saved`, `dismissed`), regravado quando o dono responde. O pedido **é** esse item: o `requestId` é o id dele.
 - **Banco:** migration com `agent_keys` (`bot_id`, `name`, `description`, `set_at`). Nenhum valor. O pedido não tem tabela própria: vive em `chat_items` (tipo `key_request`), e o limite de 5 conta os abertos ali. Uma tabela à parte repetiria o item sem ganho.
 - **App:** o cartão em `features/chat/KeyRequestCard.tsx`, a parte Chaves nos detalhes do agente, a busca nas Configurações; textos nos três idiomas.
 
@@ -2935,5 +2935,5 @@ Com as **chaves**, o dono guarda a chave fora da conversa e o agente a usa **pel
 |---|---|---|
 | **K1** Guardar e usar | `secrets\keys`, `keys.list/set/delete`, o nome validado, a variável no ambiente do agente nos três motores, o reinício com `--resume`, as regras do agente com os nomes, a troca por `[chave NOME]` no que o daemon grava | `tests/agent_keys.rs`: o agente sobe com a variável e o `keys.md`, e sem eles depois de apagada; nomes reservados e valor vazio recusados; o comando, a saída, a resposta e a mensagem do dono com o valor ficam com `[chave NOME]`; `keys.rs` do núcleo (nome, valor, troca), `agent_keys.rs` do daemon e do store. **Feito** |
 | **K2** O pedido | a tool `ask_key`, o item `key_request`, `keys.dismiss`, a mensagem ao agente quando a chave chega, o limite de 5, fora do celular | `tests/key_requests.rs`: pede, o nome errado é recusado, o dono salva pelo `requestId`, o agente reinicia com a variável e recebe a mensagem sem o valor; "Agora não" avisa o agente; nomes e motivos ruins voltam ao agente; o sexto pedido aberto é recusado; `fakeKeys.test.ts`. O celular pula o item no `mobile/chats.rs`. **Feito** |
-| **K3** No app | o cartão com o campo de senha, a parte Chaves nos detalhes, "Falta o valor", o aviso de chave já guardada colada no chat, três idiomas | `FakeBotloft`; `pnpm check` |
+| **K3** No app | o cartão com o campo de senha, a parte Chaves nos detalhes, "Falta o valor", o aviso de chave já guardada colada no chat, três idiomas | `features/keys/keys.test.tsx` com o `FakeBotloft` (que troca a chave pelo nome como o daemon): o cartão com o campo escondido e o olho, salvar pelo `requestId` e a linha com o nome, "Agora não", adicionar (o nome vira maiúsculas e _), "Falta o valor", trocar, apagar com confirmação, o aviso depois de colar uma chave guardada; `pnpm check`. Visto na prévia (`seedKeys.ts`). **Feito** |
 | **K4** As já coladas e o teste real | `keys.scan`, `keys.scrub`, a tela nas Configurações | testes no store com textos de exemplo de cada padrão; manual com o Claude Code real: um agente pede uma chave, o dono salva, o agente roda um comando que usa `$env:NOME` e funciona; um `echo` dela aparece no chat como `[chave NOME]` |

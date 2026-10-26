@@ -14,10 +14,14 @@ export type Row =
   | { kind: "notice"; key: string; item: ChatItem; notice: NoticeItem };
 
 /**
- * Tools whose card says it all: the bot asking the owner (spec 23.2) and
- * the plan it shows before long work (spec 10.5).
+ * Tools whose card says it all: the bot asking the owner (spec 23.2) or
+ * for a key (spec 32.5), and the plan it shows before long work (spec 10.5).
  */
-const CARD_TOOLS = new Set(["mcp__botloft__ask_owner", "mcp__botloft__show_plan"]);
+const CARD_TOOLS = new Set([
+  "mcp__botloft__ask_owner",
+  "mcp__botloft__ask_key",
+  "mcp__botloft__show_plan",
+]);
 
 /** A call that worked and has its own card, which stands for it. */
 function isAskLine(item: ChatItem): boolean {

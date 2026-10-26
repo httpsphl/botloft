@@ -11,6 +11,7 @@ import { Callout } from "../../ui/Callout";
 import { SidePanel } from "../../ui/SidePanel";
 import { BotTools } from "../connections/BotTools";
 import { DesktopGrants } from "../desktop/DesktopGrants";
+import { AgentKeys } from "../keys/AgentKeys";
 import { SignInButton } from "../onboarding/SignIn";
 import { AllowRules } from "./AllowRules";
 import type { stateView } from "./BotStateBadge";
@@ -95,6 +96,7 @@ export function Details({ bot, onClose }: { bot: Bot; onClose(): void }) {
         </div>
         <AllowRules bot={bot} />
         <CrewAccessList bot={bot} />
+        <AgentKeys bot={bot} />
         <BotTools bot={bot} />
         <DesktopGrants bot={bot} />
       </dl>
