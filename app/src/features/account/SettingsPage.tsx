@@ -12,12 +12,14 @@ import {
   Palette,
   Plug,
   Search,
+  ShieldCheck,
   SlidersHorizontal,
   Smartphone,
 } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { useT } from "../../i18n";
 import { ConnectedToolsSettings } from "../connections/ConnectedToolsSettings";
+import { PastedKeys } from "../keys/PastedKeys";
 import { AboutSettings } from "./AboutSettings";
 import { AccountSettings } from "./AccountSettings";
 import { AlertsSettings } from "./AlertsSettings";
@@ -51,6 +53,7 @@ const GROUPS: { id: GroupId; pages: { id: Page; icon: LucideIcon }[] }[] = [
     id: "groupData",
     pages: [
       { id: "backup", icon: DatabaseBackup },
+      { id: "security", icon: ShieldCheck },
       { id: "archived", icon: Archive },
     ],
   },
@@ -71,6 +74,7 @@ export function SettingsPage() {
     account: s.account,
     tools: s.tools,
     backup: s.backup,
+    security: s.security,
     archived: s.archived,
     about: s.about,
   };
@@ -163,6 +167,7 @@ export function SettingsPage() {
                 {page === "account" && <AccountSettings />}
                 {page === "tools" && <ConnectedToolsSettings />}
                 {page === "backup" && <BackupSettings goToAccount={() => open("account")} />}
+                {page === "security" && <PastedKeys />}
                 {page === "archived" && <ArchivedSettings />}
                 {page === "about" && <AboutSettings />}
               </>

@@ -57,3 +57,48 @@ pub struct KeysDeleteParams {
     pub bot_id: BotId,
     pub name: String,
 }
+
+/// Something in the conversations that looks like a pasted key (spec 32.7),
+/// once per value however many times it shows up.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct KeyHit {
+    /// Opaque; names the value to `keys.scrub` without carrying it.
+    pub id: String,
+    /// How it starts and its last 4 characters, like `sk-…a1b2`.
+    pub preview: String,
+    /// The agents whose conversations have it, the latest first.
+    pub bot_ids: Vec<BotId>,
+    /// How many texts have it: messages, chat items, requests, questions.
+    pub places: u32,
+    /// The newest of those, in Unix ms.
+    pub last_at: i64,
+}
+
+/// What to do with one hit: keep it as a key of an agent, or just take it
+/// out of Botloft.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct KeyScrub {
+    pub id: String,
+    /// The agent and the name to save it as; `null` deletes it.
+    pub keep: Option<KeyKeep>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct KeyKeep {
+    pub bot_id: BotId,
+    pub name: String,
+}
+
+/// `keys.scrub`; answers with what is left to scan.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct KeysScrubParams {
+    pub hits: Vec<KeyScrub>,
+}

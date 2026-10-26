@@ -129,7 +129,7 @@ function seed(fake: FakeBotloft): void {
   });
   seedRoutines(fake, { scout: scout.id, analyst: analyst.id });
   seedQuestions(fake, { scout: scout.id, analyst: analyst.id });
-  seedKeys(fake, analyst.id);
+  seedKeys(fake, analyst.id, scout.id);
   seedPlan(fake, writer.id);
   seedBrowser(fake, scout.id);
   // Analyst hit the limit in the middle of a search: its browser rests.

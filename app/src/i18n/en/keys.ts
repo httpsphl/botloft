@@ -45,6 +45,30 @@ export const keys = {
     removeConfirm: "Delete",
     removeFailed: "Could not delete the key",
   },
+  scan: {
+    title: "Keys pasted in the conversations",
+    intro:
+      "Botloft looks through what you and your agents wrote for text that looks like a key: tokens from GitHub, Slack, Stripe, OpenAI, Anthropic, Google, AWS and sign-in tokens. It shows only how each one starts and ends.",
+    run: "Look for keys",
+    again: "Look again",
+    none: "No keys found in the conversations.",
+    found: (count: number) => (count === 1 ? "1 key found" : `${count} keys found`),
+    places: (count: number) => (count === 1 ? "in 1 place" : `in ${count} places`),
+    keep: "Keep as a key",
+    keepTitle: "Keep as a key of",
+    agent: "Agent",
+    goneAgent: "an agent that is gone",
+    remove: "Delete from Botloft",
+    removeTitle: (preview: string) => `Delete ${preview} from Botloft?`,
+    removeBody:
+      "Every place it shows up will read [chave removida]. This cannot be undone, and the key still works at the service it came from.",
+    done: "Done",
+    failed: "Could not look for keys",
+    scrubFailed: "Could not change the conversations",
+    reachTitle: "Change the key at the service it came from",
+    reach:
+      "It already went through places Botloft does not control. Botloft does not touch the engine's own conversation history (starting a new conversation with the agent leaves it behind) or cloud copies already made (the next one goes without the key; old ones are deleted in Account).",
+  },
   pasted: (names: string[], bot: string) =>
     `${names.length === 1 ? `The key ${names[0]} is` : `The keys ${names.join(", ")} are`} already kept, so ${bot} got the name in place of the value.`,
 };

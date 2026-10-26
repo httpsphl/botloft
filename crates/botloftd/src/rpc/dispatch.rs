@@ -137,6 +137,8 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::KEYS_DISMISS => {
             reply(service::key_requests::dismiss(daemon, parse(params)?).map(|()| Value::Null))
         }
+        method::KEYS_SCAN => reply(service::key_scan::scan(daemon)),
+        method::KEYS_SCRUB => reply(service::key_scan::scrub(daemon, parse(params)?)),
         method::QUESTIONS_LIST => reply(questions::list(daemon, parse(params)?)),
         method::QUESTIONS_ANSWER => reply(questions::answer(daemon, parse(params)?)),
         method::QUESTIONS_DISMISS => reply(questions::dismiss(daemon, parse(params)?)),

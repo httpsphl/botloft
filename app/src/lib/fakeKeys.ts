@@ -4,13 +4,30 @@
 // is saved with its id or when the owner says not now.
 
 import type { FakeBotloft, Handlers } from "./fake";
-import type { AgentKey, BotId, ChatItem, KeyRequestItem, KeyRequestStatus } from "./protocol.gen";
+import type {
+  AgentKey,
+  BotId,
+  ChatItem,
+  KeyHit,
+  KeyRequestItem,
+  KeyRequestStatus,
+} from "./protocol.gen";
 
 export class FakeKeys {
   /** Each agent's keys by name; the value is kept only for tests to check. */
   readonly saved = new Map<BotId, Map<string, AgentKey & { value: string }>>();
 
+  /**
+   * What `keys.scan` finds (spec 32.7), with the value behind each hit; the
+   * real daemon reads the conversations, here a test puts them in.
+   */
+  readonly pasted: (KeyHit & { value: string })[] = [];
+
   constructor(private readonly fake: FakeBotloft) {}
+
+  private hits(): KeyHit[] {
+    return this.pasted.map(({ value: _value, ...hit }) => hit);
+  }
 
   /** The bot asks the owner for a key, as `ask_key` does. */
   ask(botId: BotId, name: string, why: string): ChatItem {
@@ -55,8 +72,26 @@ export class FakeKeys {
     this.fake.chat.update(item.id, { ...item.body, kind: "key_request", status });
   }
 
-  handlers(): Pick<Handlers, "keys.list" | "keys.set" | "keys.delete" | "keys.dismiss"> {
+  handlers(): Pick<
+    Handlers,
+    "keys.list" | "keys.set" | "keys.delete" | "keys.dismiss" | "keys.scan" | "keys.scrub"
+  > {
     return {
+      "keys.scan": () => this.hits(),
+      "keys.scrub": ({ hits }) => {
+        for (const { id, keep } of hits) {
+          const at = this.pasted.findIndex((hit) => hit.id === id);
+          const hit = this.pasted[at];
+          if (!hit) {
+            throw new Error(`hit ${id} is gone`);
+          }
+          if (keep) {
+            this.handlers()["keys.set"]({ botId: keep.botId, name: keep.name, value: hit.value });
+          }
+          this.pasted.splice(at, 1);
+        }
+        return this.hits();
+      },
       "keys.list": ({ botId }) => this.list(botId),
       "keys.set": ({ botId, name, value, description, requestId }) => {
         this.fake.bot(botId);

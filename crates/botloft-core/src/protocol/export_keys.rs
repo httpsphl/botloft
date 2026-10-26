@@ -9,6 +9,10 @@ pub(super) fn decls(out: &mut Out) {
     out.decl::<KeysSetParams>();
     out.decl::<KeysDeleteParams>();
     out.decl::<KeysDismissParams>();
+    out.decl::<KeyHit>();
+    out.decl::<KeyKeep>();
+    out.decl::<KeyScrub>();
+    out.decl::<KeysScrubParams>();
 }
 
 pub(super) fn methods(out: &mut Out) {
@@ -21,4 +25,7 @@ pub(super) fn methods(out: &mut Out) {
         &out.name::<KeysDismissParams>(),
         "null",
     );
+    let hits = out.name::<Vec<KeyHit>>();
+    out.method(method::KEYS_SCAN, "undefined", &hits);
+    out.method(method::KEYS_SCRUB, &out.name::<KeysScrubParams>(), &hits);
 }

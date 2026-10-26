@@ -46,6 +46,30 @@ export const keys: Messages["keys"] = {
     removeConfirm: "Apagar",
     removeFailed: "Não foi possível apagar a chave",
   },
+  scan: {
+    title: "Chaves coladas nas conversas",
+    intro:
+      "O Botloft procura no que você e seus agentes escreveram textos com cara de chave: tokens do GitHub, Slack, Stripe, OpenAI, Anthropic, Google, AWS e tokens de login. Mostra só o começo e o fim de cada uma.",
+    run: "Procurar chaves",
+    again: "Procurar de novo",
+    none: "Nenhuma chave encontrada nas conversas.",
+    found: (count: number) => (count === 1 ? "1 chave encontrada" : `${count} chaves encontradas`),
+    places: (count: number) => (count === 1 ? "em 1 lugar" : `em ${count} lugares`),
+    keep: "Guardar como chave",
+    keepTitle: "Guardar como chave de",
+    agent: "Agente",
+    goneAgent: "um agente que não existe mais",
+    remove: "Apagar do Botloft",
+    removeTitle: (preview: string) => `Apagar ${preview} do Botloft?`,
+    removeBody:
+      "Todo lugar onde ela aparece vai ficar [chave removida]. Não tem volta, e a chave continua valendo no serviço de onde veio.",
+    done: "Pronto",
+    failed: "Não foi possível procurar chaves",
+    scrubFailed: "Não foi possível mudar as conversas",
+    reachTitle: "Troque a chave no serviço de onde ela veio",
+    reach:
+      "Ela já passou por lugares que o Botloft não controla. O Botloft não mexe no histórico de conversa do próprio motor (começar uma conversa nova com o agente deixa ele para trás) nem nas cópias na nuvem já feitas (a próxima sai sem a chave; as antigas se apagam em Conta).",
+  },
   pasted: (names: string[], bot: string) =>
     `${names.length === 1 ? `A chave ${names[0]} já está guardada` : `As chaves ${names.join(", ")} já estão guardadas`}, então ${bot} recebeu o nome no lugar do valor.`,
 };

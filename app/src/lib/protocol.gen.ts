@@ -1717,6 +1717,49 @@ export type KeysDeleteParams = { botId: BotId, name: string, };
  */
 export type KeysDismissParams = { requestId: ChatItemId, };
 
+/**
+ * Something in the conversations that looks like a pasted key (spec 32.7),
+ * once per value however many times it shows up.
+ */
+export type KeyHit = { 
+/**
+ * Opaque; names the value to `keys.scrub` without carrying it.
+ */
+id: string, 
+/**
+ * How it starts and its last 4 characters, like `sk-…a1b2`.
+ */
+preview: string, 
+/**
+ * The agents whose conversations have it, the latest first.
+ */
+botIds: Array<BotId>, 
+/**
+ * How many texts have it: messages, chat items, requests, questions.
+ */
+places: number, 
+/**
+ * The newest of those, in Unix ms.
+ */
+lastAt: number, };
+
+export type KeyKeep = { botId: BotId, name: string, };
+
+/**
+ * What to do with one hit: keep it as a key of an agent, or just take it
+ * out of Botloft.
+ */
+export type KeyScrub = { id: string, 
+/**
+ * The agent and the name to save it as; `null` deletes it.
+ */
+keep: KeyKeep | null, };
+
+/**
+ * `keys.scrub`; answers with what is left to scan.
+ */
+export type KeysScrubParams = { hits: Array<KeyScrub>, };
+
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
 /**
  * What the bot says the command is for, as in `ToolItem`. The bot
@@ -2482,6 +2525,8 @@ export interface RpcMethods {
   "keys.set": { params: KeysSetParams; result: Array<AgentKey> };
   "keys.delete": { params: KeysDeleteParams; result: Array<AgentKey> };
   "keys.dismiss": { params: KeysDismissParams; result: null };
+  "keys.scan": { params: undefined; result: Array<KeyHit> };
+  "keys.scrub": { params: KeysScrubParams; result: Array<KeyHit> };
   "routines.list": { params: RoutinesListParams; result: Array<Routine> };
   "routines.create": { params: RoutinesCreateParams; result: Routine };
   "routines.update": { params: RoutinesUpdateParams; result: Routine };

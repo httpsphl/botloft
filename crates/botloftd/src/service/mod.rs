@@ -18,6 +18,7 @@ pub mod desktop;
 pub mod files;
 pub mod island;
 pub mod key_requests;
+pub mod key_scan;
 pub mod keys;
 pub mod lead;
 pub mod mcp;
