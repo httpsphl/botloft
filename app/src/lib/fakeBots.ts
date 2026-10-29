@@ -1,5 +1,5 @@
 // The fake daemon's `bots.*` methods, following the daemon's rules for
-// handles, colors, archiving, deleting and the notifications each change
+// handles, colors, archiving, unarchiving, deleting and the notifications each change
 // sends.
 
 import type { FakeBotloft, Handlers } from "./fake";
@@ -128,6 +128,21 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
           crew.leadBotId = null;
           fake.changedCrew(crew);
         }
+      }
+      return bot;
+    },
+    "bots.unarchive": ({ botId }) => {
+      const bot = fake.bot(botId, false);
+      if (bot.archivedAt !== null) {
+        if (fake.crew(bot.crewId, false).archivedAt !== null) {
+          throw conflict(`crew ${bot.crewId} is archived; unarchive the crew`);
+        }
+        if (fake.activeBots(bot.crewId).some((other) => other.handle === bot.handle)) {
+          throw conflict(`another bot in this crew already answers to @${bot.handle}`);
+        }
+        bot.archivedAt = null;
+        bot.state = "idle";
+        fake.changedBot(bot);
       }
       return bot;
     },

@@ -202,11 +202,12 @@ pub fn archive(daemon: &Daemon, params: CrewIdParams) -> ApiResult<Crew> {
         return Ok(present(daemon, crew));
     }
     let bots = store.bots(Some(&crew.id), false)?;
-    store.archive_crew(&crew.id, now_ms())?;
+    let at = now_ms();
+    store.archive_crew(&crew.id, at)?;
 
     let crew = find(&store, &crew.id)?;
     for bot in &bots {
-        super::routines::archive_of(daemon, &store, &bot.id);
+        super::routines::archive_of(daemon, &store, &bot.id, at);
         daemon.browsers.forget(&bot.id);
     }
     for bot in bots {

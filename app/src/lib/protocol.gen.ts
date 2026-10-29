@@ -2449,6 +2449,7 @@ export interface RpcMethods {
   "crews.setWorkFolder": { params: CrewsSetWorkFolderParams; result: Crew };
   "crews.setLead": { params: CrewsSetLeadParams; result: Crew };
   "crews.archive": { params: CrewIdParams; result: Crew };
+  "crews.unarchive": { params: CrewIdParams; result: Crew };
   "crews.delete": { params: CrewsDeleteParams; result: CrewDeleted };
   "archive.list": { params: undefined; result: Archive };
   "bots.list": { params: BotsListParams; result: Array<Bot> };
@@ -2460,6 +2461,7 @@ export interface RpcMethods {
   "bots.setAgentModel": { params: BotsSetAgentModelParams; result: Bot };
   "agents.models": { params: AgentsModelsParams; result: AgentModel[] };
   "bots.archive": { params: BotIdParams; result: Bot };
+  "bots.unarchive": { params: BotIdParams; result: Bot };
   "bots.delete": { params: BotsDeleteParams; result: BotDeleted };
   "bots.restart": { params: BotsRestartParams; result: Bot };
   "chat.history": { params: ChatHistoryParams; result: Array<ChatItem> };

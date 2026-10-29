@@ -294,7 +294,7 @@ export const account = {
     archived: "Archived",
     security: "Security",
     archivedIntro:
-      "Agents and crews you archived are stopped and out of sight, and Botloft still keeps their conversations. Delete one to remove it for good.",
+      "Agents and crews you archived are stopped and out of sight, and Botloft still keeps their conversations. Restore one to bring it back and start it again, or delete it to remove it for good.",
     archivedEmpty: "Nothing is archived.",
     archivedLoadFailed: "Could not load what is archived",
     /** `when` is relative, like "2 days ago". */
@@ -303,6 +303,9 @@ export const account = {
     archivedBot: (crew: string, when: string) => `Agent in ${crew} · archived ${when}`,
     deleteArchived: "Delete",
     deleteArchivedOne: (name: string) => `Delete ${name}`,
+    restoreArchived: "Restore",
+    restoreArchivedOne: (name: string) => `Restore ${name}`,
+    restoreFailed: (name: string) => `Could not restore ${name}`,
     about: "About",
     backup: "Backup",
     tools: "Connected tools",

@@ -298,7 +298,7 @@ export const account: Messages["account"] = {
     archived: "Arquivados",
     security: "Segurança",
     archivedIntro:
-      "Os agentes e as equipes que você arquivou estão parados e fora da vista, e o Botloft ainda guarda as conversas deles. Exclua um para tirá-lo de vez.",
+      "Os agentes e as equipes que você arquivou estão parados e fora da vista, e o Botloft ainda guarda as conversas deles. Restaure um para trazê-lo de volta e ligá-lo de novo, ou exclua para tirá-lo de vez.",
     archivedEmpty: "Nada está arquivado.",
     archivedLoadFailed: "Não foi possível carregar o que está arquivado",
     archivedCrew: (bots: number, when: string) =>
@@ -306,6 +306,9 @@ export const account: Messages["account"] = {
     archivedBot: (crew: string, when: string) => `Agente de ${crew} · arquivado ${when}`,
     deleteArchived: "Excluir",
     deleteArchivedOne: (name: string) => `Excluir ${name}`,
+    restoreArchived: "Restaurar",
+    restoreArchivedOne: (name: string) => `Restaurar ${name}`,
+    restoreFailed: (name: string) => `Não foi possível restaurar ${name}`,
     about: "Sobre",
     backup: "Cópia de segurança",
     tools: "Ferramentas conectadas",

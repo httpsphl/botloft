@@ -157,10 +157,10 @@ pub fn runs(daemon: &Daemon, params: RoutinesRunsParams) -> ApiResult<Vec<Routin
     Ok(store.runs(&params.routine_id, params.before.as_ref(), limit)?)
 }
 
-/// Archives the routines of a bot that was archived (spec 20.3).
-pub(crate) fn archive_of(daemon: &Daemon, store: &Store, bot: &BotId) {
-    let now = daemon.clock.now_ms();
-    let archived = match store.archive_routines_of(bot, now) {
+/// Archives the routines of a bot that was archived (spec 20.3), at the
+/// bot's own time, so unarchiving it knows which ones went with it.
+pub(crate) fn archive_of(daemon: &Daemon, store: &Store, bot: &BotId, at: i64) {
+    let archived = match store.archive_routines_of(bot, at) {
         Ok(archived) => archived,
         Err(err) => {
             warn!(bot = %bot, "could not archive the bot's routines: {err}");
@@ -171,6 +171,36 @@ pub(crate) fn archive_of(daemon: &Daemon, store: &Store, bot: &BotId) {
         if let Ok(Some(routine)) = store.routine(&id) {
             daemon.emit(Event::RoutineChanged(routine));
         }
+    }
+}
+
+/// Brings back the routines archived with the bot at `at`. They count from
+/// now: times that passed while archived are not missed.
+pub(crate) fn unarchive_of(daemon: &Daemon, store: &Store, bot: &BotId, at: i64) {
+    let routines = match store.routines(Some(bot), true) {
+        Ok(routines) => routines,
+        Err(err) => {
+            warn!(bot = %bot, "could not read the bot's routines: {err}");
+            return;
+        }
+    };
+    let now = daemon.clock.now_ms();
+    for mut routine in routines {
+        if routine.archived_at != Some(at) {
+            continue;
+        }
+        routine.archived_at = None;
+        routine.next_run_at = if routine.enabled {
+            routines::next_run_at(&routine, now, now)
+        } else {
+            None
+        };
+        routine.updated_at = now;
+        if let Err(err) = store.update_routine(&routine) {
+            warn!(routine = %routine.id, "could not bring the routine back: {err}");
+            continue;
+        }
+        changed(daemon, store, routine);
     }
 }
 

@@ -301,7 +301,7 @@ export const account: Messages["account"] = {
     archived: "Archivados",
     security: "Seguridad",
     archivedIntro:
-      "Los agentes y los equipos que archivaste están detenidos y fuera de la vista, y Botloft todavía guarda sus conversaciones. Elimina uno para quitarlo para siempre.",
+      "Los agentes y los equipos que archivaste están detenidos y fuera de la vista, y Botloft todavía guarda sus conversaciones. Restaura uno para traerlo de vuelta y encenderlo otra vez, o elimínalo para quitarlo para siempre.",
     archivedEmpty: "No hay nada archivado.",
     archivedLoadFailed: "No se pudo cargar lo archivado",
     archivedCrew: (bots: number, when: string) =>
@@ -309,6 +309,9 @@ export const account: Messages["account"] = {
     archivedBot: (crew: string, when: string) => `Agente de ${crew} · archivado ${when}`,
     deleteArchived: "Eliminar",
     deleteArchivedOne: (name: string) => `Eliminar ${name}`,
+    restoreArchived: "Restaurar",
+    restoreArchivedOne: (name: string) => `Restaurar ${name}`,
+    restoreFailed: (name: string) => `No se pudo restaurar ${name}`,
     about: "Acerca de",
     backup: "Copia de seguridad",
     tools: "Herramientas conectadas",
