@@ -1,5 +1,5 @@
 // The fake daemon's `crews.*` methods: names, slugs, the work folder,
-// pausing, archiving and deleting, with the notifications each change sends.
+// pausing, archiving, unarchiving and deleting, with the notifications each change sends.
 
 import type { FakeBotloft, Handlers } from "./fake";
 import { botHandlers } from "./fakeBots";
@@ -97,6 +97,23 @@ export function crewHandlers(fake: FakeBotloft): Pick<Handlers, CrewMethods> {
           bot.archivedAt = fake.now;
           bot.state = "archived";
           fake.changedBot(bot);
+        }
+        fake.changedCrew(crew);
+      }
+      return crew;
+    },
+    // The bots archived with the crew come back with it.
+    "crews.unarchive": ({ crewId }) => {
+      const crew = fake.crew(crewId, false);
+      const at = crew.archivedAt;
+      if (at !== null) {
+        crew.archivedAt = null;
+        for (const bot of fake.bots.values()) {
+          if (bot.crewId === crewId && bot.archivedAt === at) {
+            bot.archivedAt = null;
+            bot.state = "idle";
+            fake.changedBot(bot);
+          }
         }
         fake.changedCrew(crew);
       }
