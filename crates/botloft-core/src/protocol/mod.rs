@@ -124,6 +124,7 @@ pub mod method {
     pub const CREWS_SET_WORK_FOLDER: &str = "crews.setWorkFolder";
     pub const CREWS_SET_LEAD: &str = "crews.setLead";
     pub const CREWS_ARCHIVE: &str = "crews.archive";
+    pub const CREWS_UNARCHIVE: &str = "crews.unarchive";
     pub const CREWS_DELETE: &str = "crews.delete";
     pub const ARCHIVE_LIST: &str = "archive.list";
     pub const BOTS_LIST: &str = "bots.list";
@@ -140,6 +141,7 @@ pub mod method {
     pub const BOTS_SET_EFFORT: &str = "bots.setEffort";
     pub const BOTS_COMPACT: &str = "bots.compact";
     pub const BOTS_ARCHIVE: &str = "bots.archive";
+    pub const BOTS_UNARCHIVE: &str = "bots.unarchive";
     pub const BOTS_DELETE: &str = "bots.delete";
     pub const BOTS_RESTART: &str = "bots.restart";
     pub const CHAT_HISTORY: &str = "chat.history";

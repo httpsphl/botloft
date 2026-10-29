@@ -313,6 +313,7 @@ fn export_bindings() {
         &crew,
     );
     out.method(method::CREWS_ARCHIVE, &out.name::<CrewIdParams>(), &crew);
+    out.method(method::CREWS_UNARCHIVE, &out.name::<CrewIdParams>(), &crew);
     let crew_deleted = out.name::<CrewDeleted>();
     let bot_deleted = out.name::<BotDeleted>();
     out.method(
@@ -350,6 +351,7 @@ fn export_bindings() {
         &format!("{}[]", out.name::<AgentModel>()),
     );
     out.method(method::BOTS_ARCHIVE, &out.name::<BotIdParams>(), &bot);
+    out.method(method::BOTS_UNARCHIVE, &out.name::<BotIdParams>(), &bot);
     out.method(
         method::BOTS_DELETE,
         &out.name::<BotsDeleteParams>(),

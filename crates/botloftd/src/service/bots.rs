@@ -264,10 +264,11 @@ pub fn archive(daemon: &Daemon, params: BotIdParams) -> ApiResult<Bot> {
     if record.archived_at.is_some() {
         return Ok(to_protocol(daemon, &store, &crew, record));
     }
-    record.archived_at = Some(now_ms());
+    let at = now_ms();
+    record.archived_at = Some(at);
     store.update_bot(&record)?;
     super::lead::forget_archived(daemon, &store, &crew, &record.id)?;
-    super::routines::archive_of(daemon, &store, &record.id);
+    super::routines::archive_of(daemon, &store, &record.id, at);
     let bot = changed(daemon, &store, &crew, record);
     daemon.supervisor.wake();
     daemon.browsers.forget(&bot.id);

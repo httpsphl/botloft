@@ -121,6 +121,22 @@ impl Store {
         tx.commit()?;
         Ok(())
     }
+
+    /// Brings back the crew archived at `at` and the bots archived with it,
+    /// atomically. A bot archived on its own before stays archived.
+    pub fn unarchive_crew(&self, id: &CrewId, at: i64) -> Result<()> {
+        let tx = self.conn.unchecked_transaction()?;
+        tx.execute(
+            "UPDATE crews SET archived_at = NULL WHERE id = ?1",
+            params![id.as_str()],
+        )?;
+        tx.execute(
+            "UPDATE bots SET archived_at = NULL WHERE crew_id = ?1 AND archived_at = ?2",
+            params![id.as_str(), at],
+        )?;
+        tx.commit()?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -185,5 +201,8 @@ mod tests {
         let all = store.crews(true).expect("list all");
         assert_eq!(all.len(), 1);
         assert_eq!(all[0].archived_at, Some(5));
+
+        store.unarchive_crew(&docs.id, 5).expect("unarchive");
+        assert_eq!(store.crews(false).expect("list"), [docs]);
     }
 }

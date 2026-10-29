@@ -39,6 +39,8 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::CREWS_ARCHIVE => reply(crews::archive(daemon, parse(params)?)),
         method::CREWS_DELETE => reply(delete::crew(daemon, parse(params)?)),
         method::ARCHIVE_LIST => reply(archive::list(daemon)),
+        method::CREWS_UNARCHIVE => reply(archive::unarchive_crew(daemon, parse(params)?)),
+        method::BOTS_UNARCHIVE => reply(archive::unarchive_bot(daemon, parse(params)?)),
         method::BOTS_LIST => reply(bots::list(daemon, parse(params)?)),
         method::BOTS_CREATE => reply(bots::create(daemon, parse(params)?)),
         method::CATALOG_LIST => reply(catalog::list(parse(params)?)),
