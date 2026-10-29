@@ -51,7 +51,8 @@ off until you turn them on (see [Engines](#engines)).
   anything about it afterwards. The Chief uses the same list when it suggests an agent.
 - **Chat with every agent.** Replies stream in as they are written. Send images and files. When an agent
   wants to run a command, edit a file or open a website, a card asks you first, unless you told that
-  agent it may. Search every chat with Ctrl+K.
+  agent it may. Each file edit shows how many lines it added and removed, and opens to its diff.
+  Search every chat with Ctrl+K.
 - **Answer their questions.** An agent that needs your decision asks in its chat and in the Questions
   box, and goes on with what it can, even in a routine at night. Your answer reaches it as a message
   whenever you reply.
@@ -74,6 +75,8 @@ off until you turn them on (see [Engines](#engines)).
   waits near the clock and tells you when an agent needs you.
 - **Choose per agent.** Which model it uses and how much it asks before acting. See how much of your
   plan's usage is left.
+- **See the plan first.** Turn on "Show the plan before long tasks" for an agent and it shows its
+  steps before long work. It starts by itself unless you change or cancel it.
 - **Connect your own tools.** Add a tool of yours in Settings > Connected tools, like a LinkedIn
   reader or your company's system, and turn it on only for the agents that need it. They still ask you
   before using it.
@@ -192,6 +195,10 @@ The full design, from the protocol to the states of an agent, lives in [`docs/sp
 - **You decide what agents may do.** Per agent: ask before anything, accept edits, plan only, or decide on
   its own what needs your OK. Unless it decides on its own, an agent also asks before its first visit
   to each website.
+- **Keys stay out of the chat.** When an agent needs a token or password for another service, it asks
+  for it by name; you type it in a hidden field and the agent gets it as an environment variable. The
+  value never goes into the chat, the database, backups or the cloud, and Botloft can find keys
+  already pasted in a conversation and scrub them.
 - **Tokens stay safe.** The app authenticates with an owner token readable only by your user account.
   Each agent gets its own token per start, and the daemon keeps only its SHA-256 hash.
 - **Botloft is not a sandbox.** Every agent runs as your user account, so isolation between agents is
@@ -274,12 +281,13 @@ as installed on your computer and is not affiliated with or endorsed by Anthropi
 
 ## Status
 
-Botloft is young (version 0.x) and moves fast. The latest release, 0.15.0 (2026-10-10), has agents
+Botloft is young (version 0.x) and moves fast. The latest release, 0.16.0 (2026-10-29), has agents
 that keep running in the background, the chat, crews with a Chief, ready-made agents in the Agent
 agency, messages and tasks between agents, routines, the live browser, screens, "always allow" for
 requests, questions from agents, chat search, desktop use on Windows, connected tools, backups with an
-optional cloud copy, the phone page, the installer and updates, and Antigravity and Codex as
-experimental engines. Still open: a code-signed installer.
+optional cloud copy, the phone page, the installer and updates, Antigravity and Codex as
+experimental engines, agents' keys, plans before long work, edit diffs in the chat, and restoring
+archived crews and agents. Still open: a code-signed installer.
 
 <details>
 <summary><b>Development</b></summary>
