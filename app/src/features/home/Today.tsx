@@ -1,50 +1,11 @@
 // "Today" on the home (spec 15.1): what the crews did since midnight, as
-// the daemon counts it (`activity.today`, 31.4), without a turn of any
-// agent. Read when the home opens and again when a turn ends, the turns of
-// a second read once.
+// the daemon counts it (`useToday`).
 
-import { type ReactNode, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { useT } from "../../i18n";
 import { duration } from "../../lib/format";
-import type { DayActivity } from "../../lib/protocol.gen";
-import { useApi } from "../../store/context";
 import { EditCounts } from "../chat/EditDiff";
-
-const SETTLE_MS = 1000;
-
-function midnight(): number {
-  const day = new Date();
-  day.setHours(0, 0, 0, 0);
-  return day.getTime();
-}
-
-function useToday(): DayActivity | null {
-  const api = useApi();
-  const [today, setToday] = useState<DayActivity | null>(null);
-  useEffect(() => {
-    let alive = true;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const read = () =>
-      api.call("activity.today", { since: midnight() }).then(
-        (day) => alive && setToday(day),
-        // An older daemon does not count the day: the section stays out.
-        () => {},
-      );
-    const stop = api.subscribe((event) => {
-      if (event.name === "chat.item" && event.params.item.body.kind === "turn") {
-        clearTimeout(timer);
-        timer = setTimeout(read, SETTLE_MS);
-      }
-    });
-    void read();
-    return () => {
-      alive = false;
-      clearTimeout(timer);
-      stop();
-    };
-  }, [api]);
-  return today;
-}
+import { useToday } from "./useToday";
 
 /** The day's numbers, or a line that nothing happened yet; nothing before the first read. */
 export function Today() {

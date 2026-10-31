@@ -15,14 +15,20 @@ export function HostProvider({ host, children }: { host: Host; children: ReactNo
   return <HostContext.Provider value={host}>{children}</HostContext.Provider>;
 }
 
+/** Provides `api` alone, for a page with no store of its own: the island
+ *  (spec 31.3) reads with the home's hooks. */
+export function ApiProvider({ api, children }: { api: BotloftApi; children: ReactNode }) {
+  return <ApiContext.Provider value={api}>{children}</ApiContext.Provider>;
+}
+
 /** Provides `api` and a store kept in sync with it. */
 export function DaemonProvider({ api, children }: { api: BotloftApi; children: ReactNode }) {
   const [store] = useState(() => createAppStore(api));
   useEffect(() => syncStore(store, api), [store, api]);
   return (
-    <ApiContext.Provider value={api}>
+    <ApiProvider api={api}>
       <StoreContext.Provider value={store}>{children}</StoreContext.Provider>
-    </ApiContext.Provider>
+    </ApiProvider>
   );
 }
 

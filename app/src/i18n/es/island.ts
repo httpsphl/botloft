@@ -47,6 +47,7 @@ export const island: Messages["island"] = {
     tasks: (count) => (count === 1 ? "tarea" : "tareas"),
     requests: (count) => (count === 1 ? "solicitud" : "solicitudes"),
     lines: (files) => (files === 1 ? "líneas, 1 archivo" : `líneas, ${files} archivos`),
+    messages: (count) => (count === 1 ? "mensaje entre agentes" : "mensajes entre agentes"),
     busiest: "trabajó más",
   },
   card: {

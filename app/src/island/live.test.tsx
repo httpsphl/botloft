@@ -1,10 +1,10 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
+import { midnight } from "../features/home/useToday";
 import { FakeBotloft } from "../lib/fake";
 import { prefs, resetPrefs } from "../shell/prefs";
 import { FakeIslandHost } from "./fakeHost";
 import { IslandApp } from "./IslandApp";
-import { localMidnight } from "./Today";
 
 afterEach(() => {
   cleanup();
@@ -74,11 +74,12 @@ describe("the island's agents at work", () => {
     await screen.findByRole("button", { name: "1 working" });
 
     act(() => {
-      fake.chat.reply(writer.id, "**The draft is ready.**\nThree sections.");
+      fake.chat.reply(writer.id, "## \n**The draft** is in `draft_v2.md`.\nThree sections.");
       fake.setBotState(writer.id, "idle");
     });
     expect(await screen.findByText("Writer finished", {}, { timeout: 4000 })).toBeDefined();
-    expect(screen.getByText(/The draft is ready\./)).toBeDefined();
+    // As a preview line says it: no marks, the file name whole.
+    expect(screen.getByText("· The draft is in draft_v2.md.")).toBeDefined();
   });
 
   test("do not cheer when the owner turned it off", async () => {
@@ -100,18 +101,25 @@ describe("the island's agents at work", () => {
       file: "C:\\work\\a.md",
       lines: { added: 12, removed: 0 },
     });
+    fake.chat.tool(writer.id, "Edit", {
+      status: "done",
+      file: "C:\\work\\b.md",
+      lines: { added: 2, removed: 3 },
+    });
     fake.chat.turn(writer.id);
     render(<IslandApp api={fake} host={host} />);
     const island = await openPanel();
     expect(await within(island).findByText("Today")).toBeDefined();
-    expect(within(island).getByText("+12")).toBeDefined();
-    expect(within(island).getByText("lines, 1 file")).toBeDefined();
+    expect(within(island).getByText("+14")).toBeDefined();
+    expect(within(island).getByText("−3")).toBeDefined();
+    expect(within(island).getByText("lines, 2 files")).toBeDefined();
+    expect(within(island).getByText("messages between agents")).toBeDefined();
     expect(within(island).getByText("worked the most")).toBeDefined();
   });
 
   test("the day starts at local midnight", () => {
     const noon = new Date(2026, 9, 25, 12, 30).getTime();
-    expect(localMidnight(noon)).toBe(new Date(2026, 9, 25).getTime());
+    expect(midnight(noon)).toBe(new Date(2026, 9, 25).getTime());
   });
 });
 

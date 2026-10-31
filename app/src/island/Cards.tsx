@@ -4,6 +4,8 @@
 
 import { type CSSProperties, type FormEvent, type ReactNode, useRef, useState } from "react";
 import { BotAvatar } from "../features/bots/BotAvatar";
+import { isCommand } from "../features/chat/command";
+import { pretty } from "../features/chat/ToolLines";
 import { toolTitle } from "../features/chat/toolNames";
 import { useT } from "../i18n";
 import type { BotloftApi } from "../lib/api";
@@ -100,8 +102,9 @@ export function RequestCard({
         </p>
       )}
       {card.explanation && <p className="island-soft text-[13px]">{card.explanation}</p>}
+      {/* A command shows as written; any other request laid out, as on the home. */}
       <pre className="island-sunk max-h-[40vh] overflow-auto whitespace-pre-wrap break-all px-3 py-2.5 font-mono text-[12.5px] text-[var(--island-ink)]">
-        {card.text}
+        {isCommand(card.toolName) ? card.text : pretty(card.text)}
       </pre>
       {card.cut && <p className="text-[12px] text-[var(--island-warn)]">{t.island.card.cut}</p>}
       {failed && <p className="text-[12px] text-[var(--island-danger)]">{t.island.card.failed}</p>}

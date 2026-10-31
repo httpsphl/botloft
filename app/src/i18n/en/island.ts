@@ -53,6 +53,8 @@ export const island = {
     requests: (count: number): string => (count === 1 ? "request" : "requests"),
     /** Under the lines added, with how many files. */
     lines: (files: number) => (files === 1 ? "lines, 1 file" : `lines, ${files} files`),
+    messages: (count: number): string =>
+      count === 1 ? "message between agents" : "messages between agents",
     busiest: "worked the most",
   },
   card: {

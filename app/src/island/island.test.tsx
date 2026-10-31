@@ -117,6 +117,31 @@ describe("the island", () => {
     await waitFor(() => expect(calls).toContain(`open ${scout.id}`));
   });
 
+  test("what came while the connection was away shows once it is back", async () => {
+    const { fake, scout, writer } = crew();
+    fake.setBotState(writer.id, "busy");
+    const { host } = fakeHost();
+    render(<IslandApp api={fake} host={host} />);
+    await screen.findByRole("button", { name: "1 working" });
+    act(() => fake.setConnection({ kind: "waiting", retryAt: 0 }));
+    // Its notice is lost, as on a socket.
+    fake.chat.ask(scout.id, "Bash", "git status", JSON.stringify({ command: "git status" }));
+    act(() => fake.setConnection({ kind: "open", daemonVersion: "0.1.0" }));
+    expect(await screen.findByText("Run a command")).toBeDefined();
+  });
+
+  test("lays out a request that is not a command, as the home does", async () => {
+    const { fake, scout } = crew();
+    const input = JSON.stringify({ file_path: "notes.md", content: "Hi" });
+    fake.chat.ask(scout.id, "Write", "notes.md", input);
+    const { host } = fakeHost();
+    render(<IslandApp api={fake} host={host} />);
+    const island = await openPanel();
+    expect(island.querySelector("pre")?.textContent).toBe(
+      '{\n  "file_path": "notes.md",\n  "content": "Hi"\n}',
+    );
+  });
+
   test("answers a question with an option or its own words", async () => {
     const { fake, scout } = crew();
     const question = fake.questions.ask(scout.id, "Coffee?", ["Yes", "No"]);

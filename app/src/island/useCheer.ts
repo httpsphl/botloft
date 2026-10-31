@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { BotloftApi } from "../lib/api";
+import { plainText } from "../lib/plainText";
 import type { Bot, BotId, BotState } from "../lib/protocol.gen";
 import { prefs } from "../shell/prefs";
 import type { IslandHost } from "./host";
@@ -53,9 +54,9 @@ export function useCheer(api: BotloftApi, bots: Bot[], host: IslandHost): Cheer 
           }
           const reply = newestFirst.find((item) => item.body.kind === "reply");
           const text = reply?.body.kind === "reply" ? reply.body.text : "";
-          const line = text.split("\n").find((part) => part.trim() !== "") ?? "";
+          const line = text.split("\n").find((part) => plainText(part) !== "") ?? "";
           clearTimeout(timer);
-          setCheer({ bot, line: line.replace(/[*_`#>]/g, "").trim() });
+          setCheer({ bot, line: plainText(line) });
           timer = setTimeout(() => setCheer(null), CHEER_SHOWN_MS);
         },
         () => {},

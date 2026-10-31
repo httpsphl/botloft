@@ -6,17 +6,18 @@
 
 import { type DragEvent, useLayoutEffect, useRef, useState } from "react";
 import { useFiles } from "../features/chat/useFiles";
+import { useToday } from "../features/home/useToday";
 import { useT } from "../i18n";
 import type { BotloftApi } from "../lib/api";
 import type { BotId } from "../lib/protocol.gen";
 import { prefs, usePref } from "../shell/prefs";
+import { ApiProvider, useApi } from "../store/context";
 import { Bar, type Tab } from "./Bar";
 import { ChatTab } from "./ChatTab";
 import { Home } from "./Home";
 import type { IslandHost } from "./host";
 import { SHOWN } from "./LiveAgents";
 import { CHEER_WIDTH, CheerPill, PILL, Pill } from "./Pill";
-import { useToday } from "./Today";
 import { fiveHour, UsageTab, useUsage, WARN_AT } from "./UsageTab";
 import { useAppear } from "./useAppear";
 import { useCheer } from "./useCheer";
@@ -28,24 +29,34 @@ export const PANEL_WIDTH = 720;
 
 const hasFiles = (event: DragEvent) => event.dataTransfer.types.includes("Files");
 
+/** The island on its own connection, with no app store: the home's hooks read through it. */
 export function IslandApp({ api, host }: { api: BotloftApi; host: IslandHost }) {
+  return (
+    <ApiProvider api={api}>
+      <Island host={host} />
+    </ApiProvider>
+  );
+}
+
+function Island({ host }: { host: IslandHost }) {
   const t = useT();
+  const api = useApi();
   const enabled = usePref(prefs.island) && host.supported;
   const screen = usePref(prefs.islandScreen);
-  const { waiting, working, bots, crews, crewList, version, refresh } = useWaiting(api);
+  const { waiting, loaded, working, bots, crews, crewList, version, refresh } = useWaiting(api);
   const live = useLive(
     api,
     working.slice(0, SHOWN).map((bot) => bot.id),
   );
   const cheer = useCheer(api, bots, host);
-  const today = useToday(api, version);
+  const today = useToday();
   const usage = useUsage(api, version);
   const files = useFiles();
   const [tab, setTab] = useState<Tab>("home");
   const { open, pinned, setOpen, hover } = useAppear({
     host,
     enabled,
-    loaded: version > 0,
+    loaded,
     waitingIds: waiting.map((item) => item.id),
     onArrive: () => setTab("home"),
   });
