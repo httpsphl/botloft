@@ -116,4 +116,52 @@ describe("the home", () => {
     );
     expect(await screen.findByRole("heading", { level: 1, name: "Writer" })).toBeDefined();
   });
+
+  test("who works and who replied show under their own titles, and open the chat", async () => {
+    const { fake, scout, writer } = crew();
+    fake.setBotState(scout.id, "busy");
+    fake.chat.tool(scout.id, "Bash", { summary: "npm test" });
+    renderApp(fake);
+    const page = await screen.findByRole("region", { name: "Home" });
+    const working = await within(page).findByRole("region", { name: "Working now" });
+    expect(within(working).getByText("Run a command · npm test")).toBeDefined();
+    expect(within(page).queryByRole("region", { name: "New replies" })).toBeNull();
+
+    // A reply that comes while the home is open is new.
+    act(() => {
+      fake.chat.reply(writer.id, "The draft is ready.");
+    });
+    const replies = await within(page).findByRole("region", { name: "New replies" });
+    fireEvent.click(within(replies).getByRole("button", { name: /^Writer/ }));
+    expect(await screen.findByRole("heading", { level: 1, name: "Writer" })).toBeDefined();
+  });
+
+  test("today counts what the crews did, without asking an agent", async () => {
+    const { fake, scout, writer } = crew();
+    const edit = fake.chat.tool(writer.id, "Edit", {
+      file: "C:Work\notes.md",
+      lines: { added: 5, removed: 1 },
+    });
+    fake.chat.finish(edit, "The file has been updated.");
+    fake.chat.turn(scout.id);
+    renderApp(fake);
+    const today = await within(await screen.findByRole("region", { name: "Home" })).findByRole(
+      "region",
+      { name: "Today" },
+    );
+    const tile = (label: string) => within(today).getByText(label).closest("div") as HTMLElement;
+    expect(await within(today).findByText("Files edited")).toBeDefined();
+    expect(tile("Files edited").textContent).toBe("Files edited1+5−1");
+    expect(tile("Worked the most").textContent).toBe("Worked the mostScout4.2 s");
+  });
+
+  test("a quiet day says so", async () => {
+    const { fake } = crew();
+    renderApp(fake);
+    const today = await within(await screen.findByRole("region", { name: "Home" })).findByRole(
+      "region",
+      { name: "Today" },
+    );
+    expect(await within(today).findByText("Nothing done yet today.")).toBeDefined();
+  });
 });

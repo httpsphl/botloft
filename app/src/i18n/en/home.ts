@@ -13,7 +13,20 @@ export const home = {
       .filter(Boolean)
       .join(" · ") || "All quiet",
   needsYou: "Needs you",
+  working: "Working now",
+  replies: "New replies",
   crews: "Crews",
+  /** What the crews did since midnight, counted by Botloft (spec 31.4). */
+  today: {
+    title: "Today",
+    nothing: "Nothing done yet today.",
+    tasks: "Tasks done",
+    failed: (count: number) => `${count} failed`,
+    requests: "Requests answered",
+    files: "Files edited",
+    messages: "Messages between agents",
+    busiest: "Worked the most",
+  },
   empty: {
     title: "Nothing waits for you",
     body: "When an agent asks for your OK or a decision, it shows up here, from every crew.",

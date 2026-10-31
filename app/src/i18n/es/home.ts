@@ -11,7 +11,19 @@ export const home: Messages["home"] = {
       .filter(Boolean)
       .join(" · ") || "Todo tranquilo",
   needsYou: "Te necesita",
+  working: "Trabajando ahora",
+  replies: "Respuestas nuevas",
   crews: "Crews",
+  today: {
+    title: "Hoy",
+    nothing: "Nada hecho todavía hoy.",
+    tasks: "Tareas hechas",
+    failed: (count: number) => `${count} ${count === 1 ? "falló" : "fallaron"}`,
+    requests: "Solicitudes respondidas",
+    files: "Archivos editados",
+    messages: "Mensajes entre agentes",
+    busiest: "Más trabajó",
+  },
   empty: {
     title: "Nada te espera",
     body: "Cuando un agente pida tu permiso o una decisión, aparece aquí, de todas las crews.",

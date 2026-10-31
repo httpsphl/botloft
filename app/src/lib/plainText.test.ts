@@ -12,6 +12,13 @@ describe("plainText", () => {
     expect(plainText("***both***")).toBe("both");
   });
 
+  test("drops the opening mark of a span the preview cut", () => {
+    expect(plainText("Short version: **a config change in Fri…")).toBe(
+      "Short version: a config change in Fri…",
+    );
+    expect(plainText("Run `npm i…")).toBe("Run npm i…");
+  });
+
   test("keeps a lone star or underscore inside words", () => {
     expect(plainText("rename snake_case_name, 2*3*4 = 24")).toBe(
       "rename snake_case_name, 2*3*4 = 24",

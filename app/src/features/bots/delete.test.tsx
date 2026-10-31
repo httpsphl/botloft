@@ -6,12 +6,10 @@ import { crewOpened, openBot, openTab, renderApp, sidebar } from "../../test/app
 
 /**
  * The last call that is not a page reading what it shows: the Bot agency on
- * an empty crew's page, what waits on the home.
+ * an empty crew's page, what waits and the day on the home.
  */
-const lastCall = (fake: FakeBotloft) =>
-  fake.calls
-    .filter((call) => call.method !== "catalog.list" && call.method !== "cards.list")
-    .at(-1);
+const READS = new Set(["catalog.list", "cards.list", "activity.today"]);
+const lastCall = (fake: FakeBotloft) => fake.calls.filter((call) => !READS.has(call.method)).at(-1);
 
 afterEach(cleanup);
 

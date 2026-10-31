@@ -1,8 +1,9 @@
 // The home (spec 15.1), where the app opens: what waits for the owner in
-// every crew on top, answered right here, then the crews.
+// every crew on top, answered right here; who works and who replied; what
+// the crews did today; then the crews.
 
 import { Hand, Plus } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useT } from "../../i18n";
 import type { Bot } from "../../lib/protocol.gen";
@@ -14,7 +15,9 @@ import { CrewCard } from "../crews/CrewCard";
 import { CrewDialog } from "../crews/CrewDialog";
 import { orderedCrews, useCrewOrder } from "../crews/crewOrder";
 import { actionableDead } from "../messages/FailedDeliveries";
+import { BotLines, useUnread, useWorking } from "./BotLines";
 import { NeedsYou } from "./NeedsYou";
+import { Today } from "./Today";
 import { useRequests } from "./useRequests";
 
 const signedOut = (bots: Record<string, Bot>) =>
@@ -28,11 +31,8 @@ export function HomeView() {
   const questions = [...useApp(openQuestions)].reverse();
   const dead = useApp(useShallow(actionableDead));
   const out = useApp(useShallow((state) => signedOut(state.bots)));
-  const working = useApp(
-    (state) =>
-      Object.values(state.bots).filter((bot) => bot.state === "busy" || bot.state === "launching")
-        .length,
-  );
+  const working = useWorking();
+  const unread = useUnread();
   const crews = orderedCrews(useApp(useShallow(crewList)), useCrewOrder());
   const [creating, setCreating] = useState(false);
   const waiting = (requests?.length ?? 0) + questions.length + dead.length + out.length;
@@ -42,7 +42,7 @@ export function HomeView() {
       <header className="flex items-center gap-3 border-line border-b px-5 py-3.5">
         <div className="min-w-0 flex-1">
           <h1 className="truncate font-semibold text-xl tracking-tight">{words.title}</h1>
-          <p className="mt-0.5 text-muted text-sm">{words.summary(waiting, working)}</p>
+          <p className="mt-0.5 text-muted text-sm">{words.summary(waiting, working.length)}</p>
         </div>
         <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
           {t.crews.newCrew}
@@ -68,19 +68,41 @@ export function HomeView() {
               />
             )}
           </section>
-          <section aria-labelledby="home-crews">
-            <h2 id="home-crews" className="mb-3 font-semibold text-muted text-sm">
-              {words.crews}
-            </h2>
+          {working.length > 0 && (
+            <Part id="home-working" title={words.working}>
+              <BotLines bots={working} time="since" />
+            </Part>
+          )}
+          {unread.length > 0 && (
+            <Part id="home-replies" title={words.replies}>
+              <BotLines bots={unread} time="reply" />
+            </Part>
+          )}
+          <Part id="home-today" title={words.today.title}>
+            <Today />
+          </Part>
+          <Part id="home-crews" title={words.crews}>
             <ul className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
               {crews.map((crew) => (
                 <CrewCard key={crew.id} crew={crew} />
               ))}
             </ul>
-          </section>
+          </Part>
         </div>
       </div>
       {creating && <CrewDialog onClose={() => setCreating(false)} />}
+    </section>
+  );
+}
+
+/** A part of the home under a quiet title. */
+function Part({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+  return (
+    <section aria-labelledby={id}>
+      <h2 id={id} className="mb-3 font-semibold text-muted text-sm">
+        {title}
+      </h2>
+      {children}
     </section>
   );
 }
