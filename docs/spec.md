@@ -748,7 +748,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `tasks.list` | `crewId?, status?` | `Task[]` |
 | `browser.list`, `browser.watch`, `browser.unwatch`, `browser.take`, `browser.release`, `browser.input` | seção 21.7 | o navegador dos bots, a tela ao vivo e o dono no controle |
 | `screens.list` | seção 22.4 | as telas HTML do bot |
-| `cards.list` | — | `{approvals: ApprovalCard[], questions: QuestionCard[]}`: os pedidos e as perguntas que esperam o dono, do mais velho ao mais novo, como o celular os vê (31.5, 28.5), sem exigir conta |
+| `cards.list` | — | `{approvals: ApprovalCard[], questions: QuestionCard[]}`: os pedidos e as perguntas que esperam o dono, do mais velho ao mais novo, como o celular os vê (31.5, 28.5), sem exigir conta. O bot de cada cartão vem com `id`, nome e cor, para o Início e a ilha abrirem o chat dele |
 | `activity.today` | `since` (ms Unix, a meia-noite local do app) | `DayActivity`: o que as equipes fizeram desde `since`, sem turno de agente (31.4) |
 | `questions.list` | `status?` (`open` se ausente) | `Question[]` de bots e crews ativos, da mais nova à mais velha (23.5) |
 | `questions.answer` | `questionId, answer` | `Question`; a resposta vai ao bot como message do dono (23.3) |

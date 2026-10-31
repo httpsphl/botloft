@@ -65,7 +65,7 @@ async fn cards_when(app: &mut Client, approvals: usize, questions: usize) -> Val
 async fn the_island_sees_what_waits_as_the_phone_does_without_an_account() {
     let t = TestDaemon::start_supervised().await;
     let mut app = t.session().await;
-    let (_bot, process, mut mcp) = lead(&t, &mut app).await;
+    let (bot, process, mut mcp) = lead(&t, &mut app).await;
 
     let plain = json!({ "command": "git status", "description": "Shows what changed" });
     let first = ask(&process, &mcp, "toolu_1", "Bash", &plain).await;
@@ -93,6 +93,8 @@ async fn the_island_sees_what_waits_as_the_phone_does_without_an_account() {
     assert_eq!(approvals[0]["text"], "git status");
     assert_eq!(approvals[0]["explanation"], "Shows what changed");
     assert_eq!(approvals[0]["bot"]["name"], "Lead");
+    // Which bot, for the app's home to open its chat.
+    assert_eq!(approvals[0]["bot"]["id"], bot["id"]);
     assert_eq!(approvals[0]["crew"], "Ops");
     assert_eq!(
         (
@@ -105,6 +107,7 @@ async fn the_island_sees_what_waits_as_the_phone_does_without_an_account() {
     assert_eq!(approvals[2]["cut"], true);
     assert_eq!(cards["questions"][0]["text"], "Coffee?");
     assert_eq!(cards["questions"][0]["options"], json!(["Yes", "No"]));
+    assert_eq!(cards["questions"][0]["bot"]["id"], bot["id"]);
 
     // Answered at the computer, a card leaves the list.
     app.call(

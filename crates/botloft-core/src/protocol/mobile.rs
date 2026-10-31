@@ -116,17 +116,19 @@ pub struct MobilePairRequest {
     pub code: String,
 }
 
-/// The bot that asks, as the phone shows it.
+/// The bot that asks, as the phone shows it. The id lets the app's home
+/// open the bot's chat (spec 15.1); the phone's chat list has it already.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct CardBot {
+    pub id: BotId,
     pub name: String,
     pub color: String,
 }
 
 /// A request waiting for the owner, as the phone shows it (spec 28.5). It
-/// carries what the owner needs to decide, and nothing else of the bot.
+/// carries what the owner needs to decide, and of the bot only who it is.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
