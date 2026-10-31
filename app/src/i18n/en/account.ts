@@ -309,6 +309,7 @@ export const account = {
     about: "About",
     backup: "Backup",
     tools: "Connected tools",
+    permissions: "Permissions",
     account: "Account and phone",
     groupDaily: "Every day",
     groupConnect: "Account and connections",

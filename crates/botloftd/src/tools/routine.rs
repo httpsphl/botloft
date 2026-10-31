@@ -94,12 +94,13 @@ async fn run(
 
     let input = serde_json::to_value(&proposal).map_err(|err| err.to_string())?;
     match approvals::ask(daemon, bot, generation, ROUTINE_TOOL, &input, "").await {
-        Some(Answer::Allowed { input: None }) => {
+        Some(Answer::Allowed { input: None, .. }) => {
             let routine = routines::create(daemon, params).map_err(explain)?;
             Ok(created_note(&routine, "The owner approved it."))
         }
         Some(Answer::Allowed {
             input: Some(changed),
+            ..
         }) => {
             let changed: Proposal = serde_json::from_str(&changed)
                 .map_err(|err| format!("the owner's changes could not be read: {err}"))?;

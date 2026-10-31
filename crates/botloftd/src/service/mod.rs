@@ -27,6 +27,7 @@ pub mod messages;
 pub mod mobile;
 pub mod models;
 pub mod modes;
+pub mod permissions;
 pub mod plan;
 pub mod questions;
 pub mod reactions;

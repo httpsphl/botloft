@@ -45,11 +45,17 @@ pub(super) async fn allowed(
         .store()
         .browser_sites(id)
         .map_err(|err| explain(err.into()))?;
-    if known.iter().any(|allowed| sites::covers(allowed, site)) {
+    if known.iter().any(|allowed| sites::covers(allowed, site))
+        || daemon.approvals.this_turn.site(id, site)
+    {
         return Ok(());
     }
     let input = json!({ "site": site, "url": url });
     match approvals::ask(daemon, id, generation, BROWSER_SITE_TOOL, &input, "").await {
+        Some(Answer::Allowed { once: true, .. }) => {
+            daemon.approvals.this_turn.allow_site(id, site);
+            Ok(())
+        }
         Some(Answer::Allowed { .. }) => {
             daemon
                 .store()

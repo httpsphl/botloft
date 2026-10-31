@@ -10,6 +10,7 @@ import type {
   BotId,
   ChatItemId,
   DesktopAction,
+  DesktopApp,
   DesktopAwayUse,
   DesktopFrame,
   DesktopGrant,
@@ -22,6 +23,8 @@ type DesktopMethods = Extract<keyof Handlers, `desktop.${string}`>;
 
 export class FakeDesktop {
   readonly grants: DesktopGrant[] = [];
+  /** The apps open on the desktop that a bot may be given. */
+  apps: DesktopApp[] = [];
   private readonly states = new Map<BotId, DesktopState>();
   private readonly frames = new Map<BotId, DesktopFrame>();
   /** What bots did while the owner was away. */
@@ -181,6 +184,22 @@ export class FakeDesktop {
         }
         this.changed(botId);
         return { botId, grants: this.of(botId) };
+      },
+      "desktop.apps": () => [...this.apps],
+      "desktop.grantApp": ({ botId, path, level }) => {
+        this.fake.bot(botId);
+        const app = this.apps.find((open) => open.path.toLowerCase() === path.toLowerCase());
+        if (!app) {
+          throw notFound(`app ${path}`);
+        }
+        this.grant(botId, app.path, app.name, level);
+        return { botId, grants: this.of(botId) };
+      },
+      "desktop.stopAll": () => {
+        for (const botId of this.fake.bots.keys()) {
+          this.set(botId, { stopped: true });
+        }
+        return null;
       },
       "desktop.awayUses": () => this.away,
       "desktop.dismissAway": () => {

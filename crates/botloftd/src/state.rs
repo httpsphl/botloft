@@ -7,9 +7,9 @@ use std::time::Instant;
 
 use botloft_core::protocol::{
     AccountUsage, AgentUsage, AutoBackupStatus, Bot, BotContextChanged, BotDeleted, BotDesktop,
-    BotMcp, BotRules, BotStateChanged, BrowserAction, BrowserState, ChatDelta, ChatItemChanged,
-    CloudProgress, CloudSignedIn, Crew, CrewDeleted, Delivery, DesktopAwayUse, DesktopState,
-    FolderRecycled, McpOverview, Message, MobilePairRequest, MobileStatus, Question,
+    BotMcp, BotRules, BotSites, BotStateChanged, BrowserAction, BrowserState, ChatDelta,
+    ChatItemChanged, CloudProgress, CloudSignedIn, Crew, CrewDeleted, Delivery, DesktopAwayUse,
+    DesktopState, FolderRecycled, McpOverview, Message, MobilePairRequest, MobileStatus, Question,
     ReactionChanged, Routine, RoutineRun, ScreenDraft, Task,
 };
 use botloft_store::Store;
@@ -45,6 +45,7 @@ pub enum Event {
     BotContext(BotContextChanged),
     BotRules(BotRules),
     BotDesktop(BotDesktop),
+    BotSites(BotSites),
     McpServers(McpOverview),
     BotMcp(BotMcp),
     DesktopChanged(DesktopState),

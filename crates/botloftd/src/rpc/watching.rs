@@ -266,6 +266,7 @@ fn helped(daemon: &Daemon, bot: &BotId) {
             note: None,
             input: None,
             always: None,
+            once: None,
         };
         // It may have been answered in the chat a moment before.
         let _ = approvals::answer(daemon, done);

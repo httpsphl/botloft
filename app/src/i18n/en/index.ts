@@ -16,6 +16,7 @@ import { home } from "./home";
 import { keys } from "./keys";
 import { messages } from "./messages";
 import { onboarding } from "./onboarding";
+import { permissions } from "./permissions";
 import { phone } from "./phone";
 import { questions } from "./questions";
 import { routines } from "./routines";
@@ -46,6 +47,7 @@ export const en = {
   home,
   keys,
   messages,
+  permissions,
   phone,
   questions,
   routines,

@@ -312,6 +312,7 @@ export const account: Messages["account"] = {
     about: "Sobre",
     backup: "Cópia de segurança",
     tools: "Ferramentas conectadas",
+    permissions: "Permissões",
     account: "Conta e celular",
     groupDaily: "No dia a dia",
     groupConnect: "Conta e conexões",
