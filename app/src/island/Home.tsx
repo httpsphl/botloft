@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useT } from "../i18n";
 import type { BotloftApi } from "../lib/api";
 import type { Bot, BotId, DayActivity } from "../lib/protocol.gen";
-import { AskCard, RequestCard } from "./Cards";
+import { AskCard, KeyAskCard, RequestCard } from "./Cards";
 import type { IslandHost } from "./host";
 import { LiveAgents } from "./LiveAgents";
 import { Today } from "./Today";
@@ -60,6 +60,9 @@ function WaitingCard({
   }
   const pager = <Pager at={index} of={waiting.length} onMove={setAt} />;
   const open = () => host.openApp(shown.card.bot.id).catch(() => {});
+  if (shown.kind === "key") {
+    return <KeyAskCard key={shown.id} card={shown.card} pager={pager} onOpen={open} />;
+  }
   return shown.kind === "approval" ? (
     <RequestCard
       key={shown.id}

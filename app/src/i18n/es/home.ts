@@ -26,7 +26,7 @@ export const home: Messages["home"] = {
   },
   empty: {
     title: "Nada te espera",
-    body: "Cuando un agente pida tu permiso o una decisión, aparece aquí, de todas las crews.",
+    body: "Cuando un agente pida tu permiso, una decisión o una clave, aparece aquí, de todas las crews.",
   },
   request: {
     seeAll: "Ver la solicitud",
@@ -35,6 +35,10 @@ export const home: Messages["home"] = {
     cut: "Demasiado larga para mostrarla entera aquí. Para permitirla, ábrela en el chat.",
     atComputer: "Esta cambia las cosas para siempre, así que la respondes en el chat.",
     gone: "Ya se respondió",
+  },
+  key: {
+    title: "Necesita una clave",
+    inChat: "Pegas la clave en el chat, en una tarjeta que la guarda fuera de la conversación.",
   },
   failed: {
     line: (count: number) =>

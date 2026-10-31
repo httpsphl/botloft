@@ -29,7 +29,7 @@ export const home = {
   },
   empty: {
     title: "Nothing waits for you",
-    body: "When an agent asks for your OK or a decision, it shows up here, from every crew.",
+    body: "When an agent asks for your OK, a decision or a key, it shows up here, from every crew.",
   },
   request: {
     /** At the head of a request, under the agent's name. */
@@ -42,6 +42,12 @@ export const home = {
     atComputer: "This one changes things for good, so you answer it in the chat.",
     /** Answered elsewhere (in the chat, on the phone) before this click. */
     gone: "It was already answered",
+  },
+  /** An agent's request for a key (spec 32.5), pasted only in the chat. */
+  key: {
+    /** At the head of the card, under the agent's name. */
+    title: "Needs a key",
+    inChat: "You paste the key in the chat, in a card that keeps it out of the conversation.",
   },
   failed: {
     line: (count: number) =>

@@ -1,6 +1,7 @@
 // "Needs you" on the home (spec 15.1): the requests and questions of every
-// crew, oldest first, each answered right here; then messages that were not
-// delivered and agents whose engine is signed out.
+// crew, oldest first, each answered right here, and the requests for a key,
+// answered in the chat; then messages that were not delivered and agents
+// whose engine is signed out.
 
 import { CircleX, KeyRound } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -10,6 +11,7 @@ import {
   AVATAR_PALETTE,
   type Bot,
   type Delivery,
+  type KeyCard,
   type Question,
 } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
@@ -17,21 +19,25 @@ import { Button } from "../../ui/Button";
 import { EmptyState } from "../../ui/EmptyState";
 import { FailedDialog } from "../messages/FailedDeliveries";
 import { QuestionEntry } from "../questions/QuestionBox";
+import { KeyEntry } from "./KeyEntry";
 import { RequestEntry } from "./RequestEntry";
 
 type Entry =
   | { kind: "request"; at: number; card: ApprovalCard }
-  | { kind: "question"; at: number; question: Question };
+  | { kind: "question"; at: number; question: Question }
+  | { kind: "key"; at: number; card: KeyCard };
 
 export function NeedsYou({
   requests,
   questions,
+  keys,
   dead,
   signedOut,
   onAnswered,
 }: {
   requests: ApprovalCard[];
   questions: Question[];
+  keys: KeyCard[];
   dead: Delivery[];
   signedOut: Bot[];
   onAnswered(approvalId: string): void;
@@ -46,6 +52,7 @@ export function NeedsYou({
       at: question.createdAt,
       question,
     })),
+    ...keys.map((card) => ({ kind: "key" as const, at: card.createdAt, card })),
   ].sort((a, b) => a.at - b.at);
 
   if (entries.length === 0 && dead.length === 0 && signedOut.length === 0) {
@@ -63,6 +70,8 @@ export function NeedsYou({
               card={entry.card}
               onDone={() => onAnswered(entry.card.approvalId)}
             />
+          ) : entry.kind === "key" ? (
+            <KeyEntry key={entry.card.requestId} card={entry.card} />
           ) : (
             <QuestionEntry key={entry.question.id} question={entry.question} />
           ),

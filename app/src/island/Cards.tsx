@@ -1,6 +1,7 @@
 // A request or a question in the island (spec 31.5): the agent's mascot,
 // what it wants and the buttons. The phone's rules hold: a request cut to
-// size or one that belongs to the computer is only denied here.
+// size or one that belongs to the computer is only denied here. A request
+// for a key only opens Botloft, where the key is pasted in the chat (32.5).
 
 import { type CSSProperties, type FormEvent, type ReactNode, useRef, useState } from "react";
 import { BotAvatar } from "../features/bots/BotAvatar";
@@ -9,7 +10,7 @@ import { pretty } from "../features/chat/ToolLines";
 import { toolTitle } from "../features/chat/toolNames";
 import { useT } from "../i18n";
 import type { BotloftApi } from "../lib/api";
-import type { ApprovalCard, CardBot, QuestionCard } from "../lib/protocol.gen";
+import type { ApprovalCard, CardBot, KeyCard, QuestionCard } from "../lib/protocol.gen";
 
 /** A card that just appeared ignores its buttons this long (spec 31.7). */
 export const GUARD_MS = 600;
@@ -129,6 +130,35 @@ export function RequestCard({
         >
           {t.island.card.deny}
         </button>
+        <button type="button" className="island-button ml-auto" data-kind="quiet" onClick={onOpen}>
+          {t.island.card.openInApp}
+        </button>
+      </div>
+    </Frame>
+  );
+}
+
+export function KeyAskCard({
+  card,
+  pager,
+  onOpen,
+}: {
+  card: KeyCard;
+  pager: ReactNode;
+  onOpen: () => void;
+}) {
+  const t = useT();
+  return (
+    <Frame bot={card.bot} crew={card.crew} title={t.keys.card.asks(card.bot.name)} pager={pager}>
+      <p className="font-medium text-[13px] text-[var(--island-warn)]">
+        {t.island.card.atComputer}
+      </p>
+      <p className="font-mono font-semibold text-[13px] text-[var(--island-ink)]">{card.name}</p>
+      <p className="island-soft whitespace-pre-wrap text-[13px]">
+        <span className="sr-only">{t.keys.card.why}: </span>
+        {card.why}
+      </p>
+      <div className="mt-1 flex">
         <button type="button" className="island-button ml-auto" data-kind="quiet" onClick={onOpen}>
           {t.island.card.openInApp}
         </button>
