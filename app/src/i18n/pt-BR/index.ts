@@ -14,6 +14,7 @@ import { crewTemplates } from "./crewTemplates";
 import { desktop } from "./desktop";
 import { files } from "./files";
 import { home } from "./home";
+import { island } from "./island";
 import { keys } from "./keys";
 import { messages } from "./messages";
 import { onboarding } from "./onboarding";
@@ -45,6 +46,7 @@ export const ptBR: Messages = {
   desktop,
   files,
   home,
+  island,
   keys,
   messages,
   phone,

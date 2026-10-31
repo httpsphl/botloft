@@ -93,8 +93,9 @@ async fn the_island_sees_what_waits_as_the_phone_does_without_an_account() {
     assert_eq!(approvals[0]["text"], "git status");
     assert_eq!(approvals[0]["explanation"], "Shows what changed");
     assert_eq!(approvals[0]["bot"]["name"], "Lead");
-    // Which bot, for the app's home to open its chat.
+    // Which bot, for the app's home and the island to open its chat.
     assert_eq!(approvals[0]["bot"]["id"], bot["id"]);
+    assert_eq!(cards["questions"][0]["bot"]["id"], bot["id"]);
     assert_eq!(approvals[0]["crew"], "Ops");
     assert_eq!(
         (

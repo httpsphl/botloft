@@ -45,6 +45,9 @@ export default defineConfig(({ mode }) => ({
   build: {
     // WebView2 on Windows is evergreen Chromium.
     target: "chrome120",
+    // The app's two windows: the main one and the island (spec 31.3).
+    ...(mode !== "setup" &&
+      mode !== "phone" && { rollupOptions: { input: ["index.html", "island.html"] } }),
     ...(mode === "setup" && { outDir: "dist-setup", rollupOptions: { input: "setup.html" } }),
     ...(mode === "phone" && {
       target: "es2022",

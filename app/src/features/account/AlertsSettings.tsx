@@ -1,10 +1,11 @@
 // Settings, "Notifications" (spec 15.1): when Botloft tells the owner, with
 // a Windows notification while it is not in front, and whether a sound
-// goes with it.
+// goes with it; on Windows, the island at the top of the screen (spec 31.9).
 
 import { useT } from "../../i18n";
 import { SYSTEM } from "../../lib/system";
 import { prefs, usePref } from "../../shell/prefs";
+import { Select } from "../../ui/Select";
 import { Section, Toggle } from "./settingsParts";
 
 export function AlertsSettings() {
@@ -17,8 +18,40 @@ export function AlertsSettings() {
   const tray = usePref(prefs.tray);
   const keep = usePref(prefs.whenClosed) === "keep";
   const nearClock = tray && keep;
+  const island = usePref(prefs.island);
+  const islandScreen = usePref(prefs.islandScreen);
+  const cheer = usePref(prefs.islandCheer);
   return (
     <Section title={s.alerts}>
+      {SYSTEM === "Windows" && (
+        <>
+          <Toggle
+            label={s.island}
+            hint={s.islandHint}
+            checked={island}
+            onChange={prefs.island.set}
+          />
+          {island && (
+            <>
+              <Select<"primary" | "mouse">
+                label={s.islandScreen}
+                value={islandScreen}
+                options={[
+                  { value: "primary", label: s.islandScreens.primary },
+                  { value: "mouse", label: s.islandScreens.mouse },
+                ]}
+                onChange={prefs.islandScreen.set}
+              />
+              <Toggle
+                label={s.islandCheer}
+                hint={s.islandCheerHint}
+                checked={cheer}
+                onChange={prefs.islandCheer.set}
+              />
+            </>
+          )}
+        </>
+      )}
       <Toggle
         label={s.notifyNeeds}
         hint={s.notifyNeedsHint(SYSTEM)}

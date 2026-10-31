@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { toolTitle } from "../features/chat/toolNames";
 import { t } from "../i18n";
 import type { Bot, BotId, BotState } from "../lib/protocol.gen";
+import { SYSTEM } from "../lib/system";
 import { type AppState, activityOf } from "../store/app";
 import { useAppStore, useHost } from "../store/context";
 import { prefs } from "./prefs";
@@ -78,7 +79,20 @@ export function useBotAlerts(): void {
           continue;
         }
         last = { bot: bot.id, at: Date.now() };
-        host.notify({ ...notice(state, bot, kind), sound }).catch(() => {});
+        const toast = () => host.notify({ ...notice(state, bot, kind), sound }).catch(() => {});
+        // The island shows it instead (spec 31.6), unless the screen is quiet,
+        // where Windows keeps its own rule.
+        if (SYSTEM === "Windows" && prefs.island.get()) {
+          host.quiet().then((quiet) => {
+            if (quiet) {
+              toast();
+            } else if (sound) {
+              playSound(kind === "done" ? "done" : "needs");
+            }
+          }, toast);
+          continue;
+        }
+        toast();
       }
     };
 
