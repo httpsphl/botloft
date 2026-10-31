@@ -234,6 +234,14 @@ export const account = {
       `A ${system} notification when an agent asks for permission or needs you to sign in, if Botloft is not in front.`,
     notifyDone: "When an agent finishes",
     notifyDoneHint: "A notification when an agent finishes what it was doing.",
+    island: "Show Botloft at the top of the screen",
+    islandHint:
+      "A small island at the top of the screen while agents work or wait for you. It comes down when one asks you something, so you can answer without opening Botloft, and it takes the place of the notifications.",
+    islandScreen: "Which screen",
+    islandScreens: { primary: "The main screen", mouse: "Where the mouse is" },
+    islandCheer: "Celebrate when an agent finishes",
+    islandCheerHint:
+      "The island shows for a moment that an agent finished, with the first line of its answer.",
     markReplies: "Mark the icon when an agent replies",
     markRepliesHint: "A dot on the Botloft icon in the taskbar while a conversation is unread.",
     sound: "Play a sound",

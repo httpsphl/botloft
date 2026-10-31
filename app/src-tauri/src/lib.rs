@@ -4,6 +4,7 @@
 mod claude;
 mod daemon;
 mod open;
+mod quiet;
 mod save;
 mod sign_in;
 #[cfg(unix)]
@@ -138,6 +139,25 @@ fn launched_at_sign_in() -> bool {
     sign_in::launched_at_sign_in()
 }
 
+/// Whether Windows would hold back a notification now: full screen, a
+/// presentation or "Do not disturb" (spec 31.6).
+#[tauri::command]
+fn quiet_now() -> bool {
+    quiet::now()
+}
+
+/// Whether the main window is on screen and has the focus, for the island
+/// (spec 31.6): then what waits already shows in the chat.
+#[tauri::command]
+fn main_in_front(app: tauri::AppHandle) -> bool {
+    use tauri::Manager as _;
+    app.get_webview_window("main").is_some_and(|window| {
+        window.is_visible().unwrap_or(false)
+            && window.is_focused().unwrap_or(false)
+            && !window.is_minimized().unwrap_or(false)
+    })
+}
+
 /// Whether `url` is a plain web link, safe to hand to the default browser.
 fn is_web_link(url: &str) -> bool {
     let rest = url
@@ -182,6 +202,13 @@ pub fn run() {
             }
             Ok(())
         })
+        // The island keeps the app alive while hidden: when the main window
+        // closes for good, the app ends with it (spec 31.3).
+        .on_window_event(|window, event| {
+            if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
+                tauri::Manager::app_handle(window).exit(0);
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             daemon_status,
             daemon_install,
@@ -195,7 +222,9 @@ pub fn run() {
             save_file_as,
             open_url,
             open_at_sign_in,
-            launched_at_sign_in
+            launched_at_sign_in,
+            quiet_now,
+            main_in_front
         ])
         .run(tauri::generate_context!())
         .expect("error while running the Botloft app");

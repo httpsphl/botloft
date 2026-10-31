@@ -1,10 +1,12 @@
 // The requests waiting for the owner in every crew (spec 15.1), as
-// `cards.list` gives them, with the phone's rules (28.5). Read when the home
-// opens and again when a request or a bot's state changes, the changes of
-// 200 ms read once. The island (spec 31.5) reads them the same way.
+// `cards.list` gives them, with the phone's rules (28.5), and the questions
+// as cards. Read when the page opens and when the connection comes back,
+// and again when a request, a question or a bot's state changes, the changes
+// of 200 ms read once. The home answers questions from the store; the island
+// (spec 31.5) shows these cards.
 
-import { useCallback, useEffect, useState } from "react";
-import type { ApprovalCard } from "../../lib/protocol.gen";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { ApprovalCard, QuestionCard } from "../../lib/protocol.gen";
 import { useApi } from "../../store/context";
 
 const SETTLE_MS = 200;
@@ -12,31 +14,56 @@ const SETTLE_MS = 200;
 export function useRequests(): {
   /** Oldest first; null until the first read. */
   requests: ApprovalCard[] | null;
+  /** The open questions, oldest first; null until the first read. */
+  questions: QuestionCard[] | null;
   /** Takes an answered request off at once, before the next read. */
   drop(approvalId: string): void;
+  /** Reads again soon, as after an answer that may not have gone through. */
+  refresh(): void;
 } {
   const api = useApi();
   const [requests, setRequests] = useState<ApprovalCard[] | null>(null);
+  const [questions, setQuestions] = useState<QuestionCard[] | null>(null);
+  const soon = useRef(() => {});
 
   useEffect(() => {
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const read = () =>
       api.call("cards.list").then(
-        (cards) => alive && setRequests(cards.approvals),
+        (cards) => {
+          if (alive) {
+            setRequests(cards.approvals);
+            setQuestions(cards.questions);
+          }
+        },
         // An older daemon has no cards: nothing shows as waiting.
-        () => alive && setRequests((current) => current ?? []),
+        () => {
+          if (alive) {
+            setRequests((current) => current ?? []);
+            setQuestions((current) => current ?? []);
+          }
+        },
       );
-    const soon = () => {
+    soon.current = () => {
       clearTimeout(timer);
       timer = setTimeout(read, SETTLE_MS);
     };
     const stop = api.subscribe((event) => {
+      const kind = event.name === "chat.item" ? event.params.item.body.kind : null;
       if (
-        (event.name === "chat.item" && event.params.item.body.kind === "approval") ||
+        kind === "approval" ||
+        kind === "question" ||
+        event.name === "question.changed" ||
         event.name === "bot.state"
       ) {
-        soon();
+        soon.current();
+      }
+    });
+    // What changed while the daemon was away, as across a restart.
+    const stopConnection = api.onConnection((state) => {
+      if (state.kind === "open") {
+        soon.current();
       }
     });
     void read();
@@ -44,6 +71,7 @@ export function useRequests(): {
       alive = false;
       clearTimeout(timer);
       stop();
+      stopConnection();
     };
   }, [api]);
 
@@ -52,5 +80,6 @@ export function useRequests(): {
       setRequests((current) => current?.filter((card) => card.approvalId !== approvalId) ?? null),
     [],
   );
-  return { requests, drop };
+  const refresh = useCallback(() => soon.current(), []);
+  return { requests, questions, drop, refresh };
 }

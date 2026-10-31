@@ -1,9 +1,16 @@
 import { act, cleanup, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { FakeBotloft } from "../lib/fake";
 import { FakeHost } from "../lib/fakeHost";
+import { SYSTEM } from "../lib/system";
 import { crewOpened, renderApp } from "../test/app";
 import { prefs, resetPrefs } from "./prefs";
+
+// These are the Windows notifications without the island, which takes
+// their place when it is on (spec 31.6); its own tests are below.
+beforeEach(() => {
+  prefs.island.set(false);
+});
 
 afterEach(() => {
   cleanup();
@@ -78,5 +85,19 @@ describe("notifications", () => {
     await waitFor(() =>
       expect(screen.getByRole("heading", { level: 1, name: "Writer" })).toBeDefined(),
     );
+  });
+});
+
+describe.runIf(SYSTEM === "Windows")("with the island on", () => {
+  test("no notification while the screen is free, and the usual one when it is quiet", async () => {
+    const { fake, host, scout } = await scoutBehind();
+    prefs.island.set(true);
+    act(() => fake.setBotState(scout.id, "needs_approval"));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(host.notices).toEqual([]);
+
+    host.quietNow = true;
+    act(() => fake.setBotState(scout.id, "auth_error"));
+    await waitFor(() => expect(host.notices).toHaveLength(1));
   });
 });
