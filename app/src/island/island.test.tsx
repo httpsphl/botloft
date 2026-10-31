@@ -35,6 +35,9 @@ async function openPanel() {
   return screen.findByRole("region", { name: "Botloft at the top of the screen" });
 }
 
+/** What scrolls inside the open panel. */
+const scroller = (island: HTMLElement) => island.querySelector(".island-scroll") as HTMLElement;
+
 describe("the island", () => {
   test("stays hidden while nothing works or waits", async () => {
     const { fake } = crew();
@@ -142,6 +145,17 @@ describe("the island", () => {
     );
   });
 
+  test("each tab starts at its top", async () => {
+    const { fake, scout } = crew();
+    fake.chat.ask(scout.id, "Bash", "git status", JSON.stringify({ command: "git status" }));
+    const { host } = fakeHost();
+    render(<IslandApp api={fake} host={host} />);
+    const island = await openPanel();
+    scroller(island).scrollTop = 300;
+    fireEvent.click(within(island).getByRole("tab", { name: "Usage" }));
+    expect(scroller(island).scrollTop).toBe(0);
+  });
+
   test("answers a question with an option or its own words", async () => {
     const { fake, scout } = crew();
     const question = fake.questions.ask(scout.id, "Coffee?", ["Yes", "No"]);
@@ -156,5 +170,46 @@ describe("the island", () => {
         fake.questions.asked.find((entry) => entry.question.id === question.id)?.question,
       ).toMatchObject({ status: "answered", answer: "Yes" }),
     );
+  });
+});
+
+describe("the panel's height", () => {
+  /** Opens the panel with its content `content` px tall on a screen `display` px
+   *  tall (jsdom lays nothing out), and gives the heights then asked of the window. */
+  async function opened(content: number, display: number) {
+    vi.spyOn(Element.prototype, "scrollHeight", "get").mockReturnValue(content);
+    vi.spyOn(Screen.prototype, "availHeight", "get").mockReturnValue(display);
+    const { fake, scout } = crew();
+    fake.chat.ask(scout.id, "Bash", "git status", JSON.stringify({ command: "git status" }));
+    const { host, calls } = fakeHost();
+    render(<IslandApp api={fake} host={host} />);
+    const island = await openPanel();
+    await within(island).findByText("Run a command");
+    const heights = calls.flatMap((call) => {
+      const asked = new RegExp(`^show ${PANEL_WIDTH}x(\\d+) `).exec(call);
+      return asked ? [Number(asked[1])] : [];
+    });
+    return { island, heights };
+  }
+
+  test("stops at 60% of the screen, and the rest scrolls", async () => {
+    // A 1080p screen at 150% is 720 pixels tall.
+    const { island, heights } = await opened(900, 720);
+    expect(heights.at(-1)).toBe(432);
+    expect(Math.max(...heights)).toBe(432);
+    expect(island.style.height).toBe("432px");
+    expect(scroller(island).style.maxHeight).toBe("432px");
+  });
+
+  test("below that, it is as tall as what it shows", async () => {
+    const { island, heights } = await opened(554, 1440);
+    expect(heights.at(-1)).toBe(554);
+    expect(island.style.height).toBe("554px");
+  });
+
+  test("has no cap when the screen gives no height", async () => {
+    const { island, heights } = await opened(900, 0);
+    expect(heights.at(-1)).toBe(900);
+    expect(scroller(island).style.maxHeight).toBe("");
   });
 });

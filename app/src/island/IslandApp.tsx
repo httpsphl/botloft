@@ -2,7 +2,8 @@
 // or wait for the owner, that grows into a panel with three tabs: Home,
 // Chat and Usage. It comes down by itself when something new waits, peeks
 // under the mouse, and takes files dropped on it to the Chat. The window
-// always has the size of what it shows (spec 31.3).
+// always has the size of what it shows (spec 31.3), up to 60% of the
+// screen's height; past that, the panel scrolls (31.2).
 
 import { type DragEvent, useLayoutEffect, useRef, useState } from "react";
 import { useFiles } from "../features/chat/useFiles";
@@ -26,6 +27,14 @@ import { useWaiting } from "./useWaiting";
 
 export { PILL } from "./Pill";
 export const PANEL_WIDTH = 720;
+/** The share of the screen's height the panel may take. */
+const CAP = 0.6;
+
+/** The panel's tallest height in CSS pixels; none where the screen has no size, as in jsdom. */
+function panelCap(): number | undefined {
+  const tall = window.screen.availHeight;
+  return tall > 0 ? Math.floor(tall * CAP) : undefined;
+}
 
 const hasFiles = (event: DragEvent) => event.dataTransfer.types.includes("Files");
 
@@ -62,7 +71,9 @@ function Island({ host }: { host: IslandHost }) {
   });
   const [talkTo, setTalkTo] = useState<BotId | null>(null);
   const panel = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(PILL.height);
+  const cap = panelCap();
   // Pinned open, it stays until the owner hides it, even once nobody
   // works: they may be reading what an agent just answered.
   const visible =
@@ -80,7 +91,10 @@ function Island({ host }: { host: IslandHost }) {
       setHeight(PILL.height);
       return;
     }
-    const measure = () => setHeight(content.scrollHeight);
+    // The content grows freely inside the scroller, so the observer keeps
+    // seeing it; the window stops at the cap.
+    const measure = () =>
+      setHeight(Math.min(content.scrollHeight, panelCap() ?? Number.POSITIVE_INFINITY));
     measure();
     if (typeof ResizeObserver === "undefined") {
       return;
@@ -105,6 +119,13 @@ function Island({ host }: { host: IslandHost }) {
     ...bots.filter((bot) => bot.state !== "needs_approval" && bot.state !== "busy"),
   ];
   const openApp = (botId?: BotId) => host.openApp(botId).catch(() => {});
+  // The three tabs share one scroller: each starts at its top.
+  const showTab = (next: Tab) => {
+    setTab(next);
+    if (scroller.current) {
+      scroller.current.scrollTop = 0;
+    }
+  };
   const color = waiting[0]?.card.bot.color ?? working[0]?.color ?? bots[0]?.color ?? "#FF7A59";
   const used = fiveHour(usage);
   return (
@@ -134,43 +155,51 @@ function Island({ host }: { host: IslandHost }) {
       }}
     >
       {expanded ? (
-        <div ref={panel} className="island-content flex flex-col">
-          <Bar
-            api={api}
-            crews={crewList}
-            tab={tab}
-            onTab={setTab}
-            onOpenApp={() => openApp()}
-            onHide={() => setOpen(false)}
-            onChanged={refresh}
-          />
-          <div className="px-3 pb-3">
-            {tab === "home" && (
-              <Home
-                api={api}
-                host={host}
-                waiting={waiting}
-                working={working}
-                crews={crews}
-                live={live}
-                today={today}
-                refresh={refresh}
-              />
-            )}
-            {tab === "chat" && (
-              <ChatTab
-                api={api}
-                bots={ordered}
-                botId={talking}
-                onPick={setTalkTo}
-                files={files.files}
-                onRemoveFile={files.remove}
-                fileError={files.error}
-                onSent={files.clear}
-                onOpen={openApp}
-              />
-            )}
-            {tab === "usage" && <UsageTab api={api} usage={usage} bots={bots} />}
+        // At the panel's width from the first frame, so the shape grows
+        // around the content instead of squeezing it.
+        <div
+          ref={scroller}
+          className="island-content island-scroll"
+          style={{ width: PANEL_WIDTH, maxHeight: cap }}
+        >
+          <div ref={panel} className="flex flex-col">
+            <Bar
+              api={api}
+              crews={crewList}
+              tab={tab}
+              onTab={showTab}
+              onOpenApp={() => openApp()}
+              onHide={() => setOpen(false)}
+              onChanged={refresh}
+            />
+            <div className="px-3 pb-3">
+              {tab === "home" && (
+                <Home
+                  api={api}
+                  host={host}
+                  waiting={waiting}
+                  working={working}
+                  crews={crews}
+                  live={live}
+                  today={today}
+                  refresh={refresh}
+                />
+              )}
+              {tab === "chat" && (
+                <ChatTab
+                  api={api}
+                  bots={ordered}
+                  botId={talking}
+                  onPick={setTalkTo}
+                  files={files.files}
+                  onRemoveFile={files.remove}
+                  fileError={files.error}
+                  onSent={files.clear}
+                  onOpen={openApp}
+                />
+              )}
+              {tab === "usage" && <UsageTab api={api} usage={usage} bots={bots} />}
+            </div>
           </div>
         </div>
       ) : cheer ? (
