@@ -80,7 +80,8 @@ function Working() {
 function Draft({ text }: { text: string }) {
   const [done, writing] = splitDraft(text);
   return (
-    <div aria-live="off" className="flex animate-fade flex-col gap-[0.6em] opacity-90">
+    // chat-md.css spaces the two parts as one reply.
+    <div aria-live="off" className="chat-draft animate-fade opacity-90">
       {done && <Markdown text={done} />}
       <Markdown text={writing} streaming />
     </div>

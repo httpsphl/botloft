@@ -202,7 +202,7 @@ pub fn archive(daemon: &Daemon, params: CrewIdParams) -> ApiResult<Crew> {
         return Ok(present(daemon, crew));
     }
     let bots = store.bots(Some(&crew.id), false)?;
-    let at = now_ms();
+    let at = super::archive::crew_time(&store, &crew.id)?;
     store.archive_crew(&crew.id, at)?;
 
     let crew = find(&store, &crew.id)?;

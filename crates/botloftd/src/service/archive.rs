@@ -5,10 +5,43 @@
 use std::cmp::Reverse;
 use std::collections::HashMap;
 
+use botloft_core::ids::{BotId, CrewId};
+use botloft_core::now_ms;
 use botloft_core::protocol::{Archive, Bot, BotIdParams, Crew, CrewIdParams};
+use botloft_store::Store;
 
 use super::{ApiError, ApiResult, bots, crews, routines};
 use crate::state::{Daemon, Event};
+
+/// When to archive a crew with its bots and their routines: now, or just
+/// after one of them was archived on its own, should that have been this
+/// same millisecond. Unarchiving brings back what has the crew's time, so
+/// it must not catch those.
+pub(crate) fn crew_time(store: &Store, crew: &CrewId) -> ApiResult<i64> {
+    let mut earlier = Vec::new();
+    for bot in store.bots(Some(crew), true)? {
+        earlier.extend(bot.archived_at);
+        earlier.extend(routine_times(store, &bot.id)?);
+    }
+    Ok(after(now_ms(), earlier))
+}
+
+/// When to archive a bot with its routines, in the same way.
+pub(crate) fn bot_time(store: &Store, bot: &BotId) -> ApiResult<i64> {
+    Ok(after(now_ms(), routine_times(store, bot)?))
+}
+
+fn routine_times(store: &Store, bot: &BotId) -> ApiResult<Vec<i64>> {
+    Ok(store
+        .routines(Some(bot), true)?
+        .into_iter()
+        .filter_map(|routine| routine.archived_at)
+        .collect())
+}
+
+fn after(now: i64, earlier: impl IntoIterator<Item = i64>) -> i64 {
+    earlier.into_iter().fold(now, |at, time| at.max(time + 1))
+}
 
 /// Archived crews and bots, the most recently archived first. A bot of an
 /// archived crew is listed too, so the app can count them.
@@ -101,4 +134,19 @@ pub fn unarchive_bot(daemon: &Daemon, params: BotIdParams) -> ApiResult<Bot> {
     daemon.supervisor.wake();
     tracing::info!(bot = %bot.id, "bot unarchived");
     Ok(bot)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::after;
+
+    #[test]
+    fn what_goes_together_is_archived_after_what_went_alone() {
+        assert_eq!(after(10, []), 10);
+        assert_eq!(after(10, [3, 7]), 10);
+        // Archived alone this same millisecond, or later by a clock that
+        // went back: the time moves past it.
+        assert_eq!(after(10, [3, 10]), 11);
+        assert_eq!(after(10, [12, 4]), 13);
+    }
 }

@@ -18,6 +18,7 @@ import { seedContext } from "./seedContext";
 import { seedDesktop } from "./seedDesktop";
 import { seedHands } from "./seedHands";
 import { seedKeys } from "./seedKeys";
+import { seedLongReply } from "./seedLongReply";
 import { activeTab, drawPage } from "./seedPage";
 import { seedPlan } from "./seedPlan";
 import { seedQuestions } from "./seedQuestions";
@@ -143,6 +144,7 @@ function seed(fake: FakeBotloft): void {
   const ops = fake.addCrew("Ops");
   const deploy = fake.addBot(ops.id, "Deploy", "Ships the site on Fridays");
   const watcher = fake.addBot(ops.id, "Watcher", "Keeps an eye on the error log");
+  seedLongReply(fake, watcher.id);
   void fake.call("crews.setPaused", { crewId: ops.id, paused: true });
   fake.setBotState(deploy.id, "offline");
   fake.setBotState(watcher.id, "offline");
