@@ -33,6 +33,7 @@ import { chatRows, rowHas } from "./rows";
 import { useChat } from "./useChat";
 import { useFiles } from "./useFiles";
 import { useSharedSound } from "./useSharedSound";
+import { WaitingPill } from "./WaitingPill";
 
 /** How long a search result stays marked (`search.css`). */
 const FOCUS_MS = 2400;
@@ -255,10 +256,10 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
       </div>
       <div className="relative w-full">
         {/* Floats over the chat's end, so nothing moves when it comes. */}
-        <CallPills
-          calls={calls}
-          className="absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 justify-center"
-        />
+        <div className="absolute bottom-full left-1/2 z-10 mb-2 flex -translate-x-1/2 flex-col items-center gap-2">
+          <CallPills calls={calls} className="justify-center" />
+          <WaitingPill items={chat.items} scroller={scroller} />
+        </div>
         {/* Keyed by bot: each one has its own draft (spec 15.1). */}
         <ChatComposer
           key={bot.id}

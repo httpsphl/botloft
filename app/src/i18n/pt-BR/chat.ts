@@ -13,6 +13,9 @@ export const chat: Messages["chat"] = {
       "Peça qualquer coisa que a pasta e as ferramentas dele permitam fazer. Você também pode anexar arquivos e imagens.",
     messages: "Mensagens",
     dropToAttach: "Solte para anexar à sua mensagem",
+    waiting: (count: number) =>
+      count === 1 ? "1 pedido esperando você" : `${count} pedidos esperando você`,
+    showWaiting: "Mostrar",
   },
   composer: {
     paused: (bot: string) =>
@@ -114,10 +117,11 @@ export const chat: Messages["chat"] = {
     unexplained: (bot: string) =>
       `${bot} não disse para que serve este comando. Na dúvida, negue e pergunte.`,
     command: "Ver o comando",
-    noteLabel: (bot: string) => `Observação para ${bot} se você negar`,
-    notePlaceholder: "Por que não? Vai para o agente se você negar (opcional)",
+    noteLabel: (bot: string) => `Por que você nega, para ${bot}`,
+    notePlaceholder: "Por que não? O agente lê isto (opcional)",
     allow: "Permitir",
     deny: "Negar",
+    back: "Voltar",
     always: {
       command: "Permitir sempre este comando",
       site: (site: string) => `Permitir sempre em ${site}`,

@@ -148,6 +148,7 @@ describe("the owner's hands in the browser", () => {
     expect(within(panel()).queryByRole("button", { name: "Take control" })).not.toBeNull();
 
     const card = screen.getByRole("region", { name: "Scout asks: Solve the captcha" });
+    fireEvent.click(within(card).getByRole("button", { name: "I won't do it" }));
     fireEvent.change(within(card).getByRole("textbox"), { target: { value: "Not now" } });
     fireEvent.click(within(card).getByRole("button", { name: "I won't do it" }));
     await waitFor(() =>

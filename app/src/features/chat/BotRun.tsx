@@ -52,10 +52,17 @@ function TurnEnd({ turn }: { turn: TurnItem }) {
   );
 }
 
-/** Animates its content in if it arrived while the owner looked. */
-function Arriving({ at, children }: { at: number; children: ReactNode }) {
+/**
+ * A card of the run, marked with its item for the chat to find it
+ * (`WaitingPill`); it animates in if it arrived while the owner looked.
+ */
+function Arriving({ id, at, children }: { id: string; at: number; children: ReactNode }) {
   const arrival = useArrival(at);
-  return arrival ? <div className={arrival}>{children}</div> : children;
+  return (
+    <div data-item={id} className={arrival || undefined}>
+      {children}
+    </div>
+  );
 }
 
 function Working() {
@@ -176,25 +183,25 @@ function BotRunView({
               );
             case "approval":
               return (
-                <Arriving key={head.id} at={head.createdAt}>
+                <Arriving key={head.id} id={head.id} at={head.createdAt}>
                   <ApprovalCard approval={head.body} bot={bot} />
                 </Arriving>
               );
             case "question":
               return (
-                <Arriving key={head.id} at={head.createdAt}>
+                <Arriving key={head.id} id={head.id} at={head.createdAt}>
                   <QuestionCard question={head.body.question} bot={bot.name} />
                 </Arriving>
               );
             case "key_request":
               return (
-                <Arriving key={head.id} at={head.createdAt}>
+                <Arriving key={head.id} id={head.id} at={head.createdAt}>
                   <KeyRequestCard id={head.id} request={head.body} bot={bot} />
                 </Arriving>
               );
             case "turn":
               return (
-                <Arriving key={head.id} at={head.createdAt}>
+                <Arriving key={head.id} id={head.id} at={head.createdAt}>
                   <TurnEnd turn={head.body} />
                 </Arriving>
               );

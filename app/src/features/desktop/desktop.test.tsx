@@ -69,6 +69,7 @@ describe("the desktop", () => {
     expect(within(card).getByText(/without moving your mouse/)).toBeDefined();
     expect(within(card).getByText(/Never in password fields/)).toBeDefined();
     fireEvent.click(within(card).getByRole("button", { name: "Deny" }));
+    fireEvent.click(within(card).getByRole("button", { name: "Deny" }));
     expect(await screen.findByText("Scout may not use Notepad")).toBeDefined();
   });
 

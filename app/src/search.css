@@ -1,6 +1,7 @@
-/* The chat item a search result opened (spec 8.8): a soft band behind it
-   that fades, so the eye finds it. With less motion the band stays still
-   for the same time and then goes. */
+/* The chat item a search result opened (spec 8.8), or the card the pill of
+   waiting requests brought into view (features/chat/WaitingPill.tsx): a
+   soft band behind it that fades, so the eye finds it. With less motion the
+   band stays still for the same time and then goes. */
 .search-focus {
   border-radius: 16px;
   animation: search-focus 2.4s var(--ease-out) both;
