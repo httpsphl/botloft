@@ -179,10 +179,12 @@ async fn run(daemon: &Daemon, bot: &BotId, generation: u64, tool: Tool) -> Resul
         return Err(STOPPED.to_owned());
     }
     let windows = blocking(platform::windows).await?;
-    let grants = daemon
+    let mut grants = daemon
         .store()
         .desktop_grants(bot)
         .map_err(|err| explain(err.into()))?;
+    // What the owner allowed only for this turn counts like a grant.
+    grants.extend(daemon.approvals.this_turn.apps(bot));
     let see = DesktopLevel::See;
     match tool {
         Tool::Windows => Ok(Reply::Text(list(&windows, &in_reach(daemon, grants)?))),

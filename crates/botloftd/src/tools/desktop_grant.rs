@@ -148,6 +148,14 @@ pub(super) async fn granted(
         "why": why,
     });
     match approvals::ask(daemon, bot, generation, DESKTOP_TOOL, &input, "").await {
+        Some(Answer::Allowed { once: true, .. }) => {
+            let now = daemon.clock.now_ms();
+            daemon
+                .approvals
+                .this_turn
+                .allow_app(bot, &path, &app.name, level, now);
+            Ok(window)
+        }
         Some(Answer::Allowed { .. }) => {
             daemon
                 .store()

@@ -33,6 +33,9 @@ export const SUGGEST_TOOL = "mcp__botloft__suggest_bot";
 export const ROUTINE_TOOL = "mcp__botloft__schedule_routine";
 /** A bot asking the owner for a hand in its browser (spec 21.10). */
 const HELP_TOOL = "mcp__botloft__browser_help";
+/** The requests that may hold only for the bot's turn (spec 24.2, 21.5). */
+const DESKTOP_TOOL = "mcp__botloft__desktop";
+const SITE_TOOL = "mcp__botloft__browser";
 
 /** The conversation-list line for an item, like the daemon's (spec 8.3). */
 export function activityLine(
@@ -203,7 +206,7 @@ export class FakeChat {
           .reverse()
           .slice(0, limit ?? 50);
       },
-      "approvals.answer": ({ approvalId, allow, note, input, always }) => {
+      "approvals.answer": ({ approvalId, allow, note, input, always, once: onlyNow }) => {
         const approval = this.approvals.get(approvalId);
         if (!approval) {
           throw notFound(`approval ${approvalId}`);
@@ -264,6 +267,14 @@ export class FakeChat {
             this.fake.routines.handlers()["routines.create"]({ botId: runner.id, ...routine });
           }
         }
+        const once =
+          allow &&
+          onlyNow === true &&
+          (approval.toolName === DESKTOP_TOOL || approval.toolName === SITE_TOOL);
+        // A site allowed for good is kept, as the daemon keeps it (spec 21.5).
+        if (allow && !once && approval.toolName === SITE_TOOL) {
+          this.fake.sites.allow(approval.botId, approval.summary);
+        }
         // Any answer to a request for help gives the browser back (spec 21.10).
         if (approval.toolName === HELP_TOOL) {
           this.fake.browser.helped(approval.botId);
@@ -281,6 +292,7 @@ export class FakeChat {
             input: approval.input,
             status: approval.status,
             note: approval.note,
+            ...(once && { once: true }),
           });
         }
         return approval;

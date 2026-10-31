@@ -64,6 +64,8 @@ export interface AppState {
   page: Page;
   /** The chat item a search result opened, to show it (spec 8.8). */
   focus: { botId: BotId; itemId: ChatItemId } | null;
+  /** Where Settings opens the Permissions page, until it is shown (spec 15.1). */
+  permissionsAt: PermissionsAt | null;
   /**
    * When the owner last looked at each bot's chat (`seen.ts`), for unread
    * replies and failed routine runs.
@@ -85,6 +87,10 @@ export interface AppState {
   selectCrew(crewId: CrewId | null): void;
   selectBot(botId: BotId): void;
   openPage(page: Exclude<Page, null>): void;
+  /** Opens Settings on the Permissions page, at a tab and an agent. */
+  openPermissions(at: PermissionsAt): void;
+  /** The Permissions page took where to open. */
+  clearPermissionsAt(): void;
   /** Opens the bot's chat at one of its items. */
   openAt(botId: BotId, itemId: ChatItemId): void;
   setPanel(botId: BotId, panel: BotPanel | null): void;
@@ -109,6 +115,15 @@ export type AppStore = StoreApi<AppState>;
 
 /** The question box (spec 23.6), the search (spec 8.8), every routine (spec 20.9) or Settings (spec 15.1). */
 export type Page = "questions" | "search" | "routines" | "settings" | null;
+
+/** A tab of the Permissions page in Settings (spec 15.1). */
+export type PermissionsTab = "desktop" | "sites" | "rules" | "crews";
+
+export interface PermissionsAt {
+  tab: PermissionsTab;
+  /** The agent chosen; `null` for all of them. */
+  botId: BotId | null;
+}
 
 const byCreation = <T extends { createdAt: number; id: string }>(a: T, b: T) =>
   a.createdAt - b.createdAt || a.id.localeCompare(b.id);
@@ -174,6 +189,7 @@ export function createAppStore(api: BotloftApi): AppStore {
       questions: {},
       page: null,
       focus: null,
+      permissionsAt: null,
       seenAt: loadSeen(),
       seenSince: loadSeenSince(),
       replyAt: {},
@@ -194,6 +210,9 @@ export function createAppStore(api: BotloftApi): AppStore {
           set({ page, selectedCrewId: null, selectedBotId: null });
         }
       },
+      openPermissions: (at) =>
+        set({ page: "settings", selectedCrewId: null, selectedBotId: null, permissionsAt: at }),
+      clearPermissionsAt: () => set({ permissionsAt: null }),
       ...seenActions(get, set, api),
       setPanel: (botId, panel) => set((state) => ({ panels: { ...state.panels, [botId]: panel } })),
       putCrew: (crew) => set((state) => withCrew(state, crew)),

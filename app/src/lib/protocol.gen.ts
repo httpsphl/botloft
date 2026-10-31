@@ -1156,6 +1156,28 @@ export type DesktopWholeParams = { botId: BotId, level: DesktopLevel,
 acceptedRisks: boolean, };
 
 /**
+ * An app open on the owner's desktop that a bot may be given, by its
+ * executable (spec 24.2): the result of `desktop.apps`, without the ones
+ * never granted (24.3).
+ */
+export type DesktopApp = { path: string, 
+/**
+ * The app's name for people ("Microsoft Excel").
+ */
+name: string, };
+
+/**
+ * `desktop.grantApp`: the owner gives a bot an app that is open now
+ * before the bot asks (spec 24.10). Like a request allowed in the chat,
+ * it only raises the level of a grant already there.
+ */
+export type DesktopGrantAppParams = { botId: BotId, 
+/**
+ * The executable, as `desktop.apps` gave it.
+ */
+path: string, level: DesktopLevel, };
+
+/**
  * How Claude Code reaches the server.
  */
 export type McpKind = "stdio" | "http";
@@ -1275,6 +1297,39 @@ createdAt: number, };
 export type CrewAccessListParams = { botId: BotId, };
 
 export type CrewAccessIdParams = { accessId: CrewAccessId, };
+
+/**
+ * A site the owner let a bot use in its browser (spec 21.5).
+ */
+export type BrowserSite = { botId: BotId, 
+/**
+ * The host in lowercase, without `www.`; it covers its subdomains.
+ */
+site: string, 
+/**
+ * Unix time in milliseconds.
+ */
+allowedAt: number, };
+
+/**
+ * A bot's sites after one was taken away: the result of `sites.revoke`
+ * and the params of the `bot.sites` notification.
+ */
+export type BotSites = { botId: BotId, 
+/**
+ * Oldest first.
+ */
+sites: Array<BrowserSite>, };
+
+/**
+ * `sites.revoke`: the bot asks for the site again the next time.
+ */
+export type SitesRevokeParams = { botId: BotId, site: string, };
+
+/**
+ * The result of `permissions.list`: every bot's, oldest first in each list.
+ */
+export type Permissions = { desktop: Array<DesktopGrant>, sites: Array<BrowserSite>, rules: Array<AllowRule>, crewAccess: Array<CrewAccess>, };
 
 /**
  * The group a role is listed under.
@@ -1805,7 +1860,12 @@ note: string | null,
  * request cannot be allowed for good. Kept only here, like the
  * explanation.
  */
-always: AllowScope | null, };
+always: AllowScope | null, 
+/**
+ * Allowed only for the bot's turn, not saved (spec 24.2, 21.5).
+ * Kept only here, like the explanation.
+ */
+once?: boolean, };
 
 /**
  * Tokens of one turn, as the `usage` of Claude Code's `result` event: the
@@ -2083,7 +2143,13 @@ input?: string,
  * With `allow`, the bot no longer asks for what the request's
  * `always` covers (spec 10.1). Ignored for a request without one.
  */
-always?: boolean, };
+always?: boolean, 
+/**
+ * With `allow`, a request for an app on the desktop or a site in the
+ * browser holds only until the bot's turn ends, and nothing is saved
+ * (spec 24.2, 21.5). Ignored for other requests.
+ */
+once?: boolean, };
 
 /**
  * The daemon's part of the app's Settings.
@@ -2519,12 +2585,17 @@ export interface RpcMethods {
   "desktop.resume": { params: DesktopBotParams; result: DesktopState };
   "desktop.awayUses": { params: undefined; result: Array<DesktopAwayUse> };
   "desktop.dismissAway": { params: undefined; result: null };
+  "desktop.apps": { params: undefined; result: Array<DesktopApp> };
+  "desktop.grantApp": { params: DesktopGrantAppParams; result: BotDesktop };
+  "desktop.stopAll": { params: undefined; result: null };
   "mcp.servers": { params: undefined; result: McpOverview };
   "mcp.save": { params: McpSaveParams; result: McpOverview };
   "mcp.delete": { params: McpServerIdParams; result: McpOverview };
   "bot.mcp.set": { params: BotMcpSetParams; result: BotMcp };
   "crewAccess.list": { params: CrewAccessListParams; result: Array<CrewAccess> };
   "crewAccess.revoke": { params: CrewAccessIdParams; result: Array<CrewAccess> };
+  "permissions.list": { params: undefined; result: Permissions };
+  "sites.revoke": { params: SitesRevokeParams; result: BotSites };
   "catalog.list": { params: CatalogListParams; result: Array<BotTemplate> };
   "catalog.get": { params: CatalogGetParams; result: BotTemplateFull };
   "catalog.add": { params: CatalogAddParams; result: Bot };
@@ -2611,6 +2682,7 @@ export interface RpcNotifications {
   "desktop.changed": DesktopState;
   "desktop.frame": DesktopFrame;
   "desktop.away": Array<DesktopAwayUse>;
+  "bot.sites": BotSites;
   "mcp.servers": McpOverview;
   "bot.mcp": BotMcp;
   "cloud.signed_in": CloudSignedIn;

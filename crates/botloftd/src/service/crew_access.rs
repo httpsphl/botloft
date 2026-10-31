@@ -108,7 +108,7 @@ pub fn revoke(daemon: &Daemon, params: CrewAccessIdParams) -> ApiResult<Vec<Crew
     described(&store, &bot)
 }
 
-fn described(store: &Store, bot: &BotId) -> ApiResult<Vec<CrewAccess>> {
+pub(super) fn described(store: &Store, bot: &BotId) -> ApiResult<Vec<CrewAccess>> {
     store
         .crew_access(bot)?
         .into_iter()

@@ -5,14 +5,15 @@
 
 mod always;
 mod prompt;
+mod turn;
 
 use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard};
 use std::time::Duration;
 
 use botloft_core::chat::{
-    CHANGE_ROUTINE_TOOL, CREW_ACCESS_TOOL, ROUTINE_TOOL, SHOW_PLAN_TOOL, SUGGEST_TOOL, clip,
-    tool_input_max, tool_summary,
+    BROWSER_SITE_TOOL, CHANGE_ROUTINE_TOOL, CREW_ACCESS_TOOL, DESKTOP_TOOL, ROUTINE_TOOL,
+    SHOW_PLAN_TOOL, SUGGEST_TOOL, clip, tool_input_max, tool_summary,
 };
 use botloft_core::command::tool_explanation;
 use botloft_core::ids::{ApprovalId, BotId, ChatItemId};
@@ -25,6 +26,7 @@ use tokio::sync::oneshot;
 use tracing::{debug, warn};
 
 pub use self::prompt::{PromptArgs, prompt};
+pub use self::turn::{ThisTurn, forget_turns};
 use crate::chat::items;
 use crate::service::{ApiError, ApiResult};
 use crate::state::Daemon;
@@ -34,6 +36,8 @@ use crate::state::Daemon;
 #[derive(Default)]
 pub struct Approvals {
     waiting: Mutex<HashMap<ApprovalId, oneshot::Sender<Decision>>>,
+    /// What the owner allowed only for a bot's turn (spec 24.2, 21.5).
+    pub this_turn: ThisTurn,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -41,6 +45,7 @@ struct Decision {
     allow: bool,
     note: Option<String>,
     input: Option<String>,
+    once: bool,
 }
 
 /// How the owner answered a request.
@@ -49,6 +54,9 @@ pub(crate) enum Answer {
     /// `input` is the request as the owner changed it, if they did.
     Allowed {
         input: Option<String>,
+        /// Only until the bot's turn ends, for an app on the desktop or a
+        /// site (spec 24.2, 21.5): the tool saves nothing.
+        once: bool,
     },
     Denied {
         note: Option<String>,
@@ -193,12 +201,22 @@ async fn settle_after(
     }
     Some(match decision {
         Ok(Ok(Decision {
-            allow: true, input, ..
-        })) => Answer::Allowed { input },
+            allow: true,
+            input,
+            once,
+            ..
+        })) => Answer::Allowed { input, once },
         Ok(Ok(Decision { note, .. })) => Answer::Denied { note },
         // Timed out, or the answer was dropped (the process ended).
         Ok(Err(_)) | Err(_) => {
-            settle(daemon, &pending.record, ApprovalStatus::Expired, None, None);
+            settle(
+                daemon,
+                &pending.record,
+                ApprovalStatus::Expired,
+                None,
+                None,
+                false,
+            );
             Answer::Expired
         }
     })
@@ -242,7 +260,20 @@ pub fn answer(daemon: &Daemon, params: ApprovalsAnswerParams) -> ApiResult<Appro
         ),
         _ => None,
     };
-    let Some(record) = settle(daemon, &existing, status, note.as_deref(), input.as_deref()) else {
+    // Only an app on the desktop or a site may be allowed for the turn
+    // alone (spec 24.2, 21.5).
+    let once = params.allow
+        && params.once == Some(true)
+        && [DESKTOP_TOOL, BROWSER_SITE_TOOL].contains(&existing.approval.tool_name.as_str());
+    let settled = settle(
+        daemon,
+        &existing,
+        status,
+        note.as_deref(),
+        input.as_deref(),
+        once,
+    );
+    let Some(record) = settled else {
         return Err(ApiError::Conflict(format!(
             "approval {} was already answered or expired",
             params.approval_id
@@ -256,6 +287,7 @@ pub fn answer(daemon: &Daemon, params: ApprovalsAnswerParams) -> ApiResult<Appro
             allow: params.allow,
             note,
             input,
+            once,
         });
     }
     Ok(record.approval)
@@ -273,7 +305,7 @@ pub fn expire_for_bot(daemon: &Daemon, bot: &BotId) {
     };
     for record in expired {
         daemon.approvals.lock().remove(&record.approval.id);
-        show(daemon, &record);
+        show(daemon, &record, false);
     }
 }
 
@@ -321,6 +353,7 @@ fn open(
         &approval,
         tool_explanation(tool_name, input),
         always::scope_of(tool_name, input),
+        None,
     );
     let mut body = ChatBody::Approval(shown);
     crate::agent_keys::redact_body(daemon, bot, &mut body);
@@ -359,6 +392,7 @@ fn item_of(
     approval: &Approval,
     explanation: Option<String>,
     always: Option<AllowScope>,
+    once: Option<bool>,
 ) -> ApprovalItem {
     ApprovalItem {
         approval_id: approval.id.clone(),
@@ -369,6 +403,7 @@ fn item_of(
         status: approval.status,
         note: approval.note.clone(),
         always,
+        once,
     }
 }
 
@@ -380,6 +415,7 @@ fn settle(
     status: ApprovalStatus,
     note: Option<&str>,
     input: Option<&str>,
+    once: bool,
 ) -> Option<ApprovalRecord> {
     let now = daemon.clock.now_ms();
     let settled = daemon
@@ -387,7 +423,7 @@ fn settle(
         .settle_approval(&record.approval.id, status, note, input, now);
     match settled {
         Ok(Some(settled)) => {
-            show(daemon, &settled);
+            show(daemon, &settled, once);
             Some(settled)
         }
         Ok(None) => None,
@@ -398,7 +434,9 @@ fn settle(
     }
 }
 
-fn show(daemon: &Daemon, record: &ApprovalRecord) {
+/// Puts the settled request in its chat item; `once` when it was allowed
+/// for the bot's turn only.
+fn show(daemon: &Daemon, record: &ApprovalRecord, once: bool) {
     let item: &ChatItemId = &record.chat_item_id;
     // The bot's explanation and what "Allow always" covers are kept only
     // in the chat item.
@@ -407,7 +445,7 @@ fn show(daemon: &Daemon, record: &ApprovalRecord) {
         Some(ChatBody::Approval(shown)) => (shown.explanation, shown.always),
         _ => (None, None),
     };
-    let shown = item_of(&record.approval, explanation, always);
+    let shown = item_of(&record.approval, explanation, always, once.then_some(true));
     items::update(
         daemon,
         &record.approval.bot_id,
@@ -442,6 +480,7 @@ impl Drop for Guard<'_> {
             ApprovalStatus::Expired,
             None,
             None,
+            false,
         );
         if self.needs_owner {
             self.daemon
