@@ -34,6 +34,8 @@ mod keys;
 mod mcp;
 #[path = "export_mobile.rs"]
 mod mobile;
+#[path = "export_permissions.rs"]
+mod permissions;
 #[path = "export_questions.rs"]
 mod questions;
 #[path = "export_reactions.rs"]
@@ -210,6 +212,7 @@ fn export_bindings() {
     desktop::decls(&mut out);
     mcp::decls(&mut out);
     crew_access::decls(&mut out);
+    permissions::decls(&mut out);
     catalog::decls(&mut out);
     backup::decls(&mut out);
     cloud::decls(&mut out);
@@ -417,6 +420,7 @@ fn export_bindings() {
     desktop::methods(&mut out);
     mcp::methods(&mut out);
     crew_access::methods(&mut out);
+    permissions::methods(&mut out);
     catalog::methods(&mut out);
     backup::methods(&mut out);
     cloud::methods(&mut out);
@@ -475,6 +479,7 @@ fn export_bindings() {
     reactions::notifications(&mut out);
     rules::notifications(&mut out);
     desktop::notifications(&mut out);
+    permissions::notifications(&mut out);
     mcp::notifications(&mut out);
     cloud::notifications(&mut out);
     mobile::notifications(&mut out);

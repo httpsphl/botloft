@@ -177,7 +177,7 @@ async fn run(daemon: &Daemon, me: &BotId, generation: u64, args: Value) -> Resul
         "why": why,
     });
     match approvals::ask(daemon, me, generation, CREW_ACCESS_TOOL, &input, "").await {
-        Some(Answer::Allowed { input }) => {
+        Some(Answer::Allowed { input, .. }) => {
             let scope = match input {
                 Some(answer) => {
                     serde_json::from_str::<Answered>(&answer)

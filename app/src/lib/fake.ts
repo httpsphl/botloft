@@ -15,6 +15,7 @@ import { FakeConversation } from "./fakeConversation";
 import { FakeCrewAccess } from "./fakeCrewAccess";
 import { crewHandlers } from "./fakeCrews";
 import { FakeDesktop } from "./fakeDesktop";
+import { FakeSites } from "./fakePermissions";
 import { FakeFiles } from "./fakeFiles";
 import { islandHandlers } from "./fakeIsland";
 import { FakeKeys } from "./fakeKeys";
@@ -94,6 +95,7 @@ export class FakeBotloft implements BotloftApi {
   readonly allow = new FakeAllow(this);
   readonly crewAccess = new FakeCrewAccess(this);
   readonly desktop = new FakeDesktop(this);
+  readonly sites = new FakeSites(this);
   readonly mcp = new FakeMcp(this);
   /** The language the app last told, as the daemon keeps it (spec 24.7). */
   locale: string | null = null;
@@ -318,6 +320,7 @@ export class FakeBotloft implements BotloftApi {
     ...this.allow.handlers(),
     ...this.crewAccess.handlers(),
     ...this.desktop.handlers(),
+    ...this.sites.handlers(),
     ...this.mcp.handlers(),
     ...this.conversation.handlers(),
     ...this.files.handlers(),

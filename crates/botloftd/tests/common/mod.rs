@@ -251,6 +251,7 @@ impl TestDaemon {
         }
         // The phone's relay waits until a phone is wanted (spec 28).
         tokio::spawn(botloftd::mobile::run(Arc::clone(&parts.daemon)));
+        tokio::spawn(botloftd::approvals::forget_turns(Arc::clone(&parts.daemon)));
         tokio::spawn(server::serve(
             Arc::clone(&parts.daemon),
             listener,

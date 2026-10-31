@@ -149,6 +149,7 @@ mod tests {
                 status: ApprovalStatus::Pending,
                 note: None,
                 always: None,
+                once: None,
             }),
             created_at: 10,
             updated_at: 10,
