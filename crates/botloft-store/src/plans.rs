@@ -51,6 +51,15 @@ fn hot_queries_use_an_index() {
          GROUP BY json_extract(data, '$.file') ORDER BY MAX(rowid) DESC LIMIT ?2",
     );
     assert!(written.contains("chat_items_tool_file"), "{written}");
+    // agent_keys.rs: open_key_request_items, read on every change that waits.
+    let keys = plan(
+        conn,
+        "SELECT id FROM chat_items \
+         WHERE kind = 'key_request' AND json_extract(data, '$.status') = 'open' \
+         ORDER BY created_at, rowid",
+    );
+    assert!(keys.contains("chat_items_key_requests"), "{keys}");
+    assert!(!keys.contains("TEMP B-TREE"), "{keys}");
     // messages.rs: task_request.
     assert_indexed(
         conn,

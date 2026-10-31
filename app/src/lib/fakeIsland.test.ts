@@ -24,6 +24,39 @@ describe("the fake's island methods", () => {
     expect(cards.questions.map((card) => card.text)).toEqual(["Coffee?"]);
   });
 
+  it("lists the open requests for a key apart, until saved or dismissed", async () => {
+    const fake = new FakeBotloft();
+    const ops = fake.addCrew("Ops");
+    const scout = fake.addBot(ops.id, "Scout", "Finds sources");
+    const github = fake.keys.ask(scout.id, "GITHUB_TOKEN", "To open the pull request");
+    fake.now += 1000;
+    const stripe = fake.keys.ask(scout.id, "STRIPE_KEY", "To read the invoices");
+
+    const cards = await fake.call("cards.list");
+    expect(cards.keys).toEqual([
+      {
+        requestId: github.id,
+        bot: { id: scout.id, name: "Scout", color: scout.color },
+        crew: "Ops",
+        createdAt: github.createdAt,
+        name: "GITHUB_TOKEN",
+        why: "To open the pull request",
+      },
+      expect.objectContaining({ requestId: stripe.id, name: "STRIPE_KEY" }),
+    ]);
+    expect(cards.approvals).toEqual([]);
+    expect(cards.questions).toEqual([]);
+
+    await fake.call("keys.set", {
+      botId: scout.id,
+      name: "GITHUB_TOKEN",
+      value: "test-value-1",
+      requestId: github.id,
+    });
+    await fake.call("keys.dismiss", { requestId: stripe.id });
+    expect((await fake.call("cards.list")).keys).toEqual([]);
+  });
+
   it("counts the edits and the time in turns since the start of the day", async () => {
     const fake = new FakeBotloft();
     const ops = fake.addCrew("Ops");

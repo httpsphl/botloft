@@ -88,7 +88,9 @@ fn plan_text(plan: &Value) -> String {
     text
 }
 
-fn bot_and_crew(daemon: &Daemon, bot: &botloft_core::ids::BotId) -> Option<(CardBot, String)> {
+/// Who asks, as a card shows it, and the crew's name; `None` for a bot that
+/// is archived or gone.
+pub fn bot_and_crew(daemon: &Daemon, bot: &botloft_core::ids::BotId) -> Option<(CardBot, String)> {
     let store = daemon.store();
     let record = match store.bot(bot) {
         Ok(Some(record)) if record.archived_at.is_none() => record,

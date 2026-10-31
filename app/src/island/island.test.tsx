@@ -120,6 +120,36 @@ describe("the island", () => {
     await waitFor(() => expect(calls).toContain(`open ${scout.id}`));
   });
 
+  test("a request for a key counts on the pill and only opens Botloft", async () => {
+    const { fake, scout } = crew();
+    const request = fake.keys.ask(scout.id, "GITHUB_TOKEN", "To open the pull request");
+    const { host, calls } = fakeHost();
+    render(<IslandApp api={fake} host={host} />);
+    expect(await screen.findByRole("button", { name: "1 waiting" })).toBeDefined();
+    const island = await openPanel();
+    expect(within(island).getByText("Scout needs a key")).toBeDefined();
+    expect(within(island).getByText("Needs you in Botloft")).toBeDefined();
+    expect(within(island).getByText("GITHUB_TOKEN")).toBeDefined();
+    expect(within(island).getByText("To open the pull request")).toBeDefined();
+    // The key is pasted in the chat's card, never here.
+    expect(within(island).queryByRole("button", { name: "Allow" })).toBeNull();
+    expect(within(island).queryByRole("button", { name: "Deny" })).toBeNull();
+    expect(island.querySelector("input")).toBeNull();
+    fireEvent.click(within(island).getByRole("button", { name: "Open in Botloft" }));
+    await waitFor(() => expect(calls).toContain(`open ${scout.id}`));
+
+    // Saved in the chat, it leaves the island.
+    await act(async () => {
+      await fake.call("keys.set", {
+        botId: scout.id,
+        name: "GITHUB_TOKEN",
+        value: "test-value-1",
+        requestId: request.id,
+      });
+    });
+    await waitFor(() => expect(within(island).queryByText("GITHUB_TOKEN")).toBeNull());
+  });
+
   test("what came while the connection was away shows once it is back", async () => {
     const { fake, scout, writer } = crew();
     fake.setBotState(writer.id, "busy");

@@ -26,7 +26,7 @@ const signedOut = (bots: Record<string, Bot>) =>
 export function HomeView() {
   const t = useT();
   const words = t.home;
-  const { requests, drop } = useRequests();
+  const { requests, keys, drop } = useRequests();
   // Oldest first, like the requests they sit with.
   const questions = [...useApp(openQuestions)].reverse();
   const dead = useApp(useShallow(actionableDead));
@@ -35,7 +35,8 @@ export function HomeView() {
   const unread = useUnread();
   const crews = orderedCrews(useApp(useShallow(crewList)), useCrewOrder());
   const [creating, setCreating] = useState(false);
-  const waiting = (requests?.length ?? 0) + questions.length + dead.length + out.length;
+  const waiting =
+    (requests?.length ?? 0) + (keys?.length ?? 0) + questions.length + dead.length + out.length;
 
   return (
     <section aria-label={words.label} className="flex min-h-0 flex-1 flex-col">
@@ -62,6 +63,7 @@ export function HomeView() {
               <NeedsYou
                 requests={requests}
                 questions={questions}
+                keys={keys ?? []}
                 dead={dead}
                 signedOut={out}
                 onAnswered={drop}

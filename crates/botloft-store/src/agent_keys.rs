@@ -2,9 +2,10 @@
 //! are in `secrets\keys`, never here.
 
 use botloft_core::ids::BotId;
-use botloft_core::protocol::AgentKey;
+use botloft_core::protocol::{AgentKey, ChatItem};
 use rusqlite::params;
 
+use crate::chat::{COLUMNS, from_row};
 use crate::{Result, Store};
 
 impl Store {
@@ -56,6 +57,19 @@ impl Store {
         Ok(u32::try_from(open).unwrap_or(u32::MAX))
     }
 
+    /// Every bot's requests for a key the owner has not answered, oldest
+    /// first: what the home and the island list (spec 32.5). Read through
+    /// the index of migration 0033, which holds only these.
+    pub fn open_key_request_items(&self) -> Result<Vec<ChatItem>> {
+        let mut stmt = self.conn.prepare_cached(&format!(
+            "SELECT {COLUMNS} FROM chat_items \
+             WHERE kind = 'key_request' AND json_extract(data, '$.status') = 'open' \
+             ORDER BY created_at, rowid"
+        ))?;
+        let rows = stmt.query_map([], from_row)?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
     /// Whether there was such a key.
     pub fn delete_agent_key(&self, bot: &BotId, name: &str) -> Result<bool> {
         let gone = self.conn.execute(
@@ -68,7 +82,53 @@ impl Store {
 
 #[cfg(test)]
 mod tests {
+    use botloft_core::ids::{BotId, ChatItemId};
+    use botloft_core::protocol::{ChatBody, ChatItem, KeyRequestItem, KeyRequestStatus};
+
     use crate::tests::Fixture;
+
+    fn request(name: &str, status: KeyRequestStatus) -> ChatBody {
+        ChatBody::KeyRequest(KeyRequestItem {
+            name: name.into(),
+            why: "To open the pull request".into(),
+            status,
+        })
+    }
+
+    #[test]
+    fn open_requests_for_a_key_come_from_every_bot_oldest_first() {
+        let fx = Fixture::new();
+        let ask = |bot: &BotId, body: ChatBody, at: i64| {
+            let id = ChatItemId::generate();
+            fx.store
+                .insert_chat_item(&ChatItem {
+                    id: id.clone(),
+                    bot_id: bot.clone(),
+                    body,
+                    created_at: at,
+                    updated_at: at,
+                })
+                .expect("insert");
+            id
+        };
+        let (scout, writer) = (&fx.bots[0].id, &fx.bots[1].id);
+        let newer = ask(scout, request("B_KEY", KeyRequestStatus::Open), 20);
+        let older = ask(writer, request("A_KEY", KeyRequestStatus::Open), 10);
+        ask(scout, request("C_KEY", KeyRequestStatus::Saved), 5);
+        ask(writer, request("D_KEY", KeyRequestStatus::Dismissed), 6);
+        let open = || -> Vec<ChatItemId> {
+            let items = fx.store.open_key_request_items().expect("open");
+            items.into_iter().map(|item| item.id).collect()
+        };
+        assert_eq!(open(), [older.clone(), newer.clone()]);
+        assert_eq!(fx.store.open_key_requests(scout).expect("count"), 1);
+
+        // Answered, a request leaves the list.
+        fx.store
+            .update_chat_item(&newer, &request("B_KEY", KeyRequestStatus::Saved), 30)
+            .expect("saved");
+        assert_eq!(open(), [older]);
+    }
 
     #[test]
     fn names_are_kept_and_a_new_value_keeps_the_description() {

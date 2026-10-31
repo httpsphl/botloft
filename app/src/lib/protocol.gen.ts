@@ -1687,10 +1687,38 @@ export type ToPhone = { "t": "snapshot", approvals: Array<ApprovalCard>, questio
 export type FromPhone = { "t": "sync" } | { "t": "approval.answer", approvalId: ApprovalId, allow: boolean, note?: string, } | { "t": "question.answer", questionId: QuestionId, answer: string, } | { "t": "question.dismiss", questionId: QuestionId, } | { "t": "chats" } | { "t": "history", req: number, botId: BotId, before?: ChatItemId, } | { "t": "send", clientId: string, botId: BotId, text: string, } | { "t": "watch", botId?: BotId, };
 
 /**
- * Every request and question waiting for the owner, oldest first, as the
- * phone sees them (spec 31.5, 28.5).
+ * A bot's open request for a key, as the home and the island list it: who
+ * asks, for which key and why. It is answered only in the chat's card.
  */
-export type Cards = { approvals: Array<ApprovalCard>, questions: Array<QuestionCard>, };
+export type KeyCard = { 
+/**
+ * The request's id, which is the chat item's (spec 32.9).
+ */
+requestId: ChatItemId, bot: CardBot, crew: string, 
+/**
+ * Unix time in milliseconds.
+ */
+createdAt: number, 
+/**
+ * The key's name, as in spec 32.3.
+ */
+name: string, 
+/**
+ * What the bot needs it for, in its own words.
+ */
+why: string, };
+
+/**
+ * Every request and question waiting for the owner, oldest first, as the
+ * phone sees them (spec 31.5, 28.5), and the bots' requests for a key,
+ * which only the app sees (spec 32.5).
+ */
+export type Cards = { approvals: Array<ApprovalCard>, questions: Array<QuestionCard>, 
+/**
+ * The open requests for a key, oldest first. The phone never gets
+ * them: the key is pasted in the chat's card, at the computer.
+ */
+keys: Array<KeyCard>, };
 
 /**
  * Params of `activity.today`.

@@ -43,6 +43,18 @@ describe("when the island comes down", () => {
     );
   });
 
+  test("comes down for a new request for a key, which changes no agent's state", async () => {
+    const { fake, scout } = await working();
+    act(() => {
+      fake.keys.ask(scout.id, "GITHUB_TOKEN", "To open the pull request");
+    });
+    const island = await screen.findByRole("region", { name: LABEL });
+    expect(await within(island).findByText("Scout needs a key")).toBeDefined();
+    expect(within(island).getByRole("tab", { name: "Home" }).getAttribute("aria-selected")).toBe(
+      "true",
+    );
+  });
+
   test("what waited when it started is no news: it stays a pill", async () => {
     const fake = new FakeBotloft();
     const ops = fake.addCrew("Ops");

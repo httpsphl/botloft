@@ -9,7 +9,7 @@ use rusqlite::{Connection, OptionalExtension, Row, params};
 
 use crate::{Result, Store, cached_execute, cached_row, parse_column};
 
-const COLUMNS: &str = "id, bot_id, data, created_at, updated_at";
+pub(crate) const COLUMNS: &str = "id, bot_id, data, created_at, updated_at";
 
 pub(crate) fn from_row(row: &Row<'_>) -> rusqlite::Result<ChatItem> {
     let data: String = row.get(2)?;

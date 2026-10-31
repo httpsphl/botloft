@@ -99,6 +99,34 @@ describe("the home", () => {
     expect(within(page).getByText("Nothing waits for you")).toBeDefined();
   });
 
+  test("a request for a key says who asks and why, and only opens the chat", async () => {
+    const { fake, scout, writer } = crew();
+    const request = fake.keys.ask(scout.id, "GITHUB_TOKEN", "To open the pull request");
+    renderApp(fake);
+    const page = await screen.findByRole("region", { name: "Home" });
+    const card = await within(page).findByRole("region", { name: "Scout needs a key" });
+    expect(within(card).getByText("Needs a key")).toBeDefined();
+    expect(within(card).getByText("GITHUB_TOKEN")).toBeDefined();
+    expect(within(card).getByText("To open the pull request")).toBeDefined();
+    // The key is pasted only in the chat's card: nothing to type here.
+    expect(card.querySelector("input")).toBeNull();
+    expect(screen.getByText("1 thing waits for you")).toBeDefined();
+
+    // Answered in the chat, it goes; one that comes while the home is open shows.
+    await act(async () => {
+      await fake.call("keys.dismiss", { requestId: request.id });
+    });
+    await waitFor(() =>
+      expect(within(page).queryByRole("region", { name: "Scout needs a key" })).toBeNull(),
+    );
+    act(() => {
+      fake.keys.ask(writer.id, "STRIPE_KEY", "To read the invoices");
+    });
+    const next = await within(page).findByRole("region", { name: "Writer needs a key" });
+    fireEvent.click(within(next).getByRole("button", { name: "Open in the chat" }));
+    expect(await screen.findByRole("heading", { level: 1, name: "Writer" })).toBeDefined();
+  });
+
   test("messages not delivered and a signed-out agent wait there too", async () => {
     const { fake, scout, writer } = crew();
     const { delivery } = fake.conversation.say({ from: scout.id, to: writer.id, body: "lost" });

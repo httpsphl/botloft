@@ -1,5 +1,6 @@
 // Dev only: the island over a fake desktop (`pnpm dev`, then
-// /island.html), with a fake daemon where two agents wait and one works.
+// /island.html), with a fake daemon where two agents wait and one works and
+// asks for a key.
 
 import { FakeBotloft } from "../lib/fake";
 import { FakeIslandHost } from "./fakeHost";
@@ -25,6 +26,11 @@ export function islandPreview(): { api: FakeBotloft; host: FakeIslandHost } {
     "Hoje",
     "Esperar",
   ]);
+  fake.keys.ask(
+    writer.id,
+    "SHEETS_API_KEY",
+    "Para ler a planilha de vendas da semana e montar o gráfico do relatório.",
+  );
   fake.chat.ask(
     scout.id,
     "Bash",

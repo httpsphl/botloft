@@ -1,13 +1,15 @@
 //! What the island reads (spec 31): the cards that wait for the owner, as
-//! the phone sees them but with no account, and what the crews did today.
+//! the phone sees them but with no account, the requests for a key, which
+//! only the app sees, and what the crews did today.
 
 mod common;
 
 use std::time::Duration;
 
-use botloft_core::protocol::BotState;
+use botloft_core::protocol::{BotState, FromPhone, ToPhone};
 use common::bots::ready_bot;
 use common::mcp::Mcp;
+use common::mobile::{connect_phone, setup};
 use common::{Client, TestDaemon, stream};
 use serde_json::{Value, json};
 
@@ -59,6 +61,26 @@ async fn cards_when(app: &mut Client, approvals: usize, questions: usize) -> Val
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
     panic!("expected {approvals} requests and {questions} questions, got {cards}");
+}
+
+/// `cards.list` once it has `keys` requests for a key.
+async fn keys_when(app: &mut Client, keys: usize) -> Value {
+    let mut cards = Value::Null;
+    for _ in 0..200 {
+        cards = app.call("cards.list", json!({})).await.expect("cards");
+        if cards["keys"].as_array().map_or(0, Vec::len) == keys {
+            return cards;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    panic!("expected {keys} requests for a key, got {cards}");
+}
+
+/// The bot asks the owner for the key `name`, as `ask_key` does.
+async fn ask_key(mcp: &mut Mcp, name: &str, why: &str) {
+    mcp.tool("ask_key", json!({ "name": name, "why": why }))
+        .await
+        .expect("asked");
 }
 
 #[tokio::test]
@@ -130,6 +152,82 @@ async fn the_island_sees_what_waits_as_the_phone_does_without_an_account() {
     .await
     .expect("deny");
     assert_eq!(second.await.expect("task")["behavior"], "deny");
+}
+
+#[tokio::test]
+async fn a_request_for_a_key_waits_for_the_app_until_saved_or_dismissed() {
+    let t = TestDaemon::start_supervised().await;
+    let mut app = t.session().await;
+    let crew = app
+        .call("crews.create", json!({ "name": "Ops" }))
+        .await
+        .expect("crew");
+    let (bot, _process, mut mcp) = ready_bot(&t, &mut app, &crew, "Lead").await;
+    ask_key(&mut mcp, "GITHUB_TOKEN", "To open the pull request").await;
+    ask_key(&mut mcp, "STRIPE_KEY", "To read the invoices").await;
+
+    let cards = keys_when(&mut app, 2).await;
+    let keys = cards["keys"].as_array().expect("keys");
+    // Oldest first, with who asks, for which key and why.
+    assert_eq!(keys[0]["name"], "GITHUB_TOKEN");
+    assert_eq!(keys[0]["why"], "To open the pull request");
+    assert_eq!(keys[0]["bot"]["id"], bot["id"]);
+    assert_eq!(keys[0]["bot"]["name"], "Lead");
+    assert_eq!(keys[0]["crew"], "Ops");
+    assert_eq!(keys[1]["name"], "STRIPE_KEY");
+    let first = keys[0]["requestId"].as_str().expect("id");
+    assert!(first.starts_with("cht_"), "{first}");
+    // Nothing to allow or answer there: it is not a permission or a question.
+    assert_eq!(
+        (cards["approvals"].clone(), cards["questions"].clone()),
+        (json!([]), json!([]))
+    );
+
+    // Saved through the request, it leaves; "not now" takes the other.
+    app.call(
+        "keys.set",
+        json!({
+            "botId": bot["id"],
+            "name": "GITHUB_TOKEN",
+            "value": "test-value-1234567890",
+            "requestId": first,
+        }),
+    )
+    .await
+    .expect("saved");
+    let cards = keys_when(&mut app, 1).await;
+    assert_eq!(cards["keys"][0]["name"], "STRIPE_KEY");
+    app.call(
+        "keys.dismiss",
+        json!({ "requestId": cards["keys"][0]["requestId"] }),
+    )
+    .await
+    .expect("dismissed");
+    keys_when(&mut app, 0).await;
+}
+
+#[tokio::test]
+async fn a_request_for_a_key_never_reaches_the_phone() {
+    let (cloud, t, mut app) = setup().await;
+    let mut phone = connect_phone(&cloud, &mut app).await;
+    let crew = app
+        .call("crews.create", json!({ "name": "Ops" }))
+        .await
+        .expect("crew");
+    let (_, _process, mut mcp) = ready_bot(&t, &mut app, &crew, "Scout").await;
+    ask_key(&mut mcp, "GITHUB_TOKEN", "To open the pull request").await;
+    keys_when(&mut app, 1).await;
+
+    // No card comes, and none is there when the phone asks what waits.
+    phone.quiet().await;
+    phone.send(&FromPhone::Sync).await;
+    match phone.next().await {
+        ToPhone::Snapshot {
+            approvals,
+            questions,
+        } => assert!(approvals.is_empty() && questions.is_empty()),
+        other => panic!("{other:?}"),
+    }
 }
 
 #[tokio::test]

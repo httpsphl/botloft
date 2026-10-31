@@ -1,16 +1,17 @@
-// What the island shows (spec 31.5): the requests and questions waiting,
-// oldest first, read as the home reads them (`useRequests`), and the agents
-// at work with their crews, read again 200 ms after the daemon says
-// something that may change them.
+// What the island shows (spec 31.5): the requests, questions and requests
+// for a key waiting, oldest first, read as the home reads them
+// (`useRequests`), and the agents at work with their crews, read again
+// 200 ms after the daemon says something that may change them.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRequests } from "../features/home/useRequests";
 import type { BotloftApi } from "../lib/api";
-import type { ApprovalCard, Bot, Crew, QuestionCard } from "../lib/protocol.gen";
+import type { ApprovalCard, Bot, Crew, KeyCard, QuestionCard } from "../lib/protocol.gen";
 
 export type Waiting =
   | { kind: "approval"; id: string; card: ApprovalCard }
-  | { kind: "question"; id: string; card: QuestionCard };
+  | { kind: "question"; id: string; card: QuestionCard }
+  | { kind: "key"; id: string; card: KeyCard };
 
 /** How long the island waits for more news before reading again. */
 const SETTLE_MS = 200;
@@ -89,12 +90,13 @@ export function useWaiting(api: BotloftApi): {
       id: card.questionId,
       card,
     })),
+    ...(cards.keys ?? []).map((card) => ({ kind: "key" as const, id: card.requestId, card })),
   ].sort((a, b) => a.card.createdAt - b.card.createdAt);
   const working = bots.filter((bot) => bot.state === "busy");
   const crews = new Map(crewList.map((crew) => [crew.id, crew.name]));
   return {
     waiting,
-    loaded: cards.requests !== null && cards.questions !== null,
+    loaded: cards.requests !== null && cards.questions !== null && cards.keys !== null,
     working,
     bots,
     crews,
