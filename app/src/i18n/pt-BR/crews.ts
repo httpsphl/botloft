@@ -123,6 +123,8 @@ export const crews: Messages["crews"] = {
     emptyHint:
       "Um agente é uma sessão do Claude Code que fica sempre rodando, com pasta e função próprias.",
     noRole: "Sem função ainda.",
+    lastActive: (when: string) => `Última atividade: ${when}`,
+    nothingYet: "Nada feito ainda",
   },
   tasks: {
     show: "Mostrar",
