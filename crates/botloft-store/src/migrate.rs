@@ -42,6 +42,10 @@ const MIGRATIONS: &[(u32, &str)] = &[
     (30, include_str!("../migrations/0030_crew_auto_mode.sql")),
     (31, include_str!("../migrations/0031_bot_plan_first.sql")),
     (32, include_str!("../migrations/0032_agent_keys.sql")),
+    (
+        33,
+        include_str!("../migrations/0033_key_requests_index.sql"),
+    ),
 ];
 
 /// Schema version after every migration has run.

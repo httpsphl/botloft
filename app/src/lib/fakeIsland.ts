@@ -1,9 +1,10 @@
 // The fake daemon's island methods (spec 31): the cards that wait, built
-// from the fake chat and questions with the phone's rules (28.5), and what
-// the crews did since a moment, counted like the daemon's `today.rs`.
+// from the fake chat and questions with the phone's rules (28.5), the open
+// requests for a key (32.5), and what the crews did since a moment, counted
+// like the daemon's `today.rs`.
 
 import type { FakeBotloft, Handlers } from "./fake";
-import type { ApprovalCard, BusyBot, QuestionCard } from "./protocol.gen";
+import type { ApprovalCard, BusyBot, KeyCard, QuestionCard } from "./protocol.gen";
 
 /** The longest text a card shows whole (the daemon's `CARD_TEXT_MAX`). */
 const CARD_TEXT_MAX = 8 * 1024;
@@ -54,7 +55,17 @@ export function islandHandlers(fake: FakeBotloft): Pick<Handlers, "cards.list" |
   return {
     "cards.list": () => {
       const approvals: ApprovalCard[] = [];
+      const keys: KeyCard[] = [];
       for (const item of fake.chat.items) {
+        if (item.body.kind === "key_request" && item.body.status === "open") {
+          keys.push({
+            requestId: item.id,
+            ...who(item.botId),
+            createdAt: item.createdAt,
+            name: item.body.name,
+            why: item.body.why,
+          });
+        }
         if (item.body.kind !== "approval" || item.body.status !== "pending") {
           continue;
         }
@@ -81,7 +92,11 @@ export function islandHandlers(fake: FakeBotloft): Pick<Handlers, "cards.list" |
         }));
       const oldest = (a: { createdAt: number }, b: { createdAt: number }) =>
         a.createdAt - b.createdAt;
-      return { approvals: approvals.sort(oldest), questions: questions.sort(oldest) };
+      return {
+        approvals: approvals.sort(oldest),
+        questions: questions.sort(oldest),
+        keys: keys.sort(oldest),
+      };
     },
     "activity.today": ({ since }) => {
       const tasks = [...fake.conversation.tasks.values()].filter((task) => task.updatedAt >= since);

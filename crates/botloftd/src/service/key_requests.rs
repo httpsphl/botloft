@@ -6,12 +6,14 @@
 use botloft_core::ids::{BotId, ChatItemId, MessageId};
 use botloft_core::keys;
 use botloft_core::protocol::{
-    ChatBody, KeyRequestItem, KeyRequestStatus, KeysDismissParams, Message, MessageKind, SenderKind,
+    ChatBody, KeyCard, KeyRequestItem, KeyRequestStatus, KeysDismissParams, Message, MessageKind,
+    SenderKind,
 };
 use tracing::warn;
 
 use super::{ApiError, ApiResult, bots, messages};
 use crate::chat::items;
+use crate::mobile::cards::bot_and_crew;
 use crate::state::Daemon;
 
 /// Requests a bot may leave open at once.
@@ -50,6 +52,36 @@ pub fn ask(daemon: &Daemon, bot: &BotId, name: &str, why: &str) -> ApiResult<Cha
     )
     .ok_or_else(|| ApiError::Conflict("could not save the request".to_owned()))?;
     Ok(item.id)
+}
+
+/// Every open request of a bot that is not archived, oldest first, for the
+/// home and the island (spec 32.5). Only the app gets these: the phone's
+/// cards come from `mobile::cards::waiting`, which leaves them out.
+pub fn waiting(daemon: &Daemon) -> Vec<KeyCard> {
+    let items = match daemon.store().open_key_request_items() {
+        Ok(items) => items,
+        Err(err) => {
+            warn!("could not read the open requests for a key: {err}");
+            return Vec::new();
+        }
+    };
+    items
+        .into_iter()
+        .filter_map(|item| {
+            let ChatBody::KeyRequest(request) = item.body else {
+                return None;
+            };
+            let (bot, crew) = bot_and_crew(daemon, &item.bot_id)?;
+            Some(KeyCard {
+                request_id: item.id,
+                bot,
+                crew,
+                created_at: item.created_at,
+                name: request.name,
+                why: request.why,
+            })
+        })
+        .collect()
 }
 
 /// The open request `id` of `bot`, if it asks for `name`.

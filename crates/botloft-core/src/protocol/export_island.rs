@@ -5,6 +5,7 @@ use super::Out;
 
 /// After the mobile cards, which `Cards` holds.
 pub(super) fn decls(out: &mut Out) {
+    out.decl::<KeyCard>();
     out.decl::<Cards>();
     out.decl::<ActivityTodayParams>();
     out.decl::<BusyBot>();
