@@ -32,23 +32,35 @@ let lastDead: {
   dead: Delivery[];
 } | null = null;
 
-/** Title-bar button for messages that were not delivered, with a list to retry them. */
+/**
+ * Title-bar button for messages that were not delivered, with a list to
+ * retry them. It says so in red until the owner opens the list; then it
+ * stays as a quiet count, until another one fails.
+ */
 export function FailedDeliveries() {
   const t = useT();
   const dead = useApp(useShallow(actionableDead));
   const [open, setOpen] = useState(false);
+  const [seen, setSeen] = useState<ReadonlySet<string>>(() => new Set());
   if (dead.length === 0) {
     return null;
   }
+  const label = t.messages.failed.button(dead.length);
+  const fresh = dead.some((delivery) => !seen.has(delivery.id));
   return (
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
-        className="mr-1 flex h-7 items-center gap-1.5 px-2 font-medium text-danger text-xs hover:bg-sunken"
+        aria-label={label}
+        title={label}
+        onClick={() => {
+          setSeen(new Set(dead.map((delivery) => delivery.id)));
+          setOpen(true);
+        }}
+        className={`mr-1 flex h-7 items-center gap-1.5 px-2 font-medium text-xs tabular-nums hover:bg-sunken ${fresh ? "text-danger" : "text-muted hover:text-ink"}`}
       >
         <CircleX aria-hidden size={13} />
-        {t.messages.failed.button(dead.length)}
+        <span aria-hidden>{fresh ? label : dead.length}</span>
       </button>
       {open && <FailedDialog dead={dead} onClose={() => setOpen(false)} />}
     </>

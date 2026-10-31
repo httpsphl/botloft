@@ -54,7 +54,7 @@ export const Conversation = memo(function Conversation({ bot, crew }: { bot: Bot
             </span>
             {activity && (
               <time
-                className={`shrink-0 text-xs ${unread ? "font-semibold text-accent-text" : "text-muted"}`}
+                className="shrink-0 text-muted text-xs"
                 dateTime={new Date(activity.at).toISOString()}
               >
                 {when(activity.at)}

@@ -116,6 +116,31 @@ describe("messages", () => {
     expect(host.attention).toBe(false);
   });
 
+  test("the title bar says it in red until the list is seen, then keeps a quiet count", async () => {
+    const { fake, lead, writer } = crew();
+    const lost = (body: string) => {
+      const { delivery } = fake.conversation.say({ from: lead.id, to: writer.id, body });
+      fake.conversation.deliver(delivery.id, "dead", "the agent's inbox did not answer");
+    };
+    lost("lost note");
+    renderApp(fake);
+    const loud = await screen.findByRole("button", { name: "1 not delivered" });
+    expect(loud.textContent).toBe("1 not delivered");
+    expect(loud.className).toContain("text-danger");
+
+    fireEvent.click(loud);
+    const dialog = screen.getByRole("dialog", { name: "Messages not delivered" });
+    fireEvent.click(within(dialog).getAllByRole("button", { name: "Close" })[0] as HTMLElement);
+    const quiet = screen.getByRole("button", { name: "1 not delivered" });
+    expect(quiet.textContent).toBe("1");
+    expect(quiet.className).not.toContain("text-danger");
+
+    // Another one fails: it speaks up again.
+    act(() => lost("another note"));
+    const again = await screen.findByRole("button", { name: "2 not delivered" });
+    expect(again.textContent).toBe("2 not delivered");
+  });
+
   test("a dead delivery shows in the timeline with a retry", async () => {
     const { fake, lead, writer } = crew();
     const { delivery } = fake.conversation.say({ from: lead.id, to: writer.id, body: "stuck" });
