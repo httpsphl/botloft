@@ -1,0 +1,169 @@
+/* A bot's reply (features/chat/Markdown.tsx), set for reading long text:
+   lines stop near 85 characters (about as wide as the owner's bubble),
+   each title opens a section with room above it, and what the bot titles
+   or bolds is brighter than the text around it. */
+@layer components {
+  .chat-md {
+    max-width: 40em;
+    overflow-wrap: anywhere;
+    line-height: 1.65;
+    color: var(--ink-soft);
+  }
+
+  .chat-md > * {
+    margin-top: 0.85em;
+  }
+
+  .chat-md :is(h1, h2, h3, h4, strong, th, [data-title]) {
+    color: var(--ink);
+  }
+
+  .chat-md :is(h1, h2, h3, h4) {
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+  }
+
+  .chat-md h1 {
+    font-size: 1.25em;
+  }
+
+  .chat-md h2 {
+    font-size: 1.125em;
+  }
+
+  /* A title, or a line that is only bold words, opens a section: room
+     above it, and close to what it titles. */
+  .chat-md > :is(h1, h2, h3, h4, [data-title]) {
+    margin-top: 1.6em;
+  }
+
+  .chat-md > :is(h1, h2, h3, h4, [data-title]) + * {
+    margin-top: 0.4em;
+  }
+
+  /* The big titles split a long reply into parts. */
+  .chat-md > :is(h1, h2) {
+    padding-top: 1em;
+    border-top: 1px solid var(--line);
+  }
+
+  /* The reply's first block starts at the top. The reply being written
+     comes in two parts (BotRun's Draft): the second goes on from the first. */
+  .chat-md:not(.chat-draft > .chat-md + .chat-md) > :first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .chat-md :is(ul, ol) {
+    padding-left: 1.5em;
+  }
+
+  .chat-md ul {
+    list-style: disc;
+  }
+
+  .chat-md :is(ul, ol) ul {
+    list-style: circle;
+  }
+
+  .chat-md ol {
+    list-style: decimal;
+  }
+
+  .chat-md li {
+    padding-left: 0.2em;
+  }
+
+  .chat-md li::marker {
+    color: var(--muted);
+  }
+
+  .chat-md ol > li::marker {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .chat-md li + li {
+    margin-top: 0.4em;
+  }
+
+  .chat-md li > :is(ul, ol, p + p) {
+    margin-top: 0.35em;
+  }
+
+  .chat-md :not(pre) > code {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    color: var(--ink);
+    background: var(--sunken);
+    padding: 0.1em 0.35em;
+    border-radius: 5px;
+  }
+
+  .chat-md pre {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--ink);
+    background: var(--sunken);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 0.75em 1em;
+    overflow-x: auto;
+    overflow-wrap: normal;
+  }
+
+  .chat-md blockquote {
+    border-left: 3px solid var(--line-strong);
+    padding-left: 0.8em;
+  }
+
+  .chat-md hr {
+    border: 0;
+    border-top: 1px solid var(--line);
+    margin-block: 1.6em;
+  }
+
+  .chat-md table {
+    border-collapse: separate;
+    border-spacing: 0;
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    overflow-x: auto;
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+
+  .chat-md :is(th, td) {
+    border-bottom: 1px solid var(--line);
+    padding: 0.4em 0.75em;
+    text-align: left;
+  }
+
+  .chat-md :is(th, td) + :is(th, td) {
+    border-left: 1px solid var(--line);
+  }
+
+  .chat-md tbody tr:last-child > td {
+    border-bottom: 0;
+  }
+
+  .chat-md th {
+    background: var(--sunken);
+    font-weight: 600;
+  }
+
+  .chat-mention {
+    color: var(--mention);
+    font-weight: 500;
+  }
+
+  .chat-md input[type="checkbox"] {
+    margin-right: 0.4em;
+  }
+}

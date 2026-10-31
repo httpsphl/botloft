@@ -18,6 +18,7 @@
 @import "./color.css";
 @import "./files.css";
 @import "./search.css";
+@import "./chat-md.css";
 @import "./activity.css";
 @import "./calls.css";
 @import "./browser-stage.css";
@@ -177,126 +178,5 @@
       transparent 0
     );
     background-size: 18px 18px;
-  }
-}
-
-/* A bot's reply (features/chat/Markdown.tsx). */
-@layer components {
-  .chat-md {
-    overflow-wrap: anywhere;
-    line-height: 1.6;
-  }
-
-  .chat-md > * + * {
-    margin-top: 0.6em;
-  }
-
-  .chat-md > :first-child {
-    margin-top: 0;
-  }
-
-  .chat-md :is(h1, h2, h3, h4) {
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    margin-top: 1em;
-  }
-
-  .chat-md h1 {
-    font-size: 1.2em;
-  }
-
-  .chat-md h2 {
-    font-size: 1.1em;
-  }
-
-  .chat-md :is(ul, ol) {
-    padding-left: 1.4em;
-  }
-
-  .chat-md ul {
-    list-style: disc;
-  }
-
-  .chat-md ol {
-    list-style: decimal;
-  }
-
-  .chat-md li + li {
-    margin-top: 0.2em;
-  }
-
-  .chat-md li > :is(ul, ol) {
-    margin-top: 0.2em;
-  }
-
-  .chat-md :not(pre) > code {
-    font-family: var(--font-mono);
-    font-size: 0.9em;
-    background: var(--sunken);
-    padding: 0.1em 0.35em;
-    border-radius: 5px;
-  }
-
-  .chat-md pre {
-    font-family: var(--font-mono);
-    font-size: 0.8125rem;
-    line-height: 1.5;
-    background: var(--sunken);
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 0.75em 1em;
-    overflow-x: auto;
-    overflow-wrap: normal;
-  }
-
-  .chat-md blockquote {
-    border-left: 3px solid var(--line-strong);
-    padding-left: 0.8em;
-    color: var(--ink-soft);
-  }
-
-  .chat-md hr {
-    border: 0;
-    border-top: 1px solid var(--line);
-  }
-
-  .chat-md table {
-    border-collapse: separate;
-    border-spacing: 0;
-    display: block;
-    width: fit-content;
-    max-width: 100%;
-    overflow-x: auto;
-    font-size: 0.8125rem;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-  }
-
-  .chat-md :is(th, td) {
-    border-bottom: 1px solid var(--line);
-    padding: 0.4em 0.75em;
-    text-align: left;
-  }
-
-  .chat-md :is(th, td) + :is(th, td) {
-    border-left: 1px solid var(--line);
-  }
-
-  .chat-md tbody tr:last-child > td {
-    border-bottom: 0;
-  }
-
-  .chat-md th {
-    background: var(--sunken);
-    font-weight: 600;
-  }
-
-  .chat-mention {
-    color: var(--mention);
-    font-weight: 500;
-  }
-
-  .chat-md input[type="checkbox"] {
-    margin-right: 0.4em;
   }
 }
