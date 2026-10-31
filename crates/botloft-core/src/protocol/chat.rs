@@ -199,6 +199,11 @@ pub struct ApprovalItem {
     /// explanation.
     #[serde(default)]
     pub always: Option<AllowScope>,
+    /// Allowed only for the bot's turn, not saved (spec 24.2, 21.5).
+    /// Kept only here, like the explanation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, ts(optional))]
+    pub once: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -313,6 +318,12 @@ pub struct ApprovalsAnswerParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub always: Option<bool>,
+    /// With `allow`, a request for an app on the desktop or a site in the
+    /// browser holds only until the bot's turn ends, and nothing is saved
+    /// (spec 24.2, 21.5). Ignored for other requests.
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub once: Option<bool>,
 }
 
 /// The last thing in a bot's chat, for the conversation list.

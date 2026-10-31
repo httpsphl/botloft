@@ -264,6 +264,7 @@ impl Mobile {
             note: note.map(|note| note.chars().take(500).collect()),
             input: None,
             always: None,
+            once: None,
         };
         let done = blocking(daemon, move |daemon| {
             approvals::answer(daemon, params).is_ok()

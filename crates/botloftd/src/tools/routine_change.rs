@@ -203,12 +203,13 @@ async fn run_change(
     }
     let input = json!({ "before": before, "after": after, "name": routine.name });
     match approvals::ask(daemon, bot, generation, CHANGE_ROUTINE_TOOL, &input, "").await {
-        Some(Answer::Allowed { input: None }) => {
+        Some(Answer::Allowed { input: None, .. }) => {
             let changed = after.apply(daemon).map_err(explain)?;
             Ok(done(&changed, "The owner approved the change."))
         }
         Some(Answer::Allowed {
             input: Some(adjusted),
+            ..
         }) => {
             let adjusted: Changed = serde_json::from_str(&adjusted)
                 .map_err(|err| format!("the owner's changes could not be read: {err}"))?;

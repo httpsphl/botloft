@@ -10,8 +10,8 @@ use crate::approvals;
 use crate::service::{
     self, ApiError, ApiResult, agents, archive, attachments, autobackup, backup, bots, catalog,
     chat, cloud, crew_access, crews, delete, deliveries, desktop, files, island, keys, lead, mcp,
-    messages, mobile, models, modes, questions, reactions, routines, rules, screens, settings,
-    tasks, usage,
+    messages, mobile, models, modes, permissions, questions, reactions, routines, rules, screens,
+    settings, tasks, usage,
 };
 use crate::state::Daemon;
 
@@ -102,6 +102,8 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         }
         method::MOBILE_REVOKE => reply(mobile::revoke(daemon, parse(params)?)),
         method::CREW_ACCESS_LIST => reply(crew_access::list(daemon, parse(params)?)),
+        method::PERMISSIONS_LIST => reply(permissions::list(daemon)),
+        method::SITES_REVOKE => reply(permissions::revoke_site(daemon, parse(params)?)),
         method::CREW_ACCESS_REVOKE => reply(crew_access::revoke(daemon, parse(params)?)),
         method::MCP_SERVERS => reply(mcp::overview(daemon)),
         method::MCP_SAVE => reply(mcp::save(daemon, parse(params)?)),
@@ -115,6 +117,12 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::DESKTOP_AWAY_USES => reply(desktop::away_uses(daemon)),
         method::DESKTOP_DISMISS_AWAY => reply(desktop::dismiss_away(daemon)),
         method::DESKTOP_RESUME => reply(desktop::resume(daemon, parse(params)?)),
+        method::DESKTOP_APPS => reply(desktop::apps()),
+        method::DESKTOP_GRANT_APP => reply(desktop::grant_app(daemon, parse(params)?)),
+        method::DESKTOP_STOP_ALL => {
+            desktop::stop_all(daemon);
+            reply(Ok(()))
+        }
         method::MESSAGES_SEND => reply(messages::send(daemon, parse(params)?)),
         method::MESSAGES_LIST => reply(messages::list(daemon, parse(params)?)),
         method::ATTACHMENTS_READ => reply(attachments::read(daemon, parse(params)?)),

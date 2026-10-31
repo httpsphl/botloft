@@ -7,15 +7,17 @@ export const desktop = {
     asks: (bot: string, app: string) => `${bot} asks to see ${app}`,
     because: (bot: string) => `${bot} says:`,
     means: (bot: string) =>
-      `${bot} will read this app's windows and take pictures of them while you are at your computer. Never your passwords. You can take it back in ${bot}'s details.`,
+      `${bot} will read this app's windows and take pictures of them while you are at your computer. Never your passwords. You can take it back in Settings, under Permissions.`,
     allowed: (bot: string, app: string) => `${bot} can see ${app}`,
+    allowedOnce: (bot: string, app: string) => `${bot} can see ${app}, only this time`,
     denied: (bot: string, app: string) => `${bot} may not see ${app}`,
     expired: (app: string) => `No answer about ${app}`,
     wantsUse: (bot: string) => `${bot} wants to use`,
     asksUse: (bot: string, app: string) => `${bot} asks to use ${app}`,
     meansUse: (bot: string) =>
-      `${bot} will click, type and choose in this app's windows as you would, without moving your mouse, while you are at your computer. Every action shows in this chat. Never in password fields. You can take it back in ${bot}'s details.`,
+      `${bot} will click, type and choose in this app's windows as you would, without moving your mouse, while you are at your computer. Every action shows in this chat. Never in password fields. You can take it back in Settings, under Permissions.`,
     allowedUse: (bot: string, app: string) => `${bot} can use ${app}`,
+    allowedUseOnce: (bot: string, app: string) => `${bot} can use ${app}, only this time`,
     deniedUse: (bot: string, app: string) => `${bot} may not use ${app}`,
   },
   panel: {

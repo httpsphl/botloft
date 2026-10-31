@@ -170,6 +170,7 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
         info!(port = config.port, "listening on 127.0.0.1");
         tokio::spawn(supervisor::run(Arc::clone(&daemon)));
         tokio::spawn(courier::run(Arc::clone(&daemon)));
+        tokio::spawn(approvals::forget_turns(Arc::clone(&daemon)));
         tokio::spawn(routines::run(Arc::clone(&daemon)));
         tokio::spawn(botloftd::autobackup::run(Arc::clone(&daemon)));
         tokio::spawn(botloftd::mobile::run(Arc::clone(&daemon)));

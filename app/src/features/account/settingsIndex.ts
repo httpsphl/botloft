@@ -11,6 +11,7 @@ export type Page =
   | "alerts"
   | "account"
   | "tools"
+  | "permissions"
   | "backup"
   | "security"
   | "archived"
@@ -46,6 +47,17 @@ export function settingsIndex(t: ReturnType<typeof useT>): Entry[] {
     ...entry("alerts", s.notifyNeeds, s.notifyDone, s.markReplies, s.sound, s.appSounds),
     ...entry("account", t.account.cloud.title, t.account.mobile.title, t.account.mobile.connect),
     ...entry("tools", s.tools),
+    ...entry(
+      "permissions",
+      s.permissions,
+      t.permissions.tabs.desktop,
+      t.permissions.tabs.sites,
+      t.permissions.tabs.rules,
+      t.permissions.tabs.crews,
+      t.desktop.grants.real,
+      t.desktop.grants.away,
+      t.permissions.stopAll,
+    ),
     ...entry("backup", t.account.backup.exportTitle, t.account.backup.importTitle, s.copiesTitle),
     ...entry("security", t.keys.scan.title, t.keys.scan.run),
     ...entry("archived", s.archived),
