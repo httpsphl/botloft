@@ -4,6 +4,7 @@ import { App } from "../../App";
 import type { Client } from "../../lib/client";
 import { FakeBotloft } from "../../lib/fake";
 import { FakeHost } from "../../lib/fakeHost";
+import { crewOpened } from "../../test/app";
 
 afterEach(cleanup);
 
@@ -52,7 +53,7 @@ describe("signing in to Claude", () => {
     const fake = signedOut();
     fake.addCrew("Ops");
     renderApp(fake);
-    await screen.findByRole("heading", { level: 1, name: "Ops" });
+    await crewOpened("Ops");
     const banner = screen.getByText("Sign in to Claude", { selector: "p" }).closest("[role=alert]");
     expect(
       within(banner as HTMLElement).getByRole("button", { name: "Sign in to Claude" }),
@@ -64,7 +65,7 @@ describe("signing in to Claude", () => {
     const crew = fake.addCrew("Ops");
     const bot = fake.addBot(crew.id, "Scout");
     renderApp(fake);
-    await screen.findByRole("heading", { level: 1, name: "Ops" });
+    await crewOpened("Ops");
     const sidebar = screen.getByRole("navigation", { name: "Crews" });
     fireEvent.click(within(sidebar).getByRole("button", { name: /Scout/ }));
     act(() => fake.setBotState(bot.id, "auth_error"));

@@ -202,7 +202,7 @@ describe("a conversation", () => {
     const phone = withList(line());
     const card: ApprovalCard = {
       approvalId: "apr_1",
-      bot: { name: "Scout", color: "#aabbcc" },
+      bot: { id: "bot_scout", name: "Scout", color: "#aabbcc" },
       crew: "Ops",
       createdAt: 1,
       toolName: "Bash",

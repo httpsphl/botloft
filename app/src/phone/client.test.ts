@@ -52,7 +52,7 @@ class FakeSocket {
 
 const card = (id: string, at: number): ApprovalCard => ({
   approvalId: id,
-  bot: { name: "Scout", color: "#aabbcc" },
+  bot: { id: "bot_scout", name: "Scout", color: "#aabbcc" },
   crew: "Ops",
   createdAt: at,
   toolName: "Bash",
@@ -64,7 +64,7 @@ const card = (id: string, at: number): ApprovalCard => ({
 
 const question = (id: string, at: number): QuestionCard => ({
   questionId: id,
-  bot: { name: "Scout", color: "#aabbcc" },
+  bot: { id: "bot_scout", name: "Scout", color: "#aabbcc" },
   crew: "Ops",
   createdAt: at,
   text: "Which first?",

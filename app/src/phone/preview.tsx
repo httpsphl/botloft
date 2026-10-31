@@ -87,7 +87,7 @@ phone.set({
   approvals: [
     {
       approvalId: "apr_1",
-      bot: { name: "Lead", color: "#FF7A59" },
+      bot: { id: "bot_lead", name: "Lead", color: "#FF7A59" },
       crew: "Agência",
       createdAt: now,
       toolName: "Bash",

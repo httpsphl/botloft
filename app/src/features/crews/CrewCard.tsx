@@ -1,53 +1,21 @@
-import { Pause, Plus } from "lucide-react";
-import { useState } from "react";
+// A crew as a card on the home (spec 15.1): its faces, what they do, its
+// unread count; a click opens the crew.
+
+import { Pause } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
-import { botsOf, crewList } from "../../store/app";
+import { botsOf } from "../../store/app";
 import { useApp } from "../../store/context";
 import { unreadIn } from "../../store/seen";
 import { CountBadge } from "../../ui/Badge";
-import { Button } from "../../ui/Button";
 import { BotAvatar, moodOf } from "../bots/BotAvatar";
-import { CrewDialog } from "./CrewDialog";
-import { orderedCrews, useCrewOrder } from "./crewOrder";
 
 /** Faces shown on a card; the rest are counted. */
 const FACES = 6;
 
-/** Every crew as a card (spec 15.1), opened from "Crews" on the left. */
-export function CrewsOverview() {
-  const t = useT();
-  const words = t.crews.overview;
-  const crews = orderedCrews(useApp(useShallow(crewList)), useCrewOrder());
-  const botCount = useApp((state) => Object.keys(state.bots).length);
-  const [creating, setCreating] = useState(false);
-  return (
-    <section aria-label={t.crews.sidebar.label} className="flex min-h-0 flex-1 flex-col">
-      <header className="flex items-center gap-3 border-line border-b px-5 py-3.5">
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate font-semibold text-xl tracking-tight">{t.crews.sidebar.label}</h1>
-          <p className="mt-0.5 text-muted text-sm">
-            {words.count(crews.length)} · {t.crews.view.bots(botCount)}
-          </p>
-        </div>
-        <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
-          {t.crews.newCrew}
-        </Button>
-      </header>
-      <div className="min-h-0 flex-1 overflow-y-auto p-5">
-        <ul className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3">
-          {crews.map((crew) => (
-            <CrewCard key={crew.id} crew={crew} />
-          ))}
-        </ul>
-      </div>
-      {creating && <CrewDialog onClose={() => setCreating(false)} />}
-    </section>
-  );
-}
-
-function CrewCard({ crew }: { crew: Crew }) {
+/** A crew as a card: its faces, what they do, its unread count; also on the home. */
+export function CrewCard({ crew }: { crew: Crew }) {
   const t = useT();
   const words = t.crews.overview;
   const bots = useApp(useShallow((state) => botsOf(state, crew.id)));

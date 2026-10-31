@@ -90,7 +90,7 @@ export const Conversation = memo(function Conversation({ bot, crew }: { bot: Bot
  * words: the chat renders its Markdown, a line would show the marks raw. A
  * command or a path keeps its own characters.
  */
-function activityText(activity: Activity, t: Messages): string {
+export function activityText(activity: Activity, t: Messages): string {
   const { text, tool } = activity;
   switch (activity.kind) {
     case "owner":

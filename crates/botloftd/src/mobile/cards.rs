@@ -101,6 +101,7 @@ fn bot_and_crew(daemon: &Daemon, bot: &botloft_core::ids::BotId) -> Option<(Card
     let crew = store.crew(&record.crew_id).ok().flatten()?;
     Some((
         CardBot {
+            id: record.id,
             name: record.name,
             color: record.color,
         },

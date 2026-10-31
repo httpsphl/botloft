@@ -4,6 +4,7 @@ import { App } from "../../App";
 import type { Client } from "../../lib/client";
 import { FakeBotloft } from "../../lib/fake";
 import { FakeHost, FakeUpdate } from "../../lib/fakeHost";
+import { crewOpened } from "../../test/app";
 
 afterEach(cleanup);
 
@@ -17,7 +18,7 @@ describe("app updates", () => {
   test("nothing shows while this is the latest version", async () => {
     const host = new FakeHost();
     renderApp(host);
-    await screen.findByRole("heading", { level: 1, name: "Ops" });
+    await crewOpened("Ops");
     expect(host.updateChecks).toBe(1);
     expect(screen.queryByRole("button", { name: "Update available" })).toBeNull();
   });
@@ -58,7 +59,7 @@ describe("app updates", () => {
     const host = new FakeHost();
     host.update = new Error("offline");
     renderApp(host);
-    await screen.findByRole("heading", { level: 1, name: "Ops" });
+    await crewOpened("Ops");
     expect(screen.queryByRole("button", { name: "Update available" })).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
   });

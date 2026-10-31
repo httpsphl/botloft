@@ -6,11 +6,11 @@ import type { ReactNode } from "react";
 import { SettingsPage } from "../features/account/SettingsPage";
 import { BotAvatar } from "../features/bots/BotAvatar";
 import { BotView } from "../features/bots/BotView";
-import { CrewsOverview } from "../features/crews/CrewsOverview";
 import { CrewView } from "../features/crews/CrewView";
 import { Sidebar } from "../features/crews/Sidebar";
 import { AwayNotice } from "../features/desktop/AwayNotice";
 import { useLocaleToDaemon } from "../features/desktop/useLocaleToDaemon";
+import { HomeView } from "../features/home/HomeView";
 import { FailedDeliveries } from "../features/messages/FailedDeliveries";
 import { ClaudeCodeHelp } from "../features/onboarding/ClaudeCodeHelp";
 import { SignInButton } from "../features/onboarding/SignIn";
@@ -152,11 +152,11 @@ function Selection() {
   } else if (crew) {
     view = <CrewView crew={crew} />;
   } else {
-    view = <CrewsOverview />;
+    view = <HomeView />;
   }
   return (
     <div
-      key={page ?? bot?.id ?? crew?.id ?? "crews"}
+      key={page ?? bot?.id ?? crew?.id ?? "home"}
       className="pane-rise flex min-h-0 flex-1 flex-col"
     >
       {view}
@@ -187,11 +187,11 @@ function Breadcrumb() {
     );
   }
   if (!crew) {
-    // Only shown with crews: the overview is where "no crew" leads.
+    // Only shown with crews: the home is where "no crew" leads.
     return (
       <>
         <ChevronRight aria-hidden size={14} className="text-muted" />
-        <span className="truncate text-ink-soft">{t.crews.sidebar.label}</span>
+        <span className="truncate text-ink-soft">{t.home.title}</span>
       </>
     );
   }

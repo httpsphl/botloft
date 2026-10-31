@@ -46,7 +46,10 @@ function textOf(input: string): { text: string; cut: boolean } {
 export function islandHandlers(fake: FakeBotloft): Pick<Handlers, "cards.list" | "activity.today"> {
   const who = (botId: string) => {
     const bot = fake.bot(botId, false);
-    return { bot: { name: bot.name, color: bot.color }, crew: fake.crew(bot.crewId, false).name };
+    return {
+      bot: { id: bot.id, name: bot.name, color: bot.color },
+      crew: fake.crew(bot.crewId, false).name,
+    };
   };
   return {
     "cards.list": () => {

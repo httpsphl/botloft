@@ -16,8 +16,21 @@ export const sidebar = () => screen.getByRole("navigation", { name: "Crews" });
 /** The icons at the far left (shell/Rail.tsx). */
 export const rail = () => screen.getByRole("navigation", { name: "Places" });
 
-/** Waits for the first crew to open. */
+/**
+ * Opens the crew from the list, as the owner would: the app opens on its
+ * home (spec 15.1). A crew already open stays.
+ */
 export async function crewOpened(name: string) {
+  const open = screen.queryByRole("heading", { level: 1, name });
+  if (open) {
+    return open;
+  }
+  // In the list or on the home's card, in any language.
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const [crew] = await screen.findAllByRole("button", { name: new RegExp(`^${escaped}`) });
+  if (crew) {
+    fireEvent.click(crew);
+  }
   return screen.findByRole("heading", { level: 1, name });
 }
 

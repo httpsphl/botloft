@@ -67,7 +67,8 @@ export function FailedDeliveries() {
   );
 }
 
-function FailedDialog({ dead, onClose }: { dead: Delivery[]; onClose(): void }) {
+/** The list of messages not delivered, to retry them; also opened from the home. */
+export function FailedDialog({ dead, onClose }: { dead: Delivery[]; onClose(): void }) {
   const api = useApi();
   const t = useT();
   const text = t.messages.failed;

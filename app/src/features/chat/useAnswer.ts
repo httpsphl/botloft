@@ -8,7 +8,10 @@ import { attempt } from "../../ui/toast";
  * bot suggestion as the owner changed it (spec 10.2); `always` allows the
  * request for good (spec 10.1).
  */
-export function useAnswer(approval: ApprovalItem, failed: { allow: string; deny: string }) {
+export function useAnswer(
+  approval: Pick<ApprovalItem, "approvalId">,
+  failed: { allow: string; deny: string },
+) {
   const api = useApi();
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
