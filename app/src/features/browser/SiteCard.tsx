@@ -1,7 +1,7 @@
 // A bot asking to use a site in its browser (spec 21.5): the site, the
 // address, and Allow or Deny. Once answered it shrinks to one line.
 
-import { Ban, Check, Globe, TimerOff } from "lucide-react";
+import { Ban, Check, Clock, Globe, TimerOff } from "lucide-react";
 import { useT } from "../../i18n";
 import type { ApprovalItem, Bot } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
@@ -26,7 +26,13 @@ function Answered({ approval, site }: { approval: ApprovalItem; site: string }) 
   const words = useT().browser.site;
   switch (approval.status) {
     case "allowed":
-      return <SettledLine icon={Check} tone="ok" text={words.allowed(site)} />;
+      return (
+        <SettledLine
+          icon={Check}
+          tone="ok"
+          text={(approval.once === true ? words.allowedOnce : words.allowed)(site)}
+        />
+      );
     case "denied":
       return (
         <SettledLine icon={Ban} tone="danger" text={words.denied(site)} note={approval.note} />
@@ -76,6 +82,14 @@ export function SiteCard({ approval, bot }: { approval: ApprovalItem; bot: Bot }
       >
         <Button variant="primary" icon={Check} disabled={busy} onClick={() => answer(true)}>
           {t.chat.approval.allow}
+        </Button>
+        <Button
+          variant="secondary"
+          icon={Clock}
+          disabled={busy}
+          onClick={() => answer(true, undefined, false, true)}
+        >
+          {t.chat.approval.once}
         </Button>
       </RequestAnswers>
     </RequestCard>

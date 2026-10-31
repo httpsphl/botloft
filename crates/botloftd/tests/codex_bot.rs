@@ -384,6 +384,7 @@ fn owner(codex: &Codex, approval: &botloft_core::protocol::ApprovalItem, allow: 
             note: None,
             input: None,
             always: None,
+            once: None,
         },
     )
     .expect("answered");

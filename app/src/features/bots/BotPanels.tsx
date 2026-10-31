@@ -10,12 +10,10 @@ import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { SidePanel } from "../../ui/SidePanel";
 import { BotTools } from "../connections/BotTools";
-import { DesktopGrants } from "../desktop/DesktopGrants";
 import { AgentKeys } from "../keys/AgentKeys";
 import { SignInButton } from "../onboarding/SignIn";
-import { AllowRules } from "./AllowRules";
+import { BotPermissions } from "../permissions/BotPermissions";
 import type { stateView } from "./BotStateBadge";
-import { CrewAccessList } from "./CrewAccessList";
 
 export function Notices({
   bot,
@@ -94,11 +92,9 @@ export function Details({ bot, onClose }: { bot: Bot; onClose(): void }) {
             {bot.instructions || words.noInstructions}
           </dd>
         </div>
-        <AllowRules bot={bot} />
-        <CrewAccessList bot={bot} />
+        <BotPermissions bot={bot} />
         <AgentKeys bot={bot} />
         <BotTools bot={bot} />
-        <DesktopGrants bot={bot} />
       </dl>
     </SidePanel>
   );

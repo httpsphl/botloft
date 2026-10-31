@@ -248,6 +248,7 @@ describe("the page of settings", () => {
       "Notifications",
       "Account and phone",
       "Connected tools",
+      "Permissions",
       "Backup",
       "Security",
       "Archived",

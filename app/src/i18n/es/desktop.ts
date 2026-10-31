@@ -6,15 +6,17 @@ export const desktop: Messages["desktop"] = {
     asks: (bot, app) => `${bot} pide ver ${app}`,
     because: (bot) => `${bot} dice:`,
     means: (bot) =>
-      `${bot} va a leer las ventanas de esa app y sacarles fotos mientras estés en la computadora. Nunca tus contraseñas. Puedes quitárselo en los detalles de ${bot}.`,
+      `${bot} va a leer las ventanas de esa app y sacarles fotos mientras estés en la computadora. Nunca tus contraseñas. Puedes quitárselo en Configuración, en Permisos.`,
     allowed: (bot, app) => `${bot} puede ver ${app}`,
+    allowedOnce: (bot, app) => `${bot} puede ver ${app}, solo esta vez`,
     denied: (bot, app) => `${bot} no puede ver ${app}`,
     expired: (app) => `Sin respuesta sobre ${app}`,
     wantsUse: (bot) => `${bot} quiere usar`,
     asksUse: (bot, app) => `${bot} pide usar ${app}`,
     meansUse: (bot) =>
-      `${bot} va a hacer clic, escribir y elegir en las ventanas de esa app como lo harías tú, sin mover tu mouse, mientras estés en la computadora. Cada acción aparece en este chat. Nunca en campos de contraseña. Puedes quitárselo en los detalles de ${bot}.`,
+      `${bot} va a hacer clic, escribir y elegir en las ventanas de esa app como lo harías tú, sin mover tu mouse, mientras estés en la computadora. Cada acción aparece en este chat. Nunca en campos de contraseña. Puedes quitárselo en Configuración, en Permisos.`,
     allowedUse: (bot, app) => `${bot} puede usar ${app}`,
+    allowedUseOnce: (bot, app) => `${bot} puede usar ${app}, solo esta vez`,
     deniedUse: (bot, app) => `${bot} no puede usar ${app}`,
   },
   panel: {

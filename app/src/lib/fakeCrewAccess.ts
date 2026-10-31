@@ -37,6 +37,11 @@ export class FakeCrewAccess {
     return access;
   }
 
+  /** Every bot's, oldest first. */
+  all(): CrewAccess[] {
+    return [...this.list];
+  }
+
   handlers(): Pick<Handlers, AccessMethods> {
     const of = (bot: BotId) => this.list.filter((access) => access.botId === bot);
     return {
