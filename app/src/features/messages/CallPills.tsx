@@ -39,12 +39,12 @@ function Pill({ call }: { call: LiveCall }) {
   const picked = call.readAt !== null;
   return (
     <li
-      className={`call-pill flex animate-rise items-center gap-2 rounded-full border bg-panel py-1 pr-3 pl-1 text-sm shadow-sm ${
+      className={`call-pill flex min-w-0 max-w-full animate-rise items-center gap-2 rounded-full border bg-panel py-1 pr-3 pl-1 text-sm shadow-sm ${
         picked ? "border-ok/45" : "border-line"
       }`}
       data-picked={picked || undefined}
     >
-      <span aria-hidden className="flex items-center">
+      <span aria-hidden className="flex shrink-0 items-center">
         <span className="call-avatar">
           <BotAvatar botId={from.id} color={from.color} size={20} />
         </span>
@@ -53,13 +53,13 @@ function Pill({ call }: { call: LiveCall }) {
         </span>
       </span>
       {picked ? (
-        <span className="flex items-center gap-1 text-ok">
+        <span className="flex min-w-0 items-center gap-1 text-ok">
           <Check aria-hidden size={13} className="shrink-0" />
           <span className="sr-only">{t.caller(from.name)}</span>
-          {t.picked(to.name)}
+          <span className="truncate">{t.picked(to.name)}</span>
         </span>
       ) : (
-        <span className="flex items-center gap-1.5 text-ink-soft">
+        <span className="flex min-w-0 items-center gap-1.5 text-ink-soft">
           {/* The mascots say who calls; a screen reader hears it. */}
           <span className="sr-only">{t.caller(from.name)}</span>
           <span className="truncate">{t.calling(to.name)}</span>

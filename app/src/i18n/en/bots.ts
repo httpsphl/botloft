@@ -40,6 +40,7 @@ export const bots = {
     restart: "Restart",
     showDetails: "Show details",
     hideDetails: "Hide details",
+    panels: "Panels",
     more: "More agent actions",
     menuOf: (name: string) => `Actions for ${name}`,
     edit: "Edit",
