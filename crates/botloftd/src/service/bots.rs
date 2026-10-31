@@ -264,7 +264,7 @@ pub fn archive(daemon: &Daemon, params: BotIdParams) -> ApiResult<Bot> {
     if record.archived_at.is_some() {
         return Ok(to_protocol(daemon, &store, &crew, record));
     }
-    let at = now_ms();
+    let at = super::archive::bot_time(&store, &record.id)?;
     record.archived_at = Some(at);
     store.update_bot(&record)?;
     super::lead::forget_archived(daemon, &store, &crew, &record.id)?;

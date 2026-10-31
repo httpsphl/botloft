@@ -311,7 +311,7 @@ Eventos de uma generation antiga são ignorados. Todo processo novo emite `bot.s
 
 ### 7.6 Arquivar e excluir
 
-**Arquivar** (`bots.archive`, `crews.archive`) tira o bot ou a crew do app e guarda tudo no banco: o processo para, o token é revogado, as rotinas são arquivadas junto (20.3) e o perfil do navegador é apagado (21.2). Bot, crew e rotinas arquivados juntos recebem o mesmo `archivedAt`.
+**Arquivar** (`bots.archive`, `crews.archive`) tira o bot ou a crew do app e guarda tudo no banco: o processo para, o token é revogado, as rotinas são arquivadas junto (20.3) e o perfil do navegador é apagado (21.2). Bot, crew e rotinas arquivados juntos recebem o mesmo `archivedAt`, que fica sempre depois do `archivedAt` do que já estava arquivado sozinho neles: se um bot ou uma rotina foi arquivado no mesmo milissegundo, o grupo leva o milissegundo seguinte, para desarquivar não trazer de volta junto o que foi arquivado à parte.
 
 **Desarquivar** (`bots.unarchive`, `crews.unarchive`) traz de volta o que foi arquivado e o supervisor sobe os bots de novo, cada um com um token novo (cada processo ganha o seu, 7.4). Volta só o que foi arquivado junto, pelo mesmo `archivedAt`: a crew traz os bots e as rotinas arquivados com ela, e um bot arquivado sozinho antes continua arquivado. As rotinas voltam contando de agora, como ao religar (20.8), e uma desligada continua desligada. O navegador começa sem login, porque o perfil foi apagado. Um chefe arquivado sozinho não volta a ser chefe. `bots.unarchive` dá `-32003` se a crew do bot está arquivada (desarquive a crew) ou se outro bot ativo da crew já usa o mesmo `@handle`.
 
