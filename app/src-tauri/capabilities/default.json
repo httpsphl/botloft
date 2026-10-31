@@ -35,6 +35,7 @@
     "allow-open-url",
     "allow-open-at-sign-in",
     "allow-launched-at-sign-in",
-    "allow-quiet-now"
+    "allow-quiet-now",
+    "allow-main-in-front"
   ]
 }
