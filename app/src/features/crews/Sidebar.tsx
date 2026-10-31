@@ -184,7 +184,7 @@ function CrewEntry({
             </span>
           )}
           {unread > 0 && (
-            <CountBadge tone="accent" count={unread} label={t.crews.sidebar.unreadCount(unread)} />
+            <CountBadge tone="quiet" count={unread} label={t.crews.sidebar.unreadCount(unread)} />
           )}
           {crew.paused && (
             <span className="flex items-center gap-1 font-medium text-quiet text-xs">

@@ -74,7 +74,7 @@ function CrewCard({ crew }: { crew: Crew }) {
             <span className="block text-muted text-xs">{t.crews.view.bots(bots.length)}</span>
           </span>
           {unread > 0 && (
-            <CountBadge tone="accent" count={unread} label={t.crews.sidebar.unreadCount(unread)} />
+            <CountBadge tone="quiet" count={unread} label={t.crews.sidebar.unreadCount(unread)} />
           )}
         </span>
         {bots.length > 0 && (
