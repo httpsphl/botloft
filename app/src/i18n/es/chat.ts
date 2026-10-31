@@ -13,6 +13,9 @@ export const chat: Messages["chat"] = {
       "Pídele lo que su carpeta y sus herramientas le permitan hacer. También puedes adjuntar archivos e imágenes.",
     messages: "Mensajes",
     dropToAttach: "Suelta para adjuntar a tu mensaje",
+    waiting: (count: number) =>
+      count === 1 ? "1 solicitud te espera" : `${count} solicitudes te esperan`,
+    showWaiting: "Mostrar",
   },
   composer: {
     paused: (bot: string) =>
@@ -116,10 +119,11 @@ export const chat: Messages["chat"] = {
     unexplained: (bot: string) =>
       `${bot} no dijo para qué sirve este comando. Si tienes dudas, deniégalo y pregunta.`,
     command: "Ver el comando",
-    noteLabel: (bot: string) => `Nota para ${bot} si deniegas`,
-    notePlaceholder: "¿Por qué no? Se envía al agente si deniegas (opcional)",
+    noteLabel: (bot: string) => `Por qué lo deniegas, para ${bot}`,
+    notePlaceholder: "¿Por qué no? El agente lo lee (opcional)",
     allow: "Permitir",
     deny: "Denegar",
+    back: "Volver",
     always: {
       command: "Permitir siempre este comando",
       site: (site: string) => `Permitir siempre en ${site}`,

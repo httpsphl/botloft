@@ -7,7 +7,8 @@ import { useContext } from "react";
 import { useT } from "../../i18n";
 import type { ApprovalItem, Bot } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
-import { NoteInput, RequestCard, SettledLine } from "../../ui/ChatCard";
+import { RequestCard, SettledLine } from "../../ui/ChatCard";
+import { RequestAnswers } from "../chat/RequestAnswers";
 import { useAnswer } from "../chat/useAnswer";
 import { ShowBrowser } from "./showBrowser";
 
@@ -70,13 +71,14 @@ export function HelpCard({ approval, bot }: { approval: ApprovalItem; bot: Bot }
         </p>
       )}
       <p className="mt-1.5 text-muted text-xs">{words.why}</p>
-      <NoteInput
-        label={t.chat.approval.noteLabel(bot.name)}
-        value={note}
-        onChange={setNote}
-        placeholder={t.chat.approval.notePlaceholder}
-      />
-      <div className="mt-2.5 flex flex-wrap gap-2">
+      <RequestAnswers
+        bot={bot.name}
+        deny={words.wontDo}
+        busy={busy}
+        note={note}
+        onNote={setNote}
+        onDeny={() => answer(false)}
+      >
         {showBrowser && (
           <Button variant="primary" icon={Hand} onClick={() => showBrowser({ take: true })}>
             {words.take}
@@ -90,10 +92,7 @@ export function HelpCard({ approval, bot }: { approval: ApprovalItem; bot: Bot }
         >
           {words.done}
         </Button>
-        <Button variant="danger" icon={Ban} disabled={busy} onClick={() => answer(false)}>
-          {words.wontDo}
-        </Button>
-      </div>
+      </RequestAnswers>
     </RequestCard>
   );
 }

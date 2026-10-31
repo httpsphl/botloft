@@ -81,6 +81,20 @@ export function rowHas(row: Row, id: string): boolean {
   }
 }
 
+/** A card still waiting for the owner: a request, a question, a key. */
+export function isWaiting(item: ChatItem): boolean {
+  switch (item.body.kind) {
+    case "approval":
+      return item.body.status === "pending";
+    case "question":
+      return item.body.question.status === "open";
+    case "key_request":
+      return item.body.status === "open";
+    default:
+      return false;
+  }
+}
+
 /** Tool calls that run together as lines; shared files are cards of their own. */
 function isLine(item: ChatItem | undefined): boolean {
   return item?.body.kind === "tool" && !isSharedFiles(item);

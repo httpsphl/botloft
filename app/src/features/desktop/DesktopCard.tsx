@@ -6,7 +6,8 @@ import { Ban, Check, Monitor, TimerOff } from "lucide-react";
 import { useT } from "../../i18n";
 import type { ApprovalItem, Bot } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
-import { NoteInput, RequestCard, SettledLine } from "../../ui/ChatCard";
+import { RequestCard, SettledLine } from "../../ui/ChatCard";
+import { RequestAnswers } from "../chat/RequestAnswers";
 import { useAnswer } from "../chat/useAnswer";
 
 /** The request the daemon opens from the desktop tools. */
@@ -100,20 +101,18 @@ export function DesktopCard({ approval, bot }: { approval: ApprovalItem; bot: Bo
         </p>
       )}
       <p className="mt-1.5 text-muted text-xs">{(use ? words.meansUse : words.means)(bot.name)}</p>
-      <NoteInput
-        label={t.chat.approval.noteLabel(bot.name)}
-        value={note}
-        onChange={setNote}
-        placeholder={t.chat.approval.notePlaceholder}
-      />
-      <div className="mt-2.5 flex gap-2">
+      <RequestAnswers
+        bot={bot.name}
+        deny={t.chat.approval.deny}
+        busy={busy}
+        note={note}
+        onNote={setNote}
+        onDeny={() => answer(false)}
+      >
         <Button variant="primary" icon={Check} disabled={busy} onClick={() => answer(true)}>
           {t.chat.approval.allow}
         </Button>
-        <Button variant="danger" icon={Ban} disabled={busy} onClick={() => answer(false)}>
-          {t.chat.approval.deny}
-        </Button>
-      </div>
+      </RequestAnswers>
     </RequestCard>
   );
 }

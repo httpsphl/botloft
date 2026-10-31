@@ -20,6 +20,10 @@ export const chat = {
     emptyBody: "Ask for anything its folder and tools can do. You can attach files and images too.",
     messages: "Messages",
     dropToAttach: "Drop to attach to your message",
+    /** Over the chat's end, when a request for the owner is out of view. */
+    waiting: (count: number) =>
+      count === 1 ? "1 request waiting for you" : `${count} requests waiting for you`,
+    showWaiting: "Show it",
   },
   composer: {
     paused: (bot: string) => `${bot} is paused. What you send waits until it runs again.`,
@@ -126,10 +130,11 @@ export const chat = {
     unexplained: (bot: string) =>
       `${bot} did not say what this command is for. If you are not sure, deny it and ask.`,
     command: "See the command",
-    noteLabel: (bot: string) => `Note for ${bot} if you deny`,
-    notePlaceholder: "Why not? Sent to the agent if you deny (optional)",
+    noteLabel: (bot: string) => `Why you deny it, for ${bot}`,
+    notePlaceholder: "Why not? The agent reads this (optional)",
     allow: "Allow",
     deny: "Deny",
+    back: "Back",
     /** "Allow always" (spec 10.1), by what it covers. */
     always: {
       command: "Always allow this command",

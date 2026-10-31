@@ -124,7 +124,7 @@ describe("chat", () => {
     expect(done.title).toBe("Took 4.2 s. Read 1.8k tokens and wrote 640.");
   });
 
-  test("an approval waits for the owner, and a denial carries a note", async () => {
+  test("an approval waits for the owner, and Deny asks why first", async () => {
     const { fake, scout } = crew();
     await openScout(fake);
     act(() => {
@@ -135,10 +135,18 @@ describe("chat", () => {
     expect(within(card).getByText(/^Scout did not say what this command is for\./)).toBeDefined();
     const command = within(card).getByText("rm -rf build");
     expect(command.closest("details")?.open).toBe(true);
-    fireEvent.change(within(card).getByLabelText("Note for Scout if you deny"), {
-      target: { value: "keep the cache" },
-    });
+    // The reason waits for Deny; Esc goes back to the answers.
+    const reason = () => within(card).queryByLabelText("Why you deny it, for Scout");
+    expect(reason()).toBeNull();
     fireEvent.click(within(card).getByRole("button", { name: "Deny" }));
+    expect(document.activeElement).toBe(reason());
+    expect(within(card).queryByRole("button", { name: "Allow" })).toBeNull();
+    fireEvent.keyDown(reason() as HTMLElement, { key: "Escape" });
+    expect(reason()).toBeNull();
+    expect(fake.calls.some((call) => call.method === "approvals.answer")).toBe(false);
+    fireEvent.click(within(card).getByRole("button", { name: "Deny" }));
+    fireEvent.change(reason() as HTMLElement, { target: { value: "keep the cache" } });
+    fireEvent.keyDown(reason() as HTMLElement, { key: "Enter" });
     expect(await within(chat()).findByText("Denied: run a command")).toBeDefined();
     expect(fake.calls.at(-1)).toEqual({
       method: "approvals.answer",
@@ -198,6 +206,8 @@ describe("chat", () => {
     const card = screen.getByRole("region", { name: "Scout asks to run a command" });
     expect(within(card).getByText("This command is too long to show in full.")).toBeDefined();
     expect(within(card).getByText('{"command":"Get-Date; Get-Da…')).toBeDefined();
+    // Denied without a reason.
+    fireEvent.click(within(card).getByRole("button", { name: "Deny" }));
     fireEvent.click(within(card).getByRole("button", { name: "Deny" }));
     await within(chat()).findByText("Denied: run a command");
 

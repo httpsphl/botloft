@@ -1,6 +1,12 @@
 import { describe, expect, test } from "vitest";
-import type { ChatBody, ChatItem } from "../../lib/protocol.gen";
-import { chatRows, runParts, splitDraft } from "./rows";
+import type {
+  ChatBody,
+  ChatItem,
+  KeyRequestStatus,
+  Question,
+  QuestionStatus,
+} from "../../lib/protocol.gen";
+import { chatRows, isWaiting, runParts, splitDraft } from "./rows";
 
 const DAY = 24 * 60 * 60 * 1000;
 const start = new Date(2026, 8, 28, 9, 0).getTime();
@@ -87,5 +93,20 @@ describe("splitDraft", () => {
 
   test("does not cut before an indented line, which may belong to a list item", () => {
     expect(splitDraft("- item\n\n  more of it")).toEqual(["", "- item\n\n  more of it"]);
+  });
+});
+
+describe("isWaiting", () => {
+  const question = (status: QuestionStatus) =>
+    item({ kind: "question", question: { status } as Question });
+  const key = (status: KeyRequestStatus) =>
+    item({ kind: "key_request", name: "OPENAI_API_KEY", why: "", status });
+
+  test("open questions and keys wait for the owner, answered ones do not", () => {
+    expect(isWaiting(question("open"))).toBe(true);
+    expect(isWaiting(question("answered"))).toBe(false);
+    expect(isWaiting(key("open"))).toBe(true);
+    expect(isWaiting(key("saved"))).toBe(false);
+    expect(isWaiting(reply("Done."))).toBe(false);
   });
 });

@@ -86,8 +86,18 @@ interface NoteProps {
 const NOTE =
   "rounded-xl border border-line-strong px-3 text-sm outline-none placeholder:text-muted focus:border-muted";
 
-/** One line for the owner's note, in a request card. */
-export function NoteInput({ label, value, placeholder, onChange }: NoteProps) {
+/**
+ * One line for the owner's note, in a request card. It opens when the owner
+ * asks for it, so it takes the typing at once.
+ */
+export function NoteInput({
+  label,
+  value,
+  placeholder,
+  onChange,
+  onEnter,
+  onEscape,
+}: NoteProps & { onEnter: () => void; onEscape: () => void }) {
   const id = useId();
   return (
     <>
@@ -98,7 +108,18 @@ export function NoteInput({ label, value, placeholder, onChange }: NoteProps) {
         id={id}
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            onEnter();
+          } else if (event.key === "Escape") {
+            event.preventDefault();
+            onEscape();
+          }
+        }}
         placeholder={placeholder}
+        // biome-ignore lint/a11y/noAutofocus: it opens on the owner's click
+        autoFocus
         className={`mt-3 h-9 w-full bg-canvas ${NOTE}`}
       />
     </>
