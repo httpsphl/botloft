@@ -82,6 +82,7 @@ export class FakeBotloft implements BotloftApi {
     startWithWindows: true,
     keepAwake: true,
     approvalWaitMinutes: 60,
+    sleepAfterMinutes: 30,
     defaultAgent: "claude",
     showExperimentalAgents: false,
   };
@@ -297,6 +298,7 @@ export class FakeBotloft implements BotloftApi {
         startWithWindows: change.startWithWindows ?? this.settings.startWithWindows,
         keepAwake: change.keepAwake ?? this.settings.keepAwake,
         approvalWaitMinutes: change.approvalWaitMinutes ?? this.settings.approvalWaitMinutes,
+        sleepAfterMinutes: change.sleepAfterMinutes ?? this.settings.sleepAfterMinutes,
         defaultAgent: change.defaultAgent ?? this.settings.defaultAgent,
         showExperimentalAgents:
           change.showExperimentalAgents ?? this.settings.showExperimentalAgents,

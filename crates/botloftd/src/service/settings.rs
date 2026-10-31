@@ -2,7 +2,7 @@
 //! changes in the app's Settings.
 
 use botloft_core::protocol::{
-    APPROVAL_WAIT_MAX_MINUTES, AgentKind, Settings, SettingsUpdateParams,
+    APPROVAL_WAIT_MAX_MINUTES, AgentKind, SLEEP_AFTER_MAX_MINUTES, Settings, SettingsUpdateParams,
 };
 use tracing::info;
 
@@ -27,6 +27,14 @@ pub fn update(daemon: &Daemon, params: SettingsUpdateParams) -> ApiResult<Settin
     {
         return Err(ApiError::validation(format!(
             "approvalWaitMinutes must be between 1 and {APPROVAL_WAIT_MAX_MINUTES}"
+        )));
+    }
+    if params
+        .sleep_after_minutes
+        .is_some_and(|minutes| minutes > SLEEP_AFTER_MAX_MINUTES)
+    {
+        return Err(ApiError::validation(format!(
+            "sleepAfterMinutes must be between 0 and {SLEEP_AFTER_MAX_MINUTES}"
         )));
     }
     let before = daemon.settings.get();

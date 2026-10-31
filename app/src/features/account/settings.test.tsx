@@ -57,6 +57,7 @@ describe("settings", () => {
         startWithWindows: false,
         keepAwake: false,
         approvalWaitMinutes: 60,
+        sleepAfterMinutes: 30,
         defaultAgent: "claude",
         showExperimentalAgents: false,
       }),

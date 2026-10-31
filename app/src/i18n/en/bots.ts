@@ -8,6 +8,10 @@ export const bots = {
     offline: { label: "Offline", hint: "Not running." },
     launching: { label: "Starting", hint: "Claude Code is starting." },
     idle: { label: "Idle", hint: "Ready for work." },
+    sleeping: {
+      label: "Sleeping",
+      hint: "Uses no memory and wakes by itself when a message, a routine or a signal comes. The first reply takes a few seconds more.",
+    },
     busy: { label: "Working", hint: "Working on something." },
     needs_approval: {
       label: "Needs approval",

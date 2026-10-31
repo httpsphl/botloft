@@ -258,6 +258,10 @@ export const account: Messages["account"] = {
       "Com a janela fechada, os avisos só chegam com o Botloft perto do relógio (em Geral).",
     keepAwake: "Não deixar o computador dormir enquanto os agentes trabalham",
     keepAwakeHint: "Ele ainda dorme quando você fecha a tampa ou escolhe Suspender.",
+    sleepAfter: "Agentes parados dormem depois de",
+    sleepAfterHint:
+      "Um agente dormindo não usa memória e acorda sozinho quando chega mensagem, rotina ou aviso. A primeira resposta dele leva alguns segundos a mais.",
+    sleepAfterChoices: { 15: "15 minutos", 30: "30 minutos", 60: "1 hora", 0: "Nunca" },
     saveFailed: "Não foi possível mudar a configuração",
     pages: "Partes das configurações",
     general: "Geral",

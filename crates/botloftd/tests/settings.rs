@@ -15,7 +15,7 @@ async fn settings_are_read_and_changed_one_at_a_time() {
     let settings = app.call("settings.get", json!(null)).await.expect("get");
     assert_eq!(
         settings,
-        json!({ "startWithWindows": true, "keepAwake": true, "approvalWaitMinutes": 0, "defaultAgent": "claude", "showExperimentalAgents": false })
+        json!({ "startWithWindows": true, "keepAwake": true, "approvalWaitMinutes": 0, "sleepAfterMinutes": 0, "defaultAgent": "claude", "showExperimentalAgents": false })
     );
 
     let changed = app
@@ -24,7 +24,7 @@ async fn settings_are_read_and_changed_one_at_a_time() {
         .expect("update");
     assert_eq!(
         changed,
-        json!({ "startWithWindows": true, "keepAwake": false, "approvalWaitMinutes": 0, "defaultAgent": "claude", "showExperimentalAgents": false })
+        json!({ "startWithWindows": true, "keepAwake": false, "approvalWaitMinutes": 0, "sleepAfterMinutes": 0, "defaultAgent": "claude", "showExperimentalAgents": false })
     );
     assert!(!*t.daemon.settings.keep_awake().borrow());
 
@@ -34,7 +34,7 @@ async fn settings_are_read_and_changed_one_at_a_time() {
         .expect("update");
     assert_eq!(
         changed,
-        json!({ "startWithWindows": false, "keepAwake": false, "approvalWaitMinutes": 0, "defaultAgent": "claude", "showExperimentalAgents": false })
+        json!({ "startWithWindows": false, "keepAwake": false, "approvalWaitMinutes": 0, "sleepAfterMinutes": 0, "defaultAgent": "claude", "showExperimentalAgents": false })
     );
     assert_eq!(
         app.call("settings.get", json!(null)).await.expect("get"),
@@ -46,6 +46,26 @@ async fn settings_are_read_and_changed_one_at_a_time() {
             "the daemon runs in this sign-in"
         );
     }
+
+    // How long agents stay idle before they sleep (spec 7.7): 0 is never,
+    // and more than a day is refused.
+    let changed = app
+        .call("settings.update", json!({ "sleepAfterMinutes": 60 }))
+        .await
+        .expect("update");
+    assert_eq!(changed["sleepAfterMinutes"], 60);
+    assert_eq!(
+        t.daemon.settings.sleep_after(),
+        Some(std::time::Duration::from_secs(3600))
+    );
+    let refused = app
+        .call("settings.update", json!({ "sleepAfterMinutes": 1441 }))
+        .await;
+    assert!(refused.is_err());
+    app.call("settings.update", json!({ "sleepAfterMinutes": 0 }))
+        .await
+        .expect("never");
+    assert_eq!(t.daemon.settings.sleep_after(), None);
 }
 
 #[tokio::test]

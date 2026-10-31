@@ -15,10 +15,12 @@ import { prefs, usePref } from "../../shell/prefs";
 import { useApp } from "../../store/context";
 import { Select } from "../../ui/Select";
 import { AgentPrograms } from "./AgentPrograms";
-import { Section, Toggle } from "./settingsParts";
+import { Field, Section, Toggle } from "./settingsParts";
 import { useDaemonSettings } from "./useDaemonSettings";
 
 const NO_AGENTS: AgentKind[] = [];
+/** The times the owner chooses from, in minutes; 0 never (spec 7.7). */
+const SLEEP_CHOICES = [15, 30, 60, 0] as const;
 
 export function GeneralSettings() {
   const t = useT();
@@ -109,6 +111,19 @@ export function GeneralSettings() {
           disabled={!settings}
           onChange={(on) => change({ keepAwake: on })}
         />
+        <Field label={s.sleepAfter} hint={s.sleepAfterHint}>
+          <div className="max-w-xs">
+            <Select
+              label={s.sleepAfter}
+              value={String(settings?.sleepAfterMinutes ?? 30)}
+              options={SLEEP_CHOICES.map((minutes) => ({
+                value: String(minutes),
+                label: s.sleepAfterChoices[minutes],
+              }))}
+              onChange={(minutes) => change({ sleepAfterMinutes: Number(minutes) })}
+            />
+          </div>
+        </Field>
       </Section>
     </>
   );

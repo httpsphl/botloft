@@ -150,7 +150,10 @@ pub fn new_daemon_with(
         },
         bots: bot_settings(),
         browser: BrowserSettings::default(),
-        settings: LiveSettings::new(None, &Config::default()).with_approval_wait(approval_wait),
+        // Bots never sleep unless a test says so (spec 7.7).
+        settings: LiveSettings::new(None, &Config::default())
+            .with_approval_wait(approval_wait)
+            .with_sleep_after(None),
         trash: Arc::new(trash.clone()),
         // The owner is always right there, unless a test says otherwise.
         owner_idle: Arc::new(|| Some(Duration::ZERO)),

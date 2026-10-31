@@ -5,6 +5,10 @@ export const bots: Messages["bots"] = {
     offline: { label: "Desligado", hint: "Não está rodando." },
     launching: { label: "Iniciando", hint: "O Claude Code está iniciando." },
     idle: { label: "Disponível", hint: "Pronto para trabalhar." },
+    sleeping: {
+      label: "Dormindo",
+      hint: "Não usa memória e acorda sozinho quando chega mensagem, rotina ou aviso. A primeira resposta leva alguns segundos a mais.",
+    },
     busy: { label: "Trabalhando", hint: "Trabalhando em algo." },
     needs_approval: {
       label: "Precisa de aprovação",

@@ -27,15 +27,19 @@ struct Current {
     settings: Settings,
     /// `settings.approval_wait_minutes`, or shorter in tests.
     approval_wait: Duration,
+    /// `settings.sleep_after_minutes`, or shorter in tests; `None` never.
+    sleep_after: Option<Duration>,
 }
 
 impl LiveSettings {
     pub fn new(file: Option<PathBuf>, config: &Config) -> Self {
         let minutes = u32::try_from(config.bots.approval_timeout_minutes).unwrap_or(u32::MAX);
+        let sleep = u32::try_from(config.bots.sleep_after_minutes).unwrap_or(u32::MAX);
         let settings = Settings {
             start_with_windows: config.start_with_windows,
             keep_awake: config.keep_awake,
             approval_wait_minutes: minutes,
+            sleep_after_minutes: sleep,
             // A name this build does not know is Claude Code.
             default_agent: config.default_agent.parse().unwrap_or(AgentKind::Claude),
             show_experimental_agents: !config.experimental_agents.is_empty(),
@@ -45,6 +49,7 @@ impl LiveSettings {
             current: Mutex::new(Current {
                 settings,
                 approval_wait: minutes_to_wait(minutes),
+                sleep_after: minutes_to_sleep(sleep),
             }),
             keep_awake: watch::Sender::new(settings.keep_awake),
         }
@@ -62,6 +67,29 @@ impl LiveSettings {
         self
     }
 
+    /// Bots sleep after `after` idle, even under a minute, or never
+    /// (tests).
+    #[must_use]
+    pub fn with_sleep_after(self, after: Option<Duration>) -> Self {
+        {
+            let mut current = self.lock();
+            current.sleep_after = after;
+            current.settings.sleep_after_minutes = after.map_or(0, |after| {
+                u32::try_from(after.as_secs() / 60).unwrap_or(u32::MAX)
+            });
+        }
+        self
+    }
+
+    /// Changes the sleep time at once, even under a minute (tests).
+    pub fn set_sleep_after(&self, after: Option<Duration>) {
+        let mut current = self.lock();
+        current.sleep_after = after;
+        current.settings.sleep_after_minutes = after.map_or(0, |after| {
+            u32::try_from(after.as_secs() / 60).unwrap_or(u32::MAX)
+        });
+    }
+
     pub fn get(&self) -> Settings {
         self.lock().settings
     }
@@ -69,6 +97,11 @@ impl LiveSettings {
     /// How long a permission request waits for the owner (spec 10.1).
     pub fn approval_wait(&self) -> Duration {
         self.lock().approval_wait
+    }
+
+    /// How long a bot stays idle before it sleeps (spec 7.7); `None` never.
+    pub fn sleep_after(&self) -> Option<Duration> {
+        self.lock().sleep_after
     }
 
     /// Follows `keep_awake` (spec 14).
@@ -92,6 +125,10 @@ impl LiveSettings {
         if let Some(minutes) = update.approval_wait_minutes {
             current.settings.approval_wait_minutes = minutes;
             current.approval_wait = minutes_to_wait(minutes);
+        }
+        if let Some(minutes) = update.sleep_after_minutes {
+            current.settings.sleep_after_minutes = minutes;
+            current.sleep_after = minutes_to_sleep(minutes);
         }
         if let Some(agent) = update.default_agent {
             current.settings.default_agent = agent;
@@ -128,6 +165,11 @@ fn minutes_to_wait(minutes: u32) -> Duration {
     Duration::from_secs(u64::from(minutes) * 60)
 }
 
+/// 0 is never.
+fn minutes_to_sleep(minutes: u32) -> Option<Duration> {
+    (minutes > 0).then(|| minutes_to_wait(minutes))
+}
+
 /// Sets the changed keys in `config.toml` and leaves the rest as it was.
 /// The new file replaces the old one whole, so a crash never leaves half.
 fn write(file: &Path, update: SettingsUpdateParams) -> io::Result<()> {
@@ -161,6 +203,13 @@ fn write(file: &Path, update: SettingsUpdateParams) -> io::Result<()> {
             .as_table_like_mut()
             .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "bots is not a table"))?;
         set(bots, "approval_timeout_minutes", i64::from(minutes));
+    }
+    if let Some(minutes) = update.sleep_after_minutes {
+        let bots = config["bots"]
+            .or_insert(toml_edit::table())
+            .as_table_like_mut()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "bots is not a table"))?;
+        set(bots, "sleep_after_minutes", i64::from(minutes));
     }
     let staged = file.with_extension("toml.new");
     std::fs::write(&staged, config.to_string())?;
@@ -218,6 +267,7 @@ mod tests {
                 start_with_windows: true,
                 keep_awake: false,
                 approval_wait_minutes: 30,
+                sleep_after_minutes: 30,
                 default_agent: AgentKind::Claude,
                 show_experimental_agents: false,
             }
@@ -236,6 +286,7 @@ mod tests {
                 start_with_windows: Some(false),
                 keep_awake: Some(true),
                 approval_wait_minutes: Some(240),
+                sleep_after_minutes: Some(0),
                 default_agent: None,
                 show_experimental_agents: None,
             })
@@ -249,12 +300,16 @@ mod tests {
         let config = Config::parse(&text).expect("parse");
         assert!(config.keep_awake && !config.start_with_windows);
         assert_eq!(config.bots.approval_timeout_minutes, 240);
+        // 0 is never: agents stay up (spec 7.7).
+        assert_eq!(config.bots.sleep_after_minutes, 0);
+        assert_eq!(settings.sleep_after(), None);
         assert_eq!(
             settings.get(),
             Settings {
                 start_with_windows: false,
                 keep_awake: true,
                 approval_wait_minutes: 240,
+                sleep_after_minutes: 0,
                 default_agent: AgentKind::Claude,
                 show_experimental_agents: false,
             }

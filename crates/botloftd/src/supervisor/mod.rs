@@ -11,6 +11,7 @@ mod relaunch;
 mod session;
 mod settings;
 mod sign_in;
+mod sleep;
 mod slot;
 mod spawn;
 mod start;
@@ -270,6 +271,8 @@ impl Supervisor {
         let mut inner = self.lock();
         let slot = self.slot(&mut inner, bot);
         slot.backoff.reset();
+        // A sleeping bot the owner restarts wakes up (spec 7.7).
+        slot.wake_asked = true;
         match &slot.running {
             Some(running) => {
                 slot.stop = Some(StopIntent::Restart { fresh });
@@ -300,6 +303,7 @@ impl Supervisor {
     fn set_state(&self, bot: &BotId, slot: &mut Slot, state: BotState) {
         if slot.state != state {
             self.count_busy(slot.state, state);
+            slot.idle_since = (state == BotState::Idle).then(Instant::now);
             slot.state = state;
             self.announce(bot, slot);
         }
@@ -354,7 +358,8 @@ pub async fn run(daemon: Arc<Daemon>) {
     let supervisor = &daemon.supervisor;
     loop {
         supervisor.reconcile().await;
-        let next = supervisor.next_restart().map_or(RECONCILE_EVERY, |at| {
+        let nap = daemon.settings.sleep_after();
+        let next = supervisor.next_due(nap).map_or(RECONCILE_EVERY, |at| {
             at.saturating_duration_since(Instant::now())
                 .min(RECONCILE_EVERY)
         });
