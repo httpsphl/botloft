@@ -1,6 +1,6 @@
 // The top of the island's panel (spec 31.2): the tabs as icons on the left;
 // on the right, pause or resume every crew, sound on or off, open Botloft
-// and hide.
+// and hide. It stays in place while the panel scrolls.
 
 import {
   Gauge,
@@ -70,7 +70,7 @@ export function Bar({
         .map((crew) => api.call("crews.setPaused", { crewId: crew.id, paused: !allPaused })),
     ).then(onChanged, onChanged);
   return (
-    <div className="flex items-center justify-between px-3 pt-2.5 pb-2">
+    <div className="sticky top-0 z-10 flex items-center justify-between bg-[var(--island-bg)] px-3 pt-2.5 pb-2">
       <div role="tablist" aria-label={t.island.tabs.label} className="flex gap-1">
         {tabs.map(([id, name, icon]) => (
           <button
