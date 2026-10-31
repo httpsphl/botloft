@@ -35,13 +35,18 @@ async fn every_bots_permissions_come_in_one_list_and_a_site_can_be_taken_back() 
         let bot = json!({ "crewId": crew["id"], "name": name, "role": "", "instructions": "" });
         bots.push(app.call("bots.create", bot).await.expect("bot"));
     }
-    let (scout, writer, editor): (BotId, BotId, BotId) =
-        (id(&bots[0]), id(&bots[1]), id(&bots[2]));
+    let (scout, writer, editor): (BotId, BotId, BotId) = (id(&bots[0]), id(&bots[1]), id(&bots[2]));
     let docs_id: CrewId = id(&docs);
     {
         let store = t.daemon.store();
         store
-            .grant_desktop_app(&scout, r"C:\Office\EXCEL.EXE", "Excel", DesktopLevel::See, 10)
+            .grant_desktop_app(
+                &scout,
+                r"C:\Office\EXCEL.EXE",
+                "Excel",
+                DesktopLevel::See,
+                10,
+            )
             .expect("app");
         store
             .allow_browser_site(&scout, "wikipedia.org", 20)
@@ -91,7 +96,10 @@ async fn every_bots_permissions_come_in_one_list_and_a_site_can_be_taken_back() 
 
     // A site taken back: the apps hear of it and the bot asks again.
     let revoke = json!({ "botId": bots[0]["id"], "site": "wikipedia.org" });
-    let left = app.call("sites.revoke", revoke.clone()).await.expect("revoke");
+    let left = app
+        .call("sites.revoke", revoke.clone())
+        .await
+        .expect("revoke");
     assert_eq!(left["sites"], json!([]));
     let heard = app.notification("bot.sites").await;
     assert_eq!(heard["botId"], bots[0]["id"]);

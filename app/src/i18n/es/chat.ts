@@ -122,6 +122,7 @@ export const chat: Messages["chat"] = {
     noteLabel: (bot: string) => `Por qué lo deniegas, para ${bot}`,
     notePlaceholder: "¿Por qué no? El agente lo lee (opcional)",
     allow: "Permitir",
+    once: "Solo esta vez",
     deny: "Denegar",
     back: "Volver",
     always: {

@@ -7,6 +7,7 @@ import {
   Bell,
   DatabaseBackup,
   Info,
+  LockKeyhole,
   type LucideIcon,
   MessageSquare,
   Palette,
@@ -16,10 +17,12 @@ import {
   SlidersHorizontal,
   Smartphone,
 } from "lucide-react";
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useT } from "../../i18n";
+import { useApp } from "../../store/context";
 import { ConnectedToolsSettings } from "../connections/ConnectedToolsSettings";
 import { PastedKeys } from "../keys/PastedKeys";
+import { PermissionsSettings } from "../permissions/PermissionsSettings";
 import { AboutSettings } from "./AboutSettings";
 import { AccountSettings } from "./AccountSettings";
 import { AlertsSettings } from "./AlertsSettings";
@@ -47,6 +50,7 @@ const GROUPS: { id: GroupId; pages: { id: Page; icon: LucideIcon }[] }[] = [
     pages: [
       { id: "account", icon: Smartphone },
       { id: "tools", icon: Plug },
+      { id: "permissions", icon: LockKeyhole },
     ],
   },
   {
@@ -63,7 +67,9 @@ const GROUPS: { id: GroupId; pages: { id: Page; icon: LucideIcon }[] }[] = [
 export function SettingsPage() {
   const t = useT();
   const s = t.account.settings;
-  const [page, setPage] = useState<Page>("general");
+  // Opened on the Permissions page from an agent's details or panel.
+  const permissionsAt = useApp((state) => state.permissionsAt);
+  const [page, setPage] = useState<Page>(permissionsAt ? "permissions" : "general");
   const [query, setQuery] = useState("");
   const id = useId();
   const names: Record<Page, string> = {
@@ -73,6 +79,7 @@ export function SettingsPage() {
     alerts: s.alerts,
     account: s.account,
     tools: s.tools,
+    permissions: s.permissions,
     backup: s.backup,
     security: s.security,
     archived: s.archived,
@@ -81,6 +88,13 @@ export function SettingsPage() {
   const entries = useMemo(() => settingsIndex(t), [t]);
   const found = search(entries, query, names);
   const searching = plain(query) !== "";
+
+  useEffect(() => {
+    if (permissionsAt) {
+      setPage("permissions");
+      setQuery("");
+    }
+  }, [permissionsAt]);
 
   const open = (to: Page) => {
     setPage(to);
@@ -166,6 +180,7 @@ export function SettingsPage() {
                 {page === "alerts" && <AlertsSettings />}
                 {page === "account" && <AccountSettings />}
                 {page === "tools" && <ConnectedToolsSettings />}
+                {page === "permissions" && <PermissionsSettings />}
                 {page === "backup" && <BackupSettings goToAccount={() => open("account")} />}
                 {page === "security" && <PastedKeys />}
                 {page === "archived" && <ArchivedSettings />}

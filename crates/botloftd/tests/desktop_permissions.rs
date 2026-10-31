@@ -33,11 +33,7 @@ async fn an_app_given_in_settings_is_seen_without_asking() {
     let mut s = setup().await;
     let own = std::env::current_exe().expect("exe");
     let own = own.to_string_lossy();
-    let apps = s
-        .app
-        .call("desktop.apps", Value::Null)
-        .await
-        .expect("apps");
+    let apps = s.app.call("desktop.apps", Value::Null).await.expect("apps");
     let ours = apps
         .as_array()
         .expect("list")

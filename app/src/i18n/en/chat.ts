@@ -133,6 +133,8 @@ export const chat = {
     noteLabel: (bot: string) => `Why you deny it, for ${bot}`,
     notePlaceholder: "Why not? The agent reads this (optional)",
     allow: "Allow",
+    /** A desktop app or a site, until the agent ends its turn (spec 24.2, 21.5). */
+    once: "Only this time",
     deny: "Deny",
     back: "Back",
     /** "Allow always" (spec 10.1), by what it covers. */
