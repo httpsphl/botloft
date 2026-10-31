@@ -24,6 +24,7 @@ import { BotAvatar, moodOf } from "../bots/BotAvatar";
 import { CallPills, useLiveCalls } from "../messages/CallPills";
 import { BotRun, type Live } from "./BotRun";
 import { ChatComposer } from "./ChatComposer";
+import { followTop } from "./follow";
 import { InboundRow } from "./InboundRow";
 import { NoticeRow } from "./NoticeRow";
 import { ReactionsOf, useReactions } from "./Reactions";
@@ -83,7 +84,7 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
       element.scrollTop = element.scrollHeight - anchor.current;
       anchor.current = null;
     } else if (atEnd.current) {
-      element.scrollTop = element.scrollHeight;
+      element.scrollTop = followTop(element, listRef.current);
     }
   }, [end]);
 
@@ -97,7 +98,7 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
     const observer = new ResizeObserver(() => {
       const scrolled = scroller.current;
       if (scrolled && atEnd.current) {
-        scrolled.scrollTop = scrolled.scrollHeight;
+        scrolled.scrollTop = followTop(scrolled, listRef.current);
       }
     });
     observer.observe(element);

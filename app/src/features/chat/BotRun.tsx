@@ -80,8 +80,9 @@ function Working() {
 function Draft({ text }: { text: string }) {
   const [done, writing] = splitDraft(text);
   return (
-    // chat-md.css spaces the two parts as one reply.
-    <div aria-live="off" className="chat-draft animate-fade opacity-90">
+    // chat-md.css spaces the two parts as one reply; `data-reply` is where
+    // following a long one stops (follow.ts).
+    <div aria-live="off" data-reply className="chat-draft animate-fade opacity-90">
       {done && <Markdown text={done} />}
       <Markdown text={writing} streaming />
     </div>
@@ -164,13 +165,14 @@ function BotRunView({
             case "reply":
               // It was already on screen as it was written.
               return (
-                <Repliable
-                  key={head.id}
-                  target={{ itemId: head.id, who: bot.name, text: head.body.text }}
-                  react
-                >
-                  <Markdown text={head.body.text} />
-                </Repliable>
+                <div key={head.id} data-reply>
+                  <Repliable
+                    target={{ itemId: head.id, who: bot.name, text: head.body.text }}
+                    react
+                  >
+                    <Markdown text={head.body.text} />
+                  </Repliable>
+                </div>
               );
             case "approval":
               return (
