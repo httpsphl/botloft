@@ -6,6 +6,7 @@ import {
   MailOpen,
   Pencil,
   RefreshCcw,
+  RotateCw,
   Trash2,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -54,6 +55,15 @@ export function useBotActions(
           putCrew(
             await api.call("crews.setLead", { crewId: crew.id, botId: chief ? null : bot.id }),
           ),
+        ),
+    },
+    {
+      label: words.restart,
+      icon: RotateCw,
+      disabled: bot.paused || crew.paused,
+      onSelect: () =>
+        attempt(words.failed.restart, async () =>
+          putBot(await api.call("bots.restart", { botId: bot.id, fresh: false })),
         ),
     },
     {

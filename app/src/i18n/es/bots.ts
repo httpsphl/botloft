@@ -36,6 +36,7 @@ export const bots: Messages["bots"] = {
     restart: "Reiniciar",
     showDetails: "Mostrar detalles",
     hideDetails: "Ocultar detalles",
+    panels: "Paneles",
     more: "Más acciones del agente",
     menuOf: (name: string) => `Acciones de ${name}`,
     edit: "Editar",

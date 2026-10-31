@@ -6,14 +6,13 @@ import {
   PanelRight,
   Pause,
   Play,
-  RotateCw,
   ShieldOff,
 } from "lucide-react";
 import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
 import { useApi, useApp } from "../../store/context";
 import { Badge } from "../../ui/Badge";
-import { Button } from "../../ui/Button";
+import { Button, FitLabel } from "../../ui/Button";
 import { Menu } from "../../ui/Menu";
 import { attempt } from "../../ui/toast";
 import { BotAvatar, moodOf } from "./BotAvatar";
@@ -63,15 +62,10 @@ export function BotHeader({
   const putBot = useApp((state) => state.putBot);
   const chief = isChief(bot, crew);
   const actions = useBotActions(bot, crew);
-  const stopped = bot.paused || crew.paused;
 
   const setPaused = (paused: boolean) =>
     attempt(paused ? words.failed.pause : words.failed.resume, async () =>
       putBot(await api.call("bots.setPaused", { botId: bot.id, paused })),
-    );
-  const restart = () =>
-    attempt(words.failed.restart, async () =>
-      putBot(await api.call("bots.restart", { botId: bot.id, fresh: false })),
     );
 
   return (
@@ -107,99 +101,101 @@ export function BotHeader({
       </div>
       {bot.paused ? (
         <Button icon={Play} title={words.resume} onClick={() => setPaused(false)}>
-          <Label>{words.resume}</Label>
+          <FitLabel>{words.resume}</FitLabel>
         </Button>
       ) : (
         <Button icon={Pause} title={words.pause} onClick={() => setPaused(true)}>
-          <Label>{words.pause}</Label>
+          <FitLabel>{words.pause}</FitLabel>
         </Button>
       )}
-      <Button icon={RotateCw} title={words.restart} disabled={stopped} onClick={restart}>
-        <Label>{words.restart}</Label>
-      </Button>
-      <span className="relative">
-        <Button
-          variant={screensOpen ? "secondary" : "ghost"}
-          icon={LayoutTemplate}
-          label={
-            screensOpen
-              ? t.screens.hide
-              : drawing
-                ? `${t.screens.show}: ${t.screens.drawing(bot.name)}`
-                : t.screens.show
-          }
-          aria-pressed={screensOpen}
-          onClick={onToggleScreens}
-        />
-        {drawing && !screensOpen && (
-          <span
-            aria-hidden
-            className="live-dot pointer-events-none absolute top-0.5 right-0.5"
-            style={{ background: bot.color }}
+      {/* The panels beside the chat, one group, the open ones raised. */}
+      <fieldset
+        aria-label={words.panels}
+        className="m-0 flex items-center gap-0.5 rounded-xl border border-line p-0.5"
+      >
+        <span className="relative">
+          <Button
+            size="sm"
+            variant={screensOpen ? "secondary" : "ghost"}
+            icon={LayoutTemplate}
+            label={
+              screensOpen
+                ? t.screens.hide
+                : drawing
+                  ? `${t.screens.show}: ${t.screens.drawing(bot.name)}`
+                  : t.screens.show
+            }
+            aria-pressed={screensOpen}
+            onClick={onToggleScreens}
           />
-        )}
-      </span>
-      <span className="relative">
-        <Button
-          variant={browserOpen ? "secondary" : "ghost"}
-          icon={Globe}
-          label={
-            browserOpen
-              ? t.browser.hide
-              : asking
-                ? `${t.browser.show}: ${t.browser.help.needs(bot.name)}`
-                : browsing
-                  ? `${t.browser.show}: ${t.browser.browsing(bot.name)}`
-                  : t.browser.show
-          }
-          aria-pressed={browserOpen}
-          onClick={onToggleBrowser}
-        />
-        {(browsing || asking) && !browserOpen && (
-          <span
-            aria-hidden
-            className="live-dot pointer-events-none absolute top-0.5 right-0.5"
-            style={{ background: asking ? "var(--warn)" : "var(--work)" }}
+          {drawing && !screensOpen && (
+            <span
+              aria-hidden
+              className="live-dot pointer-events-none absolute top-0.5 right-0.5"
+              style={{ background: bot.color }}
+            />
+          )}
+        </span>
+        <span className="relative">
+          <Button
+            size="sm"
+            variant={browserOpen ? "secondary" : "ghost"}
+            icon={Globe}
+            label={
+              browserOpen
+                ? t.browser.hide
+                : asking
+                  ? `${t.browser.show}: ${t.browser.help.needs(bot.name)}`
+                  : browsing
+                    ? `${t.browser.show}: ${t.browser.browsing(bot.name)}`
+                    : t.browser.show
+            }
+            aria-pressed={browserOpen}
+            onClick={onToggleBrowser}
           />
-        )}
-      </span>
-      <span className="relative">
+          {(browsing || asking) && !browserOpen && (
+            <span
+              aria-hidden
+              className="live-dot pointer-events-none absolute top-0.5 right-0.5"
+              style={{ background: asking ? "var(--warn)" : "var(--work)" }}
+            />
+          )}
+        </span>
+        <span className="relative">
+          <Button
+            size="sm"
+            variant={filesOpen ? "secondary" : "ghost"}
+            icon={Files}
+            label={
+              freshFiles > 0
+                ? `${t.files.show}: ${t.files.fresh(freshFiles)}`
+                : filesOpen
+                  ? t.files.hide
+                  : t.files.show
+            }
+            aria-pressed={filesOpen}
+            onClick={onToggleFiles}
+          />
+          {freshFiles > 0 && (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -top-1 -right-1 grid min-w-4 place-items-center rounded-full bg-work px-1 font-semibold text-[10px] text-canvas leading-4"
+            >
+              {freshFiles}
+            </span>
+          )}
+        </span>
         <Button
-          variant={filesOpen ? "secondary" : "ghost"}
-          icon={Files}
-          label={
-            freshFiles > 0
-              ? `${t.files.show}: ${t.files.fresh(freshFiles)}`
-              : filesOpen
-                ? t.files.hide
-                : t.files.show
-          }
-          aria-pressed={filesOpen}
-          onClick={onToggleFiles}
+          size="sm"
+          variant={detailsOpen ? "secondary" : "ghost"}
+          icon={PanelRight}
+          label={detailsOpen ? words.hideDetails : words.showDetails}
+          aria-pressed={detailsOpen}
+          onClick={onToggleDetails}
         />
-        {freshFiles > 0 && (
-          <span
-            aria-hidden
-            className="pointer-events-none absolute -top-1 -right-1 grid min-w-4 place-items-center rounded-full bg-work px-1 font-semibold text-[10px] text-canvas leading-4"
-          >
-            {freshFiles}
-          </span>
-        )}
-      </span>
-      <Button
-        variant={detailsOpen ? "secondary" : "ghost"}
-        icon={PanelRight}
-        label={detailsOpen ? words.hideDetails : words.showDetails}
-        aria-pressed={detailsOpen}
-        onClick={onToggleDetails}
-      />
+      </fieldset>
       <Menu label={words.more} icon={Ellipsis} items={actions.items} />
       {actions.dialogs}
     </header>
   );
-}
-
-/** A button's words, read aloud always but shown only where they fit. */
-function Label({ children }: { children: string }) {
-  return <span className="sr-only @3xl:not-sr-only">{children}</span>;
 }
