@@ -4,9 +4,14 @@ import { FakeBotloft } from "../../lib/fake";
 import { RpcError } from "../../lib/rpc";
 import { crewOpened, openBot, openTab, renderApp, sidebar } from "../../test/app";
 
-/** The last call that is not the Bot agency loading, which an empty crew page does. */
+/**
+ * The last call that is not a page reading what it shows: the Bot agency on
+ * an empty crew's page, what waits on the home.
+ */
 const lastCall = (fake: FakeBotloft) =>
-  fake.calls.filter((call) => call.method !== "catalog.list").at(-1);
+  fake.calls
+    .filter((call) => call.method !== "catalog.list" && call.method !== "cards.list")
+    .at(-1);
 
 afterEach(cleanup);
 

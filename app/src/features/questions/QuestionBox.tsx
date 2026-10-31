@@ -28,7 +28,7 @@ export function QuestionBox() {
         ) : (
           <ul className="mx-auto flex max-w-3xl flex-col gap-6">
             {questions.map((question) => (
-              <Entry key={question.id} question={question} />
+              <QuestionEntry key={question.id} question={question} />
             ))}
           </ul>
         )}
@@ -37,7 +37,8 @@ export function QuestionBox() {
   );
 }
 
-function Entry({ question }: { question: Question }) {
+/** A question with who asked, from which crew and when; also on the home. */
+export function QuestionEntry({ question }: { question: Question }) {
   const t = useT();
   const words = t.questions.box;
   const bot = useApp((state) => state.bots[question.botId]);
