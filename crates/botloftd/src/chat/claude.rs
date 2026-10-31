@@ -27,9 +27,10 @@ pub(crate) fn apply(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value
             daemon.supervisor.turn_began(bot, generation);
         }
         "system" if subtype == Some("background_tasks_changed") => {
+            let (agents, tasks) = task_counts(event);
             daemon
                 .supervisor
-                .agents_running(bot, generation, agent_count(event));
+                .agents_running(bot, generation, agents, tasks);
         }
         "system" if subtype == Some("status") => context::status(daemon, bot, event),
         "system" if subtype == Some("compact_boundary") => context::compacted(daemon, bot, event),
@@ -48,17 +49,18 @@ pub(crate) fn apply(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value
     }
 }
 
-/// How many of the background tasks Claude Code lists are subagents. Shell
-/// commands and monitors can run for as long as the bot lives, so they do
-/// not count as work.
-fn agent_count(event: &Value) -> u32 {
-    let agents = event["tasks"].as_array().map_or(0, |tasks| {
-        tasks
-            .iter()
-            .filter(|task| task["task_type"] == "local_agent")
-            .count()
-    });
-    u32::try_from(agents).unwrap_or(u32::MAX)
+/// How many of the background tasks Claude Code lists are subagents, and
+/// how many there are in all. Shell commands and monitors can run for as
+/// long as the bot lives, so they do not count as work; they only keep it
+/// from sleeping, since they end with the process (spec 7.7).
+fn task_counts(event: &Value) -> (u32, u32) {
+    let tasks = event["tasks"].as_array().map_or(&[][..], Vec::as_slice);
+    let agents = tasks
+        .iter()
+        .filter(|task| task["task_type"] == "local_agent")
+        .count();
+    let count = |n: usize| u32::try_from(n).unwrap_or(u32::MAX);
+    (count(agents), count(tasks.len()))
 }
 
 /// Every turn starts with the mode and the model in use (spec 7.4).

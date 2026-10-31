@@ -89,7 +89,7 @@ export function BotHeader({
           </span>
         </div>
         <div className="mt-0.5 flex items-center gap-3 text-sm">
-          <BotStateBadge bot={bot} crewPaused={crew.paused} />
+          <BotStateBadge bot={bot} crewPaused={crew.paused} sleep />
           {chief && <ChiefBadge crew={crew} />}
           {bot.permissionMode === "bypass_permissions" && (
             <Badge tone="danger" icon={ShieldOff} title={t.chat.mode.badgeHint}>

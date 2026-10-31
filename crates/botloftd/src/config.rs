@@ -105,6 +105,8 @@ impl Default for CourierConfig {
 pub struct BotsConfig {
     /// How long a permission request waits for the owner (spec 10.1).
     pub approval_timeout_minutes: u64,
+    /// Minutes idle before a bot sleeps (spec 7.7); 0 never.
+    pub sleep_after_minutes: u64,
     /// Largest attachment, per file (spec 9.5).
     pub attachment_max_mb: u64,
     /// Most bots a chief's suggestions can bring a crew to (spec 10.2).
@@ -115,6 +117,7 @@ impl Default for BotsConfig {
     fn default() -> Self {
         Self {
             approval_timeout_minutes: 60,
+            sleep_after_minutes: 30,
             attachment_max_mb: 20,
             max_per_crew: 12,
         }

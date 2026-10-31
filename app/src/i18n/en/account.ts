@@ -253,6 +253,10 @@ export const account = {
       "With the window closed, notifications only come with Botloft near the clock (in General).",
     keepAwake: "Keep the computer awake while agents work",
     keepAwakeHint: "It still sleeps when you close the lid or choose Sleep.",
+    sleepAfter: "Idle agents sleep after",
+    sleepAfterHint:
+      "A sleeping agent uses no memory and wakes by itself when a message, a routine or a signal comes. Its first reply then takes a few seconds more.",
+    sleepAfterChoices: { 15: "15 minutes", 30: "30 minutes", 60: "1 hour", 0: "Never" },
     saveFailed: "Could not change the setting",
     pages: "Parts of Settings",
     general: "General",

@@ -134,7 +134,7 @@ archivedAt: number | null, };
 /**
  * Lifecycle state of a bot (spec 7.1).
  */
-export type BotState = "offline" | "launching" | "idle" | "busy" | "needs_approval" | "rate_limited" | "auth_error" | "backoff" | "archived";
+export type BotState = "offline" | "launching" | "idle" | "sleeping" | "busy" | "needs_approval" | "rate_limited" | "auth_error" | "backoff" | "archived";
 
 /**
  * How much a bot may do without asking the owner: Claude Code's
@@ -2170,6 +2170,11 @@ keepAwake: boolean,
  */
 approvalWaitMinutes: number, 
 /**
+ * Minutes idle before a bot's process stops until something comes
+ * for it (spec 7.7); 0 never.
+ */
+sleepAfterMinutes: number, 
+/**
  * The agent bots are made for when nothing says otherwise: new bots,
  * the chief of a new crew, the bots of a template (spec 30).
  */
@@ -2187,7 +2192,11 @@ export type SettingsUpdateParams = { startWithWindows?: boolean, keepAwake?: boo
 /**
  * From 1 to [`APPROVAL_WAIT_MAX_MINUTES`].
  */
-approvalWaitMinutes?: number, defaultAgent?: AgentKind, showExperimentalAgents?: boolean, };
+approvalWaitMinutes?: number, 
+/**
+ * From 0 (never) to [`SLEEP_AFTER_MAX_MINUTES`].
+ */
+sleepAfterMinutes?: number, defaultAgent?: AgentKind, showExperimentalAgents?: boolean, };
 
 /**
  * When a routine runs (spec 20.2), kept as structure rather than cron text

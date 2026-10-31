@@ -260,6 +260,10 @@ export const account: Messages["account"] = {
       "Con la ventana cerrada, los avisos solo llegan con Botloft junto al reloj (en General).",
     keepAwake: "Mantener el equipo despierto mientras los agentes trabajan",
     keepAwakeHint: "Igual se suspende si cierras la tapa o eliges Suspender.",
+    sleepAfter: "Los agentes inactivos duermen después de",
+    sleepAfterHint:
+      "Un agente dormido no usa memoria y se despierta solo cuando llega un mensaje, una rutina o un aviso. Su primera respuesta tarda unos segundos más.",
+    sleepAfterChoices: { 15: "15 minutos", 30: "30 minutos", 60: "1 hora", 0: "Nunca" },
     saveFailed: "No se pudo cambiar el ajuste",
     pages: "Partes de la configuración",
     general: "General",

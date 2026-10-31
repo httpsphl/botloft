@@ -42,6 +42,9 @@ pub enum BotState {
     Offline,
     Launching,
     Idle,
+    /// No process, but nothing to stop it: it stopped after a while idle
+    /// (or started so) and wakes when something comes for it (spec 7.7).
+    Sleeping,
     Busy,
     NeedsApproval,
     RateLimited,

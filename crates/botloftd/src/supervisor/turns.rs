@@ -85,9 +85,10 @@ impl Supervisor {
     /// Claude Code lists the subagents it runs in the background (`system/
     /// background_tasks_changed`); the whole list comes each time. They work
     /// after the turn that started them has ended.
-    pub(crate) fn agents_running(&self, bot: &BotId, generation: u64, agents: u32) {
+    pub(crate) fn agents_running(&self, bot: &BotId, generation: u64, agents: u32, tasks: u32) {
         self.with_current(bot, generation, |supervisor, slot| {
             slot.agents = agents;
+            slot.tasks = tasks;
             if slot.is_working() {
                 supervisor.set_state(bot, slot, slot.working_state());
             }

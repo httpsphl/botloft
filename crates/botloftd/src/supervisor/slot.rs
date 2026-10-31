@@ -36,6 +36,13 @@ pub(super) struct Slot {
     /// A new permission mode, model or effort waits for the running turn
     /// to end (spec 7.4).
     pub restart_when_idle: bool,
+    /// Every background task Claude Code lists, commands and monitors
+    /// too: they die with the process, so the bot does not sleep (7.7).
+    pub tasks: u32,
+    /// Since when the bot is `idle`, for its sleep.
+    pub idle_since: Option<Instant>,
+    /// Something came for the sleeping bot: it starts at the next pass.
+    pub wake_asked: bool,
 }
 
 impl Slot {
@@ -55,6 +62,9 @@ impl Slot {
             approvals: 0,
             limited_until: None,
             restart_when_idle: false,
+            tasks: 0,
+            idle_since: None,
+            wake_asked: false,
         }
     }
 
@@ -63,6 +73,7 @@ impl Slot {
         self.waiting.clear();
         self.in_turn = false;
         self.agents = 0;
+        self.tasks = 0;
         self.approvals = 0;
     }
 

@@ -8,6 +8,7 @@ use botloft_store::BotRecord;
 use tokio::time::Instant;
 use tracing::warn;
 
+use super::sleep::Rest;
 use super::slot::{Backoff, Slot, StopIntent};
 use super::start::Start;
 use super::{ClaudeSource, ClaudeStatus, Inner, REPROBE_AFTER, Supervisor, SupervisorSettings};
@@ -49,6 +50,8 @@ impl Supervisor {
             .map(|crew| (crew.id.clone(), crew))
             .collect();
         self.release_limits(daemon.clock.now_ms());
+        // Read before the supervisor lock, like the database.
+        let sleep_after = daemon.settings.sleep_after();
         let now = Instant::now();
         let mut inner = self.lock();
         for (bot, session) in sessions {
@@ -58,7 +61,7 @@ impl Supervisor {
             .iter()
             .filter_map(|bot| {
                 let crew = crews.get(&bot.crew_id)?;
-                self.reconcile_bot(&mut inner, crew, bot, now)
+                self.reconcile_bot(&mut inner, crew, bot, now, sleep_after)
             })
             .collect();
         drop(inner);
@@ -76,6 +79,7 @@ impl Supervisor {
         crew: &Crew,
         bot: &BotRecord,
         now: Instant,
+        sleep_after: Option<std::time::Duration>,
     ) -> Option<Start> {
         // Deleted after this pass read the database.
         if inner.gone.contains(&bot.id) {
@@ -106,6 +110,9 @@ impl Supervisor {
             }
             return None;
         }
+        if let Rest::Asleep = self.rest(&bot.id, slot, now, sleep_after) {
+            return None;
+        }
         // A process on its way out settles first; its exit wakes the loop.
         let waiting = slot.restart_at.is_some_and(|at| at > now);
         if slot.running.is_some() || slot.launching || slot.stop.is_some() || waiting {
@@ -114,18 +121,25 @@ impl Supervisor {
         if slot.state == BotState::AuthError {
             return None;
         }
+        slot.wake_asked = false;
         self.plan_start(inner, crew, bot)
     }
 
-    /// Earliest scheduled restart, so the run loop can wake for it.
-    pub(super) fn next_restart(&self) -> Option<Instant> {
+    /// Earliest scheduled restart, or the moment an idle bot falls
+    /// asleep (spec 7.7), so the run loop can wake for it.
+    pub(super) fn next_due(&self, sleep_after: Option<std::time::Duration>) -> Option<Instant> {
         let inner = self.lock();
-        inner
+        let restarts = inner
             .slots
             .values()
             .filter(|slot| slot.running.is_none())
-            .filter_map(|slot| slot.restart_at)
-            .min()
+            .filter_map(|slot| slot.restart_at);
+        let naps = inner
+            .slots
+            .values()
+            .filter(|slot| slot.running.is_some() && slot.state == BotState::Idle)
+            .filter_map(|slot| Some(slot.idle_since? + sleep_after?));
+        restarts.chain(naps).min()
     }
 
     /// Finds and checks Claude Code when it is unknown or failed a while ago.

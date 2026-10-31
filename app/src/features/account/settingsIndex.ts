@@ -41,6 +41,7 @@ export function settingsIndex(t: ReturnType<typeof useT>): Entry[] {
       s.startWithSystem(SYSTEM),
       s.openAtSignIn(SYSTEM),
       s.keepAwake,
+      s.sleepAfter,
     ),
     ...entry("appearance", s.theme, s.size, s.lessMotion),
     ...entry("chat", s.enterSends, s.followBot, s.approvalWait),

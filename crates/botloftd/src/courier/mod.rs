@@ -198,9 +198,15 @@ fn prepare(daemon: &Daemon, store: &Store, delivery: &Delivery) -> Result<Step, 
     if bot.archived_at.is_some() || crew.archived_at.is_some() {
         return Ok(Step::Drop("the bot was archived"));
     }
+    let state = daemon.supervisor.status(&bot.id).map(|(state, _)| state);
+    if state == Some(BotState::Sleeping) {
+        // It wakes, and the delivery goes once it is ready (spec 7.7).
+        daemon.supervisor.wake_up(&bot.id);
+        return Ok(Step::Wait);
+    }
     let ready = matches!(
-        daemon.supervisor.status(&bot.id),
-        Some((BotState::Idle | BotState::Busy | BotState::NeedsApproval, _))
+        state,
+        Some(BotState::Idle | BotState::Busy | BotState::NeedsApproval)
     );
     if !ready {
         return Ok(Step::Wait);

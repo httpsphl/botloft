@@ -50,7 +50,13 @@ export const BOTLOFT_COLOR = "#FF7A59";
 
 /** How the mascot of `bot` moves, from what the bot is doing. */
 export function moodOf(bot: Pick<Bot, "state" | "paused">, crewPaused = false): Mood {
-  if (bot.paused || crewPaused || bot.state === "offline" || bot.state === "archived") {
+  if (
+    bot.paused ||
+    crewPaused ||
+    bot.state === "offline" ||
+    bot.state === "sleeping" ||
+    bot.state === "archived"
+  ) {
     return "sleeping";
   }
   switch (bot.state) {
