@@ -35,6 +35,18 @@ if (restore && !files.every((file) => existsSync(join(backup, file)))) {
   throw new Error(`nothing to restore in ${backup}`);
 }
 
+// A `permissions` folder beside the capabilities puts the app's own commands
+// under Tauri's ACL, and the capabilities grant none of them: the installed
+// app would stop at "Command daemon_status not allowed by ACL". Botloft has
+// none, so one here is left over from something else, and a build made with
+// it (the one --no-build would install) has the same fault.
+const stray = join(app, "src-tauri", "permissions");
+if (!restore && existsSync(stray)) {
+  throw new Error(
+    `${stray} is not part of Botloft and locks the app's commands; move it out of the checkout, then run pnpm local again (with a build)`,
+  );
+}
+
 if (build) {
   execFileSync("cargo", ["build", "--release", "-p", "botloftd"], { cwd: root, stdio: "inherit" });
   // `tauri build` embeds the UI; a plain `cargo build` would point it at
