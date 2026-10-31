@@ -131,6 +131,9 @@ export const crews = {
     emptyHint:
       "An agent is a Claude Code session that keeps running, with its own folder and role.",
     noRole: "No role yet.",
+    /** Under a free agent's card, where a busy one shows its state. */
+    lastActive: (when: string) => `Last active: ${when}`,
+    nothingYet: "Nothing done yet",
   },
   tasks: {
     show: "Show",

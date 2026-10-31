@@ -31,6 +31,7 @@ describe("questions to the owner", () => {
       fake.questions.ask(scout.id, "Which **client** first?", ["Acme", "Globex"]);
     });
     const card = within(chat).getByRole("region", { name: "Scout asks" });
+    expect(within(card).getByText("Scout asks")).toBeDefined();
     expect(within(card).getByText("client").tagName).toBe("STRONG");
     // The card stands for the call; no tool line repeats it.
     expect(within(chat).queryByText("Ask you a question")).toBeNull();
@@ -74,6 +75,9 @@ describe("questions to the owner", () => {
       "Writer asks",
       "Scout asks",
     ]);
+    // The name is on the line above each card, so the card's head does not repeat it.
+    expect(within(cards[1] as HTMLElement).getByText("Question")).toBeDefined();
+    expect(within(box).queryByText("Scout asks")).toBeNull();
 
     const field = within(box).getByLabelText("Your answer to Scout");
     fireEvent.change(field, { target: { value: "Acme, then Globex" } });

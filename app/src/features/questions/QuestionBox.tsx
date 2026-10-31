@@ -68,7 +68,8 @@ function Entry({ question }: { question: Question }) {
             onClick={() => selectBot(bot.id)}
           />
         </div>
-        <QuestionCard question={question} bot={bot.name} />
+        {/* The name is on the line above: the card does not say it again. */}
+        <QuestionCard question={question} bot={bot.name} title={t.questions.card.question} />
       </div>
     </li>
   );

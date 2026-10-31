@@ -13,14 +13,31 @@ import { NoteArea, SectionCard, SettledLine } from "../../ui/ChatCard";
 import { attempt } from "../../ui/toast";
 import { Markdown } from "../chat/Markdown";
 
-export function QuestionCard({ question, bot }: { question: Question; bot: string }) {
+/** `title` replaces "<bot> asks" at the card's head where the bot's name is already above it. */
+export function QuestionCard({
+  question,
+  bot,
+  title,
+}: {
+  question: Question;
+  bot: string;
+  title?: string;
+}) {
   if (question.status !== "open") {
     return <Closed question={question} />;
   }
-  return <OpenQuestion question={question} bot={bot} />;
+  return <OpenQuestion question={question} bot={bot} title={title} />;
 }
 
-function OpenQuestion({ question, bot }: { question: Question; bot: string }) {
+function OpenQuestion({
+  question,
+  bot,
+  title,
+}: {
+  question: Question;
+  bot: string;
+  title: string | undefined;
+}) {
   const t = useT();
   const q = t.questions.card;
   const api = useApi();
@@ -53,6 +70,7 @@ function OpenQuestion({ question, bot }: { question: Question; bot: string }) {
   return (
     <SectionCard
       label={q.asks(bot)}
+      title={title}
       icon={MessageCircleQuestion}
       tone="warn"
       footer={

@@ -5,6 +5,8 @@
 export const questions = {
   card: {
     asks: (bot: string) => `${bot} asks`,
+    /** The card's head in the question box, under the bot's name. */
+    question: "Question",
     pick: "Pick an answer",
     answerLabel: (bot: string) => `Your answer to ${bot}`,
     placeholder: "Write your answer",

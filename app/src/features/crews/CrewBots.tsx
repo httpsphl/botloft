@@ -1,10 +1,12 @@
-import { Plus } from "lucide-react";
+import { Clock, Plus } from "lucide-react";
 import { useState } from "react";
 import { useT } from "../../i18n";
+import { when } from "../../lib/format";
 import type { Bot, Crew } from "../../lib/protocol.gen";
+import { activityOf } from "../../store/app";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
-import { BotStateBadge } from "../bots/BotStateBadge";
+import { BotStateBadge, stateView } from "../bots/BotStateBadge";
 import { ChiefBadge, isChief } from "../bots/ChiefBadge";
 import { ListAvatar } from "../bots/ListAvatar";
 import { AgencyInvite } from "../catalog/AgencyInvite";
@@ -66,9 +68,22 @@ function BotCards({ crew, bots }: { crew: Crew; bots: Bot[] }) {
               {bot.role || t.crews.bots.noRole}
             </p>
             <BotStateBadge bot={bot} crewPaused={crew.paused} />
+            {!stateView(bot, crew.paused, t).icon && <LastActive bot={bot} />}
           </button>
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Where a busy bot shows its state, a free one says when it last did something. */
+function LastActive({ bot }: { bot: Bot }) {
+  const t = useT().crews.bots;
+  const activity = useApp((state) => activityOf(state, bot.id));
+  return (
+    <p className="flex items-center gap-1 text-muted text-sm">
+      <Clock aria-hidden size={13} className="shrink-0" />
+      {activity ? t.lastActive(when(activity.at)) : t.nothingYet}
+    </p>
   );
 }

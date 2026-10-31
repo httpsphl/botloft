@@ -5,6 +5,7 @@ import type { Messages } from "../en";
 export const questions: Messages["questions"] = {
   card: {
     asks: (bot: string) => `${bot} pregunta`,
+    question: "Pregunta",
     pick: "Elige una respuesta",
     answerLabel: (bot: string) => `Tu respuesta para ${bot}`,
     placeholder: "Escribe tu respuesta",
