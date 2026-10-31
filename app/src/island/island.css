@@ -69,13 +69,15 @@ body {
 
 /* The panel's content, centred and at its full width while the shape grows
    around it: measured squeezed, it asked for a window twice as tall. Past
-   60% of the screen it scrolls under the tab bar (31.2). */
+   60% of the screen it scrolls under the tab bar (31.2), which is 46 px
+   tall: a button reached with the keyboard comes out from under it. */
 .island-scroll {
   position: relative;
   left: 50%;
   translate: -50% 0;
   overflow-x: hidden;
   overflow-y: auto;
+  scroll-padding-top: 46px;
 }
 
 /* The scrollbar in the island's grey, from under the tab bar to clear of
