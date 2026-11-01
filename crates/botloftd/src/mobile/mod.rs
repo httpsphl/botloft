@@ -6,6 +6,7 @@ mod bridge;
 pub(crate) mod cards;
 mod chats;
 pub mod files;
+mod home;
 mod kdf;
 mod pair;
 mod phones;

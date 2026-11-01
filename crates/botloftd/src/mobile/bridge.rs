@@ -226,6 +226,9 @@ impl Mobile {
             | FromPhone::History { .. }
             | FromPhone::Send { .. }
             | FromPhone::Watch { .. }) => self.talk_apply(daemon, phone, message).await,
+            message @ (FromPhone::Home { .. } | FromPhone::RoutineRun { .. }) => {
+                self.home_apply(daemon, phone, message).await;
+            }
             FromPhone::QuestionDismiss { question_id } => {
                 if self.may_answer(daemon, phone) {
                     let params = QuestionIdParams {

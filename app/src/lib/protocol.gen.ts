@@ -1691,9 +1691,15 @@ failed?: RunFailure, };
 export type PhoneItem = { "kind": "you", id: ChatItemId, at: number, text: string, cut: boolean, files?: Array<string>, } | { "kind": "bot_message", id: ChatItemId, at: number, from: string, text: string, cut: boolean, } | { "kind": "reply", id: ChatItemId, at: number, text: string, cut: boolean, } | { "kind": "tool", id: ChatItemId, at: number, summary: string, } | { "kind": "approval", id: ChatItemId, at: number, approvalId: ApprovalId, summary: string, status: ApprovalStatus, } | { "kind": "question", id: ChatItemId, at: number, questionId: QuestionId, text: string, status: QuestionStatus, } | { "kind": "failed", id: ChatItemId, at: number, error?: string, } | { "kind": "notice", id: ChatItemId, at: number, level: NoticeLevel, text: string, };
 
 /**
+ * A routine the owner runs with a tap (spec 20.2), as the phone shows it.
+ * The agent's name and color come from its line in the list (28.12).
+ */
+export type PhoneShortcut = { routineId: RoutineId, name: string, botId: BotId, };
+
+/**
  * What the computer sends the phone, sealed (spec 28.3).
  */
-export type ToPhone = { "t": "snapshot", approvals: Array<ApprovalCard>, questions: Array<QuestionCard>, } | { "t": "approval.open", card: ApprovalCard, } | { "t": "approval.closed", approvalId: ApprovalId, status: ApprovalStatus, } | { "t": "question.open", card: QuestionCard, } | { "t": "question.closed", questionId: QuestionId, status: QuestionStatus, } | { "t": "chats", bots: Array<ChatLine>, first: boolean, } | { "t": "history", req: number, botId: BotId, items: Array<PhoneItem>, more: boolean, done: boolean, } | { "t": "sent", clientId: string, ok: boolean, reason?: string, } | { "t": "item", botId: BotId, item: PhoneItem, } | { "t": "live", botId: BotId, text: string, } | { "t": "state", botId: BotId, state: BotState, } | { "t": "line", bot: ChatLine, } | { "t": "read", botId: BotId, upto: number, };
+export type ToPhone = { "t": "snapshot", approvals: Array<ApprovalCard>, questions: Array<QuestionCard>, } | { "t": "approval.open", card: ApprovalCard, } | { "t": "approval.closed", approvalId: ApprovalId, status: ApprovalStatus, } | { "t": "question.open", card: QuestionCard, } | { "t": "question.closed", questionId: QuestionId, status: QuestionStatus, } | { "t": "chats", bots: Array<ChatLine>, first: boolean, } | { "t": "history", req: number, botId: BotId, items: Array<PhoneItem>, more: boolean, done: boolean, } | { "t": "sent", clientId: string, ok: boolean, reason?: string, } | { "t": "item", botId: BotId, item: PhoneItem, } | { "t": "live", botId: BotId, text: string, } | { "t": "state", botId: BotId, state: BotState, } | { "t": "line", bot: ChatLine, } | { "t": "read", botId: BotId, upto: number, } | { "t": "home", shortcuts: Array<PhoneShortcut>, today?: DayActivity, } | { "t": "ran", clientId: string, ok: boolean, reason?: string, };
 
 export type PhoneFile = { 
 /**
@@ -1712,7 +1718,7 @@ size: number, };
 /**
  * What the phone sends the computer, sealed (spec 28.3).
  */
-export type FromPhone = { "t": "sync" } | { "t": "approval.answer", approvalId: ApprovalId, allow: boolean, note?: string, } | { "t": "question.answer", questionId: QuestionId, answer: string, } | { "t": "question.dismiss", questionId: QuestionId, } | { "t": "chats" } | { "t": "history", req: number, botId: BotId, before?: ChatItemId, } | { "t": "send", clientId: string, botId: BotId, text: string, files?: Array<PhoneFile>, } | { "t": "watch", botId?: BotId, };
+export type FromPhone = { "t": "sync" } | { "t": "approval.answer", approvalId: ApprovalId, allow: boolean, note?: string, } | { "t": "question.answer", questionId: QuestionId, answer: string, } | { "t": "question.dismiss", questionId: QuestionId, } | { "t": "chats" } | { "t": "history", req: number, botId: BotId, before?: ChatItemId, } | { "t": "send", clientId: string, botId: BotId, text: string, files?: Array<PhoneFile>, } | { "t": "watch", botId?: BotId, } | { "t": "home", since: number, } | { "t": "routine.run", clientId: string, routineId: RoutineId, };
 
 /**
  * A bot's open request for a key, as the home and the island list it: who

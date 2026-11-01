@@ -21,7 +21,6 @@ export const phone: Messages["phone"] = {
     names: { iphone: "iPhone", ipad: "iPad", android: "Móvil Android", other: "Móvil" },
   },
   inbox: {
-    title: "Esperándote",
     empty: "Nada te está esperando",
     emptyBody: "Cuando un agente te necesite, aparecerá aquí.",
     loading: "Viendo qué está esperando…",
@@ -30,7 +29,8 @@ export const phone: Messages["phone"] = {
     thisPhone: "Este móvil",
     inCrew: (crew: string) => `en ${crew}`,
   },
-  tabs: { requests: "Solicitudes", chats: "Conversaciones", newReply: "respuesta nueva" },
+  home: { running: "Empezando…" },
+  tabs: { home: "Inicio", chats: "Conversaciones", newReply: "respuesta nueva" },
   failed: {
     label: (routine, bot) => `La rutina “${routine}” de ${bot} falló`,
     row: (routine) => `“${routine}” falló`,

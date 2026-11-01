@@ -3,8 +3,11 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::ids::{ApprovalId, BotId, ChatItemId, QuestionId};
-use crate::protocol::{Activity, ApprovalStatus, BotState, NoticeLevel, PhoneFile, QuestionStatus};
+use crate::ids::{ApprovalId, BotId, ChatItemId, QuestionId, RoutineId};
+use crate::protocol::{
+    Activity, ApprovalStatus, BotState, DayActivity, NoticeLevel, PhoneFile, PhoneShortcut,
+    QuestionStatus,
+};
 
 /// Whether the computer's connection to the relay is up.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -340,6 +343,23 @@ pub enum ToPhone {
     /// The owner read the bot's chat on the computer, up to this reply.
     #[serde(rename = "read")]
     Read { bot_id: BotId, upto: i64 },
+    /// The Home's shortcuts and the day so far: the answer to `home` (28.15).
+    #[serde(rename = "home")]
+    Home {
+        shortcuts: Vec<PhoneShortcut>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(test, ts(optional))]
+        today: Option<DayActivity>,
+    },
+    /// What came of a `routine.run`.
+    #[serde(rename = "ran")]
+    Ran {
+        client_id: String,
+        ok: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(test, ts(optional))]
+        reason: Option<String>,
+    },
 }
 
 /// What the phone sends the computer, sealed (spec 28.3).
@@ -393,6 +413,16 @@ pub enum FromPhone {
         #[serde(default)]
         #[cfg_attr(test, ts(optional))]
         bot_id: Option<BotId>,
+    },
+    /// Asks for the Home (28.15); the day starts at `since`, the phone's
+    /// midnight.
+    #[serde(rename = "home")]
+    Home { since: i64 },
+    /// Runs one of the owner's shortcuts.
+    #[serde(rename = "routine.run")]
+    RoutineRun {
+        client_id: String,
+        routine_id: RoutineId,
     },
 }
 
