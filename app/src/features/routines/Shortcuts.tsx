@@ -34,7 +34,7 @@ export function Shortcuts() {
                 type="button"
                 aria-label={words.run(routine.name, bot?.name ?? "")}
                 onClick={() => void run(routine, bot)}
-                className="flex h-9 max-w-xs items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm transition-colors hover:border-line-strong hover:bg-sunken"
+                className="flex h-9 max-w-xs items-center gap-2 rounded-xl border border-line bg-panel px-3 text-sm transition-colors hover:border-line-strong hover:bg-sunken"
               >
                 <Play aria-hidden size={13} className="shrink-0 text-accent" />
                 <span className="truncate font-medium">{routine.name}</span>

@@ -21,7 +21,7 @@ export function Reminders({ bot }: { bot: Bot }) {
       {reminders.map((routine) => (
         <li
           key={routine.id}
-          className="flex items-center gap-2 rounded-full border border-line bg-surface py-1 pr-1 pl-3 text-sm shadow-sm"
+          className="flex items-center gap-2 whitespace-nowrap rounded-full border border-line bg-panel py-1 pr-1 pl-3 text-sm shadow-sm"
         >
           <AlarmClock aria-hidden size={14} className="shrink-0 text-muted" />
           <span title={routine.prompt}>

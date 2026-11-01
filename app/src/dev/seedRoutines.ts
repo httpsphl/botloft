@@ -49,6 +49,18 @@ export function seedRoutines(fake: FakeBotloft, bots: { scout: BotId; analyst: B
     prompt: "Write this week's sales report in shared/reports.",
     schedule: { kind: "manual" },
   });
+  // Scout's own return to its work, over its message field (spec 20.12).
+  const back = new Date(fake.now + 2 * HOUR);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  create(bots.scout, {
+    name: "Look at the deploy again",
+    prompt: "Check whether the deploy finished and tell me.",
+    schedule: {
+      kind: "once",
+      at: `${back.getUTCFullYear()}-${pad(back.getUTCMonth() + 1)}-${pad(back.getUTCDate())}T${pad(back.getUTCHours())}:${pad(back.getUTCMinutes())}`,
+      reminder: true,
+    },
+  });
   morning.nextRunAt = fake.now + 14 * HOUR;
 
   const links = create(bots.scout, {

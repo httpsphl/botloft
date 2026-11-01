@@ -42,7 +42,7 @@ export function ShortcutMenu({ bot }: { bot: Bot }) {
         <div
           role="menu"
           aria-label={words.menu(bot.name)}
-          className="absolute bottom-full left-0 z-20 mb-2 flex min-w-56 flex-col rounded-xl border border-line bg-surface p-1 shadow-lg"
+          className="absolute bottom-full left-0 z-20 mb-2 flex min-w-56 flex-col rounded-xl border border-line bg-panel p-1 shadow-lg"
         >
           {shortcuts.map((routine) => (
             <button
