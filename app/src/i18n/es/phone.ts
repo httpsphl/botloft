@@ -61,6 +61,7 @@ export const phone: Messages["phone"] = {
     loadingOlder: "Cargando…",
     busy: (bot: string) => `${bot} está trabajando…`,
     from: (name: string) => `De ${name}`,
+    attached: (count: number) => (count === 1 ? "1 archivo" : `${count} archivos`),
     cut: "Cortado: demasiado grande para el móvil. El texto entero está en tu ordenador.",
     failedTurn: "El turno falló",
     tool: (summary: string) => `Usó: ${summary}`,
@@ -71,6 +72,13 @@ export const phone: Messages["phone"] = {
       placeholder: "Escribe un mensaje",
       send: "Enviar",
       tooLong: "Demasiado grande para enviar desde el móvil.",
+      photo: "Enviar una foto",
+      file: "Enviar un archivo",
+      chosen: "Para enviar",
+      remove: (name: string) => `Quitar ${name}`,
+      tooBig: (name: string) => `“${name}” pasa de 20 MB.`,
+      tooMany: "Como máximo 10 archivos en un mensaje.",
+      preparing: "Preparando la foto…",
     },
     pending: {
       sending: "Enviando…",
@@ -79,7 +87,10 @@ export const phone: Messages["phone"] = {
       reasons: {
         offline: "Revisa la conexión e inténtalo de nuevo.",
         timeout: "El ordenador no respondió. Mira si está encendido e inténtalo de nuevo.",
-        invalid: "El agente no acepta este texto.",
+        invalid: "El agente no acepta este mensaje.",
+        too_big: "Un archivo pasa de 20 MB.",
+        queue_full:
+          "Demasiados archivos esperan al ordenador. Inténtalo de nuevo cuando los recoja.",
         not_found: "Este agente ya no existe.",
         rate_limited: "Demasiados mensajes en un minuto. Espera un poco.",
         failed: "Algo salió mal. Inténtalo de nuevo.",

@@ -1688,17 +1688,31 @@ failed?: RunFailure, };
  * One thing in a conversation, as the phone shows it (spec 28.12): the
  * text, and never the output of a tool.
  */
-export type PhoneItem = { "kind": "you", id: ChatItemId, at: number, text: string, cut: boolean, } | { "kind": "bot_message", id: ChatItemId, at: number, from: string, text: string, cut: boolean, } | { "kind": "reply", id: ChatItemId, at: number, text: string, cut: boolean, } | { "kind": "tool", id: ChatItemId, at: number, summary: string, } | { "kind": "approval", id: ChatItemId, at: number, approvalId: ApprovalId, summary: string, status: ApprovalStatus, } | { "kind": "question", id: ChatItemId, at: number, questionId: QuestionId, text: string, status: QuestionStatus, } | { "kind": "failed", id: ChatItemId, at: number, error?: string, } | { "kind": "notice", id: ChatItemId, at: number, level: NoticeLevel, text: string, };
+export type PhoneItem = { "kind": "you", id: ChatItemId, at: number, text: string, cut: boolean, files?: Array<string>, } | { "kind": "bot_message", id: ChatItemId, at: number, from: string, text: string, cut: boolean, } | { "kind": "reply", id: ChatItemId, at: number, text: string, cut: boolean, } | { "kind": "tool", id: ChatItemId, at: number, summary: string, } | { "kind": "approval", id: ChatItemId, at: number, approvalId: ApprovalId, summary: string, status: ApprovalStatus, } | { "kind": "question", id: ChatItemId, at: number, questionId: QuestionId, text: string, status: QuestionStatus, } | { "kind": "failed", id: ChatItemId, at: number, error?: string, } | { "kind": "notice", id: ChatItemId, at: number, level: NoticeLevel, text: string, };
 
 /**
  * What the computer sends the phone, sealed (spec 28.3).
  */
 export type ToPhone = { "t": "snapshot", approvals: Array<ApprovalCard>, questions: Array<QuestionCard>, } | { "t": "approval.open", card: ApprovalCard, } | { "t": "approval.closed", approvalId: ApprovalId, status: ApprovalStatus, } | { "t": "question.open", card: QuestionCard, } | { "t": "question.closed", questionId: QuestionId, status: QuestionStatus, } | { "t": "chats", bots: Array<ChatLine>, first: boolean, } | { "t": "history", req: number, botId: BotId, items: Array<PhoneItem>, more: boolean, done: boolean, } | { "t": "sent", clientId: string, ok: boolean, reason?: string, } | { "t": "item", botId: BotId, item: PhoneItem, } | { "t": "live", botId: BotId, text: string, } | { "t": "state", botId: BotId, state: BotState, } | { "t": "line", bot: ChatLine, } | { "t": "read", botId: BotId, upto: number, };
 
+export type PhoneFile = { 
+/**
+ * The file on the server (`fil_...`).
+ */
+id: string, 
+/**
+ * The AES-256-GCM key that opens it, base64url; it seals this file only.
+ */
+key: string, name: string, mediaType: string, 
+/**
+ * The bytes of the file itself.
+ */
+size: number, };
+
 /**
  * What the phone sends the computer, sealed (spec 28.3).
  */
-export type FromPhone = { "t": "sync" } | { "t": "approval.answer", approvalId: ApprovalId, allow: boolean, note?: string, } | { "t": "question.answer", questionId: QuestionId, answer: string, } | { "t": "question.dismiss", questionId: QuestionId, } | { "t": "chats" } | { "t": "history", req: number, botId: BotId, before?: ChatItemId, } | { "t": "send", clientId: string, botId: BotId, text: string, } | { "t": "watch", botId?: BotId, };
+export type FromPhone = { "t": "sync" } | { "t": "approval.answer", approvalId: ApprovalId, allow: boolean, note?: string, } | { "t": "question.answer", questionId: QuestionId, answer: string, } | { "t": "question.dismiss", questionId: QuestionId, } | { "t": "chats" } | { "t": "history", req: number, botId: BotId, before?: ChatItemId, } | { "t": "send", clientId: string, botId: BotId, text: string, files?: Array<PhoneFile>, } | { "t": "watch", botId?: BotId, };
 
 /**
  * A bot's open request for a key, as the home and the island list it: who

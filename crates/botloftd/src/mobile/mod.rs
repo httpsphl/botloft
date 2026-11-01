@@ -5,12 +5,15 @@
 mod bridge;
 pub(crate) mod cards;
 mod chats;
+pub mod files;
 mod kdf;
 mod pair;
 mod phones;
 mod relay;
 pub mod seal;
 mod talk;
+#[cfg(test)]
+mod vectors;
 
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::Path;

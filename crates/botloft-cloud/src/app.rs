@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use axum::Router;
-use axum::routing::{delete, get, post};
+use axum::routing::{delete, get, post, put};
 
 use crate::clock::Clock;
 use crate::config::Config;
@@ -12,7 +12,7 @@ use crate::hub::Hub;
 use crate::mailer::Mailer;
 use crate::push::Pusher;
 use crate::store::CopyStore;
-use crate::{copies, login, pairing, phone, push_api, relay, removal, session};
+use crate::{copies, files, login, pairing, phone, push_api, relay, removal, session};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -57,6 +57,8 @@ pub fn router(state: AppState) -> Router {
         .route("/v1/pairings/{id}/result", get(pairing::result))
         .route("/v1/copies", get(copies::list).put(copies::put))
         .route("/v1/copies/{id}", get(copies::get).delete(copies::remove))
+        .route("/v1/files", put(files::put))
+        .route("/v1/files/{id}", get(files::get).delete(files::remove))
         .route("/v1/account/delete", post(removal::ask))
         .route(
             "/v1/account/delete/confirm",

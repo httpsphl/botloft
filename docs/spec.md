@@ -2426,7 +2426,7 @@ Uma página que o dono instala na tela inicial do celular (um PWA) para **aprova
 
 O que o celular **faz**: mostra os pedidos de aprovação abertos, permite ou nega um de cada vez (com nota), mostra as perguntas abertas, responde ou descarta, e avisa quando chega algo novo.
 
-O que o celular **não faz** nesta etapa: ver arquivos, criar bot, crew, tarefa ou rotina, mexer em configurações. (As conversas, ler e mandar texto, vêm em 28.12.) Quanto menos o celular sabe, menos há para vazar de um celular perdido.
+O que o celular **não faz** nesta etapa: ver arquivos (mandar foto e arquivo está em 28.14), criar bot, crew, tarefa ou rotina, mexer em configurações. (As conversas, ler e mandar texto, vêm em 28.12.) Quanto menos o celular sabe, menos há para vazar de um celular perdido.
 
 Quatro promessas valem para tudo aqui:
 
@@ -2445,7 +2445,7 @@ Quatro promessas valem para tudo aqui:
 
 A conta de 27 ganha o **tipo** do aparelho (`computer` ou `phone`) e, no celular, o **par** (`peer`): o computador com que ele foi conectado. Um celular conectado a dois computadores são duas conexões, cada uma com o seu token e as suas chaves.
 
-**O token de um celular só alcança o relay, o push, `GET /v1/me` (que diz só de quem é o celular e a que computador serve, sem a lista de aparelhos nem o espaço usado) e `POST /v1/logout` (desconectar pelo próprio celular).** As cópias (27.4), a conta, os pareamentos e os outros aparelhos dão `403` `wrong_device`. Um celular nunca baixa uma cópia. Tirar um computador (`DELETE /v1/devices/<id>`, ou apagar a conta) leva os celulares dele e fecha os sockets de todos.
+**O token de um celular só alcança o relay, o push, `GET /v1/me` (que diz só de quem é o celular e a que computador serve, sem a lista de aparelhos nem o espaço usado) `POST /v1/logout` (desconectar pelo próprio celular) e `PUT /v1/files` (mandar um arquivo selado ao computador dele, 28.14).** As cópias (27.4), a conta, os pareamentos e os outros aparelhos dão `403` `wrong_device`. Um celular nunca baixa uma cópia. Tirar um computador (`DELETE /v1/devices/<id>`, ou apagar a conta) leva os celulares dele e fecha os sockets de todos.
 
 ### 28.3 Conectar um celular e selar as mensagens
 
@@ -2542,7 +2542,7 @@ Quando chega um pedido ou uma pergunta, o dono precisa saber sem abrir a página
 ### 28.9 Privacidade (13)
 
 - Nada vai à rede sem um celular conectado pelo dono (28.1). Desconectar o último celular fecha a conexão.
-- O servidor vê: o e-mail, os nomes dos aparelhos que entraram, o IP de quem conecta (no proxy, por 7 dias, 27.7), quando cada um está online, o **tamanho e a hora** de cada mensagem selada, e os endereços de push. Não vê: nome de bot ou de equipe, comando, plano, pergunta, resposta, nota, nem as chaves.
+- O servidor vê: o e-mail, os nomes dos aparelhos que entraram, o IP de quem conecta (no proxy, por 7 dias, 27.7), quando cada um está online, o **tamanho e a hora** de cada mensagem selada e de cada arquivo que um celular manda (que ele guarda selado por até 2 horas, 28.14), e os endereços de push. Não vê: nome de bot ou de equipe, comando, plano, pergunta, resposta, nota, o que há num arquivo, nem as chaves.
 - Quem controla o servidor pode ver **que** o dono aprovou algo às 14h, e quanto tempo levou, mas não o quê.
 - Os serviços de push veem que "um aviso do Botloft" chegou a um aparelho, e nada além.
 - Sem telemetria: nenhuma contagem de uso do celular sai do aparelho.
@@ -2581,31 +2581,31 @@ Quando chega um pedido ou uma pergunta, o dono precisa saber sem abrir a página
 
 ### 28.11 Fora desta etapa
 
-Arquivos e anexos, tarefas e rotinas no celular (conversa, só de texto, está em 28.12); app nativo e lojas; trocar as chaves sem conectar de novo; trava por biometria dentro do PWA (o PIN está em 28.13); mais de um dono; ligação direta entre celular e computador sem o servidor (WebRTC); aviso com conteúdo; permitir "sempre" pelo celular.
+Ver e abrir no celular os arquivos e anexos das conversas (mandar foto e arquivo está em 28.14), tarefas e rotinas no celular (a conversa está em 28.12); app nativo e lojas; trocar as chaves sem conectar de novo; trava por biometria dentro do PWA (o PIN está em 28.13); mais de um dono; ligação direta entre celular e computador sem o servidor (WebRTC); aviso com conteúdo; permitir "sempre" pelo celular.
 
 ### 28.12 Conversas
 
-Status: **CH1 a CH3 feitos**, no 0.14.0; o CH4 foi visto no Android e falta o iPhone. O celular, que só aprovava e respondia (28.1), passa a **ler as conversas dos bots e a mandar texto a eles**. O que ele continua sem fazer: anexos e arquivos (ver, mandar ou abrir), telas e navegador do bot, tarefas, rotinas, reações, busca, e qualquer configuração.
+Status: **CH1 a CH3 feitos**, no 0.14.0; o CH4 foi visto no Android e falta o iPhone. O celular, que só aprovava e respondia (28.1), passa a **ler as conversas dos bots e a mandar texto a eles**. O que ele continua sem fazer: ver ou abrir anexos e arquivos (mandar foto e arquivo veio depois, em 28.14), telas e navegador do bot, tarefas, rotinas, reações, busca, e qualquer configuração.
 
 **O que muda na privacidade (28.9).** Até aqui só passavam pedidos e perguntas. Agora passa **o texto das conversas**, e continua selado de ponta a ponta: o servidor não o lê. Ele vê um pouco mais do ritmo (mais mensagens, de tamanhos variados, quando alguém conversa), mas nada do que se diz. E um celular desbloqueado e conectado passa a **ler o histórico dos bots e a falar com eles**: por isso o aviso do app (28.7) diz isso também, e a regra abaixo protege o que há de pior.
 
 **Regras de segurança (o daemon as aplica).**
 
 1. **Sem regra especial para `bypass_permissions`.** Um bot que faz tudo sem perguntar também recebe mensagem do celular. A proteção contra quem pega o celular é a trava com PIN (28.13), que o dono liga se quiser; o daemon não tem como saber se ela está ligada (ela vive no aparelho), então não finge que protege. O aviso do app diz isso com todas as letras.
-2. **O mesmo caminho do app.** `send` chama a lógica de `messages.send` (9.1), do dono, sem anexos: bot pausado recebe quando voltar, bot arquivado dá erro (`not_found`), texto vazio ou grande demais dá `invalid`.
+2. **O mesmo caminho do app.** `send` chama a lógica de `messages.send` (9.1), do dono, com os arquivos de 28.14, se houver: bot pausado recebe quando voltar, bot arquivado dá erro (`not_found`), texto vazio ou grande demais dá `invalid`.
 3. **Limite de envio:** 30 por minuto por celular, contados à parte dos 30 das respostas (28.5, regra 5); passou disso, `sent` volta `rate_limited`.
-4. **O que não vai ao celular:** a saída das ferramentas e a entrada delas (o celular recebe uma linha, `summary`), segredos de bots, anexos, e o texto que passa de 6 KiB (vai cortado, com `cut`).
+4. **O que não vai ao celular:** a saída das ferramentas e a entrada delas (o celular recebe uma linha, `summary`), segredos de bots, anexos (só os nomes, em `you`), e o texto que passa de 6 KiB (vai cortado, com `cut`).
 
 **Mensagens seladas novas** (mesmo selo de 28.3, até 16 KiB cada; o que não cabe vai em várias mensagens).
 
 | Sentido | Mensagem |
 |---|---|
-| celular → computador | `chats`: pede a lista de conversas. `history {req, botId, before?}`: uma página do histórico, as 20 mais novas ou as 20 antes do item `before`. `send {clientId, botId, text}`. `watch {botId}` (ou `{botId: null}`): qual conversa está aberta |
+| celular → computador | `chats`: pede a lista de conversas. `history {req, botId, before?}`: uma página do histórico, as 20 mais novas ou as 20 antes do item `before`. `send {clientId, botId, text, files?}` (`files` em 28.14). `watch {botId}` (ou `{botId: null}`): qual conversa está aberta |
 | computador → celular | `chats {bots: [ChatLine], first}`: a lista (`first` é verdadeiro na primeira parte). `history {req, botId, items: [PhoneItem], more, done}`: as partes de uma página, do mais antigo ao mais novo (`done` na última; `more` diz se há páginas antes). `sent {clientId, ok, reason?}` (`reason`: `invalid`, `not_found`, `rate_limited` ou `failed`). `item {botId, item}` e `live {botId, text}` e `state {botId, state}` (só da conversa aberta). `line {bot: ChatLine}` (a linha de qualquer bot mudou) |
 
 - **`ChatLine`**: `botId`, `name`, `color`, `crew`, `state` (o `BotState`, de 7.1, que a tela mostra como "trabalhando" ou "parado"), `lastReplyAt?` e `last?: {kind, text, at}` (a última atividade, em uma linha, como 11.2) e `failed?: {routine, at}`, a rotina do bot que falhou por último (`routine_runs`). Só bots e equipes ativos.
 - **Rotina que falhou:** quando uma execução vira `failed` (20.3), o daemon manda a `ChatLine` do bot, com `failed`, aos celulares ligados, e o `{t: "wake"}` de 28.8 aos outros, vazio como sempre. O celular mostra a falha que o dono ainda não leu, isto é, com `at` depois da última vez que ele abriu aquela conversa no celular ou a leu no computador (`readAt`): em Pedidos, um cartão "A rotina “<rotina>” de <bot> falhou" com "Abrir a conversa", que leva à conversa, e que conta como algo esperando; e, na lista de conversas, a linha do bot em vermelho, "“<rotina>” falhou". Ler a conversa, lá ou no computador, tira os dois.
-- **`PhoneItem`** (`kind` diz qual): `you {id, at, text, cut}` (o dono escreveu), `bot_message {id, at, from, text, cut}` (outro bot, uma rotina ou o daemon escreveu ao bot; `from` é o nome), `reply {id, at, text, cut}` (o bot respondeu, markdown), `tool {id, at, summary}`, `approval {id, at, approvalId, summary, status}`, `question {id, at, questionId, text, status}`, `failed {id, at, error?}` (um turno que falhou) e `notice {id, at, level, text}`. Os turnos que deram certo não viram item (só ruído).
+- **`PhoneItem`** (`kind` diz qual): `you {id, at, text, cut, files?}` (o dono escreveu; `files`, os nomes dos anexos), `bot_message {id, at, from, text, cut}` (outro bot, uma rotina ou o daemon escreveu ao bot; `from` é o nome), `reply {id, at, text, cut}` (o bot respondeu, markdown), `tool {id, at, summary}`, `approval {id, at, approvalId, summary, status}`, `question {id, at, questionId, text, status}`, `failed {id, at, error?}` (um turno que falhou) e `notice {id, at, level, text}`. Os turnos que deram certo não viram item (só ruído).
 - **`live`** é o texto inteiro da resposta que o bot está escrevendo agora (não pedaços: um pedaço perdido não estraga o resto), no máximo uma vez por segundo, só enquanto aquela conversa está aberta; vazio quando a resposta termina e o item `reply` chega. **`item`** leva um item novo ou que mudou (o status de um pedido que foi respondido, por exemplo).
 - **`line`** avisa que a linha de um bot mudou, no máximo uma vez a cada 2 s por bot, e só para resposta, pergunta, pedido ou aviso novos (não para cada ferramenta que o bot usa).
 - **Quem pede, recebe:** `history` e `chats` chegam como resposta ao pedido do celular. Se o celular pede de novo antes de a resposta chegar, vale a última (`req`).
@@ -2655,6 +2655,32 @@ Status: **LK1 e LK2 feitos**, no 0.14.0 (o que já foi visto e o que falta, no f
 
 **Visto** (2026-10-08, navegador do app como celular, servidor e daemon de verdade em processo): conectar mostra o aviso com o motivo; ligar o PIN deixa no IndexedDB só `{v, lock: {salt, iterations: 600000, iv, ct, failed, nextTryAt}}`, sem `plain`, sem o token e sem os ids; recarregar a página abre trancada; PIN errado diz "Restam 9 tentativas" e limpa o campo; o PIN certo abre, reconecta e traz os pedidos de volta; com a página "escondida" ela seguia aberta aos 26 s e estava trancada aos 70 s. **Falta ver no Android de verdade**: o teclado numérico, o minuto em segundo plano com o app instalado, e o que acontece com uma sessão feita antes do PIN (deve dizer para conectar de novo).
 
+
+### 28.14 Fotos e arquivos
+
+Status: **feito** no código; falta o teste com aparelhos de verdade ("A verificar", no fim). O dono manda ao agente, pelo celular, a foto de um recibo ou de um quadro, ou qualquer arquivo, como faz no computador (9.5). Ver ou abrir no celular os anexos das conversas continua de fora (28.11).
+
+**O caminho.** O relay leva quadros de até 64 KiB e 60 por minuto de cada celular (28.4, 28.12): uns 2 MB por minuto, divididos com as mensagens. Por isso o arquivo vai por fora dele, selado:
+
+1. O celular sorteia uma chave AES-256 só para aquele arquivo e o sela (AES-256-GCM, nonce de 12 bytes zero, que pode ser zero porque a chave sela um arquivo só, dados autenticados `botloft-file-1` e a etiqueta de 16 bytes no fim, como o WebCrypto devolve).
+2. Manda os bytes selados ao servidor (`PUT /v1/files`, com o token do celular, `Content-Length` e `x-botloft-sha256` do que vai, como as cópias de 27.4) e recebe `{id, size, expires}`.
+3. Manda pelo relay o `send` de 28.12 com `files: [{id, key, name, mediaType, size}]` (`key` em base64url; `size`, o do arquivo antes do selo). A chave só viaja dentro do selo: o servidor guarda bytes que não abre.
+4. O daemon baixa cada arquivo (`GET /v1/files/<id>`, com o token do computador), confere o tamanho, abre com a chave e o passa a `messages.send` como anexo, o mesmo caminho do app (28.12, regra 2): o arquivo vai para a pasta do bot e a imagem segue inline (9.5). Depois apaga cada um no servidor (`DELETE /v1/files/<id>`), tenha dado certo ou não, e responde `sent`. Baixar leva tempo: isso roda à parte, e o relay segue com as outras mensagens.
+
+**No servidor** (`phone_files`, migration 5): só o celular manda (`403` `wrong_device` para um computador), e só o computador a que ele serve pega ou apaga (os outros recebem `404`). Cada arquivo tem até 20 MiB mais a etiqueta (`413` `too_big`); um celular tem no máximo 20 esperando (`429` `queue_full`) e manda até 60 por hora (`429` `rate_limited`). O arquivo vence em 2 horas, mais que a hora que o relay guarda o `send` (28.4), e some com o celular, com o computador e com a conta. O que venceu sai a cada 10 minutos e antes de cada envio, linha e bytes, no mesmo lugar das cópias (`<conta>/files/<id>`).
+
+**Regras do daemon.** No máximo 10 arquivos por mensagem (9.5); um `id` que não é do servidor (`fil_` e letras), uma chave que não tem 32 bytes ou um tamanho zero ou acima do menor entre 20 MiB e `attachment_max_mb` dão `invalid`; um arquivo que não baixa, não abre ou não tem o tamanho que o celular disse dá `failed`, e nada é anexado. A chave nunca vai para o log (o `Debug` de `PhoneFile` a esconde).
+
+**No PWA.** Ao lado do campo de escrever, **"Mandar uma foto"** (a câmera ou a galeria) e **"Mandar um arquivo"**. A foto vai reduzida, com até 2048 px no lado maior, em JPEG (qualidade 0,85): chega em segundos e o agente a vê na hora; uma foto JPEG que já é pequena vai como está, e uma que a página não consegue ler (um HEIC no Chrome, por exemplo) também. "Mandar um arquivo" leva qualquer arquivo como está, uma foto inteira inclusive. O que foi escolhido aparece acima do campo, com a miniatura da foto (uma imagem `data:`, para a política de 28.7 não mudar), o nome, o tamanho e um botão para tirar; até 10 por mensagem e 20 MB cada ("“nome” passa de 20 MB", "No máximo 10 arquivos numa mensagem"). Um arquivo sozinho já é mensagem. A mensagem aparece como "Enviando…" com os nomes dos arquivos; a espera pelo `sent` cresce 5 s por MB. Se o servidor recusa (`too_big`, `queue_full`, `rate_limited`, sem conexão) ou o computador responde com erro, a mensagem fica marcada e o texto e os arquivos voltam ao campo. A mensagem do dono na conversa mostra os nomes dos anexos (`you.files`); o daemon pode tê-los renomeado (`recibo-2.pdf`), então a mensagem que espera é trocada pela de verdade pelo texto e pela quantidade de arquivos. Os bytes ficam só na memória da página, como o texto (28.12).
+
+**Vetores.** `docs/test-vectors/mobile.json` ganha `file` (`key`, `plain`, `sealed`): o PWA sela os mesmos bytes que o Rust.
+
+**A verificar** (com o servidor atualizado, porque a página mora nele, 28.7):
+
+- a câmera do Android e a do iPhone abrem pelo "Mandar uma foto" (`accept="image/*"`), e o iPhone entrega a foto como JPEG (ele converte o HEIC ao escolher);
+- uma foto de 12 MP fica com menos de 1 MB e o agente do Claude Code real a vê na hora;
+- um PDF de 15 MB sobe atrás da Cloudflare (o plano grátis aceita até 100 MB por envio) e chega à pasta do bot;
+- com o computador desligado, a mensagem espera no relay e o arquivo no servidor, e os dois chegam quando ele volta (até 1 hora).
 
 ## 29. Modelos de equipe e resumo diário
 

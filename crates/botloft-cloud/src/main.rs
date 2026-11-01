@@ -4,11 +4,15 @@
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Context;
 use botloft_cloud::{
-    AppState, Clock, Config, CopyStore, Db, Hub, Mailer, Pusher, SmtpMailer, Storage, router,
+    AppState, Clock, Config, CopyStore, Db, Hub, Mailer, Pusher, SmtpMailer, Storage, router, sweep,
 };
+
+/// How often what ran out (files from phones nobody took, old links) goes.
+const SWEEP_EVERY: Duration = Duration::from_secs(10 * 60);
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -113,6 +117,14 @@ async fn serve(config: Config) -> anyhow::Result<()> {
         hub: Hub::default(),
         push: Pusher::from_config(&config)?,
     };
+    let sweeping = state.clone();
+    tokio::spawn(async move {
+        let mut every = tokio::time::interval(SWEEP_EVERY);
+        loop {
+            every.tick().await;
+            sweep(&sweeping).await;
+        }
+    });
     let listener = tokio::net::TcpListener::bind(config.listen).await?;
     tracing::info!("listening on {}", config.listen);
     axum::serve(

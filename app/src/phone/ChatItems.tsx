@@ -6,6 +6,7 @@ import { useT } from "../i18n";
 import type { PhoneItem } from "../lib/protocol.gen";
 import { Callout } from "../ui/Callout";
 import { ApprovalView } from "./ApprovalView";
+import { Attached } from "./Attach";
 import type { PhoneApi, PhoneState } from "./client";
 import { PhoneMarkdown } from "./parts";
 import { QuestionView } from "./QuestionView";
@@ -15,12 +16,25 @@ function Cut() {
   return <p className="text-muted text-xs">{useT().phone.chats.cut}</p>;
 }
 
-function Mine({ text, cut, note }: { text: string; cut?: boolean; note?: string }) {
+function Mine({
+  text,
+  cut,
+  note,
+  files,
+}: {
+  text: string;
+  cut?: boolean;
+  note?: string;
+  files?: string[] | undefined;
+}) {
   return (
     <div className="flex max-w-[85%] flex-col items-end gap-1 self-end">
-      <p className="whitespace-pre-wrap break-words rounded-2xl bg-ink px-3 py-2 text-base text-canvas">
-        {text}
-      </p>
+      {text !== "" && (
+        <p className="whitespace-pre-wrap break-words rounded-2xl bg-ink px-3 py-2 text-base text-canvas">
+          {text}
+        </p>
+      )}
+      {files && files.length > 0 && <Attached names={files} />}
       {cut && <Cut />}
       {note && <span className="text-muted text-xs">{note}</span>}
     </div>
@@ -39,7 +53,7 @@ export function ChatItem({
   const t = useT().phone;
   switch (item.kind) {
     case "you":
-      return <Mine text={item.text} cut={item.cut} />;
+      return <Mine text={item.text} cut={item.cut} files={item.files} />;
     case "bot_message":
       return (
         <div className="flex max-w-[85%] flex-col gap-1 self-start rounded-2xl border border-line bg-sunken px-3 py-2">
@@ -121,7 +135,7 @@ export function PendingItem({ pending }: { pending: Pending }) {
         : `${c.pending.notSent} ${reason}`;
   return (
     <div className={pending.status === "failed" ? "self-end text-danger" : "self-end"}>
-      <Mine text={pending.text} note={note} />
+      <Mine text={pending.text} note={note} files={pending.files?.map((file) => file.name)} />
     </div>
   );
 }

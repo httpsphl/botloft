@@ -6,12 +6,13 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{
-    ApprovalStatus, ChatBody, ChatDelta, FromPhone, MessagesSendParams, PhoneItem, ToPhone,
+    ApprovalStatus, AttachmentUpload, ChatBody, ChatDelta, FromPhone, MessagesSendParams,
+    PhoneItem, ToPhone,
 };
 
 use super::Mobile;
 use super::bridge::blocking_result;
-use super::chats;
+use super::{chats, files};
 use crate::service::{ApiError, messages};
 use crate::state::Daemon;
 
@@ -49,6 +50,30 @@ fn reason(error: &ApiError) -> &'static str {
         ApiError::NotFound(_) | ApiError::Conflict(_) => "not_found",
         _ => "failed",
     }
+}
+
+/// The owner's message, as the app sends it (spec 28.12, rule 2).
+async fn send(
+    daemon: &Arc<Daemon>,
+    bot_id: BotId,
+    text: String,
+    attachments: Vec<AttachmentUpload>,
+) -> Result<(), &'static str> {
+    blocking_result(daemon, move |daemon| {
+        messages::send(
+            daemon,
+            MessagesSendParams {
+                bot_id,
+                body: text,
+                attachments: (!attachments.is_empty()).then_some(attachments),
+                reply_to: None,
+            },
+        )
+        .map(|_| ())
+        .map_err(|error| reason(&error))
+    })
+    .await
+    .unwrap_or(Err("failed"))
 }
 
 impl Mobile {
@@ -279,38 +304,49 @@ impl Mobile {
                 client_id,
                 bot_id,
                 text,
+                files,
             } => {
-                let result = if self.may_send(daemon, phone) {
-                    blocking_result(daemon, move |daemon| {
-                        messages::send(
-                            daemon,
-                            MessagesSendParams {
-                                bot_id,
-                                body: text,
-                                attachments: None,
-                                reply_to: None,
-                            },
-                        )
-                        .map(|_| ())
-                        .map_err(|error| reason(&error))
-                    })
-                    .await
-                    .unwrap_or(Err("failed"))
-                } else {
-                    Err("rate_limited")
-                };
-                self.send_to(
-                    daemon,
-                    phone,
-                    &ToPhone::Sent {
-                        client_id,
-                        ok: result.is_ok(),
-                        reason: result.err().map(str::to_owned),
-                    },
-                );
+                if !self.may_send(daemon, phone) {
+                    self.say_sent(daemon, phone, client_id, Err("rate_limited"));
+                    return;
+                }
+                let files = files.unwrap_or_default();
+                if files.is_empty() {
+                    let result = send(daemon, bot_id, text, Vec::new()).await;
+                    self.say_sent(daemon, phone, client_id, result);
+                    return;
+                }
+                // Bringing the files down takes a while: the relay keeps
+                // going meanwhile.
+                let (daemon, phone) = (Arc::clone(daemon), phone.to_owned());
+                tokio::spawn(async move {
+                    let result = match files::take(&daemon, &files).await {
+                        Ok(attachments) => send(&daemon, bot_id, text, attachments).await,
+                        Err(reason) => Err(reason),
+                    };
+                    daemon.mobile.say_sent(&daemon, &phone, client_id, result);
+                });
             }
             _ => {}
         }
+    }
+
+    fn say_sent(
+        &self,
+        daemon: &Daemon,
+        phone: &str,
+        client_id: String,
+        result: Result<(), &'static str>,
+    ) {
+        self.send_to(
+            daemon,
+            phone,
+            &ToPhone::Sent {
+                client_id,
+                ok: result.is_ok(),
+                reason: result.err().map(str::to_owned),
+            },
+        );
     }
 
     /// Which conversation the phone has open; what it needs to follow it is

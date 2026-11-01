@@ -76,6 +76,7 @@ async fn send(phone: &mut Phone, bot: &Value, id: &str, text: &str) -> (bool, Op
             client_id: id.into(),
             bot_id: bot_id(bot),
             text: text.into(),
+            files: None,
         })
         .await;
     loop {

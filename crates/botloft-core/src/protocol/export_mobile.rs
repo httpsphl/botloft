@@ -23,6 +23,7 @@ pub(super) fn decls(out: &mut Out) {
     out.decl::<ChatLine>();
     out.decl::<PhoneItem>();
     out.decl::<ToPhone>();
+    out.decl::<PhoneFile>();
     out.decl::<FromPhone>();
 }
 

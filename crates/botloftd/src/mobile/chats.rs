@@ -112,7 +112,19 @@ pub fn item(daemon: &Daemon, item: &ChatItem) -> Option<PhoneItem> {
         ChatBody::Inbound(inbound) => {
             let (text, cut) = cut(&inbound.message.body);
             if inbound.message.from_kind == SenderKind::Owner {
-                PhoneItem::You { id, at, text, cut }
+                let files: Vec<String> = inbound
+                    .message
+                    .attachments
+                    .iter()
+                    .map(|file| file.name.clone())
+                    .collect();
+                PhoneItem::You {
+                    id,
+                    at,
+                    text,
+                    cut,
+                    files: (!files.is_empty()).then_some(files),
+                }
             } else {
                 let from = sender(&daemon.store(), item);
                 PhoneItem::BotMessage {

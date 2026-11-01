@@ -171,6 +171,32 @@ export async function seal(
   return JSON.stringify({ v: VERSION, seq, ct: toB64(new Uint8Array(ct)) });
 }
 
+/** What every file's seal is bound to (spec 28.14). */
+const FILE_AAD = text.encode("botloft-file-1");
+
+/**
+ * A file sealed with a key of its own, which seals nothing else: so the
+ * nonce can be zero. The tag is at the end, as the computer reads it.
+ */
+export async function sealFile(
+  rawKey: Uint8Array,
+  plain: Uint8Array,
+): Promise<Uint8Array<ArrayBuffer>> {
+  const key = await crypto.subtle.importKey("raw", own(rawKey), "AES-GCM", false, ["encrypt"]);
+  const sealed = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: new Uint8Array(12), additionalData: own(FILE_AAD) },
+    key,
+    own(plain),
+  );
+  return new Uint8Array(sealed);
+}
+
+/** The SHA-256 of `bytes`, in hex, as the server checks an upload. */
+export async function sha256Hex(bytes: Uint8Array): Promise<string> {
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", own(bytes)));
+  return Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 /** The counter and the plain text of a sealed message; throws if it does not open. */
 export async function open(
   key: CryptoKey,

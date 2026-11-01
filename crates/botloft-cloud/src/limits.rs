@@ -25,6 +25,12 @@ pub const PAIR_PER_ADDRESS: Rule = Rule {
     limit: 30,
     window_ms: 3_600_000,
 };
+/// Files a phone sends to its computer (spec 28.14), per phone.
+pub const PHONE_FILES: Rule = Rule {
+    kind: "file",
+    limit: 60,
+    window_ms: 3_600_000,
+};
 pub const GAP: Rule = Rule {
     kind: "gap",
     limit: 1,
