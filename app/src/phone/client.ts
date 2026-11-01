@@ -19,6 +19,7 @@ import {
   turnOff,
   turnOn,
 } from "./notices";
+import { type Outgoing, upload } from "./outgoing";
 import type { Session, SessionStore } from "./store";
 import { type ChatPart, noChats, type SeenStore, Talk } from "./talk";
 
@@ -55,8 +56,8 @@ export interface PhoneApi {
   openChat(botId: string): Promise<void>;
   closeChat(): Promise<void>;
   olderItems(): Promise<void>;
-  /** Writes to the open bot. False if it could not even be sent. */
-  write(text: string): Promise<boolean>;
+  /** Writes to the open bot, with files if any. False if it could not even be sent. */
+  write(text: string, files?: Outgoing[]): Promise<boolean>;
   /** Notices when something waits (spec 28.8). */
   noticeState(): Promise<NoticeState>;
   turnOnNotices(): Promise<NoticeState>;
@@ -125,6 +126,11 @@ export class PhoneClient implements PhoneApi {
       (message) => this.send(message),
       deps.seen,
       deps.sentWait,
+      (file) =>
+        upload(
+          { origin: this.deps.origin, fetch: this.deps.fetch, token: this.session.token },
+          file,
+        ),
     );
   }
 
@@ -302,7 +308,7 @@ export class PhoneClient implements PhoneApi {
   openChat = (botId: string): Promise<void> => this.talk.open(botId);
   closeChat = (): Promise<void> => this.talk.leave();
   olderItems = (): Promise<void> => this.talk.older();
-  write = (text: string): Promise<boolean> => this.talk.write(text);
+  write = (text: string, files?: Outgoing[]): Promise<boolean> => this.talk.write(text, files);
 
   private close(id: string, status: Ended): void {
     const { state } = this;

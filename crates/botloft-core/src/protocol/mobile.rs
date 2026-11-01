@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::ids::{ApprovalId, BotId, ChatItemId, QuestionId};
-use crate::protocol::{Activity, ApprovalStatus, BotState, NoticeLevel, QuestionStatus};
+use crate::protocol::{Activity, ApprovalStatus, BotState, NoticeLevel, PhoneFile, QuestionStatus};
 
 /// Whether the computer's connection to the relay is up.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -216,12 +216,15 @@ pub struct RunFailure {
 )]
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub enum PhoneItem {
-    /// The owner wrote it.
+    /// The owner wrote it, with the names of the files that went with it.
     You {
         id: ChatItemId,
         at: i64,
         text: String,
         cut: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(test, ts(optional))]
+        files: Option<Vec<String>>,
     },
     /// Another bot, a routine or the daemon wrote it to this bot; `from` is
     /// the name.
@@ -374,12 +377,15 @@ pub enum FromPhone {
         #[cfg_attr(test, ts(optional))]
         before: Option<ChatItemId>,
     },
-    /// The owner writes to a bot.
+    /// The owner writes to a bot, maybe with files (spec 28.14).
     #[serde(rename = "send")]
     Send {
         client_id: String,
         bot_id: BotId,
         text: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(test, ts(optional))]
+        files: Option<Vec<PhoneFile>>,
     },
     /// Which conversation is open, if any.
     #[serde(rename = "watch")]
@@ -458,12 +464,23 @@ mod tests {
             client_id: "c1".into(),
             bot_id: bot.clone(),
             text: "oi".into(),
+            files: None,
         })
         .expect("json");
         assert_eq!(
             send,
             serde_json::json!({ "t": "send", "clientId": "c1", "botId": bot, "text": "oi" })
         );
+        // A phone of before the files still says the same thing.
+        let with_file: FromPhone = serde_json::from_value(serde_json::json!({
+            "t": "send", "clientId": "c2", "botId": bot, "text": "",
+            "files": [{ "id": "fil_a", "key": "k", "name": "a.jpg", "mediaType": "image/jpeg", "size": 3 }],
+        }))
+        .expect("with a file");
+        assert!(matches!(
+            with_file,
+            FromPhone::Send { files: Some(files), .. } if files[0].media_type == "image/jpeg"
+        ));
         // What it gets: an item is told by its `kind`, in camelCase.
         let item = PhoneItem::Approval {
             id: ChatItemId::generate(),

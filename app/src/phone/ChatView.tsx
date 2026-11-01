@@ -3,8 +3,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../i18n";
+import { AttachButtons, Chosen } from "./Attach";
 import { ChatItem, PendingItem } from "./ChatItems";
 import type { PhoneApi, PhoneState } from "./client";
+import { asIs, FILE_MAX, FILES_MAX, type Outgoing, photo } from "./outgoing";
 import { BotDot, PhoneButton, PhoneMarkdown } from "./parts";
 import { SEND_MAX } from "./talk";
 
@@ -17,6 +19,10 @@ export function ChatView({ api, state, back }: { api: PhoneApi; state: PhoneStat
   const line = state.chats.find((one) => one.botId === convo?.botId);
   const [text, setText] = useState("");
   const [tooLong, setTooLong] = useState(false);
+  const [files, setFiles] = useState<Outgoing[]>([]);
+  /** Why a file was left out, if one was. */
+  const [fileNote, setFileNote] = useState<string | null>(null);
+  const [preparing, setPreparing] = useState(false);
   const column = useRef<HTMLDivElement>(null);
   /** The owner is at the end of the conversation, so what comes is followed. */
   const atEnd = useRef(true);
@@ -51,21 +57,47 @@ export function ChatView({ api, state, back }: { api: PhoneApi; state: PhoneStat
     };
   }, [open]);
 
-  // A message that did not go comes back to the box, if the box is empty.
+  // A message that did not go comes back to the box, if the box is empty,
+  // and so do its files.
   const failedText = failed?.text;
+  const failedFiles = failed?.files;
   useEffect(() => {
     if (failedText !== undefined) {
       setText((now) => (now === "" ? failedText : now));
     }
   }, [failedText]);
+  useEffect(() => {
+    if (failedFiles) {
+      setFiles((now) => (now.length === 0 ? failedFiles : now));
+    }
+  }, [failedFiles]);
 
   if (!convo) {
     return null;
   }
   const name = line?.name ?? "";
+  const pick = async (picked: File[], asPhoto: boolean) => {
+    setFileNote(null);
+    const room = FILES_MAX - files.length;
+    if (picked.length > room) {
+      setFileNote(c.composer.tooMany);
+    }
+    setPreparing(asPhoto);
+    const ready: Outgoing[] = [];
+    for (const file of picked.slice(0, Math.max(0, room))) {
+      const out = asPhoto ? await photo(file) : asIs(file);
+      if (out.blob.size > FILE_MAX) {
+        setFileNote(c.composer.tooBig(file.name));
+      } else {
+        ready.push(out);
+      }
+    }
+    setPreparing(false);
+    setFiles((now) => [...now, ...ready].slice(0, FILES_MAX));
+  };
   const submit = async () => {
     const bytes = new TextEncoder().encode(text.trim()).length;
-    if (bytes === 0) {
+    if (bytes === 0 && files.length === 0) {
       return;
     }
     if (bytes > SEND_MAX) {
@@ -73,10 +105,12 @@ export function ChatView({ api, state, back }: { api: PhoneApi; state: PhoneStat
       return;
     }
     setTooLong(false);
+    setFileNote(null);
     atEnd.current = true;
-    const body = text;
+    const [body, chosen] = [text, files];
     setText("");
-    await api.write(body);
+    setFiles([]);
+    await api.write(body, chosen);
   };
 
   return (
@@ -139,7 +173,19 @@ export function ChatView({ api, state, back }: { api: PhoneApi; state: PhoneStat
             {c.composer.tooLong}
           </p>
         )}
+        {fileNote && (
+          <p role="alert" className="text-danger text-sm">
+            {fileNote}
+          </p>
+        )}
+        {preparing && (
+          <p role="status" className="text-muted text-sm">
+            {c.composer.preparing}
+          </p>
+        )}
+        <Chosen files={files} remove={(at) => setFiles((now) => now.filter((_, i) => i !== at))} />
         <div className="flex items-end gap-2">
+          <AttachButtons disabled={preparing || files.length >= FILES_MAX} pick={pick} />
           <textarea
             aria-label={c.composer.label(name)}
             placeholder={c.composer.placeholder}
@@ -154,7 +200,9 @@ export function ChatView({ api, state, back }: { api: PhoneApi; state: PhoneStat
           <PhoneButton
             look="primary"
             type="submit"
-            disabled={text.trim() === "" || state.link !== "online"}
+            disabled={
+              (text.trim() === "" && files.length === 0) || preparing || state.link !== "online"
+            }
             className="flex-none"
           >
             {c.composer.send}

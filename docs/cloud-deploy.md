@@ -146,6 +146,10 @@ docker compose run --rm cloud vapid-key --to /config/vapid-key   # imprime a cha
 
 Depois descomente `[push]` no `cloud.toml` (ou no `BOTLOFT_CLOUD_CONFIG`): `subject` (um `mailto:` ou `https:` seu), `vapid_key_file` (ou a variável `BOTLOFT_CLOUD_VAPID_KEY`, para o Coolify) e, se quiser, `allow_hosts`. O servidor só chama os serviços de push dos navegadores (Chrome, Firefox, Edge, Safari) e manda uma chamada **vazia** e assinada: o texto do aviso é o da própria página, e nada de bot, comando ou pergunta passa por Google, Apple ou Mozilla. Guarde a chave privada como guarda a senha do SMTP: quem a tem pode mandar avisos em nome do seu servidor. Trocá-la obriga cada celular a ligar os avisos de novo.
 
+## Fotos e arquivos do celular
+
+O celular manda fotos e arquivos aos agentes (spec 28.14) por este servidor. Cada arquivo chega selado com uma chave que só o celular e o computador têm, fica no mesmo lugar das cópias (`<conta>/files/<id>`, fora da cota delas) até o computador pegá-lo, e some depois disso ou em 2 horas. Não há nada a configurar; só confira que o proxy na frente (Caddy, Cloudflare) deixa passar envios de 20 MB.
+
 ## Limites conhecidos
 
 - **Uma instância só.** O banco é um arquivo SQLite: não suba dois servidores sobre o mesmo `cloud.db`.
