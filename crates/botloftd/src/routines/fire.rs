@@ -5,7 +5,7 @@
 use botloft_core::ids::{MessageId, RoutineId, RoutineRunId};
 use botloft_core::protocol::{
     Crew, Message, MessageKind, Missed, Overlap, Routine, RoutineRun, RunSignal, RunStatus,
-    SenderKind, SkipReason,
+    Schedule, SenderKind, SkipReason,
 };
 use botloft_store::{BotRecord, Store};
 use tracing::{debug, warn};
@@ -71,6 +71,15 @@ pub(super) fn due(daemon: &Daemon, mut routine: Routine, now: i64) {
         warn!(routine = %routine.id, "a routine could not run: {err}");
     }
     routine.next_run_at = plan.next_after(latest, now);
+    // A one-time routine ran (spec 20.2): the owner's stays as a
+    // shortcut, a bot's own reminder goes.
+    if let Schedule::Once { reminder, .. } = &routine.schedule {
+        if *reminder == Some(true) {
+            routine.archived_at = Some(now);
+        } else {
+            routine.schedule = Schedule::Manual;
+        }
+    }
     drop(store);
     save(daemon, &routine);
 }

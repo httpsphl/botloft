@@ -5,7 +5,7 @@
 import type { Missed, Overlap, Routine, Schedule } from "../../lib/protocol.gen";
 import { systemZone } from "./describe";
 
-export type Frequency = "daily" | "weekdays" | "days" | "interval" | "signal";
+export type Frequency = "daily" | "weekdays" | "days" | "interval" | "signal" | "once" | "manual";
 export type Unit = "minutes" | "hours";
 
 export interface RoutineForm {
@@ -16,6 +16,8 @@ export interface RoutineForm {
   days: number[];
   /** `HH:MM`. */
   time: string;
+  /** `YYYY-MM-DD`, for once. */
+  date: string;
   every: number;
   unit: Unit;
   timezone: string;
@@ -37,6 +39,7 @@ export function blankForm(): RoutineForm {
     frequency: "weekdays",
     days: [1],
     time: "09:00",
+    date: tomorrow(),
     every: 1,
     unit: "hours",
     timezone: systemZone(),
@@ -93,6 +96,16 @@ export function formOf(routine: RoutineFields): RoutineForm {
       form.frequency = "signal";
       form.signal = schedule.name;
       break;
+    case "manual":
+      form.frequency = "manual";
+      break;
+    case "once": {
+      const [date = "", time = ""] = schedule.at.split("T");
+      form.frequency = "once";
+      form.date = date;
+      form.time = time;
+      break;
+    }
   }
   return form;
 }
@@ -116,5 +129,16 @@ export function scheduleOf(form: RoutineForm): Schedule {
       };
     case "signal":
       return { kind: "signal", name: form.signal.trim() };
+    case "manual":
+      return { kind: "manual" };
+    case "once":
+      return { kind: "once", at: `${form.date}T${form.time}` };
   }
+}
+
+/** Tomorrow's date here, `YYYY-MM-DD`: where a new one-time routine starts. */
+function tomorrow(): string {
+  const day = new Date(Date.now() + 86_400_000);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`;
 }

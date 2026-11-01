@@ -24,12 +24,15 @@ export function ScheduleFields({
   const timeId = useId();
   const everyId = useId();
   const signalId = useId();
+  const dateId = useId();
   const frequencies: { value: Frequency; label: string }[] = [
     { value: "daily", label: d.frequency.daily },
     { value: "weekdays", label: d.frequency.weekdays },
     { value: "days", label: d.frequency.days },
     { value: "interval", label: d.frequency.interval },
     { value: "signal", label: d.frequency.signal },
+    { value: "once", label: d.frequency.once },
+    { value: "manual", label: d.frequency.manual },
   ];
 
   const toggleDay = (day: number) =>
@@ -70,7 +73,37 @@ export function ScheduleFields({
           })}
         </fieldset>
       )}
-      {form.frequency === "signal" ? (
+      {form.frequency === "manual" ? (
+        <p className="text-muted text-xs">{d.manualHint(bot)}</p>
+      ) : form.frequency === "once" ? (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <label htmlFor={dateId} className="text-ink-soft text-sm">
+              {d.date}
+            </label>
+            <input
+              id={dateId}
+              type="date"
+              required
+              value={form.date}
+              onChange={(event) => change({ date: event.target.value })}
+              className={`${control} w-40`}
+            />
+            <label htmlFor={timeId} className="text-ink-soft text-sm">
+              {d.at}
+            </label>
+            <input
+              id={timeId}
+              type="time"
+              required
+              value={form.time}
+              onChange={(event) => change({ time: event.target.value })}
+              className={`${control} w-32`}
+            />
+          </div>
+          <p className="text-muted text-xs">{d.onceHint}</p>
+        </div>
+      ) : form.frequency === "signal" ? (
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
             <label htmlFor={signalId} className="text-ink-soft text-sm">

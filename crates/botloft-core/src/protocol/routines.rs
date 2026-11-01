@@ -19,6 +19,18 @@ pub enum Schedule {
     Cron { expr: String },
     /// When a bot of the crew sends the signal `name` (spec 20.13).
     Signal { name: String },
+    /// When the owner clicks it ("Run now", a shortcut on the home): no
+    /// time of its own (spec 20.2).
+    Manual,
+    /// Once, at `at` (`YYYY-MM-DDTHH:MM`) in the routine's time zone. Run,
+    /// the owner's becomes `manual`; a bot's `reminder` to come back to
+    /// its own work is archived (spec 20.12).
+    Once {
+        at: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(test, ts(optional))]
+        reminder: Option<bool>,
+    },
 }
 
 text_enum!(

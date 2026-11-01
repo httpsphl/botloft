@@ -182,3 +182,81 @@ async fn off_routines_do_not_run_and_come_back_from_now() {
         "nothing missed"
     );
 }
+
+#[tokio::test(start_paused = true)]
+async fn a_one_time_routine_runs_at_its_time_and_stays_as_a_shortcut() {
+    let s = routines_setup().await;
+    let once = Schedule::Once {
+        at: "2026-10-01T09:30".into(),
+        reminder: None,
+    };
+    let made = create(&s, once, Overlap::Skip, Missed::RunOnce);
+    assert_eq!(made.next_run_at, Some(at("UTC", 2026, 10, 1, 9, 30)));
+
+    tick_after(&s, 60 * MINUTE);
+    assert!(runs(&s, &made.id).is_empty(), "not yet");
+    tick_after(&s, 30 * MINUTE);
+    assert_eq!(runs(&s, &made.id).len(), 1);
+    let lines = written(&s, 1).await;
+    finish_turn(&s, &lines[0], false).await;
+
+    // Run, it waits as a shortcut for the owner's click (spec 20.2).
+    let after = routine(&s, &made.id);
+    assert_eq!(after.schedule, Schedule::Manual);
+    assert_eq!(after.next_run_at, None);
+    assert!(after.archived_at.is_none());
+    let again = service::run_now(
+        &s.daemon,
+        RoutineIdParams {
+            routine_id: made.id.clone(),
+        },
+    )
+    .expect("run now");
+    assert_eq!(again.status, RunStatus::Queued);
+
+    // A time that already passed is refused, with its reason.
+    let past = botloft_core::protocol::RoutinesCreateParams {
+        bot_id: s.bot.clone(),
+        name: "Late".into(),
+        prompt: "Too late.".into(),
+        schedule: Schedule::Once {
+            at: "2026-10-01T08:00".into(),
+            reminder: None,
+        },
+        timezone: "UTC".into(),
+        overlap: None,
+        missed: None,
+    };
+    let refused = service::create(&s.daemon, past).expect_err("past");
+    assert!(format!("{refused:?}").contains("once_past"), "{refused:?}");
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_shortcut_runs_only_when_the_owner_clicks_it() {
+    let s = routines_setup().await;
+    let shortcut = create(&s, Schedule::Manual, Overlap::Skip, Missed::RunOnce);
+    assert_eq!(shortcut.next_run_at, None);
+    tick_after(&s, 24 * 60 * MINUTE);
+    assert!(runs(&s, &shortcut.id).is_empty());
+    service::run_now(
+        &s.daemon,
+        RoutineIdParams {
+            routine_id: shortcut.id.clone(),
+        },
+    )
+    .expect("run now");
+    assert_eq!(runs(&s, &shortcut.id).len(), 1);
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_bots_own_reminder_goes_once_it_has_run() {
+    let s = routines_setup().await;
+    let reminder = Schedule::Once {
+        at: "2026-10-01T08:30".into(),
+        reminder: Some(true),
+    };
+    let made = create(&s, reminder, Overlap::Skip, Missed::RunOnce);
+    tick_after(&s, 30 * MINUTE);
+    assert_eq!(runs(&s, &made.id).len(), 1);
+    assert!(routine(&s, &made.id).archived_at.is_some());
+}

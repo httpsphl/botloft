@@ -63,6 +63,12 @@ enum Kind {
     Cron(Cron),
     /// Runs when a bot sends the signal, never by the clock.
     Signal,
+    /// Runs when the owner clicks it, never by the clock.
+    Manual,
+    /// Runs once, at this instant (Unix ms).
+    Once {
+        at: i64,
+    },
 }
 
 impl Plan {
@@ -123,15 +129,43 @@ impl Plan {
                 }
                 Kind::Signal
             }
+            Schedule::Manual => Kind::Manual,
+            Schedule::Once { at, .. } => {
+                let local: DateTime = at.parse().map_err(|_| {
+                    Problem::new(
+                        "once_invalid",
+                        format!("\"{at}\" is not a date and time like 2026-11-01T09:00"),
+                    )
+                })?;
+                let plan = Self {
+                    kind: Kind::Manual,
+                    tz,
+                };
+                let at = plan.resolve(local).ok_or_else(|| {
+                    Problem::new("once_invalid", format!("\"{at}\" does not exist"))
+                })?;
+                return Ok(Self {
+                    kind: Kind::Once { at },
+                    tz: plan.tz,
+                });
+            }
         };
         Ok(Self { kind, tz })
     }
 
     /// Checks that runs are never closer than five minutes, from `now` on.
     pub fn check_spacing(&self, now: i64) -> Result<(), Problem> {
-        // Signals are kept apart when they come (spec 20.13).
-        if matches!(self.kind, Kind::Signal) {
+        // Signals are kept apart when they come (spec 20.13), and the
+        // owner's clicks are theirs.
+        if matches!(self.kind, Kind::Signal | Kind::Manual) {
             return Ok(());
+        }
+        if let Kind::Once { at } = self.kind {
+            return if at > now {
+                Ok(())
+            } else {
+                Err(Problem::new("once_past", "that time has already passed"))
+            };
         }
         let mut last = self.next_after(now, now);
         let mut samples = 0;
@@ -180,7 +214,8 @@ impl Plan {
                         .collect()
                 })
             }),
-            Kind::Signal => None,
+            Kind::Signal | Kind::Manual => None,
+            Kind::Once { at } => (*at > after).then_some(*at),
         }
     }
 

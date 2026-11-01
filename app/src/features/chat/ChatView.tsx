@@ -22,6 +22,7 @@ import { Callout } from "../../ui/Callout";
 import { SeenSince } from "../../ui/motion";
 import { BotAvatar, moodOf } from "../bots/BotAvatar";
 import { CallPills, useLiveCalls } from "../messages/CallPills";
+import { Reminders } from "../routines/Reminders";
 import { BotRun, type Live } from "./BotRun";
 import { ChatComposer } from "./ChatComposer";
 import { followTop } from "./follow";
@@ -259,6 +260,7 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
         <div className="absolute bottom-full left-1/2 z-10 mb-2 flex -translate-x-1/2 flex-col items-center gap-2">
           <CallPills calls={calls} className="justify-center" />
           <WaitingPill items={chat.items} scroller={scroller} />
+          <Reminders bot={bot} />
         </div>
         {/* Keyed by bot: each one has its own draft (spec 15.1). */}
         <ChatComposer

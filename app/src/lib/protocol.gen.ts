@@ -2216,7 +2216,7 @@ sleepAfterMinutes?: number, defaultAgent?: AgentKind, showExperimentalAgents?: b
  * When a routine runs (spec 20.2), kept as structure rather than cron text
  * so the app can show and edit it without jargon.
  */
-export type Schedule = { "kind": "weekly", days: Array<number>, time: string, } | { "kind": "interval", minutes: number, } | { "kind": "cron", expr: string, } | { "kind": "signal", name: string, };
+export type Schedule = { "kind": "weekly", days: Array<number>, time: string, } | { "kind": "interval", minutes: number, } | { "kind": "cron", expr: string, } | { "kind": "signal", name: string, } | { "kind": "manual" } | { "kind": "once", at: string, reminder?: boolean, };
 
 /**
  * What happens when a routine's time comes while its last run is still

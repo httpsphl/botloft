@@ -22,6 +22,9 @@ use crate::state::Daemon;
 pub(super) const PROMPT_MAX: usize = 8_000;
 /// Used when the system's zone has no IANA name.
 const FALLBACK_ZONE: &str = "UTC";
+/// How far ahead a bot may set a return to its own work without the
+/// owner (spec 20.12).
+const REMINDER_WITHIN_MS: i64 = 24 * 60 * 60 * 1000;
 
 /// The tool's input, and what the owner sends back when they change it.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -71,6 +74,10 @@ async fn run(
     arguments: Value,
 ) -> Result<Value, String> {
     let mut proposal: Proposal = parse(arguments)?;
+    // Only the daemon marks a reminder (spec 20.12).
+    if let Schedule::Once { reminder, .. } = &mut proposal.schedule {
+        *reminder = None;
+    }
     if proposal.prompt.chars().count() > PROMPT_MAX {
         return Err(format!("prompt must be at most {PROMPT_MAX} characters"));
     }
@@ -80,6 +87,22 @@ async fn run(
     // Nothing impossible goes to the owner.
     let params = proposal.params(target.clone());
     routines::check(daemon, &params).map_err(explain)?;
+
+    // A return to its own work within a day needs nobody: it runs once
+    // and goes (spec 20.12).
+    if target == *bot && reminder_soon(daemon, &params) {
+        let mut params = params;
+        if let Schedule::Once { reminder, .. } = &mut params.schedule {
+            *reminder = Some(true);
+        }
+        let routine = routines::create(daemon, params).map_err(explain)?;
+        return Ok(created_note(
+            &routine,
+            "It is a one-time return to your own work within a day, so it was set without \
+             asking the owner, who sees it in your chat and may cancel it. It goes once it \
+             has run.",
+        ));
+    }
 
     let mode = bots::find(&daemon.store(), bot)
         .map_err(explain)?
@@ -127,6 +150,18 @@ async fn run(
         })),
         None => Err("Botloft could not ask the owner.".to_owned()),
     }
+}
+
+/// A one-time routine for the bot itself, due within a day.
+fn reminder_soon(daemon: &Daemon, params: &RoutinesCreateParams) -> bool {
+    if !matches!(params.schedule, Schedule::Once { .. }) {
+        return false;
+    }
+    let now = daemon.clock.now_ms();
+    crate::routines::schedule::Plan::new(&params.schedule, &params.timezone)
+        .ok()
+        .and_then(|plan| plan.next_after(now, now))
+        .is_some_and(|at| at - now <= REMINDER_WITHIN_MS)
 }
 
 /// The owner's changes to a request (`approvals.answer`), checked before
