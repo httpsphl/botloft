@@ -53,6 +53,18 @@ export function describeSchedule(schedule: Schedule, words: Words["when"]): stri
       return words.cron(schedule.expr);
     case "signal":
       return words.signal(schedule.name);
+    case "manual":
+      return words.manual;
+    case "once": {
+      const [date = "", time = ""] = schedule.at.split("T");
+      const [year, month, day] = date.split("-").map(Number);
+      const label = new Intl.DateTimeFormat(currentLocale(), {
+        day: "numeric",
+        month: "short",
+        timeZone: "UTC",
+      }).format(Date.UTC(year ?? 1970, (month ?? 1) - 1, day ?? 1));
+      return words.once(label, clockText(time));
+    }
   }
 }
 

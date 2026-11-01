@@ -15,6 +15,7 @@ import { CrewCard } from "../crews/CrewCard";
 import { CrewDialog } from "../crews/CrewDialog";
 import { orderedCrews, useCrewOrder } from "../crews/crewOrder";
 import { actionableDead } from "../messages/FailedDeliveries";
+import { Shortcuts } from "../routines/Shortcuts";
 import { BotLines, useUnread, useWorking } from "./BotLines";
 import { NeedsYou } from "./NeedsYou";
 import { Today } from "./Today";
@@ -51,6 +52,7 @@ export function HomeView() {
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto p-5">
         <div className="mx-auto flex max-w-3xl flex-col gap-8">
+          <Shortcuts />
           <section aria-labelledby="home-needs-you">
             <h2
               id="home-needs-you"

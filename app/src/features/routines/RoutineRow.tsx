@@ -77,9 +77,11 @@ export function RoutineRow({
               ? r.off
               : routine.schedule.kind === "signal"
                 ? r.waitsSignal
-                : routine.nextRunAt !== null
-                  ? r.next(nextText(routine.nextRunAt, routine.timezone, r))
-                  : r.off}
+                : routine.schedule.kind === "manual"
+                  ? r.waitsClick
+                  : routine.nextRunAt !== null
+                    ? r.next(nextText(routine.nextRunAt, routine.timezone, r))
+                    : r.off}
           </span>
         </p>
         {routine.lastRun && <LastRun run={routine.lastRun} words={r.last} />}

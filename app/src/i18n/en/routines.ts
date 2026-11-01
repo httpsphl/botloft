@@ -16,6 +16,7 @@ export const routines = {
   next: (time: string) => `Next: ${time}`,
   off: "Off",
   waitsSignal: "Waits for a signal",
+  waitsClick: "A shortcut on Home",
   today: (time: string) => `today at ${time}`,
   tomorrow: (time: string) => `tomorrow at ${time}`,
   onDay: (day: string, time: string) => `${day} at ${time}`,
@@ -54,8 +55,25 @@ export const routines = {
     everyHours: (count: number) => (count === 1 ? "Every hour" : `Every ${count} hours`),
     cron: (expr: string) => `Cron: ${expr}`,
     signal: (name: string) => `When an agent signals “${name}”`,
+    manual: "When you click it",
+    once: (date: string, time: string) => `Once, ${date} at ${time}`,
   },
   tag: (name: string) => `Routine · ${name}`,
+  /** Routines that run when the owner clicks them (spec 20.2). */
+  shortcuts: {
+    title: "Shortcuts",
+    run: (name: string, bot: string) => `Run ${name}, by ${bot}`,
+    started: (bot: string, name: string) => `${bot} started: ${name}`,
+    failed: "Could not run it",
+    menu: (bot: string) => `${bot}'s shortcuts`,
+  },
+  /** An agent's own return to its work (spec 20.12). */
+  reminder: {
+    list: (bot: string) => `When ${bot} comes back to its work`,
+    label: (bot: string, when: string) => `${bot} comes back to it ${when}`,
+    cancel: (name: string) => `Cancel: ${name}`,
+    failed: "Could not cancel it",
+  },
   dialog: {
     newTitle: (bot: string) => `New routine for ${bot}`,
     editTitle: (name: string) => `Edit ${name}`,
@@ -70,6 +88,8 @@ export const routines = {
       days: "Chosen days",
       interval: "Every…",
       signal: "When an agent signals",
+      once: "Once",
+      manual: "When I click",
     },
     at: "At",
     every: "Every",
@@ -90,6 +110,10 @@ export const routines = {
     signalPlaceholder: "report-ready",
     signalHint: (bot: string) =>
       `${bot} runs this when an agent of the crew sends this signal. Tell that agent, in its instructions, when to send it, like “send report-ready when the report is saved”.`,
+    date: "On",
+    onceHint: "Once it has run, it stays as a shortcut you click to run it again.",
+    manualHint: (bot: string) =>
+      `It becomes a shortcut on Home and by ${bot}'s message field, and runs each time you click it.`,
     cronHint: "Minute, hour, day of the month, month and day of the week. It replaces When.",
     create: "Create routine",
     save: "Save",
@@ -103,6 +127,8 @@ export const routines = {
       too_often: "Runs must be at least 5 minutes apart.",
       never_runs: "This schedule never runs.",
       signal_invalid: "A signal needs letters or digits, like report-ready.",
+      once_invalid: "Pick a valid date and time.",
+      once_past: "That time has already passed.",
     },
   },
   /** The daily summary the chief writes (spec 29.2), a routine made for the owner. */

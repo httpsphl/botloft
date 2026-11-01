@@ -23,6 +23,7 @@ import { prefs, usePref } from "../../shell/prefs";
 import { playSound } from "../../shell/sounds";
 import { useApi } from "../../store/context";
 import { pastedKeys } from "../keys/pasted";
+import { ShortcutMenu } from "../routines/ShortcutMenu";
 import { AgentModelPicker } from "./AgentModelPicker";
 import { ContextMeter } from "./ContextMeter";
 import { draftOf, keepDraft } from "./drafts";
@@ -237,6 +238,7 @@ export const ChatComposer = memo(function ChatComposer({
           >
             <Paperclip aria-hidden size={16} />
           </button>
+          <ShortcutMenu bot={bot} />
           <input
             ref={picker}
             type="file"

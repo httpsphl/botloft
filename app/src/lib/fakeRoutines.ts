@@ -43,7 +43,12 @@ export class FakeRoutines {
           overlap: overlap ?? "skip",
           missed: missed ?? "run_once",
           enabled: true,
-          nextRunAt: schedule.kind === "signal" ? null : this.fake.now + HOUR,
+          nextRunAt:
+            schedule.kind === "signal" || schedule.kind === "manual"
+              ? null
+              : schedule.kind === "once"
+                ? Date.parse(`${schedule.at}:00Z`)
+                : this.fake.now + HOUR,
           lastRun: null,
           createdAt: this.fake.now,
           updatedAt: this.fake.now,

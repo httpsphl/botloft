@@ -38,6 +38,17 @@ export function seedRoutines(fake: FakeBotloft, bots: { scout: BotId; analyst: B
     schedule: { kind: "weekly", days: [1, 2, 3, 4, 5], time: "09:00" },
   });
   lastRun(morning, {});
+  // Shortcuts on the home and by the message field (spec 20.9).
+  create(bots.scout, {
+    name: "Check the inbox",
+    prompt: "Read what arrived in shared/inbox and tell me what needs me.",
+    schedule: { kind: "manual" },
+  });
+  create(bots.analyst, {
+    name: "Sales report",
+    prompt: "Write this week's sales report in shared/reports.",
+    schedule: { kind: "manual" },
+  });
   morning.nextRunAt = fake.now + 14 * HOUR;
 
   const links = create(bots.scout, {
