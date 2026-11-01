@@ -18,6 +18,7 @@ import { security } from "./catalogSecurity";
 export const catalog: Messages["catalog"] = {
   title: "Agência de agentes",
   open: "Agência de agentes",
+  short: "Agência",
   openHint: "Agentes prontos que você pode adicionar a esta equipe",
   intro:
     "Escolha um agente para o trabalho. Ele entra nesta equipe pronto para trabalhar, e depois você pode mudar o que quiser nele.",
