@@ -10,6 +10,7 @@ import { ApprovalView } from "./ApprovalView";
 import { ChatsList, CrewChips, isUnread } from "./ChatsList";
 import { ChatView } from "./ChatView";
 import type { PhoneApi } from "./client";
+import { FailedRuns, failureOf } from "./FailedRuns";
 import { Notices } from "./NoticesControl";
 import { type LockApi, PinNudge, PinSettings } from "./PinSettings";
 import { PhoneButton } from "./parts";
@@ -108,7 +109,8 @@ export function PhoneApp({
     );
   }
 
-  const waiting = state.approvals.length + state.questions.length;
+  const failures = state.chats.filter((line) => failureOf(line, state.seen) !== null).length;
+  const waiting = state.approvals.length + state.questions.length + failures;
   const news = state.chats.some((line) => isUnread(line, state.seen));
   return (
     <Shell>
@@ -182,6 +184,14 @@ export function PhoneApp({
             dismiss={() => api.dismissQuestion(card.questionId)}
           />
         ))}
+        <FailedRuns
+          chats={state.chats}
+          seen={state.seen}
+          open={(botId) => {
+            setTab("chats");
+            void api.openChat(botId);
+          }}
+        />
         {waiting === 0 && (
           <div className="flex flex-col items-center gap-2 py-16 text-center">
             <Smartphone aria-hidden size={28} className="text-muted" />

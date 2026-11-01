@@ -234,6 +234,9 @@ export const account = {
       `A ${system} notification when an agent asks for permission or needs you to sign in, if Botloft is not in front.`,
     notifyDone: "When an agent finishes",
     notifyDoneHint: "A notification when an agent finishes what it was doing.",
+    notifyRoutineFailed: "When a routine fails",
+    notifyRoutineFailedHint:
+      "A notification with the agent and the routine. A connected phone is told too, without what it is about.",
     island: "Show Botloft at the top of the screen",
     islandHint:
       "A small island at the top of the screen while agents work or wait for you. It comes down when one asks you something, so you can answer without opening Botloft, and it takes the place of the notifications.",

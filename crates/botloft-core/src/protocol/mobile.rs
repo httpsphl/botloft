@@ -189,6 +189,21 @@ pub struct ChatLine {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(test, ts(optional))]
     pub read_at: Option<i64>,
+    /// The bot's routine that failed last (spec 20.9, 28.12): the phone
+    /// shows it until the owner reads the chat, here or there.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, ts(optional))]
+    pub failed: Option<RunFailure>,
+}
+
+/// A routine run that failed, as the phone tells it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct RunFailure {
+    pub routine: String,
+    /// Unix time in milliseconds.
+    pub at: i64,
 }
 
 /// One thing in a conversation, as the phone shows it (spec 28.12): the

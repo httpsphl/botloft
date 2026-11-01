@@ -5,6 +5,7 @@
 
 import { useT } from "../i18n";
 import type { ChatLine } from "../lib/protocol.gen";
+import { failureOf } from "./FailedRuns";
 import { BotDot } from "./parts";
 
 export function isUnread(line: ChatLine, seen: Record<string, number>): boolean {
@@ -117,6 +118,7 @@ export function ChatsList({
                 <ChatRow
                   line={line}
                   unread={isUnread(line, seen)}
+                  failed={failureOf(line, seen)?.routine ?? null}
                   open={() => open(line.botId)}
                   showCrew={!headings && crew === null}
                 />
@@ -132,11 +134,14 @@ export function ChatsList({
 function ChatRow({
   line,
   unread,
+  failed,
   open,
   showCrew,
 }: {
   line: ChatLine;
   unread: boolean;
+  /** The routine that failed since the owner read the chat. */
+  failed: string | null;
   open(): void;
   showCrew: boolean;
 }) {
@@ -158,7 +163,11 @@ function ChatRow({
             <span className="truncate text-muted text-xs">{t.chats.inCrew(line.crew)}</span>
           )}
         </span>
-        <span className="truncate text-ink-soft text-sm">{busy ? t.chats.working : last}</span>
+        {failed && !busy ? (
+          <span className="truncate text-danger text-sm">{t.failed.row(failed)}</span>
+        ) : (
+          <span className="truncate text-ink-soft text-sm">{busy ? t.chats.working : last}</span>
+        )}
       </span>
       {unread && <Dot label={t.tabs.newReply} />}
     </button>

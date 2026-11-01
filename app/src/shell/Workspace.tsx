@@ -28,6 +28,7 @@ import { useAttentionMark } from "./attention";
 import { useFolderNotices } from "./folders";
 import { useIslandOpen } from "./islandOpen";
 import { Rail } from "./Rail";
+import { useRoutineAlerts } from "./routineAlerts";
 import { SidebarSlot, SidebarToggle } from "./sidebarToggle";
 import { useOpenAtSignIn } from "./signIn";
 import { useAppSounds } from "./sounds";
@@ -53,6 +54,7 @@ export function Workspace() {
   useAttentionMark();
   useTray();
   useBotAlerts();
+  useRoutineAlerts();
   useIslandOpen();
   useAppSounds();
   useFolderNotices();

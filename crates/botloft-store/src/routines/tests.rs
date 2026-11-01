@@ -112,3 +112,35 @@ fn a_run_is_saved_with_its_message_and_ends_once() {
     assert_eq!(listed.last_run.map(|r| r.id), Some(skipped.id));
     assert_eq!(fx.store.runs(&routine.id, None, 10).expect("runs").len(), 2);
 }
+
+#[test]
+fn the_last_failed_run_of_a_bot_is_found_with_its_routine() {
+    let fx = Fixture::new();
+    let bot = &fx.bots[0].id;
+    assert_eq!(fx.store.last_failed_run(bot).expect("read"), None);
+    let morning = routine(&fx, 1_000);
+    fx.store.insert_routine(&morning).expect("routine");
+    let mut evening = routine(&fx, 2_000);
+    evening.name = "Evening".into();
+    fx.store.insert_routine(&evening).expect("routine");
+
+    let mut first = run(&morning, RunStatus::Failed, None);
+    first.finished_at = Some(200);
+    fx.store.insert_run(&first).expect("run");
+    fx.store
+        .insert_run(&run(&evening, RunStatus::Done, None))
+        .expect("run");
+    let mut last = run(&evening, RunStatus::Failed, None);
+    last.finished_at = Some(300);
+    fx.store.insert_run(&last).expect("run");
+
+    assert_eq!(
+        fx.store.last_failed_run(bot).expect("read"),
+        Some(("Evening".to_owned(), 300))
+    );
+    // Another bot's runs are its own.
+    assert_eq!(
+        fx.store.last_failed_run(&fx.bots[1].id).expect("read"),
+        None
+    );
+}

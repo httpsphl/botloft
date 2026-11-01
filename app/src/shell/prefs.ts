@@ -79,6 +79,8 @@ export const prefs = {
   notifyNeeds: pref<boolean>("botloft.notifyNeeds", true, ON_OFF),
   /** A Windows notification when a bot finishes what it was doing. */
   notifyDone: pref<boolean>("botloft.notifyDone", false, ON_OFF),
+  /** A Windows notification when a routine fails (spec 20.9). */
+  notifyRoutineFailed: pref<boolean>("botloft.notifyRoutineFailed", true, ON_OFF),
   /** The island at the top of the screen (spec 31). */
   island: pref<boolean>("botloft.island", true, ON_OFF),
   /** Which screen the island sits on: the main one, or where the mouse is. */

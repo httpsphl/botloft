@@ -30,6 +30,12 @@ export const phone = {
     inCrew: (crew: string) => `in ${crew}`,
   },
   tabs: { requests: "Requests", chats: "Chats", newReply: "new reply" },
+  /** A routine that failed (spec 28.12). */
+  failed: {
+    label: (routine: string, bot: string) => `${bot}'s routine “${routine}” failed`,
+    row: (routine: string) => `“${routine}” failed`,
+    open: "Open the conversation",
+  },
   chats: {
     empty: "No agents yet",
     emptyBody: "When you create an agent on your computer, it shows up here.",

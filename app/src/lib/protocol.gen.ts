@@ -1653,6 +1653,15 @@ atComputer: boolean, };
 export type QuestionCard = { questionId: QuestionId, bot: CardBot, crew: string, createdAt: number, text: string, options: Array<string>, };
 
 /**
+ * A routine run that failed, as the phone tells it.
+ */
+export type RunFailure = { routine: string, 
+/**
+ * Unix time in milliseconds.
+ */
+at: number, };
+
+/**
  * A bot in the phone's list of conversations (spec 28.12).
  */
 export type ChatLine = { botId: BotId, name: string, color: string, crew: string, state: BotState, 
@@ -1668,7 +1677,12 @@ last?: Activity,
  * Up to when the owner read this chat on the computer, so the phone
  * does not mark as new what was read there.
  */
-readAt?: number, };
+readAt?: number, 
+/**
+ * The bot's routine that failed last (spec 20.9, 28.12): the phone
+ * shows it until the owner reads the chat, here or there.
+ */
+failed?: RunFailure, };
 
 /**
  * One thing in a conversation, as the phone shows it (spec 28.12): the

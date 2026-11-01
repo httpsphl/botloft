@@ -343,3 +343,50 @@ async fn reading_a_chat_on_the_computer_tells_the_phone_and_the_list_remembers()
     let list = chats(&mut phone).await;
     assert_eq!(list[0].read_at, reply_at);
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_failed_routine_reaches_the_phones_line_of_its_bot() {
+    let (t, _app, mut phone, bot) = start().await;
+    let routine = botloftd::service::routines::create(
+        &t.daemon,
+        botloft_core::protocol::RoutinesCreateParams {
+            bot_id: bot_id(&bot),
+            name: "Morning summary".into(),
+            prompt: "Summarize.".into(),
+            schedule: botloft_core::protocol::Schedule::Interval { minutes: 60 },
+            timezone: "UTC".into(),
+            overlap: None,
+            missed: None,
+        },
+    )
+    .expect("routine");
+    botloftd::service::routines::run_now(
+        &t.daemon,
+        botloft_core::protocol::RoutineIdParams {
+            routine_id: routine.id.clone(),
+        },
+    )
+    .expect("run now");
+
+    // The bot takes the routine's message up, and its turn ends in error.
+    let process = t.process_of(&bot).await;
+    let lines = process.wait_lines(1).await;
+    process
+        .emit(stream::replay(lines.last().expect("line")))
+        .await;
+    process.emit(stream::result(true)).await;
+
+    // The phone hears of it on the bot's line, with the routine's name.
+    let line = tokio::time::timeout(Duration::from_secs(10), async {
+        loop {
+            if let ToPhone::Line { bot } = phone.next_any().await
+                && bot.failed.is_some()
+            {
+                return bot;
+            }
+        }
+    })
+    .await
+    .expect("a line with the failure");
+    assert_eq!(line.failed.expect("failure").routine, "Morning summary");
+}
