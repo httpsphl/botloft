@@ -260,3 +260,40 @@ async fn a_bot_that_bypasses_permissions_creates_at_once() {
     );
     assert_eq!(routines_of(&mut c.app, &c.bot).await.len(), 1);
 }
+
+#[tokio::test]
+async fn a_bot_sets_its_own_return_within_a_day_without_asking() {
+    let mut c = crew_with_bot().await;
+    c.t.clock
+        .set(botloftd::routines::schedule::at("UTC", 2026, 10, 1, 8, 0));
+    let once = |at: &str| {
+        json!({
+            "name": "Look at the deploy again",
+            "prompt": "Check whether the deploy finished.",
+            "schedule": { "kind": "once", "at": at, "reminder": false },
+            "timezone": "UTC",
+        })
+    };
+
+    // Two hours ahead, for itself: set at once, marked as its reminder.
+    let set = schedule(&c.mcp, once("2026-10-01T10:00"))
+        .await
+        .expect("task")
+        .expect("tool");
+    assert_eq!(set["created"], true, "{set}");
+    assert_eq!(set["schedule"]["reminder"], true, "{set}");
+    let listed = c
+        .app
+        .call("routines.list", json!({ "botId": c.bot["id"] }))
+        .await
+        .expect("list");
+    assert_eq!(listed[0]["schedule"]["kind"], "once");
+
+    // Further than a day, the owner is asked, as for any routine.
+    let asking = schedule(&c.mcp, once("2026-10-03T10:00"));
+    let request = pending_request(&mut c.app).await;
+    let deny = json!({ "approvalId": request["approvalId"], "allow": false });
+    c.app.call("approvals.answer", deny).await.expect("answer");
+    let declined = asking.await.expect("task").expect("tool");
+    assert_eq!(declined["created"], false);
+}
