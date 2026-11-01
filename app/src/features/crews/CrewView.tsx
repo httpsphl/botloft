@@ -35,12 +35,13 @@ export function CrewView({ crew }: { crew: Crew }) {
 
   return (
     <section aria-label={crew.name} className="flex min-h-0 flex-1 flex-col">
-      {/* One line at any width: the name gives way, then the Pause label. */}
-      <header className="@container flex items-center gap-3 border-line border-b px-5 py-3.5">
-        <div className="min-w-0 flex-1">
+      {/* The name keeps its room: when the buttons do not fit beside it, they
+          go to a line of their own under it instead of covering it. */}
+      <header className="@container flex flex-wrap items-center gap-x-3 gap-y-2.5 border-line border-b px-5 py-3.5">
+        <div className="min-w-48 flex-1">
           <h1 className="truncate font-semibold text-xl tracking-tight">{crew.name}</h1>
           <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-muted text-sm">
-            <span className="shrink-0">
+            <span className="truncate">
               {words.bots(bots.length)}
               {crew.paused && ` · ${words.pausedNote}`}
             </span>
@@ -57,21 +58,26 @@ ${words.openFolderHint}`}
             </button>
           </p>
         </div>
-        <AutoModeSwitch checked={crew.autoMode} onChange={actions.setAutoMode} />
-        <Button title={t.catalog.openHint} onClick={actions.agency.onSelect}>
-          {actions.agency.label}
-        </Button>
-        <Button variant="primary" icon={Plus} onClick={actions.newBot.onSelect}>
-          {actions.newBot.label}
-        </Button>
-        <Button
-          icon={actions.pause.icon}
-          title={actions.pause.label}
-          onClick={actions.pause.onSelect}
-        >
-          <FitLabel>{actions.pause.label}</FitLabel>
-        </Button>
-        <Menu label={words.moreActions} icon={Ellipsis} items={actions.items} />
+        <div className="flex flex-wrap items-center gap-2">
+          <AutoModeSwitch checked={crew.autoMode} onChange={actions.setAutoMode} />
+          <Button title={t.catalog.openHint} onClick={actions.agency.onSelect}>
+            <span className="sr-only @2xl:not-sr-only">{actions.agency.label}</span>
+            <span aria-hidden className="@2xl:hidden">
+              {t.catalog.short}
+            </span>
+          </Button>
+          <Button variant="primary" icon={Plus} onClick={actions.newBot.onSelect}>
+            {actions.newBot.label}
+          </Button>
+          <Button
+            icon={actions.pause.icon}
+            title={actions.pause.label}
+            onClick={actions.pause.onSelect}
+          >
+            <FitLabel>{actions.pause.label}</FitLabel>
+          </Button>
+          <Menu label={words.moreActions} icon={Ellipsis} items={actions.items} />
+        </div>
       </header>
 
       <div className="relative">

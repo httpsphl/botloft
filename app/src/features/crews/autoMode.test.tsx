@@ -71,4 +71,19 @@ describe("the crew's automatic mode", () => {
     });
     expect(added.permissionMode).toBe("auto");
   });
+
+  test("a narrow header shows short words, and the whole names are still what is read aloud", async () => {
+    const fake = new FakeBotloft();
+    fake.addCrew("Ops");
+    renderApp(fake);
+    await crewOpened("Ops");
+
+    const header = screen.getByRole("heading", { name: "Ops" }).closest("header") as HTMLElement;
+    expect(within(header).getByRole("switch", { name: "Automatic mode" })).toBeTruthy();
+    expect(within(header).getByRole("button", { name: "Agent agency" })).toBeTruthy();
+    // The short forms are only for the eye: hidden from screen readers.
+    for (const short of ["Automatic", "Agency"]) {
+      expect(within(header).getByText(short).getAttribute("aria-hidden")).toBe("true");
+    }
+  });
 });

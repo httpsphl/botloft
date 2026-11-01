@@ -21,6 +21,7 @@ import { security } from "./catalogSecurity";
 export const catalog = {
   title: "Agent agency",
   open: "Agent agency",
+  short: "Agency",
   openHint: "Ready-made agents you can add to this crew",
   intro:
     "Pick an agent for the job. It joins this crew ready to work, and you can change anything about it afterwards.",

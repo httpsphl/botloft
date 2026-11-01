@@ -7,6 +7,7 @@ export const crews: Messages["crews"] = {
   /** The crew's automatic mode (spec 7.4): a switch in the new-crew form and in the crew's header. */
   autoMode: {
     label: "Modo automático",
+    short: "Automático",
     hint: "Todos los agentes de este equipo trabajan sin preguntar en cada paso, incluidos los que añadas después. Lo que sea arriesgado sigue llegando a ti.",
     failed: "No se pudo cambiar el modo automático",
   },
