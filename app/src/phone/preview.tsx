@@ -83,6 +83,35 @@ phone.receive({
 });
 // A reply the owner has not seen.
 phone.set({ seen: { bot_1: now, bot_2: 0, bot_3: now, bot_4: now, bot_5: now } });
+// The Home: shortcuts and the day so far (spec 28.15).
+phone.receive({
+  t: "home",
+  shortcuts: [
+    { routineId: "rtn_1", name: "Conciliar o mês", botId: "bot_4" },
+    { routineId: "rtn_2", name: "Post da semana", botId: "bot_2" },
+    { routineId: "rtn_3", name: "Revisar o site", botId: "bot_1" },
+  ],
+  today: {
+    tasksDone: 6,
+    tasksFailed: 1,
+    botMessages: 14,
+    requestsAnswered: 5,
+    filesEdited: 9,
+    lines: { added: 120, removed: 34 },
+    busiest: { botId: "bot_1", name: "Lead", color: "#FF7A59", crew: "Agência", workMs: 5_400_000 },
+  },
+});
+const run = phone.runShortcut;
+phone.runShortcut = async (routineId: string) => {
+  const sent = await run(routineId);
+  const asked = phone.asked.filter((ask) => ask.t === "routine.run").at(-1);
+  setTimeout(() => {
+    if (asked?.t === "routine.run") {
+      phone.receive({ t: "ran", clientId: asked.clientId, ok: true });
+    }
+  }, 800);
+  return sent;
+};
 phone.set({
   approvals: [
     {

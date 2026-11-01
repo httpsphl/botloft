@@ -1367,7 +1367,7 @@ Sem jargão (15.2): o dono não vê "cron", "overlap" nem "timezone" no caminho 
 
 - No bot, abas **Conversa** e **Rotinas** (com a contagem, "Rotinas (2)"). A lista: um interruptor para ligar e desligar, o nome, quando ("Dias úteis às 09:00"), a próxima vez no fuso da rotina ("amanhã às 09:00"; desligada, "Desligada"), como foi a última (rodando, rodou bem, falhou, ou pulada e por quê), "Rodar agora" e um menu com editar e apagar (com confirmação). Sem rotinas, uma explicação e "Nova rotina".
 - Criar e editar: "Nome", "O que <bot> deve fazer?" e "Quando": todo dia, dias úteis, dias escolhidos (os sete dias como botões, com os nomes do idioma), ou a cada N minutos ou horas; para os três primeiros, o horário. Depois de "Quando um agente avisar", **Uma vez**, com a data e o horário (a data começa em amanhã, e a linha embaixo diz que, depois de rodar, ela fica como um atalho), e **Quando eu clicar**, sem campo, com a linha de que ela vira um atalho no Início e ao lado da caixa de mensagem do bot. Nomes de dias e horas vêm do `Intl`, no idioma do app.
-- **Atalhos:** as rotinas `manual` ligadas, de todas as crews, ficam numa faixa "Atalhos" no topo do Início (15.1), por nome: um botão com o nome, o mascote e o nome do bot, que roda na hora (`routines.runNow`) e diz "<bot> começou: <rotina>". No chat do bot, um botão de play ao lado do de anexar abre, para cima, os atalhos daquele bot; sem nenhum, ele não aparece. Na lista de rotinas, uma `manual` diz "Um atalho no Início" no lugar da próxima vez.
+- **Atalhos:** as rotinas `manual` ligadas, de todas as crews, ficam numa faixa "Atalhos" no topo do Início (15.1), por nome: um botão com o nome, o mascote e o nome do bot, que roda na hora (`routines.runNow`) e diz "<bot> começou: <rotina>". No chat do bot, um botão de play ao lado do de anexar abre, para cima, os atalhos daquele bot; sem nenhum, ele não aparece. Na lista de rotinas, uma `manual` diz "Um atalho no Início" no lugar da próxima vez. O Início do celular também tem os atalhos e os roda com um toque (28.15).
 - **Lembretes do bot** (20.12): sobre a caixa de mensagem do bot, uma linha por volta que ele marcou, "<bot> volta a isso hoje às 15:30", com um X que a cancela (`routines.archive`).
 - Em "Mais opções":
   - o fuso (o do sistema por padrão, mostrado pelo nome da cidade);
@@ -2523,7 +2523,7 @@ Notificações: `mobile.changed {status}` e `mobile.pair_request {pairId, name, 
 **App do computador:** Configurações, bloco **Celular** (abaixo de Conta, 27.6). Sem cloud configurada (`[cloud] url` vazio) o bloco não aparece. Sem conta: "Entre na conta acima para usar o celular" (o bloco Conta fica logo acima). Com conta e sem celular: uma frase do que o celular faz e não faz ("Aprove pedidos e responda perguntas dos bots de qualquer lugar. As conversas ficam só no computador."), e "Conectar um celular". Conectando: o QR, "Abra a câmera do celular e aponte para o código", o tempo que falta e "Cancelar"; quando o celular entra, "O celular de Ana quer entrar. Confira que o código é 482 913 nos dois", com "Conectar" e "Recusar". Com celulares: cada um com o nome, quando entrou, "online agora" ou "visto há 2 h", e **"Desconectar"** com a confirmação que diz que o celular perde o acesso na hora. Sob a lista de celulares, um aviso fixo, em palavras do dia a dia, de que quem tiver um celular conectado e desbloqueado pode permitir pedidos até ser desconectado (28.6). O QR é desenhado no app (`qrcode-generator`, MIT), preto sobre branco com margem em qualquer tema, e vale o que o código diz: o tempo que falta conta de 5:00 até 0:00, e depois o app volta ao botão e diz que o código venceu. Textos nos três idiomas, sem jargão (15.6): "celular", "conectar", "código"; nunca "relay", "pareamento", "token", "chave" nem "daemon".
 
 **PWA (`<public_url>/m`):** a mesma identidade visual do app (cores, fonte, mascote, tema do aparelho), uma coluna, feito para o polegar, em `pt-BR`, `en` e `es` pelo idioma do aparelho.
-- **Caixa:** a lista do que espera o dono, pedidos e perguntas misturados, o mais velho primeiro (o que vence antes), cada linha com o rosto do bot, o nome, a crew e a hora; vazio mostra o mascote e "Nada esperando você". Se o computador está fora do ar: "O computador está desligado ou sem internet. Os pedidos continuam esperando lá."
+- **Caixa** (hoje a parte "Precisa de você" do Início, 28.15): a lista do que espera o dono, pedidos e perguntas misturados, o mais velho primeiro (o que vence antes), cada linha com o rosto do bot, o nome, a crew e a hora; vazio mostra o mascote e "Nada esperando você". Se o computador está fora do ar: "O computador está desligado ou sem internet. Os pedidos continuam esperando lá."
 - **Pedido:** o cartão de 15.1 simplificado: o bot, o que ele quer fazer em uma frase (a `explanation`, marcada como escrita pelo bot, ou o aviso de que ele não disse para que serve), o comando inteiro a um toque, **Permitir** e **Negar** (com campo de nota). Cartão cortado ou do tipo que fica no computador: só "Negar" e a explicação.
 - **Pergunta:** o texto em markdown, as opções como botões e um campo para outra resposta, com **Responder** e **Descartar**.
 - **Este celular:** nome, "Desconectar daqui" (apaga as chaves e avisa o computador) e, no iOS fora da tela inicial, a instrução de "Adicionar à Tela de Início" (o aviso por push só chega depois disso).
@@ -2581,7 +2581,7 @@ Quando chega um pedido ou uma pergunta, o dono precisa saber sem abrir a página
 
 ### 28.11 Fora desta etapa
 
-Ver e abrir no celular os arquivos e anexos das conversas (mandar foto e arquivo está em 28.14), tarefas e rotinas no celular (a conversa está em 28.12); app nativo e lojas; trocar as chaves sem conectar de novo; trava por biometria dentro do PWA (o PIN está em 28.13); mais de um dono; ligação direta entre celular e computador sem o servidor (WebRTC); aviso com conteúdo; permitir "sempre" pelo celular.
+Ver e abrir no celular os arquivos e anexos das conversas (mandar foto e arquivo está em 28.14), tarefas no celular, e rotinas além de rodar um atalho (28.15; a conversa está em 28.12); app nativo e lojas; trocar as chaves sem conectar de novo; trava por biometria dentro do PWA (o PIN está em 28.13); mais de um dono; ligação direta entre celular e computador sem o servidor (WebRTC); aviso com conteúdo; permitir "sempre" pelo celular.
 
 ### 28.12 Conversas
 
@@ -2616,7 +2616,7 @@ Status: **CH1 a CH3 feitos**, no 0.14.0; o CH4 foi visto no Android e falta o iP
 
 **Achar o caminho (teste real, 2026-10-08).** A lista agrupa os bots por **equipe** (título com a contagem), com o **mascote** de cada bot como no computador (ele se mexe com o que o bot faz) e, havendo mais de uma equipe, **chips** no topo para ver uma só (com a bolinha da equipe que tem resposta nova). O **gesto de voltar** do celular e o botão do app fecham a conversa (e "Este celular") em vez de sair do app: abrir empurra um passo no histórico do navegador. O cabeçalho (com **Voltar**) e o campo de escrever ficam **fixos** na tela, sem precisar rolar a conversa até o topo.
 
-**No PWA (28.7).** A caixa vira a primeira de duas abas, **Pedidos** (como hoje) e **Conversas**. Em Conversas, a lista de bots com o rosto, o nome, a equipe, a última atividade e uma bolinha quando há resposta mais nova do que a última vez que esta tela abriu a conversa (guardada no aparelho; só um número por bot, nunca texto). Tocar abre a conversa: as mensagens mais recentes embaixo, "ver mais antigas" em cima, a resposta ao vivo, "trabalhando…" enquanto o bot está ocupado, o cartão de pedido ou pergunta ali dentro (com os mesmos botões de 28.5) e o campo de escrever com **Enviar**. A mensagem que o celular manda aparece na hora, como "enviando", e é trocada pelo item de verdade quando ele chega; se `sent` volta com erro, fica marcada e o texto volta para o campo. O texto das conversas, como o dos cartões, **fica só na memória**: nada vai para o IndexedDB nem para o cache do service worker.
+**No PWA (28.7).** A caixa vira a primeira de duas abas, **Pedidos** (hoje o **Início**, 28.15) e **Conversas**. Em Conversas, a lista de bots com o rosto, o nome, a equipe, a última atividade e uma bolinha quando há resposta mais nova do que a última vez que esta tela abriu a conversa (guardada no aparelho; só um número por bot, nunca texto). Tocar abre a conversa: as mensagens mais recentes embaixo, "ver mais antigas" em cima, a resposta ao vivo, "trabalhando…" enquanto o bot está ocupado, o cartão de pedido ou pergunta ali dentro (com os mesmos botões de 28.5) e o campo de escrever com **Enviar**. A mensagem que o celular manda aparece na hora, como "enviando", e é trocada pelo item de verdade quando ele chega; se `sent` volta com erro, fica marcada e o texto volta para o campo. O texto das conversas, como o dos cartões, **fica só na memória**: nada vai para o IndexedDB nem para o cache do service worker.
 
 **Marcos.**
 
@@ -2681,6 +2681,28 @@ Status: **feito** no código; falta o teste com aparelhos de verdade ("A verific
 - uma foto de 12 MP fica com menos de 1 MB e o agente do Claude Code real a vê na hora;
 - um PDF de 15 MB sobe atrás da Cloudflare (o plano grátis aceita até 100 MB por envio) e chega à pasta do bot;
 - com o computador desligado, a mensagem espera no relay e o arquivo no servidor, e os dois chegam quando ele volta (até 1 hora).
+
+### 28.15 Início
+
+Status: **feito** no código; falta ver num aparelho de verdade. A primeira aba do celular deixa de ser só **Pedidos** e vira o **Início**, como o do computador (15.1): duas abas, **Início** e **Conversas**, e o Início abre primeiro, com o número do que espera na aba, como antes. O título da tela é o nome da aba.
+
+**O que tem**, de cima para baixo:
+
+- **Atalhos** (só com algum): as rotinas `manual` ligadas, de bots ativos, por nome (20.9), no máximo 40, com o mascote do bot; um toque roda na hora. O botão fica apagado enquanto o computador não responde e, embaixo de todos, uma linha diz "Começando…", depois "<bot> começou: <rotina>" ou "Não deu para rodar", por 4 s. Sem resposta em 20 s, vale como não rodou.
+- **Precisa de você**: os pedidos, as perguntas e as rotinas que falharam, como era a caixa (28.7, 28.12), com o mascote e "Nada esperando você" quando não há nada.
+- **Trabalhando agora** (só com alguém): os bots ocupados (`busy` ou `launching`) da lista de conversas, com o mascote, o nome e a última atividade; um toque abre a conversa.
+- **Hoje** (quando chega): os números do dia, os mesmos do computador (`activity.today`, 31.4): tarefas feitas e quantas falharam, pedidos respondidos, arquivos editados, mensagens entre bots e quem mais trabalhou, com o tempo. O dia começa à meia-noite do celular.
+
+**Mensagens seladas novas** (28.3):
+
+| Sentido | Mensagem |
+|---|---|
+| celular → computador | `home {since}`: pede o Início, com o dia contado desde `since` (a meia-noite do celular). `routine.run {clientId, routineId}`: roda um atalho |
+| computador → celular | `home {shortcuts: [{routineId, name, botId}], today?}` (o nome e a cor do bot vêm da linha dele, 28.12; `today` é o `DayActivity`). `ran {clientId, ok, reason?}` (`reason`: `not_found`, `rate_limited` ou `failed`) |
+
+**Regras do daemon.** O celular só roda um atalho: uma rotina que não é `manual`, está desligada ou arquivada, ou é de um bot que não está ativo dá `not_found` e não roda. Rodar usa o mesmo caminho do app (`routines.runNow`, 20.3), e conta no mesmo limite do `send` (30 por minuto, 28.12). Rodar um atalho não dá ao celular nada que ele já não tivesse: ele já manda qualquer texto a qualquer bot.
+
+**Quando pede.** O celular pede o Início ao conectar e quando o computador volta (junto com `sync` e `chats`), quando a aba aparece, quando a página volta para a frente, 1,5 s depois de um bot começar ou parar de trabalhar (pela lista de conversas) e depois de um atalho que rodou. Como o resto, fica só na memória.
 
 ## 29. Modelos de equipe e resumo diário
 

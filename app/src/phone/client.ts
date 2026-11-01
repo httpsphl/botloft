@@ -10,6 +10,7 @@ import type {
   ToPhone,
 } from "../lib/protocol.gen";
 import { open, SealError, seal } from "./crypto";
+import { type HomePart, HomeTalk, noHome } from "./home";
 import {
   keepNotices,
   type NoticePlatform,
@@ -25,7 +26,7 @@ import { type ChatPart, noChats, type SeenStore, Talk } from "./talk";
 
 export type Ended = Exclude<ApprovalStatus, "pending"> | Exclude<QuestionStatus, "open">;
 
-export interface PhoneState extends ChatPart {
+export interface PhoneState extends ChatPart, HomePart {
   /** `revoked`: the server or the computer cut this phone off. `left`: the owner left from here. */
   session: "ok" | "revoked" | "left";
   link: "connecting" | "online" | "offline";
@@ -58,6 +59,10 @@ export interface PhoneApi {
   olderItems(): Promise<void>;
   /** Writes to the open bot, with files if any. False if it could not even be sent. */
   write(text: string, files?: Outgoing[]): Promise<boolean>;
+  /** Asks for the Home again: the shortcuts and the day so far (spec 28.15). */
+  askHome(): Promise<void>;
+  /** Runs one of the owner's shortcuts. False if it could not even be sent. */
+  runShortcut(routineId: string): Promise<boolean>;
   /** Notices when something waits (spec 28.8). */
   noticeState(): Promise<NoticeState>;
   turnOnNotices(): Promise<NoticeState>;
@@ -102,6 +107,7 @@ export class PhoneClient implements PhoneApi {
   private outbox: Promise<unknown> = Promise.resolve();
   private saving: Promise<void> = Promise.resolve();
   private readonly talk: Talk;
+  private readonly home: HomeTalk;
 
   constructor(
     private session: Session,
@@ -119,7 +125,13 @@ export class PhoneClient implements PhoneApi {
       ended: {},
       name: session.name,
       ...noChats,
+      ...noHome,
     };
+    this.home = new HomeTalk(
+      this.getState,
+      (change) => this.set(change),
+      (message) => this.send(message),
+    );
     this.talk = new Talk(
       this.getState,
       (change) => this.set(change),
@@ -207,6 +219,7 @@ export class PhoneClient implements PhoneApi {
         this.set({ link: "online", computer: frame.online === true ? "online" : "offline" });
         await this.send({ t: "sync" });
         await this.talk.ask();
+        await this.home.ask();
         break;
       case "presence":
         if (frame.device === this.session.peer) {
@@ -215,6 +228,7 @@ export class PhoneClient implements PhoneApi {
           if (online) {
             await this.send({ t: "sync" });
             await this.talk.ask();
+            await this.home.ask();
           }
         }
         break;
@@ -301,7 +315,9 @@ export class PhoneClient implements PhoneApi {
         }
         break;
       default:
-        this.talk.handle(message);
+        if (!this.talk.handle(message)) {
+          this.home.handle(message);
+        }
     }
   }
 
@@ -309,6 +325,8 @@ export class PhoneClient implements PhoneApi {
   closeChat = (): Promise<void> => this.talk.leave();
   olderItems = (): Promise<void> => this.talk.older();
   write = (text: string, files?: Outgoing[]): Promise<boolean> => this.talk.write(text, files);
+  askHome = (): Promise<void> => this.home.ask();
+  runShortcut = (routineId: string): Promise<boolean> => this.home.run(routineId);
 
   private close(id: string, status: Ended): void {
     const { state } = this;
@@ -439,6 +457,7 @@ export class PhoneClient implements PhoneApi {
       approvals: [],
       questions: [],
       ...noChats,
+      ...noHome,
     });
   }
 

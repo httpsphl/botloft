@@ -20,7 +20,6 @@ export const phone = {
     names: { iphone: "iPhone", ipad: "iPad", android: "Android phone", other: "Phone" },
   },
   inbox: {
-    title: "Waiting for you",
     empty: "Nothing is waiting for you",
     emptyBody: "When an agent needs you, it shows up here.",
     loading: "Checking what is waiting…",
@@ -29,7 +28,9 @@ export const phone = {
     thisPhone: "This phone",
     inCrew: (crew: string) => `in ${crew}`,
   },
-  tabs: { requests: "Requests", chats: "Chats", newReply: "new reply" },
+  /** The Home (spec 28.15). */
+  home: { running: "Starting…" },
+  tabs: { home: "Home", chats: "Chats", newReply: "new reply" },
   /** A routine that failed (spec 28.12). */
   failed: {
     label: (routine: string, bot: string) => `${bot}'s routine “${routine}” failed`,
