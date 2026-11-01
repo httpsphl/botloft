@@ -81,6 +81,20 @@ impl Store {
     }
 
     /// How many runs of the routine are still open.
+    /// The name of the bot's routine that failed last and when, Unix ms.
+    pub fn last_failed_run(&self, bot: &BotId) -> Result<Option<(String, i64)>> {
+        let mut statement = self.conn.prepare_cached(
+            "SELECT r.name, coalesce(rr.finished_at, rr.created_at) AS at \
+             FROM routine_runs rr JOIN routines r ON r.id = rr.routine_id \
+             WHERE r.bot_id = ?1 AND rr.status = 'failed' ORDER BY at DESC LIMIT 1",
+        )?;
+        let mut rows = statement.query([bot.as_str()])?;
+        Ok(match rows.next()? {
+            Some(row) => Some((row.get(0)?, row.get(1)?)),
+            None => None,
+        })
+    }
+
     pub fn open_runs(&self, routine: &RoutineId) -> Result<u32> {
         let count: i64 = self.conn.query_row(
             "SELECT COUNT(*) FROM routine_runs WHERE routine_id = ?1 AND status = 'queued'",

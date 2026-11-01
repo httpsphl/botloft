@@ -8,7 +8,7 @@ use std::sync::Arc;
 use botloft_core::ids::{ApprovalId, QuestionId};
 use botloft_core::protocol::{
     ApprovalStatus, ApprovalsAnswerParams, ChatBody, FromPhone, QuestionIdParams, QuestionStatus,
-    QuestionsAnswerParams, SEALED_MAX, ToPhone,
+    QuestionsAnswerParams, RoutineRun, RunStatus, SEALED_MAX, ToPhone,
 };
 use serde_json::json;
 use tracing::{debug, warn};
@@ -58,6 +58,10 @@ impl Mobile {
                 self.bot_state(daemon, &changed.bot_id, changed.state);
                 None
             }
+            Event::RoutineRun(run) if run.status == RunStatus::Failed => {
+                self.routine_failed(daemon, run);
+                None
+            }
             _ => None,
         };
         let Some(message) = message else {
@@ -73,6 +77,23 @@ impl Mobile {
         ) {
             self.send_frame(&json!({ "t": "wake" }));
         }
+    }
+
+    /// A routine failed (spec 28.12): the bot's line, with the failure,
+    /// goes to the phones on now, and the others are woken with an empty
+    /// push, like for a request (28.8).
+    fn routine_failed(&self, daemon: &Daemon, run: &RoutineRun) {
+        let bot = match daemon.store().routine(&run.routine_id) {
+            Ok(Some(routine)) => routine.bot_id,
+            _ => return,
+        };
+        let Some(line) = super::chats::line(daemon, &bot) else {
+            return;
+        };
+        for phone in self.online_phones(daemon) {
+            self.send_to(daemon, &phone.id, &ToPhone::Line { bot: line.clone() });
+        }
+        self.send_frame(&json!({ "t": "wake" }));
     }
 
     /// Sends `phone` what is waiting right now.

@@ -19,6 +19,7 @@ pub(super) fn decls(out: &mut Out) {
     out.decl::<CardBot>();
     out.decl::<ApprovalCard>();
     out.decl::<QuestionCard>();
+    out.decl::<RunFailure>();
     out.decl::<ChatLine>();
     out.decl::<PhoneItem>();
     out.decl::<ToPhone>();

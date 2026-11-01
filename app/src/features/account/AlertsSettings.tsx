@@ -12,6 +12,7 @@ export function AlertsSettings() {
   const s = useT().account.settings;
   const needs = usePref(prefs.notifyNeeds);
   const done = usePref(prefs.notifyDone);
+  const failed = usePref(prefs.notifyRoutineFailed);
   const sound = usePref(prefs.sound);
   const appSounds = usePref(prefs.appSounds);
   const replies = usePref(prefs.markReplies);
@@ -63,6 +64,12 @@ export function AlertsSettings() {
         hint={s.notifyDoneHint}
         checked={done}
         onChange={prefs.notifyDone.set}
+      />
+      <Toggle
+        label={s.notifyRoutineFailed}
+        hint={s.notifyRoutineFailedHint}
+        checked={failed}
+        onChange={prefs.notifyRoutineFailed.set}
       />
       {/* The mark on the icon is a taskbar overlay, which only Windows has. */}
       {SYSTEM === "Windows" && (

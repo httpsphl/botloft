@@ -4,7 +4,8 @@
 
 use botloft_core::ids::{BotId, ChatItemId};
 use botloft_core::protocol::{
-    ChatBody, ChatItem, ChatLine, ITEM_TEXT_MAX, PhoneItem, SEALED_MAX, SenderKind, ToPhone,
+    ChatBody, ChatItem, ChatLine, ITEM_TEXT_MAX, PhoneItem, RunFailure, SEALED_MAX, SenderKind,
+    ToPhone,
 };
 use botloft_store::Store;
 use serde::Serialize;
@@ -52,6 +53,11 @@ pub fn line(daemon: &Daemon, bot: &BotId) -> Option<ChatLine> {
     let crew_name = crew.name.clone();
     let bot = bots::to_protocol(daemon, &store, &crew, record);
     let read_at = daemon.mobile.read_at(&bot.id);
+    let failed = store
+        .last_failed_run(&bot.id)
+        .ok()
+        .flatten()
+        .map(|(routine, at)| RunFailure { routine, at });
     Some(ChatLine {
         bot_id: bot.id,
         name: bot.name,
@@ -61,6 +67,7 @@ pub fn line(daemon: &Daemon, bot: &BotId) -> Option<ChatLine> {
         last_reply_at: bot.last_reply_at,
         last: bot.last_activity,
         read_at,
+        failed,
     })
 }
 

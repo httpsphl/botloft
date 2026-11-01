@@ -45,7 +45,15 @@ export function settingsIndex(t: ReturnType<typeof useT>): Entry[] {
     ),
     ...entry("appearance", s.theme, s.size, s.lessMotion),
     ...entry("chat", s.enterSends, s.followBot, s.approvalWait),
-    ...entry("alerts", s.notifyNeeds, s.notifyDone, s.markReplies, s.sound, s.appSounds),
+    ...entry(
+      "alerts",
+      s.notifyNeeds,
+      s.notifyDone,
+      s.notifyRoutineFailed,
+      s.markReplies,
+      s.sound,
+      s.appSounds,
+    ),
     ...entry("account", t.account.cloud.title, t.account.mobile.title, t.account.mobile.connect),
     ...entry("tools", s.tools),
     ...entry(

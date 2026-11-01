@@ -31,6 +31,11 @@ export const phone: Messages["phone"] = {
     inCrew: (crew: string) => `en ${crew}`,
   },
   tabs: { requests: "Solicitudes", chats: "Conversaciones", newReply: "respuesta nueva" },
+  failed: {
+    label: (routine, bot) => `La rutina “${routine}” de ${bot} falló`,
+    row: (routine) => `“${routine}” falló`,
+    open: "Abrir la conversación",
+  },
   chats: {
     empty: "Aún no hay agentes",
     emptyBody: "Cuando crees un agente en el ordenador, aparece aquí.",

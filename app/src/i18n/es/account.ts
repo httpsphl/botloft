@@ -240,6 +240,9 @@ export const account: Messages["account"] = {
       `Un aviso de ${system} cuando un agente pide permiso o necesita que inicies sesión, si Botloft no está al frente.`,
     notifyDone: "Cuando un agente termine",
     notifyDoneHint: "Un aviso cuando un agente termina lo que estaba haciendo.",
+    notifyRoutineFailed: "Cuando una rutina falle",
+    notifyRoutineFailedHint:
+      "Un aviso con el agente y la rutina. Un teléfono conectado también recibe un aviso, sin decir de qué se trata.",
     island: "Mostrar Botloft en la parte de arriba de la pantalla",
     islandHint:
       "Una isla pequeña arriba de la pantalla mientras los agentes trabajan o te esperan. Baja cuando uno te pide algo, para que respondas sin abrir Botloft, y ocupa el lugar de los avisos.",
