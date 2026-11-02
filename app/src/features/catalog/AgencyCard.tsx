@@ -1,7 +1,6 @@
 import { Check, Plus } from "lucide-react";
 import { useT } from "../../i18n";
 import type { Bot, BotTemplate } from "../../lib/protocol.gen";
-import { Button } from "../../ui/Button";
 import { BotAvatar } from "../bots/BotAvatar";
 import type { RoleText } from "./roleText";
 
@@ -25,7 +24,10 @@ export function Joined({ bot, onCustomize }: { bot: Bot; onCustomize(): void }) 
   );
 }
 
-/** A role as a card: what it is, and the two things to do with it. */
+/**
+ * A role as a line of the list: its mascot, name, kind and what it does,
+ * which opens the whole of it, and a light button that adds it.
+ */
 export function AgencyCard({
   template,
   text,
@@ -47,31 +49,42 @@ export function AgencyCard({
 }) {
   const t = useT();
   return (
-    <li className="flex flex-col gap-2 rounded-xl border border-line bg-panel p-3.5">
-      <div className="flex items-center gap-2.5">
-        <BotAvatar color={color} size={32} />
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate font-semibold">{text.name}</h3>
-          <p className="truncate text-muted text-xs">{t.catalog.categories[template.category]}</p>
-        </div>
-      </div>
-      <p className="line-clamp-2 min-h-10 text-ink-soft text-sm">{text.summary}</p>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant="primary"
-          size="sm"
-          icon={Plus}
+    <li className="flex flex-col gap-1.5 rounded-xl p-2 transition-colors hover:bg-sunken/60">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          aria-label={`${t.catalog.learnMore}: ${text.name}`}
+          title={t.catalog.learnMore}
+          onClick={onLearnMore}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left"
+        >
+          <BotAvatar color={color} size={40} />
+          <span className="min-w-0 flex-1">
+            <span className="flex items-baseline gap-2">
+              <span className="truncate font-semibold">{text.name}</span>
+              <span className="shrink-0 text-muted text-xs">
+                {t.catalog.categories[template.category]}
+              </span>
+            </span>
+            <span className="line-clamp-2 text-muted text-sm">{text.summary}</span>
+          </span>
+        </button>
+        <button
+          type="button"
           disabled={busy}
           aria-label={`${t.catalog.add}: ${text.name}`}
           onClick={onAdd}
+          className="flex h-8 shrink-0 items-center gap-1 rounded-full bg-sunken px-3 font-medium text-ink text-sm transition-[background-color,transform] duration-150 hover:bg-line active:scale-[0.97] disabled:opacity-45"
         >
-          {t.catalog.add}
-        </Button>
-        <Button size="sm" aria-label={`${t.catalog.learnMore}: ${text.name}`} onClick={onLearnMore}>
-          {t.catalog.learnMore}
-        </Button>
+          <Plus aria-hidden size={14} />
+          {t.catalog.addShort}
+        </button>
       </div>
-      {added && <Joined bot={added} onCustomize={onCustomize} />}
+      {added && (
+        <div className="pl-[3.25rem]">
+          <Joined bot={added} onCustomize={onCustomize} />
+        </div>
+      )}
     </li>
   );
 }

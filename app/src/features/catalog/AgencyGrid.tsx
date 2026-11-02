@@ -3,6 +3,7 @@
 // opens and, for a crew with only its chief, in the page itself, where
 // `featured` shows just a few and a button to see them all.
 
+import { Search } from "lucide-react";
 import { useState } from "react";
 import { useT } from "../../i18n";
 import { AVATAR_PALETTE, type BotTemplate, type Crew } from "../../lib/protocol.gen";
@@ -107,15 +108,22 @@ export function AgencyGrid({
   return (
     <div className="flex flex-col gap-3">
       {!featured && (
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            aria-label={t.catalog.search}
-            placeholder={t.catalog.search}
-            className="h-8 w-48 rounded-lg border border-line-strong bg-canvas px-2.5 text-ink text-sm outline-none placeholder:text-muted focus:border-accent"
-          />
+        <div className="flex flex-col gap-2.5">
+          <label className="relative block">
+            <Search
+              aria-hidden
+              size={15}
+              className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-muted"
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              aria-label={t.catalog.search}
+              placeholder={t.catalog.search}
+              className="h-10 w-full rounded-full border border-transparent bg-sunken pr-4 pl-10 text-ink text-sm outline-none transition-colors placeholder:text-muted focus:border-line-strong focus:bg-panel"
+            />
+          </label>
           <fieldset
             aria-label={t.catalog.filter}
             className="m-0 flex min-w-0 flex-wrap gap-1.5 border-0 p-0"
@@ -141,7 +149,7 @@ export function AgencyGrid({
       {shown.length === 0 ? (
         <p className="py-6 text-center text-muted text-sm">{t.catalog.none}</p>
       ) : (
-        <ul className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-3">
+        <ul className="-mx-2 grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-x-3 gap-y-1">
           {shown.map((role) => {
             const bot = added[role.id];
             return (
