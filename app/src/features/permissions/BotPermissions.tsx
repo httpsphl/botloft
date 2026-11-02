@@ -39,11 +39,9 @@ export function BotPermissions({ bot }: { bot: Bot }) {
   const words = useT().permissions;
   const openPermissions = useApp((state) => state.openPermissions);
   return (
-    <div className="rounded-xl border border-line p-3">
+    <div>
       <dt className="flex items-center justify-between gap-2">
-        <span className="font-semibold text-muted text-xs uppercase tracking-[0.12em]">
-          {words.section}
-        </span>
+        <span className="font-semibold text-sm">{words.section}</span>
         <Button
           variant="ghost"
           size="sm"
