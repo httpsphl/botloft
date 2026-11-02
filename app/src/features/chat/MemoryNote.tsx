@@ -15,7 +15,7 @@ function Lines({ lines, sign }: { lines: string[]; sign: "-" | "+" }) {
   return lines.map((line, index) => (
     // Lines repeat and never move: their place is their key.
     // biome-ignore lint/suspicious/noArrayIndexKey: a fixed list
-    <span key={index} className={`block px-2 ${tone}`}>
+    <span key={index} className={`block px-3 ${tone}`}>
       <span aria-hidden className="mr-2 select-none">
         {sign}
       </span>
@@ -27,12 +27,12 @@ function Lines({ lines, sign }: { lines: string[]; sign: "-" | "+" }) {
 function Change({ change }: { change: MemoryChange }) {
   const t = useT().chat.memory;
   const block =
-    "max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-line bg-sunken py-1.5 font-mono text-xs leading-relaxed";
+    "max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-bubble py-2 font-mono text-xs leading-relaxed";
   if (change.kind === "write") {
     return (
       <>
         <p className="text-muted text-xs">{t.now}</p>
-        <pre className={`${block} px-2.5`}>{change.text}</pre>
+        <pre className={`${block} px-3`}>{change.text}</pre>
       </>
     );
   }

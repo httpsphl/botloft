@@ -91,7 +91,7 @@ function TaskTag({ message }: { message: Message }) {
   }
   const Icon = message.kind === "task" ? ListTodo : Reply;
   return (
-    <span className="inline-flex items-center gap-1 rounded-lg border border-line px-1.5 text-muted text-xs">
+    <span className="inline-flex items-center gap-1 rounded-full bg-sunken px-2 text-muted text-xs">
       <Icon aria-hidden size={11} />
       {message.kind === "task" ? t.chat.inbound.task : t.chat.inbound.result}
     </span>
