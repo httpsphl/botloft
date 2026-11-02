@@ -1,14 +1,15 @@
-// The pieces the Settings sections share: a titled section, a labelled
-// field and an on/off row with its explanation.
+// The pieces the Settings sections share: a titled section, its options
+// in one soft gray block as settings apps group them, a labelled field and
+// an on/off row with its explanation.
 
 import { type ReactNode, useId } from "react";
 import { Switch } from "../../ui/Switch";
 
 export function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-3">
-      <h3 className="font-semibold text-muted text-xs uppercase tracking-[0.12em]">{title}</h3>
-      {children}
+    <section className="flex flex-col gap-2.5">
+      <h3 className="px-1 font-semibold text-ink-soft text-sm">{title}</h3>
+      <div className="flex flex-col gap-4 rounded-2xl bg-bubble p-4">{children}</div>
     </section>
   );
 }
