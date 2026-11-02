@@ -79,7 +79,7 @@ export function Workspace() {
         <Rail />
         <Sidebar />
         {page === "settings" ? (
-          <main className="flex min-w-0 flex-1 flex-col">
+          <main className="flex min-w-0 flex-1 flex-col bg-panel">
             <SettingsPage />
           </main>
         ) : (
@@ -94,7 +94,7 @@ export function Workspace() {
         <SidebarSlot>
           <Sidebar />
         </SidebarSlot>
-        <main className="flex min-w-0 flex-1 flex-col">
+        <main className="flex min-w-0 flex-1 flex-col bg-panel">
           {runtimeError ? (
             <div className="border-line border-b p-3">
               <Callout tone="danger" title={t.shell.botsCantStart}>

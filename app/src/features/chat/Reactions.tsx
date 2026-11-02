@@ -80,7 +80,7 @@ export function ReactButton({ itemId, bot }: { itemId: string; bot: string }) {
         aria-label={t.to(bot)}
         aria-expanded={open}
         onClick={() => setOpen(!open)}
-        className="grid size-7 place-items-center rounded-lg text-muted transition-colors hover:text-ink"
+        className="grid size-7 place-items-center rounded-full text-muted transition-colors hover:bg-sunken hover:text-ink"
       >
         <SmilePlus aria-hidden size={15} />
       </button>

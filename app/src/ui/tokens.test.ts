@@ -26,7 +26,8 @@ function contrast(a: string, b: string): number {
   return (x + 0.05) / (y + 0.05);
 }
 
-const BACKGROUNDS = ["canvas", "panel", "sunken"];
+/** `bubble` is the bot's balloon in the chat, where its replies are written. */
+const BACKGROUNDS = ["canvas", "panel", "sunken", "bubble"];
 /** Colors text is written in. `accent` is a fill; words use `accent-text`. */
 const TEXT = [
   "ink",
@@ -52,5 +53,10 @@ describe.each([
       const ratio = contrast(theme[text] as string, theme[background] as string);
       expect(ratio, `${text} on ${background}`).toBeGreaterThanOrEqual(4.5);
     }
+  });
+
+  test("the owner's balloon reads", () => {
+    const ratio = contrast(theme["bubble-own-ink"] as string, theme["bubble-own"] as string);
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
   });
 });

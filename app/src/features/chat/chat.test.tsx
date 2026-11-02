@@ -78,6 +78,25 @@ describe("chat", () => {
     expect(within(sidebar()).getByText("You: Find three sources on retrieval")).toBeDefined();
   });
 
+  test("only the newest message, and one still on its way, says where it is", async () => {
+    const { fake } = crew();
+    await openScout(fake);
+    write("First ask");
+    fireEvent.keyDown(field(), { key: "Enter" });
+    const first = (await within(chat()).findByText("First ask")).closest("li") as HTMLElement;
+    const firstSent = fake.conversation.messages.at(-1);
+    write("Second ask");
+    fireEvent.keyDown(field(), { key: "Enter" });
+    const second = (await within(chat()).findByText("Second ask")).closest("li") as HTMLElement;
+    // Not read yet, so the older one still says it waits.
+    expect(within(first).getByText("Waiting for the agent")).toBeDefined();
+    act(() => {
+      fake.conversation.read(fake.conversation.deliveryOf(firstSent?.id ?? "").id);
+    });
+    expect(within(first).queryByText("Read")).toBeNull();
+    expect(within(second).getByText("Waiting for the agent")).toBeDefined();
+  });
+
   test("the reply streams in, then tools and the turn show under the agent", async () => {
     const { fake, scout } = crew();
     await openScout(fake);

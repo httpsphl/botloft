@@ -1,10 +1,11 @@
 // Replying to something in the bot's chat (spec 9.3): a button that shows
-// on what can be quoted (the bot's replies, the messages it got), the
+// beside what can be quoted (the bot's replies, the messages it got), the
 // quote over the composer, and the quote over the owner's bubble after.
 
 import { CornerUpLeft, X } from "lucide-react";
 import { createContext, type ReactNode, useContext } from "react";
 import { useT } from "../../i18n";
+import { clock } from "../../lib/format";
 import { plainText } from "../../lib/plainText";
 import type { ChatItemId, MessageReply } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
@@ -22,20 +23,21 @@ export interface ReplyTarget {
 export const StartReply = createContext<((target: ReplyTarget) => void) | null>(null);
 
 /**
- * Wraps what can be replied to, with the buttons that show on hover: reply,
- * and for the bot's own replies, react (spec 8.9).
+ * Wraps a balloon that can be replied to, with what shows beside it on
+ * hover: its time, reply and, for the bot's own replies, react (spec 8.9).
+ * The chat leaves room on the right for them.
  */
 export function Repliable({
   target,
+  at,
   react = false,
-  className = "",
   children,
 }: {
   target: ReplyTarget;
+  /** When it was said. */
+  at: number;
   /** The bot's own reply: the owner can react to it too. */
   react?: boolean;
-  /** A bubble narrows it to its own width, for the buttons to sit on its corner. */
-  className?: string;
   children: ReactNode;
 }) {
   const t = useT().chat.reply;
@@ -44,17 +46,23 @@ export function Repliable({
     return children;
   }
   return (
-    <div className={`group/reply relative ${className}`}>
+    <div className="group/reply relative w-fit max-w-full">
       {children}
       {react && <ReactionMark itemId={target.itemId} bot={target.who} />}
-      <div className="absolute -top-2 right-0 flex rounded-lg border border-line bg-panel opacity-0 shadow-sm transition-opacity focus-within:opacity-100 group-hover/reply:opacity-100">
+      <div className="absolute top-0 left-full flex h-10 items-center gap-0.5 pl-1.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/reply:opacity-100">
+        <time
+          className="whitespace-nowrap px-0.5 text-muted text-xs tabular-nums"
+          dateTime={new Date(at).toISOString()}
+        >
+          {clock(at)}
+        </time>
         {react && <ReactButton itemId={target.itemId} bot={target.who} />}
         <button
           type="button"
           title={t.action}
           aria-label={t.to(target.who)}
           onClick={() => start(target)}
-          className="grid size-7 place-items-center rounded-lg text-muted transition-colors hover:text-ink"
+          className="grid size-7 place-items-center rounded-full text-muted transition-colors hover:bg-sunken hover:text-ink"
         >
           <CornerUpLeft aria-hidden size={15} />
         </button>
@@ -95,7 +103,7 @@ export function ReplyQuote({ botId, reply }: { botId: string; reply: MessageRepl
       type="button"
       title={t.jump}
       onClick={() => openAt(botId, reply.itemId)}
-      className="flex max-w-[36rem] items-start gap-1.5 rounded-xl border-accent/60 border-l-2 bg-sunken/60 px-3 py-1.5 text-left text-muted text-xs transition-colors hover:text-ink"
+      className="flex max-w-[36rem] items-start gap-1.5 rounded-xl border-accent/60 border-l-2 bg-bubble px-3 py-1.5 text-left text-muted text-xs transition-colors hover:text-ink"
     >
       <CornerUpLeft aria-hidden size={12} className="mt-0.5 shrink-0" />
       <span className="line-clamp-2">{plainText(reply.text)}</span>
