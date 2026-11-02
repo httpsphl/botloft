@@ -41,7 +41,7 @@ export function HomeView() {
 
   return (
     <section aria-label={words.label} className="flex min-h-0 flex-1 flex-col">
-      <header className="flex items-center gap-3 border-line border-b px-5 py-3.5">
+      <header className="flex items-center gap-3 px-5 pt-3.5 pb-2">
         <div className="min-w-0 flex-1">
           <h1 className="truncate font-semibold text-xl tracking-tight">{words.title}</h1>
           <p className="mt-0.5 text-muted text-sm">{words.summary(waiting, working.length)}</p>
@@ -56,7 +56,7 @@ export function HomeView() {
           <section aria-labelledby="home-needs-you">
             <h2
               id="home-needs-you"
-              className="mb-3 flex items-center gap-1.5 font-semibold text-sm text-warn"
+              className="mb-3 flex items-center gap-1.5 font-semibold text-base text-warn"
             >
               <Hand aria-hidden size={14} />
               {words.needsYou}
@@ -86,7 +86,7 @@ export function HomeView() {
             <Today />
           </Part>
           <Part id="home-crews" title={words.crews}>
-            <ul className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
+            <ul className="grid grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-3">
               {crews.map((crew) => (
                 <CrewCard key={crew.id} crew={crew} />
               ))}
@@ -99,11 +99,11 @@ export function HomeView() {
   );
 }
 
-/** A part of the home under a quiet title. */
+/** A part of the home under its title. */
 function Part({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
     <section aria-labelledby={id}>
-      <h2 id={id} className="mb-3 font-semibold text-muted text-sm">
+      <h2 id={id} className="mb-3 font-semibold text-base">
         {title}
       </h2>
       {children}

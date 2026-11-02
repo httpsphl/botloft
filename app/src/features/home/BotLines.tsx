@@ -32,7 +32,8 @@ export function useUnread(): Bot[] {
 
 export function BotLines({ bots, time }: { bots: Bot[]; time: "since" | "reply" }) {
   return (
-    <ul className="flex flex-col overflow-hidden rounded-xl border border-line bg-panel">
+    // One soft gray block, like the chat's balloons; each line darkens under the mouse.
+    <ul className="flex flex-col gap-0.5 rounded-2xl bg-bubble p-1.5">
       {bots.map((bot) => (
         <Line key={bot.id} bot={bot} time={time} />
       ))}
@@ -48,13 +49,13 @@ function Line({ bot, time }: { bot: Bot; time: "since" | "reply" }) {
   const selectBot = useApp((state) => state.selectBot);
   const at = time === "reply" ? replyAt : activity?.at;
   return (
-    <li className="border-line border-b last:border-b-0">
+    <li>
       <button
         type="button"
         onClick={() => selectBot(bot.id)}
-        className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm transition-colors hover:bg-sunken"
+        className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-sm transition-colors hover:bg-line/60"
       >
-        <BotAvatar color={bot.color} size={24} mood={moodOf(bot, crew?.paused)} still />
+        <BotAvatar color={bot.color} size={32} mood={moodOf(bot, crew?.paused)} still />
         <span className="shrink-0 font-semibold">{bot.name}</span>
         {crew && (
           <span className="shrink-0 text-muted text-xs">{t.questions.box.inCrew(crew.name)}</span>
