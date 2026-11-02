@@ -139,7 +139,7 @@ function ToolLine({
   );
   const Icon = iconOf(toolKey(tool.name));
   const block =
-    "max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-lg border border-line bg-sunken px-2.5 py-1.5 font-mono text-xs leading-relaxed";
+    "max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-bubble px-3 py-2 font-mono text-xs leading-relaxed";
   return (
     <li className={arrival}>
       <div className="flex items-center gap-1">

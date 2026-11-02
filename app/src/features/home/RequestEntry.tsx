@@ -17,8 +17,7 @@ import { toolAction, toolTitle } from "../chat/toolNames";
 import { useAnswer } from "../chat/useAnswer";
 import { Elsewhere, Entry } from "./Entry";
 
-const BOX =
-  "max-h-56 overflow-auto break-all rounded-lg border border-line bg-sunken px-2.5 py-1.5 font-mono text-xs";
+const BOX = "max-h-56 overflow-auto break-all rounded-xl bg-panel px-3 py-2 font-mono text-xs";
 
 export function RequestEntry({ card, onDone }: { card: ApprovalCard; onDone(): void }) {
   const t = useT();

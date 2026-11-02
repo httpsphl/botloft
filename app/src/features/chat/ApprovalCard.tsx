@@ -111,8 +111,7 @@ function alwaysLabel(
   }
 }
 
-const BOX =
-  "max-h-56 overflow-auto break-all rounded-lg border border-line bg-sunken px-2.5 py-1.5";
+const BOX = "max-h-56 overflow-auto break-all rounded-xl bg-panel px-3 py-2";
 
 /**
  * A command the bot wants to run: first what the bot says it is for, in

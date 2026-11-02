@@ -88,7 +88,7 @@ export function ReadPicture({ source, name }: { source: ImageSource; name: strin
     <img
       src={source.url}
       alt={name}
-      className="block max-h-64 max-w-full self-start rounded-lg border border-line bg-sunken object-contain"
+      className="block max-h-64 max-w-full self-start rounded-xl bg-bubble object-contain"
     />
   );
 }
