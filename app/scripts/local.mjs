@@ -76,9 +76,11 @@ execFileSync(join(folder, "botloftd.exe"), ["--home", home, "service", "install"
   env,
   stdio: "inherit",
 });
-// Through `start`, so the app holds none of this terminal's handles.
+// Through `start`, and with no pipes: `start` hands cmd's handles to the
+// app, and a pipe the app holds keeps this call waiting until it closes.
 execFileSync("cmd", ["/c", "start", '""', `"${join(folder, "Botloft.exe")}"`], {
   env,
+  stdio: "ignore",
   windowsVerbatimArguments: true,
 });
 console.log(
