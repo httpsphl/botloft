@@ -30,7 +30,7 @@ export function QuestionView({
   };
 
   return (
-    <article className="flex flex-col gap-3 rounded-2xl border border-line bg-panel p-4">
+    <article className="flex flex-col gap-3 rounded-bubble bg-bubble p-4">
       <header className="flex items-center gap-3">
         <BotDot name={card.bot.name} color={card.bot.color} />
         <div className="min-w-0">
@@ -66,7 +66,7 @@ export function QuestionView({
           rows={2}
           placeholder={q.placeholder}
           onChange={(event) => setText(event.target.value)}
-          className="rounded-xl border border-line-strong bg-canvas px-3 py-2 text-base text-ink"
+          className="rounded-xl border border-line-strong bg-panel px-3 py-2 text-base text-ink"
         />
       </label>
       <div className="flex gap-3">

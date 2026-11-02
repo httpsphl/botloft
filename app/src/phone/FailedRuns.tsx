@@ -33,7 +33,7 @@ export function FailedRuns({
         <section
           key={line.botId}
           aria-label={t.label(failure.routine, line.name)}
-          className="flex flex-col gap-3 rounded-2xl border border-danger/45 bg-panel p-4"
+          className="flex flex-col gap-3 rounded-bubble bg-bubble p-4"
         >
           <div className="flex items-center gap-3">
             <BotDot name={line.name} color={line.color} state={line.state} size={34} />
@@ -45,7 +45,7 @@ export function FailedRuns({
           <button
             type="button"
             onClick={() => open(line.botId)}
-            className="h-12 rounded-xl border border-line-strong font-medium text-base active:scale-[0.99]"
+            className="h-12 rounded-xl border border-line-strong bg-panel font-medium text-base active:scale-[0.99]"
           >
             {t.open}
           </button>

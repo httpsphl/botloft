@@ -48,7 +48,7 @@ export function CrewChips({
         type="button"
         aria-pressed={on}
         onClick={() => pick(name)}
-        className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-full border px-4 font-medium text-sm ${on ? "border-ink bg-ink text-canvas" : "border-line-strong bg-panel text-ink"}`}
+        className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-full border px-4 font-medium text-sm ${on ? "border-ink bg-ink text-canvas" : "border-transparent bg-bubble text-ink"}`}
       >
         {label}
         {news && <Dot label={t.tabs.newReply} />}
@@ -105,14 +105,14 @@ export function ChatsList({
       {groups.map((group) => (
         <section key={group.name} aria-label={group.name} className="flex flex-col gap-2">
           {headings && (
-            <h2 className="flex items-baseline gap-2 px-1 font-semibold text-muted text-xs uppercase tracking-[0.12em]">
+            <h2 className="flex items-baseline gap-2 px-1 font-semibold text-base">
               {group.name}
-              <span className="font-normal normal-case tracking-normal">
+              <span className="font-normal text-muted text-sm">
                 {t.chats.bots(group.lines.length)}
               </span>
             </h2>
           )}
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-0.5 rounded-2xl bg-bubble p-1.5">
             {group.lines.map((line) => (
               <li key={line.botId}>
                 <ChatRow
@@ -153,7 +153,7 @@ function ChatRow({
     <button
       type="button"
       onClick={open}
-      className="flex min-h-[4.5rem] w-full items-center gap-3 rounded-2xl border border-line bg-panel p-3 text-left active:scale-[0.99]"
+      className="flex min-h-[4.5rem] w-full items-center gap-3 rounded-xl p-2.5 text-left active:bg-line/60"
     >
       <BotDot name={line.name} color={line.color} state={line.state} size={34} />
       <span className="flex min-w-0 flex-1 flex-col">

@@ -30,7 +30,7 @@ function Mine({
   return (
     <div className="flex max-w-[85%] flex-col items-end gap-1 self-end">
       {text !== "" && (
-        <p className="whitespace-pre-wrap break-words rounded-2xl bg-ink px-3 py-2 text-base text-canvas">
+        <p className="whitespace-pre-wrap break-words rounded-bubble bg-bubble-own px-4 py-2.5 text-base text-bubble-own-ink">
           {text}
         </p>
       )}
@@ -56,7 +56,7 @@ export function ChatItem({
       return <Mine text={item.text} cut={item.cut} files={item.files} />;
     case "bot_message":
       return (
-        <div className="flex max-w-[85%] flex-col gap-1 self-start rounded-2xl border border-line bg-sunken px-3 py-2">
+        <div className="flex max-w-[85%] flex-col gap-1 self-start rounded-bubble border border-line bg-panel px-4 py-2.5">
           <span className="text-muted text-xs">{t.chats.from(item.from)}</span>
           <p className="whitespace-pre-wrap break-words text-base">{item.text}</p>
           {item.cut && <Cut />}
@@ -64,7 +64,7 @@ export function ChatItem({
       );
     case "reply":
       return (
-        <div className="flex max-w-full flex-col gap-1 self-start rounded-2xl border border-line bg-panel px-3 py-2">
+        <div className="chat-bubble flex max-w-full flex-col gap-1 self-start rounded-bubble bg-bubble px-4 py-2.5">
           <PhoneMarkdown>{item.text}</PhoneMarkdown>
           {item.cut && <Cut />}
         </div>
