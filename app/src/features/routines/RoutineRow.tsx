@@ -52,7 +52,7 @@ export function RoutineRow({
     attempt(r.failed.runNow, () => api.call("routines.runNow", { routineId: routine.id }));
 
   return (
-    <li className="flex items-start gap-3 rounded-xl border border-line bg-panel px-4 py-3">
+    <li className="flex items-start gap-3 rounded-2xl bg-bubble px-4 py-3">
       <Switch
         checked={routine.enabled}
         label={r.toggle(routine.name)}

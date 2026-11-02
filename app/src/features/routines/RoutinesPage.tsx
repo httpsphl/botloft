@@ -76,9 +76,9 @@ function Upcoming({ bot, routine }: Owned) {
       <button
         type="button"
         onClick={() => setEditing(true)}
-        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-sunken"
+        className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-line/60"
       >
-        <BotAvatar color={bot.color} size={28} mood={running ? "working" : undefined} />
+        <BotAvatar color={bot.color} size={32} mood={running ? "working" : undefined} />
         <span className="min-w-0 flex-1">
           <span className="block truncate font-medium">{routine.name}</span>
           <span className="flex items-center gap-1.5 truncate text-muted text-sm">
@@ -115,10 +115,10 @@ function BotGroup({ bot, crew, routines }: { bot: Bot; crew: string; routines: R
           type="button"
           aria-expanded={open}
           onClick={() => setOpen(!open)}
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-sunken"
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-sunken"
         >
-          <BotAvatar color={bot.color} size={22} />
-          <span className="truncate font-semibold">{bot.name}</span>
+          <BotAvatar color={bot.color} size={24} />
+          <span className="truncate font-semibold text-base">{bot.name}</span>
           <span className="truncate text-muted text-xs">{crew}</span>
           <ChevronDown
             aria-hidden
@@ -169,14 +169,14 @@ export function RoutinesPage() {
         ) : (
           <>
             {next.length > 0 && (
-              <section aria-labelledby="routines-upcoming" className="flex flex-col gap-1">
-                <h2
-                  id="routines-upcoming"
-                  className="px-3 font-medium text-muted text-xs uppercase tracking-wide"
-                >
+              <section aria-labelledby="routines-upcoming" className="flex flex-col gap-3">
+                <h2 id="routines-upcoming" className="px-1 font-semibold text-base">
                   {r.page.upcoming}
                 </h2>
-                <ul aria-labelledby="routines-upcoming" className="flex flex-col">
+                <ul
+                  aria-labelledby="routines-upcoming"
+                  className="flex flex-col gap-0.5 rounded-2xl bg-bubble p-1.5"
+                >
                   {shown.map((item) => (
                     <Upcoming key={item.routine.id} {...item} />
                   ))}
