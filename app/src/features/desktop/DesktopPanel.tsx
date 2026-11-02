@@ -69,8 +69,8 @@ export function DesktopPanel({ bot, onClose }: { bot: Bot; onClose(): void }) {
 
   return (
     <SidePanel label={t.label(bot.name)} name="computer" defaultWidth={600}>
-      <header className="flex h-11 shrink-0 items-center justify-between border-line border-b pr-1.5 pl-4">
-        <h2 className="flex items-center gap-2 font-semibold text-sm">
+      <header className="flex h-11 shrink-0 items-center justify-between pr-1.5 pl-4">
+        <h2 className="flex items-center gap-2 font-semibold text-base">
           {t.heading}
           {stopped ? (
             <Badge tone="warn">{t.stoppedBadge}</Badge>

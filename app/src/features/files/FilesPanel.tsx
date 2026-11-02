@@ -43,8 +43,8 @@ export function FilesPanel({
 
   return (
     <SidePanel label={t.panel(bot.name)} name="computer" defaultWidth={600}>
-      <header className="flex h-11 shrink-0 items-center justify-between border-line border-b pr-1.5 pl-4">
-        <h2 className="font-semibold text-sm">{t.heading}</h2>
+      <header className="flex h-11 shrink-0 items-center justify-between pr-1.5 pl-4">
+        <h2 className="font-semibold text-base">{t.heading}</h2>
         <div className="flex items-center gap-0.5">
           <Button
             variant="ghost"
@@ -134,7 +134,7 @@ function FileRow({
         type="button"
         onClick={() => onOpen(file.path)}
         title={file.path}
-        className="flex w-full min-w-0 items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-sunken"
+        className="flex w-full min-w-0 items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-sunken"
       >
         <span aria-hidden className="file-tile" data-kind={kind}>
           <Icon size={18} />

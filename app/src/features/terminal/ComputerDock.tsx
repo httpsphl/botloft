@@ -31,7 +31,7 @@ export function ComputerFooter() {
     return null;
   }
   return (
-    <div data-steady className="shrink-0 border-line border-t py-2">
+    <div data-steady className="shrink-0 py-2">
       <ComputerDock />
     </div>
   );
