@@ -40,7 +40,7 @@ function PinField({
         autoComplete="off"
         maxLength={10}
         onChange={(event) => change(digits(event.target.value))}
-        className="h-12 rounded-xl border border-line-strong bg-canvas px-3 font-mono text-base text-ink tracking-[0.2em]"
+        className="h-12 rounded-xl border border-line-strong bg-panel px-3 font-mono text-base text-ink tracking-[0.2em]"
       />
     </label>
   );
@@ -104,7 +104,7 @@ export function PinSettings({ lock }: { lock: LockApi }) {
   }
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="font-semibold text-muted text-xs uppercase tracking-[0.12em]">{t.title}</h2>
+      <h2 className="font-semibold text-base">{t.title}</h2>
       <p className="text-ink-soft text-sm leading-relaxed">{t.why}</p>
       {state === "old" && <Callout tone="info" title={t.old} />}
       {state !== "old" && form === null && (

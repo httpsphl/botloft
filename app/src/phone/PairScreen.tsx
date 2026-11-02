@@ -79,7 +79,7 @@ export function PairScreen({
               value={name}
               maxLength={60}
               onChange={(event) => setName(event.target.value)}
-              className="h-12 rounded-xl border border-line-strong bg-canvas px-3 text-base text-ink"
+              className="h-12 rounded-xl border border-line-strong bg-panel px-3 text-base text-ink"
             />
           </label>
           <PhoneButton

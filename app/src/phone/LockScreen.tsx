@@ -87,7 +87,7 @@ export function LockScreen({
                 autoComplete="off"
                 maxLength={10}
                 onChange={(event) => setPin(event.target.value.replace(/\D/g, ""))}
-                className="h-14 rounded-xl border border-line-strong bg-canvas px-3 text-center font-mono text-2xl text-ink tracking-[0.3em]"
+                className="h-14 rounded-xl border border-line-strong bg-panel px-3 text-center font-mono text-2xl text-ink tracking-[0.3em]"
               />
             </label>
             {said && "wrong" in said && wait <= 0 && (
