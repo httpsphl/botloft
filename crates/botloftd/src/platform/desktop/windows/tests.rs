@@ -1,7 +1,7 @@
 //! With real windows: a window of the test's own, painted red, found in
 //! the list, pictured, minimized and closed.
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use windows::Win32::UI::WindowsAndMessaging::{SW_MINIMIZE, ShowWindow};
 
@@ -48,6 +48,22 @@ fn a_picture_is_only_the_window_in_its_own_pixels() {
     assert_eq!(&rgb[middle..middle + 3], [255, 0, 0]);
     let picture = super::super::picture(window.id).expect("jpeg");
     assert_eq!(&picture.jpeg[..2], [0xFF, 0xD8]);
+}
+
+#[test]
+fn a_window_that_does_not_answer_is_not_waited_for() {
+    let window = TestWindow::open("Botloft desktop test: frozen");
+    window.freeze(Duration::from_secs(4));
+    let started = Instant::now();
+    match capture(window.id) {
+        Err(DesktopError::NotResponding) => {}
+        Ok((_, width, height, _)) => {
+            panic!("pictured {width} × {height} after {:?}", started.elapsed())
+        }
+        Err(other) => panic!("{other}"),
+    }
+    let took = started.elapsed();
+    assert!(took < Duration::from_secs(3), "{took:?}");
 }
 
 #[test]
