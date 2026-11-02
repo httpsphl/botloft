@@ -10,8 +10,11 @@ interface DialogProps {
   children: ReactNode;
   /** Buttons along the bottom edge. */
   footer?: ReactNode;
-  width?: "md" | "lg";
+  /** `xl` for a list to browse, such as the agency. */
+  width?: "md" | "lg" | "xl";
 }
+
+const WIDTHS = { md: "max-w-md", lg: "max-w-2xl", xl: "max-w-4xl" } as const;
 
 /**
  * A modal panel. Escape and the close button call `onClose`. It pops in,
@@ -45,7 +48,7 @@ export function Dialog({ title, onClose, children, footer, width = "md" }: Dialo
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`flex max-h-full w-full animate-pop flex-col overflow-hidden rounded-2xl border border-line bg-panel shadow-lift ${width === "lg" ? "max-w-2xl" : "max-w-md"}`}
+        className={`flex max-h-full w-full animate-pop flex-col overflow-hidden rounded-2xl border border-line bg-panel shadow-lift ${WIDTHS[width]}`}
       >
         {/* No line under the title: the space sets it apart, as in a sheet. */}
         <header className="flex h-14 shrink-0 items-center justify-between pr-3 pl-6">

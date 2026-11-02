@@ -25,13 +25,15 @@ export function Joined({ bot, onCustomize }: { bot: Bot; onCustomize(): void }) 
 }
 
 /**
- * A role as a line of the list: its mascot, name, kind and what it does,
- * which opens the whole of it, and a light button that adds it.
+ * A role as a line of the list: its mascot, name and what it does, which
+ * opens the whole of it, and a light button that adds it. The name is never
+ * cut: a long one takes a second line.
  */
 export function AgencyCard({
   template,
   text,
   color,
+  withKind,
   added,
   busy,
   onAdd,
@@ -41,6 +43,8 @@ export function AgencyCard({
   template: BotTemplate;
   text: RoleText;
   color: string;
+  /** Out of the kind's section (the few on a crew's page): say the kind. */
+  withKind: boolean;
   added: Bot | undefined;
   busy: boolean;
   onAdd(): void;
@@ -49,7 +53,7 @@ export function AgencyCard({
 }) {
   const t = useT();
   return (
-    <li className="flex flex-col gap-1.5 rounded-xl p-2 transition-colors hover:bg-sunken/60">
+    <li className="flex flex-col gap-1.5 rounded-xl p-2.5 transition-colors hover:bg-sunken/60">
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -58,15 +62,19 @@ export function AgencyCard({
           onClick={onLearnMore}
           className="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left"
         >
-          <BotAvatar color={color} size={40} />
+          <BotAvatar color={color} size={44} />
           <span className="min-w-0 flex-1">
-            <span className="flex items-baseline gap-2">
-              <span className="truncate font-semibold">{text.name}</span>
-              <span className="shrink-0 text-muted text-xs">
-                {t.catalog.categories[template.category]}
-              </span>
+            <span className="flex flex-wrap items-baseline gap-x-2">
+              <span className="break-words font-semibold">{text.name}</span>
+              {withKind && (
+                <span className="text-muted text-xs">
+                  {t.catalog.categories[template.category]}
+                </span>
+              )}
             </span>
-            <span className="line-clamp-2 text-muted text-sm">{text.summary}</span>
+            <span className="mt-0.5 line-clamp-2 text-muted text-sm leading-snug">
+              {text.summary}
+            </span>
           </span>
         </button>
         <button
@@ -81,7 +89,7 @@ export function AgencyCard({
         </button>
       </div>
       {added && (
-        <div className="pl-[3.25rem]">
+        <div className="pl-14">
           <Joined bot={added} onCustomize={onCustomize} />
         </div>
       )}
