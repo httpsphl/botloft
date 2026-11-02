@@ -94,6 +94,8 @@ curl -si  https://cloud.seudominio.com/v1/me | head -1   # HTTP/2 401
 
 O `401` é o certo: sem entrar, nada abre.
 
+O bucket só é usado na primeira cópia ou no primeiro arquivo do celular. Se ele recusar, o log diz por quê, com o status e o código que o R2 devolveu: `storage put failed (permission denied, 403, InvalidAccessKeyId)`. `InvalidAccessKeyId` e `SignatureDoesNotMatch` apontam o `access_key_id` ou o segredo; `AccessDenied`, um token sem escrita nesse bucket. No Coolify, confira também que o compose não ficou com um texto de exemplo no lugar do `access_key_id`.
+
 ## 8. Apontar o app
 
 No `config.toml` do Botloft de quem vai usar (a pasta de dados, `%LOCALAPPDATA%\Botloft`):
