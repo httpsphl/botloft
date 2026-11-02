@@ -25,6 +25,10 @@ pub(super) fn describe(err: &DesktopError) -> String {
         DesktopError::Minimized => "That window is minimized, so there is nothing to see in it. \
             Ask the owner to bring it back if you need it."
             .to_owned(),
+        DesktopError::NotResponding => "That app is not responding right now (busy or frozen), \
+            so its window cannot be pictured. Try again in a moment; if it stays like this, tell \
+            the owner."
+            .to_owned(),
         DesktopError::System(why) => format!("Windows could not do it: {why}"),
         DesktopError::NotThere => "That control is not in the window anymore. Call desktop_look \
             to read the window again."

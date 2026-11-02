@@ -4,7 +4,7 @@
 
 use std::ffi::c_void;
 
-use windows::Win32::Foundation::RECT;
+use windows::Win32::Foundation::{HWND, LPARAM, RECT, WPARAM};
 use windows::Win32::Graphics::Dwm::{DWMWA_EXTENDED_FRAME_BOUNDS, DwmGetWindowAttribute};
 use windows::Win32::Graphics::Gdi::{
     BI_RGB, BITMAPINFO, BITMAPINFOHEADER, CreateCompatibleBitmap, CreateCompatibleDC,
@@ -16,7 +16,9 @@ use windows::Win32::UI::HiDpi::{
     DPI_AWARENESS_CONTEXT, DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, GetDpiForWindow,
     SetThreadDpiAwarenessContext,
 };
-use windows::Win32::UI::WindowsAndMessaging::{GetWindowRect, IsIconic, IsWindow};
+use windows::Win32::UI::WindowsAndMessaging::{
+    GetWindowRect, IsIconic, IsWindow, SMTO_ABORTIFHUNG, SendMessageTimeoutW, WM_NULL,
+};
 
 use super::super::DesktopError;
 use super::handle;
@@ -26,6 +28,8 @@ use super::handle;
 const RENDER_FULL_CONTENT: PRINT_WINDOW_FLAGS = PRINT_WINDOW_FLAGS(2);
 /// Windows' unscaled DPI.
 const BASE_DPI: f64 = 96.0;
+/// How long a window has to answer before it is pictured, in milliseconds.
+const ANSWER_MS: u32 = 1000;
 
 /// Sizes in real pixels on this thread while it lives, then back.
 pub(super) struct RealPixels(DPI_AWARENESS_CONTEXT);
@@ -96,6 +100,24 @@ pub fn frame(id: u64) -> Result<[i32; 4], DesktopError> {
     ])
 }
 
+/// Whether window `hwnd` takes messages now: it answers an empty one within
+/// [`ANSWER_MS`], and one Windows already calls hung fails at once.
+fn answers(hwnd: HWND) -> bool {
+    // SAFETY: an empty message to a window handle; its result is not read.
+    let answered = unsafe {
+        SendMessageTimeoutW(
+            hwnd,
+            WM_NULL,
+            WPARAM(0),
+            LPARAM(0),
+            SMTO_ABORTIFHUNG,
+            ANSWER_MS,
+            None,
+        )
+    };
+    answered.0 != 0
+}
+
 /// The window `id`'s pixels as RGB, its width and height, and the display
 /// scale it is on (1.5 at 150%).
 pub fn capture(id: u64) -> Result<(Vec<u8>, u32, u32, f64), DesktopError> {
@@ -153,6 +175,12 @@ pub fn capture(id: u64) -> Result<(Vec<u8>, u32, u32, f64), DesktopError> {
             previous,
         }
     };
+    // `PrintWindow` waits for the window to draw itself: one that takes no
+    // messages, busy or hung, would keep it (and the desktop's turn) waiting
+    // for as long as it stays so (spec 24.4).
+    if !answers(hwnd) {
+        return Err(DesktopError::NotResponding);
+    }
     // SAFETY: the window draws into our bitmap.
     if !unsafe { PrintWindow(hwnd, canvas.memory, RENDER_FULL_CONTENT) }.as_bool() {
         return Err(system("the window did not draw itself"));
