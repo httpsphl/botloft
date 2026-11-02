@@ -27,7 +27,7 @@ function Row({
   children: ReactNode;
 }) {
   return (
-    <li className="flex items-start gap-2 rounded-lg border border-line bg-sunken py-1.5 pr-1 pl-2.5">
+    <li className="flex items-start gap-2 rounded-xl bg-bubble py-2 pr-1.5 pl-3">
       {icon}
       <span className="min-w-0 flex-1 text-xs">{children}</span>
       <Button variant="ghost" size="sm" icon={X} label={remove} onClick={onRemove} />

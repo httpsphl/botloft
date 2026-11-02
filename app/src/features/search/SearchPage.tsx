@@ -110,11 +110,11 @@ export function SearchPage() {
 
   return (
     <section aria-label={words.label} className="flex min-h-0 flex-1 flex-col">
-      <header className="flex flex-wrap items-center gap-3 border-line border-b px-5 py-3.5">
+      <header className="flex flex-wrap items-center gap-3 px-5 pt-3.5 pb-2">
         <label htmlFor={fieldId} className="sr-only">
           {words.field}
         </label>
-        <div className="flex min-w-60 flex-1 items-center gap-2 rounded-xl border border-line-strong bg-panel px-3 focus-within:border-muted">
+        <div className="flex min-w-60 flex-1 items-center gap-2 rounded-full border border-transparent bg-sunken px-4 transition-colors focus-within:border-line-strong focus-within:bg-panel">
           <Search aria-hidden size={16} className="shrink-0 text-muted" />
           <input
             id={fieldId}

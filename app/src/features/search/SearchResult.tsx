@@ -57,7 +57,7 @@ export function SearchResult({ hit }: { hit: SearchHit }) {
         onClick={() => openAt(bot.id, hit.item.id)}
         className="flex w-full gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-150 hover:bg-sunken"
       >
-        <BotAvatar color={bot.color} size={26} still />
+        <BotAvatar color={bot.color} size={32} still />
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="flex items-center gap-2 text-sm">
             <span className="truncate font-semibold">{bot.name}</span>
