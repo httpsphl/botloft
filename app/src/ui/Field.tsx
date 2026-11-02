@@ -44,7 +44,7 @@ function Frame({
 }
 
 const control =
-  "w-full rounded-lg border border-line-strong bg-canvas px-2.5 text-ink text-sm outline-none placeholder:text-muted focus:border-accent";
+  "w-full rounded-lg border border-line-strong bg-panel px-3 text-ink text-sm outline-none transition-colors placeholder:text-muted focus:border-accent";
 
 export function TextField({
   label,
@@ -56,7 +56,7 @@ export function TextField({
   const length = typeof input.value === "string" ? input.value.length : undefined;
   return (
     <Frame id={id} label={label} hint={hint} max={max} length={length}>
-      <input id={id} className={`${control} h-8`} spellCheck={false} {...input} />
+      <input id={id} className={`${control} h-9`} spellCheck={false} {...input} />
     </Frame>
   );
 }
@@ -83,7 +83,7 @@ export function SecretField({
           type={shown ? "text" : "password"}
           autoComplete="off"
           spellCheck={false}
-          className={`${control} h-8 pr-9 font-mono`}
+          className={`${control} h-9 pr-9 font-mono`}
           {...input}
         />
         <button
@@ -91,7 +91,7 @@ export function SecretField({
           aria-label={shown ? hide : show}
           title={shown ? hide : show}
           onClick={() => setShown((now) => !now)}
-          className="absolute inset-y-0 right-0 grid w-8 place-items-center rounded-r-lg text-muted hover:text-ink"
+          className="absolute inset-y-0 right-0 grid w-9 place-items-center rounded-r-lg text-muted hover:text-ink"
         >
           <Icon aria-hidden size={14} />
         </button>
@@ -126,7 +126,7 @@ export function SelectField({
   const id = useId();
   return (
     <Frame id={id} label={label} hint={hint}>
-      <select id={id} className={`${control} h-8`} {...select}>
+      <select id={id} className={`${control} h-9`} {...select}>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}

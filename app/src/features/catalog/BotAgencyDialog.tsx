@@ -7,7 +7,7 @@ import { AgencyGrid } from "./AgencyGrid";
 export function BotAgencyDialog({ crew, onClose }: { crew: Crew; onClose(): void }) {
   const t = useT();
   return (
-    <Dialog title={t.catalog.title} width="lg" onClose={onClose}>
+    <Dialog title={t.catalog.title} width="xl" onClose={onClose}>
       <p className="mb-3 text-muted text-sm">{t.catalog.intro}</p>
       <AgencyGrid crew={crew} onLeave={onClose} />
     </Dialog>

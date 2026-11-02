@@ -43,7 +43,7 @@ export function Sidebar() {
   const allFolded = crews.length > 0 && crews.every((crew) => collapsed.has(crew.id));
   const [creating, setCreating] = useState(false);
   return (
-    <div className="flex w-72 shrink-0 flex-col border-line border-r bg-panel">
+    <div className="flex w-72 shrink-0 flex-col border-line border-r bg-canvas">
       <nav aria-label={words.label} className="flex min-h-0 flex-1 flex-col">
         <div className="flex h-10 shrink-0 items-center gap-0.5 pr-1.5 pl-2">
           <h2 className="min-w-0 flex-1">
@@ -52,7 +52,7 @@ export function Sidebar() {
               aria-current={overview ? "page" : undefined}
               title={words.showAll}
               onClick={() => selectCrew(null)}
-              className={`rounded-lg px-2 py-1 font-semibold text-xs uppercase tracking-[0.12em] transition-colors hover:bg-sunken hover:text-ink ${overview ? "bg-sunken text-ink" : "text-muted"}`}
+              className={`rounded-lg px-2 py-1 font-semibold text-sm transition-colors hover:bg-sunken hover:text-ink ${overview ? "bg-sunken text-ink" : "text-ink-soft"}`}
             >
               {words.label}
             </button>

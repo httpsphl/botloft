@@ -10,8 +10,11 @@ interface DialogProps {
   children: ReactNode;
   /** Buttons along the bottom edge. */
   footer?: ReactNode;
-  width?: "md" | "lg";
+  /** `xl` for a list to browse, such as the agency. */
+  width?: "md" | "lg" | "xl";
 }
+
+const WIDTHS = { md: "max-w-md", lg: "max-w-2xl", xl: "max-w-4xl" } as const;
 
 /**
  * A modal panel. Escape and the close button call `onClose`. It pops in,
@@ -45,17 +48,18 @@ export function Dialog({ title, onClose, children, footer, width = "md" }: Dialo
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`flex max-h-full w-full animate-pop flex-col overflow-hidden rounded-2xl border border-line bg-panel shadow-lift ${width === "lg" ? "max-w-2xl" : "max-w-md"}`}
+        className={`flex max-h-full w-full animate-pop flex-col overflow-hidden rounded-2xl border border-line bg-panel shadow-lift ${WIDTHS[width]}`}
       >
-        <header className="flex h-12 shrink-0 items-center justify-between border-line border-b pr-2 pl-5">
-          <h2 id={titleId} className="font-semibold text-base tracking-tight">
+        {/* No line under the title: the space sets it apart, as in a sheet. */}
+        <header className="flex h-14 shrink-0 items-center justify-between pr-3 pl-6">
+          <h2 id={titleId} className="font-semibold text-lg tracking-tight">
             {title}
           </h2>
           <Button variant="ghost" icon={X} label={t.common.close} onClick={onClose} />
         </header>
-        <div className="min-h-0 overflow-y-auto px-5 py-4">{children}</div>
+        <div className="min-h-0 overflow-y-auto px-6 pt-1 pb-5">{children}</div>
         {footer && (
-          <footer className="flex shrink-0 justify-end gap-2 border-line border-t px-5 py-3">
+          <footer className="flex shrink-0 justify-end gap-2 border-line border-t px-6 py-3.5">
             {footer}
           </footer>
         )}

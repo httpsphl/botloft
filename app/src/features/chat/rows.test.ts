@@ -71,6 +71,19 @@ describe("chat rows", () => {
     const rows = chatRows([reply("late", start), reply("early", start + DAY)]);
     expect(rows.map((row) => row.kind)).toEqual(["day", "run", "day", "run"]);
   });
+
+  test("a pause in the talk gets a clock line, a long turn does not", () => {
+    const later = start + 40 * 60 * 1000;
+    const paused = chatRows([
+      inbound("hi", start),
+      reply("one", start + 1000),
+      turn(),
+      inbound("back", later),
+    ]);
+    expect(paused.map((row) => row.kind)).toEqual(["day", "inbound", "run", "time", "inbound"]);
+    const working = chatRows([inbound("go", start), tool("Bash"), reply("done", later)]);
+    expect(working.map((row) => row.kind)).toEqual(["day", "inbound", "run"]);
+  });
 });
 
 describe("splitDraft", () => {

@@ -1,11 +1,12 @@
-// What the bot did in one turn, under its avatar: replies in markdown,
-// tool calls together, approvals, and how the turn ended. The last run
-// also shows the reply being written.
+// What the bot did in one turn, on the left of its chat: replies in
+// balloons, tool calls together, approvals, and how the turn ended. The
+// header already says whose chat it is, so a run has no name over it. The
+// last run also shows the reply being written.
 
 import { CircleAlert } from "lucide-react";
 import { memo, type ReactNode, useMemo } from "react";
 import { useT } from "../../i18n";
-import { duration, tokens, usedTokens, when } from "../../lib/format";
+import { duration, tokens, usedTokens } from "../../lib/format";
 import type { Bot, ChatItem, TurnItem } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
 import { useArrival } from "../../ui/motion";
@@ -33,7 +34,7 @@ function TurnEnd({ turn }: { turn: TurnItem }) {
   const t = useT();
   if (turn.error) {
     return (
-      <p className="flex items-center gap-1.5 text-danger text-xs">
+      <p className="flex items-center gap-1.5 px-1 text-danger text-xs">
         <CircleAlert aria-hidden size={12} />
         {t.chat.run.stopped(turn.error.replaceAll("_", " "))}
       </p>
@@ -46,7 +47,7 @@ function TurnEnd({ turn }: { turn: TurnItem }) {
     wrote: tokens(used.output),
   };
   return (
-    <p className="text-muted text-xs" title={t.chat.run.took(time, detail)}>
+    <p className="px-1 text-muted text-xs" title={t.chat.run.took(time, detail)}>
       {t.chat.run.done(time, used && tokens(usedTokens(used)))}
     </p>
   );
@@ -65,22 +66,29 @@ function Arriving({ id, at, children }: { id: string; at: number; children: Reac
   );
 }
 
-function Working() {
+/** A balloon of the bot's: what it wrote, or the dots while it thinks. */
+const BALLOON = "chat-bubble w-fit max-w-full rounded-bubble bg-bubble px-4 py-2.5";
+
+/** The bot thinking: its mascot, moving with it, and three dots in a balloon. */
+function Working({ bot }: { bot: Bot }) {
   const t = useT();
   return (
-    <p
+    <div
       role="status"
-      className="flex items-center gap-1 py-1 text-muted"
       aria-label={t.chat.run.working}
+      className="flex w-fit animate-fade items-center gap-2 rounded-bubble bg-bubble py-1.5 pr-4 pl-2 text-muted"
     >
-      {[0, 160, 320].map((delay) => (
-        <span
-          key={delay}
-          className="h-1.5 w-1.5 animate-dot rounded-full bg-current"
-          style={{ animationDelay: `${delay}ms` }}
-        />
-      ))}
-    </p>
+      <BotAvatar color={bot.color} size={24} mood={moodOf(bot)} />
+      <span className="flex items-center gap-1">
+        {[0, 160, 320].map((delay) => (
+          <span
+            key={delay}
+            className="h-1.5 w-1.5 animate-dot rounded-full bg-current"
+            style={{ animationDelay: `${delay}ms` }}
+          />
+        ))}
+      </span>
+    </div>
   );
 }
 
@@ -89,7 +97,7 @@ function Draft({ text }: { text: string }) {
   return (
     // chat-md.css spaces the two parts as one reply; `data-reply` is where
     // following a long one stops (follow.ts).
-    <div aria-live="off" data-reply className="chat-draft animate-fade opacity-90">
+    <div aria-live="off" data-reply className={`chat-draft animate-fade ${BALLOON}`}>
       {done && <Markdown text={done} />}
       <Markdown text={writing} streaming />
     </div>
@@ -133,19 +141,10 @@ function BotRunView({
   const onCalls = tail?.body.kind === "tool" && !isSharedFiles(tail) && !memory(tail);
   return (
     // A turn shows up as the bot starts it, still empty; what it does then
-    // arrives inside, so a run with items never animates as a whole.
-    <li className={`flex gap-3 ${first ? "" : "animate-rise"}`}>
-      {/* Only the run in progress moves, like the bot it stands for. */}
-      <BotAvatar color={bot.color} size={28} mood={live ? moodOf(bot) : undefined} />
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <div className="flex items-center gap-2 text-sm">
-          <span className="font-semibold">{bot.name}</span>
-          {first && (
-            <time className="text-muted text-xs" dateTime={new Date(first.createdAt).toISOString()}>
-              {when(first.createdAt)}
-            </time>
-          )}
-        </div>
+    // arrives inside, so a run with items never animates as a whole. The
+    // room on the right is for a balloon's time and buttons (Replying.tsx).
+    <li aria-label={bot.name} className={`flex pr-14 lg:pr-32 ${first ? "" : "animate-rise"}`}>
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         {parts.map((part, index) => {
           const head = part[0] as ChatItem;
           switch (head.body.kind) {
@@ -175,9 +174,12 @@ function BotRunView({
                 <div key={head.id} data-reply>
                   <Repliable
                     target={{ itemId: head.id, who: bot.name, text: head.body.text }}
+                    at={head.createdAt}
                     react
                   >
-                    <Markdown text={head.body.text} />
+                    <div className={BALLOON}>
+                      <Markdown text={head.body.text} />
+                    </div>
                   </Repliable>
                 </div>
               );
@@ -210,7 +212,7 @@ function BotRunView({
           }
         })}
         {live?.draft && <Draft text={live.draft} />}
-        {busy && !onCalls && <Working />}
+        {busy && !onCalls && <Working bot={bot} />}
       </div>
     </li>
   );

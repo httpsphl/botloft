@@ -14,7 +14,7 @@ import {
   useState,
 } from "react";
 import { useT } from "../../i18n";
-import { day } from "../../lib/format";
+import { clock, day } from "../../lib/format";
 import type { Bot } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
@@ -126,18 +126,32 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
   const tail = rows.at(-1);
   const openRun = tail?.kind === "run" && tail.items.at(-1)?.body.kind !== "turn";
 
+  // The owner's newest message always says where it is; older ones only
+  // while they are still on their way (InboundRow).
+  const lastOwn = rows
+    .filter((row) => row.kind === "inbound" && row.message.fromKind === "owner")
+    .at(-1)?.key;
+
   const list: ReactNode[] = rows.map((row, index) => {
-    if (row.kind === "day") {
+    if (row.kind === "day" || row.kind === "time") {
       return (
-        <li key={row.key} className="flex animate-fade justify-center">
-          <span className="rounded-full bg-sunken px-3 py-1 font-medium text-muted text-xs">
-            {day(row.at)}
+        <li key={row.key} className="flex animate-fade justify-center pt-2">
+          <span className="font-medium text-muted text-xs">
+            {row.kind === "day" ? `${day(row.at)} · ${clock(row.at)}` : clock(row.at)}
           </span>
         </li>
       );
     }
     if (row.kind === "inbound") {
-      return <InboundRow key={row.key} message={row.message} bot={bot} itemId={row.item.id} />;
+      return (
+        <InboundRow
+          key={row.key}
+          message={row.message}
+          bot={bot}
+          itemId={row.item.id}
+          last={row.key === lastOwn}
+        />
+      );
     }
     if (row.kind === "notice") {
       return <NoticeRow key={row.key} notice={row.notice} at={row.item.createdAt} />;
@@ -198,7 +212,7 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
     >
       <div
         ref={scroller}
-        className="min-h-0 flex-1 overflow-y-auto"
+        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
         onScroll={(event) => {
           const element = event.currentTarget;
           atEnd.current =
@@ -246,7 +260,7 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
                 <ol
                   ref={listRef}
                   aria-label={t.chat.view.messages}
-                  className="offscreen-rows flex flex-col gap-6"
+                  className="offscreen-rows flex flex-col gap-4"
                 >
                   {list}
                 </ol>

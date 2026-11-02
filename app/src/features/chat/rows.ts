@@ -1,12 +1,14 @@
 // How a chat reads on screen (spec 15.3): what others say stands alone,
-// what the bot does in a turn runs together under its avatar, and a date
-// line starts every day.
+// what the bot does in a turn runs together, a date line starts every day
+// and a clock line marks a pause in the talk.
 
 import type { ChatItem, Message, NoticeItem } from "../../lib/protocol.gen";
 import { isSharedFiles } from "./shared";
 
 export type Row =
   | { kind: "day"; key: string; at: number }
+  /** The time the talk picked up again after a pause, on the same day. */
+  | { kind: "time"; key: string; at: number }
   /** A message to the bot: from the owner, another bot or Botloft. */
   | { kind: "inbound"; key: string; item: ChatItem; message: Message }
   /** Replies, tool calls and approvals of one turn, and its end. */
@@ -30,6 +32,9 @@ function isAskLine(item: ChatItem): boolean {
   );
 }
 
+/** A pause this long before something new gets a clock line. */
+export const PAUSE_MS = 30 * 60 * 1000;
+
 function dayOf(ms: number): string {
   return new Date(ms).toDateString();
 }
@@ -38,17 +43,24 @@ export function chatRows(items: ChatItem[]): Row[] {
   const rows: Row[] = [];
   let day: string | null = null;
   let run: ChatItem[] | null = null;
+  let last = 0;
   for (const item of items) {
     if (isAskLine(item)) {
       continue;
     }
     const today = dayOf(item.createdAt);
+    const body = item.body;
+    // What the bot does inside one turn never gets cut by a clock line.
+    const opens = !run || body.kind === "inbound" || body.kind === "notice";
     if (today !== day) {
       day = today;
       run = null;
       rows.push({ kind: "day", key: `day-${item.id}`, at: item.createdAt });
+    } else if (opens && item.createdAt - last >= PAUSE_MS) {
+      run = null;
+      rows.push({ kind: "time", key: `time-${item.id}`, at: item.createdAt });
     }
-    const body = item.body;
+    last = item.createdAt;
     if (body.kind === "inbound") {
       run = null;
       rows.push({ kind: "inbound", key: item.id, item, message: body.message });
@@ -73,6 +85,7 @@ export function chatRows(items: ChatItem[]): Row[] {
 export function rowHas(row: Row, id: string): boolean {
   switch (row.kind) {
     case "day":
+    case "time":
       return false;
     case "run":
       return row.items.some((item) => item.id === id);

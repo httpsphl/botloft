@@ -70,25 +70,26 @@ export function BotHeader({
 
   return (
     // In a narrow window the handle gives way first, then the button labels.
-    <header className="@container flex items-center gap-3 border-line border-b px-5 py-2.5">
+    // The tabs under it draw the line that closes it.
+    <header className="@container flex items-center gap-3 px-5 pt-2.5 pb-1.5">
       <BotAvatar
         color={bot.color}
-        size={36}
+        size={32}
         mood={moodOf(bot, crew.paused)}
         botId={bot.id}
         starting={bot.state === "launching"}
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
-          <h1 className="truncate font-semibold text-lg tracking-tight">{bot.name}</h1>
+          <h1 className="truncate font-semibold text-base tracking-tight">{bot.name}</h1>
           <span
-            className="min-w-0 shrink-[100] truncate font-mono text-muted text-sm"
+            className="min-w-0 shrink-[100] truncate font-mono text-muted text-xs"
             data-selectable
           >
             @{bot.handle}
           </span>
         </div>
-        <div className="mt-0.5 flex items-center gap-3 text-sm">
+        <div className="flex items-center gap-3 text-xs">
           <BotStateBadge bot={bot} crewPaused={crew.paused} sleep />
           {chief && <ChiefBadge crew={crew} />}
           {bot.permissionMode === "bypass_permissions" && (
@@ -100,19 +101,16 @@ export function BotHeader({
         </div>
       </div>
       {bot.paused ? (
-        <Button icon={Play} title={words.resume} onClick={() => setPaused(false)}>
+        <Button variant="ghost" icon={Play} title={words.resume} onClick={() => setPaused(false)}>
           <FitLabel>{words.resume}</FitLabel>
         </Button>
       ) : (
-        <Button icon={Pause} title={words.pause} onClick={() => setPaused(true)}>
+        <Button variant="ghost" icon={Pause} title={words.pause} onClick={() => setPaused(true)}>
           <FitLabel>{words.pause}</FitLabel>
         </Button>
       )}
       {/* The panels beside the chat, one group, the open ones raised. */}
-      <fieldset
-        aria-label={words.panels}
-        className="m-0 flex items-center gap-0.5 rounded-xl border border-line p-0.5"
-      >
+      <fieldset aria-label={words.panels} className="m-0 flex items-center gap-0.5 border-0 p-0">
         <span className="relative">
           <Button
             size="sm"

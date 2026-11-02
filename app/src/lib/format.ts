@@ -143,6 +143,11 @@ export function duration(ms: number): string {
   return rest === 0 ? `${minutes} min` : `${minutes} min ${rest} s`;
 }
 
+/** Clock time only, whatever the day. */
+export function clock(ms: number): string {
+  return formats().clock.format(ms);
+}
+
 /** "Monday, September 28" for today's year, with the year otherwise. */
 export function day(ms: number, now = Date.now()): string {
   const sameYear = new Date(ms).getFullYear() === new Date(now).getFullYear();

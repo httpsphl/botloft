@@ -25,6 +25,9 @@ const CLAUDE_ONLY: AgentKind[] = ["claude"];
 type Props = { onClose(): void } & ({ crewId: CrewId; bot?: undefined } | { bot: Bot });
 
 /** Creates a bot in `crewId`, or edits `bot`. */
+/** The preview before a color is picked: the daemon gives one when it is not. */
+const UNSET_COLOR = "#8a8a84";
+
 export function BotDialog(props: Props) {
   const t = useT();
   const api = useApi();
@@ -112,6 +115,53 @@ export function BotDialog(props: Props) {
       }
     >
       <form id={formId} onSubmit={submit} className="flex flex-col gap-4">
+        {/* The agent as it will look, over the colors to pick from. */}
+        <fieldset className="flex flex-col items-center gap-3 pt-1">
+          <legend className="sr-only">{t.bots.dialog.color}</legend>
+          <span key={color ?? "unset"} className="animate-pop">
+            <BotAvatar color={color ?? UNSET_COLOR} size={72} mood="awake" />
+          </span>
+          <div className="flex flex-wrap items-center justify-center gap-1.5">
+            {AVATAR_PALETTE.map((swatch) => (
+              <button
+                key={swatch}
+                type="button"
+                aria-label={t.bots.dialog.swatch(swatch)}
+                aria-pressed={color === swatch}
+                onClick={() => setColor(swatch)}
+                className={`relative rounded-lg p-0.5 ${color === swatch ? "ring-2 ring-accent" : ""}`}
+              >
+                <BotAvatar color={swatch} size={26} />
+                {color === swatch && (
+                  <Check aria-hidden size={12} className="absolute right-0 bottom-0 text-white" />
+                )}
+              </button>
+            ))}
+            <button
+              type="button"
+              aria-label={t.bots.dialog.custom}
+              title={t.bots.dialog.custom}
+              aria-expanded={picking}
+              aria-pressed={custom}
+              onClick={() => setPicking(!picking)}
+              className={`relative flex size-[30px] items-center justify-center rounded-lg ${
+                custom
+                  ? "ring-2 ring-accent"
+                  : "border border-line-strong border-dashed text-muted hover:text-ink"
+              }`}
+            >
+              {custom && color ? (
+                <BotAvatar color={color} size={26} />
+              ) : (
+                <Pipette aria-hidden size={14} />
+              )}
+            </button>
+          </div>
+          {picking && <ColorPicker value={color ?? AVATAR_PALETTE[0]} onChange={setColor} />}
+          {!editing && color === undefined && (
+            <p className="text-center text-muted text-xs">{t.bots.dialog.colorUnset}</p>
+          )}
+        </fieldset>
         <div className="grid grid-cols-[1fr_1.4fr] gap-3">
           <TextField
             label={t.bots.dialog.name}
@@ -194,51 +244,6 @@ export function BotDialog(props: Props) {
             onChange={setPlanFirst}
           />
         )}
-        <fieldset className="flex flex-col gap-1.5">
-          <legend className="mb-1.5 font-medium text-ink-soft text-sm">
-            {t.bots.dialog.color}
-          </legend>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {AVATAR_PALETTE.map((swatch) => (
-              <button
-                key={swatch}
-                type="button"
-                aria-label={t.bots.dialog.swatch(swatch)}
-                aria-pressed={color === swatch}
-                onClick={() => setColor(swatch)}
-                className={`relative rounded-lg p-0.5 ${color === swatch ? "ring-2 ring-accent" : ""}`}
-              >
-                <BotAvatar color={swatch} size={26} />
-                {color === swatch && (
-                  <Check aria-hidden size={12} className="absolute right-0 bottom-0 text-white" />
-                )}
-              </button>
-            ))}
-            <button
-              type="button"
-              aria-label={t.bots.dialog.custom}
-              title={t.bots.dialog.custom}
-              aria-expanded={picking}
-              aria-pressed={custom}
-              onClick={() => setPicking(!picking)}
-              className={`relative flex size-[30px] items-center justify-center rounded-lg ${
-                custom
-                  ? "ring-2 ring-accent"
-                  : "border border-line-strong border-dashed text-muted hover:text-ink"
-              }`}
-            >
-              {custom && color ? (
-                <BotAvatar color={color} size={26} />
-              ) : (
-                <Pipette aria-hidden size={14} />
-              )}
-            </button>
-          </div>
-          {picking && <ColorPicker value={color ?? AVATAR_PALETTE[0]} onChange={setColor} />}
-          {!editing && color === undefined && (
-            <p className="text-muted text-xs">{t.bots.dialog.colorUnset}</p>
-          )}
-        </fieldset>
         {error && (
           <p role="alert" className="text-danger text-sm">
             {error}

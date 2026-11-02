@@ -203,7 +203,7 @@ export const ChatComposer = memo(function ChatComposer({
           {later}
         </p>
       )}
-      <div className="@container rounded-2xl border border-line-strong bg-panel shadow-sm transition-colors focus-within:border-muted">
+      <div className="@container rounded-bubble border border-line bg-panel shadow-rest transition-colors focus-within:border-line-strong">
         {replying && onCancelReply && <ReplyBar target={replying} onCancel={onCancelReply} />}
         {files.files.length > 0 && (
           <ul aria-label={t.chat.composer.filesToSend} className="flex flex-wrap gap-2 px-3 pt-3">
