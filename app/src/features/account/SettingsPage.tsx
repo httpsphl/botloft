@@ -111,7 +111,7 @@ export function SettingsPage() {
             <Search
               aria-hidden
               size={14}
-              className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2.5 text-muted"
+              className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3.5 text-muted"
             />
             <input
               type="search"
@@ -119,7 +119,7 @@ export function SettingsPage() {
               placeholder={s.search}
               spellCheck={false}
               onChange={(event) => setQuery(event.target.value)}
-              className="h-8 w-full rounded-lg border border-line-strong bg-canvas pr-2.5 pl-8 text-ink text-sm outline-none placeholder:text-muted focus:border-accent"
+              className="h-9 w-full rounded-full border border-transparent bg-sunken pr-4 pl-9 text-ink text-sm outline-none transition-colors placeholder:text-muted focus:border-line-strong focus:bg-panel"
             />
           </label>
         </header>
@@ -133,9 +133,7 @@ export function SettingsPage() {
                   role="presentation"
                   className="flex flex-col gap-0.5 pt-4 first:pt-0"
                 >
-                  <p className="px-2.5 pb-1 font-semibold text-muted text-xs uppercase tracking-[0.12em]">
-                    {s[group.id]}
-                  </p>
+                  <p className="px-2.5 pb-1 font-medium text-muted text-xs">{s[group.id]}</p>
                   {group.pages.map(({ id: each, icon: Icon }) => {
                     const selected = each === page && !searching;
                     return (
@@ -147,10 +145,10 @@ export function SettingsPage() {
                         aria-selected={selected}
                         aria-controls={`${id}-panel`}
                         onClick={() => open(each)}
-                        className={`flex min-h-8 items-center gap-2 rounded-lg px-2.5 py-1 text-left font-medium text-sm transition-colors ${
+                        className={`flex min-h-9 items-center gap-2.5 rounded-xl px-2.5 py-1 text-left font-medium text-sm transition-colors ${
                           selected
-                            ? "bg-sunken text-ink"
-                            : "text-ink-soft hover:bg-sunken hover:text-ink"
+                            ? "bg-bubble text-ink"
+                            : "text-ink-soft hover:bg-bubble hover:text-ink"
                         }`}
                       >
                         <Icon aria-hidden size={15} className="shrink-0" />
