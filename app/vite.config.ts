@@ -8,6 +8,10 @@ import { defineConfig } from "vitest/config";
 // Set by `tauri dev` when targeting a remote device; unused on desktop.
 const host = process.env.TAURI_DEV_HOST;
 
+// Minifying drops comments; the libraries' license notices stay, as GSAP's
+// license asks.
+const notices = { comments: { legal: true } };
+
 // `vite build --mode setup` builds the setup window alone (setup.html,
 // spec 15.7) into dist-setup, which the botloft-setup crate embeds.
 // `vite build --mode phone` builds the phone's page (src/phone, spec 28.7)
@@ -47,12 +51,18 @@ export default defineConfig(({ mode }) => ({
     target: "chrome120",
     // The app's two windows: the main one and the island (spec 31.3).
     ...(mode !== "setup" &&
-      mode !== "phone" && { rollupOptions: { input: ["index.html", "island.html"] } }),
-    ...(mode === "setup" && { outDir: "dist-setup", rollupOptions: { input: "setup.html" } }),
+      mode !== "phone" && {
+        rollupOptions: { input: ["index.html", "island.html"], output: notices },
+      }),
+    ...(mode === "setup" && {
+      outDir: "dist-setup",
+      rollupOptions: { input: "setup.html", output: notices },
+    }),
     ...(mode === "phone" && {
       target: "es2022",
       outDir: fileURLToPath(new URL("./dist-phone", import.meta.url)),
       emptyOutDir: true,
+      rollupOptions: { output: notices },
     }),
   },
   test: {
