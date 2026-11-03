@@ -19,6 +19,7 @@ import { seedDesktop } from "./seedDesktop";
 import { seedHands } from "./seedHands";
 import { seedKeys } from "./seedKeys";
 import { seedLongReply } from "./seedLongReply";
+import { seedMaker } from "./seedMaker";
 import { activeTab, drawPage } from "./seedPage";
 import { seedPlan } from "./seedPlan";
 import { seedQuestions } from "./seedQuestions";
@@ -42,6 +43,10 @@ export function previewProps(search: string): { host: Host; connect: Connect } {
   }
   if (!params.has("empty")) {
     seed(fake);
+    seedMaker(fake);
+  } else {
+    // The daemon always keeps the Maker (spec 36.2).
+    fake.maker.ensure();
   }
   return { host, connect: () => fake as Client };
 }

@@ -28,6 +28,8 @@ pub struct Config {
     pub start_with_windows: bool,
     /// Keep the computer awake while a bot works (spec 14).
     pub keep_awake: bool,
+    /// The Maker builds without asking the owner first (spec 36.4).
+    pub maker_builds_without_asking: bool,
     pub log_level: String,
     pub supervisor: SupervisorConfig,
     pub courier: CourierConfig,
@@ -49,6 +51,7 @@ impl Default for Config {
             experimental_agents: Vec::new(),
             start_with_windows: true,
             keep_awake: true,
+            maker_builds_without_asking: false,
             log_level: "info".to_owned(),
             supervisor: SupervisorConfig::default(),
             courier: CourierConfig::default(),

@@ -245,6 +245,11 @@ export class FakeChat {
             ...(model && { model }),
           });
         }
+        // An allowed plan of the Maker is built, as the owner left it (spec 36.4).
+        if (allow && approval.toolName === "mcp__botloft__build") {
+          approval.input = input ?? approval.input;
+          this.fake.maker.build(approval.input, approval.id);
+        }
         // An allowed routine request becomes a routine, as the owner left it,
         // for the bot it names or the one that asked.
         if (allow && approval.toolName === ROUTINE_TOOL && bot) {

@@ -4,6 +4,7 @@ import { useT } from "../../i18n";
 import type { AgentCheck } from "../../lib/protocol.gen";
 import { SYSTEM } from "../../lib/system";
 import { prefs, usePref } from "../../shell/prefs";
+import { makerBot } from "../../store/app";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { useDaemonSettings } from "../account/useDaemonSettings";
@@ -27,6 +28,8 @@ export function Welcome() {
   const [creating, setCreating] = useState(false);
   const [idea, setIdea] = useState<CrewTemplate | undefined>(undefined);
   const checks = useApp((state) => state.system?.agentChecks ?? NO_CHECKS);
+  const maker = useApp(makerBot);
+  const selectBot = useApp((state) => state.selectBot);
   const otherReady = checks.some((check) => check.path !== null);
   const whenClosed = usePref(prefs.whenClosed);
   const { settings } = useDaemonSettings();
@@ -113,6 +116,19 @@ export function Welcome() {
           <p className="font-semibold">{w.askFirstTitle}</p>
           <p className="mt-1 text-ink-soft">{w.askFirstBody}</p>
         </div>
+        {maker && (
+          <button
+            type="button"
+            onClick={() => selectBot(maker.id)}
+            className="mt-6 flex w-full items-center gap-3 rounded-2xl bg-bubble p-4 text-left transition-[background-color,transform] duration-150 hover:-translate-y-0.5 hover:bg-line/60"
+          >
+            <BotAvatar color={maker.color} size={40} mood="awake" />
+            <span className="flex min-w-0 flex-col gap-0.5">
+              <span className="font-semibold text-sm">{t.maker.startHere}</span>
+              <span className="text-ink-soft text-sm">{t.maker.startHereHint}</span>
+            </span>
+          </button>
+        )}
         <section aria-label={w.ideasTitle} className="mt-6">
           <h2 className="font-semibold text-base">{w.ideasTitle}</h2>
           <ul className="m-0 mt-3 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2">

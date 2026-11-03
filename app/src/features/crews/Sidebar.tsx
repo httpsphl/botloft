@@ -12,7 +12,8 @@ import { createPortal } from "react-dom";
 import { useShallow } from "zustand/react/shallow";
 import { useT } from "../../i18n";
 import type { Crew, CrewId } from "../../lib/protocol.gen";
-import { crewList } from "../../store/app";
+import { prefs, usePref } from "../../shell/prefs";
+import { crewList, makerBot } from "../../store/app";
 import { useApp } from "../../store/context";
 import { unreadIn } from "../../store/seen";
 import { CountBadge } from "../../ui/Badge";
@@ -74,6 +75,7 @@ export function Sidebar() {
         </div>
         {crews.length > 0 && <StateFilters />}
         <ul ref={list} className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
+          <MakerEntry />
           {crews.map((crew) => (
             <CrewEntry key={crew.id} crew={crew} ids={ids} drag={drag} />
           ))}
@@ -81,6 +83,23 @@ export function Sidebar() {
       </nav>
       {creating && <CrewDialog onClose={() => setCreating(false)} />}
     </div>
+  );
+}
+
+/** The Maker, above the crews, unless the owner hid it (spec 36.3). */
+function MakerEntry() {
+  const shown = usePref(prefs.showMaker);
+  const maker = useApp(makerBot);
+  const crew = useApp((state) => (maker ? state.crews[maker.crewId] : undefined));
+  if (!shown || !maker || !crew) {
+    return null;
+  }
+  return (
+    <li className="mt-1">
+      <ul>
+        <Conversation bot={maker} crew={crew} />
+      </ul>
+    </li>
   );
 }
 

@@ -34,6 +34,7 @@ pub(crate) fn create_chief(
 pub fn set_lead(daemon: &Daemon, params: CrewsSetLeadParams) -> ApiResult<Crew> {
     let store = daemon.store();
     let mut crew = crews::active(&store, &params.crew_id)?;
+    super::maker::refuse(&crew, "has no chief: it works alone")?;
     if let Some(bot) = &params.bot_id {
         let (bot_crew, _) = bots::active(&store, bot)?;
         if bot_crew.id != crew.id {

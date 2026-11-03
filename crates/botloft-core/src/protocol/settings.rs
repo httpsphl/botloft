@@ -27,6 +27,9 @@ pub struct Settings {
     /// The experimental agents (Antigravity and Codex) can be chosen for
     /// new bots. Off, bots that already use one keep working (spec 30).
     pub show_experimental_agents: bool,
+    /// The Maker builds its plans without the owner's card; each build can
+    /// still be undone (spec 36.4).
+    pub maker_builds_without_asking: bool,
 }
 
 /// The settings to change; the ones left out stay as they are.
@@ -54,6 +57,9 @@ pub struct SettingsUpdateParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub show_experimental_agents: Option<bool>,
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub maker_builds_without_asking: Option<bool>,
 }
 
 /// The longest a permission request may wait for the owner: a day.

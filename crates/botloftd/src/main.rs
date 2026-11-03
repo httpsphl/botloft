@@ -148,6 +148,10 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
     });
     // No bot process survived the last run, so nobody waits for these.
     approvals::expire_all(&daemon);
+    // Before the supervisor looks at the bots (spec 36.2).
+    if let Err(err) = botloftd::service::maker::ensure(&daemon) {
+        warn!("could not make the Maker: {err}");
+    }
     // Ctrl+Alt+Esc stops every bot on the desktop, app open or not (spec 24.9).
     let stopping = Arc::clone(&daemon);
     match platform::desktop::on_stop_key(move || botloftd::service::desktop::stop_all(&stopping)) {

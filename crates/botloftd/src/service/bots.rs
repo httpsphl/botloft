@@ -59,6 +59,7 @@ pub fn create(daemon: &Daemon, params: BotsCreateParams) -> ApiResult<Bot> {
     }
     let store = daemon.store();
     let crew = crews::active(&store, &params.crew_id)?;
+    super::maker::refuse(&crew, "works alone in its crew")?;
     let record = insert(daemon, &store, &crew, BotId::generate(), new)?;
     let bot = changed(daemon, &store, &crew, record);
     daemon.supervisor.wake();
@@ -155,6 +156,9 @@ pub(crate) fn insert(
 pub fn update(daemon: &Daemon, params: BotsUpdateParams) -> ApiResult<Bot> {
     let store = daemon.store();
     let (crew, mut record) = active(&store, &params.bot_id)?;
+    if params.name.is_some() {
+        super::maker::refuse(&crew, "keeps its name in every language")?;
+    }
     if let Some(name) = params.name {
         record.name = validate::name("name", &name)?;
         record.handle = slug::slugify(&record.name, "bot");
@@ -261,6 +265,7 @@ pub fn archive(daemon: &Daemon, params: BotIdParams) -> ApiResult<Bot> {
     let store = daemon.store();
     let mut record = find(&store, &params.bot_id)?;
     let crew = crews::find(&store, &record.crew_id)?;
+    super::maker::refuse(&crew, "is always there: hide it in Settings instead")?;
     if record.archived_at.is_some() {
         return Ok(to_protocol(daemon, &store, &crew, record));
     }

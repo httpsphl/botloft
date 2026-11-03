@@ -27,6 +27,7 @@ pub fn bot(daemon: &Daemon, params: BotsDeleteParams) -> ApiResult<BotDeleted> {
     let store = daemon.store();
     let record = bots::find(&store, &params.bot_id)?;
     let crew = crews::find(&store, &record.crew_id)?;
+    super::maker::refuse(&crew, "is always there: hide it in Settings instead")?;
     let notices = task_notices(&store, &crew, &record)?;
     let waiting = store.pending_approvals(&record.id)?;
     let folder = daemon.paths.bot_workspace(&crew.slug, &record.slug);
@@ -61,6 +62,7 @@ pub fn bot(daemon: &Daemon, params: BotsDeleteParams) -> ApiResult<BotDeleted> {
 pub fn crew(daemon: &Daemon, params: CrewsDeleteParams) -> ApiResult<CrewDeleted> {
     let store = daemon.store();
     let crew = crews::find(&store, &params.crew_id)?;
+    super::maker::refuse(&crew, "keeps its crew")?;
     let bots = store.bots(Some(&crew.id), true)?;
     let mut waiting = Vec::new();
     for bot in &bots {

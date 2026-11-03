@@ -39,9 +39,14 @@ pub const DESKTOP_TOOL: &str = "mcp__botloft__desktop";
 /// A bot asking the owner to do something in its browser themselves (spec
 /// 21.10), opened from inside `browser_ask_owner`.
 pub const BROWSER_HELP_TOOL: &str = "mcp__botloft__browser_help";
+/// The Maker building crews, agents and routines in one go (spec 36.4).
+pub const BUILD_TOOL: &str = "mcp__botloft__build";
 /// Longest bot or routine suggestion kept, in bytes: the owner reads and
 /// edits all of it.
 pub const SUGGESTION_INPUT_MAX: usize = 64 * 1024;
+/// Longest plan of the Maker kept, in bytes: several crews, each with its
+/// agents' instructions.
+pub const BUILD_INPUT_MAX: usize = 256 * 1024;
 /// Longest tool output kept, in bytes.
 pub const TOOL_OUTPUT_MAX: usize = 8 * 1024;
 /// Longest activity line, in characters.
@@ -77,6 +82,7 @@ pub fn tool_input_max(tool: &str) -> usize {
     match tool {
         PLAN_TOOL | SHOW_PLAN_TOOL => PLAN_INPUT_MAX,
         SUGGEST_TOOL | ROUTINE_TOOL | CHANGE_ROUTINE_TOOL | CHANGE_BOT_TOOL => SUGGESTION_INPUT_MAX,
+        BUILD_TOOL => BUILD_INPUT_MAX,
         tool if is_command(tool) => COMMAND_INPUT_MAX,
         _ => TOOL_INPUT_MAX,
     }
@@ -124,6 +130,7 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
         BROWSER_SITE_TOOL => field(input, "site").map(str::to_owned),
         CREW_ACCESS_TOOL => field(input, "crew").map(str::to_owned),
         SHOW_PLAN_TOOL => field(input, "summary").map(str::to_owned),
+        BUILD_TOOL => field(input, "title").map(str::to_owned),
         DESKTOP_TOOL => field(input, "app").map(str::to_owned),
         "mcp__botloft__desktop_look" | "mcp__botloft__desktop_screenshot" => {
             field(input, "why").map(str::to_owned)

@@ -20,11 +20,11 @@ import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { SeenSince } from "../../ui/motion";
-import { BotAvatar, moodOf } from "../bots/BotAvatar";
 import { CallPills, useLiveCalls } from "../messages/CallPills";
 import { Reminders } from "../routines/Reminders";
 import { BotRun, type Live } from "./BotRun";
 import { ChatComposer } from "./ChatComposer";
+import { ChatEmpty } from "./ChatEmpty";
 import { followTop } from "./follow";
 import { InboundRow } from "./InboundRow";
 import { NoticeRow } from "./NoticeRow";
@@ -239,20 +239,7 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
             </p>
           )}
           {chat.items.length === 0 && !chat.loading && !chat.error && !live && (
-            <div className="flex flex-col items-center gap-3 py-16 text-center">
-              <span className="animate-float">
-                <BotAvatar
-                  color={bot.color}
-                  size={56}
-                  mood={moodOf(bot, stopped)}
-                  botId={bot.id}
-                  starting={bot.state === "launching"}
-                />
-              </span>
-              <p className="font-semibold text-base">{t.chat.view.emptyTitle(bot.name)}</p>
-              {bot.role && <p className="max-w-md text-ink-soft text-sm">{bot.role}</p>}
-              <p className="max-w-md text-muted text-sm">{t.chat.view.emptyBody}</p>
-            </div>
+            <ChatEmpty bot={bot} stopped={stopped} />
           )}
           <StartReply.Provider value={setReplying}>
             <ReactionsOf.Provider value={reactions}>

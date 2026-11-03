@@ -34,6 +34,7 @@ pub fn add(daemon: &Daemon, params: CatalogAddParams) -> ApiResult<Bot> {
     new.effort = template.effort;
     let store = daemon.store();
     let crew = crews::active(&store, &params.crew_id)?;
+    super::maker::refuse(&crew, "works alone in its crew")?;
     let record = bots::insert(
         daemon,
         &store,

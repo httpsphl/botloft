@@ -43,6 +43,7 @@ impl LiveSettings {
             // A name this build does not know is Claude Code.
             default_agent: config.default_agent.parse().unwrap_or(AgentKind::Claude),
             show_experimental_agents: !config.experimental_agents.is_empty(),
+            maker_builds_without_asking: config.maker_builds_without_asking,
         };
         Self {
             file,
@@ -136,6 +137,9 @@ impl LiveSettings {
         if let Some(show) = update.show_experimental_agents {
             current.settings.show_experimental_agents = show;
         }
+        if let Some(without_asking) = update.maker_builds_without_asking {
+            current.settings.maker_builds_without_asking = without_asking;
+        }
         Ok(current.settings)
     }
 
@@ -189,6 +193,13 @@ fn write(file: &Path, update: SettingsUpdateParams) -> io::Result<()> {
     }
     if let Some(agent) = update.default_agent {
         set(config.as_table_mut(), "default_agent", agent.as_str());
+    }
+    if let Some(without_asking) = update.maker_builds_without_asking {
+        set(
+            config.as_table_mut(),
+            "maker_builds_without_asking",
+            without_asking,
+        );
     }
     if let Some(show) = update.show_experimental_agents {
         let mut names = toml_edit::Array::new();
@@ -270,6 +281,7 @@ mod tests {
                 sleep_after_minutes: 30,
                 default_agent: AgentKind::Claude,
                 show_experimental_agents: false,
+                maker_builds_without_asking: false,
             }
         );
         assert!(awake.has_changed().expect("sender") && !*awake.borrow_and_update());
@@ -289,6 +301,7 @@ mod tests {
                 sleep_after_minutes: Some(0),
                 default_agent: None,
                 show_experimental_agents: None,
+                maker_builds_without_asking: Some(true),
             })
             .expect("save");
         let text = std::fs::read_to_string(&file).expect("read");
@@ -299,6 +312,7 @@ mod tests {
         assert!(text.contains("approval_timeout_minutes = 240 # half an hour"));
         let config = Config::parse(&text).expect("parse");
         assert!(config.keep_awake && !config.start_with_windows);
+        assert!(config.maker_builds_without_asking);
         assert_eq!(config.bots.approval_timeout_minutes, 240);
         // 0 is never: agents stay up (spec 7.7).
         assert_eq!(config.bots.sleep_after_minutes, 0);
@@ -312,6 +326,7 @@ mod tests {
                 sleep_after_minutes: 0,
                 default_agent: AgentKind::Claude,
                 show_experimental_agents: false,
+                maker_builds_without_asking: true,
             }
         );
         assert_eq!(settings.approval_wait(), Duration::from_secs(4 * 3600));

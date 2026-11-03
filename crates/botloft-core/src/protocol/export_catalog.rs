@@ -28,4 +28,11 @@ pub(super) fn methods(out: &mut Out) {
         &out.name::<CatalogAddParams>(),
         &out.name::<Bot>(),
     );
+    // What the Maker built from the catalog, and undoing it (spec 36.4).
+    out.method(method::BUILDS_LIST, "undefined", &out.name::<Vec<Build>>());
+    out.method(
+        method::BUILDS_UNDO,
+        &out.name::<BuildIdParams>(),
+        &out.name::<Build>(),
+    );
 }
