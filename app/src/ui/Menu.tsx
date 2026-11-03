@@ -72,10 +72,13 @@ export function Menu({
   label,
   icon,
   items,
+  text,
 }: {
   label: string;
   icon: LucideIcon;
   items: MenuItem[];
+  /** Words beside the icon, on a primary button; without them, the icon alone. */
+  text?: string;
 }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -88,14 +91,26 @@ export function Menu({
 
   return (
     <div ref={root} className="relative">
-      <Button
-        variant="ghost"
-        icon={icon}
-        label={label}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-      />
+      {text ? (
+        <Button
+          variant="primary"
+          icon={icon}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+        >
+          {text}
+        </Button>
+      ) : (
+        <Button
+          variant="ghost"
+          icon={icon}
+          label={label}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+        />
+      )}
       {open && (
         <div
           role="menu"

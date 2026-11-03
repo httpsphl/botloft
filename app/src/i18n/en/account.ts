@@ -323,7 +323,7 @@ export const account = {
     restoreFailed: (name: string) => `Could not restore ${name}`,
     about: "About",
     backup: "Backup",
-    tools: "Connected tools",
+    tools: "Tools",
     permissions: "Permissions",
     account: "Account and phone",
     groupDaily: "Every day",

@@ -22,17 +22,27 @@ async function openTools() {
   fireEvent.click(await screen.findByRole("button", { name: /Ana Lima/ }));
   fireEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
   const dialog = screen.getByRole("region", { name: "Settings" });
-  fireEvent.click(within(dialog).getByRole("tab", { name: "Connected tools" }));
+  fireEvent.click(within(dialog).getByRole("tab", { name: "Tools" }));
   return { fake, scout, dialog };
 }
 
 const type = (field: HTMLElement, value: string) => fireEvent.change(field, { target: { value } });
 
+/** "Add", then "Paste a configuration" (spec 34.7). */
+async function startAdding(dialog: HTMLElement) {
+  fireEvent.click(await within(dialog).findByRole("button", { name: "Add" }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "Paste a configuration" }));
+}
+
 describe("connected tools", () => {
   test("a pasted program is connected only after the owner says they trust it", async () => {
     const { fake, dialog } = await openTools();
-    expect(await within(dialog).findByText("No tools connected yet.")).toBeDefined();
-    fireEvent.click(within(dialog).getByRole("button", { name: "Connect a tool…" }));
+    expect(
+      await within(dialog).findByText(
+        "No tools yet. Discover what you can connect, or paste a configuration.",
+      ),
+    ).toBeDefined();
+    await startAdding(dialog);
 
     const adding = screen.getByRole("dialog", { name: "Connect a tool" });
     type(within(adding).getByLabelText("Paste its settings"), LINKEDIN);
@@ -50,7 +60,7 @@ describe("connected tools", () => {
       expect(screen.queryByRole("dialog", { name: "Connect a tool" })).toBeNull(),
     );
     expect(within(dialog).getByText("LinkedIn".toLowerCase())).toBeDefined();
-    expect(within(dialog).getByText("No agent uses it yet")).toBeDefined();
+    expect(within(dialog).getByText("No agent yet")).toBeDefined();
     const saved = fake.calls.find((each) => each.method === "mcp.save");
     expect(saved?.params).toMatchObject({
       name: "linkedin",
@@ -63,7 +73,7 @@ describe("connected tools", () => {
 
   test("what is not understood is named, and nothing is saved", async () => {
     const { fake, dialog } = await openTools();
-    fireEvent.click(await within(dialog).findByRole("button", { name: "Connect a tool…" }));
+    await startAdding(dialog);
     const adding = screen.getByRole("dialog", { name: "Connect a tool" });
     type(
       within(adding).getByLabelText("Paste its settings"),
@@ -79,7 +89,7 @@ describe("connected tools", () => {
 
   test("settings without a name ask for one", async () => {
     const { dialog } = await openTools();
-    fireEvent.click(await within(dialog).findByRole("button", { name: "Connect a tool…" }));
+    await startAdding(dialog);
     const adding = screen.getByRole("dialog", { name: "Connect a tool" });
     type(
       within(adding).getByLabelText("Paste its settings"),
@@ -97,7 +107,7 @@ describe("connected tools", () => {
 
   test("an agent gets a tool when the owner turns it on, and shows how it came up", async () => {
     const { fake, scout, dialog } = await openTools();
-    fireEvent.click(await within(dialog).findByRole("button", { name: "Connect a tool…" }));
+    await startAdding(dialog);
     const adding = screen.getByRole("dialog", { name: "Connect a tool" });
     type(within(adding).getByLabelText("Paste its settings"), LINKEDIN);
     fireEvent.click(within(adding).getByLabelText("I understand and I trust it"));

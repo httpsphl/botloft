@@ -248,7 +248,7 @@ describe("the page of settings", () => {
       "Chat",
       "Notifications",
       "Account and phone",
-      "Connected tools",
+      "Tools",
       "Permissions",
       "Backup",
       "Security",
