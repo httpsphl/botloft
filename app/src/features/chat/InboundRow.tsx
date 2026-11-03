@@ -11,7 +11,7 @@ import { useArrival } from "../../ui/motion";
 import { BOTLOFT_COLOR, BotAvatar } from "../bots/BotAvatar";
 import { DeliveryStatus } from "../messages/DeliveryStatus";
 import { AttachmentList } from "./AttachmentList";
-import { Mentions } from "./mentions";
+import { ChatText } from "./ChatText";
 import { Repliable, ReplyQuote } from "./Replying";
 
 /** Read by the bot: the line under it no longer says anything new. */
@@ -34,10 +34,10 @@ function OwnerMessage({ message, bot, last }: { message: Message; bot: Bot; last
             {clock(message.createdAt)}
           </time>
           <p
-            className="chat-own max-w-[36rem] whitespace-pre-wrap break-words rounded-bubble bg-bubble-own px-4 py-2.5 text-bubble-own-ink leading-relaxed"
+            className="chat-own max-w-[36rem] whitespace-pre-wrap break-words rounded-bubble bg-bubble-own px-4 py-2.5 text-bubble-own-ink leading-relaxed [&_a]:text-bubble-own-link"
             data-selectable
           >
-            <Mentions text={message.body} />
+            <ChatText text={message.body} />
           </p>
         </div>
       )}
@@ -129,7 +129,7 @@ function OtherMessage({ message, itemId }: { message: Message; itemId: string })
               className={`max-w-[36rem] ${routine ? "animate-rise" : ""} whitespace-pre-wrap break-words rounded-bubble border border-line bg-panel px-4 py-2.5 leading-relaxed ${system ? "text-ink-soft" : ""}`}
               data-selectable
             >
-              <Mentions text={message.body} />
+              <ChatText text={message.body} />
             </p>
           </Repliable>
         )}
