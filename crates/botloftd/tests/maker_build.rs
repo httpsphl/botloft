@@ -55,21 +55,33 @@ async fn the_owner_builds_the_plan_and_can_undo_it() {
         .call("bots.list", json!({ "crewId": crew["id"] }))
         .await
         .expect("bots");
-    let names: Vec<&str> = bots
+    // Both are made in the same millisecond, so the list's order between
+    // them is the ids' and changes from run to run.
+    let mut names: Vec<&str> = bots
         .as_array()
         .expect("bots")
         .iter()
         .map(|bot| bot["name"].as_str().expect("name"))
         .collect();
+    names.sort_unstable();
     assert_eq!(names, ["Chief", "Writer"]);
-    assert_eq!(crew["leadBotId"], bots[0]["id"]);
+    let named = |name: &str| {
+        bots.as_array()
+            .expect("bots")
+            .iter()
+            .find(|bot| bot["name"] == name)
+            .expect("bot")
+            .clone()
+    };
+    let (chief, writer) = (named("Chief"), named("Writer"));
+    assert_eq!(crew["leadBotId"], chief["id"]);
     let routines = m
         .app
-        .call("routines.list", json!({ "botId": bots[1]["id"] }))
+        .call("routines.list", json!({ "botId": writer["id"] }))
         .await
         .expect("routines");
     assert_eq!(routines[0]["name"], "Weekly post");
-    let workspace = bots[0]["workspace"].as_str().expect("workspace");
+    let workspace = chief["workspace"].as_str().expect("workspace");
     let memory = Path::new(workspace)
         .parent()
         .expect("crew")
