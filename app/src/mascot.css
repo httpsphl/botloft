@@ -27,9 +27,14 @@
     transition: d 800ms ease-in-out;
   }
 
+  /* Open as a polygon, as every face is (mascot-look.css), so the shapes
+     ease into each other. */
   .avatar-eye {
     transform-origin: 50%;
-    transition: opacity 320ms var(--ease-out);
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+    transition:
+      opacity 320ms var(--ease-out),
+      clip-path 320ms var(--ease-out);
   }
 
   .avatar-closed,

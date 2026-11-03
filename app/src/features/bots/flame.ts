@@ -6,12 +6,15 @@
 // frames of flameFrames.ts and moving the embers up and away. Between two
 // steps nothing changes and the WebView draws nothing. It stands still
 // while the window is out of sight or has no focus, as the eyes do
-// (eyeMoments.ts), and with less motion shows the flame as drawn.
+// (eyeMoments.ts), and with less motion shows the flame as drawn. A mascot
+// scrolled or folded out of view is not stepped at all. The same steps
+// move the parts that go with the flame (ticks.ts).
 
 import { type RefObject, useLayoutEffect } from "react";
 import { lessMotion, resting } from "./eyeMoments";
 import { WORKING_FRAMES } from "./flameFrames";
 import { OUTLINE, SPARKS } from "./mascotArt";
+import { settleParts, stepParts } from "./ticks";
 
 /** Steps a second: smooth to the eye, a sixth of a fast screen's frames. */
 export const FPS = 30;
@@ -93,6 +96,9 @@ interface Ember {
 }
 
 interface Burning {
+  svg: SVGSVGElement;
+  /** On screen, as far as the browser said; unknown counts as on. */
+  seen: boolean;
   fires: SVGPathElement[];
   embers: Ember[];
   /** Where in its turn this flame starts, so a crew's flames do not burn together. */
@@ -103,7 +109,20 @@ const burning = new Map<SVGSVGElement, Burning>();
 let timer: ReturnType<typeof setTimeout> | undefined;
 let asDrawn = false;
 
-function draw({ fires, embers, offset }: Burning, now: number): void {
+/** Tells each flame whether it is on screen, where the browser can say. */
+const watcher =
+  typeof IntersectionObserver === "function"
+    ? new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          const flame = burning.get(entry.target as SVGSVGElement);
+          if (flame) flame.seen = entry.isIntersecting;
+        }
+      })
+    : null;
+
+function draw({ svg, seen, fires, embers, offset }: Burning, now: number): void {
+  if (!seen) return;
+  stepParts(svg, (now + offset) / 1000);
   const d = flameAt((now + offset) / TURN_MS);
   for (const fire of fires) fire.setAttribute("d", d);
   for (const { path, delay, drift, turn } of embers) {
@@ -115,7 +134,8 @@ function draw({ fires, embers, offset }: Burning, now: number): void {
 }
 
 /** Back to the flame as drawn, with no embers. */
-function settle({ fires, embers }: Burning): void {
+function settle({ svg, fires, embers }: Burning): void {
+  settleParts(svg);
   for (const fire of fires) fire.setAttribute("d", OUTLINE);
   for (const { path } of embers) {
     path.style.removeProperty("opacity");
@@ -140,6 +160,8 @@ function step(): void {
 /** Starts the flame of `svg` burning; returns what puts it out. */
 export function burn(svg: SVGSVGElement, offset = 0): () => void {
   const flame: Burning = {
+    svg,
+    seen: true,
     fires: [...svg.querySelectorAll<SVGPathElement>(".avatar-fire")],
     embers: [...svg.querySelectorAll<SVGElement>(".avatar-spark")].map((path, index) => {
       const spark = SPARKS[index % SPARKS.length];
@@ -153,10 +175,12 @@ export function burn(svg: SVGSVGElement, offset = 0): () => void {
     offset,
   };
   burning.set(svg, flame);
+  watcher?.observe(svg);
   if (!lessMotion()) draw(flame, performance.now());
   if (timer === undefined) timer = setTimeout(step, 1000 / FPS);
   return () => {
     burning.delete(svg);
+    watcher?.unobserve(svg);
     settle(flame);
     if (burning.size === 0 && timer !== undefined) {
       clearTimeout(timer);

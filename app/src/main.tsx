@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import packageJson from "../package.json";
 import { App } from "./App";
 import { startEyeMoments } from "./features/bots/eyeMoments";
+import { startFidgets } from "./features/bots/fidgets";
 import type { Connect } from "./features/onboarding/link";
 import { currentLocale } from "./i18n";
 import { connect, rpcUrl } from "./lib/client";
@@ -38,6 +39,8 @@ async function props(): Promise<{ host: Host; connect: Connect }> {
 // The mascot reel (dev/Reel.tsx), a page to record videos from.
 if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("reel")) {
   import("./dev/Reel").then(({ Reel }) => createRoot(root).render(<Reel />));
+} else if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("lab")) {
+  import("./dev/MascotLab").then(({ MascotLab }) => createRoot(root).render(<MascotLab />));
 } else if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("flame")) {
   import("./dev/FlameBench").then(({ FlameBench }) => createRoot(root).render(<FlameBench />));
 } else {
@@ -49,8 +52,9 @@ if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("reel
       document.documentElement.dataset.motion = "less";
     }
     watchVisibility();
-    // The mascots blink and look around in moments, not forever.
+    // The mascots blink, look around and fidget in moments, not forever.
     startEyeMoments();
+    startFidgets();
     // Opened at sign-in, the window stays hidden until the owner opens it.
     host.launchedAtSignIn().then(
       (hidden) => hidden && !document.hasFocus() && markHidden(true),

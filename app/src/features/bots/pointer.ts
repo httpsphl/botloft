@@ -130,6 +130,13 @@ export function hop(svg: SVGSVGElement, height = 1): void {
   poking.set(poke, tl);
 }
 
+/** `svg` shivers for a moment: one of its bot's tools just failed (mascotLook.ts). */
+export function shiver(svg: SVGSVGElement): void {
+  const poke = svg.querySelector(".avatar-poke");
+  if (!poke || still()) return;
+  gsap.to(poke, { keyframes: { x: [-30, 30, -22, 22, -12, 0] }, duration: 0.5, ease: "none" });
+}
+
 /** Lets the mascot drawn in `svg` play with the mouse while `on`. */
 export function usePointerPlay(svg: RefObject<SVGSVGElement | null>, on: boolean): void {
   useEffect(() => {

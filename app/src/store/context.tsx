@@ -2,6 +2,7 @@
 
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 import { useStore } from "zustand";
+import { createStore, type StoreApi } from "zustand/vanilla";
 import type { BotloftApi } from "../lib/api";
 import type { Host } from "../lib/host";
 import { type AppState, type AppStore, createAppStore } from "./app";
@@ -54,6 +55,14 @@ export function useOptionalApi(): BotloftApi | null {
 
 export function useApp<T>(selector: (state: AppState) => T): T {
   return useStore(required(useContext(StoreContext), "AppStore"), selector);
+}
+
+const NO_STORE: StoreApi<AppState | null> = createStore<AppState | null>()(() => null);
+
+/** From the store where there is one, else `fallback`: a mascot also shows outside the app. */
+export function useOptionalApp<T>(selector: (state: AppState) => T, fallback: T): T {
+  const store = useContext(StoreContext) as StoreApi<AppState | null> | null;
+  return useStore(store ?? NO_STORE, (state) => (state ? selector(state) : fallback));
 }
 
 /** The store itself, for actions that set state outside the store's own. */
