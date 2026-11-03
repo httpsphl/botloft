@@ -127,6 +127,51 @@ pub struct BotContextChanged {
     pub context: Option<ContextUsage>,
 }
 
+text_enum!(
+    /// What a bot left running in the background (spec 33.4), from
+    /// Claude Code's `task_type`.
+    BackgroundKind, "background kind" {
+        /// A shell command, or a monitor watching one (`local_bash`).
+        Command => "command",
+        /// A subagent (`local_agent`).
+        Agent => "agent",
+        /// An agent running elsewhere (`remote_agent`).
+        Remote => "remote",
+        Other => "other",
+    }
+);
+
+/// A task a bot left running in the background (spec 33.4).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BackgroundTask {
+    /// Claude Code's id, which `bots.stopTask` takes.
+    pub task_id: String,
+    pub kind: BackgroundKind,
+    /// What the bot said it is.
+    pub description: String,
+    /// When the daemon first saw it running, in Unix milliseconds.
+    pub seen_at: i64,
+}
+
+/// Params of the `bot.background` notification: the whole live list.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BotBackgroundChanged {
+    pub bot_id: BotId,
+    pub tasks: Vec<BackgroundTask>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BotsStopTaskParams {
+    pub bot_id: BotId,
+    pub task_id: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

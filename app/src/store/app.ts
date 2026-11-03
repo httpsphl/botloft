@@ -333,6 +333,13 @@ export function applyEvent(state: AppState, event: ServerEvent): Partial<AppStat
       }
       return { bots: { ...state.bots, [bot.id]: { ...bot, context: event.params.context } } };
     }
+    case "bot.background": {
+      const bot = state.bots[event.params.botId];
+      if (!bot) {
+        return null;
+      }
+      return { bots: { ...state.bots, [bot.id]: { ...bot, background: event.params.tasks } } };
+    }
     case "chat.item": {
       const { item, activity } = event.params;
       if (!state.bots[item.botId] || !activity) {

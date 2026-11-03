@@ -17,6 +17,7 @@ use crate::{context, service};
 const SETTINGS: &str = "botloft-settings-";
 const CONTEXT: &str = "botloft-context-";
 const MCP: &str = "botloft-mcp-";
+const STOP: &str = "botloft-stop-";
 
 static NEXT: AtomicU64 = AtomicU64::new(1);
 
@@ -44,6 +45,18 @@ pub(crate) fn context_request() -> Bytes {
 /// (spec 25.5).
 pub(crate) fn mcp_request() -> Bytes {
     request(MCP, "mcp_status")
+}
+
+/// Asks the process to end one of its background tasks (spec 33.4). It
+/// answers with a new task list; the answer itself says nothing more.
+pub(crate) fn stop_task_request(task_id: &str) -> Bytes {
+    let id = format!("{STOP}{}", NEXT.fetch_add(1, Ordering::Relaxed));
+    let line = json!({
+        "type": "control_request",
+        "request_id": id,
+        "request": { "subtype": "stop_task", "task_id": task_id },
+    });
+    Bytes::from(format!("{line}\n"))
 }
 
 /// A `control_response` from the bot's process. A request this Claude Code

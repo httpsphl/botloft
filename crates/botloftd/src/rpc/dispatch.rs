@@ -56,6 +56,7 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::AGENTS_MODELS => reply(models::agent_models(daemon, parse(params)?)),
         method::BOTS_SET_EFFORT => reply(models::set_effort(daemon, parse(params)?)),
         method::BOTS_COMPACT => reply(crate::context::compact(daemon, parse(params)?)),
+        method::BOTS_STOP_TASK => reply(crate::background::stop(daemon, parse(params)?)),
         method::BOTS_ARCHIVE => reply(bots::archive(daemon, parse(params)?)),
         method::BOTS_DELETE => reply(delete::bot(daemon, parse(params)?)),
         method::BOTS_RESTART => reply(bots::restart(daemon, parse(params)?)),

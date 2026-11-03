@@ -6,11 +6,12 @@ use std::sync::{Arc, Mutex, MutexGuard, TryLockError};
 use std::time::Instant;
 
 use botloft_core::protocol::{
-    AccountUsage, AgentUsage, AutoBackupStatus, Bot, BotContextChanged, BotDeleted, BotDesktop,
-    BotMcp, BotRules, BotSites, BotStateChanged, BrowserAction, BrowserState, ChatDelta,
-    ChatItemChanged, CloudProgress, CloudSignedIn, Crew, CrewDeleted, Delivery, DesktopAwayUse,
-    DesktopState, FolderRecycled, McpOverview, Message, MobilePairRequest, MobileStatus, Question,
-    ReactionChanged, Routine, RoutineRun, ScreenDraft, Task,
+    AccountUsage, AgentUsage, AutoBackupStatus, Bot, BotBackgroundChanged, BotContextChanged,
+    BotDeleted, BotDesktop, BotMcp, BotRules, BotSites, BotStateChanged, BrowserAction,
+    BrowserState, ChatDelta, ChatItemChanged, CloudProgress, CloudSignedIn, Crew, CrewDeleted,
+    Delivery, DesktopAwayUse, DesktopState, FolderRecycled, McpOverview, Message,
+    MobilePairRequest, MobileStatus, Question, ReactionChanged, Routine, RoutineRun, ScreenDraft,
+    Task,
 };
 use botloft_store::Store;
 use tokio::runtime::{Handle, RuntimeFlavor};
@@ -43,6 +44,7 @@ pub enum Event {
     FolderRecycled(FolderRecycled),
     BotState(BotStateChanged),
     BotContext(BotContextChanged),
+    BotBackground(BotBackgroundChanged),
     BotRules(BotRules),
     BotDesktop(BotDesktop),
     BotSites(BotSites),
@@ -142,6 +144,7 @@ pub struct Daemon {
     pub costs: crate::service::plan::CostMeter,
     pub trash: Arc<dyn Trash>,
     pub contexts: Contexts,
+    pub background: crate::background::Backgrounds,
     /// How each bot's connected tools stand since it started (spec 25.5).
     pub mcp_states: crate::service::mcp_state::McpStates,
     /// The values of the agents' keys, read from their files (spec 32).
@@ -195,6 +198,7 @@ impl Daemon {
             costs: Default::default(),
             trash: options.trash,
             contexts: Contexts::default(),
+            background: Default::default(),
             mcp_states: Default::default(),
             keys: Default::default(),
             clock: options.clock,

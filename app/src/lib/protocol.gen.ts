@@ -251,6 +251,36 @@ export type BotContextChanged = { botId: BotId,
  */
 context: ContextUsage | null, };
 
+/**
+ * What a bot left running in the background (spec 33.4), from
+ * Claude Code's `task_type`.
+ */
+export type BackgroundKind = "command" | "agent" | "remote" | "other";
+
+/**
+ * A task a bot left running in the background (spec 33.4).
+ */
+export type BackgroundTask = { 
+/**
+ * Claude Code's id, which `bots.stopTask` takes.
+ */
+taskId: string, kind: BackgroundKind, 
+/**
+ * What the bot said it is.
+ */
+description: string, 
+/**
+ * When the daemon first saw it running, in Unix milliseconds.
+ */
+seenAt: number, };
+
+/**
+ * Params of the `bot.background` notification: the whole live list.
+ */
+export type BotBackgroundChanged = { botId: BotId, tasks: Array<BackgroundTask>, };
+
+export type BotsStopTaskParams = { botId: BotId, taskId: string, };
+
 export type BotsSetEffortParams = { botId: BotId, effort: BotEffort, };
 
 /**
@@ -302,7 +332,11 @@ effortDefault: ModelEffort | null,
 /**
  * How full the conversation is; `null` until Claude Code said so.
  */
-context: ContextUsage | null, state: BotState, 
+context: ContextUsage | null, 
+/**
+ * What the bot left running in the background (spec 33.4).
+ */
+background: Array<BackgroundTask>, state: BotState, 
 /**
  * Current process generation; `null` if the bot has not started since
  * the daemon did. Changes on every (re)start.
@@ -2641,6 +2675,7 @@ export interface RpcMethods {
   "tasks.list": { params: TasksListParams; result: Array<Task> };
   "bots.setEffort": { params: BotsSetEffortParams; result: Bot };
   "bots.compact": { params: BotIdParams; result: Bot };
+  "bots.stopTask": { params: BotsStopTaskParams; result: null };
   "usage.tokens": { params: UsageTokensParams; result: Array<BotTokens> };
   "rules.list": { params: RulesListParams; result: Array<AllowRule> };
   "rules.delete": { params: RuleIdParams; result: BotRules };
@@ -2742,6 +2777,7 @@ export interface RpcNotifications {
   "delivery.changed": Delivery;
   "task.changed": Task;
   "bot.context": BotContextChanged;
+  "bot.background": BotBackgroundChanged;
   "routine.changed": Routine;
   "routine.run": RoutineRun;
   "question.changed": Question;

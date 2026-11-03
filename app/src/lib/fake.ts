@@ -30,6 +30,7 @@ import { FakeScreens } from "./fakeScreens";
 import { searchHandlers } from "./fakeSearch";
 import { usageHandlers } from "./fakeUsage";
 import {
+  type BackgroundTask,
   type Bot,
   type BotId,
   type BotState,
@@ -196,6 +197,12 @@ export class FakeBotloft implements BotloftApi {
   setContext(botId: BotId, context: ContextUsage | null): void {
     this.bot(botId).context = context;
     this.emit({ name: "bot.context", params: { botId, context } });
+  }
+
+  /** What the bot left running in the background (spec 33.4). */
+  setBackground(botId: BotId, tasks: BackgroundTask[]): void {
+    this.bot(botId).background = tasks;
+    this.emit({ name: "bot.background", params: { botId, tasks } });
   }
 
   /** A new id with `prefix`, like the daemon's. */

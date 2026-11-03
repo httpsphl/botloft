@@ -14,6 +14,10 @@ pub(super) fn decls(out: &mut Out) {
     out.decl::<ContextFile>();
     out.decl::<ContextUsage>();
     out.decl::<BotContextChanged>();
+    out.decl::<BackgroundKind>();
+    out.decl::<BackgroundTask>();
+    out.decl::<BotBackgroundChanged>();
+    out.decl::<BotsStopTaskParams>();
     out.decl::<BotsSetEffortParams>();
 }
 
@@ -25,9 +29,20 @@ pub(super) fn methods(out: &mut Out) {
         &bot,
     );
     out.method(method::BOTS_COMPACT, &out.name::<BotIdParams>(), &bot);
+    out.method(
+        method::BOTS_STOP_TASK,
+        &out.name::<BotsStopTaskParams>(),
+        "null",
+    );
 }
 
 pub(super) fn notifications(out: &mut Out) {
     let context = out.name::<BotContextChanged>();
     let _ = writeln!(out.text, "  \"{}\": {context};", notification::BOT_CONTEXT);
+    let background = out.name::<BotBackgroundChanged>();
+    let _ = writeln!(
+        out.text,
+        "  \"{}\": {background};",
+        notification::BOT_BACKGROUND
+    );
 }

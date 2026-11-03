@@ -1,6 +1,6 @@
-// The preview's effort and conversation space (spec 7.4, 8.6): what Claude
-// Code would have reported for each bot, and a compaction that ends a
-// moment after it is asked for.
+// The preview's effort, conversation space and background tasks (spec 7.4,
+// 8.6, 33.4): what Claude Code would have reported for each bot, and a
+// compaction that ends a moment after it is asked for.
 
 import type { FakeBotloft } from "../lib/fake";
 import type { BotId, ContextPart, ContextUsage } from "../lib/protocol.gen";
@@ -50,6 +50,21 @@ export function seedContext(
   fake.setContext(bots.writer, holds(912_400, 1_000_000));
   fake.setContext(bots.reviewer, holds(61_800, 1_000_000));
   fake.setContext(bots.analyst, holds(24_300, 200_000));
+  const now = Date.now();
+  fake.setBackground(bots.scout, [
+    {
+      taskId: "bn5jw1at6",
+      kind: "command",
+      description: "Serve the site preview on port 4321",
+      seenAt: now - 12 * 60_000,
+    },
+    {
+      taskId: "a5c2e8f41",
+      kind: "agent",
+      description: "Check every link in the draft",
+      seenAt: now - 3 * 60_000,
+    },
+  ]);
 
   fake.subscribe((event) => {
     if (event.name !== "bot.context" || !event.params.context?.compacting) {

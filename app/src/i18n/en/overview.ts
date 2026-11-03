@@ -29,4 +29,14 @@ export const overview = {
     memory: "Memory files",
     memoryHint: (bot: string) => `What ${bot} reads at the start of every conversation.`,
   },
+  background: {
+    title: "Running in the background",
+    none: "Nothing running in the background.",
+    kind: { command: "Command", agent: "Subagent", remote: "Remote agent", other: "Task" },
+    since: (time: string) => `Since ${time}`,
+    stop: "Stop",
+    stopOne: (what: string) => `Stop: ${what}`,
+    stopFailed: "Could not stop the task",
+    hint: (bot: string) => `${bot} left these running. They end when ${bot} stops or restarts.`,
+  },
 };

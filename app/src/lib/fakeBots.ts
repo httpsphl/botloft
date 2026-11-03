@@ -4,7 +4,7 @@
 
 import type { FakeBotloft, Handlers } from "./fake";
 import { purgeBot } from "./fakeDelete";
-import { checkName, conflict } from "./fakeRules";
+import { checkName, conflict, notFound } from "./fakeRules";
 import { AVATAR_PALETTE, type Bot } from "./protocol.gen";
 
 type BotMethods = Extract<keyof Handlers, `bots.${string}`>;
@@ -42,6 +42,7 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
         effort: "default",
         effortDefault: null,
         context: null,
+        background: [],
         state: crew.paused ? "offline" : "launching",
         generation: crew.paused ? null : 1,
         workspace: `C:\\Users\\owner\\Botloft\\${crew.slug}\\${handle}`,
@@ -110,6 +111,18 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
         fake.setContext(botId, { ...bot.context, compacting: true });
       }
       return bot;
+    },
+    "bots.stopTask": ({ botId, taskId }) => {
+      const bot = fake.bot(botId);
+      if (!bot.background.some((task) => task.taskId === taskId)) {
+        throw notFound(`task ${taskId} of bot ${botId}`);
+      }
+      // Claude Code ends it and sends the list without it.
+      fake.setBackground(
+        botId,
+        bot.background.filter((task) => task.taskId !== taskId),
+      );
+      return null;
     },
     "bots.restart": ({ botId }) => {
       const bot = fake.bot(botId);
