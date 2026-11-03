@@ -81,6 +81,53 @@ pub struct GitEvent {
     pub at: i64,
 }
 
+text_enum!(
+    /// Where a pull request stands on GitHub.
+    PullState, "pull request state" {
+        Open => "open",
+        Draft => "draft",
+        Merged => "merged",
+        Closed => "closed",
+    }
+);
+
+/// How a pull request's checks went, counted.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct PullChecks {
+    pub passed: u32,
+    pub failed: u32,
+    /// Queued or running.
+    pub pending: u32,
+}
+
+/// A pull request the agent opened or touched, as GitHub has it now.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct PullRequest {
+    pub number: u32,
+    pub url: String,
+    pub title: String,
+    pub state: PullState,
+    pub additions: u32,
+    pub deletions: u32,
+    pub checks: PullChecks,
+}
+
+text_enum!(
+    /// Whether the owner's `gh` could tell about the pull requests.
+    GithubAccess, "github access" {
+        Ok => "ok",
+        /// `gh` is not installed.
+        Missing => "missing",
+        /// `gh` is installed but not signed in.
+        SignedOut => "signed_out",
+        Error => "error",
+    }
+);
+
 /// What `overview.changes` answers.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -89,4 +136,8 @@ pub struct OverviewChanges {
     pub repos: Vec<GitRepo>,
     /// Newest first, at most 50.
     pub events: Vec<GitEvent>,
+    /// The newest pull requests of `events`, at most 5, as GitHub has them.
+    pub prs: Vec<PullRequest>,
+    /// `null` when there was no pull request to ask about.
+    pub github: Option<GithubAccess>,
 }

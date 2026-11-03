@@ -6,7 +6,7 @@ mod common;
 use std::path::Path;
 use std::process::Command;
 
-use botloft_core::protocol::{BotIdParams, BotState, GitEventKind, GitFileStatus};
+use botloft_core::protocol::{BotIdParams, BotState, GitEventKind, GitFileStatus, GithubAccess};
 use botloftd::changes;
 use common::context::{bot, settle};
 use common::supervised::setup;
@@ -24,6 +24,7 @@ fn git(dir: &Path, args: &[&str]) {
 
 #[tokio::test(start_paused = true)]
 async fn the_agents_repository_shows_its_branch_and_changed_files() {
+    changes::use_github_program("botloft-test-no-gh");
     let s = setup().await;
     let folder = bot(&s).workspace;
     let folder = Path::new(&folder);
@@ -53,10 +54,13 @@ async fn the_agents_repository_shows_its_branch_and_changed_files() {
         .collect();
     assert!(files.contains(&("report.md", GitFileStatus::Modified, Some(1), Some(0))));
     assert!(files.contains(&("notes.txt", GitFileStatus::Untracked, None, None)));
+    assert_eq!(found.github, None, "no pull request to ask about");
 }
 
 #[tokio::test(start_paused = true)]
 async fn what_the_agent_did_in_git_is_kept_newest_first() {
+    // No network in tests: a `gh` that is not there.
+    changes::use_github_program("botloft-test-no-gh");
     let s = setup().await;
     let process = s.runtime.process(1).await;
     s.until(BotState::Idle).await;
@@ -86,4 +90,7 @@ async fn what_the_agent_did_in_git_is_kept_newest_first() {
     assert_eq!(kinds, [GitEventKind::Pr, GitEventKind::Push]);
     assert_eq!(found.events[0].number, Some(12));
     assert_eq!(found.events[1].branch.as_deref(), Some("feat/site"));
+    // Without `gh` the pull request is not read, and the app is told why.
+    assert!(found.prs.is_empty());
+    assert_eq!(found.github, Some(GithubAccess::Missing));
 }

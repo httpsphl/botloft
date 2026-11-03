@@ -14,7 +14,7 @@ export class FakeChanges {
     return {
       "overview.changes": ({ botId }) => {
         this.asked.set(botId, (this.asked.get(botId) ?? 0) + 1);
-        return this.byBot.get(botId) ?? { repos: [], events: [] };
+        return this.byBot.get(botId) ?? { repos: [], events: [], prs: [], github: null };
       },
     };
   }

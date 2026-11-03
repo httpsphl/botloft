@@ -77,7 +77,25 @@ export const overview = {
       "auto-merge-enabled": "set to merge by itself",
       "auto-merge-disabled": "no longer merges by itself",
     },
+    prs: "Pull requests",
+    prState: { open: "Open", draft: "Draft", merged: "Merged", closed: "Closed" },
+    checks: {
+      none: "No checks",
+      passed: (total: number) => (total === 1 ? "The check passed" : `All ${total} checks passed`),
+      failed: (failed: number, total: number) => `${failed} of ${total} checks failed`,
+      running: (pending: number, total: number) => `${pending} of ${total} checks running`,
+    },
+    github: {
+      missing: "To see how the checks went, install GitHub CLI (gh) and sign in to it.",
+      signed_out: "To see how the checks went, sign in to GitHub CLI: gh auth login.",
+      error: "Couldn't read GitHub just now.",
+    },
     openPr: (number: number) => `Open pull request #${number}`,
     openFailed: "Could not open the link",
+  },
+  tools: {
+    title: "Connected tools",
+    none: (bot: string) => `${bot} has no connected tools.`,
+    change: "Change in details",
   },
 };

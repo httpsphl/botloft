@@ -28,7 +28,7 @@ const split = (usedTokens: number): ContextUsage => ({
 async function openOverview(
   context: ContextUsage | null,
   agent: "claude" | "agy" = "claude",
-  changes: OverviewChanges = { repos: [], events: [] },
+  changes: OverviewChanges = { repos: [], events: [], prs: [], github: null },
 ) {
   const fake = new FakeBotloft();
   const ops = fake.addCrew("Ops");
@@ -183,6 +183,18 @@ describe("what changed in the agent's git folders (spec 33.5)", () => {
           at: 1,
         },
       ],
+      prs: [
+        {
+          number: 14,
+          url: "https://github.com/owner/site/pull/14",
+          title: "Menu page",
+          state: "open",
+          additions: 160,
+          deletions: 6,
+          checks: { passed: 3, failed: 1, pending: 0 },
+        },
+      ],
+      github: "ok",
     });
     const files = await within(panel).findByRole("list", { name: "Changed files in site" });
     const rows = within(files).getAllByRole("listitem");
@@ -194,11 +206,38 @@ describe("what changed in the agent's git folders (spec 33.5)", () => {
     expect(within(panel).getByText("feat/menu")).toBeTruthy();
     expect(within(panel).getByText("↑2 ↓0")).toBeTruthy();
 
+    const prs = within(panel).getByRole("list", { name: "Pull requests" });
+    expect(within(prs).getByText("Menu page")).toBeTruthy();
+    expect(within(prs).getByText("Open")).toBeTruthy();
+    expect(within(prs).getByText("1 of 4 checks failed")).toBeTruthy();
     const did = within(panel).getByRole("list", { name: "What Scout did in git" });
     expect(within(did).getByText("Pull request #14 opened")).toBeTruthy();
     expect(within(did).getByText("Commit 4f9a2c1 on feat/menu")).toBeTruthy();
     fireEvent.click(within(did).getByRole("button", { name: "Open pull request #14" }));
     await screen.findByRole("complementary", { name: "Overview of Scout" });
     expect(host.opened).toContain("https://github.com/owner/site/pull/14");
+  });
+});
+
+describe("the pull requests and the connected tools (spec 33.5, 33.6)", () => {
+  test("says how to see the checks when gh is missing", async () => {
+    const { panel } = await openOverview(split(24_200), "claude", {
+      repos: [],
+      events: [],
+      prs: [],
+      github: "missing",
+    });
+    expect(
+      await within(panel).findByText(
+        "To see how the checks went, install GitHub CLI (gh) and sign in to it.",
+      ),
+    ).toBeTruthy();
+  });
+
+  test("says when the agent has no connected tools, with the way to its details", async () => {
+    const { panel } = await openOverview(split(24_200));
+    expect(await within(panel).findByText("Scout has no connected tools.")).toBeTruthy();
+    fireEvent.click(within(panel).getByRole("button", { name: "Change in details" }));
+    expect(await screen.findByRole("complementary", { name: "About Scout" })).toBeTruthy();
   });
 });

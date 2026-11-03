@@ -9,6 +9,10 @@ pub(super) fn decls(out: &mut Out) {
     out.decl::<GitRepo>();
     out.decl::<GitEventKind>();
     out.decl::<GitEvent>();
+    out.decl::<PullState>();
+    out.decl::<PullChecks>();
+    out.decl::<PullRequest>();
+    out.decl::<GithubAccess>();
     out.decl::<OverviewChanges>();
 }
 

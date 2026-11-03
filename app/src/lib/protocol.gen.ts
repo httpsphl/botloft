@@ -2013,13 +2013,45 @@ number: number | null, url: string | null,
 at: number, };
 
 /**
+ * Where a pull request stands on GitHub.
+ */
+export type PullState = "open" | "draft" | "merged" | "closed";
+
+/**
+ * How a pull request's checks went, counted.
+ */
+export type PullChecks = { passed: number, failed: number, 
+/**
+ * Queued or running.
+ */
+pending: number, };
+
+/**
+ * A pull request the agent opened or touched, as GitHub has it now.
+ */
+export type PullRequest = { number: number, url: string, title: string, state: PullState, additions: number, deletions: number, checks: PullChecks, };
+
+/**
+ * Whether the owner's `gh` could tell about the pull requests.
+ */
+export type GithubAccess = "ok" | "missing" | "signed_out" | "error";
+
+/**
  * What `overview.changes` answers.
  */
 export type OverviewChanges = { repos: Array<GitRepo>, 
 /**
  * Newest first, at most 50.
  */
-events: Array<GitEvent>, };
+events: Array<GitEvent>, 
+/**
+ * The newest pull requests of `events`, at most 5, as GitHub has them.
+ */
+prs: Array<PullRequest>, 
+/**
+ * `null` when there was no pull request to ask about.
+ */
+github: GithubAccess | null, };
 
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
 /**
