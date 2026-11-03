@@ -49,6 +49,11 @@ off until you turn them on (see [Engines](#engines)).
 - **Pick ready-made agents.** The Agent agency has dozens of agents ready for a job, like a developer, a
   designer, a writer, a researcher or customer support. Add one to a crew with a click and change
   anything about it afterwards. The Chief uses the same list when it suggests an agent.
+- **Let the Maker build for you.** The Maker, a white flame with a wand, builds crews, agents and
+  routines from what you ask. It shows the whole plan as a card you change before anything is made,
+  and Undo takes it back. Bring your Claude Code history or your claude.ai export so it knows your
+  projects: you choose what goes and read the whole summary first, with keys, e-mails and numbers
+  swapped out.
 - **Chat with every agent.** Replies stream in as they are written. Send images and files. When an agent
   wants to run a command, edit a file or open a website, a card asks you first, unless you told that
   agent it may. Each file edit shows how many lines it added and removed, and opens to its diff.
