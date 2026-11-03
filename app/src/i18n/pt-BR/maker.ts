@@ -59,4 +59,71 @@ export const maker: Messages["maker"] = {
       "Ele vai criar equipes, agentes e rotinas assim que planejar, sem mostrar antes. Arquivar ou pausar um agente continua perguntando, e você desfaz cada montagem por uma semana.",
     confirm: "Deixar montar",
   },
+  history: {
+    open: "Trazer meu histórico do Claude Code",
+    title: "Trazer seu histórico do Claude Code",
+    intro:
+      "O Botloft lê o histórico que o Claude Code guarda neste computador e faz um resumo para o Criador. Você escolhe os projetos e lê o resumo inteiro antes de qualquer coisa sair.",
+    takes:
+      "Só os pedidos que você digitou, os títulos das sessões, as ferramentas usadas, seus CLAUDE.md e os nomes das suas skills. Nunca as respostas do Claude, o que as ferramentas leram ou devolveram, nem anexos.",
+    loading: "Olhando seu histórico…",
+    none: "O Claude Code ainda não tem histórico neste computador.",
+    scanFailed: "Não foi possível ler o histórico",
+    all: "Todos os projetos",
+    project: (sessions: number, prompts: number, period: string) =>
+      `${sessions} ${sessions === 1 ? "sessão" : "sessões"} · ${prompts} ${prompts === 1 ? "pedido" : "pedidos"} · ${period}`,
+    make: "Montar o resumo",
+    making: "Lendo os projetos escolhidos…",
+    makeFailed: "Não foi possível montar o resumo",
+    size: (thousands: number) =>
+      `Perto de ${thousands} mil tokens do seu plano quando o Criador ler: como uma conversa longa.`,
+    swapped: "Trocados antes de mostrar a você",
+    kinds: {
+      key: (count: number) => `${count} ${count === 1 ? "chave ou senha" : "chaves ou senhas"}`,
+      email: (count: number) => `${count} ${count === 1 ? "e-mail" : "e-mails"}`,
+      number: (count: number) => `${count} ${count === 1 ? "número" : "números"}`,
+      card: (count: number) => `${count} ${count === 1 ? "cartão" : "cartões"}`,
+    },
+    notPerfect: "A troca não é perfeita: leia antes de mandar.",
+    cut: "Ficaram de fora para caber no limite",
+    projects: "Projetos no resumo",
+    remake: "Montar de novo sem os desmarcados",
+    after:
+      "Depois de mandado, o resumo vira um arquivo na conversa do Criador e sai com ela. Um resumo que você não manda é esquecido depois de um dia.",
+    forget: "Esquecer",
+    send: "Mandar ao Criador",
+    sendFailed: "Não foi possível mandar o resumo",
+    sent: "Mandado ao Criador",
+  },
+  claudeAi: {
+    open: "Trazer minha exportação do claude.ai",
+    title: "Trazer sua exportação do claude.ai",
+    intro:
+      "O Botloft não entra no claude.ai: você baixa lá uma cópia das suas conversas e escolhe o arquivo aqui.",
+    steps: [
+      "No claude.ai, abra Configurações > Privacidade e clique em Exportar dados.",
+      "Abra o e-mail do claude.ai e baixe o ZIP. O link vale por 24 horas.",
+      "Escolha o ZIP aqui. O Botloft lê o arquivo onde ele está, sem copiar.",
+    ],
+    openSite: "Abrir o claude.ai",
+    pick: "Escolher o ZIP",
+    other: "Escolher outro arquivo",
+    pickTitle: "Exportação do claude.ai",
+    kind: "Arquivo ZIP",
+    takes:
+      "De cada conversa, só o título, a data, quantas mensagens tem e as três primeiras mensagens que você escreveu. Nunca as respostas do Claude nem os anexos.",
+    scanFailed: "Não foi possível ler este arquivo",
+    found: (count: number, period: string) =>
+      `${count} ${count === 1 ? "conversa" : "conversas"} · ${period}`,
+    projects: (names: string) => `Projetos: ${names}`,
+    periodLabel: "Período",
+    periods: {
+      all: "Tudo",
+      year: "Último ano",
+      half: "Últimos 6 meses",
+      quarter: "Últimos 3 meses",
+    },
+    cut: (count: number) =>
+      `${count} ${count === 1 ? "conversa mais antiga ficou" : "conversas mais antigas ficaram"} de fora para caber no limite`,
+  },
 };

@@ -98,6 +98,12 @@ export type CrewAccessId = string;
 export type BuildId = string;
 
 /**
+ * Identifies a summary of the owner's history made for the Maker
+ * (spec 36.7).
+ */
+export type ImportId = string;
+
+/**
  * A group of bots that can message each other and share a folder.
  */
 export type Crew = { id: CrewId, name: string, 
@@ -1468,6 +1474,127 @@ export type CatalogAddParams = { crewId: CrewId, templateId: string,
  * In the owner's language, as the app writes it.
  */
 name: string, role: string, };
+
+/**
+ * Where a history comes from.
+ */
+export type ImportSource = "claude_code" | "claude_ai";
+
+export type ImportsScanParams = { source: ImportSource, 
+/**
+ * The ZIP of a claude.ai export, where it is; read there, never copied.
+ */
+path?: string, };
+
+/**
+ * One project of the history, as the list shows it: no text of it.
+ */
+export type ImportProject = { 
+/**
+ * What `imports.create` takes to bring it.
+ */
+key: string, 
+/**
+ * The folder the project was worked in.
+ */
+path: string, sessions: number, 
+/**
+ * How many requests the owner typed in it.
+ */
+prompts: number, 
+/**
+ * Unix time in milliseconds of its first and last request; `null`
+ * without any.
+ */
+firstAt: number | null, lastAt: number | null, };
+
+/**
+ * What a claude.ai export holds, as the list shows it: no text of it.
+ */
+export type ImportConversations = { count: number, 
+/**
+ * Unix time in milliseconds of the first and last conversation.
+ */
+firstAt: number | null, lastAt: number | null, 
+/**
+ * The names of the claude.ai projects, when the export has them.
+ */
+projects: Array<string>, };
+
+/**
+ * What there is to bring, newest project first.
+ */
+export type ImportScan = { source: ImportSource, 
+/**
+ * Claude Code's projects; empty for an export of claude.ai.
+ */
+projects: Array<ImportProject>, 
+/**
+ * What an export of claude.ai holds; `null` for Claude Code.
+ */
+conversations: ImportConversations | null, };
+
+export type ImportsCreateParams = { source: ImportSource, 
+/**
+ * Claude Code's projects to bring, by `key`; empty for claude.ai.
+ */
+keys: Array<string>, 
+/**
+ * The ZIP of a claude.ai export.
+ */
+path?: string, 
+/**
+ * For claude.ai, only the conversations started in this period, Unix
+ * time in milliseconds.
+ */
+from?: number, to?: number, };
+
+/**
+ * A summary made and kept for the owner to read before it goes.
+ */
+export type ImportDraft = { importId: ImportId, 
+/**
+ * The whole summary, in markdown, as the Maker would read it.
+ */
+text: string, chars: number, 
+/**
+ * About how many tokens of the owner's plan reading it takes.
+ */
+tokensEstimate: number, 
+/**
+ * Projects that left it to keep it under the limit, by path; for
+ * claude.ai, how many conversations left it.
+ */
+cut: Array<string>, 
+/**
+ * What was swapped out, by kind (`key`, `email`, `number`, `card`).
+ */
+redactions: { [key in string]: number }, 
+/**
+ * The period it covers, Unix time in milliseconds.
+ */
+from: number | null, to: number | null, };
+
+export type ImportIdParams = { importId: ImportId, };
+
+export type ImportSent = { 
+/**
+ * The owner's message to the Maker that carries the summary.
+ */
+messageId: MessageId, };
+
+/**
+ * A summary made, as the store keeps it: never its text.
+ */
+export type Import = { id: ImportId, source: ImportSource, 
+/**
+ * Unix time in milliseconds.
+ */
+createdAt: number, sentAt: number | null, sentMessageId: MessageId | null, 
+/**
+ * The projects it covers, by path.
+ */
+scope: Array<string>, chars: number, redactions: { [key in string]: number }, };
 
 /**
  * How much a backup carries (spec 14.2).
@@ -2952,6 +3079,11 @@ export interface RpcMethods {
   "catalog.add": { params: CatalogAddParams; result: Bot };
   "builds.list": { params: undefined; result: Array<Build> };
   "builds.undo": { params: BuildIdParams; result: Build };
+  "imports.scan": { params: ImportsScanParams; result: ImportScan };
+  "imports.create": { params: ImportsCreateParams; result: ImportDraft };
+  "imports.send": { params: ImportIdParams; result: ImportSent };
+  "imports.forget": { params: ImportIdParams; result: null };
+  "imports.list": { params: undefined; result: Array<Import> };
   "backup.export": { params: BackupExportParams; result: BackupExported };
   "backup.stage": { params: BackupStageParams; result: BackupManifest };
   "backup.confirm": { params: undefined; result: null };

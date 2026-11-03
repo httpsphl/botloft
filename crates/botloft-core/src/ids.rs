@@ -134,6 +134,11 @@ prefixed_id!(
     /// (spec 36.4).
     BuildId, "build", "bld_"
 );
+prefixed_id!(
+    /// Identifies a summary of the owner's history made for the Maker
+    /// (spec 36.7).
+    ImportId, "import", "imp_"
+);
 
 /// A random version 4 UUID, for Claude Code session ids and the uuid of
 /// each message written to a bot (spec 7.3, 9.2).

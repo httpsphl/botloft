@@ -19,6 +19,7 @@ mod deliveries;
 mod desktop_grants;
 mod fingerprint;
 mod git_events;
+mod imports;
 mod key_scan;
 mod light;
 mod mcp_servers;
