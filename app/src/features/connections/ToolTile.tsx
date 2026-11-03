@@ -1,17 +1,14 @@
-// A tool's square (spec 34.7), as on claude.ai: the brand's mark in its
-// color on white, or dark on its color when that color is too light to
-// read on white; the initial on its color for a brand with no mark; a plug
-// on gray for a tool the app does not know.
+// A tool's square (spec 34.7), as on claude.ai: the tool's official icon
+// on white for the tools the app knows, a plug on gray for the rest.
 
 import { Plug } from "lucide-react";
-import { contrastOnWhite, knownTool } from "./toolCatalog";
-
-const INK = "#111111";
+import { knownTool, toolIcon } from "./toolCatalog";
 
 export function ToolTile({ name, size = 40 }: { name: string; size?: number }) {
   const known = knownTool(name);
+  const icon = known && toolIcon(known.key);
   const box = { width: size, height: size };
-  if (!known) {
+  if (!icon) {
     return (
       <span
         aria-hidden
@@ -22,39 +19,20 @@ export function ToolTile({ name, size = 40 }: { name: string; size?: number }) {
       </span>
     );
   }
-  const pale = contrastOnWhite(known.color) < 2.2;
-  if (!known.mark) {
-    return (
-      <span
-        aria-hidden
-        className="grid shrink-0 place-items-center rounded-xl font-bold"
-        style={{
-          ...box,
-          background: known.color,
-          color: pale ? INK : "#ffffff",
-          fontSize: Math.round(size * 0.46),
-        }}
-      >
-        {known.name.charAt(0).toUpperCase()}
-      </span>
-    );
-  }
-  const mark = Math.round(size * 0.56);
+  const inner = Math.round(size * 0.74);
   return (
     <span
       aria-hidden
-      className="grid shrink-0 place-items-center rounded-xl ring-1 ring-black/10"
-      style={{ ...box, background: pale ? known.color : "#ffffff" }}
+      className="grid shrink-0 place-items-center rounded-xl bg-white ring-1 ring-black/10"
+      style={box}
     >
-      <svg
-        aria-hidden
-        viewBox="0 0 24 24"
-        width={mark}
-        height={mark}
-        fill={pale ? INK : known.color}
-      >
-        <path d={known.mark.path} />
-      </svg>
+      <img
+        src={icon}
+        alt=""
+        draggable={false}
+        className="object-contain"
+        style={{ width: inner, height: inner, borderRadius: Math.round(inner * 0.22) }}
+      />
     </span>
   );
 }
