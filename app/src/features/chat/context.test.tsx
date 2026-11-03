@@ -13,6 +13,8 @@ const holds = (usedTokens: number, windowTokens = 1_000_000): ContextUsage => ({
   autoCompactTokens: windowTokens - 33_000,
   compacting: false,
   updatedAt: 1,
+  parts: [],
+  memoryFiles: [],
 });
 
 /** A crew "Ops" with @scout, open on its chat. */

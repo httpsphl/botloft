@@ -9,6 +9,9 @@ use super::Out;
 pub(super) fn decls(out: &mut Out) {
     out.decl::<BotEffort>();
     out.decl::<ModelEffort>();
+    out.decl::<ContextPartKind>();
+    out.decl::<ContextPart>();
+    out.decl::<ContextFile>();
     out.decl::<ContextUsage>();
     out.decl::<BotContextChanged>();
     out.decl::<BotsSetEffortParams>();
