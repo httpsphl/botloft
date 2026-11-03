@@ -3,7 +3,8 @@
 use botloft_core::ids::{BotId, CrewId};
 use botloft_core::protocol::{
     AgentKind, Bot, BotEffort, BotIdParams, BotModel, BotState, BotsCreateParams, BotsListParams,
-    BotsRestartParams, BotsSetPausedParams, BotsUpdateParams, Crew, PermissionMode,
+    BotsRestartParams, BotsSetPausedParams, BotsUpdateParams, ChatBody, Crew, NoticeCode,
+    NoticeItem, NoticeLevel, PermissionMode,
 };
 use botloft_core::{avatar, now_ms, slug, validate};
 use botloft_store::{BotRecord, Store};
@@ -256,10 +257,25 @@ pub fn restart(daemon: &Daemon, params: BotsRestartParams) -> ApiResult<Bot> {
             record.id
         )));
     }
-    daemon
-        .supervisor
-        .restart(&record.id, params.fresh.unwrap_or(false));
-    Ok(to_protocol(daemon, &store, &crew, record))
+    let fresh = params.fresh.unwrap_or(false);
+    daemon.supervisor.restart(&record.id, fresh);
+    let bot = to_protocol(daemon, &store, &crew, record);
+    // The chat takes the store itself.
+    drop(store);
+    if fresh {
+        // The chat keeps what came before; this line says it is forgotten.
+        crate::chat::items::add(
+            daemon,
+            &bot.id,
+            ChatBody::Notice(NoticeItem {
+                level: NoticeLevel::Info,
+                code: Some(NoticeCode::FreshStart),
+                text: "A new conversation started here: what came before is not remembered."
+                    .to_owned(),
+            }),
+        );
+    }
+    Ok(bot)
 }
 
 /// Archives the bot and stops its process. Archiving twice is not an error.

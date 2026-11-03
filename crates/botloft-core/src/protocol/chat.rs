@@ -50,6 +50,9 @@ text_enum!(
         AutoCompacted => "auto_compacted",
         /// The conversation could not be compacted; `text` holds the detail.
         CompactFailed => "compact_failed",
+        /// The owner started a new conversation: what came before is not
+        /// remembered.
+        FreshStart => "fresh_start",
     }
 );
 

@@ -398,6 +398,7 @@ export const chat: Messages["chat"] = {
     compacted:
       "La conversación se compactó: lo anterior ahora es un resumen, y vuelve a haber espacio.",
     autoCompacted: "La conversación estaba llena y se compactó: lo anterior ahora es un resumen.",
+    freshStart: "Aquí empezó una conversación nueva: lo anterior ya no se recuerda.",
     compactFailed: (detail: string) => `No se pudo compactar la conversación: ${detail}`,
   },
 };

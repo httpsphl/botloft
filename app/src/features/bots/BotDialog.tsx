@@ -17,6 +17,7 @@ import { SelectField, TextArea, TextField } from "../../ui/Field";
 import { Toggle } from "../account/settingsParts";
 import { BotAvatar } from "./BotAvatar";
 import { ColorPicker } from "./ColorPicker";
+import { useIsMaker } from "./useIsMaker";
 
 const MODELS: BotModel[] = ["default", "fable", "opus", "sonnet", "haiku"];
 /** Stable, for a selector: a new array each time would render in a loop. */
@@ -34,6 +35,9 @@ export function BotDialog(props: Props) {
   const putBot = useApp((state) => state.putBot);
   const selectBot = useApp((state) => state.selectBot);
   const editing = props.bot;
+  // The Maker keeps its white, and its name and role follow the app's
+  // language (spec 36.2, 36.3): only what it can change is offered.
+  const maker = useIsMaker(editing?.id);
   const [name, setName] = useState(editing?.name ?? "");
   const [role, setRole] = useState(editing?.role ?? "");
   const [instructions, setInstructions] = useState(editing?.instructions ?? "");
@@ -115,72 +119,81 @@ export function BotDialog(props: Props) {
       }
     >
       <form id={formId} onSubmit={submit} className="flex flex-col gap-4">
+        {maker && (
+          <div className="flex justify-center pt-1">
+            <BotAvatar color={color ?? UNSET_COLOR} size={72} mood="awake" maker />
+          </div>
+        )}
         {/* The agent as it will look, over the colors to pick from. */}
-        <fieldset className="flex flex-col items-center gap-3 pt-1">
-          <legend className="sr-only">{t.bots.dialog.color}</legend>
-          <span key={color ?? "unset"} className="animate-pop">
-            <BotAvatar color={color ?? UNSET_COLOR} size={72} mood="awake" />
-          </span>
-          <div className="flex flex-wrap items-center justify-center gap-1.5">
-            {AVATAR_PALETTE.map((swatch) => (
+        {!maker && (
+          <fieldset className="flex flex-col items-center gap-3 pt-1">
+            <legend className="sr-only">{t.bots.dialog.color}</legend>
+            <span key={color ?? "unset"} className="animate-pop">
+              <BotAvatar color={color ?? UNSET_COLOR} size={72} mood="awake" />
+            </span>
+            <div className="flex flex-wrap items-center justify-center gap-1.5">
+              {AVATAR_PALETTE.map((swatch) => (
+                <button
+                  key={swatch}
+                  type="button"
+                  aria-label={t.bots.dialog.swatch(swatch)}
+                  aria-pressed={color === swatch}
+                  onClick={() => setColor(swatch)}
+                  className={`relative rounded-lg p-0.5 ${color === swatch ? "ring-2 ring-accent" : ""}`}
+                >
+                  <BotAvatar color={swatch} size={26} />
+                  {color === swatch && (
+                    <Check aria-hidden size={12} className="absolute right-0 bottom-0 text-white" />
+                  )}
+                </button>
+              ))}
               <button
-                key={swatch}
                 type="button"
-                aria-label={t.bots.dialog.swatch(swatch)}
-                aria-pressed={color === swatch}
-                onClick={() => setColor(swatch)}
-                className={`relative rounded-lg p-0.5 ${color === swatch ? "ring-2 ring-accent" : ""}`}
+                aria-label={t.bots.dialog.custom}
+                title={t.bots.dialog.custom}
+                aria-expanded={picking}
+                aria-pressed={custom}
+                onClick={() => setPicking(!picking)}
+                className={`relative flex size-[30px] items-center justify-center rounded-lg ${
+                  custom
+                    ? "ring-2 ring-accent"
+                    : "border border-line-strong border-dashed text-muted hover:text-ink"
+                }`}
               >
-                <BotAvatar color={swatch} size={26} />
-                {color === swatch && (
-                  <Check aria-hidden size={12} className="absolute right-0 bottom-0 text-white" />
+                {custom && color ? (
+                  <BotAvatar color={color} size={26} />
+                ) : (
+                  <Pipette aria-hidden size={14} />
                 )}
               </button>
-            ))}
-            <button
-              type="button"
-              aria-label={t.bots.dialog.custom}
-              title={t.bots.dialog.custom}
-              aria-expanded={picking}
-              aria-pressed={custom}
-              onClick={() => setPicking(!picking)}
-              className={`relative flex size-[30px] items-center justify-center rounded-lg ${
-                custom
-                  ? "ring-2 ring-accent"
-                  : "border border-line-strong border-dashed text-muted hover:text-ink"
-              }`}
-            >
-              {custom && color ? (
-                <BotAvatar color={color} size={26} />
-              ) : (
-                <Pipette aria-hidden size={14} />
-              )}
-            </button>
+            </div>
+            {picking && <ColorPicker value={color ?? AVATAR_PALETTE[0]} onChange={setColor} />}
+            {!editing && color === undefined && (
+              <p className="text-center text-muted text-xs">{t.bots.dialog.colorUnset}</p>
+            )}
+          </fieldset>
+        )}
+        {!maker && (
+          <div className="grid grid-cols-[1fr_1.4fr] gap-3">
+            <TextField
+              label={t.bots.dialog.name}
+              value={name}
+              max={FIELD_LIMITS.name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder={t.bots.dialog.namePlaceholder}
+              hint={t.bots.dialog.nameHint}
+              autoFocus
+              required
+            />
+            <TextField
+              label={t.bots.dialog.role}
+              value={role}
+              max={FIELD_LIMITS.role}
+              onChange={(event) => setRole(event.target.value)}
+              placeholder={t.bots.dialog.rolePlaceholder}
+            />
           </div>
-          {picking && <ColorPicker value={color ?? AVATAR_PALETTE[0]} onChange={setColor} />}
-          {!editing && color === undefined && (
-            <p className="text-center text-muted text-xs">{t.bots.dialog.colorUnset}</p>
-          )}
-        </fieldset>
-        <div className="grid grid-cols-[1fr_1.4fr] gap-3">
-          <TextField
-            label={t.bots.dialog.name}
-            value={name}
-            max={FIELD_LIMITS.name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder={t.bots.dialog.namePlaceholder}
-            hint={t.bots.dialog.nameHint}
-            autoFocus
-            required
-          />
-          <TextField
-            label={t.bots.dialog.role}
-            value={role}
-            max={FIELD_LIMITS.role}
-            onChange={(event) => setRole(event.target.value)}
-            placeholder={t.bots.dialog.rolePlaceholder}
-          />
-        </div>
+        )}
         <TextArea
           label={t.bots.dialog.instructions}
           value={instructions}

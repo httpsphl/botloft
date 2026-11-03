@@ -55,6 +55,8 @@ function noticeText(notice: NoticeItem, words: Messages["chat"]["notice"]): stri
       return words.autoCompacted;
     case "compact_failed":
       return words.compactFailed(notice.text);
+    case "fresh_start":
+      return words.freshStart;
     default:
       return notice.text;
   }

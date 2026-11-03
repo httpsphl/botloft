@@ -415,6 +415,7 @@ export const chat = {
       "The conversation was compacted: what came before is now a summary, and there is room again.",
     autoCompacted:
       "The conversation was full, so it was compacted: what came before is now a summary.",
+    freshStart: "A new conversation started here: what came before is not remembered.",
     compactFailed: (detail: string) => `The conversation could not be compacted: ${detail}`,
   },
 };
