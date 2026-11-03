@@ -21,6 +21,7 @@ import { islandHandlers } from "./fakeIsland";
 import { FakeKeys } from "./fakeKeys";
 import { FakeLesson } from "./fakeLesson";
 import { FakeLogins } from "./fakeLogins";
+import { FakeMaker } from "./fakeMaker";
 import { FakeMcp } from "./fakeMcp";
 import { mobileHandlers } from "./fakeMobile";
 import { FakeSites } from "./fakePermissions";
@@ -88,6 +89,7 @@ export class FakeBotloft implements BotloftApi {
     sleepAfterMinutes: 30,
     defaultAgent: "claude",
     showExperimentalAgents: false,
+    makerBuildsWithoutAsking: false,
   };
   /** Folders the owner sent to the Recycle Bin with a delete, in order. */
   readonly recycled: string[] = [];
@@ -114,6 +116,7 @@ export class FakeBotloft implements BotloftApi {
   readonly changes = new FakeChanges();
   readonly reactions = new FakeReactions(this);
   readonly lesson = new FakeLesson(this);
+  readonly maker = new FakeMaker(this);
   /** Clock for created and updated times. */
   now = Date.now();
   /** Plan share per token for `usage.tokens`; `null`, not learned yet. */
@@ -313,6 +316,8 @@ export class FakeBotloft implements BotloftApi {
         defaultAgent: change.defaultAgent ?? this.settings.defaultAgent,
         showExperimentalAgents:
           change.showExperimentalAgents ?? this.settings.showExperimentalAgents,
+        makerBuildsWithoutAsking:
+          change.makerBuildsWithoutAsking ?? this.settings.makerBuildsWithoutAsking,
       };
       if (change.showExperimentalAgents !== undefined) {
         this.system = {
@@ -346,6 +351,7 @@ export class FakeBotloft implements BotloftApi {
     ...this.changes.handlers(),
     ...this.reactions.handlers(),
     ...this.lesson.handlers(),
+    ...this.maker.handlers(),
     ...usageHandlers(this),
     ...islandHandlers(this),
     ...backupHandlers(this),

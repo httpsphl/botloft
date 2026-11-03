@@ -60,6 +60,7 @@ pub fn create(daemon: &Daemon, params: CrewsCreateParams) -> ApiResult<Crew> {
         paused: false,
         auto_mode: params.auto_mode.unwrap_or(false),
         color: None,
+        system: None,
         created_at: now_ms(),
         archived_at: None,
     };
@@ -169,6 +170,7 @@ pub fn set_paused(daemon: &Daemon, params: CrewsSetPausedParams) -> ApiResult<Cr
 pub fn set_auto_mode(daemon: &Daemon, params: CrewsSetAutoModeParams) -> ApiResult<Crew> {
     let store = daemon.store();
     let mut crew = active(&store, &params.crew_id)?;
+    super::maker::refuse(&crew, "always asks before it builds")?;
     if crew.auto_mode == params.enabled && !params.enabled {
         return Ok(present(daemon, crew));
     }
@@ -198,6 +200,7 @@ pub fn set_auto_mode(daemon: &Daemon, params: CrewsSetAutoModeParams) -> ApiResu
 pub fn archive(daemon: &Daemon, params: CrewIdParams) -> ApiResult<Crew> {
     let store = daemon.store();
     let crew = find(&store, &params.crew_id)?;
+    super::maker::refuse(&crew, "keeps its crew")?;
     if crew.archived_at.is_some() {
         return Ok(present(daemon, crew));
     }

@@ -92,6 +92,12 @@ export type McpServerId = string;
 export type CrewAccessId = string;
 
 /**
+ * Identifies what the Maker built in one go, so it can be undone
+ * (spec 36.4).
+ */
+export type BuildId = string;
+
+/**
  * A group of bots that can message each other and share a folder.
  */
 export type Crew = { id: CrewId, name: string, 
@@ -123,6 +129,12 @@ autoMode: boolean,
  */
 color: string | null, 
 /**
+ * [`MAKER_CREW`] for the crew Botloft keeps for the Maker (spec 36.2),
+ * which the app does not list with the owner's crews; `null` for the
+ * owner's own.
+ */
+system: string | null, 
+/**
  * Unix time in milliseconds.
  */
 createdAt: number, 
@@ -130,6 +142,38 @@ createdAt: number,
  * Unix time in milliseconds; `null` while the crew is active.
  */
 archivedAt: number | null, };
+
+/**
+ * A plan of the Maker that was built.
+ */
+export type Build = { id: BuildId, 
+/**
+ * The Maker.
+ */
+botId: BotId, 
+/**
+ * The request the owner allowed; `null` when the Maker built without
+ * asking (spec 36.4).
+ */
+approvalId: ApprovalId | null, title: string, 
+/**
+ * The crews it made, in the plan's order.
+ */
+crewIds: Array<CrewId>, 
+/**
+ * Unix time in milliseconds.
+ */
+appliedAt: number, 
+/**
+ * Until when it can be undone, Unix time in milliseconds.
+ */
+undoUntil: number, 
+/**
+ * Unix time in milliseconds; `null` while it stands.
+ */
+undoneAt: number | null, };
+
+export type BuildIdParams = { buildId: BuildId, };
 
 /**
  * Lifecycle state of a bot (spec 7.1).
@@ -2475,7 +2519,12 @@ defaultAgent: AgentKind,
  * The experimental agents (Antigravity and Codex) can be chosen for
  * new bots. Off, bots that already use one keep working (spec 30).
  */
-showExperimentalAgents: boolean, };
+showExperimentalAgents: boolean, 
+/**
+ * The Maker builds its plans without the owner's card; each build can
+ * still be undone (spec 36.4).
+ */
+makerBuildsWithoutAsking: boolean, };
 
 /**
  * The settings to change; the ones left out stay as they are.
@@ -2488,7 +2537,7 @@ approvalWaitMinutes?: number,
 /**
  * From 0 (never) to [`SLEEP_AFTER_MAX_MINUTES`].
  */
-sleepAfterMinutes?: number, defaultAgent?: AgentKind, showExperimentalAgents?: boolean, };
+sleepAfterMinutes?: number, defaultAgent?: AgentKind, showExperimentalAgents?: boolean, makerBuildsWithoutAsking?: boolean, };
 
 /**
  * When a routine runs (spec 20.2), kept as structure rather than cron text
@@ -2901,6 +2950,8 @@ export interface RpcMethods {
   "catalog.list": { params: CatalogListParams; result: Array<BotTemplate> };
   "catalog.get": { params: CatalogGetParams; result: BotTemplateFull };
   "catalog.add": { params: CatalogAddParams; result: Bot };
+  "builds.list": { params: undefined; result: Array<Build> };
+  "builds.undo": { params: BuildIdParams; result: Build };
   "backup.export": { params: BackupExportParams; result: BackupExported };
   "backup.stage": { params: BackupStageParams; result: BackupManifest };
   "backup.confirm": { params: undefined; result: null };

@@ -14,6 +14,7 @@ mod browser_catalog;
 mod browser_help;
 mod browser_reply;
 mod browser_sites;
+mod build;
 mod calls;
 mod catalog;
 mod connector;
@@ -49,6 +50,7 @@ use botloft_core::protocol::error_code;
 use serde_json::{Value, json};
 use tracing::debug;
 
+pub(crate) use self::build::check_changed as check_changed_build;
 pub(crate) use self::crew_access::check_answer as check_crew_access_answer;
 use self::era::{Era, LEGACY, era, supported};
 pub(crate) use self::plan::check_answer as check_plan_answer;
@@ -63,7 +65,7 @@ const CACHE_TTL_MS: u64 = 60 * 60 * 1000;
 
 const INSTRUCTIONS: &str = "Tools to work with your Botloft crew: see who is in it, send notes \
     or tasks to other bots, report the result of tasks assigned to you and, for the crew's chief, \
-    suggest new bots (list_bot_templates and get_bot_template show the catalog of ready-made roles) and, to write the owner a summary, read what the crew's bots did with crew_activity. schedule_routine asks the owner for work at set times. ask_owner asks the owner a question without waiting; the answer arrives later as a message. ask_key asks the owner for a key, such as an API token, without it going through the chat. show_plan shows the owner your plan before long work, when your rules ask for it. send_signal tells the crew something happened, and the routines waiting for it run. share_file shows the \
+    suggest new bots (list_bot_templates and get_bot_template show the catalog of ready-made roles) and, to write the owner a summary, read what the crew's bots did with crew_activity; for the Maker, build crews for the owner with build. schedule_routine asks the owner for work at set times. ask_owner asks the owner a question without waiting; the answer arrives later as a message. ask_key asks the owner for a key, such as an API token, without it going through the chat. show_plan shows the owner your plan before long work, when your rules ask for it. send_signal tells the crew something happened, and the routines waiting for it run. share_file shows the \
     owner files you made, as cards in the chat they can open and save. The browser_ tools drive your own web browser, which the owner can watch \
     live and take over when you ask with browser_ask_owner. The desktop_ tools read the apps open on \
     the owner's own computer, app by app as the owner allows. The owner writes to you directly; messages from other bots and from Botloft start with \
@@ -151,6 +153,10 @@ pub async fn handle(
         }
         Ok(era) if called(&request) == Some(catalog::SUGGEST_BOT) => {
             let result = suggest::suggest(&daemon, &bot, generation, arguments(&request)).await;
+            Ok(decorate(era, &request, result))
+        }
+        Ok(era) if called(&request) == Some(build::BUILD) => {
+            let result = build::build(&daemon, &bot, generation, arguments(&request)).await;
             Ok(decorate(era, &request, result))
         }
         Ok(era) if called(&request) == Some(catalog::SCHEDULE_ROUTINE) => {

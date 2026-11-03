@@ -67,6 +67,8 @@ export const prefs = {
   enterSends: pref<boolean>("botloft.enterSends", true, ON_OFF),
   /** The browser and the screens open by themselves when a bot starts on them. */
   followBot: pref<boolean>("botloft.followBot", true, ON_OFF),
+  /** The Maker sits at the top of the list on the left (spec 36.2). */
+  showMaker: pref<boolean>("botloft.showMaker", true, ON_OFF),
   /** The crews and bots show on the left; off, only the selection does. */
   sidebar: pref<boolean>("botloft.sidebar", true, ON_OFF),
   /** No motion in the window, whatever Windows says. */

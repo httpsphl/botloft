@@ -21,6 +21,7 @@ import { SearchPage } from "../features/search/SearchPage";
 import { useSearchKey } from "../features/search/searchKey";
 import { UpdateButton } from "../features/updates/UpdateButton";
 import { useT } from "../i18n";
+import { crewList, makerBot } from "../store/app";
 import { useApp } from "../store/context";
 import { Callout } from "../ui/Callout";
 import { useBotAlerts } from "./alerts";
@@ -40,7 +41,11 @@ export function Workspace() {
   useLocaleToDaemon();
   const loaded = useApp((state) => state.loaded);
   const loadError = useApp((state) => state.loadError);
-  const hasCrews = useApp((state) => Object.keys(state.crews).length > 0);
+  const hasCrews = useApp((state) => crewList(state).length > 0);
+  // Before the first crew, the Maker's chat opens in place of the welcome.
+  const makerOpen = useApp(
+    (state) => state.selectedBotId !== null && makerBot(state)?.id === state.selectedBotId,
+  );
   const page = useApp((state) => state.page);
   // Claude Code missing or signed out only matters to bots that run on it.
   const needsClaude = useApp((state) => {
@@ -73,7 +78,7 @@ export function Workspace() {
     );
   } else if (!loaded) {
     main = null;
-  } else if (!hasCrews) {
+  } else if (!hasCrews && !makerOpen) {
     // The sidebar stays, with the account area, before the first crew too.
     main = (
       <div className="flex min-h-0 flex-1">
@@ -202,14 +207,19 @@ function Breadcrumb() {
   }
   return (
     <>
-      <ChevronRight aria-hidden size={14} className="text-muted" />
-      <button
-        type="button"
-        onClick={() => selectCrew(crew.id)}
-        className="truncate text-ink-soft hover:text-ink"
-      >
-        {crew.name}
-      </button>
+      {/* The Maker's crew is no place of the owner's (spec 36.2). */}
+      {!crew.system && (
+        <>
+          <ChevronRight aria-hidden size={14} className="text-muted" />
+          <button
+            type="button"
+            onClick={() => selectCrew(crew.id)}
+            className="truncate text-ink-soft hover:text-ink"
+          >
+            {crew.name}
+          </button>
+        </>
+      )}
       {bot && (
         <>
           <ChevronRight aria-hidden size={14} className="text-muted" />

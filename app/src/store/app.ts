@@ -139,8 +139,20 @@ export interface PermissionsAt {
 const byCreation = <T extends { createdAt: number; id: string }>(a: T, b: T) =>
   a.createdAt - b.createdAt || a.id.localeCompare(b.id);
 
+/** The owner's crews: the Maker's own is not one of them (spec 36.2). */
 export function crewList(state: AppState): Crew[] {
-  return Object.values(state.crews).sort(byCreation);
+  return Object.values(state.crews)
+    .filter((crew) => !crew.system)
+    .sort(byCreation);
+}
+
+/** The Maker (spec 36.2), alone in a crew Botloft keeps for it. */
+export function makerBot(state: AppState): Bot | null {
+  const crew = Object.values(state.crews).find((each) => each.system === "maker");
+  if (!crew) {
+    return null;
+  }
+  return Object.values(state.bots).find((bot) => bot.crewId === crew.id) ?? null;
 }
 
 /** The bot's conversation-list line; see [`AppState.activity`]. */

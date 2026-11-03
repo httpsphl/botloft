@@ -32,6 +32,7 @@ export const tools = {
     complete_task: "Finish a task",
     my_tasks: "See its tasks",
     suggest_bot: "Suggest an agent",
+    build: "Build crews",
     schedule_routine: "Set up a routine",
     my_routines: "See my routines",
     change_routine: "Change a routine",

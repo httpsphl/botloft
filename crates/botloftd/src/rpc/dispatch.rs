@@ -21,6 +21,7 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::SESSION_SET_LOCALE => {
             let params: botloft_core::protocol::LocaleParams = parse(params)?;
             daemon.desktop.set_locale(&params.locale);
+            crate::service::maker::localize(daemon, &params.locale);
             Ok(Value::Null)
         }
         // Asks for a new check and answers at once; the app polls the result.
@@ -46,6 +47,8 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::CATALOG_LIST => reply(catalog::list(parse(params)?)),
         method::CATALOG_GET => reply(catalog::get(parse(params)?)),
         method::CATALOG_ADD => reply(catalog::add(daemon, parse(params)?)),
+        method::BUILDS_LIST => reply(crate::service::builds::list(daemon)),
+        method::BUILDS_UNDO => reply(crate::service::builds::undo(daemon, parse(params)?)),
         method::BOTS_UPDATE => reply(bots::update(daemon, parse(params)?)),
         method::BOTS_SET_PAUSED => reply(bots::set_paused(daemon, parse(params)?)),
         method::BOTS_SET_PERMISSION_MODE => {

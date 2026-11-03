@@ -15,7 +15,7 @@ async fn settings_are_read_and_changed_one_at_a_time() {
     let settings = app.call("settings.get", json!(null)).await.expect("get");
     assert_eq!(
         settings,
-        json!({ "startWithWindows": true, "keepAwake": true, "approvalWaitMinutes": 0, "sleepAfterMinutes": 0, "defaultAgent": "claude", "showExperimentalAgents": false })
+        json!({ "startWithWindows": true, "keepAwake": true, "approvalWaitMinutes": 0, "sleepAfterMinutes": 0, "defaultAgent": "claude", "showExperimentalAgents": false, "makerBuildsWithoutAsking": false })
     );
 
     let changed = app
@@ -24,7 +24,7 @@ async fn settings_are_read_and_changed_one_at_a_time() {
         .expect("update");
     assert_eq!(
         changed,
-        json!({ "startWithWindows": true, "keepAwake": false, "approvalWaitMinutes": 0, "sleepAfterMinutes": 0, "defaultAgent": "claude", "showExperimentalAgents": false })
+        json!({ "startWithWindows": true, "keepAwake": false, "approvalWaitMinutes": 0, "sleepAfterMinutes": 0, "defaultAgent": "claude", "showExperimentalAgents": false, "makerBuildsWithoutAsking": false })
     );
     assert!(!*t.daemon.settings.keep_awake().borrow());
 
@@ -34,7 +34,7 @@ async fn settings_are_read_and_changed_one_at_a_time() {
         .expect("update");
     assert_eq!(
         changed,
-        json!({ "startWithWindows": false, "keepAwake": false, "approvalWaitMinutes": 0, "sleepAfterMinutes": 0, "defaultAgent": "claude", "showExperimentalAgents": false })
+        json!({ "startWithWindows": false, "keepAwake": false, "approvalWaitMinutes": 0, "sleepAfterMinutes": 0, "defaultAgent": "claude", "showExperimentalAgents": false, "makerBuildsWithoutAsking": false })
     );
     assert_eq!(
         app.call("settings.get", json!(null)).await.expect("get"),
@@ -81,7 +81,10 @@ async fn the_experimental_agents_are_switched_on_and_off_in_settings() {
     assert_eq!(agents(status), json!(["claude"]));
 
     let on = app
-        .call("settings.update", json!({ "showExperimentalAgents": true }))
+        .call(
+            "settings.update",
+            json!({ "showExperimentalAgents": true, "makerBuildsWithoutAsking": false }),
+        )
         .await
         .expect("on");
     assert_eq!(on["showExperimentalAgents"], json!(true));
@@ -97,7 +100,7 @@ async fn the_experimental_agents_are_switched_on_and_off_in_settings() {
     let off = app
         .call(
             "settings.update",
-            json!({ "showExperimentalAgents": false }),
+            json!({ "showExperimentalAgents": false, "makerBuildsWithoutAsking": false }),
         )
         .await
         .expect("off");
@@ -119,9 +122,12 @@ async fn the_owner_tells_where_an_agents_program_is() {
     let t = TestDaemon::start().await;
     std::fs::create_dir_all(&t.paths.home).expect("home");
     let mut app = t.session().await;
-    app.call("settings.update", json!({ "showExperimentalAgents": true }))
-        .await
-        .expect("on");
+    app.call(
+        "settings.update",
+        json!({ "showExperimentalAgents": true, "makerBuildsWithoutAsking": false }),
+    )
+    .await
+    .expect("on");
 
     // A file that is not there is refused, and Claude Code has its own key.
     let missing = app
