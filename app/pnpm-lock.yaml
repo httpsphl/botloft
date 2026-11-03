@@ -184,6 +184,9 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.13.0
         version: 2.13.0
+      gsap:
+        specifier: 3.15.0
+        version: 3.15.0
       lucide-react:
         specifier: ^1.48.0
         version: 1.48.0(react@19.3.0)
@@ -1026,6 +1029,9 @@ packages:
 
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
+
+  gsap@3.15.0:
+    resolution: {integrity: sha512-dMW4CWBTUK1AEEDeZc1g4xpPGIrSf9fJF960qbTZmN/QwZIWY5wgliS6JWl9/25fpTGJrMRtSjGtOmPnfjZB+A==}
 
   hast-util-to-jsx-runtime@2.3.6:
     resolution: {integrity: sha512-zl6s8LwNyo1P9uw+XJGvZtdFF1GdAkOg8ujOw+4Pyb76874fLps4ueHXDhXWdk6YHQ6OgUtinliG7RsYvCbbBg==}
@@ -2237,6 +2243,8 @@ snapshots:
     optional: true
 
   graceful-fs@4.2.11: {}
+
+  gsap@3.15.0: {}
 
   hast-util-to-jsx-runtime@2.3.6:
     dependencies:

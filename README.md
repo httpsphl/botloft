@@ -375,6 +375,9 @@ Versions up to 0.9.1 were released under the Apache License 2.0 and stay under i
 The screenshots show sample crews from the app's preview, not
 real data.
 
+The mascot's gestures use [GSAP](https://gsap.com), which comes under its own
+[Standard "no charge" License](https://gsap.com/standard-license), not the license above.
+
 The icons of the tools on the Tools page (`app/src/assets/tools`) are the logos of their
 services. They belong to their owners, are not covered by the license above, and are there only
 to show which service each tool connects to.

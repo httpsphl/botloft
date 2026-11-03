@@ -1,21 +1,21 @@
 // The mascot's moments (spec 15.3): short gestures it makes once, on top of
 // its mood, when something happens to its bot. Only a working bot's flame
 // moves on and on; every change between the other moods is one of these.
-// It cheers when the bot finishes what it was doing (mascot-cheer.css),
-// wakes when it has something to do or comes back from paused or stopped,
-// pops in when the bot was just created (mascot-wake.css), and falls asleep
-// when it has nothing left to do (mascot-sleep.css). Each lasts as long as
-// its animation, then the mood takes over again.
+// It cheers when the bot finishes what it was doing, wakes when it has
+// something to do or comes back from paused or stopped, pops in when the
+// bot was just created, and falls asleep when it has nothing left to do;
+// gestures.ts plays each. Each lasts as long as its gesture, then the mood
+// takes over again.
 
 import { useEffect, useState } from "react";
 import type { Mood } from "./BotAvatar";
 
 export type Moment = "cheer" | "wake" | "sleep";
 
-/** How long each moment lasts, as in its CSS. */
+/** How long each moment lasts, as its gesture does. */
 export const MOMENT_MS: Record<Moment, number> = { cheer: 1200, wake: 800, sleep: 900 };
 
-/** How long a new bot's mascot pops in, as in mascot-wake.css. */
+/** How long a new bot's mascot pops in. */
 export const ARRIVE_MS = 700;
 
 interface Seen {

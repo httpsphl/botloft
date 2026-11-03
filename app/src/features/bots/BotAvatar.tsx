@@ -13,9 +13,12 @@
 // its eyes shut while its bot has nothing to do, is paused or stopped; it
 // hops as it starts to wait for the owner and burns low with heavy eyes when
 // tired. Only the working flame moves on and on: everything else plays once.
-// It makes short gestures (mascotMoments.ts): it cheers when it finishes
-// and falls asleep, wakes when it has something to do, pops in when its bot
-// was just created, and glances at the bot it talks to (useGlance.ts).
+// It makes short gestures (mascotMoments.ts, gestures.ts): it cheers when
+// it finishes and falls asleep, wakes when it has something to do, pops in
+// when its bot was just created, and glances at the bot it talks to
+// (useGlance.ts), tossing it an ember (toss.ts). It plays with the mouse
+// (pointer.ts): its eyes follow the cursor, it squeezes under it and hops
+// when clicked.
 // Awake, as on the pages that are not a bot's, it stands with its eyes open
 // and blinks now and then. Without a mood it stays still, as in the chat
 // history.
@@ -23,6 +26,7 @@
 import { type CSSProperties, useId, useMemo, useRef } from "react";
 import type { Bot, BotId } from "../../lib/protocol.gen";
 import { useFlame } from "./flame";
+import { useGestures } from "./gestures";
 import {
   BODY,
   CENTER,
@@ -36,7 +40,8 @@ import {
   SPARKS,
   VIEW_BOX,
 } from "./mascotArt";
-import { MOMENT_MS, useArrive, useMoment } from "./mascotMoments";
+import { asleep, MOMENT_MS, useArrive, useMoment } from "./mascotMoments";
+import { usePointerPlay } from "./pointer";
 import { retint } from "./retint";
 import { useGlance } from "./useGlance";
 
@@ -73,7 +78,7 @@ export function moodOf(bot: Pick<Bot, "state" | "paused">, crewPaused = false): 
   }
 }
 
-/** How long the mascot cheers when its bot finishes, as in mascot-cheer.css. */
+/** How long the mascot cheers when its bot finishes (gestures.ts). */
 export const CHEER_MS = MOMENT_MS.cheer;
 
 /** Where the flame starts its turn, from the color, so a crew's flames do not burn together. */
@@ -146,6 +151,8 @@ export function BotAvatar({
   const arrive = useArrive(arriving);
   const glance = useGlance(mood && !still ? botId : undefined, svg);
   useFlame(svg, mood === "working" && !still, flameOffset(color));
+  useGestures(svg, mood && !still ? moment : null, Boolean(mood) && arrive, asleep(mood));
+  usePointerPlay(svg, Boolean(mood) && !still);
   const style = glance
     ? ({ "--glance-x": `${glance.x}px`, "--glance-y": `${glance.y}px` } as CSSProperties)
     : undefined;
@@ -161,6 +168,7 @@ export function BotAvatar({
       data-mood={mood}
       data-still={still || undefined}
       data-bot={botId}
+      data-color={color}
       data-cheer={moment === "cheer" || undefined}
       data-wake={(moment === "wake" && !arrive) || undefined}
       data-sleep={moment === "sleep" || undefined}
@@ -186,35 +194,52 @@ export function BotAvatar({
         </radialGradient>
       </defs>
       <g className="avatar-hop">
-        {!framed && (
-          <path
-            className="avatar-fire"
-            d={OUTLINE}
-            fill="none"
-            stroke="var(--avatar-edge)"
-            strokeWidth={2}
-            vectorEffect="non-scaling-stroke"
-          />
-        )}
-        <g clipPath={`url(#${id("clip")})`}>
-          <rect x={-200} y={0} width={1000} height={900} fill={paint.body} />
-          <g filter={`url(#${id("soft")})`}>
-            {SHADES.map((shade, index) => (
-              <path key={shade.fill} d={shade.d} fill={paint.shades[index]} fillRule="evenodd" />
-            ))}
-          </g>
-        </g>
-        {mood === "working" &&
-          SPARKS.map((spark) => (
-            <g key={spark.x} transform={`translate(${spark.x} ${spark.y}) scale(1.5)`}>
-              {/* flame.ts moves it, as its spark says. */}
-              <path className="avatar-spark" d={EMBER.d} fill={`url(#${id("ember")})`} />
+        {/* The moments move the body in the spring, the mouse in the poke (gestures.ts, pointer.ts). */}
+        <g className="avatar-spring">
+          <g className="avatar-poke">
+            {!framed && (
+              <path
+                className="avatar-fire"
+                d={OUTLINE}
+                fill="none"
+                stroke="var(--avatar-edge)"
+                strokeWidth={2}
+                vectorEffect="non-scaling-stroke"
+              />
+            )}
+            <g clipPath={`url(#${id("clip")})`}>
+              <rect x={-200} y={0} width={1000} height={900} fill={paint.body} />
+              <g filter={`url(#${id("soft")})`}>
+                {SHADES.map((shade, index) => (
+                  <path
+                    key={shade.fill}
+                    d={shade.d}
+                    fill={paint.shades[index]}
+                    fillRule="evenodd"
+                  />
+                ))}
+              </g>
             </g>
-          ))}
-        <g className="avatar-look">
-          {EYES.map((eye, index) => (
-            <Eye key={eye.x} eye={eye} side={index === 0 ? "l" : "r"} fill={`url(#${id("eye")})`} />
-          ))}
+            {mood === "working" &&
+              SPARKS.map((spark) => (
+                <g key={spark.x} transform={`translate(${spark.x} ${spark.y}) scale(1.5)`}>
+                  {/* flame.ts moves it, as its spark says. */}
+                  <path className="avatar-spark" d={EMBER.d} fill={`url(#${id("ember")})`} />
+                </g>
+              ))}
+            <g className="avatar-look">
+              <g className="avatar-gaze">
+                {EYES.map((eye, index) => (
+                  <Eye
+                    key={eye.x}
+                    eye={eye}
+                    side={index === 0 ? "l" : "r"}
+                    fill={`url(#${id("eye")})`}
+                  />
+                ))}
+              </g>
+            </g>
+          </g>
         </g>
       </g>
     </svg>
