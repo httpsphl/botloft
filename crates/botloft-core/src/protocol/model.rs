@@ -5,6 +5,9 @@ use serde::{Deserialize, Serialize};
 use super::{Activity, BackgroundTask, BotEffort, ContextUsage, ModelEffort};
 use crate::ids::{BotId, CrewId};
 
+/// `Crew::system` of the Maker's own crew (spec 36.2).
+pub const MAKER_CREW: &str = "maker";
+
 /// A group of bots that can message each other and share a folder.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -28,6 +31,10 @@ pub struct Crew {
     pub auto_mode: bool,
     /// Color `#RRGGBB` the owner gave the crew; `null` for none.
     pub color: Option<String>,
+    /// [`MAKER_CREW`] for the crew Botloft keeps for the Maker (spec 36.2),
+    /// which the app does not list with the owner's crews; `null` for the
+    /// owner's own.
+    pub system: Option<String>,
     /// Unix time in milliseconds.
     pub created_at: i64,
     /// Unix time in milliseconds; `null` while the crew is active.

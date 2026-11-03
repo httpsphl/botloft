@@ -129,6 +129,11 @@ prefixed_id!(
     /// Identifies what the owner let a bot reach in another crew (spec 10.4).
     CrewAccessId, "crew access", "cxa_"
 );
+prefixed_id!(
+    /// Identifies what the Maker built in one go, so it can be undone
+    /// (spec 36.4).
+    BuildId, "build", "bld_"
+);
 
 /// A random version 4 UUID, for Claude Code session ids and the uuid of
 /// each message written to a bot (spec 7.3, 9.2).

@@ -15,6 +15,7 @@ fn setup() -> (Store, CrewId) {
         paused: false,
         color: None,
         auto_mode: false,
+        system: None,
         created_at: 1,
         archived_at: None,
     };

@@ -130,6 +130,7 @@ fn hello(daemon: &Daemon, request: jsonrpc::Request) -> Result<HelloResult, RpcE
     debug!(client = %params.client.name, version = %params.client.version, "app connected");
     if let Some(locale) = &params.client.locale {
         daemon.desktop.set_locale(locale);
+        crate::service::maker::localize(daemon, locale);
     }
     Ok(HelloResult {
         daemon_version: env!("CARGO_PKG_VERSION").to_owned(),

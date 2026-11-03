@@ -205,7 +205,7 @@ fn target(
 
 /// The computer's time zone, as the app sends it when the owner creates a
 /// routine (spec 20.2).
-fn system_zone() -> String {
+pub(super) fn system_zone() -> String {
     jiff::tz::TimeZone::system()
         .iana_name()
         .map_or_else(|| FALLBACK_ZONE.to_owned(), str::to_owned)

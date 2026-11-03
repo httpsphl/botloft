@@ -39,6 +39,7 @@ pub fn tools() -> Value {
             super::connector::tool(),
         ])
         .chain(super::templates::tools())
+        .chain([super::build::tool()])
         .chain(super::activity::tools())
         .chain(super::crew_reach::tools())
         .chain(super::browser_catalog::tools())
@@ -49,7 +50,7 @@ pub fn tools() -> Value {
 }
 
 /// The ids of the bot catalog, for `suggest_bot`'s `template`.
-fn template_ids() -> Vec<String> {
+pub(super) fn template_ids() -> Vec<String> {
     crate::catalog::list(None)
         .into_iter()
         .map(|template| template.id)

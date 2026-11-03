@@ -9,6 +9,7 @@ pub mod cloud_server;
 pub mod context;
 #[cfg(windows)]
 pub mod desktop;
+pub mod maker;
 pub mod mcp;
 pub mod mobile;
 pub mod routines;

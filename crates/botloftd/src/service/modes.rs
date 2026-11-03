@@ -13,6 +13,7 @@ use crate::state::Daemon;
 pub fn set_permission_mode(daemon: &Daemon, params: BotsSetPermissionModeParams) -> ApiResult<Bot> {
     let store = daemon.store();
     let (crew, mut record) = active(&store, &params.bot_id)?;
+    super::maker::refuse_mode(&crew, params.mode)?;
     if record.permission_mode == params.mode {
         return Ok(to_protocol(daemon, &store, &crew, record));
     }

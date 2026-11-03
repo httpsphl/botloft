@@ -8,7 +8,7 @@ use botloft_store::BotRecord;
 use serde_json::{Value, json};
 
 use super::memory;
-use super::sections::{LEAD_MD, PLAN_FIRST_MD};
+use super::sections::{LEAD_MD, MAKER_MD, PLAN_FIRST_MD};
 use crate::paths::permission_rule_path;
 
 /// Longer than the approval timeout, so Claude Code never gives up on a
@@ -76,7 +76,9 @@ pub fn rules_md(crew: &Crew, bot: &BotRecord, work_folder: &Path) -> String {
     } else {
         bot.instructions.as_str()
     };
-    let lead = if crew.lead_bot_id.as_ref() == Some(&bot.id) {
+    let lead = if crew.system.as_deref() == Some(botloft_core::protocol::MAKER_CREW) {
+        MAKER_MD
+    } else if crew.lead_bot_id.as_ref() == Some(&bot.id) {
         LEAD_MD
     } else {
         ""
@@ -265,6 +267,7 @@ mod tests {
             paused: false,
             color: None,
             auto_mode: false,
+            system: None,
             created_at: 0,
             archived_at: None,
         };

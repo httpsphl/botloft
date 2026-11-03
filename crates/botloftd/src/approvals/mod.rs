@@ -12,8 +12,8 @@ use std::sync::{Mutex, MutexGuard};
 use std::time::Duration;
 
 use botloft_core::chat::{
-    BROWSER_SITE_TOOL, CHANGE_ROUTINE_TOOL, CREW_ACCESS_TOOL, DESKTOP_TOOL, ROUTINE_TOOL,
-    SHOW_PLAN_TOOL, SUGGEST_TOOL, clip, tool_input_max, tool_summary,
+    BROWSER_SITE_TOOL, BUILD_TOOL, CHANGE_ROUTINE_TOOL, CREW_ACCESS_TOOL, DESKTOP_TOOL,
+    ROUTINE_TOOL, SHOW_PLAN_TOOL, SUGGEST_TOOL, clip, tool_input_max, tool_summary,
 };
 use botloft_core::command::tool_explanation;
 use botloft_core::ids::{ApprovalId, BotId, ChatItemId};
@@ -245,6 +245,9 @@ pub fn answer(daemon: &Daemon, params: ApprovalsAnswerParams) -> ApiResult<Appro
             let value: Value = serde_json::from_str(&input)
                 .map_err(|_| ApiError::validation("the changed suggestion is not valid JSON"))?;
             Some(value.to_string())
+        }
+        Some(input) if params.allow && existing.approval.tool_name == BUILD_TOOL => {
+            Some(crate::tools::check_changed_build(daemon, &input)?)
         }
         Some(input) if params.allow && existing.approval.tool_name == ROUTINE_TOOL => Some(
             crate::tools::check_changed_routine(daemon, &existing.approval.input, &input)?,
