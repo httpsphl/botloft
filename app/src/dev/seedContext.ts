@@ -82,6 +82,18 @@ export function seedContext(
         more: 0,
       },
     ],
+    prs: [
+      {
+        number: 14,
+        url: "https://github.com/owner/bakery-site/pull/14",
+        title: "Menu page with photos and prices",
+        state: "open",
+        additions: 160,
+        deletions: 6,
+        checks: { passed: 3, failed: 0, pending: 1 },
+      },
+    ],
+    github: "ok",
     events: [
       {
         kind: "pr",

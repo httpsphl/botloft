@@ -10,6 +10,7 @@ import type { Bot, GitEvent, GitFile, GitRepo, OverviewChanges } from "../../lib
 import { useApi, useHost } from "../../store/context";
 import { attempt } from "../../ui/toast";
 import { EditCounts } from "../chat/EditDiff";
+import { PullRequests } from "./PullRequests";
 
 const EVERY_MS = 60_000;
 /** Files shown before "Show all". */
@@ -45,6 +46,7 @@ export function ChangesSection({ bot }: { bot: Bot }) {
           ) : (
             changes.repos.map((repo) => <Repo key={repo.path} repo={repo} />)
           )}
+          <PullRequests prs={changes.prs} github={changes.github} />
           {changes.events.length > 0 && <Events bot={bot} events={changes.events} />}
         </>
       )}

@@ -1,7 +1,6 @@
 import {
   Ellipsis,
   Files,
-  Gauge,
   Globe,
   LayoutTemplate,
   PanelRight,
@@ -16,6 +15,7 @@ import { Badge } from "../../ui/Badge";
 import { Button, FitLabel } from "../../ui/Button";
 import { Menu } from "../../ui/Menu";
 import { attempt } from "../../ui/toast";
+import { OverviewIcon } from "../overview/icon";
 import { BotAvatar, moodOf } from "./BotAvatar";
 import { BotStateBadge } from "./BotStateBadge";
 import { useBotActions } from "./botActions";
@@ -191,7 +191,7 @@ export function BotHeader({
         <Button
           size="sm"
           variant={overviewOpen ? "secondary" : "ghost"}
-          icon={Gauge}
+          icon={OverviewIcon}
           label={overviewOpen ? t.overview.hide : t.overview.show}
           aria-pressed={overviewOpen}
           onClick={onToggleOverview}

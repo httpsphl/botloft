@@ -1,8 +1,12 @@
 //! The Changes part of an agent's Overview (spec 33.5): what changed in the
 //! git repositories its folders are in, and what it did in git, as Claude
-//! Code reported each time a command of the agent touched git.
+//! Code reported each time a command of the agent touched git, with its
+//! pull requests as GitHub has them now.
 
 mod git;
+mod github;
+
+pub use github::use_program as use_github_program;
 
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{BotIdParams, GitEvent, GitEventKind, OverviewChanges};
@@ -36,7 +40,15 @@ pub fn changes(daemon: &Daemon, params: BotIdParams) -> ApiResult<OverviewChange
         }
     }
     let repos = tops.iter().filter_map(|top| git::read(top)).collect();
-    Ok(OverviewChanges { repos, events })
+    // `gh` reads a full link from any folder; the bot's own is always there.
+    let cwd = tops.first().unwrap_or(&folders[0]);
+    let (prs, github) = github::read(&github::links(&events), cwd);
+    Ok(OverviewChanges {
+        repos,
+        events,
+        prs,
+        github,
+    })
 }
 
 /// The `gitOperation` of a command's result: each thing it did in git is

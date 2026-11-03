@@ -77,7 +77,25 @@ export const overview: Messages["overview"] = {
       "auto-merge-enabled": "con merge automático activado",
       "auto-merge-disabled": "con merge automático desactivado",
     },
+    prs: "Pull requests",
+    prState: { open: "Abierto", draft: "Borrador", merged: "Con merge", closed: "Cerrado" },
+    checks: {
+      none: "Sin checks",
+      passed: (total) => (total === 1 ? "El check pasó" : `Los ${total} checks pasaron`),
+      failed: (failed, total) => `${failed} de ${total} checks fallaron`,
+      running: (pending, total) => `${pending} de ${total} checks en marcha`,
+    },
+    github: {
+      missing: "Para ver cómo fueron los checks, instala GitHub CLI (gh) e inicia sesión.",
+      signed_out: "Para ver cómo fueron los checks, inicia sesión en GitHub CLI: gh auth login.",
+      error: "No se pudo leer GitHub ahora.",
+    },
     openPr: (number) => `Abrir el PR #${number}`,
     openFailed: "No se pudo abrir el enlace",
+  },
+  tools: {
+    title: "Herramientas conectadas",
+    none: (bot) => `${bot} no tiene herramientas conectadas.`,
+    change: "Cambiar en los detalles",
   },
 };
