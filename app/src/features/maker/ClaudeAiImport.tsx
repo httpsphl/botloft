@@ -12,6 +12,7 @@ import { Button } from "../../ui/Button";
 import { Choices } from "../../ui/Choices";
 import { Dialog } from "../../ui/Dialog";
 import { attempt } from "../../ui/toast";
+import { ImportWorking } from "./ImportWorking";
 import { DraftReview, period, useImportDraft } from "./importParts";
 
 /** Where claude.ai's settings are; "Privacy" holds "Export data" (spec 36.6). */
@@ -30,18 +31,22 @@ export function ClaudeAiImport({ onClose }: { onClose(): void }) {
   const [path, setPath] = useState<string | null>(null);
   const [found, setFound] = useState<ImportConversations | null>(null);
   const [span, setSpan] = useState<Period>("all");
+  /** Reading the ZIP, as opposed to making the summary. */
+  const [reading, setReading] = useState(false);
   const { draft, busy, setBusy, make, forget, footer } = useImportDraft(onClose);
 
   const pick = async () => {
     const picked = await host.pickFile(a.pickTitle, a.kind, ["zip"]);
     if (!picked) return;
     setBusy(true);
+    setReading(true);
     setFound(null);
     await attempt(a.scanFailed, async () => {
       const scan = await api.call("imports.scan", { source: "claude_ai", path: picked });
       setPath(picked);
       setFound(scan.conversations);
     });
+    setReading(false);
     setBusy(false);
   };
 
@@ -89,8 +94,11 @@ export function ClaudeAiImport({ onClose }: { onClose(): void }) {
             <p className="text-muted text-xs leading-relaxed">{a.takes}</p>
           </>
         )}
-        {busy && !draft && <p className="text-muted">{t.history.making}</p>}
-        {!draft && found && (
+        {reading && <ImportWorking title={a.reading} hint={a.readingHint} />}
+        {busy && !reading && !draft && (
+          <ImportWorking title={t.history.making} hint={t.history.makingHint} />
+        )}
+        {!draft && found && !busy && (
           <div className="flex flex-col gap-3 rounded-xl border border-line px-4 py-3">
             <p className="font-medium">
               {a.found(found.count, period(found.firstAt, found.lastAt))}

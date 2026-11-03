@@ -66,14 +66,22 @@ export const maker: Messages["maker"] = {
       "O Botloft lê o histórico que o Claude Code guarda neste computador e faz um resumo para o Criador. Você escolhe os projetos e lê o resumo inteiro antes de qualquer coisa sair.",
     takes:
       "Só os pedidos que você digitou, os títulos das sessões, as ferramentas usadas, seus CLAUDE.md e os nomes das suas skills. Nunca as respostas do Claude, o que as ferramentas leram ou devolveram, nem anexos.",
-    loading: "Olhando seu histórico…",
+    loading: "Lendo seu histórico do Claude Code…",
+    loadingHint:
+      "Com muitos projetos, isso leva até um minuto. Pode deixar esta janela aberta e esperar.",
+    scanError:
+      "Não foi possível ler o histórico. Às vezes a primeira leitura demora: tente de novo.",
+    retry: "Tentar de novo",
+    elapsed: (seconds: number) => `${seconds} s`,
     none: "O Claude Code ainda não tem histórico neste computador.",
     scanFailed: "Não foi possível ler o histórico",
     all: "Todos os projetos",
     project: (sessions: number, prompts: number, period: string) =>
       `${sessions} ${sessions === 1 ? "sessão" : "sessões"} · ${prompts} ${prompts === 1 ? "pedido" : "pedidos"} · ${period}`,
     make: "Montar o resumo",
-    making: "Lendo os projetos escolhidos…",
+    making: "Montando o resumo…",
+    makingHint:
+      "Lendo os projetos escolhidos e trocando chaves, e-mails e números. Isso leva até um minuto.",
     makeFailed: "Não foi possível montar o resumo",
     size: (thousands: number) =>
       `Perto de ${thousands} mil tokens do seu plano quando o Criador ler: como uma conversa longa.`,
@@ -113,6 +121,8 @@ export const maker: Messages["maker"] = {
     takes:
       "De cada conversa, só o título, a data, quantas mensagens tem e as três primeiras mensagens que você escreveu. Nunca as respostas do Claude nem os anexos.",
     scanFailed: "Não foi possível ler este arquivo",
+    reading: "Lendo o arquivo…",
+    readingHint: "Uma exportação grande leva até um minuto. O Botloft lê o arquivo onde ele está.",
     found: (count: number, period: string) =>
       `${count} ${count === 1 ? "conversa" : "conversas"} · ${period}`,
     projects: (names: string) => `Projetos: ${names}`,

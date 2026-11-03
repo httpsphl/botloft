@@ -195,6 +195,16 @@ describe("RpcConnection", () => {
     await expect(slow).rejects.toMatchObject({ code: ClientErrorCode.timeout });
   });
 
+  test("reading the owner's history waits minutes, not the usual time", async () => {
+    const { connection, socket, accept } = setup({ requestTimeoutMs: 1000 });
+    connection.start();
+    accept();
+    const scan = connection.request("imports.scan", { source: "claude_code" });
+    vi.advanceTimersByTime(60_000);
+    socket().reply(socket().last().id, { source: "claude_code", projects: [] });
+    await expect(scan).resolves.toMatchObject({ projects: [] });
+  });
+
   test("close stops everything", async () => {
     const { connection, sockets, socket } = setup();
     connection.start();

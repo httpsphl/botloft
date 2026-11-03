@@ -66,14 +66,22 @@ export const maker: Messages["maker"] = {
       "Botloft lee el historial que Claude Code guarda en esta computadora y hace un resumen para el Creador. Eliges los proyectos y lees el resumen entero antes de que salga nada.",
     takes:
       "Solo los pedidos que escribiste, los títulos de las sesiones, las herramientas usadas, tus CLAUDE.md y los nombres de tus skills. Nunca las respuestas de Claude, lo que las herramientas leyeron o devolvieron, ni adjuntos.",
-    loading: "Mirando tu historial…",
+    loading: "Leyendo tu historial de Claude Code…",
+    loadingHint:
+      "Con muchos proyectos, esto tarda hasta un minuto. Puedes dejar esta ventana abierta y esperar.",
+    scanError:
+      "No se pudo leer el historial. A veces la primera lectura tarda: inténtalo de nuevo.",
+    retry: "Intentar de nuevo",
+    elapsed: (seconds: number) => `${seconds} s`,
     none: "Claude Code todavía no tiene historial en esta computadora.",
     scanFailed: "No se pudo leer el historial",
     all: "Todos los proyectos",
     project: (sessions: number, prompts: number, period: string) =>
       `${sessions} ${sessions === 1 ? "sesión" : "sesiones"} · ${prompts} ${prompts === 1 ? "pedido" : "pedidos"} · ${period}`,
     make: "Armar el resumen",
-    making: "Leyendo los proyectos elegidos…",
+    making: "Armando el resumen…",
+    makingHint:
+      "Leyendo los proyectos elegidos y cambiando claves, correos y números. Esto tarda hasta un minuto.",
     makeFailed: "No se pudo armar el resumen",
     size: (thousands: number) =>
       `Cerca de ${thousands} mil tokens de tu plan cuando el Creador lo lea: como una conversación larga.`,
@@ -114,6 +122,8 @@ export const maker: Messages["maker"] = {
     takes:
       "De cada conversación, solo el título, la fecha, cuántos mensajes tiene y los tres primeros mensajes que escribiste. Nunca las respuestas de Claude ni los adjuntos.",
     scanFailed: "No se pudo leer este archivo",
+    reading: "Leyendo el archivo…",
+    readingHint: "Una exportación grande tarda hasta un minuto. Botloft la lee donde está.",
     found: (count: number, period: string) =>
       `${count} ${count === 1 ? "conversación" : "conversaciones"} · ${period}`,
     projects: (names: string) => `Proyectos: ${names}`,

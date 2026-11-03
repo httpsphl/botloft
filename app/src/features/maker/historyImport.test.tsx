@@ -1,13 +1,13 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 import { FakeBotloft } from "../../lib/fake";
+import { ClientErrorCode, RpcError } from "../../lib/rpc";
 import { crewOpened, openBot, renderApp } from "../../test/app";
 
 afterEach(cleanup);
 
 /** The Maker's empty chat, then the history dialog open on its list. */
-async function openHistory() {
-  const fake = new FakeBotloft();
+async function openHistory(fake = new FakeBotloft()) {
   fake.addCrew("Ops");
   const maker = fake.maker.ensure();
   fake.setBotState(maker.id, "idle");
@@ -55,5 +55,32 @@ describe("bringing the Claude Code history", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(fake.imports.made).toHaveLength(0);
     expect(fake.calls.some((call) => call.method === "imports.send")).toBe(false);
+  });
+
+  test("a reading that fails says so and tries again, never 'no history'", async () => {
+    const fake = new FakeBotloft();
+    fake.failNext("imports.scan", new RpcError(ClientErrorCode.timeout, "timed out"));
+    fake.addCrew("Ops");
+    const maker = fake.maker.ensure();
+    fake.setBotState(maker.id, "idle");
+    renderApp(fake);
+    await crewOpened("Ops");
+    openBot("^The Maker");
+    fireEvent.click(await screen.findByRole("button", { name: /Bring my Claude Code history/ }));
+    const dialog = await screen.findByRole("dialog", { name: "Bring your Claude Code history" });
+    expect(await within(dialog).findByText(/Could not read the history\. It may/)).toBeDefined();
+    expect(within(dialog).queryByText(/no history on this computer/)).toBeNull();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Try again" }));
+    expect(await within(dialog).findByText("C:\\work\\blog")).toBeDefined();
+  });
+
+  test("while the summary is made, the Maker works on screen with the seconds", async () => {
+    const { dialog } = await openHistory();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Make the summary" }));
+    const working = within(dialog).getByRole("status");
+    expect(within(working).getByText("Making the summary…")).toBeDefined();
+    expect(within(working).getByText("0 s")).toBeDefined();
+    expect(working.querySelector("[data-maker]")).not.toBeNull();
+    await within(dialog).findByText(/Summarize today's e-mails/);
   });
 });

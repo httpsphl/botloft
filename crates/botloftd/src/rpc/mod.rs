@@ -197,6 +197,9 @@ const ASIDE: &[&str] = &[
     method::ATTACHMENTS_READ,
     method::USAGE_TOKENS,
     method::CHAT_SEARCH,
+    // Reading the owner's whole history takes a while (spec 36.7).
+    method::IMPORTS_SCAN,
+    method::IMPORTS_CREATE,
     // They wait for the network, a copy's transfer for minutes (spec 27.5).
     method::CLOUD_STATUS,
     method::CLOUD_SIGNIN,

@@ -3,13 +3,14 @@
 // swapped out, how much of the plan it takes), then send it to the Maker
 // or forget it. Nothing leaves before the owner clicks Send.
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useT } from "../../i18n";
 import type { ImportProject } from "../../lib/protocol.gen";
 import { useApi } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Dialog } from "../../ui/Dialog";
 import { attempt } from "../../ui/toast";
+import { ImportFailed, ImportWorking } from "./ImportWorking";
 import { Check, DraftReview, period, useImportDraft } from "./importParts";
 
 /** The dialog that brings the owner's Claude Code history to the Maker. */
@@ -17,23 +18,36 @@ export function HistoryImport({ onClose }: { onClose(): void }) {
   const h = useT().maker.history;
   const api = useApi();
   const [projects, setProjects] = useState<ImportProject[] | null>(null);
+  const [failed, setFailed] = useState(false);
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   /** The projects the summary was made from, to take some out again. */
   const [made, setMade] = useState<Set<string>>(new Set());
   const { draft, busy, make, forget, footer } = useImportDraft(onClose);
+  const making = busy && !draft;
+
+  /** Lists the history again: the first reading with a cold disk is slow. */
+  const scan = useCallback(
+    async (live: () => boolean) => {
+      setFailed(false);
+      setProjects(null);
+      const ok = await attempt(h.scanFailed, async () => {
+        const found = await api.call("imports.scan", { source: "claude_code" });
+        if (!live()) return;
+        setProjects(found.projects);
+        setChosen(new Set(found.projects.map((project) => project.key)));
+      });
+      if (!ok && live()) setFailed(true);
+    },
+    [api, h.scanFailed],
+  );
 
   useEffect(() => {
     let live = true;
-    attempt(h.scanFailed, async () => {
-      const scan = await api.call("imports.scan", { source: "claude_code" });
-      if (!live) return;
-      setProjects(scan.projects);
-      setChosen(new Set(scan.projects.map((project) => project.key)));
-    }).then((ok) => !ok && live && setProjects([]));
+    void scan(() => live);
     return () => {
       live = false;
     };
-  }, [api, h.scanFailed]);
+  }, [scan]);
 
   const toggle = (key: string, on: boolean) =>
     setChosen((now) => {
@@ -72,10 +86,11 @@ export function HistoryImport({ onClose }: { onClose(): void }) {
             <p className="text-muted text-xs leading-relaxed">{h.takes}</p>
           </>
         )}
-        {projects === null && <p className="text-muted">{h.loading}</p>}
+        {failed && <ImportFailed text={h.scanError} onRetry={() => void scan(() => true)} />}
+        {projects === null && !failed && <ImportWorking title={h.loading} hint={h.loadingHint} />}
         {projects?.length === 0 && <p className="text-muted">{h.none}</p>}
-        {busy && !draft && <p className="text-muted">{h.making}</p>}
-        {!draft && projects && projects.length > 0 && (
+        {making && <ImportWorking title={h.making} hint={h.makingHint} />}
+        {!draft && !making && projects && projects.length > 0 && (
           <div className="flex flex-col">
             <Check
               label={h.all}

@@ -51,6 +51,7 @@ pub fn create(daemon: &Daemon, params: BotsCreateParams) -> ApiResult<Bot> {
         params.model,
         Some(params.agent.unwrap_or_else(|| default_agent(daemon))),
     )?;
+    not_white(new.color.as_deref())?;
     if !daemon.supervisor.agent_enabled(new.agent) {
         return Err(ApiError::validation(format!(
             "bots that run on {} are not available yet",
@@ -171,7 +172,9 @@ pub fn update(daemon: &Daemon, params: BotsUpdateParams) -> ApiResult<Bot> {
         record.instructions = validate::instructions(&instructions)?;
     }
     if let Some(color) = params.color {
+        super::maker::refuse(&crew, "stays white")?;
         record.color = parse_color(&color)?;
+        not_white(Some(&record.color))?;
     }
     let mut relaunch = false;
     if let Some(commands) = params.allowed_commands {
@@ -375,6 +378,14 @@ pub(crate) fn ensure_handle_free(
         ))),
         _ => Ok(()),
     }
+}
+
+/// White is the Maker's (spec 36.3): the app draws it as the Maker.
+fn not_white(color: Option<&str>) -> ApiResult<()> {
+    if color == Some(super::maker::COLOR) {
+        return Err(ApiError::validation("white is the Maker's color"));
+    }
+    Ok(())
 }
 
 fn parse_color(input: &str) -> ApiResult<String> {

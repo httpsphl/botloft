@@ -120,7 +120,7 @@ export function BotAvatar({
   starting = false,
   doing = null,
   face = null,
-  maker = false,
+  maker: asked = false,
   scene = false,
 }: {
   color: string;
@@ -139,11 +139,15 @@ export function BotAvatar({
   doing?: Doing | null;
   /** The shape of its eyes on top of the mood (mascotLook.ts). */
   face?: Face | null;
-  /** The Maker: its flame all in white, with its wand (spec 36.3). */
+  /** The Maker: its flame all in white, with its wand (spec 36.3). A white
+   * `color` is the Maker too. */
   maker?: boolean;
   /** The Maker with its flow behind it, where there is room. */
   scene?: boolean;
 }) {
+  // The Maker's bot is white in the daemon (spec 36.3), so the chat, the
+  // island and every other place show it as the Maker without asking.
+  const maker = asked || chosen.toUpperCase() === MAKER_COLOR;
   const color = maker ? MAKER_COLOR : chosen;
   // Every avatar on the page needs its own clip, blur and gradients.
   const unique = useId().replace(/[^\w-]/g, "");

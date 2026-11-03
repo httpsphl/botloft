@@ -72,7 +72,43 @@ async fn the_maker_is_made_once_and_works_alone() {
         .expect("bots");
     assert_eq!(bots[0]["name"], "O Criador");
     assert_eq!(bots[0]["handle"], "maker");
-    assert_eq!(bots[0]["color"], "#FF7A59");
+    // White, which the app draws as the Maker everywhere; it stays white
+    // and no other bot takes it.
+    assert_eq!(bots[0]["color"], "#FFFFFF");
+    let refused = m
+        .app
+        .call(
+            "bots.update",
+            json!({ "botId": m.bot["id"], "color": "#5EC8FF" }),
+        )
+        .await
+        .expect_err("stays white");
+    assert!(
+        refused.message.contains("stays white"),
+        "{}",
+        refused.message
+    );
+    let crew = m
+        .app
+        .call(
+            "crews.create",
+            json!({ "name": "Desk", "lead": { "name": "Lead", "role": "Leads", "instructions": "" } }),
+        )
+        .await
+        .expect("crew");
+    let refused = m
+        .app
+        .call(
+            "bots.create",
+            json!({ "crewId": crew["id"], "name": "Snow", "role": "Writes", "instructions": "", "color": "#ffffff" }),
+        )
+        .await
+        .expect_err("white is the Maker's");
+    assert!(
+        refused.message.contains("Maker's color"),
+        "{}",
+        refused.message
+    );
     // Asking the owner is fine; bypassing is not.
     m.app
         .call(
@@ -134,4 +170,18 @@ async fn an_impossible_plan_never_reaches_the_owner() {
             .pending_approvals(&m.bot["id"].as_str().expect("id").parse().expect("bot id"))
             .expect("pending");
     assert!(pending.is_empty(), "no card for an impossible plan");
+}
+
+#[tokio::test]
+async fn a_maker_made_before_it_turned_white_turns_white() {
+    let m = maker().await;
+    let id: botloft_core::ids::BotId = m.bot["id"].as_str().expect("id").parse().expect("bot id");
+    let store = m.t.daemon.store();
+    let mut record = store.bot(&id).expect("read").expect("bot");
+    record.color = "#FF7A59".to_owned();
+    store.update_bot(&record).expect("orange, as it was made");
+    drop(store);
+    botloftd::service::maker::ensure(&m.t.daemon).expect("ensure");
+    let record = m.t.daemon.store().bot(&id).expect("read").expect("bot");
+    assert_eq!(record.color, "#FFFFFF");
 }

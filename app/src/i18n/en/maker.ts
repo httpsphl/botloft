@@ -64,14 +64,21 @@ export const maker = {
       "Botloft reads the history Claude Code keeps on this computer and makes a summary for the Maker. You choose the projects and read the whole summary before anything goes.",
     takes:
       "Only the requests you typed, session titles, which tools were used, your CLAUDE.md files and the names of your skills. Never Claude's answers, what tools read or returned, or attachments.",
-    loading: "Looking at your history…",
+    loading: "Reading your Claude Code history…",
+    loadingHint:
+      "With many projects this takes up to a minute. You can leave this window open and wait.",
+    scanError: "Could not read the history. It may still be warming up: try again.",
+    retry: "Try again",
+    elapsed: (seconds: number) => `${seconds} s`,
     none: "Claude Code has no history on this computer yet.",
     scanFailed: "Could not read the history",
     all: "All projects",
     project: (sessions: number, prompts: number, period: string) =>
       `${sessions} ${sessions === 1 ? "session" : "sessions"} · ${prompts} ${prompts === 1 ? "request" : "requests"} · ${period}`,
     make: "Make the summary",
-    making: "Reading the chosen projects…",
+    making: "Making the summary…",
+    makingHint:
+      "Reading the chosen projects and swapping out keys, e-mails and numbers. This takes up to a minute.",
     makeFailed: "Could not make the summary",
     size: (thousands: number) =>
       `About ${thousands} thousand tokens of your plan when the Maker reads it: like a long conversation.`,
@@ -111,6 +118,8 @@ export const maker = {
     takes:
       "Of each conversation, only the title, the date, how many messages it has and the first three messages you wrote. Never Claude's answers or attachments.",
     scanFailed: "Could not read this file",
+    reading: "Reading the file…",
+    readingHint: "A big export takes up to a minute. Botloft reads it where it is.",
     found: (count: number, period: string) =>
       `${count} ${count === 1 ? "conversation" : "conversations"} · ${period}`,
     projects: (names: string) => `Projects: ${names}`,
