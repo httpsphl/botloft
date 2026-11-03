@@ -19,14 +19,22 @@ const DROOP_MS = 800;
 const LOOK_EVERY_MS = [9000, 16000] as const;
 const LOOK_MS = 4400;
 
-function resting(): boolean {
+/** The owner asked for less motion, in Botloft or in Windows. */
+export function lessMotion(): boolean {
+  return (
+    document.documentElement.getAttribute("data-motion") === "less" ||
+    (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches)
+  );
+}
+
+/** Whether the mascots stand still: out of sight, without focus, or with less motion. */
+export function resting(): boolean {
   const root = document.documentElement;
   return (
     document.visibilityState === "hidden" ||
     root.hasAttribute("data-hidden") ||
     root.hasAttribute("data-blurred") ||
-    root.getAttribute("data-motion") === "less" ||
-    (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches)
+    lessMotion()
   );
 }
 
