@@ -77,6 +77,9 @@ export function seedContext(
     checkedAt: now,
   };
   fake.bot(bots.scout).connectors = ["Google Calendar"];
+  // Sites the owner signed in to for the agents (spec 35).
+  fake.logins.add("reddit.com", [bots.scout], now - 2 * 3_600_000);
+  fake.logins.add("notion.so", [], now - 26 * 3_600_000);
   fake.changes.byBot.set(bots.scout, {
     repos: [
       {

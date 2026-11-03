@@ -16,6 +16,7 @@ import { files } from "./files";
 import { home } from "./home";
 import { island } from "./island";
 import { keys } from "./keys";
+import { logins } from "./logins";
 import { messages } from "./messages";
 import { onboarding } from "./onboarding";
 import { overview } from "./overview";
@@ -43,6 +44,7 @@ export const es: Messages = {
   catalog,
   chat,
   connections,
+  logins,
   crews,
   crewTemplates,
   desktop,

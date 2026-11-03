@@ -31,6 +31,18 @@ impl BrowserProcess {
         let _ = self.child.kill();
         let _ = self.child.wait();
     }
+
+    /// Whether the browser itself ended within `within`.
+    pub async fn ended(&mut self, within: Duration) -> bool {
+        let started = Instant::now();
+        while started.elapsed() < within {
+            if !matches!(self.child.try_wait(), Ok(None)) {
+                return true;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+        false
+    }
 }
 
 impl Drop for BrowserProcess {

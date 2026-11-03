@@ -330,6 +330,7 @@ export const account: Messages["account"] = {
     about: "Acerca de",
     backup: "Copia de seguridad",
     tools: "Herramientas",
+    logins: "Inicios de sesión",
     permissions: "Permisos",
     account: "Cuenta y móvil",
     groupDaily: "Cada día",

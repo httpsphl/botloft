@@ -209,6 +209,7 @@ pub fn archive(daemon: &Daemon, params: CrewIdParams) -> ApiResult<Crew> {
     for bot in &bots {
         super::routines::archive_of(daemon, &store, &bot.id, at);
         daemon.browsers.forget(&bot.id);
+        crate::logins::forget_bot(daemon, &store, &bot.id);
     }
     for bot in bots {
         if let Some(bot) = store.bot(&bot.id)? {

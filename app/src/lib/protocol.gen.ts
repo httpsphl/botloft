@@ -2092,6 +2092,50 @@ export type BotsSetConnectorsParams = { botId: BotId,
  */
 names: Array<string>, };
 
+/**
+ * A site the owner signed in to, and the agents that have the login.
+ */
+export type SiteLogin = { 
+/**
+ * The host in lowercase without `www.`, as in spec 21.5: "reddit.com".
+ */
+site: string, 
+/**
+ * When the owner last signed in, in Unix milliseconds.
+ */
+signedAt: number, botIds: Array<BotId>, };
+
+/**
+ * What `logins.list` answers, and `logins.changed` brings.
+ */
+export type LoginList = { logins: Array<SiteLogin>, 
+/**
+ * The site of the window open for the owner to sign in, if any.
+ */
+window: string | null, };
+
+/**
+ * `logins.changed`: the list after a change. When a window closed,
+ * `closed` names its site and `found` says whether a login was there.
+ */
+export type LoginsChanged = { list: LoginList, closed: string | null, found: boolean | null, };
+
+export type LoginsOpenParams = { 
+/**
+ * The page to sign in on: "reddit.com" or "https://www.reddit.com/login".
+ */
+address: string, };
+
+export type LoginsOpenResult = { site: string, };
+
+export type LoginsShareParams = { site: string, 
+/**
+ * Every agent that should have the login; the others lose it.
+ */
+botIds: Array<BotId>, };
+
+export type LoginsSiteParams = { site: string, };
+
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
 /**
  * What the bot says the command is for, as in `ToolItem`. The bot
@@ -2890,6 +2934,10 @@ export interface RpcMethods {
   "overview.changes": { params: BotIdParams; result: OverviewChanges };
   "connectors.list": { params: ConnectorsListParams; result: ConnectorList };
   "bots.setConnectors": { params: BotsSetConnectorsParams; result: Bot };
+  "logins.list": { params: undefined; result: LoginList };
+  "logins.open": { params: LoginsOpenParams; result: LoginsOpenResult };
+  "logins.share": { params: LoginsShareParams; result: SiteLogin };
+  "logins.remove": { params: LoginsSiteParams; result: LoginList };
   "routines.list": { params: RoutinesListParams; result: Array<Routine> };
   "routines.create": { params: RoutinesCreateParams; result: Routine };
   "routines.update": { params: RoutinesUpdateParams; result: Routine };
@@ -2947,6 +2995,7 @@ export interface RpcNotifications {
   "bot.sites": BotSites;
   "mcp.servers": McpOverview;
   "bot.mcp": BotMcp;
+  "logins.changed": LoginsChanged;
   "cloud.signed_in": CloudSignedIn;
   "cloud.progress": CloudProgress;
   "cloud.signin_expired": null;

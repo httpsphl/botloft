@@ -32,6 +32,7 @@ mod routine_runs;
 mod routines;
 mod search;
 mod signals;
+mod site_logins;
 mod tasks;
 mod today;
 mod usage;

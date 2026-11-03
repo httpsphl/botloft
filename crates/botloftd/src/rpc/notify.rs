@@ -21,6 +21,7 @@ pub(super) fn to_notification(event: &Event) -> String {
         Event::BotSites(sites) => note(notification::BOT_SITES, sites),
         Event::McpServers(overview) => note(notification::MCP_SERVERS, overview),
         Event::BotMcp(bot) => note(notification::BOT_MCP, bot),
+        Event::LoginsChanged(changed) => note(notification::LOGINS_CHANGED, changed),
         Event::DesktopChanged(state) => note(notification::DESKTOP_CHANGED, state),
         Event::DesktopAway(uses) => note(notification::DESKTOP_AWAY, uses),
         Event::ChatItem(item) => note(notification::CHAT_ITEM, item),

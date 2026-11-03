@@ -22,6 +22,7 @@ pub mod courier;
 pub mod desktop;
 pub mod keep_awake;
 pub mod logging;
+pub mod logins;
 pub mod mcp_secrets;
 pub mod mobile;
 pub mod paths;

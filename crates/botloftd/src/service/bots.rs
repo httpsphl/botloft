@@ -272,6 +272,7 @@ pub fn archive(daemon: &Daemon, params: BotIdParams) -> ApiResult<Bot> {
     let bot = changed(daemon, &store, &crew, record);
     daemon.supervisor.wake();
     daemon.browsers.forget(&bot.id);
+    crate::logins::forget_bot(daemon, &store, &bot.id);
     Ok(bot)
 }
 

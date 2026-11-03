@@ -42,7 +42,7 @@ pub fn revoke_site(daemon: &Daemon, params: SitesRevokeParams) -> ApiResult<BotS
 }
 
 /// Tells the apps the bot's sites now.
-fn sites_changed(daemon: &Daemon, bot: &BotId) -> ApiResult<BotSites> {
+pub(crate) fn sites_changed(daemon: &Daemon, bot: &BotId) -> ApiResult<BotSites> {
     let sites = BotSites {
         sites: daemon.store().allowed_sites(bot)?,
         bot_id: bot.clone(),

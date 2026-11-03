@@ -113,6 +113,8 @@ pub(super) fn launch_spec(
     // The names of its keys, for its rules (spec 32.4).
     let keys = crate::service::keys::listed(daemon, &bot.id).map_err(io::Error::other)?;
     crate::agent_keys::write_rules(&workspace, &keys)?;
+    // The sites its browser is signed in to (spec 35.3).
+    crate::logins::write_rules(daemon, &bot.id, &workspace)?;
     let token = secrets::random_token()?;
     let (session, resumed) = match session {
         Some(session) => (session.to_owned(), true),
