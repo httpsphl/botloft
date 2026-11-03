@@ -1,5 +1,6 @@
-// The agent's connected tools and how they stand (spec 33.6): the switches
-// to change them are in its details, one click away.
+// The agent's connected tools and how they stand (spec 33.6), with the
+// claude.ai tools it may use (spec 34): the switches to change them are in
+// its details, one click away.
 
 import { useId } from "react";
 import { useT } from "../../i18n";
@@ -24,10 +25,19 @@ export function ToolsSection({ bot }: { bot: Bot }) {
       <h3 id={id} className="font-semibold text-sm">
         {w.title}
       </h3>
-      {servers.length === 0 ? (
+      {servers.length === 0 && bot.connectors.length === 0 ? (
         <p className="text-muted text-sm">{w.none(bot.name)}</p>
       ) : (
         <ul aria-label={w.title} className="flex flex-col gap-0.5 rounded-xl bg-bubble p-1.5">
+          {bot.connectors.map((name) => (
+            <li
+              key={`claude-${name}`}
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm"
+            >
+              <span className="min-w-0 flex-1 break-words">{name}</span>
+              <span className="shrink-0 text-muted text-xs">{w.fromClaudeAi}</span>
+            </li>
+          ))}
           {servers.map((server) => {
             const state = mine?.states.find((each) => each.serverId === server.id);
             return (

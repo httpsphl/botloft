@@ -326,7 +326,7 @@ export const account: Messages["account"] = {
     restoreFailed: (name: string) => `Não foi possível restaurar ${name}`,
     about: "Sobre",
     backup: "Cópia de segurança",
-    tools: "Ferramentas conectadas",
+    tools: "Ferramentas",
     permissions: "Permissões",
     account: "Conta e celular",
     groupDaily: "No dia a dia",

@@ -66,6 +66,17 @@ export function seedContext(
     },
   ]);
 
+  // The owner's claude.ai account, with Google Calendar given to Scout (spec 34).
+  fake.changes.connectors = {
+    connectors: [
+      { name: "Gmail", state: "connected" },
+      { name: "Google Calendar", state: "connected" },
+      { name: "Google Drive", state: "connected" },
+      { name: "Figma", state: "needs_auth" },
+    ],
+    checkedAt: now,
+  };
+  fake.bot(bots.scout).connectors = ["Google Calendar"];
   fake.changes.byBot.set(bots.scout, {
     repos: [
       {

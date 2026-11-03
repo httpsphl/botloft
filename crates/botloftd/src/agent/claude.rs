@@ -62,10 +62,19 @@ impl Agent for ClaudeAgent {
             .into(),
         );
         args.push(plan.session.into());
+        args.push("--setting-sources".into());
+        args.push("project,local".into());
+        // Claude Code fetches the claude.ai connectors only without it: an
+        // agent given some runs without, with every other server blocked by
+        // name (spec 34.5).
+        if plan.connectors.is_empty() {
+            args.push("--strict-mcp-config".into());
+        }
+        let mut disallowed = String::from(DISALLOWED_TOOLS);
+        for server in plan.blocked_servers {
+            disallowed.push_str(&format!(",mcp__{server}"));
+        }
         for arg in [
-            "--setting-sources",
-            "project,local",
-            "--strict-mcp-config",
             "--permission-mode",
             plan.permission_mode.cli_value(),
             "--permission-prompt-tool",
@@ -73,7 +82,7 @@ impl Agent for ClaudeAgent {
             "--allowedTools",
             ALLOWED_TOOLS,
             "--disallowedTools",
-            DISALLOWED_TOOLS,
+            disallowed.as_str(),
             "--mcp-config",
         ] {
             args.push(arg.into());
@@ -168,6 +177,8 @@ mod tests {
             model,
             effort,
             agent_model: None,
+            connectors: &[],
+            blocked_servers: &[],
         }
     }
 

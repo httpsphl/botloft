@@ -27,6 +27,8 @@ pub const CHANGE_BOT_TOOL: &str = "mcp__botloft__change_bot";
 pub const SHOW_PLAN_TOOL: &str = "mcp__botloft__show_plan";
 /// A bot asking to reach another crew (spec 10.4).
 pub const CREW_ACCESS_TOOL: &str = "mcp__botloft__ask_crew_access";
+/// A bot asking for a tool of the owner's claude.ai account (spec 34.6).
+pub const CONNECTOR_TOOL: &str = "mcp__botloft__ask_connector";
 /// A bot asking to use its browser on a site (spec 21.5). Not a tool the
 /// model calls: the daemon opens this request from inside the `browser_*`
 /// tools.
@@ -118,7 +120,7 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
             field(input, "to").map(|to| format!("@{}", to.trim_start_matches('@')))
         }
         SUGGEST_TOOL | ROUTINE_TOOL | CHANGE_ROUTINE_TOOL | DELETE_ROUTINE_TOOL
-        | CHANGE_BOT_TOOL => field(input, "name").map(str::to_owned),
+        | CHANGE_BOT_TOOL | CONNECTOR_TOOL => field(input, "name").map(str::to_owned),
         BROWSER_SITE_TOOL => field(input, "site").map(str::to_owned),
         CREW_ACCESS_TOOL => field(input, "crew").map(str::to_owned),
         SHOW_PLAN_TOOL => field(input, "summary").map(str::to_owned),

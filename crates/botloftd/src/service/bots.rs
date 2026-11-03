@@ -301,6 +301,7 @@ pub(crate) fn to_protocol(daemon: &Daemon, store: &Store, crew: &Crew, record: B
     });
     let context = daemon.contexts.get(&record.id);
     let background = daemon.background.get(&record.id);
+    let connectors = store.bot_connectors(&record.id).unwrap_or_default();
     Bot {
         id: record.id,
         crew_id: record.crew_id,
@@ -322,6 +323,7 @@ pub(crate) fn to_protocol(daemon: &Daemon, store: &Store, crew: &Crew, record: B
         effort_default: record.effort_default,
         context,
         background,
+        connectors,
         state,
         generation,
         workspace: workspace.to_string_lossy().into_owned(),

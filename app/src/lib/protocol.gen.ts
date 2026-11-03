@@ -336,7 +336,11 @@ context: ContextUsage | null,
 /**
  * What the bot left running in the background (spec 33.4).
  */
-background: Array<BackgroundTask>, state: BotState, 
+background: Array<BackgroundTask>, 
+/**
+ * The claude.ai connectors it may use, by name (spec 34.4).
+ */
+connectors: Array<string>, state: BotState, 
 /**
  * Current process generation; `null` if the bot has not started since
  * the daemon did. Changes on every (re)start.
@@ -2053,6 +2057,41 @@ prs: Array<PullRequest>,
  */
 github: GithubAccess | null, };
 
+/**
+ * How a connector stands, as Claude Code reports it.
+ */
+export type ConnectorState = "connected" | "needs_auth" | "pending" | "failed";
+
+/**
+ * A connector of the owner's claude.ai account (spec 34.1).
+ */
+export type Connector = { 
+/**
+ * Its plain name, without "claude.ai ": "Google Calendar".
+ */
+name: string, state: ConnectorState, };
+
+/**
+ * What `connectors.list` answers.
+ */
+export type ConnectorList = { connectors: Array<Connector>, 
+/**
+ * When they were looked for, in Unix milliseconds.
+ */
+checkedAt: number, };
+
+export type ConnectorsListParams = { 
+/**
+ * Look again even when they were found before.
+ */
+refresh: boolean, };
+
+export type BotsSetConnectorsParams = { botId: BotId, 
+/**
+ * Plain names, as `connectors.list` gives them.
+ */
+names: Array<string>, };
+
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
 /**
  * What the bot says the command is for, as in `ToolItem`. The bot
@@ -2849,6 +2888,8 @@ export interface RpcMethods {
   "keys.scan": { params: undefined; result: Array<KeyHit> };
   "keys.scrub": { params: KeysScrubParams; result: Array<KeyHit> };
   "overview.changes": { params: BotIdParams; result: OverviewChanges };
+  "connectors.list": { params: ConnectorsListParams; result: ConnectorList };
+  "bots.setConnectors": { params: BotsSetConnectorsParams; result: Bot };
   "routines.list": { params: RoutinesListParams; result: Array<Routine> };
   "routines.create": { params: RoutinesCreateParams; result: Routine };
   "routines.update": { params: RoutinesUpdateParams; result: Routine };

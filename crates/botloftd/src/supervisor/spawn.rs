@@ -128,6 +128,8 @@ pub(super) fn launch_spec(
     )?;
     let mcp = workspace.join(".botloft").join("mcp.json");
     let work_folder = daemon.paths.work_folder(crew);
+    // The claude.ai connectors it may use (spec 34.5).
+    let connectors = crate::connectors::launch(daemon, &bot.id, &workspace)?;
     let args = agent.args(&LaunchPlan {
         session: &session,
         resumed,
@@ -137,6 +139,8 @@ pub(super) fn launch_spec(
         model: bot.model,
         effort: bot.effort,
         agent_model: bot.agent_model.as_deref(),
+        connectors: &connectors.chosen,
+        blocked_servers: &connectors.blocked,
     });
 
     let mut env = platform::user_environment()?;

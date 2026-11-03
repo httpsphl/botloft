@@ -20,7 +20,7 @@ import {
 import { useEffect, useId, useMemo, useState } from "react";
 import { useT } from "../../i18n";
 import { useApp } from "../../store/context";
-import { ConnectedToolsSettings } from "../connections/ConnectedToolsSettings";
+import { ToolsPage } from "../connections/ToolsPage";
 import { PastedKeys } from "../keys/PastedKeys";
 import { PermissionsSettings } from "../permissions/PermissionsSettings";
 import { AboutSettings } from "./AboutSettings";
@@ -69,7 +69,12 @@ export function SettingsPage() {
   const s = t.account.settings;
   // Opened on the Permissions page from an agent's details or panel.
   const permissionsAt = useApp((state) => state.permissionsAt);
-  const [page, setPage] = useState<Page>(permissionsAt ? "permissions" : "general");
+  // Or on another part, from elsewhere in the app (an agent's tools).
+  const settingsPart = useApp((state) => state.settingsPart);
+  const clearSettingsPart = useApp((state) => state.clearSettingsPart);
+  const [page, setPage] = useState<Page>(
+    permissionsAt ? "permissions" : (settingsPart ?? "general"),
+  );
   const [query, setQuery] = useState("");
   const id = useId();
   const names: Record<Page, string> = {
@@ -95,6 +100,13 @@ export function SettingsPage() {
       setQuery("");
     }
   }, [permissionsAt]);
+  useEffect(() => {
+    if (settingsPart) {
+      setPage(settingsPart);
+      setQuery("");
+      clearSettingsPart();
+    }
+  }, [settingsPart, clearSettingsPart]);
 
   const open = (to: Page) => {
     setPage(to);
@@ -177,7 +189,7 @@ export function SettingsPage() {
                 {page === "chat" && <ChatSettings />}
                 {page === "alerts" && <AlertsSettings />}
                 {page === "account" && <AccountSettings />}
-                {page === "tools" && <ConnectedToolsSettings />}
+                {page === "tools" && <ToolsPage />}
                 {page === "permissions" && <PermissionsSettings />}
                 {page === "backup" && <BackupSettings goToAccount={() => open("account")} />}
                 {page === "security" && <PastedKeys />}

@@ -179,6 +179,13 @@ async fn a_codex_bot_starts_its_server_with_the_owners_things_off_and_its_own_mc
 }
 
 #[tokio::test(start_paused = true)]
+async fn a_codex_bot_cannot_ask_for_the_claude_ai_tools() {
+    let codex = codex_bot().await;
+    // ask_connector refuses it before the owner is asked (spec 34.6).
+    assert!(!botloftd::connectors::on_claude(&codex.daemon, &codex.bot));
+}
+
+#[tokio::test(start_paused = true)]
 async fn what_codex_prints_becomes_the_chat() {
     let codex = codex_bot().await;
     let process = codex.runtime.process(1).await;

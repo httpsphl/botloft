@@ -177,6 +177,9 @@ pub struct Bot {
     /// What the bot left running in the background (spec 33.4).
     #[serde(default)]
     pub background: Vec<BackgroundTask>,
+    /// The claude.ai connectors it may use, by name (spec 34.4).
+    #[serde(default)]
+    pub connectors: Vec<String>,
     pub state: BotState,
     /// Current process generation; `null` if the bot has not started since
     /// the daemon did. Changes on every (re)start.

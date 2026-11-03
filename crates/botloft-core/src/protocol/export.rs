@@ -24,6 +24,8 @@ mod catalog;
 mod changes;
 #[path = "export_cloud.rs"]
 mod cloud;
+#[path = "export_connectors.rs"]
+mod connectors;
 #[path = "export_crew_access.rs"]
 mod crew_access;
 #[path = "export_desktop.rs"]
@@ -222,6 +224,7 @@ fn export_bindings() {
     island::decls(&mut out);
     keys::decls(&mut out);
     changes::decls(&mut out);
+    connectors::decls(&mut out);
     out.decl::<ApprovalItem>();
     usage::decls(&mut out);
     questions::decls(&mut out);
@@ -431,6 +434,7 @@ fn export_bindings() {
     island::methods(&mut out);
     keys::methods(&mut out);
     changes::methods(&mut out);
+    connectors::methods(&mut out);
     routines::methods(&mut out);
     questions::methods(&mut out);
     reactions::methods(&mut out);

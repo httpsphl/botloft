@@ -58,6 +58,10 @@ pub struct LaunchPlan<'a> {
     pub effort: BotEffort,
     /// The model of a bot not on Claude Code, as its agent names it.
     pub agent_model: Option<&'a str>,
+    /// The claude.ai connectors it may use, and the tool-name servers it
+    /// must not get (spec 34.5); both empty for most bots.
+    pub connectors: &'a [String],
+    pub blocked_servers: &'a [String],
 }
 
 /// What an agent needs to write the files it reads at start, once the bot

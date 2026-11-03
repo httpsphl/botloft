@@ -16,6 +16,7 @@ mod browser_reply;
 mod browser_sites;
 mod calls;
 mod catalog;
+mod connector;
 mod crew_access;
 mod crew_reach;
 mod desktop;
@@ -169,6 +170,11 @@ pub async fn handle(
         Ok(era) if called(&request) == Some(crew_access::ASK_CREW_ACCESS) => {
             let args = arguments(&request);
             let result = crew_access::ask(&daemon, &bot, generation, args).await;
+            Ok(decorate(era, &request, result))
+        }
+        Ok(era) if called(&request) == Some(connector::ASK_CONNECTOR) => {
+            let args = arguments(&request);
+            let result = connector::ask(&daemon, &bot, generation, args).await;
             Ok(decorate(era, &request, result))
         }
         Ok(era) if called(&request) == Some(plan::SHOW_PLAN) => {

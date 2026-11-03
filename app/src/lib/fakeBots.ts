@@ -43,6 +43,7 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
         effortDefault: null,
         context: null,
         background: [],
+        connectors: [],
         state: crew.paused ? "offline" : "launching",
         generation: crew.paused ? null : 1,
         workspace: `C:\\Users\\owner\\Botloft\\${crew.slug}\\${handle}`,
@@ -123,6 +124,11 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
         bot.background.filter((task) => task.taskId !== taskId),
       );
       return null;
+    },
+    "bots.setConnectors": ({ botId, names }) => {
+      const bot = fake.bot(botId);
+      bot.connectors = [...new Set(names)];
+      return fake.changedBot(bot);
     },
     "bots.restart": ({ botId }) => {
       const bot = fake.bot(botId);

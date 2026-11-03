@@ -56,6 +56,7 @@ mod catalog;
 mod changes;
 mod chat;
 mod cloud;
+mod connectors;
 mod crew_access;
 mod desktop;
 #[cfg(test)]
@@ -89,6 +90,7 @@ pub use catalog::*;
 pub use changes::*;
 pub use chat::*;
 pub use cloud::*;
+pub use connectors::*;
 pub use crew_access::*;
 pub use desktop::*;
 pub use files::*;
@@ -150,6 +152,8 @@ pub mod method {
     pub const BOTS_COMPACT: &str = "bots.compact";
     pub const BOTS_STOP_TASK: &str = "bots.stopTask";
     pub const OVERVIEW_CHANGES: &str = "overview.changes";
+    pub const CONNECTORS_LIST: &str = "connectors.list";
+    pub const BOTS_SET_CONNECTORS: &str = "bots.setConnectors";
     pub const BOTS_ARCHIVE: &str = "bots.archive";
     pub const BOTS_UNARCHIVE: &str = "bots.unarchive";
     pub const BOTS_DELETE: &str = "bots.delete";

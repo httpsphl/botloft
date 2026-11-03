@@ -73,6 +73,8 @@ export interface AppState {
   focus: { botId: BotId; itemId: ChatItemId } | null;
   /** Where Settings opens the Permissions page, until it is shown (spec 15.1). */
   permissionsAt: PermissionsAt | null;
+  /** A part of the settings to open them on, from elsewhere in the app. */
+  settingsPart: "tools" | null;
   /**
    * When the owner last looked at each bot's chat (`seen.ts`), for unread
    * replies and failed routine runs.
@@ -96,6 +98,8 @@ export interface AppState {
   openPage(page: Exclude<Page, null>): void;
   /** Opens Settings on the Permissions page, at a tab and an agent. */
   openPermissions(at: PermissionsAt): void;
+  openSettingsPart(part: "tools"): void;
+  clearSettingsPart(): void;
   /** The Permissions page took where to open. */
   clearPermissionsAt(): void;
   /** Opens the bot's chat at one of its items. */
@@ -197,6 +201,7 @@ export function createAppStore(api: BotloftApi): AppStore {
       page: null,
       focus: null,
       permissionsAt: null,
+      settingsPart: null,
       seenAt: loadSeen(),
       seenSince: loadSeenSince(),
       replyAt: {},
@@ -220,6 +225,9 @@ export function createAppStore(api: BotloftApi): AppStore {
       openPermissions: (at) =>
         set({ page: "settings", selectedCrewId: null, selectedBotId: null, permissionsAt: at }),
       clearPermissionsAt: () => set({ permissionsAt: null }),
+      openSettingsPart: (part) =>
+        set({ page: "settings", selectedCrewId: null, selectedBotId: null, settingsPart: part }),
+      clearSettingsPart: () => set({ settingsPart: null }),
       ...seenActions(get, set, api),
       setPanel: (botId, panel) => set((state) => ({ panels: { ...state.panels, [botId]: panel } })),
       putCrew: (crew) => set((state) => withCrew(state, crew)),
