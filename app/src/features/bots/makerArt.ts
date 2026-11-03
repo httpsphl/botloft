@@ -1,8 +1,8 @@
 // The Maker's gear (spec 36.3), in the units of the mascot's artwork
 // (mascotArt.ts). The Maker is Botloft's flame all in white (`whiten` in
 // retint.ts), with a wand that floats by its right side with an orb of
-// light at its tip and, behind it in the large sizes, a flow of boxes
-// joined by dotted arrows.
+// light at its tip and, behind it in the large sizes, a flow of cards (a
+// crew, a routine, a flow) joined by dotted arrows.
 
 /** The wand: its grip, how it leans at rest, its length, its orb and its colors. */
 export const WAND = {
@@ -23,16 +23,18 @@ export const WAND = {
 export const WAND_BOX = [-10.75, 117.25, 834, 634] as const;
 
 /** The box the mascot takes with its flow behind it. */
-export const SCENE_BOX = [-720, -150, 2050, 900] as const;
+export const SCENE_BOX = [-720, -290, 2050, 1040] as const;
 
-/** The flow behind the Maker: its boxes, in order. */
+/** The flow behind the Maker: its cards, in order, and what each stands for. */
 export const FLOW = {
   boxes: [
     { x: -470, y: 250 },
-    { x: 196, y: -120 },
+    { x: 196, y: -250 },
     { x: 860, y: 250 },
   ],
-  box: { width: 230, height: 150, rx: 26 },
+  box: { width: 230, height: 150, rx: 30 },
+  /** What each card stands for: what the Maker builds. */
+  steps: ["team", "routine", "flow"] as const,
 };
 
 /** The dotted arrow from one box to the next, bowing up between them. */

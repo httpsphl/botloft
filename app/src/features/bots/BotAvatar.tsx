@@ -214,7 +214,7 @@ export function BotAvatar({
           <stop offset="1" stopColor="#0a0101" />
         </radialGradient>
       </defs>
-      {flow && <MakerFlow arrowId={id("arrow")} />}
+      {flow && <MakerFlow arrowId={id("arrow")} liftId={id("lift")} />}
       <g className="avatar-hop">
         {/* The moments move the body in the spring, the mouse in the poke (gestures.ts, pointer.ts). */}
         <g className="avatar-spring">
