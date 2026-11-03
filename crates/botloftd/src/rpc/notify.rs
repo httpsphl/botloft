@@ -15,6 +15,7 @@ pub(super) fn to_notification(event: &Event) -> String {
         Event::FolderRecycled(folder) => note(notification::FOLDER_RECYCLED, folder),
         Event::BotState(state) => note(notification::BOT_STATE, state),
         Event::BotContext(context) => note(notification::BOT_CONTEXT, context),
+        Event::BotBackground(tasks) => note(notification::BOT_BACKGROUND, tasks),
         Event::BotRules(rules) => note(notification::BOT_RULES, rules),
         Event::BotDesktop(desktop) => note(notification::BOT_DESKTOP, desktop),
         Event::BotSites(sites) => note(notification::BOT_SITES, sites),

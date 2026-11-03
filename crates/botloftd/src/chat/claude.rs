@@ -31,6 +31,7 @@ pub(crate) fn apply(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value
             daemon
                 .supervisor
                 .agents_running(bot, generation, agents, tasks);
+            crate::background::changed(daemon, bot, event);
         }
         "system" if subtype == Some("status") => context::status(daemon, bot, event),
         "system" if subtype == Some("compact_boundary") => context::compacted(daemon, bot, event),

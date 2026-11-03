@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{Activity, BotEffort, ContextUsage, ModelEffort};
+use super::{Activity, BackgroundTask, BotEffort, ContextUsage, ModelEffort};
 use crate::ids::{BotId, CrewId};
 
 /// A group of bots that can message each other and share a folder.
@@ -174,6 +174,9 @@ pub struct Bot {
     pub effort_default: Option<ModelEffort>,
     /// How full the conversation is; `null` until Claude Code said so.
     pub context: Option<ContextUsage>,
+    /// What the bot left running in the background (spec 33.4).
+    #[serde(default)]
+    pub background: Vec<BackgroundTask>,
     pub state: BotState,
     /// Current process generation; `null` if the bot has not started since
     /// the daemon did. Changes on every (re)start.

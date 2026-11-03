@@ -105,3 +105,31 @@ describe("the overview's conversation space (spec 33.3)", () => {
     ).toBeTruthy();
   });
 });
+
+describe("what runs in the background (spec 33.4)", () => {
+  test("says when nothing runs", async () => {
+    const { panel } = await openOverview(split(24_200));
+    expect(within(panel).getByText("Nothing running in the background.")).toBeTruthy();
+  });
+
+  test("lists each task, follows the live list and stops one", async () => {
+    const { fake, scout, panel } = await openOverview(split(24_200));
+    const seenAt = new Date(2026, 10, 2, 14, 32).getTime();
+    fake.setBackground(scout.id, [
+      { taskId: "b1", kind: "command", description: "Serve the site preview", seenAt },
+      { taskId: "a1", kind: "agent", description: "", seenAt },
+    ]);
+    const list = await within(panel).findByRole("list", { name: "Running in the background" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.textContent).toContain("Serve the site preview");
+    expect(rows[0]?.textContent).toContain("Command");
+    expect(rows[0]?.textContent).toContain("Since");
+    // A task without a description goes by its kind.
+    expect(rows[1]?.textContent).toContain("Subagent");
+
+    fireEvent.click(within(list).getByRole("button", { name: "Stop: Serve the site preview" }));
+    expect(await within(panel).findByRole("button", { name: "Stop: Subagent" })).toBeTruthy();
+    expect(within(panel).queryByText("Serve the site preview")).toBeNull();
+  });
+});

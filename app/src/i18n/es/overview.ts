@@ -31,4 +31,14 @@ export const overview: Messages["overview"] = {
     memory: "Archivos de memoria",
     memoryHint: (bot) => `Lo que ${bot} lee al comienzo de cada conversación.`,
   },
+  background: {
+    title: "En segundo plano",
+    none: "Nada en marcha en segundo plano.",
+    kind: { command: "Comando", agent: "Subagente", remote: "Agente remoto", other: "Tarea" },
+    since: (time) => `Desde ${time}`,
+    stop: "Detener",
+    stopOne: (what) => `Detener: ${what}`,
+    stopFailed: "No se pudo detener la tarea",
+    hint: (bot) => `${bot} dejó esto en marcha. Termina cuando ${bot} se detiene o se reinicia.`,
+  },
 };

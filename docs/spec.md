@@ -3036,7 +3036,7 @@ Com as **chaves**, o dono guarda a chave fora da conversa e o agente a usa **pel
 
 ## 33. Visão geral do agente
 
-Status: **V1 feito** (o contexto); V2 a V4 planejados (33.10). A ideia veio do painel lateral do app do Claude Code no computador, que o dono mostrou em 2026-11-02; o desenho, os textos e a implementação são nossos.
+Status: **V1 e V2 feitos** (o contexto e o que roda em segundo plano); V3 e V4 planejados (33.10). A ideia veio do painel lateral do app do Claude Code no computador, que o dono mostrou em 2026-11-02; o desenho, os textos e a implementação são nossos.
 
 ### 33.1 O que é
 
@@ -3072,7 +3072,7 @@ Um painel ao lado do chat que mostra, de um olhar, o que está acontecendo com u
 
 ### 33.4 Em segundo plano
 
-- **O que entra:** as tarefas vivas que o Claude Code lista em `system/background_tasks_changed` (7.2), menos as `ambient: true`, que são do próprio Claude Code. Cada linha mostra o tipo ("Comando" para `local_bash`, que inclui os observadores, "Subagente" para `local_agent`, "Agente remoto" para `remote_agent`), a `description`, há quanto tempo roda e um botão **Parar**.
+- **O que entra:** as tarefas vivas que o Claude Code lista em `system/background_tasks_changed` (7.2), menos as `ambient: true`, que são do próprio Claude Code. Cada linha mostra a `description` (sem ela, o tipo), o tipo ("Comando" para `local_bash`, que inclui os observadores, "Subagente" para `local_agent`, "Agente remoto" para `remote_agent`, "Tarefa" para outro), desde que horas roda ("Desde 14:32") e um botão **Parar**. Embaixo, uma linha lembra que tudo isso acaba quando o agente para ou reinicia.
 - **Quando começou:** o daemon anota a hora em que viu a tarefa pela primeira vez (`task_started` ou a primeira lista que a traz). A lista chega inteira a cada mudança e substitui a anterior. Um processo novo começa com a lista vazia: o Claude Code não manda a lista ao subir.
 - **Parar:** `bots.stopTask {botId, taskId}` escreve o pedido de controle `stop_task` (`{"subtype":"stop_task","task_id":...}`, 9.2). O Claude Code encerra a tarefa, manda `task_updated` (`killed`), `task_notification` (`stopped`) e a lista nova, e responde `success`. Uma tarefa que já acabou responde erro, e o app só tira a linha.
 - **Fora daqui:** a contagem que acorda e faz dormir o agente (7.2, 7.7) não muda.
@@ -3095,7 +3095,7 @@ Nomes de arquivo, branches, títulos de PR, descrições de tarefa e caminhos de
 ### 33.8 Protocolo e dados
 
 - `ContextUsage` (8.6) ganha `parts: ContextPart[]` (`kind`, `tokens`) e `memoryFiles: ContextFile[]` (`path`, `tokens`), vazios quando o motor não os dá.
-- `Bot` ganha `background: BackgroundTask[]` (`taskId`, `kind`: `command`, `agent` ou `remote`, `description`, `seenAt`), com a notificação `bot.background {botId, tasks}` (11.3). Método `bots.stopTask {botId, taskId}`.
+- `Bot` ganha `background: BackgroundTask[]` (`taskId`, `kind`: `command`, `agent`, `remote` ou `other`, `description` até 300 caracteres, `seenAt`; no máximo 50), com a notificação `bot.background {botId, tasks}` (11.3), que leva a lista inteira e só sai quando ela muda. Método `bots.stopTask {botId, taskId}` → `null`: `not_found` para uma tarefa que não está na lista, `conflict` com o processo parado. A lista mora no daemon (`background.rs`), não no banco.
 - `overview.changes {botId}` → `{repos: GitRepo[], events: GitEvent[], prs: PullRequest[], github: "ok" | "missing" | "signed_out" | "error"}`.
 - Migration `agent_git_events`, apagada junto com o agente (7.6); entra na cópia de segurança (14.2) como o resto do agente.
 - App: `features/overview/`, textos nos três idiomas (15.6).

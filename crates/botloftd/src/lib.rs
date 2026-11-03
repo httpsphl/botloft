@@ -7,6 +7,7 @@ pub mod agent_keys;
 pub mod approvals;
 pub mod autobackup;
 pub mod autostart;
+pub mod background;
 pub mod backup;
 pub mod browser;
 pub mod catalog;

@@ -146,6 +146,7 @@ pub mod method {
     pub const AGENTS_MODELS: &str = "agents.models";
     pub const BOTS_SET_EFFORT: &str = "bots.setEffort";
     pub const BOTS_COMPACT: &str = "bots.compact";
+    pub const BOTS_STOP_TASK: &str = "bots.stopTask";
     pub const BOTS_ARCHIVE: &str = "bots.archive";
     pub const BOTS_UNARCHIVE: &str = "bots.unarchive";
     pub const BOTS_DELETE: &str = "bots.delete";
@@ -259,6 +260,7 @@ pub mod notification {
     pub const FOLDER_RECYCLED: &str = "folder.recycled";
     pub const BOT_STATE: &str = "bot.state";
     pub const BOT_CONTEXT: &str = "bot.context";
+    pub const BOT_BACKGROUND: &str = "bot.background";
     pub const BOT_RULES: &str = "bot.rules";
     pub const BOT_DESKTOP: &str = "bot.desktop";
     pub const BOT_SITES: &str = "bot.sites";
