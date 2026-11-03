@@ -7,6 +7,7 @@ import type { Bot } from "../../lib/protocol.gen";
 import { APP_OPENED } from "../../ui/motion";
 import { BotAvatar, moodOf } from "./BotAvatar";
 import { useMascotLook } from "./mascotLook";
+import { useIsMaker } from "./useIsMaker";
 
 /** A bot's mascot in a list (the sidebar, a crew's cards). */
 export function ListAvatar({
@@ -27,6 +28,7 @@ export function ListAvatar({
   );
   const mood = moodOf(bot, crewPaused);
   const { doing, face } = useMascotLook(bot.id, mood);
+  const maker = useIsMaker(bot.id);
   return (
     <BotAvatar
       color={bot.color}
@@ -34,6 +36,7 @@ export function ListAvatar({
       mood={mood}
       doing={doing}
       face={face}
+      maker={maker}
       botId={bot.id}
       arriving={arriving}
       starting={bot.state === "launching"}

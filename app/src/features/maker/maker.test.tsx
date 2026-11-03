@@ -70,6 +70,20 @@ const sent = (fake: FakeBotloft) =>
   };
 
 describe("the Maker", () => {
+  test("shows as the white flame, with its wand and flow in its empty chat", async () => {
+    const { maker } = await openMaker();
+    const mascots = [...document.querySelectorAll<SVGSVGElement>(`svg[data-bot="${maker.id}"]`)];
+    expect(mascots.length).toBeGreaterThan(1);
+    expect(mascots.every((svg) => svg.hasAttribute("data-maker"))).toBe(true);
+    expect(document.querySelector("svg[data-maker] .maker-flow")).not.toBeNull();
+    expect(document.querySelector("svg[data-maker] .maker-wand")).not.toBeNull();
+    // An agent of the owner's never looks like the Maker.
+    const others = [...document.querySelectorAll("svg[data-bot]")].filter(
+      (svg) => svg.getAttribute("data-bot") !== maker.id,
+    );
+    expect(others.some((svg) => svg.hasAttribute("data-maker"))).toBe(false);
+  });
+
   test("sits above the crews, without its own crew in the list", async () => {
     const { fake } = await openMaker();
     expect(screen.getByText("Tell me what you do, and I build your crews")).toBeDefined();

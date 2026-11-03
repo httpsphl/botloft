@@ -12,10 +12,13 @@ export function ChatEmpty({ bot, stopped }: { bot: Bot; stopped: boolean }) {
   const isMaker = useApp((state) => makerBot(state)?.id === bot.id);
   return (
     <div className="flex flex-col items-center gap-3 py-16 text-center">
+      {/* The Maker shows larger, with its wand and its flow behind it (spec 36.3). */}
       <span className="animate-float">
         <BotAvatar
           color={bot.color}
-          size={56}
+          size={isMaker ? 96 : 56}
+          maker={isMaker}
+          scene={isMaker}
           mood={moodOf(bot, stopped)}
           botId={bot.id}
           starting={bot.state === "launching"}
