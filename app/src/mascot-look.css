@@ -1,0 +1,41 @@
+/* What a bot's mascot shows on top of its mood (features/bots/mascotLook.ts,
+   spec 15.3): its face, as the shape of its eyes, and the badge by its head.
+   Every face is a polygon of four corners, as the eyes' gestures are
+   (gestures.ts), so one shape eases into the next. Asleep, the eyes are
+   shut and no face shows. */
+
+@layer components {
+  /* Focused while it writes, runs or reads: the lids come down a little. */
+  [data-face="focus"] .avatar-eye {
+    clip-path: polygon(0% 20%, 100% 20%, 100% 92%, 0% 92%);
+  }
+
+  /* Sleepy after waiting a long while: heavy lids. */
+  [data-face="sleepy"] .avatar-eye {
+    clip-path: polygon(0% 46%, 100% 46%, 100% 100%, 0% 100%);
+  }
+
+  /* Worried for a moment after a tool fails: the lids rise toward the middle. */
+  [data-face="worried"] .avatar-eye-l {
+    clip-path: polygon(0% 40%, 100% 6%, 100% 100%, 0% 100%);
+  }
+
+  [data-face="worried"] .avatar-eye-r {
+    clip-path: polygon(0% 6%, 100% 40%, 100% 100%, 0% 100%);
+  }
+
+  /* The badge comes in once, growing from its middle. Only its disc: the
+     parts the flame's timer turns keep their own origin. */
+  .avatar-badge > circle:first-child {
+    transform-box: fill-box;
+    transform-origin: 50%;
+    animation: badge-in 260ms var(--ease-out) both;
+  }
+}
+
+@keyframes badge-in {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}

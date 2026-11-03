@@ -50,6 +50,16 @@ export function toHex(h: number, s: number, l: number): string {
 
 const unit = (value: number) => Math.max(0, Math.min(1, value));
 
+/**
+ * A color of the artwork, `drawn`, in white: the Maker's flame (spec 36.3).
+ * No hue, and every light and shadow kept in a narrow band near white, so
+ * the flame reads white with only a hint of its shading.
+ */
+export function whiten(drawn: string): string {
+  const [, , l] = toHsl(drawn);
+  return toHex(0, 0, unit(0.86 + l * 0.17));
+}
+
 /** A color of the artwork, `drawn`, moved to the bot's `color`. */
 export function retint(drawn: string, color: string): string {
   const [h, s, l] = toHsl(drawn);

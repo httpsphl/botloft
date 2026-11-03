@@ -1,10 +1,12 @@
 // A bot's mascot in a list (the sidebar, a crew's cards), with the bot's
-// mood, its glances and, for a bot just created, its pop in (BotAvatar.tsx).
+// mood, what it is doing and its face (mascotLook.ts), its glances and, for
+// a bot just created, its pop in (BotAvatar.tsx).
 
 import { useState } from "react";
 import type { Bot } from "../../lib/protocol.gen";
 import { APP_OPENED } from "../../ui/motion";
 import { BotAvatar, moodOf } from "./BotAvatar";
+import { useMascotLook } from "./mascotLook";
 
 /** A bot's mascot in a list (the sidebar, a crew's cards). */
 export function ListAvatar({
@@ -23,11 +25,15 @@ export function ListAvatar({
       bot.createdAt > APP_OPENED &&
       Date.now() - bot.createdAt < ARRIVING_FOR_MS,
   );
+  const mood = moodOf(bot, crewPaused);
+  const { doing, face } = useMascotLook(bot.id, mood);
   return (
     <BotAvatar
       color={bot.color}
       size={size}
-      mood={moodOf(bot, crewPaused)}
+      mood={mood}
+      doing={doing}
+      face={face}
       botId={bot.id}
       arriving={arriving}
       starting={bot.state === "launching"}

@@ -3,8 +3,9 @@
    working bot's flame burns on and on, throwing embers (flame.ts, frame by
    frame from a timer: no animation here runs forever); every other mood
    holds still, and the mascot moves only in moments that play once: from
-   one mood to the next the flame morphs into its new shape, and the eyes
-   blink and glance around when eyeMoments.ts picks. A bot with nothing to
+   one mood to the next the flame morphs into its new shape, the body and
+   eyes make their gesture (gestures.ts, with GSAP), and the eyes blink and
+   glance around when eyeMoments.ts picks. A bot with nothing to
    do sleeps as a paused or stopped one does, a small ember with its eyes
    shut; one waiting for the owner hops as it starts to wait; a tired one
    burns low with heavy eyes. Less motion (motion.css) stops all of it. */
@@ -26,9 +27,14 @@
     transition: d 800ms ease-in-out;
   }
 
+  /* Open as a polygon, as every face is (mascot-look.css), so the shapes
+     ease into each other. */
   .avatar-eye {
     transform-origin: 50%;
-    transition: opacity 320ms var(--ease-out);
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+    transition:
+      opacity 320ms var(--ease-out),
+      clip-path 320ms var(--ease-out);
   }
 
   .avatar-closed,
@@ -38,6 +44,17 @@
 
   .avatar-closed {
     transition: opacity 320ms var(--ease-out);
+  }
+
+  /* The smile of a cheer, shown only while it plays (gestures.ts). */
+  .avatar-happy {
+    opacity: 0;
+  }
+
+  /* A gesture (gestures.ts) steps the eyes itself: a transition would drag
+     every step behind. */
+  [data-gesture] :is(.avatar-eye, .avatar-closed) {
+    transition: none;
   }
 
   /* Asleep, unless a moment shows it awake (mascotMoments.ts). */
@@ -165,4 +182,14 @@
   34% {
     transform: translateY(0) scale(1.05, 0.95);
   }
+}
+
+/* An ember flying from one bot's mascot to another's (toss.ts). */
+.avatar-toss {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 60;
+  pointer-events: none;
+  transform-origin: 50% 70%;
 }

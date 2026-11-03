@@ -1,0 +1,54 @@
+/* The Maker's gear (features/bots/MakerGear.tsx, spec 36.3). Asleep, the
+   wand lies down and the flow dims; each
+   moves there once, as the mood changes. What moves on and on while it
+   works (the wand, the flow) is stepped by the flame's timer (ticks.ts),
+   and the cheer's flourish is a gesture (gestures.ts). The transforms turn
+   about points of the artwork (makerArt.ts), in its own units. */
+
+@layer components {
+  .maker-wand-pose {
+    transform-box: view-box;
+    transition: transform 700ms var(--ease-out);
+  }
+
+  .maker-wand-pose {
+    transform-origin: 620px 610px;
+  }
+
+  .maker-flow {
+    transition: opacity 600ms var(--ease-out);
+  }
+
+  .maker-box {
+    transition: transform 250ms var(--ease-out);
+  }
+
+  .maker-strip {
+    transition: fill 250ms var(--ease-out);
+  }
+
+  .maker-icon {
+    transition: stroke 250ms var(--ease-out);
+  }
+
+  /* The card lit in its turn rises a little, its strip and icon in the accent. */
+  .maker-box[data-lit=""] {
+    transform: translateY(-10px);
+  }
+
+  .maker-box[data-lit=""] .maker-strip {
+    fill: var(--accent);
+  }
+
+  .maker-box[data-lit=""] .maker-icon {
+    stroke: var(--accent);
+  }
+
+  :is([data-mood="idle"], [data-mood="sleeping"]):not([data-cheer], [data-wake]) .maker-wand-pose {
+    transform: translate(20px, 60px) rotate(60deg);
+  }
+
+  :is([data-mood="idle"], [data-mood="sleeping"]):not([data-cheer], [data-wake]) .maker-flow {
+    opacity: 0.35;
+  }
+}

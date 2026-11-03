@@ -13,31 +13,41 @@
 // its eyes shut while its bot has nothing to do, is paused or stopped; it
 // hops as it starts to wait for the owner and burns low with heavy eyes when
 // tired. Only the working flame moves on and on: everything else plays once.
-// It makes short gestures (mascotMoments.ts): it cheers when it finishes
-// and falls asleep, wakes when it has something to do, pops in when its bot
-// was just created, and glances at the bot it talks to (useGlance.ts).
+// It makes short gestures (mascotMoments.ts, gestures.ts): it cheers when
+// it finishes and falls asleep, wakes when it has something to do, pops in
+// when its bot was just created, and glances at the bot it talks to
+// (useGlance.ts), tossing it an ember (toss.ts). It plays with the mouse
+// (pointer.ts): its eyes follow the cursor, it squeezes under it and hops
+// when clicked. A bot's mascot also shows what its bot is doing, as a
+// small badge by its head, and a face (mascotLook.ts, MascotBadge.tsx).
+// `maker` dresses it as the Maker (spec 36.3, MakerGear.tsx).
 // Awake, as on the pages that are not a bot's, it stands with its eyes open
 // and blinks now and then. Without a mood it stays still, as in the chat
 // history.
 
-import { type CSSProperties, useId, useMemo, useRef } from "react";
+import { type CSSProperties, useEffect, useId, useMemo, useRef } from "react";
 import type { Bot, BotId } from "../../lib/protocol.gen";
 import { useFlame } from "./flame";
+import { useGestures } from "./gestures";
+import { MakerFlow, MakerWand } from "./MakerGear";
+import { MascotBadge } from "./MascotBadge";
+import { MascotEye } from "./MascotEye";
+import { SCENE_BOX, WAND_BOX } from "./makerArt";
 import {
   BODY,
   CENTER,
-  type Ellipse,
   EMBER,
   EYE_GLOW,
   EYES,
-  HIGHLIGHTS,
   OUTLINE,
   SHADES,
   SPARKS,
   VIEW_BOX,
 } from "./mascotArt";
-import { MOMENT_MS, useArrive, useMoment } from "./mascotMoments";
-import { retint } from "./retint";
+import type { Doing, Face } from "./mascotLook";
+import { asleep, MOMENT_MS, useArrive, useMoment } from "./mascotMoments";
+import { shiver, usePointerPlay } from "./pointer";
+import { retint, whiten } from "./retint";
 import { useGlance } from "./useGlance";
 
 /**
@@ -48,6 +58,9 @@ export type Mood = "awake" | "idle" | "working" | "waiting" | "tired" | "sleepin
 
 /** Botloft's own mascot, as on the app icon: the color that shows the drawing as drawn. */
 export const BOTLOFT_COLOR = "#FF7A59";
+
+/** The Maker's color: its flame is white (spec 36.3). */
+export const MAKER_COLOR = "#FFFFFF";
 
 /** How the mascot of `bot` moves, from what the bot is doing. */
 export function moodOf(bot: Pick<Bot, "state" | "paused">, crewPaused = false): Mood {
@@ -73,8 +86,12 @@ export function moodOf(bot: Pick<Bot, "state" | "paused">, crewPaused = false): 
   }
 }
 
-/** How long the mascot cheers when its bot finishes, as in mascot-cheer.css. */
+/** How long the mascot cheers when its bot finishes (gestures.ts). */
 export const CHEER_MS = MOMENT_MS.cheer;
+
+/** The smallest mascot that shows its badge, and the smallest Maker with its wand. */
+const BADGE_FROM = 24;
+const WAND_FROM = 72;
 
 /** Where the flame starts its turn, from the color, so a crew's flames do not burn together. */
 function flameOffset(color: string): number {
@@ -85,28 +102,15 @@ function flameOffset(color: string): number {
   return hash;
 }
 
-/** The glints that sit on `eye`. */
-function glintsOn(eye: Ellipse): Ellipse[] {
-  const reach = Math.max(eye.rx, eye.ry) * 1.3;
-  return HIGHLIGHTS.filter((glint) => Math.hypot(glint.x - eye.x, glint.y - eye.y) < reach);
+/** The box the mascot takes: around the body, or wider for the Maker's wand or flow. */
+function boxOf(framed: boolean, flow: boolean, wand: boolean): readonly number[] {
+  if (framed) return [CENTER.x - 500, CENTER.y - 470, 1000, 1000];
+  if (flow) return SCENE_BOX;
+  return wand ? WAND_BOX : VIEW_BOX;
 }
-
-const rotate = ({ x, y, turn }: Ellipse) => `rotate(${turn} ${x} ${y})`;
-
-/**
- * How far the face leans, in degrees: the line through the two eyes, the
- * right one sitting higher. Shut and smiling eyes lean with it.
- */
-function tiltOf(eyes: readonly Ellipse[]): number {
-  const [left, right] = eyes;
-  if (!left || !right) return 0;
-  return (Math.atan2(right.y - left.y, right.x - left.x) * 180) / Math.PI;
-}
-
-const TILT = tiltOf(EYES);
 
 export function BotAvatar({
-  color,
+  color: chosen,
   size = 28,
   framed = false,
   mood,
@@ -114,6 +118,10 @@ export function BotAvatar({
   botId,
   arriving = false,
   starting = false,
+  doing = null,
+  face = null,
+  maker = false,
+  scene = false,
 }: {
   color: string;
   size?: number;
@@ -127,40 +135,61 @@ export function BotAvatar({
   arriving?: boolean;
   /** Its bot is starting up: done, it does not cheer as for finished work. */
   starting?: boolean;
+  /** What its bot is doing, as a badge by its head (mascotLook.ts). */
+  doing?: Doing | null;
+  /** The shape of its eyes on top of the mood (mascotLook.ts). */
+  face?: Face | null;
+  /** The Maker: its flame all in white, with its wand (spec 36.3). */
+  maker?: boolean;
+  /** The Maker with its flow behind it, where there is room. */
+  scene?: boolean;
 }) {
+  const color = maker ? MAKER_COLOR : chosen;
   // Every avatar on the page needs its own clip, blur and gradients.
   const unique = useId().replace(/[^\w-]/g, "");
   const id = (name: string) => `avatar-${name}-${unique}`;
-  const paint = useMemo(
-    () => ({
-      body: retint(BODY, color),
-      shades: SHADES.map((shade) => retint(shade.fill, color)),
-      emberLight: retint(EMBER.light, color),
-      emberBase: retint(EMBER.base, color),
-      glow: retint(EYE_GLOW, color),
-    }),
-    [color],
-  );
+  const paint = useMemo(() => {
+    // The Maker's white keeps the eyes' warm glow.
+    const tint = (drawn: string) => (maker ? whiten(drawn) : retint(drawn, color));
+    return {
+      body: tint(BODY),
+      shades: SHADES.map((shade) => tint(shade.fill)),
+      emberLight: tint(EMBER.light),
+      emberBase: tint(EMBER.base),
+      glow: maker ? EYE_GLOW : retint(EYE_GLOW, color),
+    };
+  }, [color, maker]);
   const svg = useRef<SVGSVGElement>(null);
   const moment = useMoment(mood, starting);
   const arrive = useArrive(arriving);
   const glance = useGlance(mood && !still ? botId : undefined, svg);
   useFlame(svg, mood === "working" && !still, flameOffset(color));
+  useGestures(svg, mood && !still ? moment : null, Boolean(mood) && arrive, asleep(mood));
+  usePointerPlay(svg, Boolean(mood) && !still);
+  useEffect(() => {
+    if (face === "worried" && !still && svg.current) shiver(svg.current);
+  }, [face, still]);
   const style = glance
     ? ({ "--glance-x": `${glance.x}px`, "--glance-y": `${glance.y}px` } as CSSProperties)
     : undefined;
-  const box = framed ? [CENTER.x - 500, CENTER.y - 470, 1000, 1000] : VIEW_BOX;
+  const wand = maker && !framed && size >= WAND_FROM;
+  const flow = maker && !framed && scene;
+  const box = boxOf(framed, flow, wand);
+  const scale = size / VIEW_BOX[3];
   return (
     <svg
       ref={svg}
       aria-hidden
-      width={size}
-      height={size}
+      width={framed ? size : Math.round((box[2] ?? 0) * scale)}
+      height={framed ? size : Math.round((box[3] ?? 0) * scale)}
       viewBox={box.join(" ")}
       className={`shrink-0 overflow-visible ${framed ? "rounded-lg bg-[#0b0b0b]" : ""}`}
       data-mood={mood}
       data-still={still || undefined}
       data-bot={botId}
+      data-color={color}
+      data-face={face ?? undefined}
+      data-maker={maker || undefined}
       data-cheer={moment === "cheer" || undefined}
       data-wake={(moment === "wake" && !arrive) || undefined}
       data-sleep={moment === "sleep" || undefined}
@@ -185,86 +214,59 @@ export function BotAvatar({
           <stop offset="1" stopColor="#0a0101" />
         </radialGradient>
       </defs>
+      {flow && <MakerFlow arrowId={id("arrow")} liftId={id("lift")} />}
       <g className="avatar-hop">
-        {!framed && (
-          <path
-            className="avatar-fire"
-            d={OUTLINE}
-            fill="none"
-            stroke="var(--avatar-edge)"
-            strokeWidth={2}
-            vectorEffect="non-scaling-stroke"
-          />
-        )}
-        <g clipPath={`url(#${id("clip")})`}>
-          <rect x={-200} y={0} width={1000} height={900} fill={paint.body} />
-          <g filter={`url(#${id("soft")})`}>
-            {SHADES.map((shade, index) => (
-              <path key={shade.fill} d={shade.d} fill={paint.shades[index]} fillRule="evenodd" />
-            ))}
-          </g>
-        </g>
-        {mood === "working" &&
-          SPARKS.map((spark) => (
-            <g key={spark.x} transform={`translate(${spark.x} ${spark.y}) scale(1.5)`}>
-              {/* flame.ts moves it, as its spark says. */}
-              <path className="avatar-spark" d={EMBER.d} fill={`url(#${id("ember")})`} />
+        {/* The moments move the body in the spring, the mouse in the poke (gestures.ts, pointer.ts). */}
+        <g className="avatar-spring">
+          <g className="avatar-poke">
+            {!framed && (
+              // The Maker's white needs a firmer edge to keep its shape on the light theme.
+              <path
+                className="avatar-fire"
+                d={OUTLINE}
+                fill="none"
+                stroke={maker ? "var(--line-strong)" : "var(--avatar-edge)"}
+                strokeWidth={maker ? 3 : 2}
+                vectorEffect="non-scaling-stroke"
+              />
+            )}
+            <g clipPath={`url(#${id("clip")})`}>
+              <rect x={-200} y={0} width={1000} height={900} fill={paint.body} />
+              <g filter={`url(#${id("soft")})`}>
+                {SHADES.map((shade, index) => (
+                  <path
+                    key={shade.fill}
+                    d={shade.d}
+                    fill={paint.shades[index]}
+                    fillRule="evenodd"
+                  />
+                ))}
+              </g>
             </g>
-          ))}
-        <g className="avatar-look">
-          {EYES.map((eye, index) => (
-            <Eye key={eye.x} eye={eye} side={index === 0 ? "l" : "r"} fill={`url(#${id("eye")})`} />
-          ))}
+            {mood === "working" &&
+              SPARKS.map((spark) => (
+                <g key={spark.x} transform={`translate(${spark.x} ${spark.y}) scale(1.5)`}>
+                  {/* flame.ts moves it, as its spark says. */}
+                  <path className="avatar-spark" d={EMBER.d} fill={`url(#${id("ember")})`} />
+                </g>
+              ))}
+            <g className="avatar-look">
+              <g className="avatar-gaze">
+                {EYES.map((eye, index) => (
+                  <MascotEye
+                    key={eye.x}
+                    eye={eye}
+                    side={index === 0 ? "l" : "r"}
+                    fill={`url(#${id("eye")})`}
+                  />
+                ))}
+              </g>
+            </g>
+            {wand && <MakerWand glowId={id("orb")} />}
+            {doing && size >= BADGE_FROM && <MascotBadge doing={doing} />}
+          </g>
         </g>
       </g>
     </svg>
-  );
-}
-
-/**
- * One eye: open with its glints, shut into a soft arc while asleep, or
- * bent up into a smile while the mascot cheers.
- */
-function Eye({ eye, side, fill }: { eye: Ellipse; side: "l" | "r"; fill: string }) {
-  const { x, y, rx, ry } = eye;
-  return (
-    <g>
-      <g className={`avatar-eye avatar-eye-${side}`}>
-        <ellipse cx={x} cy={y} rx={rx} ry={ry} transform={rotate(eye)} fill={fill} />
-        <g className="avatar-hl">
-          {glintsOn(eye).map((glint) => (
-            <ellipse
-              key={glint.x}
-              cx={glint.x}
-              cy={glint.y}
-              rx={glint.rx}
-              ry={glint.ry}
-              transform={rotate(glint)}
-              fill="#ffffff"
-            />
-          ))}
-        </g>
-      </g>
-      {/* The arcs lean in a group of their own: the smile's CSS transform
-          would replace a transform set on the path itself. */}
-      <g transform={`rotate(${TILT} ${x} ${y})`}>
-        <path
-          className="avatar-closed"
-          d={`M${x - rx * 0.8} ${y - 6}Q${x} ${y + ry * 0.62} ${x + rx * 0.8} ${y - 6}`}
-          fill="none"
-          stroke="#2a0d05"
-          strokeWidth={22}
-          strokeLinecap="round"
-        />
-        <path
-          className="avatar-happy"
-          d={`M${x - rx * 0.78} ${y + ry * 0.3}Q${x} ${y - ry * 1.3} ${x + rx * 0.78} ${y + ry * 0.3}`}
-          fill="none"
-          stroke="#2a0d05"
-          strokeWidth={22}
-          strokeLinecap="round"
-        />
-      </g>
-    </g>
   );
 }

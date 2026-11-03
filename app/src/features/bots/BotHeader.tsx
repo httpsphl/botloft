@@ -20,6 +20,7 @@ import { BotAvatar, moodOf } from "./BotAvatar";
 import { BotStateBadge } from "./BotStateBadge";
 import { useBotActions } from "./botActions";
 import { ChiefBadge, isChief } from "./ChiefBadge";
+import { useMascotLook } from "./mascotLook";
 
 /** The bot's name, state and actions. */
 export function BotHeader({
@@ -67,6 +68,8 @@ export function BotHeader({
   const putBot = useApp((state) => state.putBot);
   const chief = isChief(bot, crew);
   const actions = useBotActions(bot, crew);
+  const mood = moodOf(bot, crew.paused);
+  const look = useMascotLook(bot.id, mood);
 
   const setPaused = (paused: boolean) =>
     attempt(paused ? words.failed.pause : words.failed.resume, async () =>
@@ -80,7 +83,9 @@ export function BotHeader({
       <BotAvatar
         color={bot.color}
         size={32}
-        mood={moodOf(bot, crew.paused)}
+        mood={mood}
+        doing={look.doing}
+        face={look.face}
         botId={bot.id}
         starting={bot.state === "launching"}
       />

@@ -1,11 +1,13 @@
 // Bots look at each other when they talk (spec 15.3): when one bot sends
 // another a message, the mascots of both glance toward each other for a
 // moment, wherever the other one shows on screen (the sidebar, a crew's
-// cards). A bot whose partner is nowhere on screen does not glance.
+// cards). A bot whose partner is nowhere on screen does not glance. The
+// writer's mascot also tosses an ember over to the other (toss.ts).
 
 import { type RefObject, useEffect, useState } from "react";
 import type { BotId } from "../../lib/protocol.gen";
 import { useOptionalApi } from "../../store/context";
+import { toss } from "./toss";
 
 /** How long a glance lasts, as in mascot-glance.css. */
 export const GLANCE_MS = 1600;
@@ -54,6 +56,7 @@ export function useGlance(
       if (event.name !== "message.created") return;
       const { fromBotId, toBotId } = event.params;
       if (!fromBotId || fromBotId === toBotId) return;
+      if (fromBotId === botId && toBotId) toss(event.params.id, fromBotId, toBotId);
       const partner = toBotId === botId ? fromBotId : fromBotId === botId ? toBotId : null;
       const toward = partner && svg.current ? glanceToward(svg.current, partner) : null;
       if (!toward) return;
