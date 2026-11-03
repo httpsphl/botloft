@@ -58,6 +58,8 @@ export function usePresence({
   const last = useRef({ panel: expanded, size: { width, height } });
   const window = useRef<Size | null>(null);
   const leaving = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  /** Makes the window smaller once the shape has shrunk; never after it hid. */
+  const shrinking = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const first = useRef(true);
 
   // What showed last, for the way out.
@@ -90,6 +92,7 @@ export function usePresence({
       return;
     }
     const gone = () => {
+      clearTimeout(shrinking.current);
       setPresent(false);
       setPhase("shown");
       window.current = null;
@@ -140,14 +143,14 @@ export function usePresence({
     if (room.width === target.width && room.height === target.height) {
       return;
     }
-    const timer = setTimeout(
+    shrinking.current = setTimeout(
       () => {
         window.current = target;
         host.show(target.width, target.height, screen).catch(() => {});
       },
       still() ? 0 : MORPH_MS,
     );
-    return () => clearTimeout(timer);
+    return () => clearTimeout(shrinking.current);
   }, [host, present, phase, width, height, screen]);
 
   return {

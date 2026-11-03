@@ -123,7 +123,9 @@ function Island({ host }: { host: IslandHost }) {
       stop?.();
     };
   }, [host, summon]);
-  const panel = useRef<HTMLDivElement>(null);
+  // A state, not a ref: called by the owner from nothing, the panel is
+  // drawn a render after it opens, and the height is measured then.
+  const [panel, setPanel] = useState<HTMLDivElement | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(PILL.height);
   const cap = panelCap();
@@ -143,7 +145,7 @@ function Island({ host }: { host: IslandHost }) {
   const expanded = open && visible;
 
   useLayoutEffect(() => {
-    const content = panel.current;
+    const content = panel;
     if (!expanded || !content) {
       setHeight(PILL.height);
       return;
@@ -159,7 +161,7 @@ function Island({ host }: { host: IslandHost }) {
     const watch = new ResizeObserver(measure);
     watch.observe(content);
     return () => watch.disconnect();
-  }, [expanded]);
+  }, [expanded, panel]);
 
   const width = expanded ? PANEL_WIDTH : cheer ? CHEER_WIDTH : PILL.width;
   const {
@@ -230,7 +232,7 @@ function Island({ host }: { host: IslandHost }) {
           className="island-content island-scroll"
           style={{ width: PANEL_WIDTH, maxHeight: cap }}
         >
-          <div ref={panel} className="flex flex-col">
+          <div ref={setPanel} className="flex flex-col">
             <Bar
               api={api}
               crews={crewList}

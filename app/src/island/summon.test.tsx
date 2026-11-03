@@ -1,5 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { followLocale } from "../i18n";
 import { FakeBotloft } from "../lib/fake";
 import { prefs, resetPrefs } from "../shell/prefs";
@@ -111,6 +111,18 @@ describe("Home on the island (spec 31.4)", () => {
 });
 
 describe("coming and going (spec 31.2)", () => {
+  test("called from nothing, the panel is as tall as what it shows", async () => {
+    // jsdom lays nothing out: the panel's content says it is 480 px tall.
+    vi.spyOn(Element.prototype, "scrollHeight", "get").mockReturnValue(480);
+    vi.spyOn(Screen.prototype, "availHeight", "get").mockReturnValue(1440);
+    const { host } = await quiet();
+    act(() => host.summon());
+    const island = await screen.findByRole("region", { name: LABEL });
+    // Not just its tab bar: measured once the panel is drawn.
+    await waitFor(() => expect(island.style.height).toBe("480px"));
+    vi.restoreAllMocks();
+  });
+
   test("goes back into the edge before the window hides", async () => {
     const { host } = await quiet();
     act(() => host.summon());
