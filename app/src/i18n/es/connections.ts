@@ -1,4 +1,5 @@
 import type { Messages } from "../en";
+import { toolAbout, toolKinds } from "./toolAbout";
 
 export const connections: Messages["connections"] = {
   title: "Herramientas conectadas",
@@ -109,31 +110,8 @@ export const connections: Messages["connections"] = {
     close: "Cerrar",
     choose: "Elegir herramientas",
   },
-  about: {
-    google_calendar: "Leer tu agenda, encontrar horarios libres y agendar reuniones.",
-    gmail: "Leer y buscar tu bandeja de entrada y escribir borradores de respuesta.",
-    google_drive: "Encontrar, leer y agregar archivos en tu Drive.",
-    google_docs: "Leer, escribir y comentar documentos.",
-    google_sheets: "Leer y actualizar hojas de cálculo.",
-    slack: "Leer canales, enviar mensajes y seguir conversaciones.",
-    notion: "Buscar, leer y actualizar páginas y bases.",
-    microsoft_365: "Correo y agenda de Outlook, y archivos de OneDrive.",
-    canva: "Encontrar, crear y exportar diseños.",
-    figma: "Leer diseños y convertirlos en código.",
-    atlassian: "Tareas de Jira y páginas de Confluence.",
-    asana: "Tareas y proyectos de tu equipo.",
-    linear: "Tareas, proyectos y ciclos.",
-    github: "Repositorios, issues y pull requests.",
-    hubspot: "Contactos, empresas y negocios.",
-    clickup: "Tareas, documentos y horas trabajadas.",
-    vercel: "Publicaciones, logs y proyectos.",
-    supabase: "Bases de datos, tablas y archivos.",
-    stripe: "Pagos, clientes y facturas.",
-    wordpress: "Entradas y páginas de tu sitio.",
-    zapier: "Miles de apps a través de tus automatizaciones.",
-    dropbox: "Encontrar y leer archivos en tu Dropbox.",
-    monday: "Tableros, elementos y novedades.",
-  },
+  about: toolAbout,
+  toolKinds,
   request: {
     asks: (bot, tool) => `${bot} pide ${tool}`,
     wants: (bot, tool) => `${bot} quiere usar tu ${tool}`,

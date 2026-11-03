@@ -66,17 +66,28 @@ describe("the tools of the owner's claude.ai account (spec 34.7)", () => {
     expect(host.opened).toContain("https://claude.ai/customize/connectors");
   });
 
-  test("Discover lists known tools the account lacks, each one a way to claude.ai", async () => {
+  test("Discover lists known tools the account lacks by kind, each a way to claude.ai", async () => {
     const { host } = await setUp();
     const settings = await openTools();
     fireEvent.click(within(settings).getByRole("tab", { name: "Discover" }));
-    const discover = await within(settings).findByRole("list", { name: "Discover" });
+    const mail = await within(settings).findByRole("list", { name: "Mail and calendar" });
+    // The account has Gmail and Google Calendar already.
+    expect(within(mail).queryByRole("button", { name: "Connect Gmail on claude.ai" })).toBeNull();
     expect(
-      within(discover).queryByRole("button", { name: "Connect Gmail on claude.ai" }),
-    ).toBeNull();
-    fireEvent.click(within(discover).getByRole("button", { name: "Connect Slack on claude.ai" }));
-    await within(settings).findByRole("list", { name: "Discover" });
+      within(mail).getByRole("button", { name: "Connect Calendly on claude.ai" }),
+    ).toBeTruthy();
+    const talk = within(settings).getByRole("list", { name: "Chat and meetings" });
+    fireEvent.click(within(talk).getByRole("button", { name: "Connect Slack on claude.ai" }));
     expect(host.opened).toContain("https://claude.ai/customize/connectors");
+
+    fireEvent.change(within(settings).getByRole("searchbox", { name: "Search tools" }), {
+      target: { value: "stripe" },
+    });
+    expect(
+      within(settings)
+        .getAllByRole("list")
+        .map((list) => list.getAttribute("aria-label")),
+    ).toEqual(["Payments and finance"]);
   });
 
   test("an agent's details list its tools, and an agent on another engine has none", async () => {
