@@ -46,6 +46,7 @@ const MIGRATIONS: &[(u32, &str)] = &[
         33,
         include_str!("../migrations/0033_key_requests_index.sql"),
     ),
+    (34, include_str!("../migrations/0034_agent_git_events.sql")),
 ];
 
 /// Schema version after every migration has run.

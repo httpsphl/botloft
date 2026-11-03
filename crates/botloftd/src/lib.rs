@@ -11,6 +11,7 @@ pub mod background;
 pub mod backup;
 pub mod browser;
 pub mod catalog;
+pub mod changes;
 pub mod chat;
 pub mod clock;
 pub mod cloud;

@@ -1,6 +1,6 @@
 // The overview beside an agent's chat (spec 33): what fills its
-// conversation now and what it left running in the background. What
-// changed in its folders and its connected tools come in later parts.
+// conversation now, what it left running in the background, and what
+// changed in its git folders. Its connected tools come in a later part.
 
 import { X } from "lucide-react";
 import { useT } from "../../i18n";
@@ -8,6 +8,7 @@ import type { Bot } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
 import { SidePanel } from "../../ui/SidePanel";
 import { BackgroundSection } from "./BackgroundSection";
+import { ChangesSection } from "./ChangesSection";
 import { ContextSection } from "./ContextSection";
 
 export function OverviewPanel({ bot, onClose }: { bot: Bot; onClose(): void }) {
@@ -21,6 +22,7 @@ export function OverviewPanel({ bot, onClose }: { bot: Bot; onClose(): void }) {
       <div className="flex min-h-0 flex-col gap-6 overflow-y-auto px-4 pt-1 pb-4">
         <ContextSection bot={bot} />
         <BackgroundSection bot={bot} />
+        <ChangesSection bot={bot} />
       </div>
     </SidePanel>
   );

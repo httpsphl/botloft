@@ -20,6 +20,8 @@ mod backup;
 mod browser;
 #[path = "export_catalog.rs"]
 mod catalog;
+#[path = "export_changes.rs"]
+mod changes;
 #[path = "export_cloud.rs"]
 mod cloud;
 #[path = "export_crew_access.rs"]
@@ -219,6 +221,7 @@ fn export_bindings() {
     mobile::decls(&mut out);
     island::decls(&mut out);
     keys::decls(&mut out);
+    changes::decls(&mut out);
     out.decl::<ApprovalItem>();
     usage::decls(&mut out);
     questions::decls(&mut out);
@@ -427,6 +430,7 @@ fn export_bindings() {
     mobile::methods(&mut out);
     island::methods(&mut out);
     keys::methods(&mut out);
+    changes::methods(&mut out);
     routines::methods(&mut out);
     questions::methods(&mut out);
     reactions::methods(&mut out);

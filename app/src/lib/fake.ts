@@ -9,6 +9,7 @@ import { backupHandlers } from "./fakeBackup";
 import { botHandlers } from "./fakeBots";
 import { FakeBrowser } from "./fakeBrowser";
 import { catalogHandlers } from "./fakeCatalog";
+import { FakeChanges } from "./fakeChanges";
 import { FakeChat } from "./fakeChat";
 import { cloudHandlers } from "./fakeCloud";
 import { FakeConversation } from "./fakeConversation";
@@ -108,6 +109,7 @@ export class FakeBotloft implements BotloftApi {
   readonly screens = new FakeScreens(this);
   readonly questions = new FakeQuestions(this);
   readonly keys = new FakeKeys(this);
+  readonly changes = new FakeChanges();
   readonly reactions = new FakeReactions(this);
   readonly lesson = new FakeLesson(this);
   /** Clock for created and updated times. */
@@ -338,6 +340,7 @@ export class FakeBotloft implements BotloftApi {
     ...this.routines.handlers(),
     ...this.questions.handlers(),
     ...this.keys.handlers(),
+    ...this.changes.handlers(),
     ...this.reactions.handlers(),
     ...this.lesson.handlers(),
     ...usageHandlers(this),

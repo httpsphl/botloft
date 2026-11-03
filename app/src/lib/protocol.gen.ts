@@ -1938,6 +1938,89 @@ keep: KeyKeep | null, };
  */
 export type KeysScrubParams = { hits: Array<KeyScrub>, };
 
+/**
+ * How a file differs from the last commit, from `git status`.
+ */
+export type GitFileStatus = "modified" | "added" | "deleted" | "renamed" | "untracked" | "conflicted";
+
+/**
+ * A changed file in a repository.
+ */
+export type GitFile = { 
+/**
+ * Relative to the repository, with `/`.
+ */
+path: string, status: GitFileStatus, 
+/**
+ * Lines added and removed against the last commit; `null` for a new
+ * file, a binary one or a repository with no commit yet.
+ */
+added: number | null, removed: number | null, };
+
+/**
+ * A git repository one of the agent's folders is in.
+ */
+export type GitRepo = { 
+/**
+ * Absolute path of the repository's top folder.
+ */
+path: string, 
+/**
+ * Its folder name.
+ */
+name: string, 
+/**
+ * `null` when no branch is checked out.
+ */
+branch: string | null, 
+/**
+ * Commits ahead of and behind its upstream; 0 without one.
+ */
+ahead: number, behind: number, 
+/**
+ * The first changed files, at most 200.
+ */
+files: Array<GitFile>, 
+/**
+ * How many more changed files there are.
+ */
+more: number, };
+
+/**
+ * What the agent did in git, from Claude Code's `gitOperation`.
+ */
+export type GitEventKind = "commit" | "push" | "branch" | "pr";
+
+/**
+ * One thing the agent did in git (spec 33.5).
+ */
+export type GitEvent = { kind: GitEventKind, 
+/**
+ * A commit's short sha.
+ */
+sha: string | null, branch: string | null, 
+/**
+ * As Claude Code says it: `committed`, `amended`, `merged`, `created`...
+ */
+action: string | null, 
+/**
+ * A pull request's number and link.
+ */
+number: number | null, url: string | null, 
+/**
+ * Unix time in milliseconds.
+ */
+at: number, };
+
+/**
+ * What `overview.changes` answers.
+ */
+export type OverviewChanges = { repos: Array<GitRepo>, 
+/**
+ * Newest first, at most 50.
+ */
+events: Array<GitEvent>, };
+
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
 /**
  * What the bot says the command is for, as in `ToolItem`. The bot
@@ -2733,6 +2816,7 @@ export interface RpcMethods {
   "keys.dismiss": { params: KeysDismissParams; result: null };
   "keys.scan": { params: undefined; result: Array<KeyHit> };
   "keys.scrub": { params: KeysScrubParams; result: Array<KeyHit> };
+  "overview.changes": { params: BotIdParams; result: OverviewChanges };
   "routines.list": { params: RoutinesListParams; result: Array<Routine> };
   "routines.create": { params: RoutinesCreateParams; result: Routine };
   "routines.update": { params: RoutinesUpdateParams; result: Routine };

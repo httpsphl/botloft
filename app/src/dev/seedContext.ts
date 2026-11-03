@@ -66,6 +66,53 @@ export function seedContext(
     },
   ]);
 
+  fake.changes.byBot.set(bots.scout, {
+    repos: [
+      {
+        path: "D:\\Projects\\Bakery site",
+        name: "Bakery site",
+        branch: "feat/menu-page",
+        ahead: 2,
+        behind: 0,
+        files: [
+          { path: "src/pages/menu.astro", status: "modified", added: 48, removed: 6 },
+          { path: "src/styles/menu.css", status: "added", added: 112, removed: 0 },
+          { path: "public/photos/croissant.jpg", status: "untracked", added: null, removed: null },
+        ],
+        more: 0,
+      },
+    ],
+    events: [
+      {
+        kind: "pr",
+        sha: null,
+        branch: null,
+        action: "created",
+        number: 14,
+        url: "https://github.com/owner/bakery-site/pull/14",
+        at: now - 2 * 60_000,
+      },
+      {
+        kind: "push",
+        sha: null,
+        branch: "feat/menu-page",
+        action: null,
+        number: null,
+        url: null,
+        at: now - 3 * 60_000,
+      },
+      {
+        kind: "commit",
+        sha: "4f9a2c1",
+        branch: "feat/menu-page",
+        action: "committed",
+        number: null,
+        url: null,
+        at: now - 4 * 60_000,
+      },
+    ],
+  });
+
   fake.subscribe((event) => {
     if (event.name !== "bot.context" || !event.params.context?.compacting) {
       return;
