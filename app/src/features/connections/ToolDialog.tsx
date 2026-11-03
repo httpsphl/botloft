@@ -8,15 +8,13 @@ import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useT } from "../../i18n";
 import type { Bot, Connector, McpServer } from "../../lib/protocol.gen";
-import { crewList } from "../../store/app";
 import { useApi, useApp, useHost } from "../../store/context";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { Confirm } from "../../ui/Confirm";
 import { Dialog } from "../../ui/Dialog";
-import { Switch } from "../../ui/Switch";
 import { attempt } from "../../ui/toast";
-import { BotAvatar } from "../bots/BotAvatar";
+import { AgentSwitches } from "./AgentSwitches";
 import { CONNECTORS_PAGE } from "./BotConnectors";
 import { EditToolDialog } from "./EditToolDialog";
 import { ToolTile } from "./ToolTile";
@@ -33,7 +31,6 @@ export function ToolDialog({ opened, onClose }: { opened: Opened; onClose(): voi
   const api = useApi();
   const host = useHost();
   const putBot = useApp((state) => state.putBot);
-  const crews = useApp(useShallow(crewList));
   const bots = useApp(useShallow((state) => Object.values(state.bots)));
   const overview = useConnections();
   const [asking, setAsking] = useState<"edit" | "remove" | null>(null);
@@ -108,37 +105,13 @@ export function ToolDialog({ opened, onClose }: { opened: Opened; onClose(): voi
         <section className="flex flex-col gap-2">
           <h3 className="font-semibold text-sm">{p.who}</h3>
           {claude && <p className="text-muted text-xs">{p.onlyClaude}</p>}
-          {usable.length === 0 ? (
-            <p className="text-muted text-sm">{p.noAgents}</p>
-          ) : (
-            crews.map((crew) => {
-              const mine = usable.filter((bot) => bot.crewId === crew.id);
-              if (mine.length === 0) {
-                return null;
-              }
-              return (
-                <div key={crew.id} className="flex flex-col gap-1">
-                  <p className="px-1 text-muted text-xs">{crew.name}</p>
-                  <ul
-                    aria-label={crew.name}
-                    className="flex flex-col gap-0.5 rounded-xl bg-bubble p-1.5"
-                  >
-                    {mine.map((bot) => (
-                      <li key={bot.id} className="flex items-center gap-2.5 rounded-lg px-2 py-1.5">
-                        <BotAvatar color={bot.color} size={24} still />
-                        <span className="min-w-0 flex-1 break-words text-sm">{bot.name}</span>
-                        <Switch
-                          checked={uses(bot)}
-                          label={p.canUse(bot.name)}
-                          onChange={(next) => set(bot, next)}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })
-          )}
+          <AgentSwitches
+            bots={usable}
+            uses={uses}
+            onChange={set}
+            label={(bot) => p.canUse(bot.name)}
+            empty={p.noAgents}
+          />
         </section>
       </div>
       {asking === "edit" && opened.kind === "own" && (

@@ -50,6 +50,7 @@ pub enum Event {
     BotSites(BotSites),
     McpServers(McpOverview),
     BotMcp(BotMcp),
+    LoginsChanged(botloft_core::protocol::LoginsChanged),
     DesktopChanged(DesktopState),
     DesktopAway(Vec<DesktopAwayUse>),
     ChatItem(ChatItemChanged),
@@ -146,6 +147,8 @@ pub struct Daemon {
     pub contexts: Contexts,
     pub background: crate::background::Backgrounds,
     pub connectors: crate::connectors::Connectors,
+    /// The shared site logins' window and profile (spec 35).
+    pub logins: crate::logins::Logins,
     /// How each bot's connected tools stand since it started (spec 25.5).
     pub mcp_states: crate::service::mcp_state::McpStates,
     /// The values of the agents' keys, read from their files (spec 32).
@@ -201,6 +204,7 @@ impl Daemon {
             contexts: Contexts::default(),
             background: Default::default(),
             connectors: Default::default(),
+            logins: Default::default(),
             mcp_states: Default::default(),
             keys: Default::default(),
             clock: options.clock,

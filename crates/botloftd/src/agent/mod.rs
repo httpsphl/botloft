@@ -186,10 +186,12 @@ pub(crate) fn neutral_turn_with_images(turn: &Turn) -> Bytes {
 pub(crate) fn copy_rules_to_agents_md(workspace: &Path) -> io::Result<()> {
     let rules = workspace.join(".claude").join("rules");
     if let Ok(mut text) = std::fs::read_to_string(rules.join("botloft.md")) {
-        // The agent's keys, when it has any (spec 32.4).
-        if let Ok(keys) = std::fs::read_to_string(rules.join("keys.md")) {
-            text.push('\n');
-            text.push_str(&keys);
+        // The agent's keys and logins, when it has any (spec 32.4, 35.3).
+        for more in ["keys.md", "logins.md"] {
+            if let Ok(extra) = std::fs::read_to_string(rules.join(more)) {
+                text.push('\n');
+                text.push_str(&extra);
+            }
         }
         std::fs::write(workspace.join("AGENTS.md"), text)?;
     }

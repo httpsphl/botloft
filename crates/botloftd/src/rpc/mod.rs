@@ -262,6 +262,8 @@ fn route(
         method::BROWSER_WINDOW => watch.window(daemon, request.params),
         // The browser starting outlives the request too (spec 21.10).
         method::BROWSER_START => watch.start(daemon, request.params),
+        // So does a login window (spec 35.2).
+        method::LOGINS_OPEN => logins_open(daemon, request.params),
         name if ASIDE.contains(&name) => return Routed::Aside(request),
         _ => return Routed::InOrder(request),
     };
@@ -302,4 +304,13 @@ fn reply(id: &Value, result: Result<Value, RpcError>) -> String {
         Ok(value) => jsonrpc::success(id, value),
         Err(err) => jsonrpc::failure(id, &err),
     }
+}
+
+/// `logins.open`: its window outlives the request (spec 35.2).
+fn logins_open(daemon: &Arc<Daemon>, params: Option<Value>) -> Result<Value, RpcError> {
+    let params = serde_json::from_value(params.unwrap_or(Value::Null))
+        .map_err(|err| RpcError::new(error_code::INVALID_PARAMS, err.to_string()))?;
+    let opened = crate::logins::open(daemon, params)?;
+    serde_json::to_value(opened)
+        .map_err(|err| RpcError::new(error_code::INTERNAL_ERROR, err.to_string()))
 }

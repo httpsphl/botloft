@@ -7,6 +7,7 @@ import {
   Bell,
   DatabaseBackup,
   Info,
+  KeyRound,
   LockKeyhole,
   type LucideIcon,
   MessageSquare,
@@ -22,6 +23,7 @@ import { useT } from "../../i18n";
 import { useApp } from "../../store/context";
 import { ToolsPage } from "../connections/ToolsPage";
 import { PastedKeys } from "../keys/PastedKeys";
+import { LoginsPage } from "../logins/LoginsPage";
 import { PermissionsSettings } from "../permissions/PermissionsSettings";
 import { AboutSettings } from "./AboutSettings";
 import { AccountSettings } from "./AccountSettings";
@@ -50,6 +52,7 @@ const GROUPS: { id: GroupId; pages: { id: Page; icon: LucideIcon }[] }[] = [
     pages: [
       { id: "account", icon: Smartphone },
       { id: "tools", icon: Plug },
+      { id: "logins", icon: KeyRound },
       { id: "permissions", icon: LockKeyhole },
     ],
   },
@@ -84,6 +87,7 @@ export function SettingsPage() {
     alerts: s.alerts,
     account: s.account,
     tools: s.tools,
+    logins: s.logins,
     permissions: s.permissions,
     backup: s.backup,
     security: s.security,
@@ -190,6 +194,7 @@ export function SettingsPage() {
                 {page === "alerts" && <AlertsSettings />}
                 {page === "account" && <AccountSettings />}
                 {page === "tools" && <ToolsPage />}
+                {page === "logins" && <LoginsPage />}
                 {page === "permissions" && <PermissionsSettings />}
                 {page === "backup" && <BackupSettings goToAccount={() => open("account")} />}
                 {page === "security" && <PastedKeys />}

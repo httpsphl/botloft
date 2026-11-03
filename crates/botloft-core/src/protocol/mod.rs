@@ -65,6 +65,7 @@ mod files;
 mod island;
 mod keys;
 mod lesson;
+mod logins;
 mod mcp;
 mod messaging;
 mod methods;
@@ -97,6 +98,7 @@ pub use files::*;
 pub use island::*;
 pub use keys::*;
 pub use lesson::*;
+pub use logins::*;
 pub use mcp::*;
 pub use messaging::*;
 pub use methods::*;
@@ -154,6 +156,10 @@ pub mod method {
     pub const OVERVIEW_CHANGES: &str = "overview.changes";
     pub const CONNECTORS_LIST: &str = "connectors.list";
     pub const BOTS_SET_CONNECTORS: &str = "bots.setConnectors";
+    pub const LOGINS_LIST: &str = "logins.list";
+    pub const LOGINS_OPEN: &str = "logins.open";
+    pub const LOGINS_SHARE: &str = "logins.share";
+    pub const LOGINS_REMOVE: &str = "logins.remove";
     pub const BOTS_ARCHIVE: &str = "bots.archive";
     pub const BOTS_UNARCHIVE: &str = "bots.unarchive";
     pub const BOTS_DELETE: &str = "bots.delete";
@@ -273,6 +279,8 @@ pub mod notification {
     pub const BOT_SITES: &str = "bot.sites";
     pub const MCP_SERVERS: &str = "mcp.servers";
     pub const BOT_MCP: &str = "bot.mcp";
+    /// The shared site logins changed (spec 35).
+    pub const LOGINS_CHANGED: &str = "logins.changed";
     pub const DESKTOP_CHANGED: &str = "desktop.changed";
     /// What bots did while the owner was away, whenever it changes.
     pub const DESKTOP_AWAY: &str = "desktop.away";

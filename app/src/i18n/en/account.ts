@@ -324,6 +324,7 @@ export const account = {
     about: "About",
     backup: "Backup",
     tools: "Tools",
+    logins: "Logins",
     permissions: "Permissions",
     account: "Account and phone",
     groupDaily: "Every day",

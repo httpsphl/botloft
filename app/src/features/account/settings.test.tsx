@@ -249,6 +249,7 @@ describe("the page of settings", () => {
       "Notifications",
       "Account and phone",
       "Tools",
+      "Logins",
       "Permissions",
       "Backup",
       "Security",

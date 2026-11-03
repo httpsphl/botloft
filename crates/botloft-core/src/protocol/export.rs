@@ -34,6 +34,8 @@ mod desktop;
 mod island;
 #[path = "export_keys.rs"]
 mod keys;
+#[path = "export_logins.rs"]
+mod logins;
 #[path = "export_mcp.rs"]
 mod mcp;
 #[path = "export_mobile.rs"]
@@ -225,6 +227,7 @@ fn export_bindings() {
     keys::decls(&mut out);
     changes::decls(&mut out);
     connectors::decls(&mut out);
+    logins::decls(&mut out);
     out.decl::<ApprovalItem>();
     usage::decls(&mut out);
     questions::decls(&mut out);
@@ -435,6 +438,7 @@ fn export_bindings() {
     keys::methods(&mut out);
     changes::methods(&mut out);
     connectors::methods(&mut out);
+    logins::methods(&mut out);
     routines::methods(&mut out);
     questions::methods(&mut out);
     reactions::methods(&mut out);
@@ -489,6 +493,7 @@ fn export_bindings() {
     desktop::notifications(&mut out);
     permissions::notifications(&mut out);
     mcp::notifications(&mut out);
+    logins::notifications(&mut out);
     cloud::notifications(&mut out);
     mobile::notifications(&mut out);
     browser::notifications(&mut out);
