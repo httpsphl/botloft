@@ -38,6 +38,8 @@ async function props(): Promise<{ host: Host; connect: Connect }> {
 // The mascot reel (dev/Reel.tsx), a page to record videos from.
 if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("reel")) {
   import("./dev/Reel").then(({ Reel }) => createRoot(root).render(<Reel />));
+} else if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("flame")) {
+  import("./dev/FlameBench").then(({ FlameBench }) => createRoot(root).render(<FlameBench />));
 } else {
   props().then(({ host, connect: open }) => {
     // Before the first paint, so the window never flashes at the small size

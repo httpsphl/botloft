@@ -1,6 +1,7 @@
 /* The mascot (features/bots/BotAvatar.tsx, spec 15.3). Its mood follows
    what the bot does, on top of the state's own icon and label. Only a
-   working bot's flame burns on and on, throwing embers; every other mood
+   working bot's flame burns on and on, throwing embers (flame.ts, frame by
+   frame from a timer: no animation here runs forever); every other mood
    holds still, and the mascot moves only in moments that play once: from
    one mood to the next the flame morphs into its new shape, and the eyes
    blink and glance around when eyeMoments.ts picks. A bot with nothing to
@@ -59,9 +60,9 @@
     animation: eye-look 4.4s ease-in-out;
   }
 
+  /* Stepped by flame.ts: a transition would blur every step. */
   [data-mood="working"] .avatar-fire {
-    animation: fire-working 1.5s linear infinite;
-    animation-delay: var(--blink-delay, 0s);
+    transition: none;
   }
 
   [data-mood="waiting"] .avatar-hop {
@@ -88,11 +89,6 @@
 
   [data-mood="tired"] .avatar-hl {
     transform: translateY(12px);
-  }
-
-  [data-mood="working"] .avatar-spark {
-    animation: spark 1.5s ease-out infinite;
-    animation-delay: var(--spark-delay, 0s);
   }
 
   /* On a page of crews, the faces show their mood without moving. */
@@ -168,23 +164,5 @@
   }
   34% {
     transform: translateY(0) scale(1.05, 0.95);
-  }
-}
-
-/* An ember: it flares up, then drifts off to one side as it fades. */
-@keyframes spark {
-  0% {
-    opacity: 0;
-    transform: translate(0) scale(0.25) rotate(0);
-  }
-  18% {
-    opacity: 1;
-    transform: translate(calc(var(--spark-drift, 20px) * 0.15), -40px) scale(1)
-      rotate(calc(var(--spark-turn, 0deg) * 0.3));
-  }
-  100% {
-    opacity: 0;
-    transform: translate(var(--spark-drift, 20px), -200px) scale(0.2)
-      rotate(var(--spark-turn, 0deg));
   }
 }

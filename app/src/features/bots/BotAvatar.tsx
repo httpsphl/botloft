@@ -8,7 +8,7 @@
 // square of the app icon, for Botloft itself (the title bar, messages from
 // the daemon), in the icon's own color.
 //
-// Given a `mood`, the mascot comes alive (mascot.css): its flame burns
+// Given a `mood`, the mascot comes alive (mascot.css, flame.ts): its flame burns
 // wildly, throwing embers, while it works; it sleeps as a small ember with
 // its eyes shut while its bot has nothing to do, is paused or stopped; it
 // hops as it starts to wait for the owner and burns low with heavy eyes when
@@ -22,6 +22,7 @@
 
 import { type CSSProperties, useId, useMemo, useRef } from "react";
 import type { Bot, BotId } from "../../lib/protocol.gen";
+import { useFlame } from "./flame";
 import {
   BODY,
   CENTER,
@@ -75,13 +76,13 @@ export function moodOf(bot: Pick<Bot, "state" | "paused">, crewPaused = false): 
 /** How long the mascot cheers when its bot finishes, as in mascot-cheer.css. */
 export const CHEER_MS = MOMENT_MS.cheer;
 
-/** A delay from the color, so a crew's mascots do not blink together. */
-function blinkDelay(color: string): string {
+/** Where the flame starts its turn, from the color, so a crew's flames do not burn together. */
+function flameOffset(color: string): number {
   let hash = 0;
   for (const char of color) {
     hash = (hash * 31 + char.charCodeAt(0)) % 7000;
   }
-  return `-${hash}ms`;
+  return hash;
 }
 
 /** The glints that sit on `eye`. */
@@ -144,11 +145,9 @@ export function BotAvatar({
   const moment = useMoment(mood, starting);
   const arrive = useArrive(arriving);
   const glance = useGlance(mood && !still ? botId : undefined, svg);
-  const style = mood
-    ? ({
-        "--blink-delay": blinkDelay(color),
-        ...(glance && { "--glance-x": `${glance.x}px`, "--glance-y": `${glance.y}px` }),
-      } as CSSProperties)
+  useFlame(svg, mood === "working" && !still, flameOffset(color));
+  const style = glance
+    ? ({ "--glance-x": `${glance.x}px`, "--glance-y": `${glance.y}px` } as CSSProperties)
     : undefined;
   const box = framed ? [CENTER.x - 500, CENTER.y - 470, 1000, 1000] : VIEW_BOX;
   return (
@@ -208,18 +207,8 @@ export function BotAvatar({
         {mood === "working" &&
           SPARKS.map((spark) => (
             <g key={spark.x} transform={`translate(${spark.x} ${spark.y}) scale(1.5)`}>
-              <path
-                className="avatar-spark"
-                d={EMBER.d}
-                fill={`url(#${id("ember")})`}
-                style={
-                  {
-                    "--spark-delay": spark.delay,
-                    "--spark-drift": spark.drift,
-                    "--spark-turn": spark.turn,
-                  } as CSSProperties
-                }
-              />
+              {/* flame.ts moves it, as its spark says. */}
+              <path className="avatar-spark" d={EMBER.d} fill={`url(#${id("ember")})`} />
             </g>
           ))}
         <g className="avatar-look">
