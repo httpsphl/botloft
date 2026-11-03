@@ -1,23 +1,18 @@
 /* The Maker's gear (features/bots/MakerGear.tsx, spec 36.3). Asleep, the
-   hat slips down over the eyes, the wand lies down and the flow dims; each
+   wand lies down and the flow dims; each
    moves there once, as the mood changes. What moves on and on while it
    works (the wand, the flow) is stepped by the flame's timer (ticks.ts),
    and the cheer's flourish is a gesture (gestures.ts). The transforms turn
    about points of the artwork (makerArt.ts), in its own units. */
 
 @layer components {
-  .maker-hat,
   .maker-wand-pose {
     transform-box: view-box;
     transition: transform 700ms var(--ease-out);
   }
 
-  .maker-hat {
-    transform-origin: 346px 410px;
-  }
-
   .maker-wand-pose {
-    transform-origin: 660px 640px;
+    transform-origin: 620px 610px;
   }
 
   .maker-flow {
@@ -39,12 +34,8 @@
     opacity: 0.55;
   }
 
-  :is([data-mood="idle"], [data-mood="sleeping"]):not([data-cheer], [data-wake]) .maker-hat {
-    transform: translate(0, 64px) rotate(-6deg);
-  }
-
   :is([data-mood="idle"], [data-mood="sleeping"]):not([data-cheer], [data-wake]) .maker-wand-pose {
-    transform: translate(10px, 70px) rotate(76deg);
+    transform: translate(20px, 60px) rotate(60deg);
   }
 
   :is([data-mood="idle"], [data-mood="sleeping"]):not([data-cheer], [data-wake]) .maker-flow {

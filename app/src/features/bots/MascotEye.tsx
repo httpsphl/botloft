@@ -14,8 +14,7 @@ const rotate = ({ x, y, turn }: Ellipse) => `rotate(${turn} ${x} ${y})`;
 
 /**
  * How far the face leans, in degrees: the line through the two eyes, the
- * right one sitting higher. Shut and smiling eyes lean with it, and so
- * does the Maker's hat.
+ * right one sitting higher. Shut and smiling eyes lean with it.
  */
 function tiltOf(eyes: readonly Ellipse[]): number {
   const [left, right] = eyes;
@@ -23,7 +22,7 @@ function tiltOf(eyes: readonly Ellipse[]): number {
   return (Math.atan2(right.y - left.y, right.x - left.x) * 180) / Math.PI;
 }
 
-export const TILT = tiltOf(EYES);
+const TILT = tiltOf(EYES);
 
 export function MascotEye({ eye, side, fill }: { eye: Ellipse; side: "l" | "r"; fill: string }) {
   const { x, y, rx, ry } = eye;

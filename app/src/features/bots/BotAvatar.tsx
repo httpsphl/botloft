@@ -29,9 +29,9 @@ import { type CSSProperties, useEffect, useId, useMemo, useRef } from "react";
 import type { Bot, BotId } from "../../lib/protocol.gen";
 import { useFlame } from "./flame";
 import { useGestures } from "./gestures";
-import { MakerFlow, MakerHat, MakerWand } from "./MakerGear";
+import { MakerFlow, MakerWand } from "./MakerGear";
 import { MascotBadge } from "./MascotBadge";
-import { MascotEye, TILT } from "./MascotEye";
+import { MascotEye } from "./MascotEye";
 import { SCENE_BOX, WAND_BOX } from "./makerArt";
 import {
   BODY,
@@ -47,7 +47,7 @@ import {
 import type { Doing, Face } from "./mascotLook";
 import { asleep, MOMENT_MS, useArrive, useMoment } from "./mascotMoments";
 import { shiver, usePointerPlay } from "./pointer";
-import { retint } from "./retint";
+import { retint, whiten } from "./retint";
 import { useGlance } from "./useGlance";
 
 /**
@@ -58,6 +58,9 @@ export type Mood = "awake" | "idle" | "working" | "waiting" | "tired" | "sleepin
 
 /** Botloft's own mascot, as on the app icon: the color that shows the drawing as drawn. */
 export const BOTLOFT_COLOR = "#FF7A59";
+
+/** The Maker's color: its flame is white (spec 36.3). */
+export const MAKER_COLOR = "#FFFFFF";
 
 /** How the mascot of `bot` moves, from what the bot is doing. */
 export function moodOf(bot: Pick<Bot, "state" | "paused">, crewPaused = false): Mood {
@@ -136,25 +139,26 @@ export function BotAvatar({
   doing?: Doing | null;
   /** The shape of its eyes on top of the mood (mascotLook.ts). */
   face?: Face | null;
-  /** Dressed as the Maker, in Botloft's own color (spec 36.3). */
+  /** The Maker: its flame all in white, with its wand (spec 36.3). */
   maker?: boolean;
   /** The Maker with its flow behind it, where there is room. */
   scene?: boolean;
 }) {
-  const color = maker ? BOTLOFT_COLOR : chosen;
+  const color = maker ? MAKER_COLOR : chosen;
   // Every avatar on the page needs its own clip, blur and gradients.
   const unique = useId().replace(/[^\w-]/g, "");
   const id = (name: string) => `avatar-${name}-${unique}`;
-  const paint = useMemo(
-    () => ({
-      body: retint(BODY, color),
-      shades: SHADES.map((shade) => retint(shade.fill, color)),
-      emberLight: retint(EMBER.light, color),
-      emberBase: retint(EMBER.base, color),
-      glow: retint(EYE_GLOW, color),
-    }),
-    [color],
-  );
+  const paint = useMemo(() => {
+    // The Maker's white keeps the eyes' warm glow.
+    const tint = (drawn: string) => (maker ? whiten(drawn) : retint(drawn, color));
+    return {
+      body: tint(BODY),
+      shades: SHADES.map((shade) => tint(shade.fill)),
+      emberLight: tint(EMBER.light),
+      emberBase: tint(EMBER.base),
+      glow: maker ? EYE_GLOW : retint(EYE_GLOW, color),
+    };
+  }, [color, maker]);
   const svg = useRef<SVGSVGElement>(null);
   const moment = useMoment(mood, starting);
   const arrive = useArrive(arriving);
@@ -210,18 +214,19 @@ export function BotAvatar({
           <stop offset="1" stopColor="#0a0101" />
         </radialGradient>
       </defs>
-      {flow && <MakerFlow arrowId={id("arrow")} ember={paint.body} />}
+      {flow && <MakerFlow arrowId={id("arrow")} />}
       <g className="avatar-hop">
         {/* The moments move the body in the spring, the mouse in the poke (gestures.ts, pointer.ts). */}
         <g className="avatar-spring">
           <g className="avatar-poke">
             {!framed && (
+              // The Maker's white needs a firmer edge to keep its shape on the light theme.
               <path
                 className="avatar-fire"
                 d={OUTLINE}
                 fill="none"
-                stroke="var(--avatar-edge)"
-                strokeWidth={2}
+                stroke={maker ? "var(--line-strong)" : "var(--avatar-edge)"}
+                strokeWidth={maker ? 3 : 2}
                 vectorEffect="non-scaling-stroke"
               />
             )}
@@ -257,8 +262,7 @@ export function BotAvatar({
                 ))}
               </g>
             </g>
-            {maker && <MakerHat tilt={TILT} />}
-            {wand && <MakerWand ember={paint.body} />}
+            {wand && <MakerWand glowId={id("orb")} />}
             {doing && size >= BADGE_FROM && <MascotBadge doing={doing} />}
           </g>
         </g>

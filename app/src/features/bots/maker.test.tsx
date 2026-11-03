@@ -1,6 +1,6 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { BOTLOFT_COLOR, BotAvatar } from "./BotAvatar";
+import { BotAvatar, MAKER_COLOR } from "./BotAvatar";
 import { gestureOf } from "./gestures";
 import { settleParts, stepParts } from "./ticks";
 
@@ -9,11 +9,16 @@ afterEach(cleanup);
 const svgOf = (container: HTMLElement) => container.querySelector("svg") as SVGSVGElement;
 
 describe("the Maker's mascot", () => {
-  test("wears the hat at every size, the wand from 72 px, and the flow only with room", () => {
+  test("is the flame in white, with its wand from 72 px and the flow only with room", () => {
     const { container, rerender } = render(<BotAvatar color="#5ec8ff" size={28} maker />);
-    expect(container.querySelector(".maker-hat")).not.toBeNull();
     expect(container.querySelector(".maker-wand")).toBeNull();
-    expect(svgOf(container).dataset.color).toBe(BOTLOFT_COLOR);
+    expect(svgOf(container).dataset.color).toBe(MAKER_COLOR);
+    // Every color of the flame is a gray near white; the eyes keep their glow.
+    const body = container.querySelector("[clip-path] rect")?.getAttribute("fill") ?? "";
+    const [r, g, b] = [1, 3, 5].map((at) => Number.parseInt(body.slice(at, at + 2), 16));
+    expect(r).toBe(g);
+    expect(g).toBe(b);
+    expect(r).toBeGreaterThan(230);
 
     rerender(<BotAvatar color="#5ec8ff" size={96} maker />);
     expect(container.querySelector(".maker-wand")).not.toBeNull();
@@ -28,7 +33,7 @@ describe("the Maker's mascot", () => {
 
   test("an agent never wears the Maker's gear", () => {
     const { container } = render(<BotAvatar color="#5ec8ff" size={96} mood="working" />);
-    expect(container.querySelector(".maker-hat, .maker-wand, .maker-flow")).toBeNull();
+    expect(container.querySelector(".maker-wand, .maker-flow")).toBeNull();
   });
 
   test("working, its flow lights one box at a time; settled, it is as drawn", () => {
