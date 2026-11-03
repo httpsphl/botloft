@@ -18,6 +18,7 @@ import { island } from "./island";
 import { keys } from "./keys";
 import { messages } from "./messages";
 import { onboarding } from "./onboarding";
+import { overview } from "./overview";
 import { permissions } from "./permissions";
 import { phone } from "./phone";
 import { questions } from "./questions";
@@ -50,6 +51,7 @@ export const ptBR: Messages = {
   island,
   keys,
   messages,
+  overview,
   permissions,
   phone,
   questions,

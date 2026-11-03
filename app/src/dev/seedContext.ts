@@ -3,17 +3,38 @@
 // moment after it is asked for.
 
 import type { FakeBotloft } from "../lib/fake";
-import type { BotId, ContextUsage } from "../lib/protocol.gen";
+import type { BotId, ContextPart, ContextUsage } from "../lib/protocol.gen";
 
 const COMPACTION_MS = 2500;
 
-const holds = (usedTokens: number, windowTokens: number): ContextUsage => ({
-  usedTokens,
-  windowTokens,
-  autoCompactTokens: windowTokens - 33_000,
-  compacting: false,
-  updatedAt: Date.now(),
-});
+/** What fills a conversation besides the talk, as Claude Code 2.1.309 split it (spec 33.3). */
+const FIXED: ContextPart[] = [
+  { kind: "instructions", tokens: 3_341 },
+  { kind: "tools", tokens: 13_908 },
+  { kind: "connected_tools", tokens: 2_500 },
+  { kind: "memory", tokens: 1_240 },
+  { kind: "skills", tokens: 2_210 },
+];
+
+const holds = (usedTokens: number, windowTokens: number): ContextUsage => {
+  const fixed = FIXED.reduce((sum, part) => sum + part.tokens, 0);
+  return {
+    usedTokens,
+    windowTokens,
+    autoCompactTokens: windowTokens - 33_000,
+    compacting: false,
+    updatedAt: Date.now(),
+    parts: [
+      { kind: "messages", tokens: Math.max(0, usedTokens - fixed) },
+      ...FIXED,
+      { kind: "buffer", tokens: 33_000 },
+    ],
+    memoryFiles: [
+      { path: "C:\\Users\\owner\\Botloft\\research\\scout\\CLAUDE.md", tokens: 940 },
+      { path: "C:\\Users\\owner\\Botloft\\research\\shared\\CLAUDE.md", tokens: 300 },
+    ],
+  };
+};
 
 export function seedContext(
   fake: FakeBotloft,

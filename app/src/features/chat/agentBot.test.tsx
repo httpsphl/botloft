@@ -17,6 +17,8 @@ async function agyBot() {
     autoCompactTokens: null,
     compacting: false,
     updatedAt: 0,
+    parts: [],
+    memoryFiles: [],
   });
   renderApp(fake);
   await crewOpened("Ops");
@@ -117,6 +119,8 @@ describe("a Codex agent", () => {
       autoCompactTokens: null,
       compacting: false,
       updatedAt: 0,
+      parts: [],
+      memoryFiles: [],
     });
     renderApp(fake);
     await crewOpened("Ops");

@@ -189,6 +189,23 @@ export type BotEffort = "default" | "low" | "medium" | "high" | "xhigh" | "max";
 export type ModelEffort = "none" | "low" | "medium" | "high" | "xhigh" | "max";
 
 /**
+ * What a part of a bot's conversation is (spec 33.3), from the
+ * categories Claude Code counts.
+ */
+export type ContextPartKind = "messages" | "instructions" | "tools" | "connected_tools" | "memory" | "skills" | "agents" | "buffer" | "other";
+
+export type ContextPart = { kind: ContextPartKind, tokens: number, };
+
+/**
+ * A memory file in a bot's conversation.
+ */
+export type ContextFile = { 
+/**
+ * As Claude Code gives it: absolute.
+ */
+path: string, tokens: number, };
+
+/**
  * How full a bot's conversation is, in tokens, as Claude Code counts it
  * (spec 8.6).
  */
@@ -213,7 +230,16 @@ compacting: boolean,
 /**
  * Unix time in milliseconds.
  */
-updatedAt: number, };
+updatedAt: number, 
+/**
+ * What the conversation holds, part by part, as of Claude Code's last
+ * answer (spec 33.3); empty when the agent does not say.
+ */
+parts: Array<ContextPart>, 
+/**
+ * The memory files the agent loaded.
+ */
+memoryFiles: Array<ContextFile>, };
 
 /**
  * Params of the `bot.context` notification.

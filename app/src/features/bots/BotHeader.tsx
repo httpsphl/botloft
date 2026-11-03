@@ -1,6 +1,7 @@
 import {
   Ellipsis,
   Files,
+  Gauge,
   Globe,
   LayoutTemplate,
   PanelRight,
@@ -24,6 +25,8 @@ import { ChiefBadge, isChief } from "./ChiefBadge";
 export function BotHeader({
   bot,
   crew,
+  overviewOpen,
+  onToggleOverview,
   detailsOpen,
   onToggleDetails,
   filesOpen,
@@ -39,6 +42,8 @@ export function BotHeader({
 }: {
   bot: Bot;
   crew: Crew;
+  overviewOpen: boolean;
+  onToggleOverview(): void;
   detailsOpen: boolean;
   onToggleDetails(): void;
   filesOpen: boolean;
@@ -183,6 +188,14 @@ export function BotHeader({
             </span>
           )}
         </span>
+        <Button
+          size="sm"
+          variant={overviewOpen ? "secondary" : "ghost"}
+          icon={Gauge}
+          label={overviewOpen ? t.overview.hide : t.overview.show}
+          aria-pressed={overviewOpen}
+          onClick={onToggleOverview}
+        />
         <Button
           size="sm"
           variant={detailsOpen ? "secondary" : "ghost"}

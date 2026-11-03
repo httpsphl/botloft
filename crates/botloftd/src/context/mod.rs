@@ -3,6 +3,7 @@
 //! when a turn ends and after a compaction, and follows the usage of each
 //! model request in between. Nothing is stored; a new daemon asks again.
 
+mod parts;
 mod reload;
 
 use std::collections::HashMap;
@@ -10,8 +11,8 @@ use std::sync::{Mutex, MutexGuard};
 
 use botloft_core::ids::{BotId, random_uuid};
 use botloft_core::protocol::{
-    Bot, BotContextChanged, BotIdParams, BotState, ChatBody, ContextUsage, NoticeCode, NoticeItem,
-    NoticeLevel,
+    Bot, BotContextChanged, BotIdParams, BotState, ChatBody, ContextFile, ContextPart,
+    ContextUsage, NoticeCode, NoticeItem, NoticeLevel,
 };
 use bytes::Bytes;
 use serde_json::{Value, json};
@@ -44,6 +45,9 @@ struct Size {
     window: u64,
     auto_compact: Option<u64>,
     at: i64,
+    /// As of Claude Code's last answer (spec 33.3).
+    parts: Vec<ContextPart>,
+    memory_files: Vec<ContextFile>,
 }
 
 impl Entry {
@@ -54,6 +58,8 @@ impl Entry {
             auto_compact_tokens: size.auto_compact,
             compacting: self.compacting,
             updated_at: size.at,
+            parts: size.parts.clone(),
+            memory_files: size.memory_files.clone(),
         })
     }
 }
@@ -128,6 +134,7 @@ pub(crate) fn answered(daemon: &Daemon, bot: &BotId, body: &Value) {
         .filter(|at| *at > 0 && *at <= window);
     let at = daemon.clock.now_ms();
     debug!(bot = %bot, used, window, "context usage");
+    let (parts, memory_files) = (parts::parts(body), parts::memory_files(body));
     update(daemon, bot, |entry| {
         entry.reload.measured(used);
         entry.size = Some(Size {
@@ -135,6 +142,8 @@ pub(crate) fn answered(daemon: &Daemon, bot: &BotId, body: &Value) {
             window,
             auto_compact,
             at,
+            parts,
+            memory_files,
         });
     });
 }
@@ -149,6 +158,8 @@ pub(crate) fn report(daemon: &Daemon, bot: &BotId, used: u64, window: u64) {
             window,
             auto_compact: None,
             at,
+            parts: Vec::new(),
+            memory_files: Vec::new(),
         });
     });
 }
