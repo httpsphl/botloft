@@ -1,13 +1,16 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
+import { followLocale } from "../i18n";
 import { FakeBotloft } from "../lib/fake";
 import { prefs, resetPrefs } from "../shell/prefs";
 import { FakeIslandHost } from "./fakeHost";
 import { IslandApp } from "./IslandApp";
+import { GONE_MS } from "./usePresence";
 
 afterEach(() => {
   cleanup();
   resetPrefs();
+  followLocale("en");
 });
 
 const LABEL = "Botloft at the top of the screen";
@@ -104,5 +107,29 @@ describe("Home on the island (spec 31.4)", () => {
     );
     expect(await within(shortcuts).findByText("Started")).toBeDefined();
     expect(fake.calls.some((call) => call.method === "routines.runNow")).toBe(true);
+  });
+});
+
+describe("coming and going (spec 31.2)", () => {
+  test("goes back into the edge before the window hides", async () => {
+    const { host } = await quiet();
+    act(() => host.summon());
+    const island = await screen.findByRole("region", { name: LABEL });
+    await waitFor(() => expect(island.getAttribute("data-phase")).toBe("shown"));
+    act(() => host.summon());
+    // Still drawn, on its way out, with the window where it was.
+    expect(island.getAttribute("data-phase")).toBe("leave");
+    expect(host.calls.at(-1)).not.toBe("hide");
+    await act(() => new Promise((resolve) => setTimeout(resolve, GONE_MS + 50)));
+    expect(host.calls.at(-1)).toBe("hide");
+    expect(screen.queryByRole("region", { name: LABEL })).toBeNull();
+  });
+
+  test("speaks the main window's language", async () => {
+    const { host } = await quiet();
+    act(() => host.tellLocale("pt-BR"));
+    act(() => host.summon());
+    const island = await screen.findByRole("region", { name: "Botloft no topo da tela" });
+    expect(within(island).getByRole("tab", { name: "Início" })).toBeDefined();
   });
 });

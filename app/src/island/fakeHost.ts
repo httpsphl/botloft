@@ -58,6 +58,24 @@ export class FakeIslandHost implements IslandHost {
     return Promise.resolve();
   }
 
+  private readonly locales = new Set<(locale: string) => void>();
+
+  onLocale(listener: (locale: string) => void): Promise<() => void> {
+    this.locales.add(listener);
+    return Promise.resolve(() => this.locales.delete(listener));
+  }
+
+  /** The main window says which language it shows. */
+  tellLocale(locale: string): void {
+    for (const listener of this.locales) {
+      listener(locale);
+    }
+  }
+
+  askLocale(): Promise<void> {
+    return Promise.resolve();
+  }
+
   /** The owner held the right Ctrl long enough. */
   summon(): void {
     for (const listener of this.summons) {

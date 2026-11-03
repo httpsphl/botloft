@@ -6,3 +6,8 @@ export const OPEN_BOT_EVENT = "botloft://open-bot";
 // Ctrl long enough, and the main window came to the front or left it.
 export const SUMMON_EVENT = "botloft://summon";
 export const FRONT_EVENT = "botloft://front";
+
+// The island follows the main window's language (spec 31.3): the main
+// window tells it, and it asks once when it starts.
+export const LOCALE_EVENT = "botloft://locale";
+export const LOCALE_ASK_EVENT = "botloft://locale-ask";

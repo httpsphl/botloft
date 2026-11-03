@@ -69,7 +69,7 @@ function Picker({ bots, bot, onPick }: { bots: Bot[]; bot: Bot; onPick: (id: Bot
         <div
           role="listbox"
           aria-label={t.island.chat.pick}
-          className="island-card absolute top-full left-0 z-10 mt-1 max-h-60 w-48 overflow-auto p-1 text-left shadow-lg"
+          className="island-sunk mt-1 flex max-h-56 w-full flex-col overflow-auto rounded-xl p-1 text-left"
         >
           {bots.map((other) => (
             <button

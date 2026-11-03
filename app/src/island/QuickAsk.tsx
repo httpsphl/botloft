@@ -55,7 +55,7 @@ export function QuickAsk({
       .finally(() => setBusy(false));
   };
   return (
-    <form onSubmit={send} className="island-card relative flex flex-col gap-2 p-3">
+    <form onSubmit={send} className="island-card flex flex-col gap-2 p-3">
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -108,7 +108,7 @@ export function QuickAsk({
         <div
           role="listbox"
           aria-label={pick}
-          className="island-card absolute top-12 left-2 z-10 max-h-60 w-48 overflow-auto p-1 text-left shadow-lg"
+          className="flex max-h-40 flex-wrap gap-1.5 overflow-auto px-1 pb-1"
         >
           {bots.map((other) => (
             <button
@@ -121,10 +121,10 @@ export function QuickAsk({
                 setMenu(false);
                 setSent(null);
               }}
-              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] hover:bg-[var(--island-tab)]"
+              className={`flex items-center gap-1.5 rounded-full py-1 pr-3 pl-1 text-[13px] ${other.id === bot.id ? "bg-[var(--island-ink)] text-black" : "bg-[var(--island-tab)] hover:brightness-125"}`}
             >
               <BotAvatar color={other.color} size={20} mood="idle" still />
-              <span className="truncate">{other.name}</span>
+              <span className="max-w-32 truncate">{other.name}</span>
             </button>
           ))}
         </div>

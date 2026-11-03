@@ -8,7 +8,7 @@
 import { type DragEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useFiles } from "../features/chat/useFiles";
 import { useToday } from "../features/home/useToday";
-import { useT } from "../i18n";
+import { followLocale, useT } from "../i18n";
 import type { BotloftApi } from "../lib/api";
 import type { BotId } from "../lib/protocol.gen";
 import { prefs, usePref } from "../shell/prefs";
@@ -23,6 +23,7 @@ import { fiveHour, UsageTab, useUsage, WARN_AT } from "./UsageTab";
 import { useAppear } from "./useAppear";
 import { useCheer } from "./useCheer";
 import { useLive } from "./useLive";
+import { usePresence } from "./usePresence";
 import { useWaiting } from "./useWaiting";
 
 export { PILL } from "./Pill";
@@ -74,6 +75,26 @@ function Island({ host }: { host: IslandHost }) {
   });
   const [talkTo, setTalkTo] = useState<BotId | null>(null);
   const front = useFront(host);
+  // The main window's language, whatever this window would guess (31.3).
+  useEffect(() => {
+    let stop: (() => void) | undefined;
+    let gone = false;
+    host.onLocale(followLocale).then(
+      (unlisten) => {
+        if (gone) {
+          unlisten();
+        } else {
+          stop = unlisten;
+        }
+      },
+      () => {},
+    );
+    host.askLocale().catch(() => {});
+    return () => {
+      gone = true;
+      stop?.();
+    };
+  }, [host]);
   // Holding the right Ctrl calls it (spec 31.6): the app listens for it
   // only while the owner wants it.
   useEffect(() => {
@@ -141,11 +162,21 @@ function Island({ host }: { host: IslandHost }) {
   }, [expanded]);
 
   const width = expanded ? PANEL_WIDTH : cheer ? CHEER_WIDTH : PILL.width;
-  useLayoutEffect(() => {
-    (visible ? host.show(width, height, screen) : host.hide()).catch(() => {});
-  }, [host, visible, width, height, screen]);
+  const {
+    present,
+    phase,
+    panel: showPanel,
+    shape,
+  } = usePresence({
+    host,
+    visible,
+    expanded,
+    width,
+    height,
+    screen,
+  });
 
-  if (!visible) {
+  if (!present) {
     return null;
   }
   // The agent the Chat starts on: who waits, then who works, then the first.
@@ -168,8 +199,9 @@ function Island({ host }: { host: IslandHost }) {
     <section
       aria-label={t.island.label}
       className="island"
-      data-open={expanded}
-      style={{ width, height }}
+      data-open={showPanel}
+      data-phase={phase}
+      style={{ width: shape.width, height: shape.height }}
       {...hover}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
@@ -190,7 +222,7 @@ function Island({ host }: { host: IslandHost }) {
         }
       }}
     >
-      {expanded ? (
+      {showPanel ? (
         // At the panel's width from the first frame, so the shape grows
         // around the content instead of squeezing it.
         <div

@@ -230,14 +230,15 @@ describe("the panel's height", () => {
     const { island, heights } = await opened(900, 720);
     expect(heights.at(-1)).toBe(432);
     expect(Math.max(...heights)).toBe(432);
-    expect(island.style.height).toBe("432px");
+    // It grows out of a sliver at the edge (usePresence.ts).
+    await waitFor(() => expect(island.style.height).toBe("432px"));
     expect(scroller(island).style.maxHeight).toBe("432px");
   });
 
   test("below that, it is as tall as what it shows", async () => {
     const { island, heights } = await opened(554, 1440);
     expect(heights.at(-1)).toBe(554);
-    expect(island.style.height).toBe("554px");
+    await waitFor(() => expect(island.style.height).toBe("554px"));
   });
 
   test("has no cap when the screen gives no height", async () => {

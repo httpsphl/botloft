@@ -16,7 +16,7 @@ import {
 } from "@tauri-apps/api/window";
 import type { DaemonStatus } from "../lib/host";
 import { SYSTEM } from "../lib/system";
-import { FRONT_EVENT, OPEN_BOT_EVENT, SUMMON_EVENT } from "./event";
+import { FRONT_EVENT, LOCALE_ASK_EVENT, LOCALE_EVENT, OPEN_BOT_EVENT, SUMMON_EVENT } from "./event";
 
 /** The screen the island sits on (spec 31.6). */
 export type IslandScreen = "primary" | "mouse";
@@ -44,6 +44,10 @@ export interface IslandHost {
   onFront(listener: (front: boolean) => void): Promise<() => void>;
   /** Turns calling the island with the right Ctrl on or off. */
   setSummon(on: boolean, holdMs: number): Promise<void>;
+  /** The main window says which language it shows. */
+  onLocale(listener: (locale: string) => void): Promise<() => void>;
+  /** Asks the main window for its language. */
+  askLocale(): Promise<void>;
 }
 
 async function monitorOf(screen: IslandScreen): Promise<Monitor | null> {
@@ -87,5 +91,7 @@ export function tauriIslandHost(): IslandHost {
     onSummon: (listener) => listen(SUMMON_EVENT, () => listener()),
     onFront: (listener) => listen<boolean>(FRONT_EVENT, (event) => listener(event.payload)),
     setSummon: (on, holdMs) => invoke("set_summon", { on, holdMs }),
+    onLocale: (listener) => listen<string>(LOCALE_EVENT, (event) => listener(event.payload)),
+    askLocale: () => emitTo("main", LOCALE_ASK_EVENT),
   };
 }
