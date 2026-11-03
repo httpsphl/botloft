@@ -43,7 +43,10 @@ pub(crate) fn apply(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value
             daemon.supervisor.message_began(bot, generation, uuid);
             replay(daemon, bot, event);
         }
-        "user" if !from_subagent => tool_results(daemon, bot, event),
+        "user" if !from_subagent => {
+            crate::changes::operation(daemon, bot, &event["tool_use_result"]);
+            tool_results(daemon, bot, event);
+        }
         "rate_limit_event" => account::rate_limit(daemon, bot, generation, event),
         "result" => result(daemon, bot, generation, event),
         _ => debug!(bot = %bot, kind, subtype, "stream event not used"),

@@ -2,6 +2,7 @@
 //! daemon calls these functions and never Win32.
 
 pub mod desktop;
+mod helper;
 #[cfg(unix)]
 mod unix;
 #[cfg(windows)]
@@ -10,6 +11,8 @@ mod windows;
 use std::fs::{File, OpenOptions, TryLockError};
 use std::io;
 use std::path::{Path, PathBuf};
+
+pub use helper::run_helper;
 
 #[cfg(unix)]
 pub use unix::{

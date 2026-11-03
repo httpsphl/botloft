@@ -3036,7 +3036,7 @@ Com as **chaves**, o dono guarda a chave fora da conversa e o agente a usa **pel
 
 ## 33. Visão geral do agente
 
-Status: **V1 e V2 feitos** (o contexto e o que roda em segundo plano); V3 e V4 planejados (33.10). A ideia veio do painel lateral do app do Claude Code no computador, que o dono mostrou em 2026-11-02; o desenho, os textos e a implementação são nossos.
+Status: **V1 a V3 feitos** (o contexto, o que roda em segundo plano e as mudanças sem os checks); V4 planejado (33.10). A ideia veio do painel lateral do app do Claude Code no computador, que o dono mostrou em 2026-11-02; o desenho, os textos e a implementação são nossos.
 
 ### 33.1 O que é
 
@@ -3079,8 +3079,8 @@ Um painel ao lado do chat que mostra, de um olhar, o que está acontecendo com u
 
 ### 33.5 Mudanças
 
-- **Nas pastas:** para a pasta do agente e a pasta de trabalho da crew (5) que estiverem dentro de um repositório git, o daemon roda `git status --porcelain=v2 --branch` e `git diff --numstat HEAD` (com `-c core.quotepath=false`, sem abrir janela, com tempo máximo de 5 s). Cada repositório mostra o nome da pasta, o branch, quantos commits está à frente ou atrás, e os arquivos mudados com "+N −M" (arquivo novo mostra "novo", binário mostra "binário"). No máximo 200 arquivos por repositório, com "e mais N".
-- **O que o agente fez:** o resultado de um `Bash` traz `gitOperation` (`commit`, `push`, `branch`, `pr`). O daemon guarda cada um, por agente, em `agent_git_events` (`bot_id`, `kind`, `ref`, `pr_number`, `pr_url`, `action`, `at`): commits com o sha curto e o branch, pushes com o branch, PRs com o número, o link e a ação ("criado", "merge", "fechado"...). Ficam os 50 mais novos de cada agente.
+- **Nas pastas:** para a pasta do agente e a pasta de trabalho da crew (5) que estiverem dentro de um repositório git, o daemon roda `git status --porcelain=v2 --branch` e `git diff --numstat HEAD` (com `-c core.quotepath=false`, `GIT_OPTIONAL_LOCKS=0` para não segurar o lock que o próprio agente pode querer, sem abrir janela, com tempo máximo de 5 s; `platform::run_helper`). Sem git instalado, ou numa pasta fora de um repositório, a parte diz "Nenhuma pasta de <agente> está num repositório git". Cada repositório mostra o nome da pasta, o branch, quantos commits está à frente ou atrás, e os arquivos mudados com "+N −M" (arquivo novo mostra "novo", binário mostra "binário"). No máximo 200 arquivos por repositório, com "e mais N"; o app mostra os 8 primeiros e "Mostrar todos". O link de um PR abre no navegador do dono.
+- **O que o agente fez:** o resultado de um `Bash` traz `gitOperation` (`commit`, `push`, `branch`, `pr`). O daemon guarda cada um, por agente, em `agent_git_events` (`bot_id`, `kind`, `sha`, `branch`, `action`, `number`, `url`, `at`; migration 0034): commits com o sha curto (7) e o branch, pushes com o branch, branches com merge ou rebase, PRs com o número, o link (só `https://`) e a ação ("aberto", "com merge feito", "fechado"...). Ficam os 50 mais novos de cada agente. Vem do `tool_use_result` do evento `user` do processo, o mesmo que traz o resultado do comando.
 - **Checks dos PRs:** para cada PR que o agente criou ou mexeu, o daemon pergunta ao GitHub pelo programa `gh` do dono (`gh pr view <url> --json number,title,state,isDraft,mergeStateStatus,additions,deletions,statusCheckRollup`), na pasta do repositório. Mostra o título, "+N −M", o estado (aberto, rascunho, merge feito, fechado) e os checks ("3 de 4 passaram", "1 falhou", "rodando"). Sem `gh`, ou sem login nele, o PR aparece sem os checks, com "Para ver os checks, instale o GitHub CLI e entre na sua conta" e o motivo em "Detalhes". O Botloft não guarda token do GitHub.
 - **Quando atualiza:** com o painel aberto, ao abrir, a cada `result` do agente e a cada 60 s; fechado, nada roda. O app pede (`overview.changes {botId}`), e o daemon nunca roda dois de uma vez para o mesmo agente.
 
@@ -3096,7 +3096,7 @@ Nomes de arquivo, branches, títulos de PR, descrições de tarefa e caminhos de
 
 - `ContextUsage` (8.6) ganha `parts: ContextPart[]` (`kind`, `tokens`) e `memoryFiles: ContextFile[]` (`path`, `tokens`), vazios quando o motor não os dá.
 - `Bot` ganha `background: BackgroundTask[]` (`taskId`, `kind`: `command`, `agent`, `remote` ou `other`, `description` até 300 caracteres, `seenAt`; no máximo 50), com a notificação `bot.background {botId, tasks}` (11.3), que leva a lista inteira e só sai quando ela muda. Método `bots.stopTask {botId, taskId}` → `null`: `not_found` para uma tarefa que não está na lista, `conflict` com o processo parado. A lista mora no daemon (`background.rs`), não no banco.
-- `overview.changes {botId}` → `{repos: GitRepo[], events: GitEvent[], prs: PullRequest[], github: "ok" | "missing" | "signed_out" | "error"}`.
+- `overview.changes {botId}` → `{repos: GitRepo[], events: GitEvent[]}` (V3; o V4 acrescenta `prs: PullRequest[]` e `github: "ok" | "missing" | "signed_out" | "error"`). `GitRepo`: `path`, `name`, `branch`, `ahead`, `behind`, `files` (`path`, `status`: `modified`, `added`, `deleted`, `renamed`, `untracked`, `conflicted`, `added`/`removed` ou `null`), `more`. `GitEvent`: `kind` (`commit`, `push`, `branch`, `pr`), `sha`, `branch`, `action`, `number`, `url`, `at`.
 - Migration `agent_git_events`, apagada junto com o agente (7.6); entra na cópia de segurança (14.2) como o resto do agente.
 - App: `features/overview/`, textos nos três idiomas (15.6).
 

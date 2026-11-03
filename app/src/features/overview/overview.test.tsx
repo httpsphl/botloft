@@ -2,7 +2,7 @@ import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 import { FakeBotloft } from "../../lib/fake";
 import { tokens } from "../../lib/format";
-import type { ContextUsage } from "../../lib/protocol.gen";
+import type { ContextUsage, OverviewChanges } from "../../lib/protocol.gen";
 import { crewOpened, openBot, renderApp } from "../../test/app";
 
 afterEach(cleanup);
@@ -25,19 +25,24 @@ const split = (usedTokens: number): ContextUsage => ({
   memoryFiles: [{ path: "C:\\Users\\owner\\Botloft\\ops\\scout\\CLAUDE.md", tokens: 299 }],
 });
 
-async function openOverview(context: ContextUsage | null, agent: "claude" | "agy" = "claude") {
+async function openOverview(
+  context: ContextUsage | null,
+  agent: "claude" | "agy" = "claude",
+  changes: OverviewChanges = { repos: [], events: [] },
+) {
   const fake = new FakeBotloft();
   const ops = fake.addCrew("Ops");
   const scout = fake.addBot(ops.id, "Scout", "Finds sources");
   fake.bot(scout.id).agent = agent;
   fake.setBotState(scout.id, "idle");
   fake.bot(scout.id).context = context;
-  renderApp(fake);
+  fake.changes.byBot.set(scout.id, changes);
+  const { host } = renderApp(fake);
   await crewOpened("Ops");
   openBot("Scout");
   fireEvent.click(await screen.findByRole("button", { name: "Show overview" }));
   const panel = await screen.findByRole("complementary", { name: "Overview of Scout" });
-  return { fake, scout, panel };
+  return { fake, scout, panel, host };
 }
 
 /** Each part's name and tokens, as the list shows them. */
@@ -131,5 +136,69 @@ describe("what runs in the background (spec 33.4)", () => {
     fireEvent.click(within(list).getByRole("button", { name: "Stop: Serve the site preview" }));
     expect(await within(panel).findByRole("button", { name: "Stop: Subagent" })).toBeTruthy();
     expect(within(panel).queryByText("Serve the site preview")).toBeNull();
+  });
+});
+
+describe("what changed in the agent's git folders (spec 33.5)", () => {
+  test("says when none of its folders is in git", async () => {
+    const { panel } = await openOverview(split(24_200));
+    expect(
+      await within(panel).findByText("None of Scout's folders is in a git repository."),
+    ).toBeTruthy();
+  });
+
+  test("shows each changed file and what the agent did, with the link to its pull request", async () => {
+    const { panel, host } = await openOverview(split(24_200), "claude", {
+      repos: [
+        {
+          path: "D:\\Projects\\site",
+          name: "site",
+          branch: "feat/menu",
+          ahead: 2,
+          behind: 0,
+          files: [
+            { path: "src/menu.ts", status: "modified", added: 12, removed: 3 },
+            { path: "notes.md", status: "untracked", added: null, removed: null },
+          ],
+          more: 0,
+        },
+      ],
+      events: [
+        {
+          kind: "pr",
+          sha: null,
+          branch: null,
+          action: "created",
+          number: 14,
+          url: "https://github.com/owner/site/pull/14",
+          at: 2,
+        },
+        {
+          kind: "commit",
+          sha: "4f9a2c1",
+          branch: "feat/menu",
+          action: "committed",
+          number: null,
+          url: null,
+          at: 1,
+        },
+      ],
+    });
+    const files = await within(panel).findByRole("list", { name: "Changed files in site" });
+    const rows = within(files).getAllByRole("listitem");
+    expect(rows[0]?.textContent).toContain("src/menu.ts");
+    expect(
+      within(rows[0] as HTMLElement).getByRole("img", { name: "12 lines added, 3 lines removed" }),
+    ).toBeTruthy();
+    expect(rows[1]?.textContent).toContain("new");
+    expect(within(panel).getByText("feat/menu")).toBeTruthy();
+    expect(within(panel).getByText("↑2 ↓0")).toBeTruthy();
+
+    const did = within(panel).getByRole("list", { name: "What Scout did in git" });
+    expect(within(did).getByText("Pull request #14 opened")).toBeTruthy();
+    expect(within(did).getByText("Commit 4f9a2c1 on feat/menu")).toBeTruthy();
+    fireEvent.click(within(did).getByRole("button", { name: "Open pull request #14" }));
+    await screen.findByRole("complementary", { name: "Overview of Scout" });
+    expect(host.opened).toContain("https://github.com/owner/site/pull/14");
   });
 });
