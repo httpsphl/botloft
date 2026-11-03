@@ -60,6 +60,7 @@ describe("settings", () => {
         sleepAfterMinutes: 30,
         defaultAgent: "claude",
         showExperimentalAgents: false,
+        makerBuildsWithoutAsking: false,
       }),
     );
     expect(

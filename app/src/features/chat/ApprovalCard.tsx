@@ -11,6 +11,8 @@ import { HELP_TOOL, HelpCard } from "../browser/HelpCard";
 import { SITE_TOOL, SiteCard } from "../browser/SiteCard";
 import { CONNECTOR_TOOL, ConnectorRequestCard } from "../connections/ConnectorRequestCard";
 import { DESKTOP_TOOL, DesktopCard } from "../desktop/DesktopCard";
+import { BuildCard } from "../maker/BuildCard";
+import { BUILD_TOOL } from "../maker/plan";
 import {
   CHANGE_ROUTINE_TOOL,
   DELETE_ROUTINE_TOOL,
@@ -92,6 +94,8 @@ export function ApprovalCard({ approval, bot }: { approval: ApprovalItem; bot: B
       return <HelpCard approval={approval} bot={bot} />;
     case CONNECTOR_TOOL:
       return <ConnectorRequestCard approval={approval} bot={bot} />;
+    case BUILD_TOOL:
+      return <BuildCard approval={approval} bot={bot} />;
     default:
       return <ToolApproval approval={approval} bot={bot} />;
   }

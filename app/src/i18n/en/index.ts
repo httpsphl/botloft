@@ -16,6 +16,7 @@ import { home } from "./home";
 import { island } from "./island";
 import { keys } from "./keys";
 import { logins } from "./logins";
+import { maker } from "./maker";
 import { messages } from "./messages";
 import { onboarding } from "./onboarding";
 import { overview } from "./overview";
@@ -44,6 +45,7 @@ export const en = {
   chat,
   connections,
   logins,
+  maker,
   crews,
   crewTemplates,
   desktop,

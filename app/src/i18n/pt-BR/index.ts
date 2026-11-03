@@ -17,6 +17,7 @@ import { home } from "./home";
 import { island } from "./island";
 import { keys } from "./keys";
 import { logins } from "./logins";
+import { maker } from "./maker";
 import { messages } from "./messages";
 import { onboarding } from "./onboarding";
 import { overview } from "./overview";
@@ -45,6 +46,7 @@ export const ptBR: Messages = {
   chat,
   connections,
   logins,
+  maker,
   crews,
   crewTemplates,
   desktop,

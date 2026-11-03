@@ -35,6 +35,7 @@ export function crewHandlers(fake: FakeBotloft): Pick<Handlers, CrewMethods> {
         color: null,
         paused: false,
         autoMode: autoMode === true,
+        system: null,
         createdAt: fake.now,
         archivedAt: null,
       };

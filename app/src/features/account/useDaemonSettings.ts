@@ -27,6 +27,8 @@ export function useDaemonSettings(): {
         sleepAfterMinutes: update.sleepAfterMinutes ?? before.sleepAfterMinutes,
         defaultAgent: update.defaultAgent ?? before.defaultAgent,
         showExperimentalAgents: update.showExperimentalAgents ?? before.showExperimentalAgents,
+        makerBuildsWithoutAsking:
+          update.makerBuildsWithoutAsking ?? before.makerBuildsWithoutAsking,
       });
     }
     attempt(failed, async () => {
