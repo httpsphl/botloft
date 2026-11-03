@@ -15,7 +15,7 @@ import { AddToolDialog } from "./AddToolDialog";
 import { CONNECTORS_PAGE, useConnectorList } from "./BotConnectors";
 import { type Opened, ToolDialog } from "./ToolDialog";
 import { ToolTile } from "./ToolTile";
-import { KNOWN_TOOLS, knownTool } from "./toolCatalog";
+import { KNOWN_TOOLS, knownTool, TOOL_KINDS } from "./toolCatalog";
 import { useConnections } from "./useConnections";
 
 type Tab = "yours" | "discover";
@@ -195,35 +195,46 @@ export function ToolsPage() {
           {discover.length === 0 ? (
             <p className="text-muted text-sm">{p.nothingFound(query.trim())}</p>
           ) : (
-            <ul
-              aria-label={p.discover}
-              className="grid grid-cols-[repeat(auto-fill,minmax(17rem,1fr))] gap-3"
-            >
-              {discover.map((tool) => (
-                <li key={tool.key} className="flex">
-                  <button
-                    type="button"
-                    className={CARD}
-                    aria-label={p.connect(tool.name)}
-                    onClick={() => void openClaudeAi()}
+            TOOL_KINDS.map((kind) => {
+              const tools = discover.filter((tool) => tool.kind === kind);
+              if (tools.length === 0) {
+                return null;
+              }
+              return (
+                <section key={kind} className="flex flex-col gap-2.5">
+                  <h3 className="font-semibold text-sm">{t.toolKinds[kind]}</h3>
+                  <ul
+                    aria-label={t.toolKinds[kind]}
+                    className="grid grid-cols-[repeat(auto-fill,minmax(17rem,1fr))] gap-3"
                   >
-                    <ToolTile name={tool.name} />
-                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="break-words font-semibold">{tool.name}</span>
-                      <span className="line-clamp-2 text-ink-soft text-sm">
-                        {t.about[tool.key]}
-                      </span>
-                    </span>
-                    <span
-                      aria-hidden
-                      className="grid size-8 shrink-0 place-items-center self-start rounded-full bg-panel text-ink-soft"
-                    >
-                      <Plus size={16} />
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+                    {tools.map((tool) => (
+                      <li key={tool.key} className="flex">
+                        <button
+                          type="button"
+                          className={CARD}
+                          aria-label={p.connect(tool.name)}
+                          onClick={() => void openClaudeAi()}
+                        >
+                          <ToolTile name={tool.name} />
+                          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                            <span className="break-words font-semibold">{tool.name}</span>
+                            <span className="line-clamp-2 text-ink-soft text-sm">
+                              {t.about[tool.key]}
+                            </span>
+                          </span>
+                          <span
+                            aria-hidden
+                            className="grid size-8 shrink-0 place-items-center self-start rounded-full bg-panel text-ink-soft"
+                          >
+                            <Plus size={16} />
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              );
+            })
           )}
           <Button className="self-start" onClick={() => void openClaudeAi()}>
             {p.more}

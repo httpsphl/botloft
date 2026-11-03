@@ -1,6 +1,8 @@
 // Connected tools (spec 25): tools of the owner's own that bots can use, in
 // Settings and in each bot's details. Plain words: no "MCP", no "server".
 
+import { toolAbout, toolKinds } from "./toolAbout";
+
 export const connections = {
   title: "Connected tools",
   intro:
@@ -111,31 +113,8 @@ export const connections = {
     close: "Close",
     choose: "Choose tools",
   },
-  about: {
-    google_calendar: "Read your schedule, find free time and set up meetings.",
-    gmail: "Read and search your inbox, and write drafts of replies.",
-    google_drive: "Find, read and add files in your Drive.",
-    google_docs: "Read, write and comment on documents.",
-    google_sheets: "Read and update spreadsheets.",
-    slack: "Read channels, send messages and follow threads.",
-    notion: "Search, read and update pages and databases.",
-    microsoft_365: "Outlook mail and calendar, and files in OneDrive.",
-    canva: "Find, create and export designs.",
-    figma: "Read designs and turn them into code.",
-    atlassian: "Jira issues and Confluence pages.",
-    asana: "Tasks and projects of your team.",
-    linear: "Issues, projects and cycles.",
-    github: "Repositories, issues and pull requests.",
-    hubspot: "Contacts, companies and deals.",
-    clickup: "Tasks, docs and time tracking.",
-    vercel: "Deployments, logs and projects.",
-    supabase: "Databases, tables and storage.",
-    stripe: "Payments, customers and invoices.",
-    wordpress: "Posts and pages of your site.",
-    zapier: "Thousands of apps through your automations.",
-    dropbox: "Find and read files in your Dropbox.",
-    monday: "Boards, items and updates.",
-  },
+  about: toolAbout,
+  toolKinds,
   request: {
     asks: (bot: string, tool: string) => `${bot} asks for ${tool}`,
     wants: (bot: string, tool: string) => `${bot} wants to use your ${tool}`,
