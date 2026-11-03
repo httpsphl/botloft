@@ -8,6 +8,8 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 /// The event the island hears when the owner calls it.
+// Only the Windows thread reads the key (spec 31.10).
+#[cfg_attr(not(windows), allow(dead_code))]
 pub const SUMMON_EVENT: &str = "botloft://summon";
 
 static ON: AtomicBool = AtomicBool::new(false);
@@ -17,6 +19,7 @@ static STARTED: std::sync::Once = std::sync::Once::new();
 
 /// The right Ctrl held alone long enough: one call per hold.
 #[derive(Debug, Default)]
+#[cfg_attr(not(windows), allow(dead_code))]
 pub struct Hold {
     since: Option<Instant>,
     /// Another key went down during this hold.
@@ -24,6 +27,7 @@ pub struct Hold {
     called: bool,
 }
 
+#[cfg_attr(not(windows), allow(dead_code))]
 impl Hold {
     /// Whether this reading calls the island: `down` is the right Ctrl,
     /// `others` any other key.
