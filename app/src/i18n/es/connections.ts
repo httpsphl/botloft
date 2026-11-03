@@ -70,4 +70,16 @@ export const connections: Messages["connections"] = {
     needs_auth: "Necesita que inicies sesión",
     failed: "No conectó",
   },
+  claudeAi: {
+    title: "Herramientas de claude.ai",
+    looking: "Buscando las herramientas de tu cuenta de claude.ai…",
+    none: "No se encontraron herramientas. Aparecen cuando Claude Code usa tu cuenta de claude.ai y conectaste alguna allí.",
+    refresh: "Buscar de nuevo",
+    toggle: (tool, bot) => `${bot} puede usar ${tool}`,
+    hint: (bot) =>
+      `Inicio de sesión hecho una vez en claude.ai, sin entrar de nuevo aquí. ${bot} pregunta antes de cada uso, salvo que lo permitas para siempre.`,
+    manage: "Administrar en claude.ai",
+    failed: "No se pudieron cambiar las herramientas",
+    openFailed: "No se pudo abrir claude.ai",
+  },
 };

@@ -9,6 +9,7 @@ import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { SidePanel } from "../../ui/SidePanel";
+import { BotConnectors } from "../connections/BotConnectors";
 import { BotTools } from "../connections/BotTools";
 import { AgentKeys } from "../keys/AgentKeys";
 import { SignInButton } from "../onboarding/SignIn";
@@ -95,6 +96,7 @@ export function Details({ bot, onClose }: { bot: Bot; onClose(): void }) {
         <BotPermissions bot={bot} />
         <AgentKeys bot={bot} />
         <BotTools bot={bot} />
+        <BotConnectors bot={bot} />
       </dl>
     </SidePanel>
   );

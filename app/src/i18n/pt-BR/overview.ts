@@ -96,6 +96,7 @@ export const overview: Messages["overview"] = {
   tools: {
     title: "Ferramentas conectadas",
     none: (bot) => `${bot} não tem ferramentas conectadas.`,
+    fromClaudeAi: "do claude.ai",
     change: "Mudar nos detalhes",
   },
 };

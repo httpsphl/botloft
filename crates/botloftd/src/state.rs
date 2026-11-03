@@ -145,6 +145,7 @@ pub struct Daemon {
     pub trash: Arc<dyn Trash>,
     pub contexts: Contexts,
     pub background: crate::background::Backgrounds,
+    pub connectors: crate::connectors::Connectors,
     /// How each bot's connected tools stand since it started (spec 25.5).
     pub mcp_states: crate::service::mcp_state::McpStates,
     /// The values of the agents' keys, read from their files (spec 32).
@@ -199,6 +200,7 @@ impl Daemon {
             trash: options.trash,
             contexts: Contexts::default(),
             background: Default::default(),
+            connectors: Default::default(),
             mcp_states: Default::default(),
             keys: Default::default(),
             clock: options.clock,

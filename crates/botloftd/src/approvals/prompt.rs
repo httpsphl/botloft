@@ -33,6 +33,15 @@ pub async fn prompt(daemon: &Daemon, bot: &BotId, generation: u64, args: PromptA
         debug!(bot = %bot, "permission request for no running tool; denied");
         return deny("There is no pending tool call with that id.");
     }
+    // A tool of a server the owner did not give this agent never runs, not
+    // even asked: one put in its folder, or a connector it was not given
+    // (spec 34.5).
+    if let Some(server) = mcp_server(&args.tool_name)
+        && !crate::connectors::server_allowed(daemon, bot, server)
+    {
+        debug!(bot = %bot, "tool of a server the agent was not given; denied");
+        return deny("This tool is not one the owner gave you.");
+    }
     // The owner said once that this one needs no asking.
     if always::allowed(daemon, bot, &args.tool_name, &args.input) {
         debug!(bot = %bot, tool = %args.tool_name, "allowed by a rule of the bot");
@@ -59,6 +68,12 @@ pub async fn prompt(daemon: &Daemon, bot: &BotId, generation: u64, args: PromptA
         Some(Answer::Expired) => deny("The owner did not answer in time."),
         None => deny("Botloft could not ask the owner."),
     }
+}
+
+/// The server of an MCP tool name, `mcp__<server>__<tool>`.
+fn mcp_server(tool: &str) -> Option<&str> {
+    let rest = tool.strip_prefix("mcp__")?;
+    rest.split_once("__").map(|(server, _)| server)
 }
 
 fn deny(message: &str) -> String {

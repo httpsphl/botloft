@@ -260,6 +260,7 @@ Eventos de uma generation antiga são ignorados. Todo processo novo emite `bot.s
    ```
 
    - `--setting-sources project,local` e `--strict-mcp-config` deixam de fora hooks, skills, agents, modo de permissão e servidores MCP pessoais do dono: o bot vê o que o Botloft gera. O login da conta não é uma fonte de settings e continua valendo. As instruções pessoais do dono (`%USERPROFILE%\.claude\CLAUDE.md`) não saem por essa flag: o Claude Code as acha subindo as pastas a partir do cwd. Quem as deixa de fora, junto com a memória automática, é o `settings.json` gerado (7.5).
+   - Um agente a que o dono deu ferramentas do claude.ai roda sem `--strict-mcp-config`, o único jeito de o Claude Code buscá-las, com as outras ferramentas do claude.ai e qualquer servidor posto na pasta dele bloqueados pelo nome em `--disallowedTools` (34.5).
    - `--allowedTools mcp__botloft` libera as tools da crew sem aprovação. Uma regra `allow` no `settings.json` do projeto não bastaria: em `-p`, numa pasta que nunca passou pelo diálogo de confiança, o Claude Code não aplica as regras `allow` do projeto (documentado em `permissions`).
    - `--disallowedTools` tira do bot os agendamentos do próprio Claude Code. `CronCreate` e `ScheduleWakeup` só valem enquanto aquele processo vive: somem num reinício, expiram em 7 dias, e o Botloft não os vê nem os mostra. `RemoteTrigger` cria agendamentos na nuvem, fora do computador. Pedido para agendar, um bot usava `CronCreate` sem pedir permissão e dizia que tinha agendado (19). Trabalho em horário marcado é uma rotina (20).
    - Qualquer outra ferramenta que peça permissão passa pela tool de aprovação (10.1) e vira um pedido no chat.
@@ -1233,6 +1234,7 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28; esf
 | Uso de contexto no `stream-json` | 8.6 | Parcialmente documentado: `usage` e `modelUsage` no `result` (`agent-sdk/typescript`), janela de 1 milhão em Fable, Sonnet 5+ e Opus 4.7+ e compactação automática em cerca de 967 mil (`model-config`). **Visto com 2.1.284**: cada `assistant` traz `message.usage` (`input_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`, `output_tokens`), e a soma dos três primeiros bate com o `totalTokens` do `get_context_usage` a menos de 1%; `result.modelUsage[modelo]` traz `contextWindow` (200000 em Haiku 4.5, 1000000 em Sonnet 5.5) e `maxOutputTokens`; `result.usage.iterations[]` traz cada pedido do turno; `autoCompactThreshold` é a janela menos 33 mil (167000, 967000; 67000 com `--autocompact 100k`, que também encolhe `maxTokens`); `/context` como mensagem devolve um `assistant` sintético com `context_usage` e abre um turno, por isso o daemon usa o pedido de controle. `total_cost_usd` é o total do processo, não do turno. **Pelo daemon de dev**: o app recebeu o tamanho ao subir o bot, a cada pedido ao modelo e no fim do turno | feito |
 | Divisão do contexto | 33.3 | Documentado (`agent-sdk/typescript`, `getContextUsage`): `categories` com `id` (`system_prompt`, `system_tools`, `mcp_tools`, `mcp_instructions`, `mcp_tools_deferred`, `system_tools_deferred`, `custom_agents`, `memory_files`, `skills`, `messages`, `autocompact_buffer`, `compact_buffer`, `free_space`), `name`, `tokens`, `color`, `isDeferred` e `kind` (`used`, `free`, `buffer`, `deferred`); mais `memoryFiles` (`path`, `type`, `tokens`), `mcpTools`, `skills` e `agents`. O padrão `detail: "full"` conta os tokens com pedidos à API que não aparecem no stream; `"summary"` estima pelo último uso. **Testado com 2.1.309** (2026-11-02, `-p`, `stream-json`, Haiku, pasta vazia): a resposta traz tudo isso antes do primeiro turno (`messages` só aparece depois de uma mensagem), `summary` e o padrão são aceitos, e depois de um turno `messages` cresce e o resto fica igual | manual |
 | Tarefas em segundo plano e `stop_task` | 33.4 | Documentado (`agent-sdk/typescript`): `system/task_started` (`task_id`, `run_id`, `task_type`, `is_backgrounded`, `ambient`), `task_updated` (`patch.status`), `task_progress`, `task_notification` (`status`: `completed`, `failed`, `stopped`) e `background_tasks_changed` com a lista viva inteira (desde 2.1.203; nada ao subir); `stopTask(taskId)` no SDK. **Testado com 2.1.309** (2026-11-02, Haiku, `Bash` com `run_in_background`): chegam `background_tasks_changed` (`task_id`, `run_id`, `task_type: local_bash`, `description`) e `task_started` (`is_backgrounded: true`), e o resultado do `Bash` traz `backgroundTaskId`; `{"type":"control_request","request":{"subtype":"stop_task","task_id":...}}` encerra a tarefa em menos de 20 ms com `task_updated` (`killed`), `task_notification` (`stopped`), a lista vazia e `control_response` `success` | manual |
+| Ferramentas do claude.ai num agente | 34 | Documentado (`mcp`, "Use MCP servers from claude.ai"): com a conta do claude.ai, o Claude Code busca os conectores do dono sozinho, e Gmail e Google Agenda só existem por esse caminho. **Testado com 2.1.309** (2026-11-02, `-p`, `stream-json`, `--setting-sources project,local`, só `mcp_status` e `get_context_usage`, sem turno): sem `--strict-mcp-config` vêm os 11 conectores da conta (`scope: "claudeai"`, `connected` ou `needs-auth`) em uns 8 s, com tools `mcp__claude_ai_<Nome>__*`; com ele, nenhum, nem com `ENABLE_CLAUDEAI_MCP_SERVERS=true`; o servidor de escopo usuário do dono não aparece em nenhum caso; `--disallowedTools mcp__claude_ai_Gmail` tira as tools do Gmail; um `.mcp.json` na pasta sobe sem pedir aprovação (`scope: "project"`); o `--mcp-config` continua (`scope: "dynamic"`). A descoberta do daemon (`connectors::discover`, teste `#[ignore]` rodado à mão) achou os 11 em 3,4 s. **A verificar:** um agente com o Google Agenda escolhido usando uma tool dele, com a aprovação do dono | manual |
 | Tokens do turno no `result` | 8.7 | Parcialmente documentado: `usage` no `result` (`agent-sdk/typescript`), sem dizer se é do turno ou do processo. **Testado com 2.1.284** (Haiku, um processo com dois turnos): `result.usage` é a soma dos pedidos do turno (um turno com um `Read` deu `input_tokens` 18 = 10 + 8 e `cache_read_input_tokens` 46703 = 21692 + 25011, a soma de `iterations[]`) e recomeça a cada turno; `modelUsage` e `total_cost_usd` acumulam o processo. `output_tokens` inclui `output_tokens_details.thinking_tokens`. **Visto numa instalação real** (Sonnet, 2026-09-30): o primeiro turno de um bot sete horas depois do anterior, e três minutos depois de o Botloft reiniciar, levou 11 s e deu `input_tokens` 2, `cache_creation_input_tokens` 72636, `cache_read_input_tokens` 0 e `output_tokens` 983: a conversa inteira gravada de novo no cache, que levou à conta de `reloaded` (8.7). Não verificado: se os tokens de subagentes entram nesse `usage`; a conta de `reloaded` com teste real, num turno de cache quente (deve dar 0) e num depois de o cache expirar | feito |
 | Compactar em `-p` | 8.6 | `/compact [instruções]` é documentado (`commands`) sem dizer se vale em `-p`; o custo com cache quente e frio está em `prompt-caching`. **Testado com 2.1.284** (Haiku): `/compact` como mensagem imprime `system/status` (`status: "compacting"`), outro com `status: null` e `compact_result: "success"`, `system/init`, `system/compact_boundary` (`compact_metadata: {trigger: "manual", pre_tokens, post_tokens, duration_ms, ...}`), um `user` com `isSynthetic` e o resumo, dois `user` com `isReplay` (a saída `Compacted` e o comando, com o `uuid` enviado) e um `result` com `local_command: "compact"`, `num_turns: 0` e custo; levou de 12 a 16 s numa conversa pequena, e o bot lembrou depois o que tinha sido dito antes. Escrito durante um turno, roda quando o turno termina. Numa conversa vazia responde um `assistant` sintético "Error: No messages to compact" com `local_command_outcome: {kind: "failed"}` e um `result` sem erro. **Compactação automática** (Haiku, `--autocompact 100k`, quatro arquivos lidos): no meio do turno, os dois `system/status`, o `compact_boundary` com `trigger: "auto"` e o `user` sintético, sem `system/init` nem `result` próprios; o turno seguiu e terminou certo. **Pelo daemon de dev**: `bots.compact` deixou o bot `busy`, o aviso `compacted` entrou no chat, o tamanho caiu e o bot respondeu depois a palavra que tinha guardado; o log de `debug` só teve ids e números. Uma compactação que falha por erro da API não foi vista | feito |
 | CLAUDE.md do dono nos bots | 5, 7.5 | Confirmado (`memory`, `settings-reference`): o Claude Code carrega `CLAUDE.md`, `CLAUDE.local.md` e `.claude/CLAUDE.md` do cwd e de toda pasta acima dele; `claudeMdExcludes` pula arquivos por caminho absoluto ou glob, vale em qualquer camada de settings e também para `AGENTS.md`; o `CLAUDE.md` gerenciado não pode ser excluído. **Testado com 2.1.284** (`-p --setting-sources project,local`, `memoryFiles` do `get_context_usage`, numa pasta de teste dentro de `%USERPROFILE%`). Sem a setting: o `%USERPROFILE%\.claude\CLAUDE.md` do dono entra como `Project`, e de cada pasta acima entram `CLAUDE.md`, `CLAUDE.local.md`, `.claude/CLAUDE.md` e `.claude/rules/` com as subpastas; as skills são só as embutidas. Forma do padrão: `C:/Users/...` e `C:\Users\...` casam, também misturadas; `/c/Users/...` e `//c/Users/...` não casam; a comparação diferencia maiúsculas, até na letra do drive, e o Claude Code monta os caminhos com o cwd como o recebeu (um cwd em minúsculas aparece em minúsculas). Numa pasta chamada `odd (x) [y] {z}`, o caminho exato de um arquivo ainda casa, mas `.../.claude/rules/**` não; com `?` no lugar de cada um desses seis caracteres, casa. Espaço, acento e ``!+@#$%^&',;=~`` casam como estão. O `AGENTS.md` de uma pasta acima só entra com `instructionFiles: claude-md-and-agents-md` (os bots sempre têm `CLAUDE.md`), e o padrão o tira. `--add-dir` carrega `CLAUDE.md` e `.claude/rules/` só da própria pasta: os das pastas acima de uma pasta de trabalho escolhida não entram, com ou sem a setting. **Pelo daemon de dev** (workspaces dentro de `%USERPROFILE%`, com `CLAUDE.md` de teste em cada pasta acima; Haiku): com o `settings.json` gerado, `memoryFiles` e o próprio bot listaram só o `CLAUDE.md` da pasta da crew, o do bot, as regras e o da `shared\` | feito |
@@ -2013,7 +2015,7 @@ O `system/init` só vem com o primeiro turno, e o bot fica calado até lá. Por 
 
 ### 25.8 Fora desta etapa
 
-Login por navegador de servidor remoto (o `/mcp` do Claude Code), ferramentas liberadas por servidor inteiro, escolher só algumas tools de um servidor, ligar por crew, servidores que o próprio Botloft instala, e `sse`.
+Login por navegador de servidor remoto (o `/mcp` do Claude Code; as ferramentas do claude.ai, de login feito lá, entram pela seção 34), ferramentas liberadas por servidor inteiro, escolher só algumas tools de um servidor, ligar por crew, servidores que o próprio Botloft instala, e `sse`.
 
 ### 25.9 Marcos
 
@@ -3115,3 +3117,67 @@ Nomes de arquivo, branches, títulos de PR, descrições de tarefa e caminhos de
 | **V2** Em segundo plano | `Bot.background`, `bot.background`, `bots.stopTask` com `stop_task`, a parte Em segundo plano | daemon com `FakeRuntime`: a lista substitui a anterior, `ambient` fora, a hora vista, processo novo zera, o pedido de parar sai no stdin; app: linha, tempo, Parar |
 | **V3** Mudanças locais e do agente | `git status` e `git diff` nas pastas, `gitOperation` em `agent_git_events`, `overview.changes`, a parte Mudanças sem os checks | repositório de teste criado no teste (arquivo novo, mudado, branch à frente); evento de commit e de PR lido de um resultado gravado; app com repositório, arquivos e eventos |
 | **V4** Checks dos PRs | `gh pr view` por PR, `github` com os quatro estados, os checks na parte Mudanças, a parte Ferramentas conectadas | a leitura do JSON gravado de um `gh pr view` real (PR 301 deste repositório) e da contagem dos checks; nos testes do daemon o `gh` é trocado por um programa que não existe (`changes::use_github_program`), o que dá `missing` sem ir à rede; app com o PR, os checks, o aviso sem `gh` e as ferramentas; teste manual com um PR de verdade |
+
+## 34. Ferramentas do claude.ai nos agentes
+
+Status: **C1 feito**, com a descoberta e os bloqueios testados no Claude Code real (34.2). O dono pediu em 2026-11-02 que um agente use o Google Agenda dele sem abrir o navegador e pedir login a cada vez: "todos os outros bots em inúmeras ferramentas que a gente loga uma única vez".
+
+### 34.1 O que é
+
+As ferramentas que o dono conecta no claude.ai (claude.ai/customize/connectors), como Google Agenda, Gmail, Google Drive, Notion e Canva, com o login feito uma vez lá. O Claude Code as recebe sozinho quando usa a conta do claude.ai. Com isto, o dono escolhe, por agente, quais ele pode usar. Algumas, como Google Agenda e Gmail, nem aceitam o login direto do Claude Code: só existem pelo claude.ai (documentação `mcp`, "Use MCP servers from claude.ai").
+
+No app o nome é **Ferramentas do claude.ai**, ao lado das ferramentas conectadas (25), que continuam sendo as que o dono cadastra colando a configuração.
+
+### 34.2 O que foi visto no Claude Code real
+
+**Testado com 2.1.309** (2026-11-02, `-p`, `stream-json`, conta do claude.ai, `--setting-sources project,local`, só o pedido de controle `mcp_status`, sem turno):
+
+- **Sem `--strict-mcp-config`:** a lista traz, depois de uns 8 s, as do claude.ai com `scope: "claudeai"`, o nome `claude.ai <Nome>` e o estado (`connected`, `needs-auth`). As tools delas se chamam `mcp__claude_ai_<Nome com _>__<tool>` (`mcp__claude_ai_Google_Calendar__list_events`).
+- **Com `--strict-mcp-config`:** nenhuma, nem com `ENABLE_CLAUDEAI_MCP_SERVERS=true`.
+- **Servidor pessoal do dono:** um servidor de escopo usuário (`~/.claude.json`) não aparece nos dois casos, porque `--setting-sources project,local` o deixa de fora.
+- **`--disallowedTools mcp__claude_ai_Gmail`** (sem `--strict-mcp-config`): o Gmail ainda conecta, mas as tools dele somem da conversa (`get_context_usage` não as lista); as outras continuam.
+- **Um `.mcp.json` na pasta** (sem `--strict-mcp-config`): o servidor dele sobe sozinho (`scope: "project"`), sem pedir aprovação. Um agente que escrevesse esse arquivo na própria pasta se daria ferramentas no próximo início. É por isso que 34.5 os bloqueia pelo nome.
+- **O `--mcp-config` do Botloft** continua valendo (`scope: "dynamic"`).
+
+### 34.3 Como o Botloft as conhece
+
+- O daemon sobe um `claude -p` sem `--strict-mcp-config`, numa pasta vazia própria (`<home>\connectors`), sem turno. Ele pergunta `mcp_status` a cada 2 s, por até 30 s, e fecha o processo assim que nenhuma está `pending` (com a conta do dono, 3,4 s). A lista é a das entradas com `scope: "claudeai"`, cada uma com o nome (sem o `claude.ai `) e o estado (`connectors/discover.rs`).
+- **Quando pergunta:** a primeira vez que o app abre a parte, e com "Procurar de novo". Nunca duas vezes ao mesmo tempo. A resposta fica em memória e em `<home>\connectors\known.json`, para um daemon novo já saber o que bloquear antes de procurar de novo.
+- **Sem a conta do claude.ai** (chave de API, outro provedor): a lista vem vazia, e o app diz que elas aparecem quando o Claude Code usa a conta do claude.ai e o dono conectou alguma lá.
+
+### 34.4 Por agente
+
+- **Escolha:** tabela `bot_connectors` (`bot_id`, `name`). Um agente novo não tem nenhuma.
+- **Onde se escolhe:** nos Detalhes do agente, embaixo das ferramentas conectadas (25.3). Cada uma tem uma chave liga/desliga e, quando não está conectada, o estado ("Precisa que você entre"). "Gerenciar no claude.ai" abre claude.ai/customize/connectors. A Visão geral (33.6) lista as escolhidas, marcadas "do claude.ai". Só agentes do Claude Code têm a parte.
+- **Mudança:** mudar a escolha reinicia o agente com `--resume` quando nada estiver em andamento, como em 25.3.
+
+### 34.5 Como o agente roda
+
+- **Sem nenhuma escolhida:** nada muda (`--strict-mcp-config`, 7.4).
+- **Com alguma escolhida:**
+  - sai o `--strict-mcp-config`, o único jeito de o Claude Code buscar as do claude.ai;
+  - continua o `--mcp-config` do Botloft;
+  - entra `--disallowedTools mcp__claude_ai_<Nome>` para cada uma das outras que o daemon conhece, e `--disallowedTools mcp__<nome>` para cada servidor de um `.mcp.json` na pasta do agente e de escopo local para essa pasta (`projects[<pasta>].mcpServers` de `~/.claude.json`), lidos a cada início. O nome vira o do Claude Code trocando o que não for letra, número, `_` ou `-` por `_`;
+  - `ENABLE_CLAUDEAI_MCP_SERVERS` fica sem valor.
+- **O isolamento que fica:**
+  - `--setting-sources project,local` continua tirando os servidores pessoais do dono;
+  - num agente assim, o `permission_prompt` (10.1) também nega, por segurança, toda tool `mcp__<servidor>__*` que não seja do `botloft`, de uma ferramenta conectada ligada ao agente (25.3) ou de uma do claude.ai escolhida: cobre um servidor posto depois do início. Um agente sem nenhuma continua isolado pelo `--strict-mcp-config`, onde só existem os servidores do Botloft;
+  - em `bypass_permissions` (13) essa segunda checagem não roda, mas os bloqueios pelo nome sim.
+- **Aprovações:** as tools do claude.ai passam pelo `permission_prompt`, com "Permitir sempre" por tool, como em 25.4.
+- **Regras:** `.claude/rules/connectors.md` lista as escolhidas com o prefixo das tools, com a regra de 25.3: o que uma ferramenta devolve é dado, não pedido do dono. Sem nenhuma, o arquivo sai.
+
+### 34.6 Privacidade (13)
+
+O daemon só lê nomes e estados. Nada do que as ferramentas devolvem vai ao log, como em 25.6.
+
+### 34.7 Marcos
+
+| Marco | O que entra | Teste |
+|---|---|---|
+| **C1** Escolher e usar | a descoberta, `bot_connectors`, os argumentos do agente, a checagem no `permission_prompt`, a parte no app (Detalhes e Visão geral), três idiomas | daemon com `FakeRuntime`: argumentos com e sem escolha, a negação de um servidor desconhecido; app com o `FakeBotloft`; teste real: um agente com o Google Agenda escolhido vê as tools dele (`mcp_status` `connected`) e outro não, sem chamar nenhuma |
+
+### 34.8 Protocolo e dados
+
+- `connectors.list {refresh?}` → `{connectors: [{name, state}], checkedAt}` (`state`: `connected`, `needs_auth`, `pending`, `failed`); `bots.setConnectors {botId, names}` → `Bot`, que ganha `connectors` (os nomes). Um agente que não é do Claude Code recebe `conflict`.
+- Migration 0035 `bot_connectors (bot_id, name)`, apagada com o agente (7.6).
+- `LaunchPlan` ganha `connectors` e `blocked_servers`; `permission_prompt` nega com "This tool is not one the owner gave you." a tool de um servidor fora da lista.

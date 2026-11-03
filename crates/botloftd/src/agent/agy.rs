@@ -418,6 +418,8 @@ mod tests {
             model: botloft_core::protocol::BotModel::Default,
             effort: botloft_core::protocol::BotEffort::Default,
             agent_model: Some("gemini-3.8-flash-low"),
+            connectors: &[],
+            blocked_servers: &[],
         };
         let text = |args: Vec<OsString>| -> Vec<String> {
             args.into_iter()

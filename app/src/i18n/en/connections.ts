@@ -72,4 +72,16 @@ export const connections = {
     needs_auth: "Needs you to sign in",
     failed: "Did not connect",
   } as Record<string, string>,
+  claudeAi: {
+    title: "Tools from claude.ai",
+    looking: "Looking for the tools of your claude.ai account…",
+    none: "No tools found. They show up when Claude Code uses your claude.ai account and you connected some on claude.ai.",
+    refresh: "Look again",
+    toggle: (tool: string, bot: string) => `${bot} can use ${tool}`,
+    hint: (bot: string) =>
+      `Signed in once on claude.ai, with no new sign-in here. ${bot} asks you before each use, unless you allow it for good.`,
+    manage: "Manage on claude.ai",
+    failed: "Could not change the tools",
+    openFailed: "Could not open claude.ai",
+  },
 };
