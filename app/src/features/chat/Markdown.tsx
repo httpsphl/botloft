@@ -1,41 +1,15 @@
 // A bot's reply as markdown (GitHub flavor). Raw HTML is never rendered.
-// Links open in the browser through the host, since following one inside
-// the app would replace it. Images are not fetched: a reply could use one
-// to call home, so they show as links. How it reads is in chat-md.css.
+// Links open in the browser (ChatText.tsx). Images are not fetched: a reply
+// could use one to call home, so they show as links. How it reads is in
+// chat-md.css.
 
 import { ExternalLink, ImageOff } from "lucide-react";
-import { memo, type ReactNode } from "react";
+import { memo } from "react";
 import ReactMarkdown, { type Components, type ExtraProps } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useT } from "../../i18n";
-import { useHost } from "../../store/context";
-import { attempt } from "../../ui/toast";
+import { isWeb, ChatLink as Link } from "./ChatText";
 import { remarkMentions } from "./mentions";
-
-function isWeb(href: string | undefined): href is string {
-  return href !== undefined && /^https?:\/\/\S+$/i.test(href);
-}
-
-function Link({ href, children }: { href: string | undefined; children?: ReactNode }) {
-  const host = useHost();
-  const t = useT();
-  if (!isWeb(href)) {
-    return <span className="underline decoration-dotted">{children}</span>;
-  }
-  return (
-    <a
-      href={href}
-      title={href}
-      onClick={(event) => {
-        event.preventDefault();
-        void attempt(t.chat.markdown.openLinkFailed, () => host.openUrl(href));
-      }}
-      className="text-work underline decoration-1 underline-offset-2 hover:decoration-2"
-    >
-      {children}
-    </a>
-  );
-}
 
 function Picture({ src, alt }: { src: string | Blob | undefined; alt: string | undefined }) {
   const t = useT();

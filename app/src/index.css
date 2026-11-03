@@ -59,6 +59,9 @@
   --bubble: #efefec;
   --bubble-own: #1c1c1a;
   --bubble-own-ink: #f7f7f4;
+  /* A link in the owner's balloon: the dark theme's blue on this dark
+     balloon (7:1), as --work is on the other theme's light one. */
+  --bubble-own-link: #6ea6ff;
   /* The thin edge around a bot's avatar, so light colors hold their shape. */
   --avatar-edge: rgb(0 0 0 / 0.2);
   /* Under menus, pickers and dialogs. */
@@ -99,6 +102,7 @@
   --bubble: #1f1f1f;
   --bubble-own: #e9e9e4;
   --bubble-own-ink: #141414;
+  --bubble-own-link: #1f5fc4;
   --avatar-edge: rgb(255 255 255 / 0.14);
   --lift: rgb(0 0 0 / 0.5);
   --scrim: rgb(0 0 0 / 0.6);
@@ -126,6 +130,7 @@
   --color-bubble: var(--bubble);
   --color-bubble-own: var(--bubble-own);
   --color-bubble-own-ink: var(--bubble-own-ink);
+  --color-bubble-own-link: var(--bubble-own-link);
   /* The composer resting over the chat: softer than a menu's lift. */
   --shadow-rest: 0 1px 2px var(--lift), 0 6px 20px -8px var(--lift);
   --shadow-lift: 0 12px 32px -8px var(--lift), 0 2px 8px -2px var(--lift);
