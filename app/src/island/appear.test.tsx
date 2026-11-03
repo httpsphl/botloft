@@ -67,6 +67,8 @@ describe("when the island comes down", () => {
   });
 
   test("stays a pill while Botloft is in front, or Windows keeps the screen quiet", async () => {
+    // Kept in sight with Botloft in front (spec 31.6), it only stays a pill.
+    prefs.islandHideWithApp.set(false);
     const host = new FakeIslandHost();
     host.front = true;
     const { fake, scout, writer } = await working(host);
@@ -108,7 +110,7 @@ describe("when the island comes down", () => {
     await waitFor(() => expect(host.calls).toContain("show 200x36 mouse"));
     act(() => prefs.island.set(false));
     await waitFor(() => expect(screen.queryByRole("region")).toBeNull());
-    expect(host.calls.at(-1)).toBe("hide");
+    expect(host.calls.filter((call) => !call.startsWith("summon")).at(-1)).toBe("hide");
   });
 
   test("no cheer on a quiet screen", async () => {

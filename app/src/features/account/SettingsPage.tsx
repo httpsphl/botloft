@@ -12,6 +12,7 @@ import {
   type LucideIcon,
   MessageSquare,
   Palette,
+  PanelTop,
   Plug,
   Search,
   ShieldCheck,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import { useEffect, useId, useMemo, useState } from "react";
 import { useT } from "../../i18n";
+import { SYSTEM } from "../../lib/system";
 import { useApp } from "../../store/context";
 import { ToolsPage } from "../connections/ToolsPage";
 import { PastedKeys } from "../keys/PastedKeys";
@@ -33,6 +35,7 @@ import { ArchivedSettings } from "./ArchivedSettings";
 import { BackupSettings } from "./BackupSettings";
 import { ChatSettings } from "./ChatSettings";
 import { GeneralSettings } from "./GeneralSettings";
+import { IslandSettings } from "./IslandSettings";
 import { type Page, plain, search, settingsIndex } from "./settingsIndex";
 
 type GroupId = "groupDaily" | "groupConnect" | "groupData" | "groupBotloft";
@@ -45,6 +48,7 @@ const GROUPS: { id: GroupId; pages: { id: Page; icon: LucideIcon }[] }[] = [
       { id: "appearance", icon: Palette },
       { id: "chat", icon: MessageSquare },
       { id: "alerts", icon: Bell },
+      { id: "island", icon: PanelTop },
     ],
   },
   {
@@ -67,6 +71,12 @@ const GROUPS: { id: GroupId; pages: { id: Page; icon: LucideIcon }[] }[] = [
   { id: "groupBotloft", pages: [{ id: "about", icon: Info }] },
 ];
 
+/** The island only runs on Windows for now (spec 31.10). */
+const groups = GROUPS.map((group) => ({
+  ...group,
+  pages: group.pages.filter((page) => page.id !== "island" || SYSTEM === "Windows"),
+}));
+
 export function SettingsPage() {
   const t = useT();
   const s = t.account.settings;
@@ -85,6 +95,7 @@ export function SettingsPage() {
     appearance: s.appearance,
     chat: s.chat,
     alerts: s.alerts,
+    island: s.islandPart,
     account: s.account,
     tools: s.tools,
     logins: s.logins,
@@ -143,7 +154,7 @@ export function SettingsPage() {
         <div className="flex gap-6">
           <nav aria-label={s.pages} className="flex w-48 shrink-0 flex-col gap-0.5 self-start">
             <div role="tablist" aria-orientation="vertical" className="flex flex-col gap-0.5">
-              {GROUPS.map((group) => (
+              {groups.map((group) => (
                 <div
                   key={group.id}
                   role="presentation"
@@ -192,6 +203,7 @@ export function SettingsPage() {
                 {page === "appearance" && <AppearanceSettings />}
                 {page === "chat" && <ChatSettings />}
                 {page === "alerts" && <AlertsSettings />}
+                {page === "island" && <IslandSettings />}
                 {page === "account" && <AccountSettings />}
                 {page === "tools" && <ToolsPage />}
                 {page === "logins" && <LoginsPage />}

@@ -5,10 +5,10 @@
 // always has the size of what it shows (spec 31.3), up to 60% of the
 // screen's height; past that, the panel scrolls (31.2).
 
-import { type DragEvent, useLayoutEffect, useRef, useState } from "react";
+import { type DragEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useFiles } from "../features/chat/useFiles";
 import { useToday } from "../features/home/useToday";
-import { useT } from "../i18n";
+import { followLocale, useT } from "../i18n";
 import type { BotloftApi } from "../lib/api";
 import type { BotId } from "../lib/protocol.gen";
 import { prefs, usePref } from "../shell/prefs";
@@ -23,6 +23,7 @@ import { fiveHour, UsageTab, useUsage, WARN_AT } from "./UsageTab";
 import { useAppear } from "./useAppear";
 import { useCheer } from "./useCheer";
 import { useLive } from "./useLive";
+import { usePresence } from "./usePresence";
 import { useWaiting } from "./useWaiting";
 
 export { PILL } from "./Pill";
@@ -52,6 +53,9 @@ function Island({ host }: { host: IslandHost }) {
   const api = useApi();
   const enabled = usePref(prefs.island) && host.supported;
   const screen = usePref(prefs.islandScreen);
+  const hideWithApp = usePref(prefs.islandHideWithApp);
+  const summonOn = usePref(prefs.islandSummon);
+  const hold = usePref(prefs.islandHold);
   const { waiting, loaded, working, bots, crews, crewList, version, refresh } = useWaiting(api);
   const live = useLive(
     api,
@@ -62,7 +66,7 @@ function Island({ host }: { host: IslandHost }) {
   const usage = useUsage(api, version);
   const files = useFiles();
   const [tab, setTab] = useState<Tab>("home");
-  const { open, pinned, setOpen, hover } = useAppear({
+  const { open, pinned, summoned, summon, setOpen, hover } = useAppear({
     host,
     enabled,
     loaded,
@@ -70,14 +74,69 @@ function Island({ host }: { host: IslandHost }) {
     onArrive: () => setTab("home"),
   });
   const [talkTo, setTalkTo] = useState<BotId | null>(null);
-  const panel = useRef<HTMLDivElement>(null);
+  const front = useFront(host);
+  // The main window's language, whatever this window would guess (31.3).
+  useEffect(() => {
+    let stop: (() => void) | undefined;
+    let gone = false;
+    host.onLocale(followLocale).then(
+      (unlisten) => {
+        if (gone) {
+          unlisten();
+        } else {
+          stop = unlisten;
+        }
+      },
+      () => {},
+    );
+    host.askLocale().catch(() => {});
+    return () => {
+      gone = true;
+      stop?.();
+    };
+  }, [host]);
+  // Holding the right Ctrl calls it (spec 31.6): the app listens for it
+  // only while the owner wants it.
+  useEffect(() => {
+    host.setSummon(enabled && summonOn, Number(hold)).catch(() => {});
+  }, [host, enabled, summonOn, hold]);
+  useEffect(() => {
+    let stop: (() => void) | undefined;
+    let gone = false;
+    host
+      .onSummon(() => {
+        setTab("home");
+        summon();
+      })
+      .then(
+        (unlisten) => {
+          if (gone) {
+            unlisten();
+          } else {
+            stop = unlisten;
+          }
+        },
+        () => {},
+      );
+    return () => {
+      gone = true;
+      stop?.();
+    };
+  }, [host, summon]);
+  // A state, not a ref: called by the owner from nothing, the panel is
+  // drawn a render after it opens, and the height is measured then.
+  const [panel, setPanel] = useState<HTMLDivElement | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(PILL.height);
   const cap = panelCap();
   // Pinned open, it stays until the owner hides it, even once nobody
   // works: they may be reading what an agent just answered.
+  // With Botloft's own window in front, everything is there: it hides,
+  // unless the owner called it.
+  const hidden = hideWithApp && front && !summoned;
   const visible =
     enabled &&
+    !hidden &&
     ((open && pinned) ||
       waiting.length > 0 ||
       working.length > 0 ||
@@ -86,7 +145,7 @@ function Island({ host }: { host: IslandHost }) {
   const expanded = open && visible;
 
   useLayoutEffect(() => {
-    const content = panel.current;
+    const content = panel;
     if (!expanded || !content) {
       setHeight(PILL.height);
       return;
@@ -102,14 +161,24 @@ function Island({ host }: { host: IslandHost }) {
     const watch = new ResizeObserver(measure);
     watch.observe(content);
     return () => watch.disconnect();
-  }, [expanded]);
+  }, [expanded, panel]);
 
   const width = expanded ? PANEL_WIDTH : cheer ? CHEER_WIDTH : PILL.width;
-  useLayoutEffect(() => {
-    (visible ? host.show(width, height, screen) : host.hide()).catch(() => {});
-  }, [host, visible, width, height, screen]);
+  const {
+    present,
+    phase,
+    panel: showPanel,
+    shape,
+  } = usePresence({
+    host,
+    visible,
+    expanded,
+    width,
+    height,
+    screen,
+  });
 
-  if (!visible) {
+  if (!present) {
     return null;
   }
   // The agent the Chat starts on: who waits, then who works, then the first.
@@ -132,8 +201,9 @@ function Island({ host }: { host: IslandHost }) {
     <section
       aria-label={t.island.label}
       className="island"
-      data-open={expanded}
-      style={{ width, height }}
+      data-open={showPanel}
+      data-phase={phase}
+      style={{ width: shape.width, height: shape.height }}
       {...hover}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
@@ -154,7 +224,7 @@ function Island({ host }: { host: IslandHost }) {
         }
       }}
     >
-      {expanded ? (
+      {showPanel ? (
         // At the panel's width from the first frame, so the shape grows
         // around the content instead of squeezing it.
         <div
@@ -162,7 +232,7 @@ function Island({ host }: { host: IslandHost }) {
           className="island-content island-scroll"
           style={{ width: PANEL_WIDTH, maxHeight: cap }}
         >
-          <div ref={panel} className="flex flex-col">
+          <div ref={setPanel} className="flex flex-col">
             <Bar
               api={api}
               crews={crewList}
@@ -183,6 +253,14 @@ function Island({ host }: { host: IslandHost }) {
                   live={live}
                   today={today}
                   refresh={refresh}
+                  bots={ordered}
+                  talking={talking}
+                  onPick={setTalkTo}
+                  onFollow={(id) => {
+                    setTalkTo(id);
+                    showTab("chat");
+                  }}
+                  shortcuts={usage?.shortcuts ?? []}
                 />
               )}
               {tab === "chat" && (
@@ -223,4 +301,32 @@ function Island({ host }: { host: IslandHost }) {
       )}
     </section>
   );
+}
+
+/** Whether Botloft's main window is in front, kept current by the app. */
+function useFront(host: IslandHost): boolean {
+  const [front, setFront] = useState(false);
+  useEffect(() => {
+    let stop: (() => void) | undefined;
+    let gone = false;
+    host.appInFront().then(
+      (now) => !gone && setFront(now),
+      () => {},
+    );
+    host.onFront(setFront).then(
+      (unlisten) => {
+        if (gone) {
+          unlisten();
+        } else {
+          stop = unlisten;
+        }
+      },
+      () => {},
+    );
+    return () => {
+      gone = true;
+      stop?.();
+    };
+  }, [host]);
+  return front;
 }

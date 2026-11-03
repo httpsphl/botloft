@@ -1,5 +1,5 @@
 /// The app's own commands (spec 15.2), as `lib.rs` registers them.
-const COMMANDS: [&str; 15] = [
+const COMMANDS: [&str; 16] = [
     "daemon_status",
     "daemon_install",
     "daemon_restart",
@@ -15,6 +15,7 @@ const COMMANDS: [&str; 15] = [
     "launched_at_sign_in",
     "quiet_now",
     "main_in_front",
+    "set_summon",
 ];
 
 fn main() {

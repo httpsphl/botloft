@@ -1,5 +1,6 @@
 import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
+import { setLocaleChoice } from "../i18n";
 import { FakeBotloft } from "../lib/fake";
 import { FakeHost } from "../lib/fakeHost";
 import { crewOpened, renderApp } from "../test/app";
@@ -29,5 +30,17 @@ describe("Open in Botloft, from the island", () => {
     act(() => host.openBot(null));
     expect(host.hidden).toBe(false);
     expect(screen.getByRole("heading", { level: 1, name: "Writer" })).toBeDefined();
+  });
+
+  test("tells the island its language, and again when it changes", async () => {
+    const fake = new FakeBotloft();
+    fake.addCrew("Ops");
+    const host = new FakeHost();
+    renderApp(fake, host);
+    await crewOpened("Ops");
+    await waitFor(() => expect(host.islandLocale).toBe("en"));
+    act(() => setLocaleChoice("pt-BR"));
+    await waitFor(() => expect(host.islandLocale).toBe("pt-BR"));
+    act(() => setLocaleChoice("system"));
   });
 });

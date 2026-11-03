@@ -94,6 +94,22 @@ export function setLocaleChoice(choice: LocaleChoice): void {
   store.setState(next);
 }
 
+/**
+ * Shows `locale` without remembering it: the island follows the main
+ * window's language (spec 31.3), whatever its own window would guess.
+ */
+export function followLocale(locale: string): void {
+  if (!(locale in CATALOG) || store.getState().locale === locale) {
+    return;
+  }
+  markDocument(locale as Locale);
+  store.setState({
+    choice: locale as Locale,
+    locale: locale as Locale,
+    messages: CATALOG[locale as Locale],
+  });
+}
+
 /** The current messages, re-rendering when the language changes. */
 export function useT(): Messages {
   return useStore(store, (state) => state.messages);

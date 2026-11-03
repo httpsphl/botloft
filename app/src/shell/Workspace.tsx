@@ -26,7 +26,7 @@ import { Callout } from "../ui/Callout";
 import { useBotAlerts } from "./alerts";
 import { useAttentionMark } from "./attention";
 import { useFolderNotices } from "./folders";
-import { useIslandOpen } from "./islandOpen";
+import { useIslandLocale, useIslandOpen } from "./islandOpen";
 import { Rail } from "./Rail";
 import { useRoutineAlerts } from "./routineAlerts";
 import { SidebarSlot, SidebarToggle } from "./sidebarToggle";
@@ -56,6 +56,7 @@ export function Workspace() {
   useBotAlerts();
   useRoutineAlerts();
   useIslandOpen();
+  useIslandLocale();
   useAppSounds();
   useFolderNotices();
   useOpenAtSignIn();

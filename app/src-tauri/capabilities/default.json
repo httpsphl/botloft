@@ -36,6 +36,7 @@
     "allow-open-at-sign-in",
     "allow-launched-at-sign-in",
     "allow-quiet-now",
-    "allow-main-in-front"
+    "allow-main-in-front",
+    "allow-set-summon"
   ]
 }

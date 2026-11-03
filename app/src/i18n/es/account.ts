@@ -251,6 +251,15 @@ export const account: Messages["account"] = {
     islandCheer: "Celebrar cuando un agente termina",
     islandCheerHint:
       "La isla muestra un momento que un agente terminó, con la primera línea de su respuesta.",
+    islandPart: "Isla",
+    islandHideWithApp: "Ocultarla con Botloft al frente",
+    islandHideWithAppHint:
+      "Con la ventana de Botloft al frente, todo ya está ahí, así que la isla se aparta.",
+    islandSummon: "Mantener el Ctrl derecho para abrirla",
+    islandSummonHint:
+      "Mantén solo el Ctrl derecho y la isla se abre, en cualquier momento, aunque no pase nada. Mantenlo otra vez para ocultarla. Botloft solo mira esa tecla.",
+    islandHold: "Cuánto tiempo mantenerlo",
+    islandHolds: { "500": "Medio segundo", "1000": "1 segundo", "2000": "2 segundos" },
     markReplies: "Marcar el icono cuando un agente responda",
     markRepliesHint:
       "Un punto en el icono de Botloft en la barra de tareas mientras haya una conversación sin leer.",
