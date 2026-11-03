@@ -3289,7 +3289,7 @@ Sem nenhum login, o arquivo sai. Mudar os logins de um agente o reinicia com `--
 
 ## 36. O Criador
 
-Status: **rascunho**, para o dono revisar (36.13 lista o que ele ainda decide). O dono pediu em 2026-11-03: um agente pronto desde o início, com outra aparência (depois, a chama com capacete e varinha, 36.3), chamado algo como "O Criador", que monta as equipes para o dono, analisa o histórico do Claude e do Claude Code que o dono manda ou contextos grandes, sugere automações e ajuda a coordenar as equipes.
+Status: **rascunho**, para o dono revisar (36.13 lista o que ele ainda decide). O dono pediu em 2026-11-03: um agente pronto desde o início, com outra aparência (depois, a chama branca com uma varinha, 36.3), chamado algo como "O Criador", que monta as equipes para o dono, analisa o histórico do Claude e do Claude Code que o dono manda ou contextos grandes, sugere automações e ajuda a coordenar as equipes.
 
 ### 36.1 O que é
 
@@ -3307,13 +3307,13 @@ O Criador não faz o trabalho das equipes, não conversa com os agentes delas e 
 ### 36.3 Aparência
 
 - **Na barra lateral**, o Criador fica numa linha própria, acima das equipes. O chat dele é o chat de sempre (8).
-- **O mascote** é a chama do Botloft (15.3, `mascotArt.ts`) com dois acessórios, escolhidos pelo dono em 2026-11-03 no lugar de um personagem novo: um **capacete de obra** com uma engrenagem e uma **varinha** que flutua ao lado, como a gotinha de fogo, porque a chama não tem braços. Atrás dele, nos tamanhos grandes, um **fluxo**: caixas ligadas por setas pontilhadas, com chamas pequenas nas pontas. Os acessórios e o fluxo ficam em `creatorArt.ts`, e o movimento deles num arquivo próprio (`mascot-creator.css`). O `motion.css` não cresce.
-- **Cores:** a chama do Criador fica na cor do Botloft (`BOTLOFT_COLOR`), sem seletor de cor. O capacete é amarelo de obra e não é retingido, para o Criador não se confundir com um agente laranja. As caixas e as setas do fluxo usam o `accent`.
-- **Por tamanho:** até 48 px (barra lateral, cabeçalho, cartões), só a chama com o capacete, que muda a silhueta o bastante para reconhecê-lo. A varinha entra a partir de 72 px, e o fluxo só no chat vazio e no Início.
+- **O mascote** é a própria chama do Botloft (15.3, `mascotArt.ts`), toda **branca**, com uma **varinha** que flutua ao lado, escolhidos pelo dono em 2026-11-03 depois de ver as opções (um capacete de obra foi desenhado e recusado). O branco vem de `whiten` em `retint.ts`: sem matiz, com a luz e a sombra numa faixa estreita perto do branco; os olhos mantêm o brilho quente. A varinha tem um orbe de luz na ponta e três pontinhos de brilho em volta. Nos tamanhos grandes, atrás dele, um **fluxo**: três cartões brancos com sombra suave, uma faixa no topo e o ícone do que ele monta (equipe, rotina, fluxo), ligados por setas pontilhadas cinza. O desenho fica em `makerArt.ts` e `MakerGear.tsx` (o avatar com `maker` e, para o fluxo, `scene`), e o movimento em `mascot-maker.css`, nos passos da chama (`ticks.ts`) e nos gestos (`gestures.ts`). O `motion.css` não cresce.
+- **Cores:** a chama do Criador é branca (`MAKER_COLOR`), sem seletor de cor, com um contorno mais firme (`--line-strong`) para não sumir no tema claro. O orbe é amarelo-claro; os cartões usam o fundo do painel, com a faixa e o ícone em cinza e no `accent` quando acesos.
+- **Por tamanho:** até 48 px (barra lateral, cabeçalho, cartões), só a chama branca, que nenhum agente tem. A varinha entra a partir de 72 px, e o fluxo só no chat vazio (96 px).
 - **Humores** (os de 15.3, pelos mesmos agendadores):
-  - **trabalhando:** a chama queima como a de um agente trabalhando; a varinha balança devagar e solta faíscas da ponta a cada aceno, como as faíscas da chama (estrelas não: lembram o ícone de novidades, 26); as caixas do fluxo acendem uma por vez, seguindo as setas, e os pontos das setas correm na direção delas. É a única animação sem fim, como a chama trabalhando, e para com a janela fora de vista, sem foco ou com menos movimento;
-  - **dormindo:** a brasa de olhos fechados de sempre; o capacete escorrega um pouco sobre os olhos, a varinha fica deitada e o fluxo, apagado;
-  - **comemorando:** o pulo de sempre, com um floreio da varinha, uma rajada de faíscas e todas as caixas do fluxo acesas juntas uma vez;
+  - **trabalhando:** a chama queima como a de um agente trabalhando; a varinha balança devagar, os pontinhos piscam e o orbe solta faíscas de luz (chamas pequenas não: o dono não quis); os cartões do fluxo acendem um por vez, seguindo as setas (o aceso sobe um pouco, com a faixa e o ícone em `accent`), e os pontos das setas correm na direção delas. Tudo anda nos passos da chama, sem animação sem fim, e para com a janela fora de vista, sem foco ou com menos movimento;
+  - **dormindo:** a brasa de olhos fechados de sempre; a varinha deita e o fluxo apaga;
+  - **comemorando:** o pulo de sempre, com a varinha dando uma volta, uma rajada de faíscas e os três cartões acesos juntos uma vez;
   - **esperando o dono, acordado, piscando e olhando:** como qualquer mascote; a varinha fica parada, de pé.
 - **Chat vazio:** em vez do convite comum, o mascote dele com "Me conte o que você faz, e eu monto as equipes para você." e uma linha que pede para descrever o trabalho no compositor logo abaixo (`ChatEmpty.tsx`). Os botões **Trazer meu histórico do Claude Code** (36.5) e **Trazer minha exportação do claude.ai** (36.6) entram com CR3 e CR4. Isso é desenho do app, não um turno: abrir o chat não gasta o plano.
 - **Nome:** o daemon grava o nome e o papel no idioma que o app diz (`session.hello`, `session.setLocale`): "O Criador", "The Maker", "El Creador". O handle fica `maker`, e `bots.update` com `name` dá `conflict`.
@@ -3448,6 +3448,6 @@ As tools da Agência (26.4), hoje só do chefe, passam a valer também para o Cr
 
 1. ~~Fixo ou arquivável~~ **Decidido** pelo dono em 2026-11-03: fixo, sem arquivar nem excluir, com "Mostrar o Criador" para escondê-lo (36.2).
 2. ~~O nome~~ **Decidido** pelo dono em 2026-11-03: "O Criador", "The Maker", "El Creador". O handle `maker` não muda com o idioma.
-3. ~~A arte~~ **Decidido** pelo dono em 2026-11-03: a chama do Botloft com capacete de obra, varinha e um fluxo ao fundo (36.3), no lugar de um personagem novo. Falta ele aprovar o desenho final.
+3. ~~A arte~~ **Decidido** pelo dono em 2026-11-03: a chama do Botloft toda branca, com uma varinha de orbe de luz e o fluxo de cartões ao fundo (36.3), escolhidos entre opções desenhadas; o capacete de obra foi recusado.
 4. ~~Montar sem perguntar~~ **Decidido** pelo dono em 2026-11-03: começa desligado (36.4), e arquivar e pausar sempre perguntam.
 5. ~~Opus ou Sonnet~~ **Decidido** pelo dono em 2026-11-03: Opus por padrão (36.2); o dono pode trocar nos detalhes.

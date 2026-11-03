@@ -122,7 +122,7 @@ export function Welcome() {
             onClick={() => selectBot(maker.id)}
             className="mt-6 flex w-full items-center gap-3 rounded-2xl bg-bubble p-4 text-left transition-[background-color,transform] duration-150 hover:-translate-y-0.5 hover:bg-line/60"
           >
-            <BotAvatar color={maker.color} size={40} mood="awake" />
+            <BotAvatar color={maker.color} size={40} mood="awake" maker />
             <span className="flex min-w-0 flex-col gap-0.5">
               <span className="font-semibold text-sm">{t.maker.startHere}</span>
               <span className="text-ink-soft text-sm">{t.maker.startHereHint}</span>

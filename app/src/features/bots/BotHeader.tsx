@@ -21,6 +21,7 @@ import { BotStateBadge } from "./BotStateBadge";
 import { useBotActions } from "./botActions";
 import { ChiefBadge, isChief } from "./ChiefBadge";
 import { useMascotLook } from "./mascotLook";
+import { useIsMaker } from "./useIsMaker";
 
 /** The bot's name, state and actions. */
 export function BotHeader({
@@ -70,6 +71,7 @@ export function BotHeader({
   const actions = useBotActions(bot, crew);
   const mood = moodOf(bot, crew.paused);
   const look = useMascotLook(bot.id, mood);
+  const maker = useIsMaker(bot.id);
 
   const setPaused = (paused: boolean) =>
     attempt(paused ? words.failed.pause : words.failed.resume, async () =>
@@ -86,6 +88,7 @@ export function BotHeader({
         mood={mood}
         doing={look.doing}
         face={look.face}
+        maker={maker}
         botId={bot.id}
         starting={bot.state === "launching"}
       />
