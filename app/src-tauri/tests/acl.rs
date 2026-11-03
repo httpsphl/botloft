@@ -80,6 +80,7 @@ fn the_island_may_call_only_its_own_few() {
         "read_owner_token",
         "quiet_now",
         "main_in_front",
+        "set_summon",
     ]
     .map(allow);
     assert_eq!(island, own);

@@ -17,6 +17,7 @@
     "allow-read-owner-token",
     "allow-quiet-now",
     "allow-main-in-front",
+    "allow-set-summon",
     "core:window:allow-cursor-position",
     "core:window:allow-monitor-from-point"
   ]

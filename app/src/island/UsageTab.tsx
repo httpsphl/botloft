@@ -19,6 +19,8 @@ export interface Usage {
   claude: UsageWindow[];
   others: AgentUsage[];
   routines: Routine[];
+  /** The routines that wait for the owner's click, by name (spec 20.2). */
+  shortcuts: Routine[];
 }
 
 /** The plan's windows and the next routines, read again every minute and
@@ -41,10 +43,19 @@ export function useUsage(api: BotloftApi, version: number): Usage | null {
             )
             .sort((a, b) => (a.nextRunAt ?? 0) - (b.nextRunAt ?? 0))
             .slice(0, ROUTINES);
+          const shortcuts = routines
+            .filter(
+              (routine) =>
+                routine.schedule.kind === "manual" &&
+                routine.enabled &&
+                routine.archivedAt === null,
+            )
+            .sort((a, b) => a.name.localeCompare(b.name));
           setUsage({
             claude: status.usage?.windows ?? [],
             others: status.agentUsage,
             routines: next,
+            shortcuts,
           });
         },
         () => {},

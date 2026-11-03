@@ -9,6 +9,7 @@ export type Page =
   | "appearance"
   | "chat"
   | "alerts"
+  | "island"
   | "account"
   | "tools"
   | "logins"
@@ -55,6 +56,9 @@ export function settingsIndex(t: ReturnType<typeof useT>): Entry[] {
       s.sound,
       s.appSounds,
     ),
+    ...(SYSTEM === "Windows"
+      ? entry("island", s.islandPart, s.island, s.islandSummon, s.islandHideWithApp)
+      : []),
     ...entry("account", t.account.cloud.title, t.account.mobile.title, t.account.mobile.connect),
     ...entry("tools", s.tools),
     ...entry("logins", s.logins, t.logins.title, t.logins.signIn),

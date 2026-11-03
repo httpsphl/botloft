@@ -5,10 +5,12 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { useT } from "../i18n";
 import type { BotloftApi } from "../lib/api";
-import type { Bot, BotId, DayActivity } from "../lib/protocol.gen";
+import type { Bot, BotId, DayActivity, Routine } from "../lib/protocol.gen";
 import { AskCard, KeyAskCard, RequestCard } from "./Cards";
 import type { IslandHost } from "./host";
 import { LiveAgents } from "./LiveAgents";
+import { QuickAsk } from "./QuickAsk";
+import { Shortcuts } from "./Shortcuts";
 import { Today } from "./Today";
 import type { Live } from "./useLive";
 import type { Waiting } from "./useWaiting";
@@ -93,6 +95,11 @@ export function Home({
   live,
   today,
   refresh,
+  bots,
+  talking,
+  onPick,
+  onFollow,
+  shortcuts,
 }: {
   api: BotloftApi;
   host: IslandHost;
@@ -102,11 +109,19 @@ export function Home({
   live: Map<BotId, Live>;
   today: DayActivity | null;
   refresh: () => void;
+  /** Every agent, who waits or works first. */
+  bots: Bot[];
+  talking: BotId | null;
+  onPick: (id: BotId) => void;
+  onFollow: (id: BotId) => void;
+  shortcuts: Routine[];
 }) {
   return (
     <div className="flex flex-col gap-2">
       <WaitingCard api={api} host={host} waiting={waiting} refresh={refresh} />
       <LiveAgents working={working} crews={crews} live={live} />
+      <QuickAsk api={api} bots={bots} botId={talking} onPick={onPick} onFollow={onFollow} />
+      <Shortcuts api={api} shortcuts={shortcuts} bots={bots} />
       {today && <Today today={today} />}
     </div>
   );

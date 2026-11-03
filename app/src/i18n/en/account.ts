@@ -245,6 +245,15 @@ export const account = {
     islandCheer: "Celebrate when an agent finishes",
     islandCheerHint:
       "The island shows for a moment that an agent finished, with the first line of its answer.",
+    islandPart: "Island",
+    islandHideWithApp: "Hide it while Botloft is in front",
+    islandHideWithAppHint:
+      "With Botloft's own window in front, everything is already there, so the island steps aside.",
+    islandSummon: "Hold the right Ctrl to open it",
+    islandSummonHint:
+      "Hold the right Ctrl alone and the island opens, any time, even with nothing going on. Hold it again to hide it. Botloft only checks that one key.",
+    islandHold: "How long to hold it",
+    islandHolds: { "500": "Half a second", "1000": "1 second", "2000": "2 seconds" },
     markReplies: "Mark the icon when an agent replies",
     markRepliesHint: "A dot on the Botloft icon in the taskbar while a conversation is unread.",
     sound: "Play a sound",

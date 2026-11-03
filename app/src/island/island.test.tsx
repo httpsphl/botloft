@@ -134,7 +134,10 @@ describe("the island", () => {
     // The key is pasted in the chat's card, never here.
     expect(within(island).queryByRole("button", { name: "Allow" })).toBeNull();
     expect(within(island).queryByRole("button", { name: "Deny" })).toBeNull();
-    expect(island.querySelector("input")).toBeNull();
+    // The only field is Home's quick request, never one for the key.
+    expect(
+      [...island.querySelectorAll("input")].map((input) => input.getAttribute("aria-label")),
+    ).toEqual(["Ask Scout for something"]);
     fireEvent.click(within(island).getByRole("button", { name: "Open in Botloft" }));
     await waitFor(() => expect(calls).toContain(`open ${scout.id}`));
 

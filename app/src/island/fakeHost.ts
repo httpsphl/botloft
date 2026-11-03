@@ -39,4 +39,37 @@ export class FakeIslandHost implements IslandHost {
   appInFront(): Promise<boolean> {
     return Promise.resolve(this.front);
   }
+
+  private readonly summons = new Set<() => void>();
+  private readonly fronts = new Set<(front: boolean) => void>();
+
+  onSummon(listener: () => void): Promise<() => void> {
+    this.summons.add(listener);
+    return Promise.resolve(() => this.summons.delete(listener));
+  }
+
+  onFront(listener: (front: boolean) => void): Promise<() => void> {
+    this.fronts.add(listener);
+    return Promise.resolve(() => this.fronts.delete(listener));
+  }
+
+  setSummon(on: boolean, holdMs: number): Promise<void> {
+    this.calls.push(`summon ${on ? holdMs : "off"}`);
+    return Promise.resolve();
+  }
+
+  /** The owner held the right Ctrl long enough. */
+  summon(): void {
+    for (const listener of this.summons) {
+      listener();
+    }
+  }
+
+  /** The main window came to the front, or left it. */
+  setFront(front: boolean): void {
+    this.front = front;
+    for (const listener of this.fronts) {
+      listener(front);
+    }
+  }
 }

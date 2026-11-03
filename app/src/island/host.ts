@@ -6,7 +6,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
-import { emitTo } from "@tauri-apps/api/event";
+import { emitTo, listen } from "@tauri-apps/api/event";
 import {
   cursorPosition,
   getCurrentWindow,
@@ -16,7 +16,7 @@ import {
 } from "@tauri-apps/api/window";
 import type { DaemonStatus } from "../lib/host";
 import { SYSTEM } from "../lib/system";
-import { OPEN_BOT_EVENT } from "./event";
+import { FRONT_EVENT, OPEN_BOT_EVENT, SUMMON_EVENT } from "./event";
 
 /** The screen the island sits on (spec 31.6). */
 export type IslandScreen = "primary" | "mouse";
@@ -38,6 +38,12 @@ export interface IslandHost {
   quiet(): Promise<boolean>;
   /** The main window is on screen and has the focus. */
   appInFront(): Promise<boolean>;
+  /** The owner held the right Ctrl alone long enough (spec 31.6). */
+  onSummon(listener: () => void): Promise<() => void>;
+  /** The main window came to the front, or left it. */
+  onFront(listener: (front: boolean) => void): Promise<() => void>;
+  /** Turns calling the island with the right Ctrl on or off. */
+  setSummon(on: boolean, holdMs: number): Promise<void>;
 }
 
 async function monitorOf(screen: IslandScreen): Promise<Monitor | null> {
@@ -78,5 +84,8 @@ export function tauriIslandHost(): IslandHost {
     openApp: (botId) => emitTo("main", OPEN_BOT_EVENT, botId ?? ""),
     quiet: () => invoke<boolean>("quiet_now"),
     appInFront: () => invoke<boolean>("main_in_front"),
+    onSummon: (listener) => listen(SUMMON_EVENT, () => listener()),
+    onFront: (listener) => listen<boolean>(FRONT_EVENT, (event) => listener(event.payload)),
+    setSummon: (on, holdMs) => invoke("set_summon", { on, holdMs }),
   };
 }

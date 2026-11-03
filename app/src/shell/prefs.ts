@@ -87,6 +87,12 @@ export const prefs = {
   islandScreen: pref<"primary" | "mouse">("botloft.islandScreen", "primary", ["primary", "mouse"]),
   /** The island cheers when an agent finishes (spec 31.4). */
   islandCheer: pref<boolean>("botloft.islandCheer", true, ON_OFF),
+  /** The island hides while Botloft's window is in front (spec 31.6). */
+  islandHideWithApp: pref<boolean>("botloft.islandHideWithApp", true, ON_OFF),
+  /** Holding the right Ctrl alone calls the island (spec 31.6). */
+  islandSummon: pref<boolean>("botloft.islandSummon", true, ON_OFF),
+  /** How long the right Ctrl is held, in milliseconds. */
+  islandHold: pref<"500" | "1000" | "2000">("botloft.islandHold", "1000", ["500", "1000", "2000"]),
   /** The mark on the app's icon also shows while a bot is unread. */
   markReplies: pref<boolean>("botloft.markReplies", true, ON_OFF),
   /** A short sound with each of those. */
