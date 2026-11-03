@@ -69,25 +69,37 @@ off until you turn them on (see [Engines](#engines)).
   while you are away, first shows a screen that spells out the risks. Botloft itself, terminals,
   password managers and password fields are never shared.
 - **Schedule routines.** Weekday mornings, every two hours or any cron schedule, with missed runs
-  and overlaps handled.
+  and overlaps handled. Or make one a shortcut you run with one click, from the home, the chat or your
+  phone.
 - **Leave them running.** Agents keep working after you close Botloft. They start when you sign in,
   come back soon after a crash and keep the computer awake while they work. Botloft
-  waits near the clock and tells you when an agent needs you.
+  waits near the clock and tells you when an agent needs you. Agents that sit idle for a while sleep,
+  so they use no memory, and wake with the same conversation when work comes.
 - **Choose per agent.** Which model it uses and how much it asks before acting. See how much of your
   plan's usage is left.
 - **See the plan first.** Turn on "Show the plan before long tasks" for an agent and it shows its
   steps before long work. It starts by itself unless you change or cancel it.
-- **Connect your own tools.** Add a tool of yours in Settings > Connected tools, like a LinkedIn
-  reader or your company's system, and turn it on only for the agents that need it. They still ask you
-  before using it.
+- **Use your tools.** The tools you connected on claude.ai, like Google Calendar, Gmail, Drive or
+  Notion, work in your agents with the login you made there: choose which agents use each in
+  Settings > Tools, and an agent that needs one asks for it in the chat instead of opening the
+  browser. Add a tool of your own too, like a LinkedIn reader or your company's system. They still ask
+  you before using it.
+- **Sign in to a site once.** In Settings > Logins, sign in to a site in a Botloft window and choose
+  which agents use that login. Nothing is read from your own browser.
+- **See inside an agent.** The overview panel shows what fills its conversation, what it left running
+  in the background (and a way to stop it), what changed in its git folders and its pull requests'
+  checks.
+- **Botloft at the top of the screen (Windows).** A small island shows who works and comes down when
+  an agent needs you, so you answer without opening Botloft. Hold the right Ctrl alone to call it any
+  time, for a quick request, your shortcuts or a chat.
 - **Back up and move.** Save a sealed backup file, or sign in with your e-mail (no password) to keep
   a light copy in the cloud and restore it on another computer. The server cannot read it. Turn on
   automatic copies, every day or week and only when something changed, if you want them to go by
   themselves (Windows for now).
 - **Keep up from your phone.** Choose "Connect a phone" in Settings > Account and phone and scan the
   code with your phone's camera: Botloft opens there as a web page you can add to the Home Screen.
-  Approve requests, answer questions and chat with your agents from anywhere, with a notice when one
-  needs you. What passes between the phone and your computer is sealed end to end: the server
+  Approve requests, answer questions, chat with your agents, send them photos and files and run your
+  shortcuts from anywhere, with a notice when one needs you. What passes between the phone and your computer is sealed end to end: the server
   carries it but cannot read it. Anyone holding the phone unlocked can do the same, so you can lock
   the page with a PIN. It uses the same account; files stay on your computer. Checked on Android,
   not yet on iPhone.
