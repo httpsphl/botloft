@@ -20,6 +20,7 @@ import { attempt } from "../../ui/toast";
 import { BotDialog } from "./BotDialog";
 import { isChief } from "./ChiefBadge";
 import { DeleteBot } from "./DeleteBot";
+import { useIsMaker } from "./useIsMaker";
 
 type Open = "edit" | "archive" | "delete" | "fresh" | null;
 
@@ -42,12 +43,15 @@ export function useBotActions(
   const markSeen = useApp((state) => state.markSeen);
   const markUnread = useApp((state) => state.markUnread);
   const chief = isChief(bot, crew);
+  // The Maker is always there and works alone (spec 36.2): no chief, no
+  // archive, no delete, so the menu does not offer them.
+  const maker = useIsMaker(bot.id);
   const [open, setOpen] = useState<Open>(null);
   const close = () => setOpen(null);
 
-  const items: MenuItem[] = [
+  const offered: (MenuItem | false)[] = [
     { label: words.edit, icon: Pencil, onSelect: () => setOpen("edit") },
-    {
+    !maker && {
       label: chief ? words.stopChief : words.makeChief,
       icon: Crown,
       onSelect: () =>
@@ -80,9 +84,20 @@ export function useBotActions(
     unread
       ? { label: words.markRead, icon: MailOpen, onSelect: () => markSeen(bot.id) }
       : { label: words.markUnread, icon: Mail, onSelect: () => markUnread(bot.id) },
-    { label: words.archive, icon: Archive, danger: true, onSelect: () => setOpen("archive") },
-    { label: words.delete, icon: Trash2, danger: true, onSelect: () => setOpen("delete") },
+    !maker && {
+      label: words.archive,
+      icon: Archive,
+      danger: true,
+      onSelect: () => setOpen("archive"),
+    },
+    !maker && {
+      label: words.delete,
+      icon: Trash2,
+      danger: true,
+      onSelect: () => setOpen("delete"),
+    },
   ];
+  const items = offered.filter((item): item is MenuItem => item !== false);
 
   const dialogs =
     open === "edit" ? (

@@ -11,7 +11,8 @@ use super::*;
 use crate::avatar::PALETTE;
 use crate::ids::{
     ApprovalId, AttachmentId, BotId, BuildId, ChatItemId, CrewAccessId, CrewId, DeliveryId,
-    DesktopGrantId, McpServerId, MessageId, QuestionId, RoutineId, RoutineRunId, RuleId, TaskId,
+    DesktopGrantId, ImportId, McpServerId, MessageId, QuestionId, RoutineId, RoutineRunId, RuleId,
+    TaskId,
 };
 
 #[path = "export_backup.rs"]
@@ -30,6 +31,8 @@ mod connectors;
 mod crew_access;
 #[path = "export_desktop.rs"]
 mod desktop;
+#[path = "export_imports.rs"]
+mod imports;
 #[path = "export_island.rs"]
 mod island;
 #[path = "export_keys.rs"]
@@ -137,6 +140,7 @@ fn export_bindings() {
     out.decl::<McpServerId>();
     out.decl::<CrewAccessId>();
     out.decl::<BuildId>();
+    out.decl::<ImportId>();
     out.decl::<Crew>();
     out.decl::<Build>();
     out.decl::<BuildIdParams>();
@@ -223,6 +227,7 @@ fn export_bindings() {
     crew_access::decls(&mut out);
     permissions::decls(&mut out);
     catalog::decls(&mut out);
+    imports::decls(&mut out);
     backup::decls(&mut out);
     cloud::decls(&mut out);
     mobile::decls(&mut out);
@@ -434,6 +439,7 @@ fn export_bindings() {
     crew_access::methods(&mut out);
     permissions::methods(&mut out);
     catalog::methods(&mut out);
+    imports::methods(&mut out);
     backup::methods(&mut out);
     cloud::methods(&mut out);
     mobile::methods(&mut out);

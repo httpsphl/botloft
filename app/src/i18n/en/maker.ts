@@ -57,4 +57,75 @@ export const maker = {
       "It will make crews, agents and routines as soon as it plans them, without showing you first. Archiving or pausing an agent still asks you, and you can undo each build for a week.",
     confirm: "Let it build",
   },
+  history: {
+    open: "Bring my Claude Code history",
+    title: "Bring your Claude Code history",
+    intro:
+      "Botloft reads the history Claude Code keeps on this computer and makes a summary for the Maker. You choose the projects and read the whole summary before anything goes.",
+    takes:
+      "Only the requests you typed, session titles, which tools were used, your CLAUDE.md files and the names of your skills. Never Claude's answers, what tools read or returned, or attachments.",
+    loading: "Reading your Claude Code history…",
+    loadingHint:
+      "With many projects this takes up to a minute. You can leave this window open and wait.",
+    scanError: "Could not read the history. It may still be warming up: try again.",
+    retry: "Try again",
+    elapsed: (seconds: number) => `${seconds} s`,
+    none: "Claude Code has no history on this computer yet.",
+    scanFailed: "Could not read the history",
+    all: "All projects",
+    project: (sessions: number, prompts: number, period: string) =>
+      `${sessions} ${sessions === 1 ? "session" : "sessions"} · ${prompts} ${prompts === 1 ? "request" : "requests"} · ${period}`,
+    make: "Make the summary",
+    making: "Making the summary…",
+    makingHint:
+      "Reading the chosen projects and swapping out keys, e-mails and numbers. This takes up to a minute.",
+    makeFailed: "Could not make the summary",
+    size: (thousands: number) =>
+      `About ${thousands} thousand tokens of your plan when the Maker reads it: like a long conversation.`,
+    swapped: "Swapped out before showing you",
+    kinds: {
+      key: (count: number) => `${count} ${count === 1 ? "key or password" : "keys or passwords"}`,
+      email: (count: number) => `${count} ${count === 1 ? "e-mail" : "e-mails"}`,
+      number: (count: number) => `${count} ${count === 1 ? "number" : "numbers"}`,
+      card: (count: number) => `${count} ${count === 1 ? "card" : "cards"}`,
+    },
+    notPerfect: "The swap is not perfect: read it before sending.",
+    cut: "Left out to fit the limit",
+    projects: "Projects in the summary",
+    remake: "Make it again without the unchecked ones",
+    after:
+      "Once sent, the summary is a file in the Maker's chat and leaves with it. A summary you do not send is forgotten after a day.",
+    forget: "Forget it",
+    send: "Send to the Maker",
+    sendFailed: "Could not send the summary",
+    sent: "Sent to the Maker",
+  },
+  claudeAi: {
+    open: "Bring my claude.ai export",
+    title: "Bring your claude.ai export",
+    intro:
+      "Botloft does not sign in to claude.ai: you download a copy of your conversations there and choose the file here.",
+    steps: [
+      "On claude.ai, open Settings > Privacy and click Export data.",
+      "Open the e-mail from claude.ai and download the ZIP. Its link works for 24 hours.",
+      "Choose the ZIP here. Botloft reads it where it is, without copying it.",
+    ],
+    openSite: "Open claude.ai",
+    pick: "Choose the ZIP",
+    other: "Choose another file",
+    pickTitle: "claude.ai export",
+    kind: "ZIP file",
+    takes:
+      "Of each conversation, only the title, the date, how many messages it has and the first three messages you wrote. Never Claude's answers or attachments.",
+    scanFailed: "Could not read this file",
+    reading: "Reading the file…",
+    readingHint: "A big export takes up to a minute. Botloft reads it where it is.",
+    found: (count: number, period: string) =>
+      `${count} ${count === 1 ? "conversation" : "conversations"} · ${period}`,
+    projects: (names: string) => `Projects: ${names}`,
+    periodLabel: "Period",
+    periods: { all: "All", year: "Last year", half: "Last 6 months", quarter: "Last 3 months" },
+    cut: (count: number) =>
+      `${count} older ${count === 1 ? "conversation was" : "conversations were"} left out to fit the limit`,
+  },
 };

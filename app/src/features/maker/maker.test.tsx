@@ -142,3 +142,31 @@ describe("the Maker", () => {
     expect(await screen.findByText("Tell me what you do, and I build your crews")).toBeDefined();
   });
 });
+
+describe("the Maker's menu", () => {
+  test("offers only what the Maker can do, and its edit keeps its name and white", async () => {
+    const fake = new FakeBotloft();
+    fake.addCrew("Ops");
+    fake.maker.ensure();
+    renderApp(fake);
+    await crewOpened("Ops");
+    const row = within(sidebar()).getByRole("button", { name: /^The Maker/ });
+    fireEvent.contextMenu(row, { clientX: 120, clientY: 200 });
+    const menu = screen.getByRole("menu", { name: "Actions for The Maker" });
+    const offered = within(menu)
+      .getAllByRole("menuitem")
+      .map((item) => item.textContent);
+    expect(offered).toEqual([
+      "Edit",
+      "Restart",
+      "Restart with a new conversation",
+      "Open folder",
+      "Mark as unread",
+    ]);
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "Edit" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).queryByRole("textbox", { name: /^Name/ })).toBeNull();
+    expect(within(dialog).queryByRole("button", { name: "Pick any color" })).toBeNull();
+    expect(within(dialog).getByRole("textbox", { name: /Instructions/ })).toBeDefined();
+  });
+});

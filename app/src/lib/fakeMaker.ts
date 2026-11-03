@@ -57,7 +57,7 @@ export class FakeMaker {
       name: "Maker",
       role: "Builds and tunes your crews",
       instructions: "",
-      color: "#FF7A59",
+      color: "#FFFFFF",
       model: "opus",
     });
     bot.name = "The Maker";

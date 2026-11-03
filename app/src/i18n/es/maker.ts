@@ -59,4 +59,82 @@ export const maker: Messages["maker"] = {
       "Creará equipos, agentes y rutinas en cuanto los planee, sin mostrártelos antes. Archivar o pausar un agente sigue preguntando, y puedes deshacer cada armado durante una semana.",
     confirm: "Dejar que arme",
   },
+  history: {
+    open: "Traer mi historial de Claude Code",
+    title: "Traer tu historial de Claude Code",
+    intro:
+      "Botloft lee el historial que Claude Code guarda en esta computadora y hace un resumen para el Creador. Eliges los proyectos y lees el resumen entero antes de que salga nada.",
+    takes:
+      "Solo los pedidos que escribiste, los títulos de las sesiones, las herramientas usadas, tus CLAUDE.md y los nombres de tus skills. Nunca las respuestas de Claude, lo que las herramientas leyeron o devolvieron, ni adjuntos.",
+    loading: "Leyendo tu historial de Claude Code…",
+    loadingHint:
+      "Con muchos proyectos, esto tarda hasta un minuto. Puedes dejar esta ventana abierta y esperar.",
+    scanError:
+      "No se pudo leer el historial. A veces la primera lectura tarda: inténtalo de nuevo.",
+    retry: "Intentar de nuevo",
+    elapsed: (seconds: number) => `${seconds} s`,
+    none: "Claude Code todavía no tiene historial en esta computadora.",
+    scanFailed: "No se pudo leer el historial",
+    all: "Todos los proyectos",
+    project: (sessions: number, prompts: number, period: string) =>
+      `${sessions} ${sessions === 1 ? "sesión" : "sesiones"} · ${prompts} ${prompts === 1 ? "pedido" : "pedidos"} · ${period}`,
+    make: "Armar el resumen",
+    making: "Armando el resumen…",
+    makingHint:
+      "Leyendo los proyectos elegidos y cambiando claves, correos y números. Esto tarda hasta un minuto.",
+    makeFailed: "No se pudo armar el resumen",
+    size: (thousands: number) =>
+      `Cerca de ${thousands} mil tokens de tu plan cuando el Creador lo lea: como una conversación larga.`,
+    swapped: "Cambiados antes de mostrártelo",
+    kinds: {
+      key: (count: number) =>
+        `${count} ${count === 1 ? "clave o contraseña" : "claves o contraseñas"}`,
+      email: (count: number) => `${count} ${count === 1 ? "correo" : "correos"}`,
+      number: (count: number) => `${count} ${count === 1 ? "número" : "números"}`,
+      card: (count: number) => `${count} ${count === 1 ? "tarjeta" : "tarjetas"}`,
+    },
+    notPerfect: "El cambio no es perfecto: léelo antes de enviarlo.",
+    cut: "Quedaron fuera para caber en el límite",
+    projects: "Proyectos en el resumen",
+    remake: "Armarlo de nuevo sin los desmarcados",
+    after:
+      "Una vez enviado, el resumen es un archivo en la conversación del Creador y sale con ella. Un resumen que no envías se olvida después de un día.",
+    forget: "Olvidarlo",
+    send: "Enviar al Creador",
+    sendFailed: "No se pudo enviar el resumen",
+    sent: "Enviado al Creador",
+  },
+  claudeAi: {
+    open: "Traer mi exportación de claude.ai",
+    title: "Traer tu exportación de claude.ai",
+    intro:
+      "Botloft no entra en claude.ai: allí descargas una copia de tus conversaciones y eliges el archivo aquí.",
+    steps: [
+      "En claude.ai, abre Configuración > Privacidad y haz clic en Exportar datos.",
+      "Abre el correo de claude.ai y descarga el ZIP. El enlace sirve por 24 horas.",
+      "Elige el ZIP aquí. Botloft lo lee donde está, sin copiarlo.",
+    ],
+    openSite: "Abrir claude.ai",
+    pick: "Elegir el ZIP",
+    other: "Elegir otro archivo",
+    pickTitle: "Exportación de claude.ai",
+    kind: "Archivo ZIP",
+    takes:
+      "De cada conversación, solo el título, la fecha, cuántos mensajes tiene y los tres primeros mensajes que escribiste. Nunca las respuestas de Claude ni los adjuntos.",
+    scanFailed: "No se pudo leer este archivo",
+    reading: "Leyendo el archivo…",
+    readingHint: "Una exportación grande tarda hasta un minuto. Botloft la lee donde está.",
+    found: (count: number, period: string) =>
+      `${count} ${count === 1 ? "conversación" : "conversaciones"} · ${period}`,
+    projects: (names: string) => `Proyectos: ${names}`,
+    periodLabel: "Período",
+    periods: {
+      all: "Todo",
+      year: "Último año",
+      half: "Últimos 6 meses",
+      quarter: "Últimos 3 meses",
+    },
+    cut: (count: number) =>
+      `${count} ${count === 1 ? "conversación más vieja quedó" : "conversaciones más viejas quedaron"} fuera para caber en el límite`,
+  },
 };

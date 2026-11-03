@@ -63,6 +63,7 @@ mod desktop;
 #[cfg(test)]
 mod export;
 mod files;
+mod imports;
 mod island;
 mod keys;
 mod lesson;
@@ -97,6 +98,7 @@ pub use connectors::*;
 pub use crew_access::*;
 pub use desktop::*;
 pub use files::*;
+pub use imports::*;
 pub use island::*;
 pub use keys::*;
 pub use lesson::*;
@@ -148,6 +150,11 @@ pub mod method {
     pub const CATALOG_ADD: &str = "catalog.add";
     pub const BUILDS_LIST: &str = "builds.list";
     pub const BUILDS_UNDO: &str = "builds.undo";
+    pub const IMPORTS_SCAN: &str = "imports.scan";
+    pub const IMPORTS_CREATE: &str = "imports.create";
+    pub const IMPORTS_SEND: &str = "imports.send";
+    pub const IMPORTS_FORGET: &str = "imports.forget";
+    pub const IMPORTS_LIST: &str = "imports.list";
     pub const BOTS_UPDATE: &str = "bots.update";
     pub const BOTS_SET_PAUSED: &str = "bots.setPaused";
     pub const BOTS_SET_PERMISSION_MODE: &str = "bots.setPermissionMode";

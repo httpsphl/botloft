@@ -624,6 +624,7 @@ dependencies = [
  "jpeg-encoder",
  "libc",
  "p256",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",

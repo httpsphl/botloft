@@ -49,6 +49,11 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::CATALOG_ADD => reply(catalog::add(daemon, parse(params)?)),
         method::BUILDS_LIST => reply(crate::service::builds::list(daemon)),
         method::BUILDS_UNDO => reply(crate::service::builds::undo(daemon, parse(params)?)),
+        method::IMPORTS_SCAN => reply(crate::service::imports::scan(daemon, parse(params)?)),
+        method::IMPORTS_CREATE => reply(crate::service::imports::create(daemon, parse(params)?)),
+        method::IMPORTS_SEND => reply(crate::service::imports::send(daemon, parse(params)?)),
+        method::IMPORTS_FORGET => reply(crate::service::imports::forget(daemon, parse(params)?)),
+        method::IMPORTS_LIST => reply(crate::service::imports::list(daemon)),
         method::BOTS_UPDATE => reply(bots::update(daemon, parse(params)?)),
         method::BOTS_SET_PAUSED => reply(bots::set_paused(daemon, parse(params)?)),
         method::BOTS_SET_PERMISSION_MODE => {

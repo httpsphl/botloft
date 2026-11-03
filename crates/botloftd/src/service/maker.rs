@@ -17,8 +17,9 @@ use crate::workspace;
 const NAME: &str = "Maker";
 /// Its handle, the same in every language (spec 36.13).
 const HANDLE: &str = "maker";
-/// The color of Botloft's own mascot (spec 15.3).
-const COLOR: &str = "#FF7A59";
+/// White: the app draws every mascot in this color as the Maker's, in the
+/// chat, the island and everywhere else (spec 36.3). No other bot takes it.
+pub(crate) const COLOR: &str = "#FFFFFF";
 
 /// Its name and role in the language the owner reads the app in.
 fn words(locale: &str) -> (&'static str, &'static str) {
@@ -66,7 +67,13 @@ pub fn ensure(daemon: &Daemon) -> ApiResult<BotId> {
         Some(crew) => crew,
         None => create_crew(daemon, &store)?,
     };
-    if let Some(bot) = store.bots(Some(&crew.id), true)?.into_iter().next() {
+    if let Some(mut bot) = store.bots(Some(&crew.id), true)?.into_iter().next() {
+        // A Maker made before it turned white turns white now.
+        if bot.color != COLOR {
+            bot.color = COLOR.to_owned();
+            store.update_bot(&bot)?;
+            info!(bot = %bot.id, "the Maker turned white");
+        }
         return Ok(bot.id);
     }
     // Named as its handle first, so the handle is `maker` in every language.

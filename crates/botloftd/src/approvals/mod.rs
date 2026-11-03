@@ -277,6 +277,15 @@ pub fn answer(daemon: &Daemon, params: ApprovalsAnswerParams) -> ApiResult<Appro
         once,
     );
     let Some(record) = settled else {
+        // The chat may still show it open, as a card left from before a
+        // restart did: it shows how it ended now.
+        // Read first: `show` takes the store again.
+        let ended = daemon.store().approval(&params.approval_id);
+        if let Ok(Some(ended)) = ended
+            && ended.approval.status == ApprovalStatus::Expired
+        {
+            show(daemon, &ended, false);
+        }
         return Err(ApiError::Conflict(format!(
             "approval {} was already answered or expired",
             params.approval_id
@@ -315,12 +324,18 @@ pub fn expire_for_bot(daemon: &Daemon, bot: &BotId) {
 /// Expires every open request, at daemon start: no process survived.
 pub fn expire_all(daemon: &Daemon) {
     let now = daemon.clock.now_ms();
-    match daemon.store().expire_approvals(None, now) {
+    // Read first: `show` takes the store again.
+    let expired = daemon.store().expire_approvals(None, now);
+    match expired {
         Ok(expired) if !expired.is_empty() => {
             debug!(
                 count = expired.len(),
                 "expired approvals left by the last run"
             );
+            // Their cards in the chat stop offering an answer.
+            for record in expired {
+                show(daemon, &record, false);
+            }
         }
         Ok(_) => {}
         Err(err) => warn!("could not expire old approvals: {err}"),

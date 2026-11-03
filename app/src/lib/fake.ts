@@ -17,6 +17,7 @@ import { FakeCrewAccess } from "./fakeCrewAccess";
 import { crewHandlers } from "./fakeCrews";
 import { FakeDesktop } from "./fakeDesktop";
 import { FakeFiles } from "./fakeFiles";
+import { FakeImports } from "./fakeImports";
 import { islandHandlers } from "./fakeIsland";
 import { FakeKeys } from "./fakeKeys";
 import { FakeLesson } from "./fakeLesson";
@@ -117,6 +118,7 @@ export class FakeBotloft implements BotloftApi {
   readonly reactions = new FakeReactions(this);
   readonly lesson = new FakeLesson(this);
   readonly maker = new FakeMaker(this);
+  readonly imports = new FakeImports(this);
   /** Clock for created and updated times. */
   now = Date.now();
   /** Plan share per token for `usage.tokens`; `null`, not learned yet. */
@@ -352,6 +354,7 @@ export class FakeBotloft implements BotloftApi {
     ...this.reactions.handlers(),
     ...this.lesson.handlers(),
     ...this.maker.handlers(),
+    ...this.imports.handlers(),
     ...usageHandlers(this),
     ...islandHandlers(this),
     ...backupHandlers(this),

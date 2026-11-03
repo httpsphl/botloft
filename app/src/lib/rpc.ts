@@ -28,6 +28,15 @@ export const ClientErrorCode = {
   closed: -3,
 } as const;
 
+/**
+ * Requests that may take minutes: reading the owner's whole Claude Code
+ * history with a cold disk took over 30 s (spec 36.7).
+ */
+const SLOW_MS: Partial<Record<Method, number>> = {
+  "imports.scan": 10 * 60_000,
+  "imports.create": 10 * 60_000,
+};
+
 export class RpcError extends Error {
   readonly code: number;
   /** Why a validation failed, when the app words it itself (spec 20.8). */
@@ -198,12 +207,15 @@ export class RpcConnection {
 
   private send(pending: Pending): void {
     const id = this.nextId++;
-    pending.timer = setTimeout(() => {
-      this.inflight.delete(id);
-      pending.reject(
-        new RpcError(ClientErrorCode.timeout, t().common.errors.timedOut(pending.method)),
-      );
-    }, this.options.requestTimeoutMs);
+    pending.timer = setTimeout(
+      () => {
+        this.inflight.delete(id);
+        pending.reject(
+          new RpcError(ClientErrorCode.timeout, t().common.errors.timedOut(pending.method)),
+        );
+      },
+      SLOW_MS[pending.method as Method] ?? this.options.requestTimeoutMs,
+    );
     this.inflight.set(id, pending);
     const frame: Record<string, unknown> = { jsonrpc: "2.0", id, method: pending.method };
     if (pending.params !== undefined) {

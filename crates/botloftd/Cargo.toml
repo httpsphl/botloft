@@ -25,6 +25,7 @@ hex = "0.4.3"
 jiff = "0.2.37"
 jpeg-encoder = "0.7.1"
 p256 = { version = "0.14.0", default-features = false, features = ["ecdh", "arithmetic", "alloc"] }
+regex = "1.13.1"
 reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "json", "stream"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
