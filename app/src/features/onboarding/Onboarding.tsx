@@ -116,7 +116,7 @@ export function Onboarding({ link }: { link: StoreApi<Link> }) {
   }
 
   return (
-    <main className="grid flex-1 place-items-center p-8">
+    <main className="grid flex-1 place-items-center bg-panel p-8">
       <div className="w-full max-w-lg">
         <h1 className="font-semibold text-2xl tracking-tight">Botloft</h1>
         <p className="mt-1 mb-6 text-muted">{o.tagline}</p>

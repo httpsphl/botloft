@@ -999,6 +999,7 @@ Onboarding (M5): **configuração sem perguntas e sem jargão.** O dono não pre
 - Claude Code ausente ou inutilizável (`runtimeError`), na tela de boas-vindas e no aviso "Bots can't start": explica que os bots rodam no Claude Code, oferece "How to install Claude Code" (abre `https://code.claude.com/docs/en/setup`) e diz que o Botloft percebe sozinho em até 30 s; o erro vai em "Details".
 
 - Login do Claude (`claudeSignedIn`): a tela de boas-vindas mostra "Claude account" (conectado, desconectado com o botão, ou conferindo). Com crews, desconectado vira o aviso "Sign in to Claude" no topo; um bot em `auth_error` também mostra o botão. "Sign in to Claude" chama `claude_sign_in`; se terminou bem, chama `system.refresh` e relê o status a cada 1 s por até 20 s. Os bots parados voltam sozinhos (7.3). Se a janela fechar antes, "The sign-in didn't finish" com o botão de novo.
+- **Visual:** a tela de configuração e a de boas-vindas ficam no `panel`, como a área principal (15.3). Na de boas-vindas, as verificações (Botloft, Claude Code, conta) ficam num bloco cinza sem borda (`bubble`), sem linhas entre elas; o aviso de que os agentes perguntam antes e as ideias de equipe são blocos cinza próprios, e as ideias sobem um pouco e escurecem sob o mouse, como os cartões da crew.
 
 Em dev, `pnpm tauri dev` usa o `target\debug\botloftd.exe` como sidecar e instala uma tarefa própria da pasta de dev (seção 14). Quem prefere um daemon em primeiro plano roda `cargo run -p botloftd -- serve` antes de abrir o app.
 
