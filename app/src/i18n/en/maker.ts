@@ -95,6 +95,8 @@ export const maker = {
     remake: "Make it again without the unchecked ones",
     after:
       "Once sent, the summary is a file in the Maker's chat and leaves with it. A summary you do not send is forgotten after a day.",
+    readWith: "The Maker reads it with",
+    readWithHint: "A stronger model understands a big history better and uses more of your plan.",
     forget: "Forget it",
     send: "Send to the Maker",
     sendFailed: "Could not send the summary",
