@@ -98,6 +98,9 @@ export const maker: Messages["maker"] = {
     remake: "Montar de novo sem os desmarcados",
     after:
       "Depois de mandado, o resumo vira um arquivo na conversa do Criador e sai com ela. Um resumo que você não manda é esquecido depois de um dia.",
+    readWith: "O Criador vai ler com",
+    readWithHint:
+      "Um modelo mais forte entende melhor um histórico grande e gasta mais do seu plano.",
     forget: "Esquecer",
     send: "Mandar ao Criador",
     sendFailed: "Não foi possível mandar o resumo",

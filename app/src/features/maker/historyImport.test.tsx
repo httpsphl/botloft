@@ -33,6 +33,9 @@ describe("bringing the Claude Code history", () => {
     expect(await within(dialog).findByText(/Summarize today's e-mails/)).toBeDefined();
     expect(within(dialog).getByText(/2 keys or passwords, 1 e-mail/)).toBeDefined();
     expect(within(dialog).getByText(/The swap is not perfect/)).toBeDefined();
+    // The model and effort the Maker reads it with, right before sending.
+    expect(within(dialog).getByText("The Maker reads it with")).toBeDefined();
+    expect(within(dialog).getByRole("button", { name: /^Model/ })).toBeDefined();
     expect(fake.imports.made[0]?.scope).toEqual(["C:\\work\\blog", "C:\\work\\clinic"]);
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Send to the Maker" }));

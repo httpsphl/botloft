@@ -1,6 +1,8 @@
 import {
   Archive,
   Crown,
+  FileArchive,
+  FileClock,
   FolderOpen,
   Mail,
   MailOpen,
@@ -17,12 +19,14 @@ import { isUnread } from "../../store/seen";
 import { Confirm } from "../../ui/Confirm";
 import type { MenuItem } from "../../ui/Menu";
 import { attempt } from "../../ui/toast";
+import { ClaudeAiImport } from "../maker/ClaudeAiImport";
+import { HistoryImport } from "../maker/HistoryImport";
 import { BotDialog } from "./BotDialog";
 import { isChief } from "./ChiefBadge";
 import { DeleteBot } from "./DeleteBot";
 import { useIsMaker } from "./useIsMaker";
 
-type Open = "edit" | "archive" | "delete" | "fresh" | null;
+type Open = "edit" | "archive" | "delete" | "fresh" | "code" | "ai" | null;
 
 /**
  * What the owner can do with a bot from a menu, and the dialogs those
@@ -51,6 +55,10 @@ export function useBotActions(
 
   const offered: (MenuItem | false)[] = [
     { label: words.edit, icon: Pencil, onSelect: () => setOpen("edit") },
+    // Bringing a history to the Maker, also once its chat is no longer
+    // empty (spec 36.7).
+    maker && { label: t.maker.history.open, icon: FileClock, onSelect: () => setOpen("code") },
+    maker && { label: t.maker.claudeAi.open, icon: FileArchive, onSelect: () => setOpen("ai") },
     !maker && {
       label: chief ? words.stopChief : words.makeChief,
       icon: Crown,
@@ -128,6 +136,10 @@ export function useBotActions(
       >
         {words.archiveConfirm.body}
       </Confirm>
+    ) : open === "code" ? (
+      <HistoryImport onClose={close} />
+    ) : open === "ai" ? (
+      <ClaudeAiImport onClose={close} />
     ) : open === "delete" ? (
       <DeleteBot bot={bot} chiefOf={chief ? crew.name : undefined} onClose={close} />
     ) : null;

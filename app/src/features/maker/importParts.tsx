@@ -9,6 +9,7 @@ import type { ImportDraft, ImportsCreateParams } from "../../lib/protocol.gen";
 import { useApi } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { attempt, notify } from "../../ui/toast";
+import { ReadWith } from "./ReadWith";
 
 type Kind = "key" | "email" | "number" | "card";
 const KINDS: Kind[] = ["key", "email", "number", "card"];
@@ -140,6 +141,7 @@ export function DraftReview({
       >
         {draft.text}
       </pre>
+      <ReadWith />
       <p className="text-muted text-xs leading-relaxed">{h.after}</p>
     </>
   );

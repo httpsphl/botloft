@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 import { FakeBotloft } from "../../lib/fake";
 import { prefs } from "../../shell/prefs";
@@ -158,12 +158,22 @@ describe("the Maker's menu", () => {
       .map((item) => item.textContent);
     expect(offered).toEqual([
       "Edit",
+      "Bring my Claude Code history",
+      "Bring my claude.ai export",
       "Restart",
       "Restart with a new conversation",
       "Open folder",
       "Mark as unread",
     ]);
-    fireEvent.click(within(menu).getByRole("menuitem", { name: "Edit" }));
+    // A history comes from the menu too, once the chat is not empty.
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "Bring my Claude Code history" }));
+    const history = await screen.findByRole("dialog", { name: "Bring your Claude Code history" });
+    fireEvent.click(within(history).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    fireEvent.contextMenu(row, { clientX: 120, clientY: 200 });
+    const again = screen.getByRole("menu", { name: "Actions for The Maker" });
+    fireEvent.click(within(again).getByRole("menuitem", { name: "Edit" }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).queryByRole("textbox", { name: /^Name/ })).toBeNull();
     expect(within(dialog).queryByRole("button", { name: "Pick any color" })).toBeNull();
