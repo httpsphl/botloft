@@ -106,11 +106,12 @@ pub(super) fn discover(
     Ok(found)
 }
 
-/// The claude.ai entries of an `mcp_status` answer.
+/// The claude.ai entries of an `mcp_status` answer, or of the `mcp_servers`
+/// of a turn's `system/init`, which has `source` and no `scope`.
 pub(super) fn connectors(servers: &[Value]) -> Vec<Connector> {
     let mut found: Vec<Connector> = servers
         .iter()
-        .filter(|server| server["scope"] == "claudeai")
+        .filter(|server| server["scope"] == "claudeai" || server["source"] == "claudeai")
         .filter_map(|server| {
             let name = server["name"].as_str()?;
             let name = name.strip_prefix(PREFIX).unwrap_or(name).trim();
@@ -158,6 +159,22 @@ mod tests {
                 ("Google Calendar", ConnectorState::Connected),
             ]
         );
+    }
+
+    #[test]
+    fn a_turns_init_names_them_by_their_source() {
+        // Trimmed from a turn's `system/init` of Claude Code 2.1.309 on
+        // 2026-11-04: `name`, `source` and `status`, no `scope`.
+        let servers = [
+            json!({ "name": "botloft", "status": "connected", "source": "dynamic" }),
+            json!({ "name": "claude.ai Canva", "status": "connected", "source": "claudeai" }),
+            // A server put in the agent's folder under a connector's name.
+            json!({ "name": "claude.ai Gmail", "status": "connected", "source": "project" }),
+        ];
+        let found = connectors(&servers);
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].name, "Canva");
+        assert_eq!(found[0].state, ConnectorState::Connected);
     }
 
     /// Run by hand: `BOTLOFT_TEST_CLAUDE=<claude.exe> cargo test -p botloftd

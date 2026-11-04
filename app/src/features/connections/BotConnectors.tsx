@@ -11,8 +11,21 @@ import { ToolTile } from "./ToolTile";
 
 export const CONNECTORS_PAGE = "https://claude.ai/customize/connectors";
 
-/** The account's connectors, looked for once and again on demand. */
-export function useConnectorList() {
+/** How old a list may be before the Tools page looks again on its own. */
+const STALE_MS = 60_000;
+
+/** Whether a list may be out of date: something in it is not connected, or
+ * it has none, and the last look was a while ago (spec 34.3). */
+function mayHaveChanged(list: ConnectorList): boolean {
+  const unsettled =
+    list.connectors.length === 0 || list.connectors.some((tool) => tool.state !== "connected");
+  return unsettled && Date.now() - list.checkedAt > STALE_MS;
+}
+
+/** The account's connectors, looked for once and again on demand. With
+ * `fresh`, it looks again by itself when the kept list may be out of date:
+ * the owner may just have signed in to a tool on claude.ai. */
+export function useConnectorList({ fresh = false }: { fresh?: boolean } = {}) {
   const api = useApi();
   const [list, setList] = useState<ConnectorList | null>(null);
   const [looking, setLooking] = useState(false);
@@ -20,9 +33,12 @@ export function useConnectorList() {
     async (refresh: boolean) => {
       setLooking(true);
       try {
-        setList(await api.call("connectors.list", { refresh }));
+        const found = await api.call("connectors.list", { refresh });
+        setList(found);
+        return found;
       } catch {
         setList((current) => current ?? { connectors: [], checkedAt: 0 });
+        return null;
       } finally {
         setLooking(false);
       }
@@ -30,8 +46,12 @@ export function useConnectorList() {
     [api],
   );
   useEffect(() => {
-    void look(false);
-  }, [look]);
+    void look(false).then((kept) => {
+      if (fresh && kept && mayHaveChanged(kept)) {
+        void look(true);
+      }
+    });
+  }, [look, fresh]);
   return { list, looking, refresh: () => look(true) };
 }
 
