@@ -75,7 +75,10 @@ mod tests {
         let dir = tempfile::tempdir().expect("dir");
         let db = dir.path().join("botloft.db");
         let store = Store::open(&db).expect("store");
-        assert_eq!(store.file().as_deref(), Some(db.as_path()));
+        // SQLite gives the real path: on macOS the temporary folder under
+        // `/var` is `/private/var`.
+        let real = |path: &Path| path.canonicalize().expect("real path");
+        assert_eq!(store.file().as_deref().map(real), Some(real(&db)));
         assert_eq!(Store::open_in_memory().expect("memory").file(), None);
         store
             .conn
