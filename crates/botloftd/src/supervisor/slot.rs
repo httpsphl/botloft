@@ -27,6 +27,9 @@ pub(super) struct Slot {
     /// subagent finished. Messages that arrive meanwhile may join it, so
     /// one `result` can close the turn of several messages.
     pub in_turn: bool,
+    /// A line too long to read was dropped in this turn: it may have been
+    /// the replay of a waiting message (spec 8.1).
+    pub dropped_in_turn: bool,
     /// Subagents Claude Code runs in the background, between turns too.
     pub agents: u32,
     /// Permission requests waiting for the owner.
@@ -58,6 +61,7 @@ impl Slot {
             stop: None,
             waiting: Vec::new(),
             in_turn: false,
+            dropped_in_turn: false,
             agents: 0,
             approvals: 0,
             limited_until: None,
@@ -72,6 +76,7 @@ impl Slot {
     pub fn clear_work(&mut self) {
         self.waiting.clear();
         self.in_turn = false;
+        self.dropped_in_turn = false;
         self.agents = 0;
         self.tasks = 0;
         self.approvals = 0;
