@@ -87,11 +87,6 @@ fn export_to(
     let mut light_bots = HashSet::new();
     let (crews, manifest) = {
         let store = daemon.store();
-        match scope {
-            BackupScope::Full => store.snapshot_to(&snapshot),
-            BackupScope::Light => store.snapshot_light_to(&snapshot),
-        }
-        .map_err(|err| io::Error::other(err.to_string()))?;
         let crews = store
             .crews(true)
             .map_err(|err| io::Error::other(err.to_string()))?;
@@ -123,6 +118,11 @@ fn export_to(
         };
         (crews, manifest)
     };
+    // The crews are listed first and the copy reads the whole database
+    // after, not on the store: a crew made in between is in the database
+    // without its folder, like a new one, and one deleted leaves a folder.
+    super::copy_database(daemon, scope, &snapshot)
+        .map_err(|err| io::Error::other(err.to_string()))?;
 
     let archive = dir.join("backup.zip");
     {
