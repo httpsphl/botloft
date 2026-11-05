@@ -126,6 +126,7 @@ fn stop(daemon: &Daemon, bot: &BotId) {
 fn release(daemon: &Daemon, bot: &BotId) {
     daemon.routines.forget(bot);
     daemon.screens.forget(bot);
+    daemon.media.forget(bot);
     // Its keys go with it (spec 32.2).
     if let Err(err) = daemon.keys.remove(&daemon.paths.secrets(), bot, None) {
         tracing::warn!(bot = %bot, "could not remove the agent's keys: {err}");

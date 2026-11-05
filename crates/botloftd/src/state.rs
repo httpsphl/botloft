@@ -132,6 +132,8 @@ pub struct Daemon {
     pub routines: Routines,
     pub browsers: Browsers,
     pub screens: Screens,
+    /// The links the app plays sounds and videos from (spec 8.4).
+    pub media: crate::media::Media,
     pub desktop: Desktop,
     /// The account and the copies in the cloud (spec 27).
     pub cloud: crate::cloud::Cloud,
@@ -190,6 +192,7 @@ impl Daemon {
                 Arc::clone(&options.clock),
             ),
             screens: Screens::default(),
+            media: crate::media::Media::default(),
             desktop: Desktop::new(options.owner_idle),
             autobackup: crate::autobackup::AutoBackup::new(
                 &options.paths.home,

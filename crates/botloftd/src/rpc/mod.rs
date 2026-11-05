@@ -193,6 +193,7 @@ async fn run(
 const ASIDE: &[&str] = &[
     method::FILES_LIST,
     method::FILES_READ,
+    method::FILES_MEDIA,
     method::SCREENS_LIST,
     method::ATTACHMENTS_READ,
     method::USAGE_TOKENS,

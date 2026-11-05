@@ -230,6 +230,7 @@ pub mod method {
     pub const ATTACHMENTS_READ: &str = "attachments.read";
     pub const FILES_LIST: &str = "files.list";
     pub const FILES_READ: &str = "files.read";
+    pub const FILES_MEDIA: &str = "files.media";
     pub const DELIVERIES_LIST: &str = "deliveries.list";
     pub const DELIVERIES_RETRY: &str = "deliveries.retry";
     pub const TASKS_LIST: &str = "tasks.list";

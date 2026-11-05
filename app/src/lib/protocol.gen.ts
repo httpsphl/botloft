@@ -869,6 +869,16 @@ export type FileData = { mediaType: string,
 data: string, };
 
 /**
+ * Where the app plays a sound or video of the bot's (spec 8.4): an address
+ * on the daemon's own server, read in pieces as it plays.
+ */
+export type MediaLink = { 
+/**
+ * `http://127.0.0.1:<port>/media/<token>`.
+ */
+url: string, };
+
+/**
  * Text sent to a bot, by the owner, another bot or the daemon.
  */
 export type Message = { id: MessageId, crewId: CrewId, fromKind: SenderKind, 
@@ -3044,6 +3054,7 @@ export interface RpcMethods {
   "attachments.read": { params: AttachmentIdParams; result: AttachmentData };
   "files.list": { params: FilesListParams; result: Array<BotFile> };
   "files.read": { params: FilesReadParams; result: FileData };
+  "files.media": { params: FilesReadParams; result: MediaLink };
   "deliveries.list": { params: DeliveriesListParams; result: Array<Delivery> };
   "deliveries.retry": { params: DeliveryIdParams; result: Delivery };
   "tasks.list": { params: TasksListParams; result: Array<Task> };
