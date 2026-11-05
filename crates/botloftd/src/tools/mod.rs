@@ -37,6 +37,7 @@ mod routine_catalog;
 mod routine_change;
 mod share;
 mod signal;
+mod skill;
 mod suggest;
 mod templates;
 
@@ -187,6 +188,11 @@ pub async fn handle(
         Ok(era) if called(&request) == Some(chrome::ASK_CHROME) => {
             let args = arguments(&request);
             let result = chrome::ask(&daemon, &bot, generation, args).await;
+            Ok(decorate(era, &request, result))
+        }
+        Ok(era) if called(&request) == Some(skill::ASK_SKILL) => {
+            let args = arguments(&request);
+            let result = skill::ask(&daemon, &bot, generation, args).await;
             Ok(decorate(era, &request, result))
         }
         Ok(era) if called(&request) == Some(plan::SHOW_PLAN) => {

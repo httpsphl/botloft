@@ -134,6 +134,8 @@ pub(super) fn launch_spec(
     let connectors = crate::connectors::launch(daemon, &bot.id, &workspace)?;
     // The owner's own Chrome, when they gave it (spec 37.2).
     let chrome = crate::chrome::launch(daemon, &bot.id, &workspace)?;
+    // The owner's skills it was given, copied into its folder (spec 38.3).
+    crate::skills::launch(daemon, &bot.id, &workspace)?;
     let args = agent.args(&LaunchPlan {
         session: &session,
         resumed,

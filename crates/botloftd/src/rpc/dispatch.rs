@@ -71,6 +71,8 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::CHROME_SET => reply(crate::chrome::set(daemon, parse(params)?)),
         method::CHROME_STATUS => reply(Ok(crate::chrome::status(daemon))),
         method::CHROME_STOP => reply(Ok(crate::chrome::stop(daemon))),
+        method::SKILLS_LIST => reply(crate::skills::list(daemon)),
+        method::SKILLS_SHARE => reply(crate::skills::share(daemon, parse(params)?)),
         method::LOGINS_LIST => reply(crate::logins::list(daemon)),
         method::LOGINS_SHARE => reply(crate::logins::share(daemon, parse(params)?)),
         method::LOGINS_REMOVE => reply(crate::logins::remove(daemon, parse(params)?)),

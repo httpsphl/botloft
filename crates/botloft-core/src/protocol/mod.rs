@@ -85,6 +85,7 @@ mod screens;
 mod search;
 mod session;
 mod settings;
+mod skills;
 mod usage;
 
 pub use backup::*;
@@ -121,6 +122,7 @@ pub use screens::*;
 pub use search::*;
 pub use session::*;
 pub use settings::*;
+pub use skills::*;
 pub use usage::*;
 
 /// Version negotiated in `session.hello`. 2 replaced the terminal with the
@@ -172,6 +174,8 @@ pub mod method {
     pub const CHROME_SET: &str = "chrome.set";
     pub const CHROME_STATUS: &str = "chrome.status";
     pub const CHROME_STOP: &str = "chrome.stop";
+    pub const SKILLS_LIST: &str = "skills.list";
+    pub const SKILLS_SHARE: &str = "skills.share";
     pub const LOGINS_LIST: &str = "logins.list";
     pub const LOGINS_OPEN: &str = "logins.open";
     pub const LOGINS_SHARE: &str = "logins.share";
