@@ -146,8 +146,10 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
         cloud: botloftd::cloud::CloudSettings::from_config(&config),
         secrets: Arc::new(secrets),
     });
-    // No bot process survived the last run, so nobody waits for these.
+    // No bot process survived the last run, so nobody waits for these,
+    // and what they were written and never began goes back in the queue.
     approvals::expire_all(&daemon);
+    courier::requeue_left_behind(&daemon);
     // Before the supervisor looks at the bots (spec 36.2).
     if let Err(err) = botloftd::service::maker::ensure(&daemon) {
         warn!("could not make the Maker: {err}");

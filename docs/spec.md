@@ -494,7 +494,8 @@ O dono reage a uma fala do bot (item `reply`) com um emoji, sem gastar um turno:
 7. Quando o Claude Code pega a mensagem, num turno novo ou no turno que já roda, ele a devolve no stdout com o mesmo `uuid` (`--replay-user-messages`), e a delivery ganha `read_at`. O app mostra isso como "lida", com os dois tiques em azul-claro (15.3).
 8. **O processo morreu antes de ler:** a delivery ainda está `sent` sem `read_at` e com a generation que acabou. Ela volta para `pending` com `attempts += 1` e o backoff de `retry_backoff_initial_ms * 2^(attempts-1)`, limitado a `retry_backoff_max_ms`. Ao chegar em `max_attempts` vira `dead`: uma mensagem que derruba o processo toda vez não fica em laço.
 9. Lease vencido (daemon caiu no meio): volta a `pending` no boot e a cada ciclo.
-10. `deliveries.retry` devolve uma delivery `dead` para `pending`, com as tentativas zeradas.
+10. **O daemon parou antes de o bot ler:** os processos morrem junto com o daemon e não passam pelo item 8, então uma delivery `sent` sem `read_at` ficaria assim para sempre. No boot, antes de subir qualquer bot, toda delivery nesse estado volta para `pending`, na hora e **sem contar tentativa** (quem parou foi o daemon, não a mensagem), com `last_error` dizendo isso. Uma run de rotina que esperava essa mensagem segue quando ela é entregue de novo (20.3). Um turno já começado (`read_at` gravado) não é repetido: o bot já leu a mensagem, e a conversa retomada mostra até onde ele foi.
+11. `deliveries.retry` devolve uma delivery `dead` para `pending`, com as tentativas zeradas.
 
 `sent` quer dizer que o processo do bot recebeu a mensagem na fila dele; `read_at`, que o bot começou a trabalhar nela. Nenhum dos dois prova que o trabalho foi feito; para isso existem tasks.
 
