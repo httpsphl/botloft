@@ -17,6 +17,7 @@ mod browser_sites;
 mod build;
 mod calls;
 mod catalog;
+mod chrome;
 mod connector;
 mod crew_access;
 mod crew_reach;
@@ -181,6 +182,11 @@ pub async fn handle(
         Ok(era) if called(&request) == Some(connector::ASK_CONNECTOR) => {
             let args = arguments(&request);
             let result = connector::ask(&daemon, &bot, generation, args).await;
+            Ok(decorate(era, &request, result))
+        }
+        Ok(era) if called(&request) == Some(chrome::ASK_CHROME) => {
+            let args = arguments(&request);
+            let result = chrome::ask(&daemon, &bot, generation, args).await;
             Ok(decorate(era, &request, result))
         }
         Ok(era) if called(&request) == Some(plan::SHOW_PLAN) => {

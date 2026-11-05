@@ -17,14 +17,22 @@ pub fn list(daemon: &Daemon) -> ApiResult<Permissions> {
         sites: Vec::new(),
         rules: Vec::new(),
         crew_access: Vec::new(),
+        chrome: Vec::new(),
     };
-    for bot in store.bots(None, false)? {
+    let bots = store.bots(None, false)?;
+    for bot in &bots {
         all.desktop.extend(store.desktop_grants(&bot.id)?);
         all.sites.extend(store.allowed_sites(&bot.id)?);
         all.rules.extend(store.allow_rules(&bot.id)?);
         all.crew_access
             .extend(crew_access::described(&store, &bot.id)?);
     }
+    // The owner's Chrome (spec 37.2), oldest first.
+    all.chrome = store
+        .chrome_grants()?
+        .into_iter()
+        .filter(|grant| bots.iter().any(|bot| bot.id == grant.bot_id))
+        .collect();
     Ok(all)
 }
 

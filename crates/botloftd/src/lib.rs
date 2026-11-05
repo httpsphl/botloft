@@ -13,6 +13,7 @@ pub mod browser;
 pub mod catalog;
 pub mod changes;
 pub mod chat;
+pub mod chrome;
 pub mod clock;
 pub mod cloud;
 pub mod config;

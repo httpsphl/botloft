@@ -18,7 +18,9 @@ const MCP_TIMEOUT_MARGIN: Duration = Duration::from_secs(120);
 /// `.claude/settings.json` (spec 7.5): keeps the bot out of the daemon's
 /// secrets, out of `fenced` (Botloft's data and the other crews' folders,
 /// see `fences`) and the owner's own Claude Code memory out of the bot.
-/// Deny rules apply even in a folder nobody trusted, and in every mode.
+/// Deny rules apply even in a folder nobody trusted, and in every mode. The
+/// ask rule sends every tool of the owner's Chrome to `permission_prompt`,
+/// in every mode too (spec 37.3).
 pub fn settings_json(botloft_home: &Path, crew_dir: &Path, fenced: &[PathBuf]) -> Value {
     let secrets = permission_rule_path(&botloft_home.join("secrets"));
     let mut deny = vec![format!("Read({secrets}/**)")];
@@ -28,7 +30,7 @@ pub fn settings_json(botloft_home: &Path, crew_dir: &Path, fenced: &[PathBuf]) -
         deny.push(format!("Edit({folder}/**)"));
     }
     json!({
-        "permissions": { "deny": deny },
+        "permissions": { "deny": deny, "ask": [crate::chrome::RULE_TOOL] },
         // Instruction files above the crew's folder are the owner's.
         "claudeMdExcludes": memory::excludes_above(crew_dir),
         // The bot's memory is the `CLAUDE.md` in its folder. Claude Code's
@@ -211,7 +213,10 @@ mod tests {
         let settings = settings_json(home, Path::new("/ws/site"), &[]);
         assert_eq!(
             settings["permissions"],
-            json!({ "deny": ["Read(//c/Users/ana/AppData/Local/Botloft/secrets/**)"] })
+            json!({
+                "deny": ["Read(//c/Users/ana/AppData/Local/Botloft/secrets/**)"],
+                "ask": ["mcp__claude-in-chrome"],
+            })
         );
         let blog = PathBuf::from("C:/Users/ana/Botloft/blog");
         let settings = settings_json(home, Path::new("/ws/site"), &[blog]);
