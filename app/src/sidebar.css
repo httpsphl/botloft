@@ -2,11 +2,16 @@
    the list changes at once, and the list slides out under the left edge
    (or back in) above the chat. Only a transform moves, so the chat is laid
    out once, not on every frame. Reduced motion makes it instant
-   (motion.css). */
+   (motion.css). Its room goes to the chat when it hides, never to a
+   panel beside it (SidePanel.tsx reads the same width). */
+
+:root {
+  --sidebar-width: 18rem;
+}
 
 .sidebar-slot {
   position: relative;
-  width: 18rem;
+  width: var(--sidebar-width);
 }
 
 .sidebar-slot[data-open="false"] {
