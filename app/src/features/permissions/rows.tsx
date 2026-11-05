@@ -2,11 +2,18 @@
 // details and on the Permissions page: what it is, with a button that takes
 // it back so the agent asks again the next time.
 
-import { Globe, Monitor, Network, X } from "lucide-react";
+import { AppWindow, Globe, Monitor, Network, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useT } from "../../i18n";
 import { day } from "../../lib/format";
-import type { AllowRule, Bot, BrowserSite, CrewAccess, DesktopGrant } from "../../lib/protocol.gen";
+import type {
+  AllowRule,
+  Bot,
+  BrowserSite,
+  ChromeGrant,
+  CrewAccess,
+  DesktopGrant,
+} from "../../lib/protocol.gen";
 import { useApi } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { attempt } from "../../ui/toast";
@@ -81,6 +88,26 @@ export function SiteRow({ site }: { site: BrowserSite }) {
         {site.site}
       </span>
       <span className="block text-muted">{words.allowedOn(day(site.allowedAt))}</span>
+    </Row>
+  );
+}
+
+/** The owner's own Chrome, given to the agent (spec 37.2). */
+export function ChromeRow({ bot, grant }: { bot: Bot; grant: ChromeGrant }) {
+  const words = useT().chrome;
+  const api = useApi();
+  return (
+    <Row
+      icon={<AppWindow aria-hidden size={14} className={ICON} />}
+      remove={words.take(bot.name)}
+      onRemove={() =>
+        attempt(words.takeFailed, () =>
+          api.call("chrome.set", { botId: grant.botId, on: false, acceptedRisks: false }),
+        )
+      }
+    >
+      <span className="block">{words.tab}</span>
+      <span className="block text-muted">{words.givenOn(day(grant.givenAt))}</span>
     </Row>
   );
 }

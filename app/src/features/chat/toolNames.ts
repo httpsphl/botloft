@@ -16,6 +16,22 @@ function connected(name: string): string | null {
   return `${tool.join("__").replaceAll("_", " ")} (${slug})`;
 }
 
+/** The owner's own Chrome (spec 37): its tools, and the name of its site rules. */
+const CHROME = "mcp__claude-in-chrome";
+
+function chrome(name: string, t: Words): string | null {
+  if (name === CHROME) {
+    return t.chrome.rule;
+  }
+  if (!name.startsWith(`${CHROME}__`)) {
+    return null;
+  }
+  const key = name.slice(CHROME.length + 2);
+  return Object.hasOwn(t.chrome.names, key)
+    ? t.chrome.names[key as keyof Words["chrome"]["names"]]
+    : t.chrome.use;
+}
+
 /** `mcp__botloft__send_message` is `send_message`; built-ins keep theirs. */
 export function toolKey(name: string): string {
   return name.split("__").at(-1) ?? name;
@@ -28,13 +44,13 @@ function known(key: string, t: Words): string | undefined {
 /** The tool as a title: "Send a message"; an unknown one, by its name. */
 export function toolTitle(name: string, t: Words): string {
   const key = toolKey(name);
-  return known(key, t) ?? connected(name) ?? key;
+  return chrome(name, t) ?? known(key, t) ?? connected(name) ?? key;
 }
 
 /** The tool inside a sentence: "wants to send a message". */
 export function toolAction(name: string, t: Words): string {
   const key = toolKey(name);
-  const title = known(key, t);
+  const title = chrome(name, t) ?? known(key, t);
   return title ? title.charAt(0).toLowerCase() + title.slice(1) : t.use(key);
 }
 

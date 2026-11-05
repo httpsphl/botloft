@@ -9,6 +9,7 @@ import { RequestCard, SettledLine } from "../../ui/ChatCard";
 import { Details } from "../../ui/Details";
 import { HELP_TOOL, HelpCard } from "../browser/HelpCard";
 import { SITE_TOOL, SiteCard } from "../browser/SiteCard";
+import { CHROME_TOOL, ChromeRequestCard } from "../chrome/ChromeRequestCard";
 import { CONNECTOR_TOOL, ConnectorRequestCard } from "../connections/ConnectorRequestCard";
 import { DESKTOP_TOOL, DesktopCard } from "../desktop/DesktopCard";
 import { BuildCard } from "../maker/BuildCard";
@@ -94,6 +95,8 @@ export function ApprovalCard({ approval, bot }: { approval: ApprovalItem; bot: B
       return <HelpCard approval={approval} bot={bot} />;
     case CONNECTOR_TOOL:
       return <ConnectorRequestCard approval={approval} bot={bot} />;
+    case CHROME_TOOL:
+      return <ChromeRequestCard approval={approval} bot={bot} />;
     case BUILD_TOOL:
       return <BuildCard approval={approval} bot={bot} />;
     default:

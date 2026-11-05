@@ -7,6 +7,7 @@ import { bots } from "./bots";
 import { browser } from "./browser";
 import { catalog } from "./catalog";
 import { chat } from "./chat";
+import { chrome } from "./chrome";
 import { common } from "./common";
 import { connections } from "./connections";
 import { crews } from "./crews";
@@ -42,6 +43,7 @@ export const ptBR: Messages = {
   alerts,
   bots,
   browser,
+  chrome,
   catalog,
   chat,
   connections,
