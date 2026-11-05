@@ -114,6 +114,9 @@ pub struct BotsConfig {
     pub attachment_max_mb: u64,
     /// Most bots a chief's suggestions can bring a crew to (spec 10.2).
     pub max_per_crew: usize,
+    /// Days the chats, messages and routine runs are kept (spec 12.1); 0
+    /// keeps them for good.
+    pub history_days: u64,
 }
 
 impl Default for BotsConfig {
@@ -123,6 +126,7 @@ impl Default for BotsConfig {
             sleep_after_minutes: 30,
             attachment_max_mb: 20,
             max_per_crew: 12,
+            history_days: 0,
         }
     }
 }

@@ -30,6 +30,9 @@ pub struct Settings {
     /// The Maker builds its plans without the owner's card; each build can
     /// still be undone (spec 36.4).
     pub maker_builds_without_asking: bool,
+    /// Days the chats, messages and routine runs are kept; 0 keeps them
+    /// for good, which is the default (spec 12.1).
+    pub history_days: u32,
 }
 
 /// The settings to change; the ones left out stay as they are.
@@ -60,6 +63,10 @@ pub struct SettingsUpdateParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub maker_builds_without_asking: Option<bool>,
+    /// From 0 (for good) to [`HISTORY_MAX_DAYS`].
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub history_days: Option<u32>,
 }
 
 /// The longest a permission request may wait for the owner: a day.
@@ -67,3 +74,7 @@ pub const APPROVAL_WAIT_MAX_MINUTES: u32 = 24 * 60;
 
 /// The longest a bot may stay idle before it sleeps: a day.
 pub const SLEEP_AFTER_MAX_MINUTES: u32 = 24 * 60;
+
+/// The most days of history the owner can choose to keep: ten years. More
+/// is the same as keeping it for good.
+pub const HISTORY_MAX_DAYS: u32 = 3650;

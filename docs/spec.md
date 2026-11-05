@@ -168,6 +168,7 @@ approval_timeout_minutes = 60 # sem resposta do dono, a ferramenta é negada
 sleep_after_minutes = 30     # parado por esse tempo, o bot dorme (7.7); 0 nunca
 attachment_max_mb = 20        # por arquivo; no máximo 10 arquivos por message
 max_per_crew = 12             # até onde as sugestões do chefe levam uma crew (10.2)
+history_days = 0              # dias que conversas, messages e runs ficam guardados (12.1); 0 para sempre
 
 [browser]                     # navegador dos bots (seção 21)
 path = ""                     # vazio = Microsoft Edge do Windows
@@ -183,7 +184,7 @@ max_hops = 4
 default_deadline_minutes = 120
 ```
 
-`start_with_windows`, `keep_awake`, `bots.approval_timeout_minutes` e `bots.sleep_after_minutes` também mudam pelas Configurações do app (`settings.update`, 11.2): o daemon grava no próprio arquivo com `toml_edit`, só a chave que mudou, e as linhas e comentários do dono ficam (o comentário depois de um valor trocado também). O arquivo novo substitui o antigo inteiro (`config.toml.new` renomeado), para uma queda no meio não deixar metade. Valem na hora: `keep_awake` liga ou desliga o pedido de energia, `start_with_windows` muda os gatilhos da tarefa (14) o tempo para dormir vale na próxima passada do supervisor (7.7), e a espera das aprovações vale para o próximo pedido; uma espera maior chega ao `mcp.json` de cada bot, que reinicia retomando a conversa quando nada estiver em andamento (10.1, 7.4).
+`start_with_windows`, `keep_awake`, `bots.approval_timeout_minutes`, `bots.sleep_after_minutes` e `bots.history_days` também mudam pelas Configurações do app (`settings.update`, 11.2): o daemon grava no próprio arquivo com `toml_edit`, só a chave que mudou, e as linhas e comentários do dono ficam (o comentário depois de um valor trocado também). O arquivo novo substitui o antigo inteiro (`config.toml.new` renomeado), para uma queda no meio não deixar metade. Valem na hora: `keep_awake` liga ou desliga o pedido de energia, `start_with_windows` muda os gatilhos da tarefa (14) o tempo para dormir vale na próxima passada do supervisor (7.7), e a espera das aprovações vale para o próximo pedido; uma espera maior chega ao `mcp.json` de cada bot, que reinicia retomando a conversa quando nada estiver em andamento (10.1, 7.4).
 
 ## 7. Ciclo de vida do bot
 
@@ -820,6 +821,14 @@ Pragmas: `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON`, `busy_time
 | `chat_search` | índice FTS5 do texto de `chat_items`, pela view `chat_text`, mantido por triggers (8.8) |
 
 Índices mínimos: `deliveries(state, next_attempt_at)`, `messages(crew_id, created_at)`, `tasks(assignee_bot_id, status)`, `bots(crew_id)`, `chat_items(bot_id, id)`, `chat_items(created_at) WHERE kind = 'turn'` (8.7), `attachments(message_id)`.
+
+### 12.1 Histórico guardado
+
+Por padrão nada sai: conversas, messages e runs de rotina ficam para sempre. O dono pode escolher por quanto tempo guardar (`[bots] history_days`, `historyDays` em `settings.update`, de 0 a 3650; no app, Configurações > Geral > Histórico: Sempre, 30 dias, 90 dias ou 1 ano). Escolher um prazo que apaga o que antes ficava pede confirmação no app, porque apaga na hora e não volta.
+
+- **O que sai**, quando é mais antigo que o prazo: os itens do chat, com as reações, as aprovações já respondidas e as perguntas já respondidas ou vencidas deles (a message de resposta fica, sem apontar para a pergunta), e o índice de busca (8.8) junto, pelos triggers; as messages cujas deliveries foram todas lidas ou desistidas (`dead`), com as deliveries e as linhas dos anexos; as runs de rotina terminadas.
+- **O que fica sempre:** o que ainda espera alguém: aprovação pendente, pergunta aberta, message que não foi entregue ou que o bot ainda não começou, as messages de uma task aberta, a run em andamento e a message dela, e a message que levou uma reação (sai depois, quando a reação sai com o item). Também ficam as tasks, o uso do plano (`turn_costs`, `plan_readings`), a memória dos bots e todos os arquivos nas pastas deles: os anexos continuam em `attachments\` do workspace. A conversa que o Claude Code guarda por conta própria (7.3) não é tocada.
+- **Quando:** uma passada 2 min depois de o daemon subir, outra a cada 6 h, e outra na hora quando o dono muda o prazo. Cada passada apaga em lotes de 500 por tipo, uma transação por lote, soltando o banco entre um lote e outro para os bots e o app seguirem. O log diz quanto saiu (em `info`, só contagens). O arquivo do banco não encolhe: o SQLite reaproveita as páginas livres.
 
 ## 13. Segurança e privacidade
 

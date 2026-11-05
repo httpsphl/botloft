@@ -187,6 +187,8 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
             "desktop outline",
             botloftd::desktop::outline::run(Arc::clone(&daemon)),
         );
+        // Forgets the history older than the owner keeps (spec 12.1).
+        loops.spawn("history", botloftd::history::run(Arc::clone(&daemon)));
         // The owner's claude.ai tools, for the agents' rules (spec 34.3).
         tokio::spawn(botloftd::connectors::look_at_start(Arc::clone(&daemon)));
         // Ends on its own where nothing keeps the computer awake.

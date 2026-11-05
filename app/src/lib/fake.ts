@@ -91,6 +91,7 @@ export class FakeBotloft implements BotloftApi {
     defaultAgent: "claude",
     showExperimentalAgents: false,
     makerBuildsWithoutAsking: false,
+    historyDays: 0,
   };
   /** Folders the owner sent to the Recycle Bin with a delete, in order. */
   readonly recycled: string[] = [];
@@ -320,6 +321,7 @@ export class FakeBotloft implements BotloftApi {
           change.showExperimentalAgents ?? this.settings.showExperimentalAgents,
         makerBuildsWithoutAsking:
           change.makerBuildsWithoutAsking ?? this.settings.makerBuildsWithoutAsking,
+        historyDays: change.historyDays ?? this.settings.historyDays,
       };
       if (change.showExperimentalAgents !== undefined) {
         this.system = {
