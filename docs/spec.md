@@ -166,6 +166,7 @@ retry_backoff_max_ms = 120000
 [bots]
 approval_timeout_minutes = 60 # sem resposta do dono, a ferramenta é negada
 sleep_after_minutes = 30     # parado por esse tempo, o bot dorme (7.7); 0 nunca
+max_running = 0               # quantos agentes rodam ao mesmo tempo (7.8); 0 sem limite
 attachment_max_mb = 20        # por arquivo; no máximo 10 arquivos por message
 max_per_crew = 12             # até onde as sugestões do chefe levam uma crew (10.2)
 
@@ -342,6 +343,16 @@ Cada processo de bot parado ainda reserva memória: medido em 31/10/2026, 29 bot
 - **Desligar** (`sleep_after_minutes = 0`, "Nunca" no app): os bots que dormem sobem na próxima passada e não dormem mais.
 - **No app:** na lista de conversas e nos cartões da crew, um bot `sleeping` fica como um `idle` (sem estado, com "Última atividade"), mas com o mascote de olhos fechados (`sleeping`). No cabeçalho do chat aparece "Dormindo", com a dica de que ele não usa memória e acorda sozinho quando chega mensagem, rotina ou aviso. Em Configurações, Geral, "Agentes parados dormem depois de": 15 minutos, 30 minutos, 1 hora ou Nunca (`sleepAfterMinutes`, 11.2).
 - **Testes:** os testes do daemon rodam com o sono desligado, menos os de `tests/sleep.rs`, que usam um tempo de milissegundos (`LiveSettings::set_sleep_after`).
+
+### 7.8 Limite de agentes rodando
+
+Sem limite por padrão. Com `[bots] max_running` maior que 0, nunca rodam mais processos de agente que isso ao mesmo tempo: é o que deixa uma máquina de memória fixa (um servidor) a salvo de um horário em que todas as rotinas acordam juntas. Só pelo `config.toml` por enquanto, lido ao subir o daemon.
+
+- **Quem conta:** todo agente com processo, inclusive o que está saindo, e o que está sendo criado.
+- **Quem vem primeiro:** a cada passada do supervisor, os agentes que devem subir e têm uma mensagem esperando (delivery `pending` ou `sending`) vêm antes dos outros.
+- **Abrir vaga:** sem vaga para um agente com mensagem, o agente `idle` há mais tempo (sem trabalho nem comando em segundo plano, 7.7) vai dormir, como pelo sono comum, e o que esperava sobe quando ele sai. Uma vaga que já está sendo liberada (um processo pedido para parar ou dormir) conta: a passada seguinte não põe outro para dormir por ela.
+- **Esperar:** um agente que não coube fica `sleeping`. Com mensagem, continua pedindo para acordar e sobe assim que houver vaga; sem nada a fazer, sobe quando uma mensagem o acordar. Ele nunca tira a vaga de ninguém, então dois agentes sem trabalho não ficam se empurrando, nem com o sono desligado.
+- **O que não muda:** um agente ocupado, esperando aprovação ou com subagente nunca é parado para dar lugar.
 
 ## 8. Chat
 

@@ -40,4 +40,14 @@ impl Store {
             )?
             .execute(params![bot.as_str(), now])?)
     }
+
+    /// The bots a message waits for, to go out or going out now: they come
+    /// first when only so many agents may run (spec 7.8).
+    pub fn bots_with_work(&self) -> Result<std::collections::HashSet<BotId>> {
+        let mut stmt = self.conn.prepare_cached(
+            "SELECT DISTINCT bot_id FROM deliveries WHERE state IN ('pending', 'sending')",
+        )?;
+        let rows = stmt.query_map([], |row| crate::parse_column(row, 0))?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
 }

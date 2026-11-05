@@ -110,6 +110,8 @@ pub struct BotsConfig {
     pub approval_timeout_minutes: u64,
     /// Minutes idle before a bot sleeps (spec 7.7); 0 never.
     pub sleep_after_minutes: u64,
+    /// Most agents whose process runs at once (spec 7.8); 0 no limit.
+    pub max_running: usize,
     /// Largest attachment, per file (spec 9.5).
     pub attachment_max_mb: u64,
     /// Most bots a chief's suggestions can bring a crew to (spec 10.2).
@@ -121,6 +123,7 @@ impl Default for BotsConfig {
         Self {
             approval_timeout_minutes: 60,
             sleep_after_minutes: 30,
+            max_running: 0,
             attachment_max_mb: 20,
             max_per_crew: 12,
         }

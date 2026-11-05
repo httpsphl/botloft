@@ -31,6 +31,12 @@ pub(super) struct Start {
     session: Option<String>,
 }
 
+impl Start {
+    pub(super) fn bot_id(&self) -> &botloft_core::ids::BotId {
+        &self.bot.id
+    }
+}
+
 impl Supervisor {
     /// Decides to start `bot`, or marks it offline when Claude Code is not
     /// usable. The slot stays `launching` until [`Self::launch`] ends.

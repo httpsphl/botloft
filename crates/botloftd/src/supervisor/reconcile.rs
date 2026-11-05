@@ -35,10 +35,12 @@ impl Supervisor {
                         sessions.insert(bot.id.clone(), session);
                     }
                 }
-                Ok((bots, crews, sessions))
+                // Who a message waits for comes first under a limit (7.8).
+                let with_work = store.bots_with_work()?;
+                Ok((bots, crews, sessions, with_work))
             })
         };
-        let (bots, crews, sessions) = match read {
+        let (bots, crews, sessions, with_work) = match read {
             Ok(read) => read,
             Err(err) => {
                 warn!("reconcile could not read the database: {err}");
@@ -52,6 +54,7 @@ impl Supervisor {
         self.release_limits(daemon.clock.now_ms());
         // Read before the supervisor lock, like the database.
         let sleep_after = daemon.settings.sleep_after();
+        let max_running = daemon.settings.max_running();
         let now = Instant::now();
         let mut inner = self.lock();
         for (bot, session) in sessions {
@@ -64,6 +67,7 @@ impl Supervisor {
                 self.reconcile_bot(&mut inner, crew, bot, now, sleep_after)
             })
             .collect();
+        let starts = self.admit(&mut inner, starts, &with_work, max_running);
         drop(inner);
         // One after another, but nothing else waits for them.
         for start in starts {
