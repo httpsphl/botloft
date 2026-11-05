@@ -24,6 +24,7 @@ pub mod imports;
 pub mod keep_awake;
 pub mod logging;
 pub mod logins;
+pub mod loops;
 pub mod mcp_secrets;
 pub mod mobile;
 pub mod paths;

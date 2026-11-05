@@ -11,6 +11,7 @@ use botloftd::browser::{self, BrowserSettings};
 use botloftd::clock::SystemClock;
 use botloftd::config::Config;
 use botloftd::courier::{self, CourierSettings};
+use botloftd::loops::Loops;
 use botloftd::paths::{self, Paths};
 use botloftd::platform::{self, InstanceLock};
 use botloftd::runtime::PipeRuntime;
@@ -172,22 +173,36 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
                 )
             })?;
         info!(port = config.port, "listening on 127.0.0.1");
-        tokio::spawn(supervisor::run(Arc::clone(&daemon)));
-        tokio::spawn(courier::run(Arc::clone(&daemon)));
-        tokio::spawn(approvals::forget_turns(Arc::clone(&daemon)));
-        tokio::spawn(routines::run(Arc::clone(&daemon)));
-        tokio::spawn(botloftd::autobackup::run(Arc::clone(&daemon)));
-        tokio::spawn(botloftd::mobile::run(Arc::clone(&daemon)));
-        tokio::spawn(browser::run(Arc::clone(&daemon)));
+        // Each of these runs as long as the daemon does (spec 14).
+        let mut loops = Loops::new();
+        loops.spawn("supervisor", supervisor::run(Arc::clone(&daemon)));
+        loops.spawn("courier", courier::run(Arc::clone(&daemon)));
+        loops.spawn("approvals", approvals::forget_turns(Arc::clone(&daemon)));
+        loops.spawn("routines", routines::run(Arc::clone(&daemon)));
+        loops.spawn("backup", botloftd::autobackup::run(Arc::clone(&daemon)));
+        loops.spawn("phone relay", botloftd::mobile::run(Arc::clone(&daemon)));
+        loops.spawn("browser", browser::run(Arc::clone(&daemon)));
+        // The outline around the window a bot uses (spec 24.9).
+        loops.spawn(
+            "desktop outline",
+            botloftd::desktop::outline::run(Arc::clone(&daemon)),
+        );
         // The owner's claude.ai tools, for the agents' rules (spec 34.3).
         tokio::spawn(botloftd::connectors::look_at_start(Arc::clone(&daemon)));
-        // The outline around the window a bot uses (spec 24.9).
-        tokio::spawn(botloftd::desktop::outline::run(Arc::clone(&daemon)));
+        // Ends on its own where nothing keeps the computer awake.
         tokio::spawn(keep_awake::run(
             daemon.supervisor.busy_bots(),
             daemon.settings.keep_awake(),
         ));
-        server::serve(Arc::clone(&daemon), listener, platform::shutdown_signal()).await?;
+        let serving = server::serve(Arc::clone(&daemon), listener, platform::shutdown_signal());
+        tokio::select! {
+            served = serving => served?,
+            ended = loops.first_ended() => {
+                daemon.supervisor.shutdown();
+                // Not a stop asked for: the service brings the daemon back.
+                anyhow::bail!("{ended}; stopping so Botloft starts again");
+            }
+        }
         daemon.supervisor.shutdown();
         // A stop asked for (logout, `service stop`): launchd must not
         // bring the daemon back (spec 14.1).
