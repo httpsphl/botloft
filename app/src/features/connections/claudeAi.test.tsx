@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 import { FakeBotloft } from "../../lib/fake";
 import { crewOpened, openBot, renderApp } from "../../test/app";
@@ -27,12 +27,12 @@ async function setUp(scoutTools: string[] = []) {
   return { fake, scout, cody, host };
 }
 
-/** From Scout's details, "Choose tools" opens Settings > Tools. */
+/** From Scout's details, its Tools row opens Settings > Tools. */
 async function openTools() {
   openBot("Scout");
   fireEvent.click(await screen.findByRole("button", { name: "Show details" }));
   const details = await screen.findByRole("complementary", { name: "About Scout" });
-  fireEvent.click(await within(details).findByRole("button", { name: "Choose tools" }));
+  fireEvent.click(await within(details).findByRole("button", { name: /^Tools/ }));
   return screen.findByRole("region", { name: "Settings" });
 }
 
@@ -124,14 +124,15 @@ describe("the tools of the owner's claude.ai account (spec 34.7)", () => {
     openBot("Scout");
     fireEvent.click(await screen.findByRole("button", { name: "Show details" }));
     const details = await screen.findByRole("complementary", { name: "About Scout" });
-    const list = await within(details).findByRole("list", { name: "Tools from claude.ai" });
-    expect(list.textContent).toContain("Google Calendar");
+    const tools = await within(details).findByRole("button", { name: /^Tools/ });
+    expect(tools.textContent).toContain("Google Calendar");
 
     openBot("Cody");
     fireEvent.click(await screen.findByRole("button", { name: "Show details" }));
     const codyDetails = await screen.findByRole("complementary", { name: "About Cody" });
-    await within(codyDetails).findByText("Connected tools");
-    expect(within(codyDetails).queryByText("Tools from claude.ai")).toBeNull();
+    const codyTools = await within(codyDetails).findByRole("button", { name: /^Tools/ });
+    await waitFor(() => expect(codyTools.textContent).toContain("None yet"));
+    expect(within(codyDetails).queryByRole("button", { name: /^Skills/ })).toBeNull();
   });
 });
 

@@ -33,9 +33,4 @@ export const skills: typeof en = {
     declined: (name) => `Você não deu ${name}`,
     expired: (name) => `O pedido de ${name} expirou`,
   },
-  details: {
-    label: "Skills",
-    none: (bot) => `${bot} não tem nenhuma das suas skills. Ele pede no chat quando uma ajudaria.`,
-    choose: "Escolher skills",
-  },
 };

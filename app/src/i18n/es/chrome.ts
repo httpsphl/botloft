@@ -42,8 +42,5 @@ export const chrome: typeof en = {
   },
   details: {
     label: "Tu Chrome",
-    off: (bot) => `${bot} no usa tu Chrome. Lo pide en su chat cuando una tarea lo necesita.`,
-    notClaude: "Solo los agentes de Claude Code pueden usar tu Chrome.",
-    give: "Dar mi Chrome",
   },
 };

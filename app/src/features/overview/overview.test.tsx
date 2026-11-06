@@ -234,10 +234,11 @@ describe("the pull requests and the connected tools (spec 33.5, 33.6)", () => {
     ).toBeTruthy();
   });
 
-  test("says when the agent has no connected tools, with the way to its details", async () => {
+  test("says when the agent has no connected tools, with the way to Settings > Tools", async () => {
     const { panel } = await openOverview(split(24_200));
     expect(await within(panel).findByText("Scout has no connected tools.")).toBeTruthy();
-    fireEvent.click(within(panel).getByRole("button", { name: "Change in details" }));
-    expect(await screen.findByRole("complementary", { name: "About Scout" })).toBeTruthy();
+    fireEvent.click(within(panel).getByRole("button", { name: "Choose in Settings" }));
+    const page = await screen.findByRole("region", { name: "Settings" });
+    expect(within(page).getByRole("heading", { level: 2, name: "Tools" })).toBeTruthy();
   });
 });

@@ -15,7 +15,7 @@ import { Confirm } from "../../ui/Confirm";
 import { Dialog } from "../../ui/Dialog";
 import { attempt } from "../../ui/toast";
 import { AgentSwitches } from "./AgentSwitches";
-import { CONNECTORS_PAGE } from "./BotConnectors";
+import { CONNECTORS_PAGE } from "./connectorList";
 import { EditToolDialog } from "./EditToolDialog";
 import { ToolTile } from "./ToolTile";
 import { knownTool } from "./toolCatalog";

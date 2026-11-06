@@ -4,9 +4,9 @@
 
 import { useT } from "../../i18n";
 import type { Bot } from "../../lib/protocol.gen";
-import { useDesktopGrants } from "./DesktopGrants";
 import { RealInput } from "./RealInput";
 import { Unattended } from "./Unattended";
+import { useDesktopGrants } from "./useDesktopGrants";
 
 export function AppOptions({ bot, app }: { bot: Bot; app: string }) {
   const words = useT().desktop.panel;

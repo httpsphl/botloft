@@ -8,6 +8,7 @@ import {
   DatabaseBackup,
   Info,
   KeyRound,
+  KeySquare,
   LockKeyhole,
   type LucideIcon,
   MessageSquare,
@@ -25,6 +26,7 @@ import { useT } from "../../i18n";
 import { SYSTEM } from "../../lib/system";
 import { useApp } from "../../store/context";
 import { ToolsPage } from "../connections/ToolsPage";
+import { KeysSettings } from "../keys/KeysSettings";
 import { PastedKeys } from "../keys/PastedKeys";
 import { LoginsPage } from "../logins/LoginsPage";
 import { PermissionsSettings } from "../permissions/PermissionsSettings";
@@ -60,6 +62,7 @@ const GROUPS: { id: GroupId; pages: { id: Page; icon: LucideIcon }[] }[] = [
       { id: "tools", icon: Plug },
       { id: "logins", icon: KeyRound },
       { id: "skills", icon: Sparkles },
+      { id: "keys", icon: KeySquare },
       { id: "permissions", icon: LockKeyhole },
     ],
   },
@@ -85,7 +88,7 @@ export function SettingsPage() {
   const s = t.account.settings;
   // Opened on the Permissions page from an agent's details or panel.
   const permissionsAt = useApp((state) => state.permissionsAt);
-  // Or on another part, from elsewhere in the app (an agent's tools).
+  // Or on another part, from elsewhere in the app (an agent's tools, keys).
   const settingsPart = useApp((state) => state.settingsPart);
   const clearSettingsPart = useApp((state) => state.clearSettingsPart);
   const [page, setPage] = useState<Page>(
@@ -103,6 +106,7 @@ export function SettingsPage() {
     tools: s.tools,
     logins: s.logins,
     skills: s.skills,
+    keys: s.keys,
     permissions: s.permissions,
     backup: s.backup,
     security: s.security,
@@ -212,6 +216,7 @@ export function SettingsPage() {
                 {page === "tools" && <ToolsPage />}
                 {page === "logins" && <LoginsPage />}
                 {page === "skills" && <SkillsPage />}
+                {page === "keys" && <KeysSettings />}
                 {page === "permissions" && <PermissionsSettings />}
                 {page === "backup" && <BackupSettings goToAccount={() => open("account")} />}
                 {page === "security" && <PastedKeys />}

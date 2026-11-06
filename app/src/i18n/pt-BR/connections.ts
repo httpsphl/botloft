@@ -60,9 +60,6 @@ export const connections: Messages["connections"] = {
     failed: "Não deu para remover a ferramenta",
   },
   bot: {
-    title: "Ferramentas conectadas",
-    none: "Nenhuma ferramenta conectada ainda. Você pode conectá-las em Configurações, em Ferramentas conectadas.",
-    toggle: (tool, bot) => `${bot} pode usar ${tool}`,
     failed: "Não deu para mudar as ferramentas deste agente",
     reason: "Por quê",
   },
@@ -73,13 +70,10 @@ export const connections: Messages["connections"] = {
     failed: "Não conectou",
   },
   claudeAi: {
-    title: "Ferramentas do claude.ai",
     looking: "Procurando as ferramentas da sua conta do claude.ai…",
     none: "Nenhuma ferramenta encontrada. Elas aparecem quando o Claude Code usa a sua conta do claude.ai e você conectou alguma lá.",
     refresh: "Procurar de novo",
     toggle: (tool, bot) => `${bot} pode usar ${tool}`,
-    hint: (bot) =>
-      `Login feito uma vez no claude.ai, sem entrar de novo aqui. ${bot} pergunta antes de cada uso, a menos que você libere para sempre.`,
     manage: "Gerenciar no claude.ai",
     failed: "Não deu para mudar as ferramentas",
     openFailed: "Não deu para abrir o claude.ai",
@@ -109,7 +103,6 @@ export const connections: Messages["connections"] = {
     canUse: (bot) => `${bot} pode usar`,
     manage: "Gerenciar no claude.ai",
     close: "Fechar",
-    choose: "Escolher ferramentas",
   },
   about: toolAbout,
   toolKinds,

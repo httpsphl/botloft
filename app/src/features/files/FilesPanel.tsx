@@ -1,19 +1,21 @@
 // The panel beside a bot's chat with the files it made (spec 15.1): newest
-// first, the ones that showed up since the owner last looked marked new. A
-// click shows the file in the panel itself.
+// first, the ones that showed up since the owner last looked marked new,
+// pictures with their own thumbnail, and chips that keep one kind (the
+// pictures as a grid). A click shows the file in the panel itself, which
+// can take the whole room for it.
 
 import { ArrowLeft, RefreshCw, X } from "lucide-react";
+import { useState } from "react";
 import { useT } from "../../i18n";
-import { fileSize, fromNow } from "../../lib/format";
 import type { Bot, BotFile } from "../../lib/protocol.gen";
-import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { EmptyState } from "../../ui/EmptyState";
 import { SidePanel } from "../../ui/SidePanel";
 import { ComputerFooter } from "../terminal/ComputerDock";
 import { FilePreview } from "./FilePreview";
-import { fileKind, kindIcon } from "./kinds";
+import { FileCard, FileRow } from "./FileRow";
+import { FILE_GROUPS, type FileGroup, fileKind, kindGroup } from "./kinds";
 import type { BotFiles } from "./useBotFiles";
 
 export function FilesPanel({
@@ -40,9 +42,20 @@ export function FilesPanel({
   const chosen =
     data.files.find((file) => file.path === path) ??
     (described?.path === path ? described : undefined);
+  // A file shown can take all the room the chat can spare, until it closes.
+  const [wide, setWide] = useState(false);
+  const back = () => {
+    setWide(false);
+    onPath(null);
+  };
 
   return (
-    <SidePanel label={t.panel(bot.name)} name="computer" defaultWidth={600}>
+    <SidePanel
+      label={t.panel(bot.name)}
+      name="files"
+      defaultWidth={400}
+      expanded={wide && chosen !== undefined}
+    >
       <header className="flex h-11 shrink-0 items-center justify-between pr-1.5 pl-4">
         <h2 className="font-semibold text-base">{t.heading}</h2>
         <div className="flex items-center gap-0.5">
@@ -57,9 +70,9 @@ export function FilesPanel({
         </div>
       </header>
       {chosen ? (
-        <FilePreview bot={bot} file={chosen} onBack={() => onPath(null)} />
+        <FilePreview bot={bot} file={chosen} wide={wide} onWide={setWide} onBack={back} />
       ) : path !== null ? (
-        <Missing onBack={() => onPath(null)} />
+        <Missing onBack={back} />
       ) : (
         <List bot={bot} data={data} since={since} onOpen={onPath} />
       )}
@@ -95,6 +108,7 @@ function List({
   onOpen(path: string): void;
 }) {
   const t = useT().files;
+  const [only, setOnly] = useState<FileGroup | null>(null);
   if (data.error && data.files.length === 0) {
     return (
       <div className="p-3">
@@ -107,49 +121,67 @@ function List({
   if (data.files.length === 0 && !data.loading) {
     return <EmptyState color={bot.color} title={t.emptyTitle(bot.name)} body={t.emptyBody} />;
   }
-  return (
-    <ul aria-label={t.list} className="min-h-0 flex-1 overflow-y-auto p-1.5">
-      {data.files.map((file) => (
-        <FileRow key={file.path} file={file} fresh={file.modifiedAt > since} onOpen={onOpen} />
-      ))}
-    </ul>
+  const groupOf = (file: BotFile) => kindGroup(fileKind(file.mediaType, file.name));
+  const counts = new Map<FileGroup, number>();
+  for (const file of data.files) {
+    counts.set(groupOf(file), (counts.get(groupOf(file)) ?? 0) + 1);
+  }
+  const present = FILE_GROUPS.filter((group) => counts.has(group));
+  // A group that emptied out shows everything again.
+  const shown = only !== null && counts.has(only) ? only : null;
+  const files = shown === null ? data.files : data.files.filter((file) => groupOf(file) === shown);
+  const chip = (group: FileGroup | null, label: string, count: number) => (
+    <button
+      key={group ?? "all"}
+      type="button"
+      aria-pressed={shown === group}
+      onClick={() => setOnly(group)}
+      className={`shrink-0 rounded-full px-2.5 py-1 font-medium text-xs transition-colors ${
+        shown === group ? "bg-ink text-canvas" : "bg-bubble text-ink-soft hover:text-ink"
+      }`}
+    >
+      {label} <span className="opacity-60">{count}</span>
+    </button>
   );
-}
-
-function FileRow({
-  file,
-  fresh,
-  onOpen,
-}: {
-  file: BotFile;
-  fresh: boolean;
-  onOpen(path: string): void;
-}) {
-  const t = useT().files;
-  const kind = fileKind(file.mediaType, file.name);
-  const Icon = kindIcon(kind);
   return (
-    <li>
-      <button
-        type="button"
-        onClick={() => onOpen(file.path)}
-        title={file.path}
-        className="flex w-full min-w-0 items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-sunken"
-      >
-        <span aria-hidden className="file-tile" data-kind={kind}>
-          <Icon size={18} />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="flex items-center gap-2">
-            <span className="truncate font-medium text-sm">{file.name}</span>
-            {fresh && <Badge tone="work">{t.newTag}</Badge>}
-          </span>
-          <span className="block truncate text-muted text-xs">
-            {file.folder ? `${file.folder} · ` : ""}
-            {fileSize(file.size)} · {fromNow(file.modifiedAt)}
-          </span>
-        </span>
-      </button>
-    </li>
+    <div className="flex min-h-0 flex-1 flex-col">
+      {present.length > 1 && (
+        <fieldset
+          aria-label={t.filter}
+          className="m-0 flex flex-wrap gap-1.5 border-0 px-3 pt-0.5 pb-2"
+        >
+          {chip(null, t.groups.all, data.files.length)}
+          {present.map((group) => chip(group, t.groups[group], counts.get(group) ?? 0))}
+        </fieldset>
+      )}
+      {shown === "images" ? (
+        <ul
+          aria-label={t.list}
+          className="grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-1 overflow-y-auto px-2 pb-2"
+        >
+          {files.map((file) => (
+            <FileCard
+              key={file.path}
+              botId={bot.id}
+              file={file}
+              fresh={file.modifiedAt > since}
+              onOpen={onOpen}
+            />
+          ))}
+        </ul>
+      ) : (
+        <ul aria-label={t.list} className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-1.5">
+          {files.map((file) => (
+            <FileRow
+              key={file.path}
+              botId={bot.id}
+              file={file}
+              fresh={file.modifiedAt > since}
+              onOpen={onOpen}
+            />
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

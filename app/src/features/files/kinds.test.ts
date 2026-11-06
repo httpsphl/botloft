@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { fileKind } from "./kinds";
+import { extensionOf, fileKind, kindGroup } from "./kinds";
 
 const OCTET = "application/octet-stream";
 
@@ -35,5 +35,25 @@ describe("fileKind", () => {
     expect(fileKind("text/markdown", "notes.md")).toBe("text");
     expect(fileKind(OCTET, "blob.bin")).toBe("other");
     expect(fileKind(OCTET, ".docx")).toBe("other");
+  });
+});
+
+describe("kindGroup and extensionOf", () => {
+  test("each kind falls in the group its chip shows", () => {
+    expect(kindGroup("image")).toBe("images");
+    expect(kindGroup("pdf")).toBe("documents");
+    expect(kindGroup("word")).toBe("documents");
+    expect(kindGroup("sheet")).toBe("sheets");
+    expect(kindGroup("video")).toBe("media");
+    expect(kindGroup("code")).toBe("code");
+    expect(kindGroup("archive")).toBe("other");
+  });
+
+  test("the extension in capitals, or nothing", () => {
+    expect(extensionOf("chart.png")).toBe("PNG");
+    expect(extensionOf("archive.tar.gz")).toBe("GZ");
+    expect(extensionOf("Makefile")).toBe("");
+    expect(extensionOf(".env")).toBe("");
+    expect(extensionOf("trailing.")).toBe("");
   });
 });

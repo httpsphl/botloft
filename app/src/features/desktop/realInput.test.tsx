@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import { afterEach, describe, expect, test } from "vitest";
 import { setLocaleChoice } from "../../i18n";
 import { FakeBotloft } from "../../lib/fake";
-import { crewOpened, openBot, renderApp } from "../../test/app";
+import { crewOpened, openBot, renderApp, settingsFromDetails } from "../../test/app";
 
 afterEach(() => {
   act(() => setLocaleChoice("en"));
@@ -23,7 +23,8 @@ async function openScout() {
   return { fake, scout };
 }
 
-const details = () => screen.getByRole("complementary", { name: "About Scout" });
+/** Settings > Permissions, on Scout's desktop, reached from its details. */
+const details = () => screen.getByRole("region", { name: "Settings" });
 
 describe("the real mouse and keyboard", () => {
   test("are off, and turning them on says first what changes", async () => {
@@ -31,7 +32,7 @@ describe("the real mouse and keyboard", () => {
     act(() => {
       fake.desktop.grant(scout.id, NOTEPAD, "Notepad", "act");
     });
-    fireEvent.click(screen.getByRole("button", { name: /^Show details/ }));
+    await settingsFromDetails("Scout", /^Your desktop/);
     const toggle = await within(details()).findByRole("switch", {
       name: "Real mouse and keyboard: Notepad",
     });
@@ -49,7 +50,8 @@ describe("the real mouse and keyboard", () => {
     fireEvent.click(toggle);
     fireEvent.click(screen.getByRole("button", { name: "Turn on" }));
     await waitFor(() => expect(fake.desktop.grants[0]?.realInput).toBe(true));
-    expect(toggle.getAttribute("aria-checked")).toBe("true");
+    // The Permissions page reads the list again a moment later.
+    await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("true"));
 
     // Off at once, without asking.
     fireEvent.click(toggle);
@@ -61,7 +63,7 @@ describe("the real mouse and keyboard", () => {
     act(() => {
       fake.desktop.grant(scout.id, NOTEPAD, "Notepad");
     });
-    fireEvent.click(screen.getByRole("button", { name: /^Show details/ }));
+    await settingsFromDetails("Scout", /^Your desktop/);
     await within(details()).findByText("Can see");
     expect(within(details()).queryByRole("switch", { name: /Real mouse/ })).toBeNull();
   });

@@ -9,62 +9,96 @@
   place-items: center;
   width: 2rem;
   height: 2rem;
+  overflow: hidden;
   border-radius: 0.5rem;
   color: var(--kind);
   background: color-mix(in srgb, var(--kind) 14%, transparent);
 }
 
-.file-tile[data-kind="pdf"] {
+/* In the panel's list: a bit bigger, so a picture's thumbnail says what it
+   is. Among the pictures: a square as wide as its cell. */
+.file-tile-row {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.625rem;
+}
+.file-tile-card {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  border-radius: 0.75rem;
+}
+.file-tile > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.file-tile[data-picture] {
+  background: var(--sunken);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+/* What the file is, in words, in the color of its kind. */
+.file-kind {
+  --kind: var(--ink-soft);
+  color: var(--kind);
+}
+
+:is(.file-tile, .file-kind)[data-kind="pdf"] {
   --kind: #d13a2f;
 }
-.file-tile[data-kind="word"] {
+:is(.file-tile, .file-kind)[data-kind="word"] {
   --kind: #2b62c9;
 }
-.file-tile[data-kind="sheet"] {
+:is(.file-tile, .file-kind)[data-kind="sheet"] {
   --kind: #1e7d45;
 }
-.file-tile[data-kind="slides"] {
+:is(.file-tile, .file-kind)[data-kind="slides"] {
   --kind: #c8561b;
 }
-.file-tile[data-kind="image"] {
+:is(.file-tile, .file-kind)[data-kind="image"] {
   --kind: #8546c9;
 }
-.file-tile[data-kind="audio"],
-.file-tile[data-kind="video"] {
+:is(.file-tile, .file-kind)[data-kind="audio"],
+:is(.file-tile, .file-kind)[data-kind="video"] {
   --kind: #c2367a;
 }
-.file-tile[data-kind="archive"] {
+:is(.file-tile, .file-kind)[data-kind="archive"] {
   --kind: #93641a;
 }
-.file-tile[data-kind="code"] {
+:is(.file-tile, .file-kind)[data-kind="code"] {
   --kind: #127a80;
 }
 
 [data-theme="dark"] .file-tile {
   background: color-mix(in srgb, var(--kind) 20%, transparent);
 }
-[data-theme="dark"] .file-tile[data-kind="pdf"] {
+[data-theme="dark"] :is(.file-tile, .file-kind)[data-kind="pdf"] {
   --kind: #ff7066;
 }
-[data-theme="dark"] .file-tile[data-kind="word"] {
+[data-theme="dark"] :is(.file-tile, .file-kind)[data-kind="word"] {
   --kind: #74a6ff;
 }
-[data-theme="dark"] .file-tile[data-kind="sheet"] {
+[data-theme="dark"] :is(.file-tile, .file-kind)[data-kind="sheet"] {
   --kind: #55c985;
 }
-[data-theme="dark"] .file-tile[data-kind="slides"] {
+[data-theme="dark"] :is(.file-tile, .file-kind)[data-kind="slides"] {
   --kind: #ff9a5c;
 }
-[data-theme="dark"] .file-tile[data-kind="image"] {
+[data-theme="dark"] :is(.file-tile, .file-kind)[data-kind="image"] {
   --kind: #bf8cff;
 }
-[data-theme="dark"] .file-tile[data-kind="audio"],
-[data-theme="dark"] .file-tile[data-kind="video"] {
+[data-theme="dark"] :is(.file-tile, .file-kind)[data-kind="audio"],
+[data-theme="dark"] :is(.file-tile, .file-kind)[data-kind="video"] {
   --kind: #ff7ab8;
 }
-[data-theme="dark"] .file-tile[data-kind="archive"] {
+[data-theme="dark"] :is(.file-tile, .file-kind)[data-kind="archive"] {
   --kind: #e0ad5a;
 }
-[data-theme="dark"] .file-tile[data-kind="code"] {
+[data-theme="dark"] :is(.file-tile, .file-kind)[data-kind="code"] {
   --kind: #4fc8cf;
+}
+
+[data-theme="dark"] .file-tile[data-picture] {
+  background: var(--sunken);
 }

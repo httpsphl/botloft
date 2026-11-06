@@ -348,6 +348,7 @@ export const account: Messages["account"] = {
     tools: "Ferramentas",
     logins: "Logins",
     skills: "Skills",
+    keys: "Chaves dos agentes",
     permissions: "Permissões",
     account: "Conta e celular",
     groupDaily: "No dia a dia",

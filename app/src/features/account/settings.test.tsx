@@ -280,6 +280,7 @@ describe("the page of settings", () => {
       "Tools",
       "Logins",
       "Skills",
+      "Agents' keys",
       "Permissions",
       "Backup",
       "Security",
