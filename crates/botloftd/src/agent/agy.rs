@@ -271,7 +271,7 @@ impl AgyDecoder {
         });
         // `duration_seconds` is a float.
         let seconds = result["duration_seconds"].as_f64().unwrap_or_default();
-        sink::turn_finished(daemon, bot, (seconds * 1000.0) as u64, tokens, error);
+        sink::turn_finished(daemon, bot, (seconds * 1000.0) as u64, tokens, error, false);
         sink::finish_turn(daemon, bot, generation, failed);
     }
 

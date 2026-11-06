@@ -583,3 +583,26 @@ async fn new_bots_and_the_chief_follow_the_default_agent() {
         .expect("bot");
     assert_eq!(chief.agent, AgentKind::Agy);
 }
+
+#[tokio::test(start_paused = true)]
+async fn an_agy_bot_cannot_be_stopped_mid_turn() {
+    let agy = agy_bot().await;
+    let process = agy.runtime.process(1).await;
+    agy.until(BotState::Idle).await;
+    agy.daemon
+        .supervisor
+        .write_message(&agy.bot, "u-1", "{}\n".into())
+        .expect("running");
+    agy.until(BotState::Busy).await;
+    let refused = botloftd::service::interrupt::interrupt(
+        &agy.daemon,
+        botloft_core::protocol::BotIdParams {
+            bot_id: agy.bot.clone(),
+        },
+    );
+    assert!(
+        matches!(refused, Err(botloftd::service::ApiError::Validation(_))),
+        "agy has no way to stop a turn"
+    );
+    assert_eq!(process.input_lines().len(), 1, "nothing else was written");
+}

@@ -64,6 +64,7 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::AGENTS_MODELS => reply(models::agent_models(daemon, parse(params)?)),
         method::BOTS_SET_EFFORT => reply(models::set_effort(daemon, parse(params)?)),
         method::BOTS_COMPACT => reply(crate::context::compact(daemon, parse(params)?)),
+        method::BOTS_INTERRUPT => reply(service::interrupt::interrupt(daemon, parse(params)?)),
         method::BOTS_STOP_TASK => reply(crate::background::stop(daemon, parse(params)?)),
         method::OVERVIEW_CHANGES => reply(crate::changes::changes(daemon, parse(params)?)),
         method::CONNECTORS_LIST => reply(crate::connectors::list(daemon, parse(params)?)),
