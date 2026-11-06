@@ -48,6 +48,8 @@ pub enum Event {
     BotRules(BotRules),
     BotDesktop(BotDesktop),
     BotSites(BotSites),
+    BotChrome(botloft_core::protocol::BotChrome),
+    ChromeTurn(botloft_core::protocol::ChromeTurn),
     McpServers(McpOverview),
     BotMcp(BotMcp),
     LoginsChanged(botloft_core::protocol::LoginsChanged),
@@ -132,6 +134,8 @@ pub struct Daemon {
     pub routines: Routines,
     pub browsers: Browsers,
     pub screens: Screens,
+    /// The links the app plays sounds and videos from (spec 8.4).
+    pub media: crate::media::Media,
     pub desktop: Desktop,
     /// The account and the copies in the cloud (spec 27).
     pub cloud: crate::cloud::Cloud,
@@ -147,6 +151,8 @@ pub struct Daemon {
     pub contexts: Contexts,
     pub background: crate::background::Backgrounds,
     pub connectors: crate::connectors::Connectors,
+    /// The owner's own Chrome: tabs and turn (spec 37).
+    pub chrome: crate::chrome::Chrome,
     /// The shared site logins' window and profile (spec 35).
     pub logins: crate::logins::Logins,
     /// How each bot's connected tools stand since it started (spec 25.5).
@@ -190,6 +196,7 @@ impl Daemon {
                 Arc::clone(&options.clock),
             ),
             screens: Screens::default(),
+            media: crate::media::Media::default(),
             desktop: Desktop::new(options.owner_idle),
             autobackup: crate::autobackup::AutoBackup::new(
                 &options.paths.home,
@@ -204,6 +211,7 @@ impl Daemon {
             contexts: Contexts::default(),
             background: Default::default(),
             connectors: Default::default(),
+            chrome: Default::default(),
             logins: Default::default(),
             mcp_states: Default::default(),
             keys: Default::default(),

@@ -2,7 +2,8 @@
 //! changes in the app's Settings.
 
 use botloft_core::protocol::{
-    APPROVAL_WAIT_MAX_MINUTES, AgentKind, SLEEP_AFTER_MAX_MINUTES, Settings, SettingsUpdateParams,
+    APPROVAL_WAIT_MAX_MINUTES, AgentKind, HISTORY_MAX_DAYS, SLEEP_AFTER_MAX_MINUTES, Settings,
+    SettingsUpdateParams,
 };
 use tracing::info;
 
@@ -35,6 +36,14 @@ pub fn update(daemon: &Daemon, params: SettingsUpdateParams) -> ApiResult<Settin
     {
         return Err(ApiError::validation(format!(
             "sleepAfterMinutes must be between 0 and {SLEEP_AFTER_MAX_MINUTES}"
+        )));
+    }
+    if params
+        .history_days
+        .is_some_and(|days| days > HISTORY_MAX_DAYS)
+    {
+        return Err(ApiError::validation(format!(
+            "historyDays must be between 0 and {HISTORY_MAX_DAYS}"
         )));
     }
     let before = daemon.settings.get();
@@ -76,10 +85,15 @@ pub fn update(daemon: &Daemon, params: SettingsUpdateParams) -> ApiResult<Settin
     if after.approval_wait_minutes > before.approval_wait_minutes {
         daemon.supervisor.workspace_settings_changed();
     }
+    // A shorter history goes now, not at the next pass (spec 12.1).
+    if after.history_days != before.history_days {
+        crate::history::wake();
+    }
     info!(
         start_with_windows = after.start_with_windows,
         keep_awake = after.keep_awake,
         approval_wait_minutes = after.approval_wait_minutes,
+        history_days = after.history_days,
         "settings changed"
     );
     Ok(after)

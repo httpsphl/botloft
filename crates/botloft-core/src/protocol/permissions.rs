@@ -1,10 +1,11 @@
 //! Everything the owner let each bot do, in one place (spec 15.1): the
 //! apps on the desktop (24.10), the sites in its browser (21.5), what it
-//! does without asking (10.1) and the other crews it reaches (10.4).
+//! does without asking (10.1), the other crews it reaches (10.4) and the
+//! owner's own Chrome (37).
 
 use serde::{Deserialize, Serialize};
 
-use super::{AllowRule, CrewAccess, DesktopGrant};
+use super::{AllowRule, ChromeGrant, CrewAccess, DesktopGrant};
 use crate::ids::BotId;
 
 /// The result of `permissions.list`: every bot's, oldest first in each list.
@@ -16,6 +17,7 @@ pub struct Permissions {
     pub sites: Vec<BrowserSite>,
     pub rules: Vec<AllowRule>,
     pub crew_access: Vec<CrewAccess>,
+    pub chrome: Vec<ChromeGrant>,
 }
 
 /// A site the owner let a bot use in its browser (spec 21.5).

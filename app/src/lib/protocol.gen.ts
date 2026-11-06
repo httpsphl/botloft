@@ -869,6 +869,16 @@ export type FileData = { mediaType: string,
 data: string, };
 
 /**
+ * Where the app plays a sound or video of the bot's (spec 8.4): an address
+ * on the daemon's own server, read in pieces as it plays.
+ */
+export type MediaLink = { 
+/**
+ * `http://127.0.0.1:<port>/media/<token>`.
+ */
+url: string, };
+
+/**
  * Text sent to a bot, by the owner, another bot or the daemon.
  */
 export type Message = { id: MessageId, crewId: CrewId, fromKind: SenderKind, 
@@ -1413,6 +1423,45 @@ export type CrewAccessListParams = { botId: BotId, };
 export type CrewAccessIdParams = { accessId: CrewAccessId, };
 
 /**
+ * An agent the owner gave their Chrome to (spec 37.2).
+ */
+export type ChromeGrant = { botId: BotId, 
+/**
+ * Unix time in milliseconds.
+ */
+givenAt: number, };
+
+/**
+ * `chrome.set`: gives the owner's Chrome to an agent, or takes it back.
+ */
+export type ChromeSetParams = { botId: BotId, on: boolean, 
+/**
+ * The owner read the risks and ticked that they understood them;
+ * giving needs it.
+ */
+acceptedRisks: boolean, };
+
+/**
+ * One agent's Chrome: the result of `chrome.set` and the params of the
+ * `bot.chrome` notification.
+ */
+export type BotChrome = { botId: BotId, 
+/**
+ * Unix time in milliseconds; `null` when the agent does not have it.
+ */
+givenAt: number | null, };
+
+/**
+ * Who acts in the owner's Chrome now (spec 37.4): the result of
+ * `chrome.status` and the params of `chrome.turn`.
+ */
+export type ChromeTurn = { 
+/**
+ * `null` when no agent has the turn.
+ */
+botId: BotId | null, };
+
+/**
  * A site the owner let a bot use in its browser (spec 21.5).
  */
 export type BrowserSite = { botId: BotId, 
@@ -1443,7 +1492,7 @@ export type SitesRevokeParams = { botId: BotId, site: string, };
 /**
  * The result of `permissions.list`: every bot's, oldest first in each list.
  */
-export type Permissions = { desktop: Array<DesktopGrant>, sites: Array<BrowserSite>, rules: Array<AllowRule>, crewAccess: Array<CrewAccess>, };
+export type Permissions = { desktop: Array<DesktopGrant>, sites: Array<BrowserSite>, rules: Array<AllowRule>, crewAccess: Array<CrewAccess>, chrome: Array<ChromeGrant>, };
 
 /**
  * The group a role is listed under.
@@ -2651,7 +2700,12 @@ showExperimentalAgents: boolean,
  * The Maker builds its plans without the owner's card; each build can
  * still be undone (spec 36.4).
  */
-makerBuildsWithoutAsking: boolean, };
+makerBuildsWithoutAsking: boolean, 
+/**
+ * Days the chats, messages and routine runs are kept; 0 keeps them
+ * for good, which is the default (spec 12.1).
+ */
+historyDays: number, };
 
 /**
  * The settings to change; the ones left out stay as they are.
@@ -2664,7 +2718,11 @@ approvalWaitMinutes?: number,
 /**
  * From 0 (never) to [`SLEEP_AFTER_MAX_MINUTES`].
  */
-sleepAfterMinutes?: number, defaultAgent?: AgentKind, showExperimentalAgents?: boolean, makerBuildsWithoutAsking?: boolean, };
+sleepAfterMinutes?: number, defaultAgent?: AgentKind, showExperimentalAgents?: boolean, makerBuildsWithoutAsking?: boolean, 
+/**
+ * From 0 (for good) to [`HISTORY_MAX_DAYS`].
+ */
+historyDays?: number, };
 
 /**
  * When a routine runs (spec 20.2), kept as structure rather than cron text
@@ -3007,6 +3065,7 @@ done: boolean, };
 export interface RpcMethods {
   "session.hello": { params: HelloParams; result: HelloResult };
   "session.setLocale": { params: LocaleParams; result: null };
+  "session.ping": { params: undefined; result: null };
   "system.status": { params: undefined; result: SystemStatus };
   "system.refresh": { params: undefined; result: SystemStatus };
   "settings.get": { params: undefined; result: Settings };
@@ -3044,6 +3103,7 @@ export interface RpcMethods {
   "attachments.read": { params: AttachmentIdParams; result: AttachmentData };
   "files.list": { params: FilesListParams; result: Array<BotFile> };
   "files.read": { params: FilesReadParams; result: FileData };
+  "files.media": { params: FilesReadParams; result: MediaLink };
   "deliveries.list": { params: DeliveriesListParams; result: Array<Delivery> };
   "deliveries.retry": { params: DeliveryIdParams; result: Delivery };
   "tasks.list": { params: TasksListParams; result: Array<Task> };
@@ -3074,6 +3134,9 @@ export interface RpcMethods {
   "crewAccess.revoke": { params: CrewAccessIdParams; result: Array<CrewAccess> };
   "permissions.list": { params: undefined; result: Permissions };
   "sites.revoke": { params: SitesRevokeParams; result: BotSites };
+  "chrome.set": { params: ChromeSetParams; result: BotChrome };
+  "chrome.status": { params: undefined; result: ChromeTurn };
+  "chrome.stop": { params: undefined; result: ChromeTurn };
   "catalog.list": { params: CatalogListParams; result: Array<BotTemplate> };
   "catalog.get": { params: CatalogGetParams; result: BotTemplateFull };
   "catalog.add": { params: CatalogAddParams; result: Bot };
@@ -3176,6 +3239,8 @@ export interface RpcNotifications {
   "desktop.frame": DesktopFrame;
   "desktop.away": Array<DesktopAwayUse>;
   "bot.sites": BotSites;
+  "bot.chrome": BotChrome;
+  "chrome.turn": ChromeTurn;
   "mcp.servers": McpOverview;
   "bot.mcp": BotMcp;
   "logins.changed": LoginsChanged;

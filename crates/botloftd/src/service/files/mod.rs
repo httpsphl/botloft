@@ -3,6 +3,7 @@
 //! wherever the bot's `Write`/`Edit` calls put them.
 
 mod foreign;
+mod media;
 mod scan;
 
 use std::collections::HashMap;
@@ -17,6 +18,8 @@ use botloft_store::BotRecord;
 pub(crate) use self::foreign::{
     listed as foreign_files, readable as foreign_readable, writable as foreign_writable,
 };
+pub(crate) use self::media::located;
+pub use self::media::media;
 pub(crate) use self::scan::media_type;
 use self::scan::{Found, Root, key, keys, millis, walk};
 use super::{ApiError, ApiResult, bots, crews};
@@ -173,19 +176,23 @@ fn reach(places: &Places, asked: &Path) -> Result<(PathBuf, std::fs::Metadata), 
     Ok((path, meta))
 }
 
+/// `reach` for a path the app asked for, refused as the app reads it.
+fn reached(places: &Places, asked: &str) -> ApiResult<(PathBuf, std::fs::Metadata)> {
+    reach(places, Path::new(asked)).map_err(|refused| {
+        ApiError::NotFound(match refused {
+            Refused::Gone => format!("{asked} is no longer there"),
+            Refused::Outside => format!("{asked} is not one of this bot's files"),
+        })
+    })
+}
+
 /// `files.read`: the bytes of a file `files.list` can show. A path outside
 /// the bot's folders that the bot did not write is refused, so the panel
 /// cannot be used to read anything else on the computer.
 pub fn read(daemon: &Daemon, params: FilesReadParams) -> ApiResult<FileData> {
     let (_, places) = places(daemon, &params.bot_id)?;
+    let (path, meta) = reached(&places, &params.path)?;
     let gone = || ApiError::NotFound(format!("{} is no longer there", params.path));
-    let (path, meta) =
-        reach(&places, Path::new(&params.path)).map_err(|refused| match refused {
-            Refused::Gone => gone(),
-            Refused::Outside => {
-                ApiError::NotFound(format!("{} is not one of this bot's files", params.path))
-            }
-        })?;
     if meta.len() > PREVIEW_MAX_BYTES {
         return Err(ApiError::validation(format!(
             "the file is larger than {} MB",

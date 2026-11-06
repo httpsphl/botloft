@@ -37,6 +37,7 @@ pub fn tools() -> Value {
             super::bot_change::tool(),
             super::crew_access::tool(),
             super::connector::tool(),
+            super::chrome::tool(),
         ])
         .chain(super::templates::tools())
         .chain([super::build::tool()])

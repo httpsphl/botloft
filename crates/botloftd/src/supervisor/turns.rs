@@ -42,10 +42,30 @@ impl Supervisor {
     pub(crate) fn turn_began(&self, bot: &BotId, generation: u64) {
         self.with_current(bot, generation, |supervisor, slot| {
             slot.in_turn = true;
+            slot.dropped_in_turn = false;
             if slot.is_working() {
                 supervisor.set_state(bot, slot, slot.working_state());
             }
         });
+    }
+
+    /// The process printed a line too long to read (spec 8.1). A message
+    /// with big images comes back that long, and its uuid with it.
+    pub(crate) fn line_dropped(&self, bot: &BotId, generation: u64) {
+        self.with_current(bot, generation, |_, slot| slot.dropped_in_turn = true);
+    }
+
+    /// The turn is ending after a dropped line while messages still wait:
+    /// the oldest was taken up, its replay being the line that could not be
+    /// read. Without this the bot would wait for it, busy, forever.
+    pub(crate) fn begun_unseen(&self, bot: &BotId, generation: u64) -> Option<String> {
+        let mut begun = None;
+        self.with_current(bot, generation, |_, slot| {
+            if std::mem::take(&mut slot.dropped_in_turn) && !slot.waiting.is_empty() {
+                begun = Some(slot.waiting.remove(0));
+            }
+        });
+        begun
     }
 
     /// Claude Code gave back a user message (`isReplay`, spec 9.1): the

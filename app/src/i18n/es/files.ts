@@ -37,4 +37,20 @@ export const files: Messages["files"] = {
     cut: "Solo se muestra el comienzo del archivo.",
     gone: "Este archivo ya no está allí.",
   },
+  media: {
+    play: (name) => `Reproducir ${name}`,
+    pause: (name) => `Pausar ${name}`,
+    position: (name) => `Dónde se está reproduciendo ${name}`,
+    loading: "Preparando…",
+    failed: "No se puede reproducir aquí. Ábrelo en tu programa.",
+  },
+  picture: {
+    enlarge: (name) => `Ver ${name} más grande`,
+    viewer: (name) => `Imagen: ${name}`,
+  },
+  made: {
+    heading: "También hizo",
+    label: (bot) => `Imágenes, sonidos y videos que hizo ${bot}`,
+    more: (count) => (count === 1 ? "1 más en Archivos" : `${count} más en Archivos`),
+  },
 };

@@ -23,11 +23,9 @@ pub struct PlanReading {
 
 impl Store {
     /// A consistent copy of the whole database at `path`, which must not
-    /// exist yet (spec 14.2).
+    /// exist yet (spec 14.2). The daemon makes it with a [`crate::Copier`].
     pub fn snapshot_to(&self, path: &std::path::Path) -> Result<()> {
-        self.conn
-            .execute("VACUUM INTO ?1", [path.to_string_lossy().as_ref()])?;
-        Ok(())
+        crate::copier::vacuum_into(&self.conn, path)
     }
 
     /// What one turn of `bot` cost at `at`.

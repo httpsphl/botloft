@@ -11,6 +11,7 @@ import { FakeBrowser } from "./fakeBrowser";
 import { catalogHandlers } from "./fakeCatalog";
 import { FakeChanges } from "./fakeChanges";
 import { FakeChat } from "./fakeChat";
+import { FakeChrome } from "./fakeChrome";
 import { cloudHandlers } from "./fakeCloud";
 import { FakeConversation } from "./fakeConversation";
 import { FakeCrewAccess } from "./fakeCrewAccess";
@@ -91,6 +92,7 @@ export class FakeBotloft implements BotloftApi {
     defaultAgent: "claude",
     showExperimentalAgents: false,
     makerBuildsWithoutAsking: false,
+    historyDays: 0,
   };
   /** Folders the owner sent to the Recycle Bin with a delete, in order. */
   readonly recycled: string[] = [];
@@ -103,6 +105,7 @@ export class FakeBotloft implements BotloftApi {
   readonly crewAccess = new FakeCrewAccess(this);
   readonly desktop = new FakeDesktop(this);
   readonly sites = new FakeSites(this);
+  readonly chrome = new FakeChrome(this);
   readonly mcp = new FakeMcp(this);
   readonly logins = new FakeLogins(this);
   /** The language the app last told, as the daemon keeps it (spec 24.7). */
@@ -299,6 +302,7 @@ export class FakeBotloft implements BotloftApi {
       { id: "gemini-3.8-flash-low", name: "Gemini 3.8 Flash (Low)" },
       { id: "gemini-3.8-flash-high", name: "Gemini 3.8 Flash (High)" },
     ],
+    "session.ping": () => null,
     "session.setLocale": ({ locale }) => {
       this.locale = locale;
       return null;
@@ -320,6 +324,7 @@ export class FakeBotloft implements BotloftApi {
           change.showExperimentalAgents ?? this.settings.showExperimentalAgents,
         makerBuildsWithoutAsking:
           change.makerBuildsWithoutAsking ?? this.settings.makerBuildsWithoutAsking,
+        historyDays: change.historyDays ?? this.settings.historyDays,
       };
       if (change.showExperimentalAgents !== undefined) {
         this.system = {
@@ -341,6 +346,7 @@ export class FakeBotloft implements BotloftApi {
     ...this.crewAccess.handlers(),
     ...this.desktop.handlers(),
     ...this.sites.handlers(),
+    ...this.chrome.handlers(),
     ...this.mcp.handlers(),
     ...this.logins.handlers(),
     ...this.conversation.handlers(),

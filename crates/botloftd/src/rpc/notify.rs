@@ -19,6 +19,8 @@ pub(super) fn to_notification(event: &Event) -> String {
         Event::BotRules(rules) => note(notification::BOT_RULES, rules),
         Event::BotDesktop(desktop) => note(notification::BOT_DESKTOP, desktop),
         Event::BotSites(sites) => note(notification::BOT_SITES, sites),
+        Event::BotChrome(chrome) => note(notification::BOT_CHROME, chrome),
+        Event::ChromeTurn(turn) => note(notification::CHROME_TURN, turn),
         Event::McpServers(overview) => note(notification::MCP_SERVERS, overview),
         Event::BotMcp(bot) => note(notification::BOT_MCP, bot),
         Event::LoginsChanged(changed) => note(notification::LOGINS_CHANGED, changed),

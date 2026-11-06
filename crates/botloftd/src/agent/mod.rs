@@ -62,6 +62,8 @@ pub struct LaunchPlan<'a> {
     /// must not get (spec 34.5); both empty for most bots.
     pub connectors: &'a [String],
     pub blocked_servers: &'a [String],
+    /// Whether the owner gave it their own Chrome (spec 37.2).
+    pub chrome: bool,
 }
 
 /// What an agent needs to write the files it reads at start, once the bot

@@ -37,6 +37,7 @@ impl LiveSettings {
     pub fn new(file: Option<PathBuf>, config: &Config) -> Self {
         let minutes = u32::try_from(config.bots.approval_timeout_minutes).unwrap_or(u32::MAX);
         let sleep = u32::try_from(config.bots.sleep_after_minutes).unwrap_or(u32::MAX);
+        let history = u32::try_from(config.bots.history_days).unwrap_or(u32::MAX);
         let settings = Settings {
             start_with_windows: config.start_with_windows,
             keep_awake: config.keep_awake,
@@ -46,6 +47,7 @@ impl LiveSettings {
             default_agent: config.default_agent.parse().unwrap_or(AgentKind::Claude),
             show_experimental_agents: !config.experimental_agents.is_empty(),
             maker_builds_without_asking: config.maker_builds_without_asking,
+            history_days: history,
         };
         Self {
             file,
@@ -119,6 +121,11 @@ impl LiveSettings {
     }
 
     /// Follows `keep_awake` (spec 14).
+    /// How long the history is kept (spec 12.1); `None` for good.
+    pub fn history_days(&self) -> Option<u32> {
+        Some(self.lock().settings.history_days).filter(|days| *days > 0)
+    }
+
     pub fn keep_awake(&self) -> watch::Receiver<bool> {
         self.keep_awake.subscribe()
     }
@@ -152,6 +159,9 @@ impl LiveSettings {
         }
         if let Some(without_asking) = update.maker_builds_without_asking {
             current.settings.maker_builds_without_asking = without_asking;
+        }
+        if let Some(days) = update.history_days {
+            current.settings.history_days = days;
         }
         Ok(current.settings)
     }
@@ -235,6 +245,13 @@ fn write(file: &Path, update: SettingsUpdateParams) -> io::Result<()> {
             .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "bots is not a table"))?;
         set(bots, "sleep_after_minutes", i64::from(minutes));
     }
+    if let Some(days) = update.history_days {
+        let bots = config["bots"]
+            .or_insert(toml_edit::table())
+            .as_table_like_mut()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "bots is not a table"))?;
+        set(bots, "history_days", i64::from(days));
+    }
     let staged = file.with_extension("toml.new");
     std::fs::write(&staged, config.to_string())?;
     std::fs::rename(&staged, file)
@@ -295,6 +312,7 @@ mod tests {
                 default_agent: AgentKind::Claude,
                 show_experimental_agents: false,
                 maker_builds_without_asking: false,
+                history_days: 0,
             }
         );
         assert!(awake.has_changed().expect("sender") && !*awake.borrow_and_update());
@@ -315,6 +333,7 @@ mod tests {
                 default_agent: None,
                 show_experimental_agents: None,
                 maker_builds_without_asking: Some(true),
+                history_days: Some(90),
             })
             .expect("save");
         let text = std::fs::read_to_string(&file).expect("read");
@@ -330,6 +349,9 @@ mod tests {
         // 0 is never: agents stay up (spec 7.7).
         assert_eq!(config.bots.sleep_after_minutes, 0);
         assert_eq!(settings.sleep_after(), None);
+        // The history kept goes in `[bots]` too (spec 12.1).
+        assert_eq!(config.bots.history_days, 90);
+        assert_eq!(settings.history_days(), Some(90));
         assert_eq!(
             settings.get(),
             Settings {
@@ -340,6 +362,7 @@ mod tests {
                 default_agent: AgentKind::Claude,
                 show_experimental_agents: false,
                 maker_builds_without_asking: true,
+                history_days: 90,
             }
         );
         assert_eq!(settings.approval_wait(), Duration::from_secs(4 * 3600));

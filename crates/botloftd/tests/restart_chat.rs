@@ -1,7 +1,8 @@
 //! What the chat shows across restarts. A request left open when the daemon
 //! stopped (spec 10.1): its card stops offering an answer when the daemon
 //! starts, and a card that still offered one shows how it ended once the
-//! owner answers it. A new conversation (spec 7.3) leaves a line.
+//! owner answers it. A new conversation (spec 7.3) leaves a line. A message
+//! the bot never began goes out again (spec 9.1).
 
 mod common;
 
@@ -97,4 +98,36 @@ async fn a_new_conversation_leaves_a_line_in_the_chat() {
     let line = item_where(&mut c.app, |item| item["body"]["kind"] == "notice").await;
     assert_eq!(line["item"]["body"]["code"], "fresh_start");
     assert_eq!(line["item"]["botId"], lead["id"]);
+}
+
+/// A message written to a bot that stopped with the daemon before it began
+/// it (no replay) is written again at start, without counting an attempt.
+#[tokio::test]
+async fn a_message_left_unread_by_the_last_run_is_written_again() {
+    let mut c = two_bots().await;
+    let lead = c.app.call("bots.list", json!({})).await.expect("bots")[0].clone();
+    c.app
+        .call(
+            "messages.send",
+            json!({ "botId": lead["id"], "body": "Check the logs" }),
+        )
+        .await
+        .expect("send");
+    let first = c.lead_process.wait_lines(1).await;
+    assert!(first[0].to_string().contains("Check the logs"));
+
+    botloftd::courier::requeue_left_behind(&c.t.daemon);
+    let lines = c.lead_process.wait_lines(2).await;
+    assert!(lines[1].to_string().contains("Check the logs"), "{lines:?}");
+    let reopened = loop {
+        let changed = c.app.notification("delivery.changed").await;
+        if changed["state"] == "pending" && !changed["lastError"].is_null() {
+            break changed;
+        }
+    };
+    assert_eq!(reopened["attempts"], 0);
+    assert_eq!(
+        reopened["lastError"],
+        "Botloft stopped before the agent began this message"
+    );
 }

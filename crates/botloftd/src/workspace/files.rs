@@ -18,7 +18,9 @@ const MCP_TIMEOUT_MARGIN: Duration = Duration::from_secs(120);
 /// `.claude/settings.json` (spec 7.5): keeps the bot out of the daemon's
 /// secrets, out of `fenced` (Botloft's data and the other crews' folders,
 /// see `fences`) and the owner's own Claude Code memory out of the bot.
-/// Deny rules apply even in a folder nobody trusted, and in every mode.
+/// Deny rules apply even in a folder nobody trusted, and in every mode. The
+/// ask rule sends every tool of the owner's Chrome to `permission_prompt`,
+/// in every mode too (spec 37.3).
 pub fn settings_json(botloft_home: &Path, crew_dir: &Path, fenced: &[PathBuf]) -> Value {
     let secrets = permission_rule_path(&botloft_home.join("secrets"));
     let mut deny = vec![format!("Read({secrets}/**)")];
@@ -28,7 +30,7 @@ pub fn settings_json(botloft_home: &Path, crew_dir: &Path, fenced: &[PathBuf]) -
         deny.push(format!("Edit({folder}/**)"));
     }
     json!({
-        "permissions": { "deny": deny },
+        "permissions": { "deny": deny, "ask": [crate::chrome::RULE_TOOL] },
         // Instruction files above the crew's folder are the owner's.
         "claudeMdExcludes": memory::excludes_above(crew_dir),
         // The bot's memory is the `CLAUDE.md` in its folder. Claude Code's
@@ -107,10 +109,13 @@ app; the other bots of your crew send you messages too.
   their chat as markdown: keep them short and clear, and say what you did.
 - Files the owner sends are saved in `attachments/` in this folder; the
   message lists them. Images also come inline.
-- When you finish a file for the owner (a report, a spreadsheet, an image),
-  call `share_file` with its path: they get a card in the chat to preview,
-  open and save it. Do the same when they ask again for a file you made.
-  Don't write the path in your reply instead.
+- When you finish a file for the owner (a report, a spreadsheet, an image,
+  a recording, a video), call `share_file` with its path: they get a card in
+  the chat to preview, open and save it, and sounds and videos play right
+  there. Do it also when a command or script made the file, and when they
+  ask again for a file you made. Save such files in the work folder or your
+  own folder, so they can be shared. Don't write the path in your reply
+  instead.
 - When you need a permission, the owner gets a request in the chat with
   Allow and Deny. If they deny it, find another way or ask them.
 - The owner may not be technical. Every time you run a command, fill in its
@@ -211,7 +216,10 @@ mod tests {
         let settings = settings_json(home, Path::new("/ws/site"), &[]);
         assert_eq!(
             settings["permissions"],
-            json!({ "deny": ["Read(//c/Users/ana/AppData/Local/Botloft/secrets/**)"] })
+            json!({
+                "deny": ["Read(//c/Users/ana/AppData/Local/Botloft/secrets/**)"],
+                "ask": ["mcp__claude-in-chrome"],
+            })
         );
         let blog = PathBuf::from("C:/Users/ana/Botloft/blog");
         let settings = settings_json(home, Path::new("/ws/site"), &[blog]);

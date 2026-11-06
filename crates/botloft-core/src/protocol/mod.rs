@@ -56,6 +56,7 @@ mod builds;
 mod catalog;
 mod changes;
 mod chat;
+mod chrome;
 mod cloud;
 mod connectors;
 mod crew_access;
@@ -93,6 +94,7 @@ pub use builds::*;
 pub use catalog::*;
 pub use changes::*;
 pub use chat::*;
+pub use chrome::*;
 pub use cloud::*;
 pub use connectors::*;
 pub use crew_access::*;
@@ -129,6 +131,9 @@ pub const PROTOCOL_VERSION: u32 = 2;
 pub mod method {
     pub const SESSION_HELLO: &str = "session.hello";
     pub const SESSION_SET_LOCALE: &str = "session.setLocale";
+    /// Answers `null` at once: the app's sign that the connection lives
+    /// (spec 11).
+    pub const SESSION_PING: &str = "session.ping";
     pub const SYSTEM_STATUS: &str = "system.status";
     pub const SYSTEM_REFRESH: &str = "system.refresh";
     pub const CREWS_LIST: &str = "crews.list";
@@ -167,6 +172,9 @@ pub mod method {
     pub const OVERVIEW_CHANGES: &str = "overview.changes";
     pub const CONNECTORS_LIST: &str = "connectors.list";
     pub const BOTS_SET_CONNECTORS: &str = "bots.setConnectors";
+    pub const CHROME_SET: &str = "chrome.set";
+    pub const CHROME_STATUS: &str = "chrome.status";
+    pub const CHROME_STOP: &str = "chrome.stop";
     pub const LOGINS_LIST: &str = "logins.list";
     pub const LOGINS_OPEN: &str = "logins.open";
     pub const LOGINS_SHARE: &str = "logins.share";
@@ -230,6 +238,7 @@ pub mod method {
     pub const ATTACHMENTS_READ: &str = "attachments.read";
     pub const FILES_LIST: &str = "files.list";
     pub const FILES_READ: &str = "files.read";
+    pub const FILES_MEDIA: &str = "files.media";
     pub const DELIVERIES_LIST: &str = "deliveries.list";
     pub const DELIVERIES_RETRY: &str = "deliveries.retry";
     pub const TASKS_LIST: &str = "tasks.list";
@@ -288,6 +297,10 @@ pub mod notification {
     pub const BOT_RULES: &str = "bot.rules";
     pub const BOT_DESKTOP: &str = "bot.desktop";
     pub const BOT_SITES: &str = "bot.sites";
+    /// The owner gave their Chrome to an agent or took it back (spec 37).
+    pub const BOT_CHROME: &str = "bot.chrome";
+    /// Another agent, or none, acts in the owner's Chrome (spec 37.4).
+    pub const CHROME_TURN: &str = "chrome.turn";
     pub const MCP_SERVERS: &str = "mcp.servers";
     pub const BOT_MCP: &str = "bot.mcp";
     /// The shared site logins changed (spec 35).

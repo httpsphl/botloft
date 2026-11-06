@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useT } from "../../i18n";
 import type { Bot, BotFile, Crew } from "../../lib/protocol.gen";
@@ -11,6 +11,7 @@ import { useStable } from "../../ui/useStable";
 import { BrowserPanel } from "../browser/BrowserPanel";
 import { ShowBrowser } from "../browser/showBrowser";
 import { ChatView } from "../chat/ChatView";
+import { TurnFiles } from "../chat/turnFiles";
 import { DesktopPanel } from "../desktop/DesktopPanel";
 import { ShowDesktop } from "../desktop/showDesktop";
 import { FilesPanel } from "../files/FilesPanel";
@@ -81,6 +82,18 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
     setShown(path);
   });
   const fresh = filesOpen ? 0 : files.files.filter((file) => file.modifiedAt > seenAt).length;
+  // What each turn made without sharing it shows under the turn (spec 15.1).
+  const openFiles = useStable(() => {
+    if (!filesOpen) {
+      seen();
+    }
+    setShown(null);
+    setSide("files");
+  });
+  const turnFiles = useMemo(
+    () => ({ files: files.files, open: openFiles }),
+    [files.files, openFiles],
+  );
   const routines = useApp(useShallow((state) => routinesOf(state, bot.id)));
   // While the owner can see the chat, each new reply is seen (spec 15.1).
   const visible = useWindowVisible();
@@ -206,7 +219,9 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
                 <ShowScreen.Provider value={showScreen}>
                   <ShowTerminal.Provider value={showTerminal}>
                     <ShowDesktop.Provider value={showDesktop}>
-                      <ChatView bot={bot} stopped={bot.paused || crew.paused} />
+                      <TurnFiles.Provider value={turnFiles}>
+                        <ChatView bot={bot} stopped={bot.paused || crew.paused} />
+                      </TurnFiles.Provider>
                     </ShowDesktop.Provider>
                   </ShowTerminal.Provider>
                 </ShowScreen.Provider>

@@ -420,6 +420,7 @@ mod tests {
             agent_model: Some("gemini-3.8-flash-low"),
             connectors: &[],
             blocked_servers: &[],
+            chrome: false,
         };
         let text = |args: Vec<OsString>| -> Vec<String> {
             args.into_iter()

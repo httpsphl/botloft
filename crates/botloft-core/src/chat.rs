@@ -41,6 +41,11 @@ pub const DESKTOP_TOOL: &str = "mcp__botloft__desktop";
 pub const BROWSER_HELP_TOOL: &str = "mcp__botloft__browser_help";
 /// The Maker building crews, agents and routines in one go (spec 36.4).
 pub const BUILD_TOOL: &str = "mcp__botloft__build";
+/// A bot asking for the owner's own Chrome (spec 37.3).
+pub const CHROME_TOOL: &str = "mcp__botloft__ask_chrome";
+/// The start of the tools of the owner's Chrome, from the Claude in Chrome
+/// extension (spec 37): `mcp__claude-in-chrome__navigate`.
+pub const CHROME_TOOLS: &str = "mcp__claude-in-chrome__";
 /// Longest bot or routine suggestion kept, in bytes: the owner reads and
 /// edits all of it.
 pub const SUGGESTION_INPUT_MAX: usize = 64 * 1024;
@@ -150,6 +155,11 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
         // Element refs ("e12") mean nothing to the owner, and a direction
         // needs words: the app says those (spec 21.8).
         "mcp__botloft__browser_press" => field(input, "key").map(str::to_owned),
+        CHROME_TOOL => field(input, "why").map(str::to_owned),
+        // The daemon puts the site of the tab in what it shows (spec 37.3).
+        tool if tool.starts_with(CHROME_TOOLS) => field(input, "site")
+            .or_else(|| field(input, "url"))
+            .map(str::to_owned),
         _ => None,
     };
     one_line(&summary.unwrap_or_default(), SUMMARY_MAX_CHARS)

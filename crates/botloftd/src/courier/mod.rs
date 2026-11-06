@@ -4,6 +4,7 @@
 
 mod context;
 mod render;
+mod requeue;
 mod settings;
 mod sleep;
 
@@ -11,13 +12,13 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use botloft_core::ids::BotId;
 use botloft_core::protocol::{AgentKind, BotState, Delivery, Message, SenderKind, Task};
 use botloft_store::{DeliveryOutcome, Store, StoreError};
 use tokio::sync::Notify;
 use tracing::{debug, warn};
 
 use self::render::{Context, Rendered, render};
+pub use self::requeue::{requeue_left_behind, requeue_unread};
 pub use self::settings::CourierSettings;
 use self::sleep::{became_ready, hasten, next_wait};
 use crate::agent::{self, ClaudeAgent};
@@ -27,8 +28,6 @@ use crate::state::{Daemon, Event};
 
 /// How long to wait for a bot that cannot take messages yet (spec 9.1).
 const WAIT_FOR_BOT: Duration = Duration::from_secs(5);
-/// Why a delivery goes back in the queue after its process ended.
-const PROCESS_ENDED: &str = "the bot's process ended before it began this message";
 
 pub struct Courier {
     settings: CourierSettings,
@@ -284,36 +283,4 @@ impl Draft {
         let agent = agent::of(self.agent).unwrap_or(&ClaudeAgent);
         render(&self.message, &context, now, agent)
     }
-}
-
-/// The process of `generation` ended: what it never began goes back in
-/// the queue, counting an attempt (spec 9.1).
-pub fn requeue_unread(daemon: &Daemon, bot: &BotId, generation: u64) {
-    let now = daemon.clock.now_ms();
-    let store = daemon.store();
-    let unread = match store.unread_deliveries(bot, generation) {
-        Ok(unread) => unread,
-        Err(err) => {
-            warn!(bot = %bot, "could not read unread deliveries: {err}");
-            return;
-        }
-    };
-    let settings = &daemon.courier.settings;
-    for delivery in unread {
-        let attempts = delivery.attempts + 1;
-        let retry_at = (attempts < settings.max_attempts)
-            .then(|| clock::after(now, settings.retry_delay(attempts)));
-        match store.reopen_unread(&delivery.id, PROCESS_ENDED, retry_at, now) {
-            Ok(Some(changed)) => {
-                if retry_at.is_none() {
-                    warn!(delivery = %changed.id, bot = %bot, "gave up on a delivery");
-                }
-                daemon.emit(Event::DeliveryChanged(changed));
-            }
-            Ok(None) => {}
-            Err(err) => warn!(delivery = %delivery.id, "could not requeue: {err}"),
-        }
-    }
-    drop(store);
-    daemon.courier.wake();
 }

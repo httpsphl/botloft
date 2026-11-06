@@ -132,6 +132,8 @@ pub(super) fn launch_spec(
     let work_folder = daemon.paths.work_folder(crew);
     // The claude.ai connectors it may use (spec 34.5).
     let connectors = crate::connectors::launch(daemon, &bot.id, &workspace)?;
+    // The owner's own Chrome, when they gave it (spec 37.2).
+    let chrome = crate::chrome::launch(daemon, &bot.id, &workspace)?;
     let args = agent.args(&LaunchPlan {
         session: &session,
         resumed,
@@ -143,6 +145,7 @@ pub(super) fn launch_spec(
         agent_model: bot.agent_model.as_deref(),
         connectors: &connectors.chosen,
         blocked_servers: &connectors.blocked,
+        chrome,
     });
 
     let mut env = platform::user_environment()?;

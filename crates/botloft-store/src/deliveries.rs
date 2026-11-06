@@ -250,16 +250,6 @@ impl Store {
             .optional()?)
     }
 
-    /// Returns deliveries whose sender died mid-send to `pending`.
-    pub fn recover_leases(&self, now: i64) -> Result<Vec<Delivery>> {
-        let mut stmt = self.conn.prepare_cached(&format!(
-            "UPDATE deliveries SET state = 'pending', lease_until = NULL, updated_at = ?1 \
-             WHERE state = 'sending' AND lease_until <= ?1 RETURNING {COLUMNS}"
-        ))?;
-        let rows = stmt.query_map([now], from_row)?;
-        Ok(rows.collect::<rusqlite::Result<_>>()?)
-    }
-
     /// Puts a dead delivery back in the queue with its attempts reset.
     /// `None` if it is not dead.
     pub fn retry_delivery(&self, id: &DeliveryId, now: i64) -> Result<Option<Delivery>> {
@@ -294,5 +284,6 @@ impl Store {
 }
 
 mod courier;
+mod recover;
 #[cfg(test)]
 mod tests;
