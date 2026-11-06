@@ -1,6 +1,8 @@
 // The panel beside a bot's chat (spec 15.1): which one is open, kept per
 // bot in the store so it comes back with the bot, and the one sliding
-// closed while it leaves.
+// closed while it leaves. A bot the owner has not touched the panels of
+// opens with its overview (spec 33.2), when the window has room for it
+// beside the chat.
 
 import { useEffect, useMemo, useState } from "react";
 import type { BotPanel } from "../../store/app";
@@ -8,8 +10,19 @@ import { useApp } from "../../store/context";
 
 export type Side = BotPanel | null;
 
+/** The panel beside a bot nobody chose one for yet. */
+export const FIRST_PANEL: BotPanel = "overview";
+/** Narrower windows (CSS px) keep the chat to itself until a panel is asked for. */
+export const ROOM_FOR_FIRST_PANEL = 1100;
+
 export function usePanel(botId: string) {
-  const side = useApp((state) => state.panels[botId] ?? null);
+  // Looked at once each time the bot is opened.
+  const [roomy] = useState(() => window.innerWidth >= ROOM_FOR_FIRST_PANEL);
+  // Undefined: never chosen, so the overview. Null: the owner closed it.
+  const side = useApp((state) => {
+    const kept = state.panels[botId];
+    return kept === undefined ? (roomy ? FIRST_PANEL : null) : kept;
+  });
   const keepPanel = useApp((state) => state.setPanel);
   // The panel that came back is there at once; one opened after it slides.
   const [restored, setRestored] = useState(side !== null);
