@@ -204,3 +204,24 @@ async fn a_rate_limit_holds_the_bot_until_it_resets() {
     s.clock.advance(Duration::from_secs(31));
     s.until(BotState::Idle).await;
 }
+
+/// A message with big images comes back in a line too long to read (spec
+/// 8.1): the turn still ends with it taken up, so the bot does not stay busy
+/// waiting for a replay it will never see.
+#[tokio::test(start_paused = true)]
+async fn a_replay_too_long_to_read_still_ends_the_wait() {
+    let s = setup().await;
+    let process = s.runtime.process(1).await;
+    s.until(BotState::Idle).await;
+
+    s.message("a message with big images");
+    assert_eq!(s.state(), BotState::Busy);
+    process.emit(stream::init("session-1")).await;
+    // A pipe hands a long line over in pieces; past 8 MiB it is dropped.
+    let mut head = br#"{"type":"user","isReplay":true,"uuid":"u","message":""#.to_vec();
+    head.resize(head.len() + (9 << 20), b'x');
+    process.output(&head).await;
+    process.output(b"\"}\n").await;
+    process.emit(stream::result(false)).await;
+    s.until(BotState::Idle).await;
+}

@@ -61,11 +61,38 @@ describe("settings", () => {
         defaultAgent: "claude",
         showExperimentalAgents: false,
         makerBuildsWithoutAsking: false,
+        historyDays: 0,
       }),
     );
     expect(
       fake.calls.filter((call) => call.method === "settings.update").map((c) => c.params),
     ).toEqual([{ startWithWindows: false }, { keepAwake: false }]);
+  });
+
+  test("the chats stay for good unless the owner picks a time, which asks first", async () => {
+    const { fake } = renderApp();
+    const dialog = await openSettings();
+    expect(dialog.textContent).toContain("Keep the chats for");
+    const question = { name: "Delete the older chats now?" };
+
+    fireEvent.click(await within(dialog).findByRole("button", { name: /Always/ }));
+    fireEvent.click(screen.getByRole("option", { name: "30 days" }));
+    // Deleting asks first, and cancelling changes nothing.
+    const asked = await screen.findByRole("dialog", question);
+    fireEvent.click(within(asked).getByRole("button", { name: "Cancel" }));
+    expect(fake.settings.historyDays).toBe(0);
+
+    fireEvent.click(within(dialog).getByRole("button", { name: /Always/ }));
+    fireEvent.click(screen.getByRole("option", { name: "30 days" }));
+    const again = await screen.findByRole("dialog", question);
+    fireEvent.click(within(again).getByRole("button", { name: "Delete older chats" }));
+    await waitFor(() => expect(fake.settings.historyDays).toBe(30));
+
+    // Keeping more deletes nothing new: no question.
+    fireEvent.click(within(dialog).getByRole("button", { name: /30 days/ }));
+    fireEvent.click(screen.getByRole("option", { name: "1 year" }));
+    await waitFor(() => expect(fake.settings.historyDays).toBe(365));
+    expect(screen.queryByRole("dialog", question)).toBeNull();
   });
 
   test("the experimental agents are switched on here, with what that means", async () => {

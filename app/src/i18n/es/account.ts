@@ -276,6 +276,16 @@ export const account: Messages["account"] = {
     sleepAfterHint:
       "Un agente dormido no usa memoria y se despierta solo cuando llega un mensaje, una rutina o un aviso. Su primera respuesta tarda unos segundos más.",
     sleepAfterChoices: { 15: "15 minutos", 30: "30 minutos", 60: "1 hora", 0: "Nunca" },
+    history: "Historial",
+    historyKeep: "Guardar las conversaciones durante",
+    historyHint:
+      "Las conversaciones, los mensajes y las ejecuciones de rutinas más antiguas se borran de Botloft para siempre. Lo que aún te espera se queda, y también la memoria de los agentes y los archivos de sus carpetas.",
+    historyChoices: { 0: "Siempre", 30: "30 días", 90: "90 días", 365: "1 año" },
+    historyDaysCustom: (days: number) => `${days} días`,
+    historyConfirmTitle: "¿Borrar ahora las conversaciones más antiguas?",
+    historyConfirmBody: (kept: string) =>
+      `Las conversaciones, los mensajes y las ejecuciones de rutinas de más de ${kept} se borran de Botloft para siempre, ahora y en adelante. Los agentes conservan su memoria y los archivos de sus carpetas se quedan.`,
+    historyConfirm: "Borrar las más antiguas",
     saveFailed: "No se pudo cambiar el ajuste",
     pages: "Partes de la configuración",
     general: "General",
