@@ -38,6 +38,7 @@ async fn a_new_bot_runs_headless_in_a_new_session_with_a_clean_environment() {
         "--include-partial-messages",
         "--replay-user-messages",
         "--strict-mcp-config",
+        "--no-chrome",
     ] {
         assert!(
             args.iter().any(|arg| arg == flag),

@@ -64,6 +64,10 @@ impl Agent for ClaudeAgent {
         args.push(plan.session.into());
         args.push("--setting-sources".into());
         args.push("project,local".into());
+        // The owner's own Chrome, with their accounts signed in, never comes
+        // with the owner's environment or their "enabled by default": the
+        // flag beats both (spec 7.4, 19).
+        args.push("--no-chrome".into());
         // Claude Code fetches the claude.ai connectors only without it: an
         // agent given some runs without, with every other server blocked by
         // name (spec 34.5).
@@ -197,6 +201,8 @@ mod tests {
         assert!(!args.contains(&"--model".to_owned()));
         assert!(!args.contains(&"--effort".to_owned()));
         assert!(args.contains(&"--permission-prompt-tool".to_owned()));
+        assert!(args.contains(&"--no-chrome".to_owned()));
+        assert!(!args.contains(&"--chrome".to_owned()));
     }
 
     #[test]
