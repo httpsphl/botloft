@@ -3055,6 +3055,7 @@ done: boolean, };
 export interface RpcMethods {
   "session.hello": { params: HelloParams; result: HelloResult };
   "session.setLocale": { params: LocaleParams; result: null };
+  "session.ping": { params: undefined; result: null };
   "system.status": { params: undefined; result: SystemStatus };
   "system.refresh": { params: undefined; result: SystemStatus };
   "settings.get": { params: undefined; result: Settings };

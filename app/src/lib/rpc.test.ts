@@ -9,9 +9,20 @@ class FakeSocket implements SocketLike {
   onerror: ((event: unknown) => void) | null = null;
   readonly sent: { id?: number; method?: string; params?: unknown }[] = [];
   closed = false;
+  /** Pings asked; the daemon answers them at once unless told not to. */
+  pings = 0;
+  answersPings = true;
 
   send(data: string): void {
-    this.sent.push(JSON.parse(data));
+    const frame = JSON.parse(data);
+    if (frame.method === "session.ping") {
+      this.pings += 1;
+      if (this.answersPings) {
+        this.reply(frame.id, null);
+      }
+      return;
+    }
+    this.sent.push(frame);
   }
 
   close(): void {
@@ -203,6 +214,65 @@ describe("RpcConnection", () => {
     vi.advanceTimersByTime(60_000);
     socket().reply(socket().last().id, { source: "claude_code", projects: [] });
     await expect(scan).resolves.toMatchObject({ projects: [] });
+  });
+
+  test("a quiet connection asks whether the daemon is there, and replaces a dead one", async () => {
+    const { connection, sockets, socket, accept } = setup({ requestTimeoutMs: 120_000 });
+    connection.start();
+    accept();
+    const first = socket();
+    first.answersPings = false;
+    const asked = connection.request("crews.list");
+
+    vi.advanceTimersByTime(14_999);
+    expect(first.pings).toBe(0);
+    vi.advanceTimersByTime(1);
+    expect(first.pings).toBe(1);
+    // No answer within the next beat: the socket is lost, and so is what
+    // was asked on it.
+    vi.advanceTimersByTime(15_000);
+    await expect(asked).rejects.toMatchObject({ code: ClientErrorCode.connectionLost });
+    expect(first.closed).toBe(true);
+    expect(connection.state.kind).toBe("waiting");
+    vi.advanceTimersByTime(500);
+    expect(sockets).toHaveLength(2);
+  });
+
+  test("anything the daemon sends counts as life, and an answered ping keeps the socket", () => {
+    const { connection, sockets, socket, accept } = setup();
+    connection.start();
+    accept();
+    for (let i = 0; i < 4; i++) {
+      vi.advanceTimersByTime(10_000);
+      socket().notify("bot.state", { botId: "bot_1", state: "idle", generation: 1 });
+    }
+    expect(socket().pings).toBe(0);
+    // Quiet now: pings go out, are answered, and nothing is replaced.
+    vi.advanceTimersByTime(60_000);
+    expect(socket().pings).toBeGreaterThan(0);
+    expect(sockets).toHaveLength(1);
+    expect(connection.state.kind).toBe("open");
+  });
+
+  test("a hello with no answer is given up and tried again", () => {
+    const { connection, sockets, socket } = setup();
+    connection.start();
+    socket().open();
+    vi.advanceTimersByTime(10_000);
+    expect(socket().closed).toBe(true);
+    expect(connection.state.kind).toBe("waiting");
+    vi.advanceTimersByTime(500);
+    expect(sockets).toHaveLength(2);
+  });
+
+  test("a hello refused for a passing reason is tried again, not waited on", () => {
+    const { connection, sockets, socket } = setup();
+    connection.start();
+    socket().open();
+    socket().fail(socket().last().id, RpcErrorCode.internalError, "not ready");
+    expect(connection.state.kind).toBe("waiting");
+    vi.advanceTimersByTime(500);
+    expect(sockets).toHaveLength(2);
   });
 
   test("close stops everything", async () => {

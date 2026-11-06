@@ -242,6 +242,9 @@ fn route(
     };
     // Watching a browser belongs to this connection (spec 21.7).
     let result = match request.method.as_str() {
+        // Answered here, ahead of nothing: the app hears that the
+        // connection lives (spec 11).
+        method::SESSION_PING => Ok(Value::Null),
         method::BROWSER_WATCH | method::BROWSER_UNWATCH => {
             frames.send_replace(None);
             watch.request(daemon, &request.method, request.params)

@@ -302,6 +302,7 @@ export class FakeBotloft implements BotloftApi {
       { id: "gemini-3.8-flash-low", name: "Gemini 3.8 Flash (Low)" },
       { id: "gemini-3.8-flash-high", name: "Gemini 3.8 Flash (High)" },
     ],
+    "session.ping": () => null,
     "session.setLocale": ({ locale }) => {
       this.locale = locale;
       return null;

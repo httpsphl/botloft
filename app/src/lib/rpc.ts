@@ -1,32 +1,23 @@
 // JSON-RPC 2.0 over WebSocket to botloftd (spec 11): `session.hello`
-// first, requests queued while disconnected, and reconnection with backoff.
+// first, requests queued while disconnected, reconnection with backoff, and
+// a ping when the connection goes quiet, so one the network left half open
+// is noticed and replaced.
 
 import { t } from "../i18n";
+import { type ClientInfo, type HelloResult, PROTOCOL_VERSION, RpcErrorCode } from "./protocol.gen";
+import { readFrame } from "./rpcFrame";
 import {
-  type ClientInfo,
-  type HelloResult,
-  PROTOCOL_VERSION,
-  RpcErrorCode,
-  type RpcMethods,
-  type RpcNotifications,
-} from "./protocol.gen";
+  ClientErrorCode,
+  type ConnectionState,
+  type Method,
+  type ParamsArg,
+  type Result,
+  RpcError,
+  type ServerEvent,
+  type SocketLike,
+} from "./rpcTypes";
 
-export type Method = keyof RpcMethods;
-export type Params<M extends Method> = RpcMethods[M]["params"];
-export type Result<M extends Method> = RpcMethods[M]["result"];
-/** No argument for methods without params. */
-export type ParamsArg<M extends Method> = Params<M> extends undefined ? [] : [Params<M>];
-export type NotificationName = keyof RpcNotifications;
-export type ServerEvent = {
-  [N in NotificationName]: { name: N; params: RpcNotifications[N] };
-}[NotificationName];
-
-/** Codes for failures that happen on this side of the socket. */
-export const ClientErrorCode = {
-  connectionLost: -1,
-  timeout: -2,
-  closed: -3,
-} as const;
+export * from "./rpcTypes";
 
 /**
  * Requests that may take minutes: reading the owner's whole Claude Code
@@ -37,38 +28,6 @@ const SLOW_MS: Partial<Record<Method, number>> = {
   "imports.create": 10 * 60_000,
 };
 
-export class RpcError extends Error {
-  readonly code: number;
-  /** Why a validation failed, when the app words it itself (spec 20.8). */
-  readonly reason: string | undefined;
-
-  constructor(code: number, message: string, reason?: string) {
-    super(message);
-    this.name = "RpcError";
-    this.code = code;
-    this.reason = reason;
-  }
-}
-
-export type ConnectionState =
-  | { kind: "connecting" }
-  | { kind: "open"; daemonVersion: string }
-  /** Lost the daemon; trying again at `retryAt` (ms). */
-  | { kind: "waiting"; retryAt: number }
-  /** The daemon refused this client (token or protocol); no retries. */
-  | { kind: "failed"; reason: string }
-  | { kind: "closed" };
-
-/** The part of `WebSocket` the connection uses. */
-export interface SocketLike {
-  onopen: ((event: unknown) => void) | null;
-  onmessage: ((event: { data: unknown }) => void) | null;
-  onclose: ((event: unknown) => void) | null;
-  onerror: ((event: unknown) => void) | null;
-  send(data: string): void;
-  close(): void;
-}
-
 export interface RpcOptions {
   url: string;
   token: string;
@@ -77,6 +36,13 @@ export interface RpcOptions {
   retryInitialMs?: number;
   retryMaxMs?: number;
   requestTimeoutMs?: number;
+  /** How long the hello may go unanswered before the socket is replaced. */
+  helloTimeoutMs?: number;
+  /**
+   * Quiet this long, the connection sends `session.ping`; with no answer in
+   * as long again, the socket is replaced.
+   */
+  heartbeatMs?: number;
 }
 
 interface Pending {
@@ -93,6 +59,10 @@ export class RpcConnection {
   private nextId = 1;
   private retryMs: number;
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
+  private beatTimer: ReturnType<typeof setInterval> | undefined;
+  /** When anything last came from the daemon. */
+  private lastHeard = 0;
+  private pinging = false;
   /** Waiting for the connection to open. */
   private readonly queue: Pending[] = [];
   /** Sent, waiting for the answer. */
@@ -107,6 +77,8 @@ export class RpcConnection {
       retryInitialMs: 500,
       retryMaxMs: 5000,
       requestTimeoutMs: 30_000,
+      helloTimeoutMs: 10_000,
+      heartbeatMs: 15_000,
       ...options,
     };
     this.retryMs = this.options.retryInitialMs;
@@ -173,9 +145,12 @@ export class RpcConnection {
 
   private hello(socket: SocketLike): void {
     const id = this.nextId++;
+    this.lastHeard = Date.now();
     const done = (result: HelloResult) => {
       this.retryMs = this.options.retryInitialMs;
       this.setState({ kind: "open", daemonVersion: result.daemonVersion });
+      clearInterval(this.beatTimer);
+      this.beatTimer = setInterval(() => this.beat(socket), this.options.heartbeatMs);
       for (const pending of this.queue.splice(0)) {
         this.send(pending);
       }
@@ -188,6 +163,9 @@ export class RpcConnection {
         this.setState({ kind: "failed", reason: error.message });
         this.dropSocket();
         this.failAll(error);
+      } else {
+        // Anything else may pass: try again, rather than wait for nothing.
+        this.lost(socket);
       }
     };
     this.inflight.set(id, {
@@ -195,7 +173,10 @@ export class RpcConnection {
       params: undefined,
       resolve: (value) => done(value as HelloResult),
       reject: refused,
-      timer: undefined,
+      timer: setTimeout(() => {
+        this.inflight.delete(id);
+        this.lost(socket);
+      }, this.options.helloTimeoutMs),
     });
     const params = {
       token: this.options.token,
@@ -203,6 +184,38 @@ export class RpcConnection {
       protocol: PROTOCOL_VERSION,
     };
     socket.send(JSON.stringify({ jsonrpc: "2.0", id, method: "session.hello", params }));
+  }
+
+  /**
+   * Quiet for a beat: asks the daemon whether it is there, which it answers
+   * at once (spec 11). No answer within the next beat, the socket is taken
+   * as lost and replaced.
+   */
+  private beat(socket: SocketLike): void {
+    if (
+      socket !== this.socket ||
+      this.pinging ||
+      Date.now() - this.lastHeard < this.options.heartbeatMs
+    ) {
+      return;
+    }
+    const id = this.nextId++;
+    this.pinging = true;
+    const answered = () => {
+      this.pinging = false;
+    };
+    this.inflight.set(id, {
+      method: "session.ping",
+      params: undefined,
+      resolve: answered,
+      reject: answered,
+      timer: setTimeout(() => {
+        this.inflight.delete(id);
+        this.pinging = false;
+        this.lost(socket);
+      }, this.options.heartbeatMs),
+    });
+    socket.send(JSON.stringify({ jsonrpc: "2.0", id, method: "session.ping" }));
   }
 
   private send(pending: Pending): void {
@@ -225,39 +238,23 @@ export class RpcConnection {
   }
 
   private receive(text: string): void {
-    let frame: {
-      id?: unknown;
-      method?: unknown;
-      params?: unknown;
-      result?: unknown;
-      error?: { code?: unknown; message?: unknown; data?: { reason?: unknown } };
-    };
-    try {
-      frame = JSON.parse(text);
-    } catch {
-      return;
-    }
-    if (typeof frame.id === "number") {
+    this.lastHeard = Date.now();
+    const frame = readFrame(text);
+    if (frame?.kind === "answer") {
       const pending = this.inflight.get(frame.id);
       if (!pending) {
         return;
       }
       this.inflight.delete(frame.id);
       clearTimeout(pending.timer);
-      if (frame.error) {
-        const code = typeof frame.error.code === "number" ? frame.error.code : 0;
-        const message = typeof frame.error.message === "string" ? frame.error.message : "error";
-        const reason = frame.error.data?.reason;
-        pending.reject(
-          new RpcError(code, message, typeof reason === "string" ? reason : undefined),
-        );
+      if ("error" in frame.outcome) {
+        pending.reject(frame.outcome.error);
       } else {
-        pending.resolve(frame.result ?? null);
+        pending.resolve(frame.outcome.result);
       }
-    } else if (typeof frame.method === "string") {
-      const event = { name: frame.method, params: frame.params } as ServerEvent;
+    } else if (frame?.kind === "event") {
       for (const listener of this.notificationListeners) {
-        listener(event);
+        listener(frame.event);
       }
     }
   }
@@ -285,6 +282,8 @@ export class RpcConnection {
   }
 
   private dropSocket(): void {
+    clearInterval(this.beatTimer);
+    this.pinging = false;
     const socket = this.socket;
     this.socket = null;
     if (socket) {

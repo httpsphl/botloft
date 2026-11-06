@@ -278,6 +278,7 @@ fn export_bindings() {
         &out.name::<LocaleParams>(),
         "null",
     );
+    out.method(method::SESSION_PING, "undefined", "null");
     out.method(
         method::SYSTEM_STATUS,
         "undefined",
