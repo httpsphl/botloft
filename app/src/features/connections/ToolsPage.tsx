@@ -12,7 +12,7 @@ import { Button } from "../../ui/Button";
 import { Menu } from "../../ui/Menu";
 import { attempt } from "../../ui/toast";
 import { AddToolDialog } from "./AddToolDialog";
-import { CONNECTORS_PAGE, useConnectorList } from "./BotConnectors";
+import { CONNECTORS_PAGE, useConnectorList } from "./connectorList";
 import { type Opened, ToolDialog } from "./ToolDialog";
 import { ToolTile } from "./ToolTile";
 import { KNOWN_TOOLS, knownTool, TOOL_KINDS } from "./toolCatalog";

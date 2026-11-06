@@ -1,19 +1,11 @@
-// What sits around a bot's chat besides the chat (spec 15.1): the notices
-// over it, about a paused crew or a bot that needs the owner, and the panel
-// with the bot's details.
+// The notices over a bot's chat (spec 15.1), about a paused crew, a missing
+// program or a bot that needs the owner.
 
-import { X } from "lucide-react";
 import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
-import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
-import { SidePanel } from "../../ui/SidePanel";
-import { BotConnectors } from "../connections/BotConnectors";
-import { BotTools } from "../connections/BotTools";
-import { AgentKeys } from "../keys/AgentKeys";
 import { SignInButton } from "../onboarding/SignIn";
-import { BotPermissions } from "../permissions/BotPermissions";
 import type { stateView } from "./BotStateBadge";
 
 export function Notices({
@@ -60,44 +52,4 @@ export function Notices({
     return null;
   }
   return <div className="flex flex-col gap-2 px-5 py-3">{notices}</div>;
-}
-
-export function Details({ bot, onClose }: { bot: Bot; onClose(): void }) {
-  const words = useT().bots.details;
-  return (
-    <SidePanel label={words.title(bot.name)} name="details" defaultWidth={320}>
-      <header className="flex h-11 shrink-0 items-center justify-between pr-1.5 pl-4">
-        <h2 className="font-semibold text-base">{words.title(bot.name)}</h2>
-        <Button variant="ghost" size="sm" icon={X} label={words.close} onClick={onClose} />
-      </header>
-      <dl className="flex min-h-0 flex-col gap-4 overflow-y-auto p-4 text-sm">
-        <div>
-          <dt className="text-muted text-xs">{words.role}</dt>
-          <dd className="mt-0.5 text-ink-soft">{bot.role || words.noRole}</dd>
-        </div>
-        <div>
-          <dt className="text-muted text-xs">{words.folder}</dt>
-          <dd className="mt-0.5 break-all font-mono text-xs" data-selectable>
-            {bot.workspace}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-muted text-xs">{words.process}</dt>
-          <dd className="mt-0.5 font-mono text-xs">
-            {bot.generation === null ? words.notStarted : words.generation(bot.generation)}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-muted text-xs">{words.instructions}</dt>
-          <dd className="mt-0.5 whitespace-pre-wrap text-ink-soft" data-selectable>
-            {bot.instructions || words.noInstructions}
-          </dd>
-        </div>
-        <BotPermissions bot={bot} />
-        <AgentKeys bot={bot} />
-        <BotTools bot={bot} />
-        <BotConnectors bot={bot} />
-      </dl>
-    </SidePanel>
-  );
 }

@@ -345,6 +345,7 @@ export const account = {
     tools: "Tools",
     logins: "Logins",
     skills: "Skills",
+    keys: "Agents' keys",
     permissions: "Permissions",
     account: "Account and phone",
     groupDaily: "Every day",

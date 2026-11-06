@@ -27,6 +27,9 @@ import { type Call, withCall } from "./calls";
 import { withQuestion } from "./questions";
 import { loadMarked, loadSeen, loadSeenSince, seenActions, withReply } from "./seen";
 
+/** Parts of Settings the rest of the app opens them on. */
+export type SettingsPart = "tools" | "skills" | "keys";
+
 /** A panel beside a bot's chat (spec 15.1). */
 export type BotPanel =
   | "overview"
@@ -74,7 +77,9 @@ export interface AppState {
   /** Where Settings opens the Permissions page, until it is shown (spec 15.1). */
   permissionsAt: PermissionsAt | null;
   /** A part of the settings to open them on, from elsewhere in the app. */
-  settingsPart: "tools" | "skills" | null;
+  settingsPart: SettingsPart | null;
+  /** The agent that part opens on (Keys), until the part takes it. */
+  settingsBotId: BotId | null;
   /**
    * When the owner last looked at each bot's chat (`seen.ts`), for unread
    * replies and failed routine runs.
@@ -89,6 +94,7 @@ export interface AppState {
   /**
    * The panel the owner left beside each bot's chat (null: closed), so it is
    * back when they come back to the bot. Kept until the app closes (spec 15.1).
+   * A bot not in here opens with its overview (spec 33.2).
    */
   panels: Record<BotId, BotPanel | null>;
   selectedCrewId: CrewId | null;
@@ -98,7 +104,10 @@ export interface AppState {
   openPage(page: Exclude<Page, null>): void;
   /** Opens Settings on the Permissions page, at a tab and an agent. */
   openPermissions(at: PermissionsAt): void;
-  openSettingsPart(part: "tools" | "skills"): void;
+  /** Opens Settings on a part, on one agent where the part has a choice. */
+  openSettingsPart(part: SettingsPart, botId?: BotId): void;
+  /** The part took its agent. */
+  clearSettingsBotId(): void;
   clearSettingsPart(): void;
   /** The Permissions page took where to open. */
   clearPermissionsAt(): void;
@@ -214,6 +223,7 @@ export function createAppStore(api: BotloftApi): AppStore {
       focus: null,
       permissionsAt: null,
       settingsPart: null,
+      settingsBotId: null,
       seenAt: loadSeen(),
       seenSince: loadSeenSince(),
       replyAt: {},
@@ -237,8 +247,15 @@ export function createAppStore(api: BotloftApi): AppStore {
       openPermissions: (at) =>
         set({ page: "settings", selectedCrewId: null, selectedBotId: null, permissionsAt: at }),
       clearPermissionsAt: () => set({ permissionsAt: null }),
-      openSettingsPart: (part) =>
-        set({ page: "settings", selectedCrewId: null, selectedBotId: null, settingsPart: part }),
+      openSettingsPart: (part, botId) =>
+        set({
+          page: "settings",
+          selectedCrewId: null,
+          selectedBotId: null,
+          settingsPart: part,
+          settingsBotId: botId ?? null,
+        }),
+      clearSettingsBotId: () => set({ settingsBotId: null }),
       clearSettingsPart: () => set({ settingsPart: null }),
       ...seenActions(get, set, api),
       setPanel: (botId, panel) => set((state) => ({ panels: { ...state.panels, [botId]: panel } })),

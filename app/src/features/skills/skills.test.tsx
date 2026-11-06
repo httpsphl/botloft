@@ -92,8 +92,9 @@ describe("skills in the chat and the details (spec 38.5)", () => {
     openBot("Scout");
     fireEvent.click(await screen.findByRole("button", { name: "Show details" }));
     const details = await screen.findByRole("complementary", { name: "About Scout" });
-    expect(await within(details).findByText("deploy")).toBeDefined();
-    fireEvent.click(within(details).getByRole("button", { name: "Choose skills" }));
+    const row = await within(details).findByRole("button", { name: /^Skills/ });
+    await waitFor(() => expect(row.textContent).toContain("deploy"));
+    fireEvent.click(row);
     const page = await screen.findByRole("region", { name: "Settings" });
     expect(await within(page).findByRole("button", { name: /deploy/ })).toBeDefined();
   });

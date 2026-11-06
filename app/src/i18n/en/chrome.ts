@@ -45,9 +45,5 @@ export const chrome = {
   },
   details: {
     label: "Your Chrome",
-    off: (bot: string) =>
-      `${bot} does not use your Chrome. It asks in its chat when a task needs it.`,
-    notClaude: "Only agents on Claude Code can use your Chrome.",
-    give: "Give my Chrome",
   },
 };

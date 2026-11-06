@@ -15,7 +15,7 @@ import { notifyError } from "../../ui/toast";
 import { KeyForm } from "./KeyForm";
 
 /** The agent's keys, read when shown and again when it gets one it asked for. */
-function useKeys(botId: Bot["id"]) {
+export function useKeys(botId: Bot["id"]) {
   const api = useApi();
   const [keys, setKeys] = useState<AgentKey[] | null>(null);
   useEffect(() => {
@@ -49,7 +49,8 @@ function useKeys(botId: Bot["id"]) {
 /** Which form is open: a new key, or replacing one by name. */
 type Editing = { kind: "add" } | { kind: "replace"; name: string } | null;
 
-export function AgentKeys({ bot }: { bot: Bot }) {
+/** `titled`: false where a heading over it already says what it is. */
+export function AgentKeys({ bot, titled = true }: { bot: Bot; titled?: boolean }) {
   const t = useT().keys;
   const words = t.details;
   const api = useApi();
@@ -69,7 +70,7 @@ export function AgentKeys({ bot }: { bot: Bot }) {
 
   return (
     <div>
-      <dt className="text-muted text-xs">{words.title}</dt>
+      <dt className={titled ? "text-muted text-xs" : "sr-only"}>{words.title}</dt>
       <dd className="mt-1 flex flex-col gap-1.5">
         {keys !== null && keys.length === 0 && editing === null && (
           <p className="text-ink-soft text-xs leading-relaxed">{words.none(bot.name)}</p>

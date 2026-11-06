@@ -116,17 +116,23 @@ describe("connected tools", () => {
       expect(screen.queryByRole("dialog", { name: "Connect a tool" })).toBeNull(),
     );
 
-    openBot("Scout");
-    await screen.findByRole("region", { name: "Chat with Scout" });
-    fireEvent.click(screen.getByRole("button", { name: /^Show details/ }));
-    const details = await screen.findByRole("complementary", { name: "About Scout" });
-    const toggle = await within(details).findByRole("switch", { name: "Scout can use linkedin" });
+    // Who may use it is chosen on its card.
+    fireEvent.click(await screen.findByRole("button", { name: /linkedin/ }));
+    const card = await screen.findByRole("dialog", { name: "linkedin" });
+    const toggle = await within(card).findByRole("switch", { name: "Scout can use it" });
     expect(toggle.getAttribute("aria-checked")).toBe("false");
     fireEvent.click(toggle);
     await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("true"));
     expect(fake.calls.find((each) => each.method === "bot.mcp.set")?.params).toMatchObject({
       botId: scout.id,
     });
+    fireEvent.keyDown(card, { key: "Escape" });
+
+    // Its overview says how the tool came up.
+    openBot("Scout");
+    await screen.findByRole("region", { name: "Chat with Scout" });
+    fireEvent.click(screen.getByRole("button", { name: "Show overview" }));
+    const details = await screen.findByRole("complementary", { name: "Overview of Scout" });
 
     // The bot started and the tool did not come up.
     const server = fake.mcp.overview().servers[0];

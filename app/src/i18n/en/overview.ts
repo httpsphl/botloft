@@ -97,6 +97,6 @@ export const overview = {
     title: "Connected tools",
     none: (bot: string) => `${bot} has no connected tools.`,
     fromClaudeAi: "from claude.ai",
-    change: "Change in details",
+    change: "Choose in Settings",
   },
 };

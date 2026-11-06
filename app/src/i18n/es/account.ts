@@ -351,6 +351,7 @@ export const account: Messages["account"] = {
     tools: "Herramientas",
     logins: "Inicios de sesión",
     skills: "Skills",
+    keys: "Claves de los agentes",
     permissions: "Permisos",
     account: "Cuenta y móvil",
     groupDaily: "Cada día",

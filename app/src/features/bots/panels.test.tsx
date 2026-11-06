@@ -115,3 +115,65 @@ describe("the panel beside an agent's chat", () => {
     expect(panel("Files from Scout")).toBeNull();
   });
 });
+
+/** Runs `body` with the window that wide (CSS px). */
+async function inWindow(width: number, body: () => Promise<void>) {
+  const was = window.innerWidth;
+  Object.defineProperty(window, "innerWidth", { value: width, configurable: true });
+  try {
+    await body();
+  } finally {
+    Object.defineProperty(window, "innerWidth", { value: was, configurable: true });
+  }
+}
+
+describe("the overview beside an agent by default (spec 33.2)", () => {
+  test("opens with an agent nobody chose a panel for; closed, it stays closed", async () => {
+    await inWindow(1400, async () => {
+      const { fake } = crew();
+      await started(fake);
+      const overview = await screen.findByRole("complementary", { name: "Overview of Scout" });
+      fireEvent.click(within(overview).getByRole("button", { name: "Close" }));
+      await waitFor(() => expect(panel("Overview of Scout")).toBeNull());
+
+      // Another agent has its own, open; Scout's stays closed.
+      await open("Writer");
+      expect(
+        await screen.findByRole("complementary", { name: "Overview of Writer" }),
+      ).toBeDefined();
+      await open("Scout");
+      expect(panel("Overview of Scout")).toBeNull();
+    });
+  });
+
+  test("a narrow window keeps the chat to itself until a panel is asked for", async () => {
+    await inWindow(900, async () => {
+      const { fake } = crew();
+      await started(fake);
+      expect(panel("Overview of Scout")).toBeNull();
+      fireEvent.click(button(/^Show overview/));
+      expect(await screen.findByRole("complementary", { name: "Overview of Scout" })).toBeDefined();
+    });
+  });
+});
+
+describe("an agent's details (spec 15.1)", () => {
+  test("say who it is, edit it, and lead to what Settings keeps for it", async () => {
+    const { fake } = crew();
+    await started(fake);
+    fireEvent.click(button(/^Show details/));
+    const details = await screen.findByRole("complementary", { name: "About Scout" });
+    expect(within(details).getByText("Finds sources")).toBeDefined();
+    expect(within(details).getByText("@scout")).toBeDefined();
+    expect(within(details).getByText("Claude Code")).toBeDefined();
+    expect(within(details).getByText("None yet.")).toBeDefined();
+    // Nothing of the desktop, keys or tools is set here: each row leads there.
+    for (const row of [/^Your desktop/, /^Your Chrome/, /^Keys/, /^Tools/]) {
+      expect(await within(details).findByRole("button", { name: row })).toBeDefined();
+    }
+    expect(within(details).queryByRole("button", { name: "Add a key" })).toBeNull();
+
+    fireEvent.click(within(details).getByRole("button", { name: "Write instructions" }));
+    expect(await screen.findByRole("dialog", { name: "Edit Scout" })).toBeDefined();
+  });
+});

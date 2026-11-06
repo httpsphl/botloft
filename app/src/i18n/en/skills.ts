@@ -35,10 +35,4 @@ export const skills = {
     declined: (name: string) => `You did not give ${name}`,
     expired: (name: string) => `The request for ${name} expired`,
   },
-  details: {
-    label: "Skills",
-    none: (bot: string) =>
-      `${bot} has none of your skills. It asks in its chat when one would help.`,
-    choose: "Choose skills",
-  },
 };
