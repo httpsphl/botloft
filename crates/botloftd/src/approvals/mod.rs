@@ -3,7 +3,7 @@
 //! MCP call waits here until the owner answers, the request times out, or
 //! the bot's process ends.
 
-mod always;
+pub(crate) mod always;
 mod prompt;
 mod turn;
 

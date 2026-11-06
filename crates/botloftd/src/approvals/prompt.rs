@@ -33,6 +33,11 @@ pub async fn prompt(daemon: &Daemon, bot: &BotId, generation: u64, args: PromptA
         debug!(bot = %bot, "permission request for no running tool; denied");
         return deny("There is no pending tool call with that id.");
     }
+    // The owner's own Chrome: who may use it, whose turn, which site
+    // (spec 37.3).
+    if let Some(answer) = crate::chrome::prompt(daemon, bot, generation, &args).await {
+        return answer;
+    }
     // A tool of a server the owner did not give this agent never runs, not
     // even asked: one put in its folder, or a connector it was not given
     // (spec 34.5).

@@ -1413,6 +1413,45 @@ export type CrewAccessListParams = { botId: BotId, };
 export type CrewAccessIdParams = { accessId: CrewAccessId, };
 
 /**
+ * An agent the owner gave their Chrome to (spec 37.2).
+ */
+export type ChromeGrant = { botId: BotId, 
+/**
+ * Unix time in milliseconds.
+ */
+givenAt: number, };
+
+/**
+ * `chrome.set`: gives the owner's Chrome to an agent, or takes it back.
+ */
+export type ChromeSetParams = { botId: BotId, on: boolean, 
+/**
+ * The owner read the risks and ticked that they understood them;
+ * giving needs it.
+ */
+acceptedRisks: boolean, };
+
+/**
+ * One agent's Chrome: the result of `chrome.set` and the params of the
+ * `bot.chrome` notification.
+ */
+export type BotChrome = { botId: BotId, 
+/**
+ * Unix time in milliseconds; `null` when the agent does not have it.
+ */
+givenAt: number | null, };
+
+/**
+ * Who acts in the owner's Chrome now (spec 37.4): the result of
+ * `chrome.status` and the params of `chrome.turn`.
+ */
+export type ChromeTurn = { 
+/**
+ * `null` when no agent has the turn.
+ */
+botId: BotId | null, };
+
+/**
  * A site the owner let a bot use in its browser (spec 21.5).
  */
 export type BrowserSite = { botId: BotId, 
@@ -1443,7 +1482,7 @@ export type SitesRevokeParams = { botId: BotId, site: string, };
 /**
  * The result of `permissions.list`: every bot's, oldest first in each list.
  */
-export type Permissions = { desktop: Array<DesktopGrant>, sites: Array<BrowserSite>, rules: Array<AllowRule>, crewAccess: Array<CrewAccess>, };
+export type Permissions = { desktop: Array<DesktopGrant>, sites: Array<BrowserSite>, rules: Array<AllowRule>, crewAccess: Array<CrewAccess>, chrome: Array<ChromeGrant>, };
 
 /**
  * The group a role is listed under.
@@ -3074,6 +3113,9 @@ export interface RpcMethods {
   "crewAccess.revoke": { params: CrewAccessIdParams; result: Array<CrewAccess> };
   "permissions.list": { params: undefined; result: Permissions };
   "sites.revoke": { params: SitesRevokeParams; result: BotSites };
+  "chrome.set": { params: ChromeSetParams; result: BotChrome };
+  "chrome.status": { params: undefined; result: ChromeTurn };
+  "chrome.stop": { params: undefined; result: ChromeTurn };
   "catalog.list": { params: CatalogListParams; result: Array<BotTemplate> };
   "catalog.get": { params: CatalogGetParams; result: BotTemplateFull };
   "catalog.add": { params: CatalogAddParams; result: Bot };
@@ -3176,6 +3218,8 @@ export interface RpcNotifications {
   "desktop.frame": DesktopFrame;
   "desktop.away": Array<DesktopAwayUse>;
   "bot.sites": BotSites;
+  "bot.chrome": BotChrome;
+  "chrome.turn": ChromeTurn;
   "mcp.servers": McpOverview;
   "bot.mcp": BotMcp;
   "logins.changed": LoginsChanged;

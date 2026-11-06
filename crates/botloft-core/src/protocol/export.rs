@@ -23,6 +23,8 @@ mod browser;
 mod catalog;
 #[path = "export_changes.rs"]
 mod changes;
+#[path = "export_chrome.rs"]
+mod chrome;
 #[path = "export_cloud.rs"]
 mod cloud;
 #[path = "export_connectors.rs"]
@@ -225,6 +227,7 @@ fn export_bindings() {
     desktop::decls(&mut out);
     mcp::decls(&mut out);
     crew_access::decls(&mut out);
+    chrome::decls(&mut out);
     permissions::decls(&mut out);
     catalog::decls(&mut out);
     imports::decls(&mut out);
@@ -438,6 +441,7 @@ fn export_bindings() {
     mcp::methods(&mut out);
     crew_access::methods(&mut out);
     permissions::methods(&mut out);
+    chrome::methods(&mut out);
     catalog::methods(&mut out);
     imports::methods(&mut out);
     backup::methods(&mut out);
@@ -501,6 +505,7 @@ fn export_bindings() {
     rules::notifications(&mut out);
     desktop::notifications(&mut out);
     permissions::notifications(&mut out);
+    chrome::notifications(&mut out);
     mcp::notifications(&mut out);
     logins::notifications(&mut out);
     cloud::notifications(&mut out);

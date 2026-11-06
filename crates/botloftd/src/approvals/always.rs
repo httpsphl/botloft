@@ -1,6 +1,7 @@
 //! "Allow always" (spec 10.1): which requests the owner can allow for good,
 //! and whether a rule of the bot already allows one.
 
+use botloft_core::chat::CHROME_TOOLS;
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{AllowKind, AllowScope, BotRules, ChatBody};
 use botloft_store::ApprovalRecord;
@@ -8,6 +9,7 @@ use serde_json::Value;
 use tracing::warn;
 
 use crate::browser::sites;
+use crate::chrome;
 use crate::state::{Daemon, Event};
 
 /// Longest command a rule keeps, in characters: a longer one is a script,
@@ -37,6 +39,19 @@ pub(crate) fn scope_of(tool: &str, input: &Value) -> Option<AllowScope> {
         }
         "NotebookEdit" => (AllowKind::File, field("notebook_path")?.to_owned()),
         "WebSearch" => (AllowKind::Tool, String::new()),
+        // The owner's Chrome, by site, for what acts on a page; the site is
+        // the one the daemon put in what it shows (spec 37.3).
+        tool if tool.starts_with(CHROME_TOOLS) => {
+            let action = &tool[CHROME_TOOLS.len()..];
+            if chrome::kind_of(action) != chrome::Kind::Page {
+                return None;
+            }
+            return Some(AllowScope {
+                tool_name: chrome::RULE_TOOL.to_owned(),
+                kind: AllowKind::Site,
+                value: field("site")?.to_owned(),
+            });
+        }
         // One tool of one connected server (spec 25.4); the tools of
         // Botloft itself never ask.
         tool if tool.starts_with("mcp__") && !tool.starts_with("mcp__botloft__") => {

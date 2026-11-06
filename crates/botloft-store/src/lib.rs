@@ -7,6 +7,7 @@
 mod agent_keys;
 mod allow_rules;
 mod approvals;
+mod bot_chrome;
 mod bot_connectors;
 mod bots;
 mod browser_sites;

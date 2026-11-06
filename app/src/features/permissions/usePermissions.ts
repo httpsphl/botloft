@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import type { Permissions } from "../../lib/protocol.gen";
 import { useApi } from "../../store/context";
 
-const EMPTY: Permissions = { desktop: [], sites: [], rules: [], crewAccess: [] };
+const EMPTY: Permissions = { desktop: [], sites: [], rules: [], crewAccess: [], chrome: [] };
 const GATHER_MS = 200;
 
 export function usePermissions(): Permissions | null {
