@@ -30,6 +30,10 @@ export const chat: Messages["chat"] = {
     keys: "Enter para enviar, Shift+Enter para una nueva línea",
     keysWithCtrl: "Ctrl+Enter para enviar, Enter para una nueva línea",
     send: "Enviar",
+    stop: (bot: string) => `Detener a ${bot}`,
+    stopHint: (bot: string) =>
+      `Detiene lo que ${bot} está haciendo ahora. Un mensaje que todavía espera en la fila viene después.`,
+    stopFailed: "No se pudo detener",
   },
   files: {
     tooMany: (max: number) => `Un mensaje puede llevar hasta ${max} archivos.`,
@@ -60,6 +64,8 @@ export const chat: Messages["chat"] = {
       `Tardó ${time}${
         tokens === null ? "" : `. Leyó ${tokens.read} tokens y escribió ${tokens.wrote}.`
       }`,
+    stoppedByOwner: (time: string, tokens: string | null) =>
+      `Detenido por ti a los ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
     stopped: (reason: string) => `El agente dejó de trabajar en esto: ${reason}`,
   },
   tools: {

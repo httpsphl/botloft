@@ -150,6 +150,18 @@ export class FakeChat {
       durationMs: 4200,
       tokens,
       error,
+      stopped: false,
+    });
+  }
+
+  /** A turn the owner stopped (`bots.interrupt`): no error, and what it spent until then. */
+  stopped(botId: BotId): ChatItem {
+    return this.add(botId, {
+      kind: "turn",
+      durationMs: 3100,
+      tokens: { ...TURN_TOKENS, output: 90 },
+      error: null,
+      stopped: true,
     });
   }
 

@@ -31,7 +31,8 @@ const tool = (name: string) =>
     file: null,
     lines: null,
   });
-const turn = () => item({ kind: "turn", durationMs: 1000, tokens: null, error: null });
+const turn = () =>
+  item({ kind: "turn", durationMs: 1000, tokens: null, error: null, stopped: false });
 const inbound = (body: string, at?: number) =>
   item(
     {

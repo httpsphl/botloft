@@ -3,7 +3,7 @@
 // chose so in Settings, Ctrl+Enter sends and Enter starts a line (spec
 // 15.1).
 
-import { ArrowUp, File as FileIcon, Paperclip, X } from "lucide-react";
+import { File as FileIcon, Paperclip, X } from "lucide-react";
 import {
   type ClipboardEvent,
   type FormEvent,
@@ -32,6 +32,7 @@ import { rememberImage } from "./images";
 import { ModelPicker } from "./ModelPicker";
 import { ModePicker } from "./ModePicker";
 import { ReplyBar, type ReplyTarget } from "./Replying";
+import { SendButtons } from "./SendButtons";
 import type { Files, PendingFile } from "./useFiles";
 
 const MAX_HEIGHT_PX = 240;
@@ -274,19 +275,7 @@ export const ChatComposer = memo(function ChatComposer({
             ) : (
               <AgentModelPicker bot={bot} onLater={setLater} />
             )}
-            <button
-              type="submit"
-              aria-label={t.chat.composer.send}
-              disabled={empty || tooLong || busy}
-              className="group/send grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent text-canvas transition-[opacity,transform,background-color] duration-150 hover:opacity-90 active:scale-90 disabled:bg-line-strong disabled:opacity-60"
-            >
-              <ArrowUp
-                aria-hidden
-                size={16}
-                strokeWidth={2.25}
-                className="transition-transform duration-200 group-hover/send:-translate-y-0.5"
-              />
-            </button>
+            <SendButtons bot={bot} empty={empty} disabled={empty || tooLong || busy} />
           </div>
         </div>
       </div>
