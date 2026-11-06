@@ -128,7 +128,7 @@ export type AppStore = StoreApi<AppState>;
 export type Page = "questions" | "search" | "routines" | "settings" | null;
 
 /** A tab of the Permissions page in Settings (spec 15.1). */
-export type PermissionsTab = "desktop" | "sites" | "rules" | "crews";
+export type PermissionsTab = "desktop" | "sites" | "rules" | "crews" | "chrome";
 
 export interface PermissionsAt {
   tab: PermissionsTab;

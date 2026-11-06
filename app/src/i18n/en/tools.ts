@@ -65,6 +65,28 @@ export const tools = {
     desktop_select: "Choose in a window",
     desktop_scroll: "Scroll a window",
   },
+  /** The tools of the owner's Chrome (spec 37), after `mcp__claude-in-chrome__`. */
+  chrome: {
+    rule: "In your Chrome",
+    use: "Use your Chrome",
+    names: {
+      navigate: "Open a page in your Chrome",
+      computer: "Click and type in your Chrome",
+      read_page: "Read a page in your Chrome",
+      get_page_text: "Read a page in your Chrome",
+      find: "Look for something in your Chrome",
+      form_input: "Fill in a form in your Chrome",
+      javascript_tool: "Run a script in your Chrome",
+      file_upload: "Send a file in your Chrome",
+      upload_image: "Send a picture in your Chrome",
+      browser_batch: "Take some steps in your Chrome",
+      tabs_context_mcp: "Look at its tabs in your Chrome",
+      tabs_create_mcp: "Open a tab in your Chrome",
+      tabs_close_mcp: "Close a tab in your Chrome",
+      gif_creator: "Record your Chrome",
+      shortcuts_execute: "Run a shortcut in your Chrome",
+    },
+  },
   /** Where `browser_scroll` went. */
   scroll: { down: "down", up: "up", top: "to the top", bottom: "to the end" },
   /** A tool with no name of its own here, as an action. */

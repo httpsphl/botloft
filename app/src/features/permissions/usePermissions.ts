@@ -30,7 +30,8 @@ export function usePermissions(): Permissions | null {
       if (
         event.name === "bot.desktop" ||
         event.name === "bot.rules" ||
-        event.name === "bot.sites"
+        event.name === "bot.sites" ||
+        event.name === "bot.chrome"
       ) {
         later();
       } else if (event.name === "chat.item") {

@@ -8,6 +8,7 @@ import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { AllowRules } from "../bots/AllowRules";
 import { CrewAccessList } from "../bots/CrewAccessList";
+import { BotChrome } from "../chrome/BotChrome";
 import { DesktopGrants } from "../desktop/DesktopGrants";
 import { SiteRow } from "./rows";
 import { usePermissions } from "./usePermissions";
@@ -56,6 +57,7 @@ export function BotPermissions({ bot }: { bot: Bot }) {
           <BotSites bot={bot} />
           <CrewAccessList bot={bot} />
           <DesktopGrants bot={bot} />
+          <BotChrome bot={bot} />
         </dl>
       </dd>
     </div>

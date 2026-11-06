@@ -69,6 +69,7 @@ export function settingsIndex(t: ReturnType<typeof useT>): Entry[] {
       t.permissions.tabs.sites,
       t.permissions.tabs.rules,
       t.permissions.tabs.crews,
+      t.chrome.tab,
       t.desktop.grants.real,
       t.desktop.grants.away,
       t.permissions.stopAll,
