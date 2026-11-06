@@ -13,6 +13,7 @@ mod bots;
 mod browser_sites;
 mod builds;
 mod chat;
+mod copier;
 mod crew_access;
 mod crews;
 mod delete;
@@ -49,6 +50,7 @@ use rusqlite::{Connection, Row, ffi};
 
 pub use approvals::ApprovalRecord;
 pub use bots::BotRecord;
+pub use copier::Copier;
 pub use crew_access::{AccessKinds, CrewAccessRecord};
 pub use deliveries::DeliveryOutcome;
 pub use key_scan::{Pasted, pasted_id};
