@@ -8,7 +8,9 @@ use std::sync::Arc;
 use axum::Router;
 use axum::body::{Body, to_bytes};
 use axum::http::{Request, StatusCode, header};
-use botloft_cloud::{AppState, Clock, Config, CopyStore, Db, Hub, Mailer, Outbox, Pusher, router};
+use botloft_cloud::{
+    AppState, Clock, Config, CopyStore, Db, Hub, Mailer, Outbox, Pusher, Releases, router,
+};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use tower::ServiceExt;
@@ -66,6 +68,7 @@ fn build(outbox: Outbox, config: Config, push: Pusher) -> Server {
         store: store.clone(),
         hub: Hub::default(),
         push,
+        releases: Releases::new().expect("releases"),
     };
     Server {
         app: router(state),
