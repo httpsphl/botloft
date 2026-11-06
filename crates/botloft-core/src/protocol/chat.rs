@@ -225,8 +225,13 @@ pub struct TurnItem {
     /// and on turns stored before it was kept.
     #[serde(default)]
     pub tokens: Option<TokenUsage>,
-    /// Why the turn failed, e.g. `rate_limit`; `null` when it worked.
+    /// Why the turn failed, e.g. `rate_limit`; `null` when it worked and
+    /// when the owner stopped it.
     pub error: Option<String>,
+    /// The owner stopped the turn (`bots.interrupt`, spec 8.2); `false` on
+    /// turns stored before it was kept.
+    #[serde(default)]
+    pub stopped: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

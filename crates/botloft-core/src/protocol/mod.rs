@@ -171,6 +171,8 @@ pub mod method {
     pub const BOTS_SET_EFFORT: &str = "bots.setEffort";
     pub const BOTS_COMPACT: &str = "bots.compact";
     pub const BOTS_STOP_TASK: &str = "bots.stopTask";
+    /// Stops what the bot is doing now (spec 9.2).
+    pub const BOTS_INTERRUPT: &str = "bots.interrupt";
     pub const OVERVIEW_CHANGES: &str = "overview.changes";
     pub const CONNECTORS_LIST: &str = "connectors.list";
     pub const BOTS_SET_CONNECTORS: &str = "bots.setConnectors";

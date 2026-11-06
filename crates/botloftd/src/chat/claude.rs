@@ -174,12 +174,23 @@ fn result(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
     crate::service::plan::turn_ended(daemon, bot, generation, event);
     let reloaded = context::reloaded(daemon, bot);
     let failed = event["is_error"].as_bool() == Some(true);
-    let error = failed.then(|| {
+    // The owner stopped it (`bots.interrupt`, spec 9.2): Claude Code says the
+    // turn was cut, `aborted_streaming` or `aborted_tools`. Not an error.
+    let stopped = failed
+        && event["terminal_reason"]
+            .as_str()
+            .is_some_and(|reason| reason.starts_with("aborted"));
+    let error = (failed && !stopped).then(|| {
         event["terminal_reason"]
             .as_str()
             .or_else(|| event["subtype"].as_str())
             .unwrap_or("error")
             .to_owned()
+    });
+    // A request cut while it streamed is not counted: Claude Code reports
+    // nothing for it (spec 19), and "0 tokens" would not be true.
+    let used = tokens(&event["usage"], reloaded).filter(|used| {
+        !stopped || used.input + used.cache_write + used.cache_read + used.output > 0
     });
     // A compaction ends like a turn; its notice already says what happened.
     if !context::turn_ended(daemon, bot, event) {
@@ -187,8 +198,9 @@ fn result(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
             daemon,
             bot,
             event["duration_ms"].as_u64().unwrap_or_default(),
-            tokens(&event["usage"], reloaded),
+            used,
             error,
+            stopped,
         );
     }
     sink::finish_turn(daemon, bot, generation, failed);
