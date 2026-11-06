@@ -206,6 +206,7 @@ fn export_bindings() {
     out.decl::<FilesListParams>();
     out.decl::<FilesReadParams>();
     out.decl::<FileData>();
+    out.decl::<MediaLink>();
     out.decl::<Message>();
     out.decl::<MessageReply>();
     out.decl::<Delivery>();
@@ -419,6 +420,11 @@ fn export_bindings() {
         method::FILES_READ,
         &out.name::<FilesReadParams>(),
         &out.name::<FileData>(),
+    );
+    out.method(
+        method::FILES_MEDIA,
+        &out.name::<FilesReadParams>(),
+        &out.name::<MediaLink>(),
     );
     out.method(
         method::DELIVERIES_LIST,

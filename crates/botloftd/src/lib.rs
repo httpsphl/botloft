@@ -28,6 +28,7 @@ pub mod logging;
 pub mod logins;
 pub mod loops;
 pub mod mcp_secrets;
+pub mod media;
 pub mod mobile;
 pub mod paths;
 pub mod platform;

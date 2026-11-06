@@ -35,4 +35,20 @@ export const files = {
     cut: "Only the start of the file is shown.",
     gone: "This file is no longer there.",
   },
+  media: {
+    play: (name: string) => `Play ${name}`,
+    pause: (name: string) => `Pause ${name}`,
+    position: (name: string) => `Where ${name} is playing`,
+    loading: "Getting it ready…",
+    failed: "This can't play here. Open it in your own program.",
+  },
+  picture: {
+    enlarge: (name: string) => `See ${name} bigger`,
+    viewer: (name: string) => `Picture: ${name}`,
+  },
+  made: {
+    heading: "Also made",
+    label: (bot: string) => `Pictures, sounds and videos ${bot} made`,
+    more: (count: number) => (count === 1 ? "1 more in Files" : `${count} more in Files`),
+  },
 };
