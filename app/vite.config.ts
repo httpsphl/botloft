@@ -16,12 +16,20 @@ const notices = { comments: { legal: true } };
 // spec 15.7) into dist-setup, which the botloft-setup crate embeds.
 // `vite build --mode phone` builds the phone's page (src/phone, spec 28.7)
 // into dist-phone, which the account server serves at /m.
+// `--mode site` is the public site (src/site, spec 39), which the account
+// server serves at /; `pnpm build:site` (scripts/site.mjs) builds it into
+// dist-site with a page per language.
 export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss()],
   ...(mode === "phone" && {
     root: fileURLToPath(new URL("./src/phone", import.meta.url)),
     base: "/m/",
     publicDir: fileURLToPath(new URL("./public-phone", import.meta.url)),
+  }),
+  ...(mode === "site" && {
+    root: fileURLToPath(new URL("./src/site", import.meta.url)),
+    base: "/",
+    publicDir: fileURLToPath(new URL("./public-site", import.meta.url)),
   }),
   // Keep Rust compiler errors visible in the terminal.
   clearScreen: false,
@@ -43,6 +51,8 @@ export default defineConfig(({ mode }) => ({
         fileURLToPath(new URL("../crates/botloftd/catalog", import.meta.url)),
         // The bytes the computer and the phone must agree on (spec 28.3).
         fileURLToPath(new URL("../docs/test-vectors", import.meta.url)),
+        // The site's screenshots, the same as the README's (spec 39).
+        fileURLToPath(new URL("../docs/assets", import.meta.url)),
       ],
     },
   },
@@ -51,7 +61,8 @@ export default defineConfig(({ mode }) => ({
     target: "chrome120",
     // The app's two windows: the main one and the island (spec 31.3).
     ...(mode !== "setup" &&
-      mode !== "phone" && {
+      mode !== "phone" &&
+      mode !== "site" && {
         rollupOptions: { input: ["index.html", "island.html"], output: notices },
       }),
     ...(mode === "setup" && {
@@ -61,6 +72,12 @@ export default defineConfig(({ mode }) => ({
     ...(mode === "phone" && {
       target: "es2022",
       outDir: fileURLToPath(new URL("./dist-phone", import.meta.url)),
+      emptyOutDir: true,
+      rollupOptions: { output: notices },
+    }),
+    ...(mode === "site" && {
+      target: "es2022",
+      outDir: fileURLToPath(new URL("./dist-site", import.meta.url)),
       emptyOutDir: true,
       rollupOptions: { output: notices },
     }),
