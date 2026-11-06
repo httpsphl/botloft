@@ -13,10 +13,20 @@ export class FakeChanges {
 
   /** What `connectors.list` answers: the owner's claude.ai connectors. */
   connectors: ConnectorList = { connectors: [], checkedAt: 0 };
+  /** What a new look finds, when it differs from `connectors`. */
+  lookedAgain: ConnectorList | null = null;
+  /** How many times the connectors were looked for again. */
+  looks = 0;
 
   handlers(): Pick<Handlers, "overview.changes" | "connectors.list"> {
     return {
-      "connectors.list": () => this.connectors,
+      "connectors.list": ({ refresh }) => {
+        if (refresh) {
+          this.looks += 1;
+          this.connectors = this.lookedAgain ?? this.connectors;
+        }
+        return this.connectors;
+      },
       "overview.changes": ({ botId }) => {
         this.asked.set(botId, (this.asked.get(botId) ?? 0) + 1);
         return this.byBot.get(botId) ?? { repos: [], events: [], prs: [], github: null };

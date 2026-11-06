@@ -29,7 +29,7 @@ export function ToolsPage() {
   const host = useHost();
   const bots = useApp((state) => state.bots);
   const overview = useConnections();
-  const { list, looking, refresh } = useConnectorList();
+  const { list, looking, refresh } = useConnectorList({ fresh: true });
   const [tab, setTab] = useState<Tab>("yours");
   const [query, setQuery] = useState("");
   const [opened, setOpened] = useState<Opened | null>(null);

@@ -66,6 +66,35 @@ describe("the tools of the owner's claude.ai account (spec 34.7)", () => {
     expect(host.opened).toContain("https://claude.ai/customize/connectors");
   });
 
+  test("a tool signed in to on claude.ai since the last look shows as connected", async () => {
+    const { fake } = await setUp();
+    fake.changes.connectors = {
+      connectors: [{ name: "Canva", state: "needs_auth" }],
+      checkedAt: 1,
+    };
+    fake.changes.lookedAgain = {
+      connectors: [{ name: "Canva", state: "connected" }],
+      checkedAt: Date.now(),
+    };
+    const settings = await openTools();
+    const yours = await within(settings).findByRole("list", { name: "Yours" });
+    expect(await within(yours).findByText("Connected")).toBeTruthy();
+    expect(within(yours).queryByText("Needs you to sign in")).toBeNull();
+    expect(fake.changes.looks).toBe(1);
+  });
+
+  test("a list looked for a moment ago is not looked for again on its own", async () => {
+    const { fake } = await setUp();
+    fake.changes.connectors = {
+      connectors: [{ name: "Figma", state: "needs_auth" }],
+      checkedAt: Date.now(),
+    };
+    const settings = await openTools();
+    const yours = await within(settings).findByRole("list", { name: "Yours" });
+    expect(within(yours).getByText("Needs you to sign in")).toBeTruthy();
+    expect(fake.changes.looks).toBe(0);
+  });
+
   test("Discover lists known tools the account lacks by kind, each a way to claude.ai", async () => {
     const { host } = await setUp();
     const settings = await openTools();

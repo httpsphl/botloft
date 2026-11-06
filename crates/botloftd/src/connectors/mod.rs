@@ -5,6 +5,9 @@
 mod discover;
 pub mod names;
 mod rules;
+mod seen;
+
+pub(crate) use seen::seen;
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -92,13 +95,18 @@ pub fn list(daemon: &Daemon, params: ConnectorsListParams) -> ApiResult<Connecto
         connectors,
         checked_at: daemon.clock.now_ms(),
     };
-    if let Ok(text) = serde_json::to_vec(&list)
+    keep(daemon, &list);
+    *lock(&daemon.connectors.known) = Some(list.clone());
+    Ok(list)
+}
+
+/// Writes `list` to disk, for the next daemon.
+fn keep(daemon: &Daemon, list: &ConnectorList) {
+    if let Ok(text) = serde_json::to_vec(list)
         && let Err(err) = std::fs::write(kept(daemon), text)
     {
         warn!("could not keep the claude.ai connectors: {err}");
     }
-    *lock(&daemon.connectors.known) = Some(list.clone());
-    Ok(list)
 }
 
 /// Looks for the connectors once after the daemon starts, when Claude Code

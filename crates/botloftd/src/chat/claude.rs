@@ -67,7 +67,8 @@ fn task_counts(event: &Value) -> (u32, u32) {
     (count(agents), count(tasks.len()))
 }
 
-/// Every turn starts with the mode and the model in use (spec 7.4).
+/// Every turn starts with the mode and the model in use (spec 7.4), and,
+/// in an agent given claude.ai connectors, how each stands (spec 34.3).
 fn init(daemon: &Daemon, bot: &BotId, event: &Value) {
     if let Some(mode) = event["permissionMode"].as_str() {
         service::modes::reported(daemon, bot, mode);
@@ -75,6 +76,7 @@ fn init(daemon: &Daemon, bot: &BotId, event: &Value) {
     if let Some(model) = event["model"].as_str() {
         service::models::reported(daemon, bot, model);
     }
+    crate::connectors::seen(daemon, &event["mcp_servers"]);
 }
 
 /// The piece of reply text a `stream_event` carries, if that is what it is
