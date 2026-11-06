@@ -1,5 +1,5 @@
 // What a file is, from its name and media type: the icon and color in the
-// list and how the preview shows it.
+// list, the group it is filtered by and how the preview shows it.
 
 import {
   File,
@@ -124,4 +124,32 @@ const ICONS: Record<FileKind, LucideIcon> = {
 
 export function kindIcon(kind: FileKind): LucideIcon {
   return ICONS[kind];
+}
+
+/** The groups the files panel filters by, in the order of its chips. */
+export const FILE_GROUPS = ["images", "documents", "sheets", "media", "code", "other"] as const;
+export type FileGroup = (typeof FILE_GROUPS)[number];
+
+const GROUPS: Record<FileKind, FileGroup> = {
+  image: "images",
+  pdf: "documents",
+  word: "documents",
+  slides: "documents",
+  text: "documents",
+  sheet: "sheets",
+  audio: "media",
+  video: "media",
+  code: "code",
+  archive: "other",
+  other: "other",
+};
+
+export function kindGroup(kind: FileKind): FileGroup {
+  return GROUPS[kind];
+}
+
+/** The extension in capitals ("PNG"), or nothing for a name without one. */
+export function extensionOf(name: string): string {
+  const dot = name.lastIndexOf(".");
+  return dot > 0 && dot < name.length - 1 ? name.slice(dot + 1).toUpperCase() : "";
 }
