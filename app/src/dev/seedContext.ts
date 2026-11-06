@@ -80,6 +80,23 @@ export function seedContext(
   // Sites the owner signed in to for the agents (spec 35).
   fake.logins.add("reddit.com", [bots.scout], now - 2 * 3_600_000);
   fake.logins.add("notion.so", [], now - 26 * 3_600_000);
+  // The owner's own skills, one given to Scout (spec 38).
+  fake.skills.add({
+    name: "deploy",
+    description: "Builds the site and ships it to the server, checking the build first.",
+    allowedTools: ["Bash(npm run build *)"],
+    hasFiles: true,
+    botIds: [bots.scout],
+  });
+  fake.skills.add({
+    name: "brand-voice",
+    description: "Writes in the bakery's voice: warm, short, no jargon.",
+  });
+  fake.skills.add({
+    name: "pdf",
+    description: "Reads and fills in PDF files.",
+    source: "claude_ai",
+  });
   fake.changes.byBot.set(bots.scout, {
     repos: [
       {

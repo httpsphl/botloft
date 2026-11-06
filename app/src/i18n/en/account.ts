@@ -334,6 +334,7 @@ export const account = {
     backup: "Backup",
     tools: "Tools",
     logins: "Logins",
+    skills: "Skills",
     permissions: "Permissions",
     account: "Account and phone",
     groupDaily: "Every day",

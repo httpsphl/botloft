@@ -30,6 +30,7 @@ import { screens } from "./screens";
 import { search } from "./search";
 import { setup } from "./setup";
 import { shell } from "./shell";
+import { skills } from "./skills";
 import { terminal } from "./terminal";
 import { tools } from "./tools";
 import { updates } from "./updates";
@@ -65,6 +66,7 @@ export const es: Messages = {
   screens,
   search,
   setup,
+  skills,
   terminal,
   tools,
 };
