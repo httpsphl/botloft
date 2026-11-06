@@ -62,3 +62,13 @@ impl std::fmt::Debug for FileData {
             .finish()
     }
 }
+
+/// Where the app plays a sound or video of the bot's (spec 8.4): an address
+/// on the daemon's own server, read in pieces as it plays.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct MediaLink {
+    /// `http://127.0.0.1:<port>/media/<token>`.
+    pub url: String,
+}

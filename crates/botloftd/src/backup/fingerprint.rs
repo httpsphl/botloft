@@ -7,6 +7,7 @@ use std::collections::HashSet;
 use std::fs::{self, File};
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, PoisonError};
 
 use botloft_core::protocol::BackupScope;
 use sha2::{Digest, Sha256};
@@ -17,13 +18,15 @@ use crate::state::Daemon;
 /// The file the database copy is made in; it is gone when the hash is.
 const SCRATCH: &str = "cloud-fingerprint.db";
 
+/// One hash at a time: they share [`SCRATCH`], and the store no longer
+/// keeps two from running together.
+static ONE_AT_A_TIME: Mutex<()> = Mutex::new(());
+
 pub fn light_fingerprint(daemon: &Daemon) -> io::Result<String> {
+    let _only = ONE_AT_A_TIME.lock().unwrap_or_else(PoisonError::into_inner);
     let other = |err: botloft_store::StoreError| io::Error::other(err.to_string());
-    let (database, crews, bots) = {
+    let (crews, bots) = {
         let store = daemon.store();
-        let database = store
-            .light_fingerprint(&daemon.paths.home.join(SCRATCH))
-            .map_err(other)?;
         let crews = store.crews(true).map_err(other)?;
         let mut bots = HashSet::new();
         for crew in &crews {
@@ -31,8 +34,11 @@ pub fn light_fingerprint(daemon: &Daemon) -> io::Result<String> {
                 bots.insert(format!("{}/{}", crew.slug, bot.slug).to_ascii_lowercase());
             }
         }
-        (database, crews, bots)
+        (crews, bots)
     };
+    // The copy it hashes reads the whole database: not on the store.
+    let database =
+        super::database_fingerprint(daemon, &daemon.paths.home.join(SCRATCH)).map_err(other)?;
     let mut hash = Sha256::new();
     hash.update(database.as_bytes());
     let filter = Filter {

@@ -269,6 +269,16 @@ export const account = {
     sleepAfterHint:
       "A sleeping agent uses no memory and wakes by itself when a message, a routine or a signal comes. Its first reply then takes a few seconds more.",
     sleepAfterChoices: { 15: "15 minutes", 30: "30 minutes", 60: "1 hour", 0: "Never" },
+    history: "History",
+    historyKeep: "Keep the chats for",
+    historyHint:
+      "Older chats, messages and routine runs are deleted from Botloft for good. What still waits for you stays, and so do the agents' memory and the files in their folders.",
+    historyChoices: { 0: "Always", 30: "30 days", 90: "90 days", 365: "1 year" },
+    historyDaysCustom: (days: number) => `${days} days`,
+    historyConfirmTitle: "Delete the older chats now?",
+    historyConfirmBody: (kept: string) =>
+      `Chats, messages and routine runs older than ${kept} are deleted from Botloft for good, now and from then on. The agents keep their memory, and the files in their folders stay.`,
+    historyConfirm: "Delete older chats",
     saveFailed: "Could not change the setting",
     pages: "Parts of Settings",
     general: "General",

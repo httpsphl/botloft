@@ -133,6 +133,9 @@ pub const PROTOCOL_VERSION: u32 = 2;
 pub mod method {
     pub const SESSION_HELLO: &str = "session.hello";
     pub const SESSION_SET_LOCALE: &str = "session.setLocale";
+    /// Answers `null` at once: the app's sign that the connection lives
+    /// (spec 11).
+    pub const SESSION_PING: &str = "session.ping";
     pub const SYSTEM_STATUS: &str = "system.status";
     pub const SYSTEM_REFRESH: &str = "system.refresh";
     pub const CREWS_LIST: &str = "crews.list";
@@ -239,6 +242,7 @@ pub mod method {
     pub const ATTACHMENTS_READ: &str = "attachments.read";
     pub const FILES_LIST: &str = "files.list";
     pub const FILES_READ: &str = "files.read";
+    pub const FILES_MEDIA: &str = "files.media";
     pub const DELIVERIES_LIST: &str = "deliveries.list";
     pub const DELIVERIES_RETRY: &str = "deliveries.retry";
     pub const TASKS_LIST: &str = "tasks.list";

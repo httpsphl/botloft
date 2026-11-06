@@ -16,6 +16,7 @@ import { useApp } from "../../store/context";
 import { Select } from "../../ui/Select";
 import { MakerSettings } from "../maker/MakerSettings";
 import { AgentPrograms } from "./AgentPrograms";
+import { HistorySettings } from "./HistorySettings";
 import { Field, Section, Toggle } from "./settingsParts";
 import { useDaemonSettings } from "./useDaemonSettings";
 
@@ -127,6 +128,7 @@ export function GeneralSettings() {
           </div>
         </Field>
       </Section>
+      <HistorySettings />
     </>
   );
 }
