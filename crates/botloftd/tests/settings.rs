@@ -15,7 +15,7 @@ async fn settings_are_read_and_changed_one_at_a_time() {
     let settings = app.call("settings.get", json!(null)).await.expect("get");
     assert_eq!(
         settings,
-        json!({ "startWithWindows": true, "keepAwake": true, "approvalWaitMinutes": 0, "sleepAfterMinutes": 0, "defaultAgent": "claude", "showExperimentalAgents": false, "makerBuildsWithoutAsking": false })
+        json!({ "startWithWindows": true, "keepAwake": true, "approvalWaitMinutes": 0, "sleepAfterMinutes": 0, "defaultAgent": "claude", "showExperimentalAgents": false, "makerBuildsWithoutAsking": false, "historyDays": 0 })
     );
 
     let changed = app
@@ -24,7 +24,7 @@ async fn settings_are_read_and_changed_one_at_a_time() {
         .expect("update");
     assert_eq!(
         changed,
-        json!({ "startWithWindows": true, "keepAwake": false, "approvalWaitMinutes": 0, "sleepAfterMinutes": 0, "defaultAgent": "claude", "showExperimentalAgents": false, "makerBuildsWithoutAsking": false })
+        json!({ "startWithWindows": true, "keepAwake": false, "approvalWaitMinutes": 0, "sleepAfterMinutes": 0, "defaultAgent": "claude", "showExperimentalAgents": false, "makerBuildsWithoutAsking": false, "historyDays": 0 })
     );
     assert!(!*t.daemon.settings.keep_awake().borrow());
 
@@ -34,7 +34,7 @@ async fn settings_are_read_and_changed_one_at_a_time() {
         .expect("update");
     assert_eq!(
         changed,
-        json!({ "startWithWindows": false, "keepAwake": false, "approvalWaitMinutes": 0, "sleepAfterMinutes": 0, "defaultAgent": "claude", "showExperimentalAgents": false, "makerBuildsWithoutAsking": false })
+        json!({ "startWithWindows": false, "keepAwake": false, "approvalWaitMinutes": 0, "sleepAfterMinutes": 0, "defaultAgent": "claude", "showExperimentalAgents": false, "makerBuildsWithoutAsking": false, "historyDays": 0 })
     );
     assert_eq!(
         app.call("settings.get", json!(null)).await.expect("get"),
@@ -83,7 +83,7 @@ async fn the_experimental_agents_are_switched_on_and_off_in_settings() {
     let on = app
         .call(
             "settings.update",
-            json!({ "showExperimentalAgents": true, "makerBuildsWithoutAsking": false }),
+            json!({ "showExperimentalAgents": true, "makerBuildsWithoutAsking": false, "historyDays": 0 }),
         )
         .await
         .expect("on");
@@ -100,7 +100,7 @@ async fn the_experimental_agents_are_switched_on_and_off_in_settings() {
     let off = app
         .call(
             "settings.update",
-            json!({ "showExperimentalAgents": false, "makerBuildsWithoutAsking": false }),
+            json!({ "showExperimentalAgents": false, "makerBuildsWithoutAsking": false, "historyDays": 0 }),
         )
         .await
         .expect("off");
@@ -124,7 +124,7 @@ async fn the_owner_tells_where_an_agents_program_is() {
     let mut app = t.session().await;
     app.call(
         "settings.update",
-        json!({ "showExperimentalAgents": true, "makerBuildsWithoutAsking": false }),
+        json!({ "showExperimentalAgents": true, "makerBuildsWithoutAsking": false, "historyDays": 0 }),
     )
     .await
     .expect("on");
@@ -184,4 +184,75 @@ async fn the_owner_tells_where_an_agents_program_is() {
             .program_setting(botloft_core::protocol::AgentKind::Codex),
         ""
     );
+}
+
+/// How many chat items `bot` has.
+async fn items(app: &mut common::Client, bot: &serde_json::Value) -> usize {
+    app.call("chat.history", json!({ "botId": bot["id"] }))
+        .await
+        .expect("history")
+        .as_array()
+        .expect("items")
+        .len()
+}
+
+/// The history stays for good unless the owner picks how many days
+/// (spec 12.1); then what is older goes, and what is newer stays.
+#[tokio::test]
+async fn the_history_older_than_the_days_kept_goes() {
+    let mut c = common::bots::two_bots().await;
+    let lead = c.app.call("bots.list", json!({})).await.expect("bots")[0].clone();
+    c.app
+        .call(
+            "messages.send",
+            json!({ "botId": lead["id"], "body": "An old question" }),
+        )
+        .await
+        .expect("send");
+    let line = c.lead_process.wait_lines(1).await[0].clone();
+    common::stream::answer(&c.lead_process, &line, "An old answer").await;
+    c.t.until_state(&lead, botloft_core::protocol::BotState::Idle)
+        .await;
+    assert!(
+        items(&mut c.app, &lead).await >= 3,
+        "message, reply and turn"
+    );
+
+    // Kept for good, a month later nothing has gone.
+    c.t.clock
+        .advance(std::time::Duration::from_secs(31 * 24 * 60 * 60));
+    assert!(botloftd::history::prune(&c.t.daemon).is_empty());
+
+    let refused = c
+        .app
+        .call("settings.update", json!({ "historyDays": 4000 }))
+        .await
+        .expect_err("ten years at most");
+    assert!(
+        refused.message.contains("historyDays"),
+        "{}",
+        refused.message
+    );
+    let changed = c
+        .app
+        .call("settings.update", json!({ "historyDays": 30 }))
+        .await
+        .expect("thirty days");
+    assert_eq!(changed["historyDays"], 30);
+    let pruned = botloftd::history::prune(&c.t.daemon);
+    assert!(pruned.chat_items >= 3, "{pruned:?}");
+    assert_eq!(pruned.messages, 1);
+    assert_eq!(items(&mut c.app, &lead).await, 0);
+
+    // What came after the days kept stays.
+    c.app
+        .call(
+            "messages.send",
+            json!({ "botId": lead["id"], "body": "A new question" }),
+        )
+        .await
+        .expect("send");
+    c.lead_process.wait_lines(2).await;
+    assert!(botloftd::history::prune(&c.t.daemon).is_empty());
+    assert_eq!(items(&mut c.app, &lead).await, 1);
 }

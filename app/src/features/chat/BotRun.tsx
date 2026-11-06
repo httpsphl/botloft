@@ -22,6 +22,7 @@ import { runParts, splitDraft } from "./rows";
 import { SharedFiles } from "./SharedFiles";
 import { isSharedFiles } from "./shared";
 import { ToolGroup } from "./ToolGroup";
+import { TurnMedia } from "./TurnMedia";
 
 export interface Live {
   /** Text of the reply being written. */
@@ -204,7 +205,10 @@ function BotRunView({
             case "turn":
               return (
                 <Arriving key={head.id} id={head.id} at={head.createdAt}>
-                  <TurnEnd turn={head.body} />
+                  <div className="flex flex-col gap-1.5">
+                    <TurnMedia items={items} turn={head} botId={bot.id} bot={bot.name} />
+                    <TurnEnd turn={head.body} />
+                  </div>
                 </Arriving>
               );
             default:

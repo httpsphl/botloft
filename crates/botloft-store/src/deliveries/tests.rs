@@ -222,3 +222,48 @@ fn deliveries_a_dead_process_never_began_go_back_or_give_up() {
         .expect("was unread");
     assert_eq!((dead.state, dead.attempts), (DeliveryState::Dead, 2));
 }
+
+#[test]
+fn deliveries_a_stopped_daemon_left_unread_go_back_without_counting() {
+    let fx = Fixture::new();
+    let a1 = queue(&fx, 0, "a1", 0);
+    let a2 = queue(&fx, 0, "a2", 0);
+    let b1 = queue(&fx, 1, "b1", 0);
+    send(&fx, &a1, 7, "u1");
+    fx.store.mark_read("u1", 25).expect("read");
+    send(&fx, &a2, 7, "u2");
+    send(&fx, &b1, 3, "u3");
+
+    let mut reopened = fx
+        .store
+        .reopen_left_behind("the daemon stopped", 40)
+        .expect("reopen");
+    reopened.sort_by(|a, b| a.id.as_str().cmp(b.id.as_str()));
+    let mut expected = vec![a2.id.clone(), b1.id.clone()];
+    expected.sort_by(|a, b| a.as_str().cmp(b.as_str()));
+    assert_eq!(
+        reopened.iter().map(|d| d.id.clone()).collect::<Vec<_>>(),
+        expected
+    );
+    for delivery in &reopened {
+        assert_eq!(
+            (delivery.state, delivery.attempts, delivery.next_attempt_at),
+            (DeliveryState::Pending, 0, 40)
+        );
+        assert_eq!(delivery.last_error.as_deref(), Some("the daemon stopped"));
+    }
+    // The one the bot began stays sent, and the queue keeps its order.
+    assert!(
+        fx.store
+            .unread_deliveries(&fx.bots[0].id, 7)
+            .expect("unread")
+            .is_empty()
+    );
+    assert_eq!(due(&fx, 40), [a2.id, b1.id]);
+    assert!(
+        fx.store
+            .reopen_left_behind("again", 50)
+            .expect("nothing left")
+            .is_empty()
+    );
+}

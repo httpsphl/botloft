@@ -869,6 +869,16 @@ export type FileData = { mediaType: string,
 data: string, };
 
 /**
+ * Where the app plays a sound or video of the bot's (spec 8.4): an address
+ * on the daemon's own server, read in pieces as it plays.
+ */
+export type MediaLink = { 
+/**
+ * `http://127.0.0.1:<port>/media/<token>`.
+ */
+url: string, };
+
+/**
  * Text sent to a bot, by the owner, another bot or the daemon.
  */
 export type Message = { id: MessageId, crewId: CrewId, fromKind: SenderKind, 
@@ -2690,7 +2700,12 @@ showExperimentalAgents: boolean,
  * The Maker builds its plans without the owner's card; each build can
  * still be undone (spec 36.4).
  */
-makerBuildsWithoutAsking: boolean, };
+makerBuildsWithoutAsking: boolean, 
+/**
+ * Days the chats, messages and routine runs are kept; 0 keeps them
+ * for good, which is the default (spec 12.1).
+ */
+historyDays: number, };
 
 /**
  * The settings to change; the ones left out stay as they are.
@@ -2703,7 +2718,11 @@ approvalWaitMinutes?: number,
 /**
  * From 0 (never) to [`SLEEP_AFTER_MAX_MINUTES`].
  */
-sleepAfterMinutes?: number, defaultAgent?: AgentKind, showExperimentalAgents?: boolean, makerBuildsWithoutAsking?: boolean, };
+sleepAfterMinutes?: number, defaultAgent?: AgentKind, showExperimentalAgents?: boolean, makerBuildsWithoutAsking?: boolean, 
+/**
+ * From 0 (for good) to [`HISTORY_MAX_DAYS`].
+ */
+historyDays?: number, };
 
 /**
  * When a routine runs (spec 20.2), kept as structure rather than cron text
@@ -3046,6 +3065,7 @@ done: boolean, };
 export interface RpcMethods {
   "session.hello": { params: HelloParams; result: HelloResult };
   "session.setLocale": { params: LocaleParams; result: null };
+  "session.ping": { params: undefined; result: null };
   "system.status": { params: undefined; result: SystemStatus };
   "system.refresh": { params: undefined; result: SystemStatus };
   "settings.get": { params: undefined; result: Settings };
@@ -3083,6 +3103,7 @@ export interface RpcMethods {
   "attachments.read": { params: AttachmentIdParams; result: AttachmentData };
   "files.list": { params: FilesListParams; result: Array<BotFile> };
   "files.read": { params: FilesReadParams; result: FileData };
+  "files.media": { params: FilesReadParams; result: MediaLink };
   "deliveries.list": { params: DeliveriesListParams; result: Array<Delivery> };
   "deliveries.retry": { params: DeliveryIdParams; result: Delivery };
   "tasks.list": { params: TasksListParams; result: Array<Task> };

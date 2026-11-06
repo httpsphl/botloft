@@ -193,6 +193,7 @@ async fn run(
 const ASIDE: &[&str] = &[
     method::FILES_LIST,
     method::FILES_READ,
+    method::FILES_MEDIA,
     method::SCREENS_LIST,
     method::ATTACHMENTS_READ,
     method::USAGE_TOKENS,
@@ -242,6 +243,9 @@ fn route(
     };
     // Watching a browser belongs to this connection (spec 21.7).
     let result = match request.method.as_str() {
+        // Answered here, ahead of nothing: the app hears that the
+        // connection lives (spec 11).
+        method::SESSION_PING => Ok(Value::Null),
         method::BROWSER_WATCH | method::BROWSER_UNWATCH => {
             frames.send_replace(None);
             watch.request(daemon, &request.method, request.params)

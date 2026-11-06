@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 use botloft_core::ids::BotId;
 use botloft_core::protocol::ChatDelta;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::agent::OutputDecoder;
 use crate::state::{Daemon, Event};
@@ -94,7 +94,8 @@ impl StreamReader {
         }
         self.buffer.extend_from_slice(rest);
         if self.buffer.len() > LINE_MAX {
-            debug!(bot = %self.bot, "dropped a stream line longer than 8 MiB");
+            warn!(bot = %self.bot, "dropped a stream line longer than 8 MiB");
+            daemon.supervisor.line_dropped(&self.bot, self.generation);
             self.buffer.clear();
             self.skipping = true;
         }

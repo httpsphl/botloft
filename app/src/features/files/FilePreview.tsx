@@ -1,6 +1,7 @@
 // One file of a bot, shown in the panel: images, PDFs, markdown and plain
-// text right there; anything else only offers to open it. A file is read
-// from the daemon once per look, up to 20 MB.
+// text right there, sounds and videos in a player; anything else only
+// offers to open it. A file is read from the daemon once per look, up to
+// 20 MB; a sound or video plays from its address, of any size.
 
 import { ArrowLeft, ExternalLink, FolderOpen, LoaderCircle } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -15,6 +16,8 @@ import { Button } from "../../ui/Button";
 import { attempt } from "../../ui/toast";
 import { Markdown } from "../chat/Markdown";
 import { previewKind } from "./kinds";
+import { MediaPlayer } from "./MediaPlayer";
+import { type MediaKind, mediaKind } from "./media";
 
 /** Characters of text shown; a longer file shows its start. */
 const TEXT_MAX = 200_000;
@@ -23,6 +26,7 @@ type Shown =
   | { kind: "loading" }
   | { kind: "failed"; gone: boolean; tooBig: boolean; detail: string }
   | { kind: "none" }
+  | { kind: "media"; media: MediaKind }
   | { kind: "image"; src: string; alt: string }
   | { kind: "pdf"; src: string }
   | { kind: "markdown" | "text"; text: string; cut: boolean };
@@ -33,6 +37,11 @@ function useShown(bot: Bot, file: BotFile): Shown {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: a file is read again when it changes
   useEffect(() => {
+    const media = mediaKind(file);
+    if (media) {
+      setShown({ kind: "media", media });
+      return;
+    }
     const kind = previewKind(file.mediaType);
     if (kind === "none") {
       setShown({ kind: "none" });
@@ -74,7 +83,7 @@ function useShown(bot: Bot, file: BotFile): Shown {
         URL.revokeObjectURL(url);
       }
     };
-  }, [api, bot.id, file.path, file.modifiedAt, file.mediaType]);
+  }, [api, bot.id, file.path, file.modifiedAt, file.mediaType, file.name]);
 
   return shown;
 }
@@ -113,15 +122,31 @@ export function FilePreview({ bot, file, onBack }: { bot: Bot; file: BotFile; on
         <p className="mt-0.5 text-muted text-xs">{fileSize(file.size)}</p>
       </div>
       <div className="flex min-h-0 flex-1 flex-col overflow-auto">
-        <Body shown={shown} />
+        <Body shown={shown} botId={bot.id} file={file} />
       </div>
     </div>
   );
 }
 
-function Body({ shown }: { shown: Shown }) {
+function Body({ shown, botId, file }: { shown: Shown; botId: string; file: BotFile }) {
   const t = useT().files.preview;
   switch (shown.kind) {
+    case "media":
+      return (
+        <div
+          className={
+            shown.media === "video" ? "grid min-h-0 flex-1 place-items-center bg-black" : "p-3"
+          }
+        >
+          {shown.media === "audio" ? (
+            <div className="rounded-xl border border-line bg-panel">
+              <MediaPlayer botId={botId} file={file} kind="audio" />
+            </div>
+          ) : (
+            <MediaPlayer botId={botId} file={file} kind="video" fill />
+          )}
+        </div>
+      );
     case "loading":
       return (
         <p role="status" className="flex items-center gap-2 p-4 text-muted text-sm">

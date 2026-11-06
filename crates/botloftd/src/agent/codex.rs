@@ -132,11 +132,22 @@ impl OutputDecoder for Silent {
 
 /// The names of the MCP servers in the owner's `config.toml`, to switch off.
 fn owner_mcp_servers() -> Vec<String> {
-    let home = std::env::var_os("CODEX_HOME")
+    codex_home(std::env::var_os("CODEX_HOME"), dirs::home_dir())
+        .map(|home| mcp_servers_in(&home))
+        .unwrap_or_default()
+}
+
+/// Where Codex keeps the owner's configuration: `CODEX_HOME`, or `.codex`
+/// in the home folder (`USERPROFILE` on Windows, `HOME` elsewhere).
+fn codex_home(set: Option<OsString>, home: Option<PathBuf>) -> Option<PathBuf> {
+    set.filter(|set| !set.is_empty())
         .map(PathBuf::from)
-        .or_else(|| std::env::var_os("USERPROFILE").map(|p| PathBuf::from(p).join(".codex")));
-    let Some(text) = home.and_then(|home| std::fs::read_to_string(home.join("config.toml")).ok())
-    else {
+        .or_else(|| home.map(|home| home.join(".codex")))
+}
+
+/// The MCP servers named in the `config.toml` of `codex_home`.
+fn mcp_servers_in(codex_home: &Path) -> Vec<String> {
+    let Ok(text) = std::fs::read_to_string(codex_home.join("config.toml")) else {
         return Vec::new();
     };
     let Ok(document) = text.parse::<toml_edit::DocumentMut>() else {
@@ -255,6 +266,31 @@ fn parse_models(result: &Value) -> Vec<botloft_core::protocol::AgentModel> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_owners_servers_are_found_in_the_home_folder_on_every_system() {
+        let home = tempfile::tempdir().expect("home");
+        let codex = home.path().join(".codex");
+        std::fs::create_dir_all(&codex).expect("codex");
+        std::fs::write(
+            codex.join("config.toml"),
+            "[mcp_servers.node_repl]\ncommand = \"node\"\n[mcp_servers.\"has space\"]\ncommand = \"x\"\n",
+        )
+        .expect("config");
+
+        // No `CODEX_HOME`: the home folder's `.codex`, which is what was
+        // missed outside Windows, where there is no `USERPROFILE`.
+        let found = codex_home(None, Some(home.path().to_path_buf())).expect("home");
+        assert_eq!(found, codex);
+        assert_eq!(mcp_servers_in(&found), ["node_repl"]);
+        let set = Some(OsString::from("/elsewhere"));
+        assert_eq!(
+            codex_home(set, Some(home.path().to_path_buf())),
+            Some(PathBuf::from("/elsewhere"))
+        );
+        let empty = Some(OsString::new());
+        assert_eq!(codex_home(empty, None), None);
+    }
 
     #[test]
     fn the_list_skips_hidden_models_and_names_the_rest() {

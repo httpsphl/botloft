@@ -14,7 +14,7 @@ use serde_json::json;
 use tokio::net::TcpListener;
 
 use crate::state::Daemon;
-use crate::{rpc, screens, tools};
+use crate::{media, rpc, screens, tools};
 
 /// Browser origins allowed to open `/rpc` (spec 11.1): the Tauri app in
 /// production and the Vite dev server. Clients that send no `Origin`, such
@@ -36,6 +36,7 @@ pub fn router(daemon: Arc<Daemon>) -> Router {
         .route("/health", get(health))
         .route("/rpc", get(rpc_upgrade))
         .route("/view/{key}/{root}/{*path}", get(screens::view))
+        .route("/media/{token}", get(media::serve))
         .route(
             "/mcp",
             post(tools::handle)

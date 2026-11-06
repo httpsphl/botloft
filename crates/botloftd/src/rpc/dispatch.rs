@@ -146,6 +146,7 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::ATTACHMENTS_READ => reply(attachments::read(daemon, parse(params)?)),
         method::FILES_LIST => reply(files::list(daemon, parse(params)?)),
         method::FILES_READ => reply(files::read(daemon, parse(params)?)),
+        method::FILES_MEDIA => reply(files::media(daemon, parse(params)?)),
         method::DELIVERIES_LIST => reply(deliveries::list(daemon, parse(params)?)),
         method::DELIVERIES_RETRY => reply(deliveries::retry(daemon, parse(params)?)),
         method::ROUTINES_LIST => reply(routines::list(daemon, parse(params)?)),

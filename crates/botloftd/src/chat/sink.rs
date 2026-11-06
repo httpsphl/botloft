@@ -120,8 +120,12 @@ pub(crate) fn session_started(daemon: &Daemon, bot: &BotId, session: &str) {
 }
 
 /// Everything that follows the end of a turn, whatever the agent: the
-/// routine's run, the screens, the access to other crews, the bot's state.
+/// message whose replay could not be read, the routine's run, the screens,
+/// the access to other crews, the bot's state.
 pub(crate) fn finish_turn(daemon: &Daemon, bot: &BotId, generation: u64, failed: bool) {
+    if let Some(uuid) = daemon.supervisor.begun_unseen(bot, generation) {
+        message_read(daemon, bot, &uuid);
+    }
     routines::turn_ended(daemon, bot, failed);
     screens::turn_ended(daemon, bot);
     daemon.crew_access.end_turn(bot);
