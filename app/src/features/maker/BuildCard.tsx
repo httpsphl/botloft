@@ -1,5 +1,5 @@
-// The Maker's plan (spec 36.4): crews, agents and routines to build in one
-// go. The owner leaves out or changes any part, then builds it, or says no
+// The Maker's plan (spec 36.4, 36.8): crews, agents and routines to build in
+// one go, and changes to the crews that already exist. The owner leaves out or changes any part, then builds it, or says no
 // with a note for the Maker. Once answered it shrinks to one line.
 
 import { Ban, Hammer } from "lucide-react";
@@ -9,16 +9,20 @@ import type { ApprovalItem, Bot } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
 import { NoteArea, SectionCard } from "../../ui/ChatCard";
 import { useAnswer } from "../chat/useAnswer";
+import { BuildChanges } from "./BuildChanges";
 import { BuildCrew } from "./BuildCrew";
 import { BuildDone } from "./BuildDone";
-import { edited, kept, planOf, type Step, selfRunning } from "./plan";
+import { edited, kept, planOf, type Step, selfRunning, takesAway } from "./plan";
 
 export function BuildCard({ approval, bot }: { approval: ApprovalItem; bot: Bot }) {
   const t = useT();
   const c = t.maker.card;
   const asked = planOf(approval.input);
   const [plan, setPlan] = useState(asked);
-  const [out, setOut] = useState<ReadonlySet<number>>(new Set());
+  // Archiving and deleting start unchecked: the owner opts in.
+  const [out, setOut] = useState<ReadonlySet<number>>(
+    () => new Set(asked?.steps.flatMap((step, index) => (takesAway(step) ? [index] : [])) ?? []),
+  );
   const { note, setNote, busy, answer } = useAnswer(approval, {
     allow: c.buildFailed,
     deny: c.declineFailed,
@@ -28,7 +32,7 @@ export function BuildCard({ approval, bot }: { approval: ApprovalItem; bot: Bot 
   }
   const steps = plan ? kept(plan, out) : [];
   const left = new Set<Step>(steps);
-  const hasCrew = steps.some((step) => step.op === "create_crew");
+  const hasCrew = steps.length > 0;
   const changed = out.size > 0 || JSON.stringify(plan) !== JSON.stringify(asked);
   const runs = selfRunning(steps);
   const toggle = (index: number) =>
@@ -95,6 +99,7 @@ export function BuildCard({ approval, bot }: { approval: ApprovalItem; bot: Bot 
             />
           ) : null,
         )}
+        {plan && <BuildChanges plan={plan} kept={left} toggle={toggle} />}
         <p className="sr-only">{bot.name}</p>
       </div>
     </SectionCard>

@@ -1,12 +1,16 @@
-//! `build` (spec 36.4): the Maker builds crews, their bots and routines in
-//! one go. The owner checks the plan in the Maker's chat, may change or
+//! `build` (spec 36.4, 36.8): the Maker builds crews, their bots and
+//! routines in one go, and changes the crews that already exist. The owner checks the plan in the Maker's chat, may change or
 //! leave out any part, and builds it; the call waits for that, like a
 //! permission request. With "build without asking" on, it builds at once.
 //! Either way the owner can undo it for a week.
 
 mod apply;
+mod existing;
+mod lookup;
 pub(crate) mod plan;
 mod schema;
+mod schema_existing;
+mod undo;
 
 use botloft_core::chat::BUILD_TOOL;
 use botloft_core::ids::{ApprovalId, BotId};
@@ -20,6 +24,7 @@ use crate::state::Daemon;
 
 pub const BUILD: &str = "build";
 pub(super) use self::schema::tool;
+pub(crate) use self::undo::undo_changes;
 
 pub(super) async fn build(
     daemon: &Daemon,
@@ -47,7 +52,8 @@ async fn run(
             "another plan of yours still waits for the owner; wait for their answer".to_owned(),
         );
     }
-    if daemon.settings.get().maker_builds_without_asking {
+    // Archiving and deleting always ask (spec 36.4).
+    if daemon.settings.get().maker_builds_without_asking && !existing::takes_away(&plan) {
         let (_, report) = apply::build(daemon, bot, None, &plan)?;
         return Ok(built(
             report,
@@ -94,10 +100,12 @@ async fn run(
 fn built(report: Value, how: &str) -> Value {
     json!({
         "built": true,
-        "crews": report,
+        "crews": report["crews"],
+        "changes": report["changes"],
         "note": format!(
-            "{how} The crews start now, each with its chief. Tell the owner to open a crew and \
-             talk to its chief: you do not do the crews' work."
+            "{how} New crews start now, each with its chief; changed bots run with their new \
+             instructions, model and effort when they next start. Tell the owner to open a crew \
+             and talk to its chief: you do not do the crews' work."
         ),
     })
 }

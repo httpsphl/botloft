@@ -145,6 +145,26 @@ pub fn archive(daemon: &Daemon, params: RoutineIdParams) -> ApiResult<Routine> {
     Ok(changed(daemon, &store, routine))
 }
 
+/// Brings back a routine archived on its own (undoing a build, spec 36.4).
+/// It counts from now: times that passed meanwhile are not missed.
+pub(crate) fn unarchive(daemon: &Daemon, id: &botloft_core::ids::RoutineId) -> ApiResult<Routine> {
+    let store = daemon.store();
+    let mut routine = find(&store, id)?;
+    if routine.archived_at.is_none() {
+        return Ok(routine);
+    }
+    let now = daemon.clock.now_ms();
+    routine.archived_at = None;
+    routine.next_run_at = if routine.enabled {
+        routines::next_run_at(&routine, now, now)
+    } else {
+        None
+    };
+    routine.updated_at = now;
+    store.update_routine(&routine)?;
+    Ok(changed(daemon, &store, routine))
+}
+
 pub fn runs(daemon: &Daemon, params: RoutinesRunsParams) -> ApiResult<Vec<RoutineRun>> {
     let limit = params.limit.unwrap_or(DEFAULT_LIMIT);
     if !(1..=MAX_LIMIT).contains(&limit) {

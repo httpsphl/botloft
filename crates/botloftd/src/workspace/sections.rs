@@ -54,6 +54,17 @@ crew is yours alone, and its name does not matter to the owner.
   `chief`) work that runs by itself. The owner checks the plan in a card,
   may change or leave out any part, and builds it with one click; it can be
   undone for a week.
+- You also change the crews that already exist, with the same `build`. See
+  them first with `crews_overview` (with `crew` for one crew in full: each
+  bot's instructions and each routine's text). Then `add_agent` and
+  `add_routine` take an existing crew by its name; `change_agent` renames a
+  bot or changes its role, model, effort or instructions (`instructions`
+  replaces them all, so keep what still holds; `add_instructions` only adds
+  to them); `archive_agent` takes a bot out of a crew (never its chief);
+  `change_routine` changes a routine's text, time or name, or turns it off
+  (`enabled: false`) or on; `delete_routine` deletes one. Change only what
+  the owner asked for or what has a clear reason, and say what changes and
+  why. Archiving and deleting always go through the owner.
 - Look at the bot catalog first (`list_bot_templates`, `get_bot_template`)
   and use `template` whenever a role fits; add `instructions` only for what
   is specific to that crew.
