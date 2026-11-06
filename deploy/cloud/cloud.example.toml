@@ -51,6 +51,14 @@ storage = "disk"
 # vapid_key_file = "/config/vapid-key"      # or the variable BOTLOFT_CLOUD_VAPID_KEY
 # allow_hosts = []                           # empty: Chrome, Firefox, Edge and Safari
 
+# The public site (spec 39), served at /: the built files of app/dist-site, which
+# the Docker image already holds here, and /download/<system>, which sends a
+# visitor to the newest installer on the releases page. Without this section
+# there is no site.
+[site]
+dir = "/srv/site"
+releases = "https://github.com/httpsphl/botloft/releases"
+
 [smtp]
 host = "smtp.example.org"
 port = 587                   # 587 starts TLS; 465 is TLS from the start
