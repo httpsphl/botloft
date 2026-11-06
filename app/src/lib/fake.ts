@@ -33,6 +33,7 @@ import { FakeRoutines } from "./fakeRoutines";
 import { conflict, invalid, notFound, slugify } from "./fakeRules";
 import { FakeScreens } from "./fakeScreens";
 import { searchHandlers } from "./fakeSearch";
+import { FakeSkills } from "./fakeSkills";
 import { usageHandlers } from "./fakeUsage";
 import {
   type BackgroundTask,
@@ -106,6 +107,7 @@ export class FakeBotloft implements BotloftApi {
   readonly desktop = new FakeDesktop(this);
   readonly sites = new FakeSites(this);
   readonly chrome = new FakeChrome(this);
+  readonly skills = new FakeSkills(this);
   readonly mcp = new FakeMcp(this);
   readonly logins = new FakeLogins(this);
   /** The language the app last told, as the daemon keeps it (spec 24.7). */
@@ -347,6 +349,7 @@ export class FakeBotloft implements BotloftApi {
     ...this.desktop.handlers(),
     ...this.sites.handlers(),
     ...this.chrome.handlers(),
+    ...this.skills.handlers(),
     ...this.mcp.handlers(),
     ...this.logins.handlers(),
     ...this.conversation.handlers(),

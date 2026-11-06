@@ -153,6 +153,8 @@ pub struct Daemon {
     pub connectors: crate::connectors::Connectors,
     /// The owner's own Chrome: tabs and turn (spec 37).
     pub chrome: crate::chrome::Chrome,
+    /// Where the owner's skills are looked for (spec 38).
+    pub skills: crate::skills::Skills,
     /// The shared site logins' window and profile (spec 35).
     pub logins: crate::logins::Logins,
     /// How each bot's connected tools stand since it started (spec 25.5).
@@ -212,6 +214,7 @@ impl Daemon {
             background: Default::default(),
             connectors: Default::default(),
             chrome: Default::default(),
+            skills: Default::default(),
             logins: Default::default(),
             mcp_states: Default::default(),
             keys: Default::default(),

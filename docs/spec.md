@@ -261,7 +261,7 @@ Eventos de uma generation antiga são ignorados. Todo processo novo emite `bot.s
      --disallowedTools CronCreate,CronDelete,CronList,ScheduleWakeup,RemoteTrigger
    ```
 
-   - `--setting-sources project,local` e `--strict-mcp-config` deixam de fora hooks, skills, agents, modo de permissão e servidores MCP pessoais do dono: o bot vê o que o Botloft gera. O login da conta não é uma fonte de settings e continua valendo. As instruções pessoais do dono (`%USERPROFILE%\.claude\CLAUDE.md`) não saem por essa flag: o Claude Code as acha subindo as pastas a partir do cwd. Quem as deixa de fora, junto com a memória automática, é o `settings.json` gerado (7.5).
+   - `--setting-sources project,local` e `--strict-mcp-config` deixam de fora hooks, skills, agents, modo de permissão e servidores MCP pessoais do dono: o bot vê o que o Botloft gera. As skills que o dono escolhe para um agente chegam como cópia na pasta dele (38). O login da conta não é uma fonte de settings e continua valendo. As instruções pessoais do dono (`%USERPROFILE%\.claude\CLAUDE.md`) não saem por essa flag: o Claude Code as acha subindo as pastas a partir do cwd. Quem as deixa de fora, junto com a memória automática, é o `settings.json` gerado (7.5).
    - `--no-chrome` deixa de fora o Chrome do dono (a extensão Claude in Chrome), que tem as contas dele logadas. Sem a flag, o agente o ganhava sem pedir quando o dono tinha `CLAUDE_CODE_ENABLE_CFC=1` nas variáveis do usuário, que chegam pelo bloco de ambiente (passo 5), e talvez com o "Enabled by default" do `/chrome`, guardado no `~/.claude.json`, que não é uma fonte de settings. `--strict-mcp-config` não o tira: o servidor `claude-in-chrome` entra pela flag, como `dynamic` (19). A flag vence as duas. Só um agente do Claude Code a quem o dono deu o Chrome sobe com `--chrome` (37.2).
    - Um agente a que o dono deu ferramentas do claude.ai roda sem `--strict-mcp-config`, o único jeito de o Claude Code buscá-las, com as outras ferramentas do claude.ai e qualquer servidor posto na pasta dele bloqueados pelo nome em `--disallowedTools` (34.5).
    - `--allowedTools mcp__botloft` libera as tools da crew sem aprovação. Uma regra `allow` no `settings.json` do projeto não bastaria: em `-p`, numa pasta que nunca passou pelo diálogo de confiança, o Claude Code não aplica as regras `allow` do projeto (documentado em `permissions`).
@@ -3574,3 +3574,66 @@ O daemon não guarda nada do que o agente vê no Chrome: o que as tools devolvem
 - `permissions.list` ganha `chrome: [ChromeGrant {botId, givenAt}]`, sem os agentes arquivados.
 - `botloft_core::chat::CHROME_TOOL` = `mcp__botloft__ask_chrome` (o pedido de 37.5: `summary` = o porquê, `input` = `{why}`); `CHROME_TOOLS` = `mcp__claude-in-chrome__`, o começo das tools da extensão, cujo resumo é o `site` que o daemon pôs, senão o `url`.
 - `LaunchPlan` ganha `chrome`.
+
+## 38. As skills do dono
+
+Status: **SK1 feito** (daemon, com os testes de 38.8); **SK2** (app) a seguir. O dono pediu em 2026-11-05 que os agentes usem as skills dele, como o Claude Code do desktop faz, e escolheu no mesmo dia, entre as opções desenhadas, escolher por agente, como as ferramentas do claude.ai (34).
+
+### 38.1 O que é
+
+As skills do Claude Code do dono: pastas com um `SKILL.md` em `%USERPROFILE%\.claude\skills\<nome>` (as dele, inclusive as que apontam para outra pasta) e as da conta do claude.ai que o Claude Code guarda em `skills\synced\<conta>\<nome>`. Com `--setting-sources project,local` (7.4) nenhuma chega ao agente (19); com isto, o dono escolhe quais cada agente usa.
+
+- **Só agentes do Claude Code.** O Codex já vê as skills pessoais do dono (30.4), e o Antigravity não tem o mesmo formato.
+- **O nome** é o da pasta. Uma pasta com nome que o Botloft recusa (vazio, começando com `.`, `synced`, caracteres fora de letras, números, `-`, `_`, `.` e espaço) fica de fora. Com o mesmo nome nas duas fontes, vale a do dono.
+- **O que o dono vê de cada uma** (`skills/meta.rs`, lendo o frontmatter sem biblioteca de YAML): a descrição (`description` com `when_to_use`, até 1.536 caracteres, como o Claude Code lista), as ferramentas que ela libera sem perguntar (`allowed-tools`), se ela roda comandos sozinha (`hooks`, ou uma linha `` !`comando` `` no corpo) e se traz outros arquivos além do `SKILL.md`.
+
+### 38.2 Por que uma cópia
+
+O Claude Code carrega como skill de projeto uma pasta em `<workspace>\.claude\skills\<nome>`, sem nada das pessoais (19). O daemon põe ali uma cópia, não um link: assim o agente não alcança o original do dono pela pasta dele. Um symlink de pasta pediria administrador no Windows, e uma junction abriria o original para escrita.
+
+### 38.3 Como chega ao agente
+
+- **A escolha:** tabela `bot_skills (bot_id, name)`. Um agente novo não tem nenhuma.
+- **A cópia do Botloft:** ao dar uma skill (`skills.share`), o daemon copia a pasta do dono para `<home>\skills\<nome>`. Essa cópia é a que vai para os agentes, e ela fica mesmo se o dono apagar o original (a lista a mostra como "guardada", `kept`). Quando nenhum agente tem mais uma skill guardada, a cópia sai.
+- **A cada início do agente:** a cópia do Botloft é refeita a partir do original, quando ele ainda existe, e vai para `<workspace>\.claude\skills\<nome>`. As pastas que o Botloft pôs ali e saíram da escolha são apagadas. Uma pasta que o próprio agente fez com o mesmo nome fica como está, e a skill do dono não entra.
+- **A marca:** cada cópia tem um arquivo `.botloft-skill`, e o daemon só substitui ou apaga pastas com ela. A cópia nunca segue um link de dentro da skill, deixa de fora `.git`, e para em 2.000 arquivos ou 50 MB. Ela é montada ao lado, numa pasta com ponto, e trocada no fim.
+- **Mudar a escolha** reinicia cada agente que ganhou ou perdeu a skill, com `--resume`, quando nada estiver em andamento, como em 34.4.
+- **O que a skill faz** vale como no Claude Code do dono: as ferramentas de `allowed-tools` rodam sem cartão no turno em que ela é usada, e os hooks e as linhas `` !`comando` `` rodam (19). Por isso o app mostra esses avisos antes de o dono dar a skill (SK2). Escrever na `.claude` do agente continua pedindo aprovação nos modos Manual e Aceitar edições (19).
+
+### 38.4 Quem pode dar
+
+O dono, em Configurações → Skills (SK2), ou no cartão quando o agente pede (38.5). `skills.share` com um agente que não é do Claude Code é `conflict`; uma skill que o daemon não acha é `not_found`.
+
+### 38.5 O agente pede
+
+- **`ask_skill {name, why?}`** (tool do MCP do Botloft, `why` até 300 caracteres):
+  - um agente que não é do Claude Code recebe erro;
+  - o nome tem de ser de uma skill do dono, sem diferença de maiúsculas; se não for, o erro diz isso;
+  - uma que ele já tem volta `done`;
+  - senão, abre no chat um pedido de aprovação (10.1) com a tool `mcp__botloft__ask_skill` e o resumo = o nome, e espera.
+- **Permitido:** a skill entra na escolha do agente, ele reinicia com `--resume` quando o turno acaba e uma mensagem de sistema na fila diz que ela está em `.claude/skills` e que ele siga, como em 34.6.
+
+### 38.6 O que o agente sabe
+
+`.claude/rules/skills.md`, escrito a cada início em todo agente do Claude Code: as skills que ele tem, pelo nome, e as outras do dono, também só pelo nome, a pedir com `ask_skill`. Sem nenhuma skill do dono, o arquivo sai. Só os nomes, para gastar pouco contexto: a descrição de cada uma chega pelo próprio Claude Code quando ele a carrega.
+
+### 38.7 Num servidor
+
+A cópia do Botloft é o que vai para os agentes, então uma skill dada continua valendo onde o daemon estiver. Num servidor não há a pasta do dono para ler: um marco próprio fará o app mandar a pasta da skill ao daemon, como um anexo. Uma skill que usa PowerShell (`shell: powershell`) pode não rodar num servidor Linux.
+
+### 38.8 Marcos
+
+| Marco | O que entra | Teste |
+|---|---|---|
+| **SK1** Daemon | a busca das skills e o frontmatter, a cópia do Botloft, `bot_skills`, a cópia na pasta do agente com a marca, as regras, `skills.list`, `skills.share`, `ask_skill` | `FakeRuntime`: a lista com descrição, ferramentas e arquivos; dar uma skill e ver a cópia e as regras no início seguinte; o original apagado e a cópia guardada; tirar e ver a pasta sair; a pasta do próprio agente intacta; `TestDaemon`: `ask_skill` com nome errado e permitido |
+| **SK2** App | Configurações → Skills com os cartões, os avisos e as chaves por agente; o cartão de `ask_skill`; os Detalhes do agente; três idiomas | `FakeBotloft`; teste manual com o Claude Code real: dar uma skill a um agente e vê-la em `get_context_usage` como `projectSettings` |
+
+### 38.9 Privacidade (13)
+
+O conteúdo das skills não vai ao log: só que o dono mudou quem usa uma. As cópias ficam na pasta de dados do Botloft, cercada para os agentes (7.5), e na pasta do agente que a tem.
+
+### 38.10 Protocolo e dados
+
+- Migration 0040: `bot_skills (bot_id, name)`, apagada com o agente (7.6).
+- `skills.list` → `SkillList {skills: [Skill {name, description, source, allowedTools, runsCommands, hasFiles, botIds}]}` (`source`: `personal`, `claude_ai`, `kept`). `skills.share {name, botIds}` → `Skill`.
+- `botloft_core::chat::SKILL_TOOL` = `mcp__botloft__ask_skill`: o pedido de 38.5 é um `ApprovalItem` com `summary` = o nome e `input` = `{name, why}`.

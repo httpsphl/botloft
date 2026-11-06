@@ -59,6 +59,8 @@ mod rules;
 mod search;
 #[path = "export_session.rs"]
 mod session;
+#[path = "export_skills.rs"]
+mod skills;
 #[path = "export_usage.rs"]
 mod usage;
 use crate::validate;
@@ -229,6 +231,7 @@ fn export_bindings() {
     mcp::decls(&mut out);
     crew_access::decls(&mut out);
     chrome::decls(&mut out);
+    skills::decls(&mut out);
     permissions::decls(&mut out);
     catalog::decls(&mut out);
     imports::decls(&mut out);
@@ -449,6 +452,7 @@ fn export_bindings() {
     crew_access::methods(&mut out);
     permissions::methods(&mut out);
     chrome::methods(&mut out);
+    skills::methods(&mut out);
     catalog::methods(&mut out);
     imports::methods(&mut out);
     backup::methods(&mut out);

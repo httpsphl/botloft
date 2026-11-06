@@ -46,6 +46,8 @@ pub const CHROME_TOOL: &str = "mcp__botloft__ask_chrome";
 /// The start of the tools of the owner's Chrome, from the Claude in Chrome
 /// extension (spec 37): `mcp__claude-in-chrome__navigate`.
 pub const CHROME_TOOLS: &str = "mcp__claude-in-chrome__";
+/// A bot asking for one of the owner's skills (spec 38.5).
+pub const SKILL_TOOL: &str = "mcp__botloft__ask_skill";
 /// Longest bot or routine suggestion kept, in bytes: the owner reads and
 /// edits all of it.
 pub const SUGGESTION_INPUT_MAX: usize = 64 * 1024;
@@ -131,7 +133,7 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
             field(input, "to").map(|to| format!("@{}", to.trim_start_matches('@')))
         }
         SUGGEST_TOOL | ROUTINE_TOOL | CHANGE_ROUTINE_TOOL | DELETE_ROUTINE_TOOL
-        | CHANGE_BOT_TOOL | CONNECTOR_TOOL => field(input, "name").map(str::to_owned),
+        | CHANGE_BOT_TOOL | CONNECTOR_TOOL | SKILL_TOOL => field(input, "name").map(str::to_owned),
         BROWSER_SITE_TOOL => field(input, "site").map(str::to_owned),
         CREW_ACCESS_TOOL => field(input, "crew").map(str::to_owned),
         SHOW_PLAN_TOOL => field(input, "summary").map(str::to_owned),

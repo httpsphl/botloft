@@ -1462,6 +1462,56 @@ export type ChromeTurn = {
 botId: BotId | null, };
 
 /**
+ * Where a skill comes from.
+ */
+export type SkillSource = "personal" | "claude_ai" | "kept";
+
+/**
+ * A skill the owner can give to agents (spec 38.1).
+ */
+export type Skill = { 
+/**
+ * Its folder's name, which is how Botloft knows it.
+ */
+name: string, 
+/**
+ * What it does and when, from its `SKILL.md`; may be empty.
+ */
+description: string, source: SkillSource, 
+/**
+ * Tools Claude Code runs without asking while the skill is used
+ * (`allowed-tools`).
+ */
+allowedTools: Array<string>, 
+/**
+ * It runs commands by itself: hooks, or `` !`command` `` lines.
+ */
+runsCommands: boolean, 
+/**
+ * It brings other files than `SKILL.md`: scripts, references.
+ */
+hasFiles: boolean, 
+/**
+ * The agents that have it.
+ */
+botIds: Array<BotId>, };
+
+/**
+ * What `skills.list` answers.
+ */
+export type SkillList = { 
+/**
+ * By name.
+ */
+skills: Array<Skill>, };
+
+/**
+ * `skills.share`: the agents that may use a skill, in place of those
+ * before.
+ */
+export type SkillsShareParams = { name: string, botIds: Array<BotId>, };
+
+/**
  * A site the owner let a bot use in its browser (spec 21.5).
  */
 export type BrowserSite = { botId: BotId, 
@@ -3137,6 +3187,8 @@ export interface RpcMethods {
   "chrome.set": { params: ChromeSetParams; result: BotChrome };
   "chrome.status": { params: undefined; result: ChromeTurn };
   "chrome.stop": { params: undefined; result: ChromeTurn };
+  "skills.list": { params: undefined; result: SkillList };
+  "skills.share": { params: SkillsShareParams; result: Skill };
   "catalog.list": { params: CatalogListParams; result: Array<BotTemplate> };
   "catalog.get": { params: CatalogGetParams; result: BotTemplateFull };
   "catalog.add": { params: CatalogAddParams; result: Bot };
