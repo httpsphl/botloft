@@ -21,6 +21,7 @@ pub mod connectors;
 pub mod context;
 pub mod courier;
 pub mod desktop;
+pub mod history;
 pub mod imports;
 pub mod keep_awake;
 pub mod logging;

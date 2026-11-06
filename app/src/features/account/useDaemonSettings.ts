@@ -29,6 +29,7 @@ export function useDaemonSettings(): {
         showExperimentalAgents: update.showExperimentalAgents ?? before.showExperimentalAgents,
         makerBuildsWithoutAsking:
           update.makerBuildsWithoutAsking ?? before.makerBuildsWithoutAsking,
+        historyDays: update.historyDays ?? before.historyDays,
       });
     }
     attempt(failed, async () => {

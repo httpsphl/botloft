@@ -2690,7 +2690,12 @@ showExperimentalAgents: boolean,
  * The Maker builds its plans without the owner's card; each build can
  * still be undone (spec 36.4).
  */
-makerBuildsWithoutAsking: boolean, };
+makerBuildsWithoutAsking: boolean, 
+/**
+ * Days the chats, messages and routine runs are kept; 0 keeps them
+ * for good, which is the default (spec 12.1).
+ */
+historyDays: number, };
 
 /**
  * The settings to change; the ones left out stay as they are.
@@ -2703,7 +2708,11 @@ approvalWaitMinutes?: number,
 /**
  * From 0 (never) to [`SLEEP_AFTER_MAX_MINUTES`].
  */
-sleepAfterMinutes?: number, defaultAgent?: AgentKind, showExperimentalAgents?: boolean, makerBuildsWithoutAsking?: boolean, };
+sleepAfterMinutes?: number, defaultAgent?: AgentKind, showExperimentalAgents?: boolean, makerBuildsWithoutAsking?: boolean, 
+/**
+ * From 0 (for good) to [`HISTORY_MAX_DAYS`].
+ */
+historyDays?: number, };
 
 /**
  * When a routine runs (spec 20.2), kept as structure rather than cron text
