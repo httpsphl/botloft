@@ -102,7 +102,7 @@ export const site: SiteMessages = {
       routines: {
         title: "Rotinas",
         body: "Trabalho que roda num horário, com o último resultado à vista.",
-        alt: "As rotinas de uma equipe: um resumo nas manhãs de dia útil, uma checagem de links a cada duas horas, números semanais e um arquivo à noite",
+        alt: "As rotinas de uma equipe: um resumo nas manhãs de dia útil, uma olhada na caixa de entrada com um clique, um lembrete de uma vez só, uma checagem de links a cada duas horas e uma revisão das fontes que espera o sinal de outro agente",
       },
     },
     note: "As imagens mostram equipes de exemplo, não dados reais.",

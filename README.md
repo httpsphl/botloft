@@ -116,7 +116,7 @@ off until you turn them on (see [Engines](#engines)).
   </tr>
   <tr>
     <td width="50%"><img src="docs/assets/chief.png" alt="The Chief suggesting a new agent, Designer, with its name, model, role and instructions ready to edit"><br><sub><b>A Chief for each crew.</b> It suggests the agents the work needs.</sub></td>
-    <td width="50%"><img src="docs/assets/routines.png" alt="The crew's routines: a morning summary on weekdays, a link check every two hours, weekly numbers and a nightly archive"><br><sub><b>Routines.</b> Work that runs on a schedule, with the last result at a glance.</sub></td>
+    <td width="50%"><img src="docs/assets/routines.png" alt="The crew's routines: a morning summary on weekdays, an inbox check run with a click, a one-time reminder, a link check every two hours and a source recheck that waits for another agent's signal"><br><sub><b>Routines.</b> Work that runs on a schedule, with the last result at a glance.</sub></td>
   </tr>
 </table>
 

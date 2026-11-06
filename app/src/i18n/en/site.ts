@@ -102,7 +102,7 @@ export const site = {
       routines: {
         title: "Routines",
         body: "Work that runs on a schedule, with the last result at a glance.",
-        alt: "A crew's routines: a morning summary on weekdays, a link check every two hours, weekly numbers and a nightly archive",
+        alt: "A crew's routines: a morning summary on weekdays, an inbox check run with a click, a one-time reminder, a link check every two hours and a source recheck that waits for another agent's signal",
       },
     },
     note: "The pictures show sample crews, not real data.",
