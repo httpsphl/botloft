@@ -9,18 +9,21 @@ use crate::tools::catalog::{schedule_schema, template_ids};
 use crate::tools::routine::PROMPT_MAX;
 use crate::tools::suggest::INSTRUCTIONS_MAX;
 
-const MODELS: [&str; 5] = ["default", "fable", "opus", "sonnet", "haiku"];
-const EFFORTS: [&str; 6] = ["default", "low", "medium", "high", "xhigh", "max"];
+pub(super) const MODELS: [&str; 5] = ["default", "fable", "opus", "sonnet", "haiku"];
+pub(super) const EFFORTS: [&str; 6] = ["default", "low", "medium", "high", "xhigh", "max"];
 
 pub(crate) fn tool() -> Value {
     json!({
         "name": BUILD,
         "title": "Build crews for the owner",
         "description": "Only for the Maker. Builds a plan in one go: new crews with their \
-            chief and memory, their bots and their routines. The owner sees the plan in your \
-            chat, may change or leave out any part, and builds it; the call waits for that. \
-            What was built can be undone for a week. Steps name a crew of the plan by its \
-            `ref`.",
+            chief and memory, their bots and their routines, and changes to the owner's crews \
+            that already exist (add, change or archive a bot, rewrite its instructions; add, \
+            change, turn off or delete a routine). The owner sees the plan in your chat, may \
+            change or leave out any part, and builds it; the call waits for that. What was \
+            built or changed can be undone for a week. Steps name a crew of the plan by its \
+            `ref` and a crew that already exists by its name, as crews_overview gives it; a \
+            bot by its handle, or \"chief\".",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -39,7 +42,17 @@ pub(crate) fn tool() -> Value {
                     "type": "array",
                     "minItems": 1,
                     "maxItems": STEPS_MAX,
-                    "items": { "oneOf": [create_crew(), add_agent(), add_routine()] },
+                    "items": {
+                        "oneOf": [
+                            create_crew(),
+                            add_agent(),
+                            add_routine(),
+                            super::schema_existing::change_agent(),
+                            super::schema_existing::archive_agent(),
+                            super::schema_existing::change_routine(),
+                            super::schema_existing::delete_routine(),
+                        ],
+                    },
                 },
             },
             "required": ["title", "why", "steps"],
@@ -48,7 +61,7 @@ pub(crate) fn tool() -> Value {
     })
 }
 
-fn why() -> Value {
+pub(super) fn why() -> Value {
     json!({
         "type": "string",
         "maxLength": STEP_WHY_MAX,
@@ -92,7 +105,7 @@ fn add_agent() -> Value {
         "type": "object",
         "properties": {
             "op": { "const": "add_agent" },
-            "crew": { "type": "string", "description": "The `ref` of a crew of this plan." },
+            "crew": { "type": "string", "description": "The `ref` of a crew of this plan, or the name of an existing crew." },
             "name": { "type": "string", "maxLength": NAME_MAX_CHARS, "description": "A short name in the owner's language; its handle comes from it." },
             "template": {
                 "type": "string",
@@ -117,8 +130,8 @@ fn add_routine() -> Value {
         "type": "object",
         "properties": {
             "op": { "const": "add_routine" },
-            "crew": { "type": "string", "description": "The `ref` of a crew of this plan." },
-            "agent": { "type": "string", "description": "The name of a bot of that crew in this plan, or \"chief\"." },
+            "crew": { "type": "string", "description": "The `ref` of a crew of this plan, or the name of an existing crew." },
+            "agent": { "type": "string", "description": "The name or handle of a bot of that crew, or \"chief\"." },
             "name": { "type": "string", "maxLength": 80 },
             "prompt": {
                 "type": "string",

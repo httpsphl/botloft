@@ -120,7 +120,7 @@ export function BuildCrew({ plan, index, out, kept, toggle, edit }: Props) {
   );
 }
 
-function Include({
+export function Include({
   label,
   checked,
   onChange,

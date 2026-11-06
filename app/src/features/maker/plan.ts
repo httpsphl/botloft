@@ -41,7 +41,97 @@ export interface RoutineStep {
   why?: string;
 }
 
-export type Step = CrewStep | AgentStep | RoutineStep;
+/** How a bot of an existing crew is now, filled in by the daemon. */
+export interface AgentBefore {
+  name: string;
+  role: string;
+  instructions: string;
+  model: BotModel;
+  effort: BotEffort;
+}
+
+/** How a routine of an existing crew is now, filled in by the daemon. */
+export interface RoutineBefore {
+  name: string;
+  prompt: string;
+  schedule: Schedule;
+  timezone: string;
+  enabled: boolean;
+}
+
+export interface ChangeAgentStep {
+  op: "change_agent";
+  crew: string;
+  agent: string;
+  name?: string;
+  role?: string;
+  instructions?: string;
+  add_instructions?: string;
+  model?: BotModel;
+  effort?: BotEffort;
+  why?: string;
+  before?: AgentBefore;
+}
+
+export interface ArchiveAgentStep {
+  op: "archive_agent";
+  crew: string;
+  agent: string;
+  why?: string;
+  before?: { name: string; role: string };
+}
+
+export interface ChangeRoutineStep {
+  op: "change_routine";
+  crew: string;
+  routine: string;
+  agent?: string;
+  name?: string;
+  prompt?: string;
+  schedule?: Schedule;
+  timezone?: string;
+  enabled?: boolean;
+  why?: string;
+  before?: RoutineBefore;
+}
+
+export interface DeleteRoutineStep {
+  op: "delete_routine";
+  crew: string;
+  routine: string;
+  agent?: string;
+  why?: string;
+  before?: RoutineBefore;
+}
+
+export type Step =
+  | CrewStep
+  | AgentStep
+  | RoutineStep
+  | ChangeAgentStep
+  | ArchiveAgentStep
+  | ChangeRoutineStep
+  | DeleteRoutineStep;
+
+/** Steps that take something away: they start unchecked (spec 36.4). */
+export function takesAway(step: Step): boolean {
+  return step.op === "archive_agent" || step.op === "delete_routine";
+}
+
+/** The steps on crews that already exist, by crew name, in plan order. */
+export function onExisting(plan: Plan): [string, { step: Step; at: number }[]][] {
+  const refs = new Set(plan.steps.flatMap((step) => (step.op === "create_crew" ? [step.ref] : [])));
+  const groups = new Map<string, { step: Step; at: number }[]>();
+  plan.steps.forEach((step, at) => {
+    if (step.op === "create_crew" || refs.has(step.crew)) {
+      return;
+    }
+    const list = groups.get(step.crew) ?? [];
+    list.push({ step, at });
+    groups.set(step.crew, list);
+  });
+  return [...groups.entries()];
+}
 
 export interface Plan {
   title: string;

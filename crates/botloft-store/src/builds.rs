@@ -78,6 +78,27 @@ impl Store {
         )?;
         Ok(changed == 1)
     }
+    /// Saves how to put back what the build changed in existing crews.
+    pub fn set_build_changes(&self, id: &BuildId, changes: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE builds SET changes = ?2 WHERE id = ?1",
+            params![id.as_str(), changes],
+        )?;
+        Ok(())
+    }
+
+    /// The JSON list saved by [`Store::set_build_changes`]; `[]` for none.
+    pub fn build_changes(&self, id: &BuildId) -> Result<String> {
+        Ok(self
+            .conn
+            .query_row(
+                "SELECT changes FROM builds WHERE id = ?1",
+                [id.as_str()],
+                |row| row.get(0),
+            )
+            .optional()?
+            .unwrap_or_else(|| "[]".to_owned()))
+    }
 }
 
 #[cfg(test)]

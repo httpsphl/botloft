@@ -2,6 +2,7 @@
 //! shows and changes, and the checks that keep anything impossible from
 //! reaching the owner.
 
+use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 
 use botloft_core::ids::BotId;
@@ -9,6 +10,7 @@ use botloft_core::protocol::{AgentKind, BotEffort, BotModel, RoutinesCreateParam
 use botloft_core::{slug, validate};
 use serde::{Deserialize, Serialize};
 
+use super::existing;
 use crate::catalog;
 use crate::service::bots::NewBot;
 use crate::service::routines;
@@ -35,6 +37,10 @@ pub(crate) enum Step {
     CreateCrew(NewCrew),
     AddAgent(NewAgent),
     AddRoutine(NewRoutine),
+    ChangeAgent(existing::ChangeAgent),
+    ArchiveAgent(existing::ArchiveAgent),
+    ChangeRoutine(existing::ChangeRoutine),
+    DeleteRoutine(existing::DeleteRoutine),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -163,6 +169,7 @@ pub(crate) fn resolve(daemon: &Daemon, plan: &mut Plan) -> Result<(), String> {
                     .timezone
                     .get_or_insert_with(crate::tools::routine::system_zone);
             }
+            other => existing::resolve(daemon, other)?,
         }
     }
     Ok(())
@@ -265,12 +272,6 @@ pub(crate) fn check(daemon: &Daemon, plan: &Plan) -> Result<(), String> {
             return Err(format!("two crews use the ref \"{}\"", crew.key));
         }
     }
-    let unknown = |crew: &str| {
-        format!(
-            "no create_crew step has the ref \"{crew}\"; changing crews that already exist comes \
-             later"
-        )
-    };
     for step in &plan.steps {
         let Step::AddAgent(agent) = step else {
             continue;
@@ -279,9 +280,10 @@ pub(crate) fn check(daemon: &Daemon, plan: &Plan) -> Result<(), String> {
             within("why", why, STEP_WHY_MAX, false)?;
         }
         agent.new_bot(crate::service::bots::default_agent(daemon))?;
-        let handles = crews
-            .get_mut(agent.crew.as_str())
-            .ok_or_else(|| unknown(&agent.crew))?;
+        let handles = match crews.entry(agent.crew.as_str()) {
+            Entry::Occupied(entry) => entry.into_mut(),
+            Entry::Vacant(entry) => entry.insert(existing::handles(daemon, &agent.crew)?),
+        };
         if !handles.insert(slug::slugify(&agent.name, "bot")) {
             return Err(format!("two bots of a crew are called {}", agent.name));
         }
@@ -294,13 +296,14 @@ pub(crate) fn check(daemon: &Daemon, plan: &Plan) -> Result<(), String> {
         let Step::AddRoutine(routine) = step else {
             continue;
         };
-        let handles = crews
-            .get(routine.crew.as_str())
-            .ok_or_else(|| unknown(&routine.crew))?;
+        let handles = match crews.entry(routine.crew.as_str()) {
+            Entry::Occupied(entry) => entry.into_mut(),
+            Entry::Vacant(entry) => entry.insert(existing::handles(daemon, &routine.crew)?),
+        };
         let agent = slug::slugify(&routine.agent, "bot");
         if routine.agent != "chief" && !handles.contains(&agent) {
             return Err(format!(
-                "{}: no bot called {} in that crew of the plan",
+                "{}: no bot called {} in that crew",
                 routine.name, routine.agent
             ));
         }
@@ -313,7 +316,7 @@ pub(crate) fn check(daemon: &Daemon, plan: &Plan) -> Result<(), String> {
         routines::check(daemon, &routine_params(routine, BotId::generate()))
             .map_err(|err| format!("{}: {}", routine.name, explain(err)))?;
     }
-    Ok(())
+    existing::check(daemon, plan)
 }
 
 pub(crate) fn routine_params(routine: &NewRoutine, bot: BotId) -> RoutinesCreateParams {

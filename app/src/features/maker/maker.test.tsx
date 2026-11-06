@@ -128,10 +128,54 @@ describe("the Maker", () => {
     const { fake, maker } = await openMaker();
     const card = propose(fake, maker.id);
     fireEvent.click(within(card).getByRole("checkbox", { name: "Include Blog" }));
-    expect(within(card).getByText("Leave at least one crew in the plan.")).toBeDefined();
+    expect(within(card).getByText("Leave at least one step in the plan.")).toBeDefined();
     expect(
       (within(card).getByRole("button", { name: "Build" }) as HTMLButtonElement).disabled,
     ).toBe(true);
+  });
+
+  test("changes to a crew that exists show before and after; archiving starts unchecked", async () => {
+    const { fake, maker } = await openMaker();
+    const plan = {
+      title: "A tidier Ops",
+      why: "You said the reports are too long.",
+      steps: [
+        {
+          op: "change_agent",
+          crew: "Ops",
+          agent: "writer",
+          model: "haiku",
+          instructions: "Write short reports.",
+          before: {
+            name: "Writer",
+            role: "Writes",
+            instructions: "Write long reports.",
+            model: "sonnet",
+            effort: "default",
+          },
+        },
+        {
+          op: "archive_agent",
+          crew: "Ops",
+          agent: "helper",
+          before: { name: "Helper", role: "Helps" },
+        },
+      ],
+    };
+    act(() => {
+      fake.chat.ask(maker.id, BUILD_TOOL, plan.title, JSON.stringify(plan));
+    });
+    const card = screen.getByRole("region", { name: "The Maker wants to build: A tidier Ops" });
+    expect(within(card).getByText("Changes to Ops")).toBeDefined();
+    expect(within(card).getByText("Sonnet")).toBeDefined();
+    expect(within(card).getByText("Haiku")).toBeDefined();
+    const archive = within(card).getByRole("checkbox", { name: "Include Archive Helper" });
+    expect((archive as HTMLInputElement).checked).toBe(false);
+    fireEvent.click(within(card).getByRole("button", { name: "Build" }));
+
+    expect(await screen.findByText("You built: A tidier Ops")).toBeDefined();
+    const input = JSON.parse(sent(fake).input ?? "{}") as { steps: { op: string }[] };
+    expect(input.steps.map((step) => step.op)).toEqual(["change_agent"]);
   });
 
   test("before the first crew, the welcome opens the Maker's chat", async () => {

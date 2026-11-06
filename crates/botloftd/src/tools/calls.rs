@@ -20,7 +20,7 @@ use super::key::{self, ASK_KEY};
 use super::question::{self, ASK_OWNER};
 use super::share::{self, SHARE_FILE};
 use super::signal::{self, SEND_SIGNAL};
-use super::{activity, crew_reach, routine_change, templates};
+use super::{activity, crew_reach, overview, routine_change, templates};
 use crate::service::tasks::{self, BotMessage};
 use crate::service::{ApiError, bots, lead};
 use crate::state::Daemon;
@@ -52,6 +52,9 @@ pub(super) fn call(daemon: &Daemon, bot: &BotId, params: &Value) -> Result<Value
             routine_change::MY_ROUTINES => routine_change::mine(daemon, bot),
             activity::CREW_ACTIVITY => {
                 parse(arguments).and_then(|args| activity::call(daemon, bot, args))
+            }
+            overview::CREWS_OVERVIEW => {
+                parse(arguments).and_then(|args| overview::call(daemon, bot, args))
             }
             templates::LIST_BOT_TEMPLATES => {
                 parse(arguments).and_then(|args| templates::list(daemon, bot, args))

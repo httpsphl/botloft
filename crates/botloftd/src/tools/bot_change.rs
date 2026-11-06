@@ -36,17 +36,17 @@ struct Args {
 }
 
 /// What the owner sees changing.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-struct Profile {
-    name: String,
-    role: String,
-    instructions: String,
-    model: BotModel,
-    effort: BotEffort,
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(super) struct Profile {
+    pub name: String,
+    pub role: String,
+    pub instructions: String,
+    pub model: BotModel,
+    pub effort: BotEffort,
 }
 
 impl Profile {
-    fn of(record: &BotRecord) -> Self {
+    pub(super) fn of(record: &BotRecord) -> Self {
         Self {
             name: record.name.clone(),
             role: record.role.clone(),
@@ -151,17 +151,43 @@ fn target(daemon: &Daemon, caller: &BotId, handle: Option<&str>) -> ApiResult<Bo
 
 /// The profile after the change, checked as `bots.update` would.
 fn after(daemon: &Daemon, record: &BotRecord, args: &Args) -> ApiResult<Profile> {
+    let change = Change {
+        name: args.name.as_deref(),
+        role: args.role.as_deref(),
+        instructions: args.instructions.as_deref(),
+        model: args.model.as_deref(),
+        effort: args.effort.as_deref(),
+    };
+    changed_profile(daemon, record, &change)
+}
+
+/// What changes in a bot; `None` keeps it.
+#[derive(Default)]
+pub(super) struct Change<'a> {
+    pub name: Option<&'a str>,
+    pub role: Option<&'a str>,
+    pub instructions: Option<&'a str>,
+    pub model: Option<&'a str>,
+    pub effort: Option<&'a str>,
+}
+
+/// The bot's profile with `change`, checked as `bots.update` would.
+pub(super) fn changed_profile(
+    daemon: &Daemon,
+    record: &BotRecord,
+    args: &Change<'_>,
+) -> ApiResult<Profile> {
     let mut next = Profile::of(record);
-    if let Some(name) = &args.name {
+    if let Some(name) = args.name {
         next.name = validate::name("name", name)?;
         let store = daemon.store();
         let handle = slug::slugify(&next.name, "bot");
         bots::ensure_handle_free(&store, &record.crew_id, &handle, Some(&record.id))?;
     }
-    if let Some(role) = &args.role {
+    if let Some(role) = args.role {
         next.role = validate::role(role)?;
     }
-    if let Some(instructions) = &args.instructions {
+    if let Some(instructions) = args.instructions {
         if instructions.chars().count() > INSTRUCTIONS_MAX {
             return Err(ApiError::validation(format!(
                 "instructions must be at most {INSTRUCTIONS_MAX} characters"
@@ -169,14 +195,14 @@ fn after(daemon: &Daemon, record: &BotRecord, args: &Args) -> ApiResult<Profile>
         }
         next.instructions = validate::instructions(instructions)?;
     }
-    if let Some(model) = &args.model {
+    if let Some(model) = args.model {
         next.model = model.parse().map_err(|_| {
             ApiError::validation(
                 "model must be \"default\", \"fable\", \"opus\", \"sonnet\" or \"haiku\"",
             )
         })?;
     }
-    if let Some(effort) = &args.effort {
+    if let Some(effort) = args.effort {
         next.effort = effort.parse().map_err(|_| {
             ApiError::validation(
                 "effort must be \"default\", \"low\", \"medium\", \"high\", \"xhigh\" or \"max\"",
@@ -188,7 +214,12 @@ fn after(daemon: &Daemon, record: &BotRecord, args: &Args) -> ApiResult<Profile>
 
 /// Makes the change. A new model or effort restarts the bot once nothing is
 /// in progress (spec 7.4).
-fn apply(daemon: &Daemon, id: &BotId, before: &Profile, next: &Profile) -> ApiResult<Bot> {
+pub(super) fn apply(
+    daemon: &Daemon,
+    id: &BotId,
+    before: &Profile,
+    next: &Profile,
+) -> ApiResult<Bot> {
     let mut bot = bots::update(
         daemon,
         BotsUpdateParams {

@@ -41,7 +41,7 @@ pub fn tools() -> Value {
             super::skill::tool(),
         ])
         .chain(super::templates::tools())
-        .chain([super::build::tool()])
+        .chain([super::build::tool(), super::overview::tool()])
         .chain(super::activity::tools())
         .chain(super::crew_reach::tools())
         .chain(super::browser_catalog::tools())

@@ -52,6 +52,29 @@ const PLAN = {
       instructions: "Draft short answers; never promise a delivery.",
       model: "haiku",
     },
+    {
+      op: "change_agent",
+      crew: "Research",
+      agent: "writer",
+      model: "haiku",
+      instructions:
+        "Write the weekly report in at most one page, with the three main points first.",
+      why: "You said the reports are too long to read.",
+      before: {
+        name: "Writer",
+        role: "Turns notes into a weekly report",
+        instructions: "Turn the crew's notes into a weekly report.",
+        model: "sonnet",
+        effort: "default",
+      },
+    },
+    {
+      op: "archive_agent",
+      crew: "Research",
+      agent: "planner",
+      why: "It has not worked in a month.",
+      before: { name: "Planner", role: "Plans changes before touching the code" },
+    },
   ],
 };
 

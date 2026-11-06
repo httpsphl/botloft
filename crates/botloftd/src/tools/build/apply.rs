@@ -1,8 +1,10 @@
 //! Building a checked plan (spec 36.4): the crews with their chiefs and
-//! memory, then the bots, then the routines. When a step fails, the crews
-//! already made are deleted again, so a plan is built whole or not at all.
+//! memory, then the bots, then the routines, then the steps on crews that
+//! already exist (`undo.rs`). When a step fails, the changes are put back
+//! and the crews already made are deleted again, so a plan is built whole
+//! or not at all.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use botloft_core::ids::{ApprovalId, BotId, BuildId, CrewId};
 use botloft_core::protocol::{
@@ -13,6 +15,7 @@ use serde_json::{Value, json};
 use tracing::{info, warn};
 
 use super::plan::{self, Plan, Step};
+use super::undo::{self, Undo};
 use crate::service::{ApiResult, bots, crews, delete, models, routines};
 use crate::state::Daemon;
 use crate::tools::calls::explain;
@@ -35,13 +38,25 @@ pub(crate) fn build(
     plan: &Plan,
 ) -> Result<(Build, Value), String> {
     let mut made: Vec<(String, Made)> = Vec::new();
-    match make(daemon, plan, &mut made) {
-        Ok(()) => {}
+    let mut journal: Vec<Undo> = Vec::new();
+    let refs: HashSet<String> = plan
+        .steps
+        .iter()
+        .filter_map(|step| match step {
+            Step::CreateCrew(crew) => Some(crew.key.clone()),
+            _ => None,
+        })
+        .collect();
+    let changes = match make(daemon, plan, &mut made)
+        .and_then(|()| undo::apply(daemon, plan, &refs, &mut journal))
+    {
+        Ok(changes) => changes,
         Err(err) => {
+            undo::replay(daemon, &journal);
             undo_partly(daemon, &made);
             return Err(err);
         }
-    }
+    };
     let now = daemon.clock.now_ms();
     let build = Build {
         id: BuildId::generate(),
@@ -53,12 +68,23 @@ pub(crate) fn build(
         undo_until: now + BUILD_UNDO_DAYS * DAY_MS,
         undone_at: None,
     };
-    if let Err(err) = daemon.store().insert_build(&build) {
+    let saved = serde_json::to_string(&journal).unwrap_or_else(|_| "[]".to_owned());
+    let store = daemon.store();
+    if let Err(err) = store
+        .insert_build(&build)
+        .and_then(|()| store.set_build_changes(&build.id, &saved))
+    {
         warn!("could not save a build: {err}");
     }
-    info!(build = %build.id, crews = build.crew_ids.len(), "the Maker built a plan");
-    let report = made.into_iter().map(|(_, made)| made.report).collect();
-    Ok((build, Value::Array(report)))
+    drop(store);
+    info!(
+        build = %build.id,
+        crews = build.crew_ids.len(),
+        changes = journal.len(),
+        "the Maker built a plan"
+    );
+    let crews: Vec<Value> = made.into_iter().map(|(_, made)| made.report).collect();
+    Ok((build, json!({ "crews": crews, "changes": changes })))
 }
 
 fn make(daemon: &Daemon, plan: &Plan, made: &mut Vec<(String, Made)>) -> Result<(), String> {
@@ -67,14 +93,14 @@ fn make(daemon: &Daemon, plan: &Plan, made: &mut Vec<(String, Made)>) -> Result<
             made.push((new.key.clone(), make_crew(daemon, new)?));
         }
     }
+    // Steps on crews that already exist are built afterwards.
     let find = |made: &mut Vec<(String, Made)>, key: &str| {
-        made.iter_mut()
-            .position(|(made_key, _)| made_key == key)
-            .ok_or_else(|| format!("no crew of the plan has the ref \"{key}\""))
+        made.iter_mut().position(|(made_key, _)| made_key == key)
     };
     for step in &plan.steps {
-        if let Step::AddAgent(agent) = step {
-            let at = find(made, &agent.crew)?;
+        if let Step::AddAgent(agent) = step
+            && let Some(at) = find(made, &agent.crew)
+        {
             let crew = made[at].1.crew.clone();
             let bot = add_bot(daemon, &crew, agent)?;
             let entry = &mut made[at].1;
@@ -85,8 +111,9 @@ fn make(daemon: &Daemon, plan: &Plan, made: &mut Vec<(String, Made)>) -> Result<
         }
     }
     for step in &plan.steps {
-        if let Step::AddRoutine(routine) = step {
-            let at = find(made, &routine.crew)?;
+        if let Step::AddRoutine(routine) = step
+            && let Some(at) = find(made, &routine.crew)
+        {
             let entry = &mut made[at].1;
             let handle = botloft_core::slug::slugify(&routine.agent, "bot");
             let bot = match entry.bots.get(&handle) {
@@ -154,7 +181,7 @@ fn make_crew(daemon: &Daemon, new: &plan::NewCrew) -> Result<Made, String> {
 
 /// The bot, as `catalog.add` makes one: Manual mode (or the crew's
 /// automatic one), no tools, logins, keys or reach into other crews.
-fn add_bot(
+pub(super) fn add_bot(
     daemon: &Daemon,
     crew: &Crew,
     agent: &plan::NewAgent,

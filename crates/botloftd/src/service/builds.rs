@@ -1,6 +1,7 @@
 //! `builds.*` (spec 36.4): what the Maker built, and undoing it. Undoing
-//! archives the crews the build made, with their bots and routines, so the
-//! owner can still bring them back from the archive.
+//! puts back what it changed in crews that already existed and archives
+//! the crews the build made, with their bots and routines, so the owner can
+//! still bring them back from the archive.
 
 use botloft_core::protocol::{Build, BuildIdParams, CrewIdParams};
 use tracing::info;
@@ -37,6 +38,8 @@ pub fn undo(daemon: &Daemon, params: BuildIdParams) -> ApiResult<Build> {
             build.id
         )));
     }
+    let changes = daemon.store().build_changes(&build.id)?;
+    crate::tools::undo_build_changes(daemon, &changes);
     for crew in &build.crew_ids {
         let exists = daemon.store().crew(crew)?.is_some();
         // A crew the owner deleted since is already gone.

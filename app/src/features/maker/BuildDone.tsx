@@ -10,7 +10,7 @@ import { Button } from "../../ui/Button";
 import { SettledLine } from "../../ui/ChatCard";
 import { Confirm } from "../../ui/Confirm";
 import { attempt } from "../../ui/toast";
-import { planOf } from "./plan";
+import { onExisting, planOf } from "./plan";
 import { useBuilds } from "./useBuilds";
 
 export function BuildDone({ approval }: { approval: ApprovalItem }) {
@@ -23,10 +23,19 @@ export function BuildDone({ approval }: { approval: ApprovalItem }) {
   if (approval.status !== "allowed") {
     return <SettledLine icon={TimerOff} tone="quiet" text={c.expired(title)} />;
   }
-  return <Built approvalId={approval.approvalId} title={title} />;
+  const changes = onExisting(planOf(approval.input) ?? { title, why: "", steps: [] }).length > 0;
+  return <Built approvalId={approval.approvalId} title={title} changes={changes} />;
 }
 
-function Built({ approvalId, title }: { approvalId: string; title: string }) {
+function Built({
+  approvalId,
+  title,
+  changes,
+}: {
+  approvalId: string;
+  title: string;
+  changes: boolean;
+}) {
   const t = useT();
   const c = t.maker.card;
   const api = useApi();
@@ -41,7 +50,9 @@ function Built({ approvalId, title }: { approvalId: string; title: string }) {
       <SettledLine
         icon={build?.undoneAt ? Undo2 : Check}
         tone={build?.undoneAt ? "quiet" : "ok"}
-        text={build?.undoneAt ? c.undone : c.built(title)}
+        text={
+          build?.undoneAt ? (build.crewIds.length > 0 ? c.undone : c.undoneChanges) : c.built(title)
+        }
       />
       {build && !build.undoneAt && first && (
         <Button size="sm" onClick={() => selectCrew(first)}>
@@ -63,7 +74,8 @@ function Built({ approvalId, title }: { approvalId: string; title: string }) {
             await reload();
           }}
         >
-          {c.undoBody(build.crewIds.length)}
+          {build.crewIds.length > 0 && c.undoBody(build.crewIds.length)}
+          {changes && ` ${c.undoChanges}`}
         </Confirm>
       )}
     </div>
