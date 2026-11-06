@@ -29,6 +29,8 @@ struct Current {
     approval_wait: Duration,
     /// `settings.sleep_after_minutes`, or shorter in tests; `None` never.
     sleep_after: Option<Duration>,
+    /// `[bots] max_running`; 0 no limit (spec 7.8).
+    max_running: usize,
 }
 
 impl LiveSettings {
@@ -53,6 +55,7 @@ impl LiveSettings {
                 settings,
                 approval_wait: minutes_to_wait(minutes),
                 sleep_after: minutes_to_sleep(sleep),
+                max_running: config.bots.max_running,
             }),
             keep_awake: watch::Sender::new(settings.keep_awake),
         }
@@ -100,6 +103,16 @@ impl LiveSettings {
     /// How long a permission request waits for the owner (spec 10.1).
     pub fn approval_wait(&self) -> Duration {
         self.lock().approval_wait
+    }
+
+    /// Most agents whose process runs at once; `None` no limit (spec 7.8).
+    pub fn max_running(&self) -> Option<usize> {
+        Some(self.lock().max_running).filter(|max| *max > 0)
+    }
+
+    /// Changes the limit while running (tests); 0 no limit.
+    pub fn set_max_running(&self, max: usize) {
+        self.lock().max_running = max;
     }
 
     /// How long a bot stays idle before it sleeps (spec 7.7); `None` never.
