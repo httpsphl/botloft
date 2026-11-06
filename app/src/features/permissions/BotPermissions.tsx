@@ -10,6 +10,7 @@ import { AllowRules } from "../bots/AllowRules";
 import { CrewAccessList } from "../bots/CrewAccessList";
 import { BotChrome } from "../chrome/BotChrome";
 import { DesktopGrants } from "../desktop/DesktopGrants";
+import { BotSkills } from "../skills/BotSkills";
 import { SiteRow } from "./rows";
 import { usePermissions } from "./usePermissions";
 
@@ -58,6 +59,7 @@ export function BotPermissions({ bot }: { bot: Bot }) {
           <CrewAccessList bot={bot} />
           <DesktopGrants bot={bot} />
           <BotChrome bot={bot} />
+          <BotSkills bot={bot} />
         </dl>
       </dd>
     </div>

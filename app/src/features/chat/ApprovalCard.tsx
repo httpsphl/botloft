@@ -21,6 +21,7 @@ import {
   RoutineDeleteCard,
 } from "../routines/RoutineChangeCard";
 import { ROUTINE_TOOL, RoutineRequestCard } from "../routines/RoutineRequestCard";
+import { SKILL_TOOL, SkillRequestCard } from "../skills/SkillRequestCard";
 import { BotChangeCard, CHANGE_BOT_TOOL } from "./BotChangeCard";
 import { CREW_ACCESS_TOOL, CrewAccessCard } from "./CrewAccessCard";
 import { commandOf, isCommand } from "./command";
@@ -97,6 +98,8 @@ export function ApprovalCard({ approval, bot }: { approval: ApprovalItem; bot: B
       return <ConnectorRequestCard approval={approval} bot={bot} />;
     case CHROME_TOOL:
       return <ChromeRequestCard approval={approval} bot={bot} />;
+    case SKILL_TOOL:
+      return <SkillRequestCard approval={approval} bot={bot} />;
     case BUILD_TOOL:
       return <BuildCard approval={approval} bot={bot} />;
     default:

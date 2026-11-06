@@ -74,7 +74,7 @@ export interface AppState {
   /** Where Settings opens the Permissions page, until it is shown (spec 15.1). */
   permissionsAt: PermissionsAt | null;
   /** A part of the settings to open them on, from elsewhere in the app. */
-  settingsPart: "tools" | null;
+  settingsPart: "tools" | "skills" | null;
   /**
    * When the owner last looked at each bot's chat (`seen.ts`), for unread
    * replies and failed routine runs.
@@ -98,7 +98,7 @@ export interface AppState {
   openPage(page: Exclude<Page, null>): void;
   /** Opens Settings on the Permissions page, at a tab and an agent. */
   openPermissions(at: PermissionsAt): void;
-  openSettingsPart(part: "tools"): void;
+  openSettingsPart(part: "tools" | "skills"): void;
   clearSettingsPart(): void;
   /** The Permissions page took where to open. */
   clearPermissionsAt(): void;

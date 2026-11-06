@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Smartphone,
+  Sparkles,
 } from "lucide-react";
 import { useEffect, useId, useMemo, useState } from "react";
 import { useT } from "../../i18n";
@@ -27,6 +28,7 @@ import { ToolsPage } from "../connections/ToolsPage";
 import { PastedKeys } from "../keys/PastedKeys";
 import { LoginsPage } from "../logins/LoginsPage";
 import { PermissionsSettings } from "../permissions/PermissionsSettings";
+import { SkillsPage } from "../skills/SkillsPage";
 import { AboutSettings } from "./AboutSettings";
 import { AccountSettings } from "./AccountSettings";
 import { AlertsSettings } from "./AlertsSettings";
@@ -57,6 +59,7 @@ const GROUPS: { id: GroupId; pages: { id: Page; icon: LucideIcon }[] }[] = [
       { id: "account", icon: Smartphone },
       { id: "tools", icon: Plug },
       { id: "logins", icon: KeyRound },
+      { id: "skills", icon: Sparkles },
       { id: "permissions", icon: LockKeyhole },
     ],
   },
@@ -99,6 +102,7 @@ export function SettingsPage() {
     account: s.account,
     tools: s.tools,
     logins: s.logins,
+    skills: s.skills,
     permissions: s.permissions,
     backup: s.backup,
     security: s.security,
@@ -207,6 +211,7 @@ export function SettingsPage() {
                 {page === "account" && <AccountSettings />}
                 {page === "tools" && <ToolsPage />}
                 {page === "logins" && <LoginsPage />}
+                {page === "skills" && <SkillsPage />}
                 {page === "permissions" && <PermissionsSettings />}
                 {page === "backup" && <BackupSettings goToAccount={() => open("account")} />}
                 {page === "security" && <PastedKeys />}
