@@ -45,6 +45,7 @@ pub(super) fn parse(limits: &Value, now_ms: i64) -> Option<AgentUsage> {
             resets_at,
             windows,
             observed_at: now_ms,
+            extra_usage: false,
         },
     })
 }

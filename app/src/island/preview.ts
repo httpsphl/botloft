@@ -46,6 +46,7 @@ export function islandPreview(): { api: FakeBotloft; host: FakeIslandHost } {
       status: "allowed_warning",
       resetsAt: now + 2 * 3600_000,
       observedAt: now - 60_000,
+      extraUsage: false,
       windows: [
         { name: "five_hour", utilization: 0.84, resetsAt: now + 2 * 3600_000 },
         { name: "seven_day", utilization: 0.46, resetsAt: now + 3 * 86_400_000 },

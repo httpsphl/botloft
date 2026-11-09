@@ -92,6 +92,7 @@ function seed(fake: FakeBotloft): void {
       status: "allowed",
       resetsAt: now + 2 * 3600_000,
       observedAt: now - 5 * 60_000,
+      extraUsage: false,
       windows: [
         { name: "five_hour", utilization: 0.34, resetsAt: now + 2 * 3600_000 },
         { name: "seven_day", utilization: 0.62, resetsAt: now + 3 * 86_400_000 },

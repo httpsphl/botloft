@@ -158,6 +158,10 @@ pub struct AccountUsage {
     pub windows: Vec<UsageWindow>,
     /// Unix time in milliseconds.
     pub observed_at: i64,
+    /// The account went past the plan's limit and runs on its paid extra
+    /// usage: a `rejected` status then does not stop the agents.
+    #[serde(default)]
+    pub extra_usage: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
