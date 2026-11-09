@@ -29,8 +29,12 @@ export function UsageDialog({ onClose }: { onClose(): void }) {
           <p className="text-muted">{u.empty}</p>
         ) : (
           shown.map((entry) => {
+            // Past the plan's limit with paid extra usage, the agents keep working.
+            const extra = entry.usage.extraUsage;
             const limited =
-              entry.usage.status !== "allowed" && entry.usage.status !== "allowed_warning";
+              !extra &&
+              entry.usage.status !== "allowed" &&
+              entry.usage.status !== "allowed_warning";
             return (
               <section key={entry.agent} className="flex flex-col gap-4">
                 {named && (
@@ -43,6 +47,7 @@ export function UsageDialog({ onClose }: { onClose(): void }) {
                     )}
                   </h3>
                 )}
+                {extra && <Callout title={u.extraUsage} />}
                 {limited && (
                   <Callout
                     tone="warn"

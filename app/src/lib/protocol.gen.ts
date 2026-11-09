@@ -488,7 +488,12 @@ resetsAt: number | null, windows: Array<UsageWindow>,
 /**
  * Unix time in milliseconds.
  */
-observedAt: number, };
+observedAt: number, 
+/**
+ * The account went past the plan's limit and runs on its paid extra
+ * usage: a `rejected` status then does not stop the agents.
+ */
+extraUsage: boolean, };
 
 /**
  * What `claude auth status` says about the account (spec 7.3).

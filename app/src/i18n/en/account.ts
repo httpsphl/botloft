@@ -29,6 +29,7 @@ export const account = {
     resets: (relative: string) => `Resets ${relative}`,
     limited: "Limit reached. Your agents wait until it resets.",
     limitedAgent: (agent: string) => `Limit reached. Agents on ${agent} wait until it resets.`,
+    extraUsage: "Past your plan's limit. Your agents keep working on the account's extra usage.",
     plan: (plan: string) => `Plan: ${plan}`,
     updated: (relative: string) => `Updated ${relative}`,
     tokens: {

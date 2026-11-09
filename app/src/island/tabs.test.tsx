@@ -79,6 +79,7 @@ describe("the island's Usage", () => {
         status: "allowed_warning",
         resetsAt: now + 3600_000,
         observedAt: now,
+        extraUsage: false,
         windows: [
           { name: "five_hour", utilization: 0.84, resetsAt: now + 3600_000 },
           { name: "seven_day", utilization: 0.4, resetsAt: now + 86_400_000 },

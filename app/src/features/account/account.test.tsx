@@ -65,6 +65,7 @@ describe("account area", () => {
         status: "allowed",
         resetsAt: now + 2 * 3600_000,
         observedAt: now,
+        extraUsage: false,
         windows: [
           { name: "five_hour", utilization: 0.34, resetsAt: now + 2 * 3600_000 },
           { name: "seven_day", utilization: 0.915, resetsAt: null },
@@ -81,6 +82,27 @@ describe("account area", () => {
     expect(dialog.textContent).toContain("92% used");
   });
 
+  test("usage past the limit on extra usage says the agents keep working", async () => {
+    const fake = new FakeBotloft();
+    const now = Date.now();
+    fake.system = {
+      ...fake.system,
+      usage: {
+        status: "rejected",
+        resetsAt: now + 3600_000,
+        observedAt: now,
+        extraUsage: true,
+        windows: [{ name: "five_hour", utilization: 1, resetsAt: now + 3600_000 }],
+      },
+    };
+    renderApp(fake);
+    await openAccount();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Usage" }));
+    const dialog = screen.getByRole("dialog", { name: "Usage" });
+    expect(dialog.textContent).toContain("Your agents keep working on the account's extra usage.");
+    expect(dialog.textContent).not.toContain("Your agents wait until it resets.");
+  });
+
   test("usage of another agent comes under its own name, with its plan and its limit", async () => {
     const fake = new FakeBotloft();
     const now = Date.now();
@@ -90,6 +112,7 @@ describe("account area", () => {
         status: "allowed",
         resetsAt: null,
         observedAt: now,
+        extraUsage: false,
         windows: [{ name: "five_hour", utilization: 0.2, resetsAt: null }],
       },
       agentUsage: [
@@ -100,6 +123,7 @@ describe("account area", () => {
             status: "rejected",
             resetsAt: now + 3 * 86_400_000,
             observedAt: now,
+            extraUsage: false,
             windows: [{ name: "thirty_day", utilization: 1, resetsAt: now + 3 * 86_400_000 }],
           },
         },

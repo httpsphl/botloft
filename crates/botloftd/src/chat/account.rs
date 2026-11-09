@@ -100,7 +100,10 @@ pub(super) fn rate_limit(daemon: &Daemon, bot: &BotId, generation: u64, event: &
     windows.sort_by(|a, b| a.name.cmp(&b.name));
     let status = info["status"].as_str().unwrap_or("unknown").to_owned();
     let resets_at = seconds(&info["resetsAt"]);
-    let limited = !status.starts_with("allowed");
+    let extra_usage = using_extra_usage(info);
+    // Past a window of the plan, an account with paid extra usage keeps
+    // working on it: `rejected` stops the bots only without it (spec 19).
+    let limited = status == "rejected" && !extra_usage;
     let now = daemon.clock.now_ms();
     crate::service::plan::observed(daemon, &windows, now);
     daemon.set_usage(AccountUsage {
@@ -108,9 +111,36 @@ pub(super) fn rate_limit(daemon: &Daemon, bot: &BotId, generation: u64, event: &
         resets_at,
         windows,
         observed_at: now,
+        extra_usage,
     });
     if limited {
         let until = resets_at.unwrap_or_else(|| daemon.clock.now_ms() + DEFAULT_LIMIT_MS);
         daemon.supervisor.rate_limited(bot, generation, until);
+    }
+}
+
+/// Claude Code says the turns run on the account's paid extra usage with
+/// either of two flags (seen in 2.1.309, spec 19).
+fn using_extra_usage(info: &Value) -> bool {
+    ["isUsingOverage", "overageInUse"]
+        .iter()
+        .any(|flag| info[*flag].as_bool() == Some(true))
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::using_extra_usage;
+
+    #[test]
+    fn either_flag_means_extra_usage() {
+        assert!(using_extra_usage(&json!({ "isUsingOverage": true })));
+        assert!(using_extra_usage(&json!({ "overageInUse": true })));
+        // Extra usage that is only allowed is not in use yet.
+        assert!(!using_extra_usage(
+            &json!({ "overageStatus": "allowed", "isUsingOverage": false })
+        ));
+        assert!(!using_extra_usage(&json!({})));
     }
 }
