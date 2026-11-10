@@ -9,6 +9,9 @@
 @import "./site-cards.css";
 @import "./site-cards-more.css";
 @source "./";
+/* The mascot's own drawing, from the app: without its classes (overflow-visible
+   above all) the drawing stops at its square and a hop loses its top. */
+@source "../features/bots/{BotAvatar,MascotEye,MascotBadge,MakerGear}.tsx";
 
 @layer base {
   :root {
@@ -216,6 +219,10 @@
     background: linear-gradient(180deg, #ffffff 30%, #b9b9b2);
     background-clip: text;
     color: transparent;
+    /* The gradient paints only inside the box, and with lines this tight the
+       tails of g, p and y hang below it: room for them, the layout unmoved. */
+    padding-bottom: 0.16em;
+    margin-bottom: -0.16em;
   }
 
   .site-lead {
