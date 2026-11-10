@@ -47,9 +47,10 @@ function TurnEnd({ turn }: { turn: TurnItem }) {
     read: tokens(used.input + used.cacheWrite),
     wrote: tokens(used.output),
   };
+  const spent = used && tokens(usedTokens(used));
   return (
     <p className="px-1 text-muted text-xs" title={t.chat.run.took(time, detail)}>
-      {t.chat.run.done(time, used && tokens(usedTokens(used)))}
+      {turn.stopped ? t.chat.run.stoppedByOwner(time, spent) : t.chat.run.done(time, spent)}
     </p>
   );
 }

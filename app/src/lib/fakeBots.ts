@@ -4,7 +4,7 @@
 
 import type { FakeBotloft, Handlers } from "./fake";
 import { purgeBot } from "./fakeDelete";
-import { checkName, conflict, notFound } from "./fakeRules";
+import { checkName, conflict, invalid, notFound } from "./fakeRules";
 import { AVATAR_PALETTE, type Bot } from "./protocol.gen";
 
 type BotMethods = Extract<keyof Handlers, `bots.${string}`>;
@@ -110,6 +110,24 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
       // It waits behind the turn in progress; a test ends it with `setContext`.
       if (bot.context && !bot.context.compacting) {
         fake.setContext(botId, { ...bot.context, compacting: true });
+      }
+      return bot;
+    },
+    "bots.interrupt": ({ botId }) => {
+      const bot = fake.bot(botId);
+      if (bot.agent !== "claude") {
+        throw invalid(`bots that run on ${bot.agent} cannot be stopped in the middle of a turn`);
+      }
+      if (bot.state === "busy" || bot.state === "needs_approval") {
+        // A tool that waits for the owner is refused, and Claude Code ends
+        // the turn as stopped.
+        for (const approval of fake.chat.approvals.values()) {
+          if (approval.botId === botId && approval.status === "pending") {
+            void fake.call("approvals.answer", { approvalId: approval.id, allow: false });
+          }
+        }
+        fake.chat.stopped(botId);
+        fake.setBotState(botId, "idle");
       }
       return bot;
     },

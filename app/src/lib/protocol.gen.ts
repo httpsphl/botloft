@@ -2570,9 +2570,15 @@ export type TurnItem = { durationMs: number,
  */
 tokens: TokenUsage | null, 
 /**
- * Why the turn failed, e.g. `rate_limit`; `null` when it worked.
+ * Why the turn failed, e.g. `rate_limit`; `null` when it worked and
+ * when the owner stopped it.
  */
-error: string | null, };
+error: string | null, 
+/**
+ * The owner stopped the turn (`bots.interrupt`, spec 8.2); `false` on
+ * turns stored before it was kept.
+ */
+stopped: boolean, };
 
 export type NoticeItem = { level: NoticeLevel, 
 /**
@@ -3164,6 +3170,7 @@ export interface RpcMethods {
   "tasks.list": { params: TasksListParams; result: Array<Task> };
   "bots.setEffort": { params: BotsSetEffortParams; result: Bot };
   "bots.compact": { params: BotIdParams; result: Bot };
+  "bots.interrupt": { params: BotIdParams; result: Bot };
   "bots.stopTask": { params: BotsStopTaskParams; result: null };
   "usage.tokens": { params: UsageTokensParams; result: Array<BotTokens> };
   "rules.list": { params: RulesListParams; result: Array<AllowRule> };

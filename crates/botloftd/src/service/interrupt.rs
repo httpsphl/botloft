@@ -1,0 +1,68 @@
+//! `bots.interrupt`: the owner stops what a bot is doing (spec 9.2). Claude
+//! Code ends the turn that runs, kills the tool it waits on and the subagents
+//! it left in the background, and closes the turn with a `result` that the
+//! chat shows as stopped (spec 8.2). Messages it has not taken up yet stay in
+//! its queue and run next.
+
+use botloft_core::protocol::{ApprovalsAnswerParams, Bot, BotIdParams, BotState};
+use tracing::{debug, warn};
+
+use crate::approvals;
+use crate::chat::control;
+use crate::service::bots::{active, to_protocol};
+use crate::service::{ApiError, ApiResult};
+use crate::state::Daemon;
+
+pub fn interrupt(daemon: &Daemon, params: BotIdParams) -> ApiResult<Bot> {
+    let store = daemon.store();
+    let (_, record) = active(&store, &params.bot_id)?;
+    // `approvals::answer` takes the store again.
+    drop(store);
+    let agent = crate::agent::of(record.agent);
+    if !agent.is_some_and(|agent| agent.can_interrupt()) {
+        return Err(ApiError::validation(format!(
+            "bots that run on {} cannot be stopped in the middle of a turn",
+            record.agent.as_str()
+        )));
+    }
+    let working = matches!(
+        daemon.supervisor.status(&record.id),
+        Some((BotState::Busy | BotState::NeedsApproval, _))
+    );
+    // A turn that ended by itself a moment ago leaves nothing to stop.
+    if working {
+        daemon
+            .supervisor
+            .write_control(&record.id, control::interrupt_request())
+            .map_err(|_| ApiError::Conflict(format!("bot {} is not running", record.id)))?;
+        debug!(bot = %record.id, "interrupt asked");
+        deny_open_requests(daemon, &record.id);
+    }
+    let store = daemon.store();
+    let (crew, record) = active(&store, &params.bot_id)?;
+    Ok(to_protocol(daemon, &store, &crew, record))
+}
+
+/// A tool that waits for the owner is refused: the owner said no to all of
+/// it, and the card shows so instead of waiting until it expires.
+fn deny_open_requests(daemon: &Daemon, bot: &botloft_core::ids::BotId) {
+    let open = match daemon.store().pending_approvals(bot) {
+        Ok(open) => open,
+        Err(err) => {
+            warn!(bot = %bot, "could not read the open requests: {err}");
+            return;
+        }
+    };
+    for approval_id in open {
+        let params = ApprovalsAnswerParams {
+            approval_id,
+            allow: false,
+            note: None,
+            input: None,
+            always: None,
+            once: None,
+        };
+        // One that was just answered or expired is already closed.
+        let _ = approvals::answer(daemon, params);
+    }
+}

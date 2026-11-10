@@ -76,6 +76,7 @@ mod tests {
             duration_ms: 1000,
             tokens,
             error: None,
+            stopped: false,
         })
     }
 

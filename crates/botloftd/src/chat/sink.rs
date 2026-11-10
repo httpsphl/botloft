@@ -72,13 +72,14 @@ pub(crate) fn tool_finished(daemon: &Daemon, bot: &BotId, id: &str, failed: bool
 }
 
 /// The line that closes a turn: how long it took, its tokens when the agent
-/// says, and the error it ended with, if any.
+/// says, and the error it ended with, if any, or that the owner stopped it.
 pub(crate) fn turn_finished(
     daemon: &Daemon,
     bot: &BotId,
     duration_ms: u64,
     tokens: Option<TokenUsage>,
     error: Option<String>,
+    stopped: bool,
 ) {
     items::add(
         daemon,
@@ -87,6 +88,7 @@ pub(crate) fn turn_finished(
             duration_ms,
             tokens,
             error,
+            stopped,
         }),
     );
 }

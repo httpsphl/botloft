@@ -37,6 +37,10 @@ export const chat = {
     keys: "Enter to send, Shift+Enter for a new line",
     keysWithCtrl: "Ctrl+Enter to send, Enter for a new line",
     send: "Send",
+    stop: (bot: string) => `Stop ${bot}`,
+    stopHint: (bot: string) =>
+      `Stops what ${bot} is doing now. A message still waiting in line comes after.`,
+    stopFailed: "Could not stop",
   },
   files: {
     tooMany: (max: number) => `A message can carry up to ${max} files.`,
@@ -66,6 +70,8 @@ export const chat = {
       `Took ${time}${
         tokens === null ? "" : `. Read ${tokens.read} tokens and wrote ${tokens.wrote}.`
       }`,
+    stoppedByOwner: (time: string, tokens: string | null) =>
+      `Stopped by you after ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
     stopped: (reason: string) => `The agent stopped working on this: ${reason}`,
   },
   tools: {

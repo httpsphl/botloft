@@ -138,6 +138,12 @@ pub trait Agent: Send + Sync + 'static {
         self.speaks_control()
     }
 
+    /// Whether the owner can stop what the bot is doing (spec 9.2): Claude
+    /// Code answers an `interrupt` request.
+    fn can_interrupt(&self) -> bool {
+        self.speaks_control()
+    }
+
     /// Whether the process answers Botloft's own requests on stdin (its
     /// settings, how full its conversation is, the state of its MCP servers,
     /// `/compact`). An agent that does not shows none of those (spec 30.2).

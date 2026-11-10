@@ -29,6 +29,7 @@ pub(super) fn methods(out: &mut Out) {
         &bot,
     );
     out.method(method::BOTS_COMPACT, &out.name::<BotIdParams>(), &bot);
+    out.method(method::BOTS_INTERRUPT, &out.name::<BotIdParams>(), &bot);
     out.method(
         method::BOTS_STOP_TASK,
         &out.name::<BotsStopTaskParams>(),
