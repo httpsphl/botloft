@@ -127,6 +127,10 @@ export const chat = {
     remove: "Take the reaction off",
     waiting: (bot: string) => `${bot} sees it with your next message`,
     seen: (bot: string) => `${bot} saw it`,
+    answerHint: "👍 or 👎 answers the question now",
+    answerYes: "Answer yes now",
+    answerNo: "Answer no now",
+    answered: (bot: string) => `Sent to ${bot} as your answer`,
     failed: "Could not save the reaction",
   },
   approval: {

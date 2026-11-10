@@ -1,6 +1,7 @@
 // The owner's reactions to what the bot wrote (spec 8.9): a button beside
 // the reply button opens the emoji, and the one picked sits under the reply,
 // saying whether the bot will see it with the next message or already did.
+// A 👍 or 👎 on a reply that asks something goes at once, as the answer.
 
 import { SmilePlus } from "lucide-react";
 import {
@@ -17,6 +18,7 @@ import { REACTIONS, type Reaction } from "../../lib/protocol.gen";
 import { useApi, useApp } from "../../store/context";
 import { attempt } from "../../ui/toast";
 import { useDismiss } from "../../ui/useDismiss";
+import { answers } from "./asks";
 
 export interface Reactions {
   byItem: Record<string, Reaction>;
@@ -60,8 +62,19 @@ export function useReactions(botId: string): Reactions {
   return useMemo(() => ({ byItem, set }), [byItem, set]);
 }
 
-/** Opens the emoji to react with. */
-export function ReactButton({ itemId, bot }: { itemId: string; bot: string }) {
+/**
+ * Opens the emoji to react with. On a reply that `asked` something, 👍 and
+ * 👎 answer it at once, and the emoji say so.
+ */
+export function ReactButton({
+  itemId,
+  bot,
+  asked = false,
+}: {
+  itemId: string;
+  bot: string;
+  asked?: boolean;
+}) {
   const t = useT().chat.react;
   const reactions = useContext(ReactionsOf);
   const [open, setOpen] = useState(false);
@@ -85,28 +98,44 @@ export function ReactButton({ itemId, bot }: { itemId: string; bot: string }) {
         <SmilePlus aria-hidden size={15} />
       </button>
       {open && (
-        <div
-          role="menu"
-          aria-label={t.to(bot)}
-          className="absolute right-0 bottom-full z-20 mb-1 flex animate-rise gap-0.5 rounded-full border border-line bg-panel p-1 shadow-lift"
-        >
-          {REACTIONS.map((emoji) => (
-            <button
-              key={emoji}
-              type="button"
-              role="menuitemradio"
-              aria-checked={emoji === current}
-              onClick={() => {
-                close();
-                reactions.set(itemId, emoji === current ? null : emoji);
-              }}
-              className={`grid size-8 place-items-center rounded-full text-lg transition-transform hover:scale-125 ${
-                emoji === current ? "bg-accent/15" : ""
-              }`}
-            >
-              {emoji}
-            </button>
-          ))}
+        <div className="absolute right-0 bottom-full z-20 mb-1 flex animate-rise flex-col items-end gap-1">
+          {asked && (
+            <p className="whitespace-nowrap rounded-full border border-line bg-panel px-2.5 py-1 text-ink-soft text-xs shadow-lift">
+              {t.answerHint}
+            </p>
+          )}
+          <div
+            role="menu"
+            aria-label={t.to(bot)}
+            className="flex gap-0.5 rounded-full border border-line bg-panel p-1 shadow-lift"
+          >
+            {REACTIONS.map((emoji) => {
+              const says = answers(emoji, asked)
+                ? emoji === "👍"
+                  ? t.answerYes
+                  : t.answerNo
+                : undefined;
+              return (
+                <button
+                  key={emoji}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={emoji === current}
+                  aria-label={says && `${emoji} ${says}`}
+                  title={says}
+                  onClick={() => {
+                    close();
+                    reactions.set(itemId, emoji === current ? null : emoji);
+                  }}
+                  className={`grid size-8 place-items-center rounded-full text-lg transition-transform hover:scale-125 ${
+                    emoji === current ? "bg-accent/15" : ""
+                  }`}
+                >
+                  {emoji}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
@@ -114,7 +143,15 @@ export function ReactButton({ itemId, bot }: { itemId: string; bot: string }) {
 }
 
 /** Under the reply: the owner's reaction; a click takes it off. */
-export function ReactionMark({ itemId, bot }: { itemId: string; bot: string }) {
+export function ReactionMark({
+  itemId,
+  bot,
+  asked = false,
+}: {
+  itemId: string;
+  bot: string;
+  asked?: boolean;
+}) {
   const t = useT().chat.react;
   const reactions = useContext(ReactionsOf);
   const reaction = reactions?.byItem[itemId];
@@ -122,6 +159,11 @@ export function ReactionMark({ itemId, bot }: { itemId: string; bot: string }) {
     return null;
   }
   const seen = reaction.sentIn !== null;
+  const status = !seen
+    ? t.waiting(bot)
+    : answers(reaction.emoji, asked)
+      ? t.answered(bot)
+      : t.seen(bot);
   return (
     <div className="mt-1.5 flex animate-rise items-center gap-2">
       <button
@@ -133,7 +175,7 @@ export function ReactionMark({ itemId, bot }: { itemId: string; bot: string }) {
       >
         {reaction.emoji}
       </button>
-      <span className="text-muted text-xs">{seen ? t.seen(bot) : t.waiting(bot)}</span>
+      <span className="text-muted text-xs">{status}</span>
     </div>
   );
 }

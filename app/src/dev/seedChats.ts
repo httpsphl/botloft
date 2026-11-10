@@ -155,7 +155,11 @@ export function seedChats(fake: FakeBotloft, crew: Crew): void {
     lines: { added: 5, removed: 1 },
   });
   chat.finish(outline, "The file has been updated.");
-  chat.reply(crew.writer, "The outline is in. Writing the sections now.");
+  // Ends with a question, so 👍 or 👎 answers it (spec 8.9).
+  chat.reply(
+    crew.writer,
+    "The outline is in. Writing the sections now.\n\nShould I add a short part on small evals too?",
+  );
   chat.tool(crew.writer, "Write", { summary: "week-39-report.md" });
 
   at(40);

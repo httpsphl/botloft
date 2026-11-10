@@ -9,6 +9,7 @@ import { clock } from "../../lib/format";
 import { plainText } from "../../lib/plainText";
 import type { ChatItemId, MessageReply } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
+import { asks } from "./asks";
 import { ReactButton, ReactionMark } from "./Reactions";
 
 /** What the owner is replying to, while they write. */
@@ -45,10 +46,12 @@ export function Repliable({
   if (!start) {
     return children;
   }
+  // A 👍 or 👎 answers a reply that ends with a question (spec 8.9).
+  const asked = react && asks(target.text);
   return (
     <div className="group/reply relative w-fit max-w-full">
       {children}
-      {react && <ReactionMark itemId={target.itemId} bot={target.who} />}
+      {react && <ReactionMark itemId={target.itemId} bot={target.who} asked={asked} />}
       <div className="absolute top-0 left-full flex h-10 items-center gap-0.5 pl-1.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/reply:opacity-100">
         <time
           className="whitespace-nowrap px-0.5 text-muted text-xs tabular-nums"
@@ -56,7 +59,7 @@ export function Repliable({
         >
           {clock(at)}
         </time>
-        {react && <ReactButton itemId={target.itemId} bot={target.who} />}
+        {react && <ReactButton itemId={target.itemId} bot={target.who} asked={asked} />}
         <button
           type="button"
           title={t.action}

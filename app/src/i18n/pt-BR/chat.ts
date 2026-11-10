@@ -114,6 +114,10 @@ export const chat: Messages["chat"] = {
     remove: "Tirar a reação",
     waiting: (bot) => `${bot} vê junto com sua próxima mensagem`,
     seen: (bot) => `${bot} viu`,
+    answerHint: "👍 ou 👎 responde a pergunta agora",
+    answerYes: "Responder sim agora",
+    answerNo: "Responder não agora",
+    answered: (bot) => `Enviado a ${bot} como sua resposta`,
     failed: "Não foi possível salvar a reação",
   },
   approval: {
