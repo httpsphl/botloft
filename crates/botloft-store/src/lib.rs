@@ -37,6 +37,7 @@ mod reactions;
 mod routine_runs;
 mod routines;
 mod search;
+mod settings;
 mod signals;
 mod site_logins;
 mod tasks;

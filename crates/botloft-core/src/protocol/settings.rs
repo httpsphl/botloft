@@ -69,6 +69,16 @@ pub struct SettingsUpdateParams {
     pub history_days: Option<u32>,
 }
 
+/// What the owner wrote for every agent to follow, in Settings (spec 7.10):
+/// the result of `instructions.get` and `instructions.set`, and what
+/// `instructions.set` takes. Empty when there are none.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct OwnerInstructions {
+    pub text: String,
+}
+
 /// The longest a permission request may wait for the owner: a day.
 pub const APPROVAL_WAIT_MAX_MINUTES: u32 = 24 * 60;
 

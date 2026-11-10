@@ -2786,6 +2786,13 @@ sleepAfterMinutes?: number, defaultAgent?: AgentKind, showExperimentalAgents?: b
 historyDays?: number, };
 
 /**
+ * What the owner wrote for every agent to follow, in Settings (spec 7.10):
+ * the result of `instructions.get` and `instructions.set`, and what
+ * `instructions.set` takes. Empty when there are none.
+ */
+export type OwnerInstructions = { text: string, };
+
+/**
  * When a routine runs (spec 20.2), kept as structure rather than cron text
  * so the app can show and edit it without jargon.
  */
@@ -3131,6 +3138,8 @@ export interface RpcMethods {
   "system.refresh": { params: undefined; result: SystemStatus };
   "settings.get": { params: undefined; result: Settings };
   "settings.update": { params: SettingsUpdateParams; result: Settings };
+  "instructions.get": { params: undefined; result: OwnerInstructions };
+  "instructions.set": { params: OwnerInstructions; result: OwnerInstructions };
   "agents.setPath": { params: AgentsSetPathParams; result: AgentCheck };
   "crews.list": { params: undefined; result: Array<Crew> };
   "crews.create": { params: CrewsCreateParams; result: Crew };

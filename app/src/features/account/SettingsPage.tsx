@@ -15,6 +15,7 @@ import {
   Palette,
   PanelTop,
   Plug,
+  ScrollText,
   Search,
   ShieldCheck,
   SlidersHorizontal,
@@ -39,6 +40,7 @@ import { ArchivedSettings } from "./ArchivedSettings";
 import { BackupSettings } from "./BackupSettings";
 import { ChatSettings } from "./ChatSettings";
 import { GeneralSettings } from "./GeneralSettings";
+import { InstructionsSettings } from "./InstructionsSettings";
 import { IslandSettings } from "./IslandSettings";
 import { type Page, plain, search, settingsIndex } from "./settingsIndex";
 
@@ -51,6 +53,7 @@ const GROUPS: { id: GroupId; pages: { id: Page; icon: LucideIcon }[] }[] = [
       { id: "general", icon: SlidersHorizontal },
       { id: "appearance", icon: Palette },
       { id: "chat", icon: MessageSquare },
+      { id: "instructions", icon: ScrollText },
       { id: "alerts", icon: Bell },
       { id: "island", icon: PanelTop },
     ],
@@ -100,6 +103,7 @@ export function SettingsPage() {
     general: s.general,
     appearance: s.appearance,
     chat: s.chat,
+    instructions: t.instructions.page,
     alerts: s.alerts,
     island: s.islandPart,
     account: s.account,
@@ -210,6 +214,7 @@ export function SettingsPage() {
                 {page === "general" && <GeneralSettings />}
                 {page === "appearance" && <AppearanceSettings />}
                 {page === "chat" && <ChatSettings />}
+                {page === "instructions" && <InstructionsSettings />}
                 {page === "alerts" && <AlertsSettings />}
                 {page === "island" && <IslandSettings />}
                 {page === "account" && <AccountSettings />}

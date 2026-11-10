@@ -194,8 +194,9 @@ pub(crate) fn neutral_turn_with_images(turn: &Turn) -> Bytes {
 pub(crate) fn copy_rules_to_agents_md(workspace: &Path) -> io::Result<()> {
     let rules = workspace.join(".claude").join("rules");
     if let Ok(mut text) = std::fs::read_to_string(rules.join("botloft.md")) {
-        // The agent's keys and logins, when it has any (spec 32.4, 35.3).
-        for more in ["keys.md", "logins.md"] {
+        // The owner's instructions for every agent, and the agent's keys and
+        // logins, when there are any (spec 7.10, 32.4, 35.3).
+        for more in ["owner.md", "keys.md", "logins.md"] {
             if let Ok(extra) = std::fs::read_to_string(rules.join(more)) {
                 text.push('\n');
                 text.push_str(&extra);
@@ -232,5 +233,29 @@ pub fn of(kind: AgentKind) -> Option<&'static dyn Agent> {
         AgentKind::Claude => Some(&CLAUDE),
         AgentKind::Agy => Some(&AGY),
         AgentKind::Codex => Some(&CODEX),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn agents_md_has_the_bots_rules_then_the_owners_and_its_keys() {
+        let dir = tempfile::tempdir().expect("dir");
+        let rules = dir.path().join(".claude").join("rules");
+        std::fs::create_dir_all(&rules).expect("rules");
+        std::fs::write(rules.join("botloft.md"), "# You are Scout\n").expect("bot");
+        std::fs::write(rules.join("keys.md"), "# Your keys\n").expect("keys");
+        crate::workspace::write_owner_rules(dir.path(), "Answer in Portuguese.").expect("owner");
+
+        copy_rules_to_agents_md(dir.path()).expect("copy");
+        let text = std::fs::read_to_string(dir.path().join("AGENTS.md")).expect("AGENTS.md");
+        let at = |part: &str| {
+            text.find(part)
+                .unwrap_or_else(|| panic!("{part} in {text}"))
+        };
+        assert!(at("# You are Scout") < at("Answer in Portuguese."));
+        assert!(at("Answer in Portuguese.") < at("# Your keys"));
     }
 }
