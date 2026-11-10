@@ -29,6 +29,8 @@ export const account: Messages["account"] = {
     limited: "Límite alcanzado. Tus agentes esperan hasta que se renueve.",
     limitedAgent: (agent: string) =>
       `Límite alcanzado. Los agentes en ${agent} esperan hasta que se renueve.`,
+    extraUsage:
+      "Se pasó el límite del plan. Tus agentes siguen trabajando con el uso extra de la cuenta.",
     plan: (plan: string) => `Plan: ${plan}`,
     updated: (relative: string) => `Actualizado ${relative}`,
     tokens: {
