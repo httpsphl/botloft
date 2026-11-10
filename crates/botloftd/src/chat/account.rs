@@ -8,6 +8,7 @@ use botloft_core::protocol::{
 use serde_json::Value;
 
 use super::{claude, items};
+use crate::service::resume;
 use crate::state::Daemon;
 
 /// Errors that restarting cannot fix: Claude Code needs the owner.
@@ -19,8 +20,6 @@ const SIGN_IN_ERRORS: &[&str] = &[
 ];
 /// The model does not exist or the account cannot use it (spec 7.4).
 const MODEL_NOT_FOUND: &str = "model_not_found";
-/// When a rate limit gives no reset time.
-const DEFAULT_LIMIT_MS: i64 = 5 * 60 * 1000;
 
 /// An API error ended the turn: say so, and stop or pause the bot when
 /// only the owner or time can fix it (spec 7.2).
@@ -48,7 +47,9 @@ pub(super) fn failed_turn(
     } else if error == "rate_limit" {
         (
             NoticeCode::UsageLimit,
-            "The account reached its usage limit. Messages wait until it resets.".to_owned(),
+            "The account reached its usage limit. Messages wait until it resets, and then the \
+             agent carries on where it stopped."
+                .to_owned(),
         )
     } else if error == MODEL_NOT_FOUND {
         (
@@ -73,11 +74,8 @@ pub(super) fn failed_turn(
     if SIGN_IN_ERRORS.contains(&error) {
         daemon.supervisor.signed_out(bot, generation);
     } else if error == "rate_limit" {
-        let until = daemon
-            .usage()
-            .and_then(|usage| usage.resets_at)
-            .unwrap_or_else(|| daemon.clock.now_ms() + DEFAULT_LIMIT_MS);
-        daemon.supervisor.rate_limited(bot, generation, until);
+        let resets_at = daemon.usage().and_then(|usage| usage.resets_at);
+        resume::cut_turn(daemon, bot, generation, resets_at);
     }
 }
 
@@ -114,7 +112,7 @@ pub(super) fn rate_limit(daemon: &Daemon, bot: &BotId, generation: u64, event: &
         extra_usage,
     });
     if limited {
-        let until = resets_at.unwrap_or_else(|| daemon.clock.now_ms() + DEFAULT_LIMIT_MS);
+        let until = resume::until(daemon, resets_at);
         daemon.supervisor.rate_limited(bot, generation, until);
     }
 }

@@ -639,6 +639,15 @@ async fn a_usage_limit_pauses_the_bot_until_the_account_resets() {
         |body| matches!(body, ChatBody::Notice(notice) if notice.text.contains("usage limit")),
     );
     assert!(said);
+    // The cut turn goes on once the limit resets (spec 7.3).
+    let note = botloftd::service::resume::NOTE;
+    assert!(
+        codex
+            .daemon
+            .store()
+            .unread_note(&codex.bot, note)
+            .expect("query")
+    );
 }
 
 #[tokio::test(start_paused = true)]

@@ -188,6 +188,19 @@ impl Store {
         )?)
     }
 
+    /// Whether `to` has a note from Botloft saying `body` that it has not
+    /// begun yet: one in its queue, or written to it and not picked up.
+    pub fn unread_note(&self, to: &BotId, body: &str) -> Result<bool> {
+        Ok(self.conn.query_row(
+            "SELECT EXISTS (SELECT 1 FROM messages AS m \
+             JOIN deliveries AS d ON d.message_id = m.id \
+             WHERE m.to_bot_id = ?1 AND m.from_kind = 'system' AND m.body = ?2 \
+               AND d.read_at IS NULL AND d.state != 'dead')",
+            params![to.as_str(), body],
+            |row| row.get(0),
+        )?)
+    }
+
     pub fn message(&self, id: &MessageId) -> Result<Option<Message>> {
         let message = self
             .conn

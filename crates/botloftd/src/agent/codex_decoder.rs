@@ -449,17 +449,16 @@ impl CodexDecoder {
         daemon.supervisor.signed_out(bot, generation);
     }
 
-    /// The account reached its usage limit: messages wait until it resets.
+    /// The account reached its usage limit: messages wait until it resets,
+    /// and the bot carries on then (spec 7.3).
     fn limit_reached(&self, daemon: &Daemon, bot: &BotId, generation: u64) {
         self.notice(
             daemon,
             bot,
-            "Codex reached its usage limit. Messages wait until it resets.",
+            "Codex reached its usage limit. Messages wait until it resets, and then the agent \
+             carries on where it stopped.",
         );
-        let until = self
-            .limit_resets_at
-            .unwrap_or_else(|| daemon.clock.now_ms() + 5 * 60 * 1000);
-        daemon.supervisor.rate_limited(bot, generation, until);
+        crate::service::resume::cut_turn(daemon, bot, generation, self.limit_resets_at);
     }
 }
 
