@@ -151,17 +151,22 @@ export class FakeChat {
       tokens,
       error,
       stopped: false,
+      quiet: false,
     });
   }
 
-  /** A turn the owner stopped (`bots.interrupt`): no error, and what it spent until then. */
-  stopped(botId: BotId): ChatItem {
+  /**
+   * A turn the owner stopped (`bots.interrupt`), or Botloft when it went quiet
+   * (spec 7.9): no error, and what it spent until then.
+   */
+  stopped(botId: BotId, quiet = false): ChatItem {
     return this.add(botId, {
       kind: "turn",
       durationMs: 3100,
       tokens: { ...TURN_TOKENS, output: 90 },
       error: null,
       stopped: true,
+      quiet,
     });
   }
 

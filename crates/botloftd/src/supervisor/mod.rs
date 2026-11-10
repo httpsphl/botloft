@@ -7,6 +7,7 @@
 
 mod forget;
 mod limit;
+mod quiet;
 mod reconcile;
 mod relaunch;
 mod session;
@@ -81,6 +82,8 @@ struct Inner {
     sign_in: sign_in::SignIn,
     /// Conversations a new one took the place of, still in the database.
     replaced: Vec<(BotId, String)>,
+    /// When the last pass looked for quiet turns (spec 7.9).
+    watched_at: Option<Instant>,
 }
 
 #[derive(Default)]
@@ -305,6 +308,10 @@ impl Supervisor {
         if slot.state != state {
             self.count_busy(slot.state, state);
             slot.idle_since = (state == BotState::Idle).then(Instant::now);
+            // Time spent idle or waiting for the owner is not quiet work.
+            if state == BotState::Busy {
+                slot.quiet_since = Some(Instant::now());
+            }
             slot.state = state;
             self.announce(bot, slot);
         }

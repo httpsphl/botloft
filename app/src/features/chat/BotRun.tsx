@@ -50,7 +50,11 @@ function TurnEnd({ turn }: { turn: TurnItem }) {
   const spent = used && tokens(usedTokens(used));
   return (
     <p className="px-1 text-muted text-xs" title={t.chat.run.took(time, detail)}>
-      {turn.stopped ? t.chat.run.stoppedByOwner(time, spent) : t.chat.run.done(time, spent)}
+      {turn.quiet
+        ? t.chat.run.stoppedByBotloft(time, spent)
+        : turn.stopped
+          ? t.chat.run.stoppedByOwner(time, spent)
+          : t.chat.run.done(time, spent)}
     </p>
   );
 }

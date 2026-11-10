@@ -121,7 +121,7 @@ impl CodexDecoder {
                     sink::message_read(daemon, bot, &uuid);
                 }
                 let error = message.unwrap_or_else(|| "the turn was refused".to_owned());
-                sink::turn_finished(daemon, bot, 0, None, Some(error), false);
+                sink::turn_finished(daemon, bot, 0, None, Some(error), sink::Stopped::No);
                 sink::finish_turn(daemon, bot, generation, true);
             }
             Answer::Failed(message) => {
@@ -414,7 +414,7 @@ impl CodexDecoder {
             output,
         });
         let duration = turn["durationMs"].as_u64().unwrap_or_default();
-        sink::turn_finished(daemon, bot, duration, tokens, error, false);
+        sink::turn_finished(daemon, bot, duration, tokens, error, sink::Stopped::No);
         self.shared.turn_done();
         sink::finish_turn(daemon, bot, generation, failed);
     }
