@@ -37,6 +37,7 @@ pub mod permissions;
 pub mod plan;
 pub mod questions;
 pub mod reactions;
+pub mod resume;
 pub mod routines;
 pub mod rules;
 pub mod screens;

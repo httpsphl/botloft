@@ -192,6 +192,14 @@ fn result(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
     let used = tokens(&event["usage"], reloaded).filter(|used| {
         !stopped || used.input + used.cache_write + used.cache_read + used.output > 0
     });
+    // Botloft asks the same way when a turn went quiet (spec 7.9). Any end
+    // of the turn answers that request.
+    let by_botloft = daemon.supervisor.took_quiet_stop(bot, generation);
+    let stopped = match (stopped, by_botloft) {
+        (false, _) => sink::Stopped::No,
+        (true, true) => sink::Stopped::ByBotloft,
+        (true, false) => sink::Stopped::ByOwner,
+    };
     // A compaction ends like a turn; its notice already says what happened.
     if !context::turn_ended(daemon, bot, event) {
         sink::turn_finished(

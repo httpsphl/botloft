@@ -53,6 +53,9 @@ text_enum!(
         /// The owner started a new conversation: what came before is not
         /// remembered.
         FreshStart => "fresh_start",
+        /// The turn printed nothing for half an hour and Botloft stopped
+        /// it (spec 7.9).
+        StuckTurn => "stuck_turn",
     }
 );
 
@@ -232,6 +235,10 @@ pub struct TurnItem {
     /// turns stored before it was kept.
     #[serde(default)]
     pub stopped: bool,
+    /// Botloft stopped it, not the owner: it printed nothing for half an
+    /// hour (spec 7.9). `stopped` is true too.
+    #[serde(default)]
+    pub quiet: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

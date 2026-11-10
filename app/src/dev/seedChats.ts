@@ -199,10 +199,16 @@ export function seedChats(fake: FakeBotloft, crew: Crew): void {
   chat.finish(chat.tool(crew.analyst, "Read", { summary: "week-39-report.md" }), "118 lines");
   chat.add(crew.analyst, {
     kind: "notice",
-    level: "warning",
-    text: "The account reached its usage limit. Messages wait until it resets.",
+    level: "error",
+    code: "usage_limit",
+    text: "The account reached its usage limit. Messages wait until it resets, and then the agent carries on where it stopped.",
   });
   chat.turn(crew.analyst, "rate_limit");
+  // What carries the cut turn on once the limit resets (spec 7.3).
+  talk.say({
+    to: crew.analyst,
+    body: "Your last turn stopped when the account reached its usage limit. This message comes once the limit resets: carry on with that work from where you stopped, without redoing what is already done. If it was finished, there is nothing more to do.",
+  });
 
   at(8);
   void fake.call("messages.send", {

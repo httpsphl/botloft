@@ -1029,7 +1029,7 @@ export type NoticeLevel = "info" | "warning" | "error";
 /**
  * What a notice is about, so the app can say it in the owner's language.
  */
-export type NoticeCode = "signed_out" | "usage_limit" | "turn_failed" | "model_unavailable" | "compacted" | "auto_compacted" | "compact_failed" | "fresh_start";
+export type NoticeCode = "signed_out" | "usage_limit" | "turn_failed" | "model_unavailable" | "compacted" | "auto_compacted" | "compact_failed" | "fresh_start" | "stuck_turn";
 
 export type InboundItem = { message: Message, };
 
@@ -2578,7 +2578,12 @@ error: string | null,
  * The owner stopped the turn (`bots.interrupt`, spec 8.2); `false` on
  * turns stored before it was kept.
  */
-stopped: boolean, };
+stopped: boolean, 
+/**
+ * Botloft stopped it, not the owner: it printed nothing for half an
+ * hour (spec 7.9). `stopped` is true too.
+ */
+quiet: boolean, };
 
 export type NoticeItem = { level: NoticeLevel, 
 /**

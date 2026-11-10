@@ -57,6 +57,8 @@ function noticeText(notice: NoticeItem, words: Messages["chat"]["notice"]): stri
       return words.compactFailed(notice.text);
     case "fresh_start":
       return words.freshStart;
+    case "stuck_turn":
+      return words.stuckTurn;
     default:
       return notice.text;
   }

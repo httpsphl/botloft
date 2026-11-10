@@ -46,6 +46,12 @@ pub(super) struct Slot {
     pub idle_since: Option<Instant>,
     /// Something came for the sleeping bot: it starts at the next pass.
     pub wake_asked: bool,
+    /// Since when the busy process has printed nothing (spec 7.9).
+    pub quiet_since: Option<Instant>,
+    /// When Botloft asked a turn that went quiet to stop.
+    pub quiet_stop: Option<Instant>,
+    /// The next end of a turn answers Botloft's request, not the owner's.
+    pub quiet_stopped: bool,
 }
 
 impl Slot {
@@ -69,6 +75,9 @@ impl Slot {
             tasks: 0,
             idle_since: None,
             wake_asked: false,
+            quiet_since: None,
+            quiet_stop: None,
+            quiet_stopped: false,
         }
     }
 
@@ -80,6 +89,9 @@ impl Slot {
         self.agents = 0;
         self.tasks = 0;
         self.approvals = 0;
+        self.quiet_since = None;
+        self.quiet_stop = None;
+        self.quiet_stopped = false;
     }
 
     /// A turn, a subagent or an approval is in progress.

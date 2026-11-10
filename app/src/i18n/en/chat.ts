@@ -72,6 +72,8 @@ export const chat = {
       }`,
     stoppedByOwner: (time: string, tokens: string | null) =>
       `Stopped by you after ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
+    stoppedByBotloft: (time: string, tokens: string | null) =>
+      `Stopped by Botloft after ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
     stopped: (reason: string) => `The agent stopped working on this: ${reason}`,
   },
   tools: {
@@ -413,7 +415,8 @@ export const chat = {
   notice: {
     signedOut:
       "Claude Code is not signed in, or the account can't be used right now. Sign in to Claude, or check your Claude plan.",
-    usageLimit: "Your Claude plan reached its usage limit. Messages wait until it resets.",
+    usageLimit:
+      "Your Claude plan reached its usage limit. Messages wait until it resets, and then the agent carries on where it stopped.",
     modelUnavailable:
       "This agent's model isn't available: it may not be on your Claude plan. Pick another model below the chat.",
     turnFailed: (detail: string) => `The agent couldn't finish this: ${detail}`,
@@ -422,6 +425,8 @@ export const chat = {
     autoCompacted:
       "The conversation was full, so it was compacted: what came before is now a summary.",
     freshStart: "A new conversation started here: what came before is not remembered.",
+    stuckTurn:
+      "Nothing happened in this turn for 30 minutes, so Botloft stopped it. Write to the agent to try again.",
     compactFailed: (detail: string) => `The conversation could not be compacted: ${detail}`,
   },
 };

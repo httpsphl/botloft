@@ -264,6 +264,8 @@ pub(super) async fn pump(
                 let Some(daemon) = daemon.upgrade() else {
                     return;
                 };
+                // Anything it prints shows the turn is not stuck (7.9).
+                daemon.supervisor.heard(reader.bot(), reader.generation());
                 reader.feed(&daemon, &data);
                 if !reader.holds_live_text() {
                     flush_at = None;
