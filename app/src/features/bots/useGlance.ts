@@ -6,7 +6,7 @@
 
 import { type RefObject, useEffect, useState } from "react";
 import type { BotId } from "../../lib/protocol.gen";
-import { useOptionalApi } from "../../store/context";
+import { useOptionalApi } from "../../store/apiContext";
 import { toss } from "./toss";
 
 /** How long a glance lasts, as in mascot-glance.css. */

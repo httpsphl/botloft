@@ -19,6 +19,13 @@ interface Scene {
   results: boolean;
 }
 
+/** Where the search box and its button sit, so a narrow page shows both. */
+function searchBar(width: number): { left: number; box: number; button: number } {
+  const left = Math.min(120, Math.round(width * 0.1));
+  const box = Math.min(760, width - 2 * left - 170);
+  return { left, box, button: left + box + 20 };
+}
+
 function draw(scene: Scene, size: PageSize): string {
   const canvas = document.createElement("canvas");
   canvas.width = size.width;
@@ -27,35 +34,37 @@ function draw(scene: Scene, size: PageSize): string {
   if (!g) {
     return "";
   }
+  const { left, box, button } = searchBar(size.width);
   g.fillStyle = "#ffffff";
   g.fillRect(0, 0, size.width, size.height);
   g.fillStyle = "#1f2937";
   g.font = "600 34px system-ui, sans-serif";
-  g.fillText(scene.results ? "Results" : "Find a recipe", 120, 150);
+  g.fillText(scene.results ? "Results" : "Find a recipe", left, 150);
   g.strokeStyle = "#9ca3af";
   g.lineWidth = 2;
   g.beginPath();
-  g.roundRect(120, 190, 760, 56, 28);
+  g.roundRect(left, 190, box, 56, 28);
   g.stroke();
   g.fillStyle = scene.query ? "#111827" : "#9ca3af";
   g.font = "22px system-ui, sans-serif";
-  g.fillText(scene.query || "Search recipes", 150, 226);
+  g.fillText(scene.query || "Search recipes", left + 30, 226);
   g.fillStyle = "#2563eb";
   g.beginPath();
-  g.roundRect(900, 190, 150, 56, 28);
+  g.roundRect(button, 190, 150, 56, 28);
   g.fill();
   g.fillStyle = "#ffffff";
-  g.fillText("Search", 938, 226);
+  g.fillText("Search", button + 38, 226);
   if (scene.results) {
+    const line = Math.min(820, size.width - 2 * left);
     // A taller page shows more of the list.
     for (let row = 0; 300 + row * 110 < size.height - 60; row++) {
       const y = 300 + row * 110;
       g.fillStyle = "#1d4ed8";
       g.font = "600 24px system-ui, sans-serif";
-      g.fillText(RECIPES[row % RECIPES.length] ?? "", 120, y);
+      g.fillText(RECIPES[row % RECIPES.length] ?? "", left, y);
       g.fillStyle = "#e5e7eb";
-      g.fillRect(120, y + 18, 820, 14);
-      g.fillRect(120, y + 42, 560, 14);
+      g.fillRect(left, y + 18, line, 14);
+      g.fillRect(left, y + 42, Math.round(line * 0.68), 14);
     }
   }
   return canvas.toDataURL("image/jpeg", 0.7).split(",")[1] ?? "";
@@ -69,21 +78,30 @@ export function seedBrowser(fake: FakeBotloft, scout: BotId): void {
     query: "",
     results: false,
   };
+  // The width of the page last drawn: the clicks land where it put things.
+  let width = 1200;
   const steps: ((scene: Scene) => Scene)[] = [
     (scene) => {
       fake.browser.act(scout, "open", { label: "recipes.example" });
       return scene;
     },
     (scene) => {
-      fake.browser.act(scout, "type", { x: 500, y: 218, label: "Search recipes" });
+      const { left, box } = searchBar(width);
+      fake.browser.act(scout, "type", {
+        x: left + Math.round(box / 2),
+        y: 218,
+        label: "Search recipes",
+      });
       return { ...scene, query: "sourdough" };
     },
     (scene) => {
-      fake.browser.act(scout, "click", { x: 975, y: 218, label: "Search" });
+      const { button } = searchBar(width);
+      fake.browser.act(scout, "click", { x: button + 75, y: 218, label: "Search" });
       return { ...scene, url: "https://recipes.example/search?q=sourdough", results: true };
     },
     (scene) => {
-      fake.browser.act(scout, "click", { x: 260, y: 300, label: "Classic sourdough loaf" });
+      const { left } = searchBar(width);
+      fake.browser.act(scout, "click", { x: left + 140, y: 300, label: "Classic sourdough loaf" });
       return scene;
     },
     () => {
@@ -122,6 +140,7 @@ export function seedBrowser(fake: FakeBotloft, scout: BotId): void {
   fake.browser.openTab(scout, "https://mill.example/flour/rye", "Rye flour · The Mill");
   fake.browser.openTab(scout, home.url, home.title);
   fake.browser.paint(scout, (size) => {
+    width = size.width;
     const tab = activeTab(fake, scout);
     return tab?.url.startsWith(SITE) ? draw(scene, size) : drawPage(tab, size);
   });

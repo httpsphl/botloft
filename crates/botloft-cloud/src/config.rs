@@ -33,6 +33,9 @@ pub struct Config {
     /// server serves at `/m` (spec 28.7). Without it there is no page.
     #[serde(default)]
     pub phone_dir: Option<PathBuf>,
+    /// The public site at `/` and its download links (spec 39).
+    #[serde(default)]
+    pub site: Option<crate::site::Site>,
     /// Notices to phones through their browser's push service (spec 28.8).
     /// Without it, a phone shows only what is there when it is opened.
     #[serde(default)]
@@ -200,6 +203,11 @@ impl Config {
         {
             anyhow::bail!("[push] subject must be a mailto: or https: address");
         }
+        if let Some(site) = &config.site
+            && !site.releases.starts_with("https://")
+        {
+            anyhow::bail!("[site] releases must be an https address");
+        }
         if config.storage == Storage::Bucket && config.bucket.is_none() {
             anyhow::bail!("storage = \"bucket\" needs a [bucket] section");
         }
@@ -223,6 +231,7 @@ impl Config {
             behind_proxy: true,
             client_ip_header: None,
             phone_dir: None,
+            site: None,
             push: None,
             storage: Storage::Disk,
             bucket: None,
@@ -383,6 +392,32 @@ password_file = \"p\"
         assert_eq!(config.max_copy_bytes, 50 << 20);
         assert_eq!(config.keep, 5);
         assert!(config.behind_proxy);
+        let site = config.site.expect("the example has the site");
+        assert_eq!(site.dir, Path::new("/srv/site"));
+    }
+
+    #[test]
+    fn the_site_takes_its_installers_from_an_https_page() {
+        let with = |site: &str| {
+            let (_dir, path) = write(&format!(
+                "public_url = \"https://cloud.example.org\"\n{site}\n\
+                 [smtp]\nhost = \"m\"\nuser = \"u\"\nfrom = \"a@b.c\"\n"
+            ));
+            Config::load(&path)
+        };
+        let site = with("[site]\ndir = \"/srv/site\"")
+            .expect("valid")
+            .site
+            .expect("a site");
+        assert_eq!(
+            site.releases,
+            "https://github.com/httpsphl/botloft/releases"
+        );
+        assert!(with("[site]\ndir = \"/srv/site\"\nreleases = \"http://x.org/r\"").is_err());
+        assert!(
+            with("[site]\nreleases = \"https://x.org/r\"").is_err(),
+            "needs dir"
+        );
     }
 
     #[test]

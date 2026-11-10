@@ -1,0 +1,287 @@
+/* The public site (spec 39): dark only, with the app's dark colors, its
+   fonts and its mascots, on a page that scrolls and reads like a page.
+   The top and the opening are here; the sections and the demos have files
+   of their own. */
+@import "../index.css";
+@import "./site-sections.css";
+@import "./site-demos.css";
+@import "./site-window.css";
+@import "./site-cards.css";
+@import "./site-cards-more.css";
+@source "./";
+
+@layer base {
+  :root {
+    /* A shade deeper than the app's canvas, so its panels stand out. */
+    --site-bg: #070707;
+  }
+
+  html,
+  body,
+  #site {
+    height: auto;
+    min-height: 100%;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+    background: var(--site-bg);
+  }
+
+  body {
+    overflow: auto;
+    background: var(--site-bg);
+    user-select: text;
+    font-size: 1rem;
+    line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}
+
+@layer components {
+  .site-wrap {
+    width: 100%;
+    max-width: 74rem;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+
+  @media (min-width: 768px) {
+    .site-wrap {
+      padding-inline: 2rem;
+    }
+  }
+
+  .site-skip {
+    position: absolute;
+    left: 1rem;
+    top: -4rem;
+    z-index: 60;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    background: var(--ink);
+    color: var(--canvas);
+  }
+
+  .site-skip:focus {
+    top: 1rem;
+  }
+
+  /* The top stays while the page scrolls, over a blur of what passes under. */
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: color-mix(in srgb, var(--site-bg) 78%, transparent);
+    backdrop-filter: saturate(1.4) blur(16px);
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  }
+
+  .site-nav {
+    gap: 1.75rem;
+    font-size: 0.9375rem;
+    color: var(--muted);
+  }
+
+  .site-nav-link {
+    font-size: 0.9375rem;
+    color: var(--muted);
+  }
+
+  :is(.site-nav a, .site-nav-link, .site-footer-links a, .site-files a):hover {
+    color: var(--ink);
+  }
+
+  .site-languages {
+    display: inline-flex;
+    padding: 2px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--panel);
+  }
+
+  .site-languages a {
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+
+  .site-languages a:hover {
+    color: var(--ink);
+  }
+
+  .site-languages a[aria-current="page"] {
+    background: var(--ink);
+    color: var(--canvas);
+  }
+
+  /* Buttons as in the app's dark theme: a light one, and a quiet one. */
+  .site-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--ink);
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--canvas);
+    font-weight: 600;
+    white-space: nowrap;
+    transition:
+      transform 150ms var(--ease-out),
+      background-color 150ms ease,
+      box-shadow 200ms ease;
+  }
+
+  .site-button:hover {
+    background: #ffffff;
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+
+  .site-button:active {
+    transform: scale(0.97);
+  }
+
+  .site-button-small {
+    height: 2.25rem;
+    padding-inline: 1rem;
+    font-size: 0.875rem;
+  }
+
+  .site-button-big {
+    height: 3.25rem;
+    padding-inline: 1.5rem;
+    font-size: 1rem;
+  }
+
+  .site-button-quiet {
+    border-color: var(--line-strong);
+    background: transparent;
+    color: var(--ink);
+  }
+
+  .site-button-quiet:hover {
+    background: var(--panel);
+  }
+
+  .site-link {
+    color: var(--accent-text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* The opening: a warm glow from above, as from the flame. */
+  .site-hero {
+    position: relative;
+    overflow: hidden;
+    padding-top: clamp(3.5rem, 9vw, 6.5rem);
+    padding-bottom: clamp(3rem, 6vw, 5rem);
+    background:
+      radial-gradient(
+        70rem 36rem at 50% -14%,
+        color-mix(in srgb, var(--accent) 26%, transparent),
+        transparent 68%
+      ),
+      var(--site-bg);
+  }
+
+  .site-badge {
+    display: inline-flex;
+    padding: 0.3rem 0.85rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 8%, var(--site-bg));
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--ink-soft);
+  }
+
+  .site-title {
+    max-width: 15ch;
+    margin: 1.5rem auto 0;
+    font-size: clamp(2.75rem, 7vw, 5.4rem);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.045em;
+    text-wrap: balance;
+    background: linear-gradient(180deg, #ffffff 30%, #b9b9b2);
+    background-clip: text;
+    color: transparent;
+  }
+
+  .site-lead {
+    max-width: 40rem;
+    margin-inline: auto;
+    margin-top: 1.5rem;
+    font-size: clamp(1.0625rem, 1.7vw, 1.25rem);
+    line-height: 1.6;
+    color: var(--muted);
+    text-wrap: pretty;
+  }
+
+  .site-stage {
+    position: relative;
+    max-width: 66rem;
+    margin-inline: auto;
+  }
+
+  /* The crew stands on the window's edge, feet just over it. */
+  .site-crew {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: clamp(0.4rem, 2vw, 1.5rem);
+    margin-bottom: -0.55rem;
+  }
+
+  @media (max-width: 480px) {
+    .site-crew {
+      zoom: 0.72;
+    }
+  }
+
+  .site-mascot {
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  .site-mascot svg {
+    display: block;
+  }
+
+  .site-facts {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.6rem 2rem;
+    margin-top: 2.5rem;
+    font-size: 0.9375rem;
+    color: var(--muted);
+  }
+
+  .site-facts li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .site-facts li::before {
+    content: "";
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 999px;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+  }
+}
