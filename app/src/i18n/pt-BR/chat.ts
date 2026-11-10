@@ -393,7 +393,7 @@ export const chat: Messages["chat"] = {
     signedOut:
       "O Claude Code não está conectado a uma conta, ou a conta não pode ser usada agora. Entre no Claude ou confira o seu plano do Claude.",
     usageLimit:
-      "Seu plano do Claude atingiu o limite de uso. As mensagens ficam esperando até o limite renovar.",
+      "Seu plano do Claude atingiu o limite de uso. As mensagens ficam esperando até o limite renovar, e aí o agente continua de onde parou.",
     modelUnavailable:
       "O modelo deste agente não está disponível: talvez não faça parte do seu plano do Claude. Escolha outro modelo abaixo do chat.",
     turnFailed: (detail: string) => `O agente não conseguiu terminar isto: ${detail}`,
