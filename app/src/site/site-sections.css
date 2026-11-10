@@ -1,39 +1,75 @@
-/* The site's sections (spec 39.1): cards, screenshots, steps, questions,
-   the last call to download and the foot. */
+/* The site's sections (spec 39.1): the cards with their scenes, the steps,
+   the engines, privacy, the questions, the last call to download and the
+   foot. */
 
 @layer components {
   .site-section {
-    padding-block: clamp(4.5rem, 9vw, 7rem);
+    padding-block: clamp(4.5rem, 9vw, 7.5rem);
   }
 
+  /* A section set apart: a line above and below, and a faint lift. */
   .site-band {
     border-block: 1px solid var(--line);
-    background: var(--panel);
+    background: linear-gradient(180deg, #0c0c0c, var(--site-bg));
   }
 
   .site-h2 {
-    font-size: clamp(1.875rem, 3.6vw, 2.75rem);
+    font-size: clamp(2rem, 4vw, 3.1rem);
     font-weight: 600;
-    line-height: 1.12;
-    letter-spacing: -0.025em;
+    line-height: 1.08;
+    letter-spacing: -0.035em;
     text-wrap: balance;
   }
 
-  .site-grid {
+  /* The cards with a scene: two wide ones, the others in a grid of three. */
+  .site-bento {
     display: grid;
     gap: 1.25rem;
   }
 
-  @media (min-width: 640px) {
-    .site-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+  @media (min-width: 900px) {
+    .site-bento {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .site-demo-card[data-wide] {
+      grid-column: span 2;
     }
   }
 
-  @media (min-width: 1024px) {
-    .site-grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
+  .site-demo-card {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 1.5rem;
+    background: linear-gradient(180deg, #121212, #0d0d0d);
+    transition: border-color 250ms ease;
+  }
+
+  .site-demo-card:hover {
+    border-color: var(--line-strong);
+  }
+
+  /* Where the scene plays: a dotted floor, as the app's design board. */
+  .site-demo-stage {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-height: 15rem;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--line);
+    background-color: #0a0a0a;
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      color-mix(in srgb, var(--muted) 22%, transparent) 1px,
+      transparent 0
+    );
+    background-size: 18px 18px;
+  }
+
+  .site-demo-text {
+    padding: 1.4rem 1.6rem 1.6rem;
   }
 
   .site-card {
@@ -44,16 +80,13 @@
     transition: border-color 200ms ease;
   }
 
-  .site-band :is(.site-card, .site-shot) {
-    background: var(--canvas);
-  }
-
   .site-card:hover {
     border-color: var(--line-strong);
   }
 
   .site-card[data-main] {
     border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+    box-shadow: 0 0 60px -30px var(--accent);
   }
 
   .site-icon {
@@ -73,6 +106,10 @@
     letter-spacing: -0.01em;
   }
 
+  .site-demo-text .site-card-title {
+    margin-top: 0;
+  }
+
   .site-card-body {
     margin-top: 0.45rem;
     font-size: 0.96875rem;
@@ -88,6 +125,29 @@
     color: var(--accent-text);
   }
 
+  /* The three steps, side by side, with a line between them. */
+  .site-steps {
+    display: grid;
+    gap: 2.5rem;
+  }
+
+  @media (min-width: 768px) {
+    .site-steps {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0;
+    }
+
+    .site-steps li {
+      padding-inline: 2rem;
+      border-left: 1px solid var(--line);
+    }
+
+    .site-steps li:first-child {
+      padding-left: 0;
+      border-left: 0;
+    }
+  }
+
   .site-step-number {
     display: grid;
     place-items: center;
@@ -99,17 +159,6 @@
     font-size: 0.9375rem;
     font-weight: 500;
     color: var(--ink-soft);
-  }
-
-  .site-shot figcaption {
-    padding: 0.9rem 0.6rem 0.45rem;
-    font-size: 0.9375rem;
-    color: var(--muted);
-  }
-
-  .site-shot strong {
-    font-weight: 600;
-    color: var(--ink);
   }
 
   /* The questions open in place, without a script. */
@@ -156,17 +205,17 @@
   }
 
   .site-closing {
-    border: 1px solid var(--line);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
     border-radius: 2rem;
-    padding: clamp(2.5rem, 6vw, 4.5rem) 1.5rem;
+    padding: clamp(3rem, 7vw, 5.5rem) 1.5rem;
     text-align: center;
     background:
       radial-gradient(
-        40rem 20rem at 50% 0%,
-        color-mix(in srgb, var(--accent) 14%, transparent),
+        44rem 24rem at 50% 0%,
+        color-mix(in srgb, var(--accent) 22%, transparent),
         transparent 70%
       ),
-      var(--panel);
+      #0d0d0d;
   }
 
   .site-crew-small {

@@ -10,16 +10,19 @@ export interface MascotProps {
   /** Its height in pixels; the mascot's drawing is as wide as it is tall. */
   size: number;
   mood: Mood;
+  /** In a demo, the moods it takes on its steps: `0:awake,3:working` (player.ts). */
+  moods?: string;
   className?: string;
 }
 
-export function Mascot({ color, size, mood, className = "" }: MascotProps) {
+export function Mascot({ color, size, mood, moods, className = "" }: MascotProps) {
   return (
     <span
       className={`site-mascot ${className}`}
       data-color={color}
       data-size={size}
       data-mood={mood}
+      data-moods={moods}
       aria-hidden
     >
       <svg width={size} height={size} viewBox="0 0 1 1" />

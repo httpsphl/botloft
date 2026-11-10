@@ -1,27 +1,27 @@
 // The site's one page (spec 39), the same in every language: the top, the
 // sections and the foot. It is drawn once per language when the site is
-// built (render.tsx); the page's script only wakes the mascots and picks
-// the visitor's download (main.tsx).
+// built (render.tsx); the page's script wakes the mascots, plays the demos
+// and picks the visitor's download (main.tsx).
 
 import { Code, Download } from "lucide-react";
-import heroDark from "../../../docs/assets/hero-dark.png";
-import heroLight from "../../../docs/assets/hero-light.png";
 import { BOTLOFT_COLOR } from "../features/bots/BotAvatar";
 import type { SiteMessages } from "../i18n/en/site";
+import { Cards } from "./Cards";
 import { GetButtons, Languages } from "./Controls";
+import { HeroDemo } from "./demos/HeroDemo";
 import { CLAUDE_SETUP_URL, messagesOf, REPO_URL, SITE_LOCALES, type SiteLocale } from "./locales";
 import { Mascot } from "./Mascot";
 import { Closing, Engines, Faq, Footer, Privacy } from "./More";
-import { Features, SHOT_HEIGHT, SHOT_WIDTH, Shots, Steps } from "./Sections";
+import { Facts, Steps } from "./Sections";
 import { MAIN_DOWNLOAD } from "./systems";
 
-/** The crew on top of the hero's window: one at work, the others watching. */
+/** The crew on top of the opening window: one at work, the others watching. */
 const CREW = [
-  { color: "#5ec8ff", size: 60, mood: "awake" },
-  { color: "#8b6bff", size: 70, mood: "awake" },
-  { color: BOTLOFT_COLOR, size: 92, mood: "working" },
-  { color: "#4ade5c", size: 70, mood: "awake" },
-  { color: "#ff5fa8", size: 60, mood: "awake" },
+  { color: "#5ec8ff", size: 54, mood: "awake" },
+  { color: "#8b6bff", size: 64, mood: "awake" },
+  { color: BOTLOFT_COLOR, size: 84, mood: "working" },
+  { color: "#4ade5c", size: 64, mood: "awake" },
+  { color: "#ff5fa8", size: 54, mood: "awake" },
 ] as const;
 
 export function Page({ locale }: { locale: SiteLocale }) {
@@ -34,8 +34,7 @@ export function Page({ locale }: { locale: SiteLocale }) {
       <Header locale={locale} t={t} />
       <main id="content">
         <Hero t={t} />
-        <Features t={t} />
-        <Shots t={t} />
+        <Cards t={t} />
         <Steps t={t} />
         <Engines t={t} />
         <Privacy t={t} />
@@ -109,19 +108,9 @@ function Hero({ t }: { t: SiteMessages }) {
               <Mascot key={mascot.color} {...mascot} />
             ))}
           </div>
-          <div className="site-window">
-            <picture>
-              <source media="(prefers-color-scheme: dark)" srcSet={heroDark} />
-              <img
-                src={heroLight}
-                alt={t.hero.shot}
-                width={SHOT_WIDTH}
-                height={SHOT_HEIGHT}
-                fetchPriority="high"
-              />
-            </picture>
-          </div>
+          <HeroDemo t={t} />
         </div>
+        <Facts t={t} />
       </div>
     </section>
   );

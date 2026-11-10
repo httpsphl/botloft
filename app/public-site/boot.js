@@ -1,10 +1,8 @@
-// Runs before the site's page shows (spec 39.2): the theme the system asks
-// for, so the page never flashes the other one, and, on the English page,
-// the language the visitor picked before or their browser's own. A plain
-// file, since the page's policy allows no script written in the page.
+// Runs before the site's page shows (spec 39.2): on the English page, it
+// goes to the language the visitor picked before, or else to their
+// browser's own. A plain file, since the page's policy allows no script
+// written in the page.
 (() => {
-  const root = document.documentElement;
-  root.dataset.theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   if (window.location.pathname !== "/") return;
   const pages = { "pt-BR": "/pt-BR/", es: "/es/" };
   let wanted = null;

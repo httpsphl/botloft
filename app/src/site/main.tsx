@@ -1,11 +1,13 @@
 // The site's script (spec 39.4). The page is already whole without it:
-// this only follows the system's theme, offers the visitor's own download,
-// remembers a chosen language and wakes the mascots.
+// this offers the visitor's own download, remembers a chosen language,
+// wakes the mascots and plays the demos, each at its end for a visitor who
+// asks for less motion.
 
-import { createRoot } from "react-dom/client";
-import { BotAvatar } from "../features/bots/BotAvatar";
+import { createRoot, type Root } from "react-dom/client";
+import { BotAvatar, type Mood } from "../features/bots/BotAvatar";
 import { LOCALE_KEY, localeOfPath } from "./locales";
-import { readMascot } from "./Mascot";
+import { type MascotProps, readMascot } from "./Mascot";
+import { playScenes } from "./player";
 import { MAIN_DOWNLOAD, systemOf } from "./systems";
 import "./site.css";
 
@@ -22,16 +24,6 @@ if (import.meta.env.DEV) {
     document.documentElement.lang = locale;
     root.innerHTML = renderToStaticMarkup(<Page locale={locale} />);
   }
-}
-
-/** The dark theme follows the system's, as it changes (boot.js set the first one). */
-function followTheme(): void {
-  const dark = window.matchMedia("(prefers-color-scheme: dark)");
-  const apply = () => {
-    document.documentElement.dataset.theme = dark.matches ? "dark" : "light";
-  };
-  apply();
-  dark.addEventListener("change", apply);
 }
 
 interface PlatformHint {
@@ -67,19 +59,31 @@ function rememberLanguage(): void {
   }
 }
 
-/** Each drawn mascot becomes a live one, with the same color, size and mood. */
+function draw(root: Root, mascot: MascotProps): void {
+  root.render(<BotAvatar color={mascot.color} size={mascot.size} mood={mascot.mood} />);
+}
+
+/**
+ * Each drawn mascot becomes a live one, with the same color, size and mood;
+ * a demo changes its mood on its steps (player.ts).
+ */
 function wakeMascots(): void {
   for (const holder of document.querySelectorAll<HTMLElement>(".site-mascot")) {
     const mascot = readMascot(holder);
     if (!mascot) continue;
     holder.replaceChildren();
-    createRoot(holder).render(
-      <BotAvatar color={mascot.color} size={mascot.size} mood={mascot.mood} />,
-    );
+    const root = createRoot(holder);
+    draw(root, mascot);
+    holder.addEventListener("site:mood", (event) => {
+      const mood = (event as CustomEvent<Mood>).detail;
+      draw(root, { ...mascot, mood });
+    });
   }
 }
 
-followTheme();
+const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+document.documentElement.classList.add("site-js");
 offerDownload();
 rememberLanguage();
 wakeMascots();
+playScenes(document, still);

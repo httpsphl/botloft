@@ -25,7 +25,10 @@ describe("the site's pages", () => {
       expect(page.file).toBe(`${path.slice(1)}index.html`);
       const holder = drawn(id);
       expect(holder.querySelector("h1")?.textContent).toBe(t.hero.title);
-      expect(holder.querySelectorAll("section h2").length).toBeGreaterThanOrEqual(7);
+      expect(holder.querySelectorAll("section h2").length).toBeGreaterThanOrEqual(6);
+      // Every card has its scene, and the opening has the crew at work.
+      expect(holder.querySelectorAll(".site-demo-card [data-scene]").length).toBe(7);
+      expect(holder.querySelector(".demo-hero")?.getAttribute("aria-label")).toBe(t.hero.demo);
       // The questions open without a script.
       expect(holder.querySelectorAll(".site-faq details").length).toBe(
         Object.keys(t.faq.items).length,
@@ -135,39 +138,27 @@ describe("the download offered first", () => {
 });
 
 describe("the script before the page shows", () => {
-  function run(path: string, saved: string | null, languages: string[], dark = false) {
-    const root = { dataset: {} as Record<string, string> };
+  function run(path: string, saved: string | null, languages: string[]) {
     const went: string[] = [];
     const page = {
-      matchMedia: () => ({ matches: dark }),
       location: { pathname: path, hash: "#faq", replace: (to: string) => went.push(to) },
     };
     const storage = { getItem: () => saved };
     // The plain file the page loads, run with stand-ins for the browser.
-    new Function("window", "document", "localStorage", "navigator", boot)(
-      page,
-      { documentElement: root },
-      storage,
-      { languages },
-    );
-    return { theme: root.dataset.theme, went };
+    new Function("window", "localStorage", "navigator", boot)(page, storage, { languages });
+    return went;
   }
 
-  it("sets the system's theme", () => {
-    expect(run("/es/", null, ["es"], true).theme).toBe("dark");
-    expect(run("/es/", null, ["es"], false).theme).toBe("light");
-  });
-
   it("sends a first visit of the English page to the visitor's language", () => {
-    expect(run("/", null, ["pt-BR", "en"]).went).toEqual(["/pt-BR/#faq"]);
-    expect(run("/", null, ["es-AR"]).went).toEqual(["/es/#faq"]);
-    expect(run("/", null, ["en-US", "pt-BR"]).went).toEqual([]);
-    expect(run("/", null, ["fr-FR", "es"]).went).toEqual(["/es/#faq"]);
+    expect(run("/", null, ["pt-BR", "en"])).toEqual(["/pt-BR/#faq"]);
+    expect(run("/", null, ["es-AR"])).toEqual(["/es/#faq"]);
+    expect(run("/", null, ["en-US", "pt-BR"])).toEqual([]);
+    expect(run("/", null, ["fr-FR", "es"])).toEqual(["/es/#faq"]);
   });
 
   it("keeps a language the visitor picked, and never moves the other pages", () => {
-    expect(run("/", "en", ["pt-BR"]).went).toEqual([]);
-    expect(run("/", "es", ["pt-BR"]).went).toEqual(["/es/#faq"]);
-    expect(run("/pt-BR/", null, ["es"]).went).toEqual([]);
+    expect(run("/", "en", ["pt-BR"])).toEqual([]);
+    expect(run("/", "es", ["pt-BR"])).toEqual(["/es/#faq"]);
+    expect(run("/pt-BR/", null, ["es"])).toEqual([]);
   });
 });

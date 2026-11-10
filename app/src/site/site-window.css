@@ -1,0 +1,241 @@
+/* The opening scene of the site (spec 39.4): a Botloft window as the app
+   looks in its dark theme, with the crew list, the chat and the ember that
+   carries a task from Scout to Writer. */
+
+@layer components {
+  /* The opening window, as the app looks in its dark theme. */
+  .demo-window {
+    overflow: hidden;
+    border: 1px solid #2a2a2a;
+    border-radius: 1rem;
+    background: #121212;
+    text-align: left;
+    font-size: 14px;
+    box-shadow:
+      0 60px 140px -50px rgb(0 0 0 / 0.9),
+      0 0 140px -60px var(--accent);
+  }
+
+  .demo-titlebar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.5rem;
+    padding: 0 0.9rem;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .demo-titlebar b {
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .demo-controls {
+    display: flex;
+    gap: 1.1rem;
+    margin-left: auto;
+  }
+
+  .demo-body {
+    display: grid;
+    height: 27rem;
+  }
+
+  .demo-rail,
+  .demo-side {
+    display: none;
+  }
+
+  @media (min-width: 900px) {
+    .demo-body {
+      grid-template-columns: 3.25rem 15.5rem minmax(0, 1fr);
+      height: 31rem;
+    }
+
+    .demo-rail,
+    .demo-side {
+      display: flex;
+    }
+  }
+
+  .demo-rail {
+    flex-direction: column;
+    align-items: center;
+    gap: 1.3rem;
+    padding-top: 1rem;
+    border-right: 1px solid var(--line);
+    color: var(--muted);
+  }
+
+  .demo-side {
+    position: relative;
+    flex-direction: column;
+    padding: 0.9rem 0.6rem;
+    border-right: 1px solid var(--line);
+  }
+
+  .demo-crew {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    height: 2rem;
+    padding: 0 0.6rem;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .demo-crew span {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--muted);
+  }
+
+  .demo-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    height: 3.5rem;
+    padding: 0 0.6rem;
+    border-radius: 0.7rem;
+  }
+
+  .demo-row[data-selected] {
+    background: #1d1d1d;
+  }
+
+  .demo-row-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.35;
+  }
+
+  .demo-row-text b {
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  /* An ember from Scout to Writer, as the task goes. */
+  .demo-ember {
+    position: absolute;
+    top: 4.4rem;
+    left: 2.05rem;
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 999px;
+    background: radial-gradient(#ffd8a0, var(--accent));
+    box-shadow: 0 0 14px var(--accent);
+    opacity: 0;
+  }
+
+  [data-step="6"] .demo-ember {
+    animation: demo-ember 1000ms ease-in-out both;
+  }
+
+  @keyframes demo-ember {
+    15%,
+    85% {
+      opacity: 1;
+    }
+    50% {
+      translate: 2.6rem 1.4rem;
+    }
+    to {
+      opacity: 0;
+      translate: 0 3.5rem;
+    }
+  }
+
+  .demo-chat {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .demo-chat-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.8rem 1.2rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .demo-chat-head b {
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .demo-chat-head code {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+
+  .demo-chat-head small {
+    display: block;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* The conversation keeps to the bottom, as a chat does. */
+  .demo-log {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 0.9rem;
+    overflow: hidden;
+    padding: 1.2rem 1.4rem;
+  }
+
+  .demo-handoff {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid color-mix(in srgb, var(--work) 30%, transparent);
+    border-radius: 0.8rem;
+    background: color-mix(in srgb, var(--work) 9%, transparent);
+    font-size: 13.5px;
+    color: var(--ink-soft);
+  }
+
+  .demo-handoff svg {
+    flex-shrink: 0;
+    margin-top: 0.2rem;
+    color: var(--work);
+  }
+
+  .demo-handoff b {
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .demo-composer {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin: 0 1.2rem 1.1rem;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    background: #171717;
+    color: var(--muted);
+  }
+
+  .demo-composer > span:first-child {
+    flex: 1;
+  }
+
+  .demo-send {
+    display: grid;
+    place-items: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 999px;
+    background: #2a2a2a;
+    color: var(--ink);
+  }
+}

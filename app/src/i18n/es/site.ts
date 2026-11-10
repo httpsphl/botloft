@@ -1,6 +1,7 @@
 // El sitio público (spec 39).
 
 import type { SiteMessages } from "../en/site";
+import { siteDemos } from "./siteDemos";
 
 export const site: SiteMessages = {
   meta: {
@@ -37,76 +38,51 @@ export const site: SiteMessages = {
     github: "Código en GitHub",
     needs: "Necesitas Claude Code, con tu propia cuenta.",
     needsLink: "Cómo instalarlo",
-    shot: "Botloft con un equipo de investigación abierto: siete agentes, cada uno con su color, su estado y su función",
+    demo: "Un equipo trabajando en Botloft: Scout pide usar un sitio, encuentra las fuentes y se las pasa a Writer",
   },
-  features: {
+  facts: {
+    label: "En resumen",
+    items: [
+      "Funciona en tu computadora",
+      "Sigue cuando lo cierras",
+      "Pide permiso antes de actuar",
+      "Claude Code, Antigravity, Codex",
+      "Gratis, con el código público",
+    ],
+  },
+  cards: {
     title: "Un equipo que trabaja mientras haces otra cosa",
     lead: "Cada agente tiene su carpeta, su memoria y su conversación. Hablas con cada uno como en una app de mensajes y decides qué pueden hacer.",
-    items: {
-      crew: {
-        title: "Un equipo para cada objetivo",
-        body: "Di para qué es el equipo. Su Jefe planea el trabajo y sugiere los agentes que necesita; tú creas cada uno con un clic.",
-      },
-      agency: {
-        title: "Decenas de agentes listos",
-        body: "Un programador, un diseñador, un redactor, un investigador, atención al cliente: elige uno para la tarea y cambia lo que quieras.",
-      },
-      maker: {
-        title: "El Creador arma por ti",
-        body: "Pide equipos, agentes y rutinas con tus palabras. Ves el plan completo antes de que se cree nada, y Deshacer lo revierte.",
-      },
-      chat: {
-        title: "Conversa con cada agente",
-        body: "Las respuestas aparecen mientras se escriben. Envía imágenes y archivos, busca en todas las conversaciones y abre cada edición de un agente.",
-      },
-      ask: {
-        title: "Tú decides qué pueden hacer",
-        body: "Antes de que un agente ejecute un comando, edite un archivo o abra un sitio, una tarjeta te pregunta, salvo que ya lo hayas permitido.",
-      },
-      handoff: {
-        title: "Se pasan trabajo entre ellos",
-        body: "Los agentes se envían mensajes y tareas. Cada mensaje se guarda antes de salir y se reintenta hasta que llega.",
-      },
-      always: {
-        title: "Siempre encendidos",
-        body: "Los agentes siguen trabajando después de cerrar Botloft y arrancan cuando inicias sesión. Los inactivos duermen y no gastan memoria.",
-      },
-      routines: {
-        title: "Rutinas con horario",
-        body: "Las mañanas de días hábiles, cada dos horas o el horario que quieras. O convierte una rutina en un atajo que se ejecuta con un clic.",
-      },
-      phone: {
-        title: "Desde tu teléfono",
-        body: "Aprueba pedidos, responde preguntas y conversa desde cualquier lugar. Lo que pasa entre el teléfono y tu computadora va sellado de extremo a extremo.",
-      },
+    browser: {
+      title: "Míralos trabajar",
+      body: "Ve en vivo cada página que abre un agente y toma el control para iniciar sesión por él.",
+    },
+    ask: {
+      title: "Tú decides qué pueden hacer",
+      body: "Un comando, una edición de archivo, un sitio nuevo: una tarjeta te pregunta antes, salvo que ya lo hayas permitido.",
+    },
+    handoff: {
+      title: "Se pasan trabajo entre ellos",
+      body: "Los agentes se envían mensajes y tareas. Cada uno se guarda antes de salir y se reintenta hasta que llega.",
+    },
+    routines: {
+      title: "Rutinas con horario",
+      body: "Las mañanas de días hábiles, cada dos horas o el horario que quieras. O un atajo que se ejecuta con un clic.",
+    },
+    phone: {
+      title: "Desde tu teléfono",
+      body: "Aprueba, responde y conversa desde cualquier lugar, todo sellado de extremo a extremo entre el teléfono y tu computadora.",
+    },
+    maker: {
+      title: "El Creador arma por ti",
+      body: "Pide equipos, agentes y rutinas con tus palabras. Ves el plan completo antes de que se cree nada, y Deshacer lo revierte.",
+    },
+    sleep: {
+      title: "Siempre encendidos, sin estorbar",
+      body: "Los agentes siguen después de cerrar Botloft. Los inactivos duermen, sin gastar memoria, y despiertan con la misma conversación.",
     },
   },
-  shots: {
-    title: "Míralos trabajar",
-    items: {
-      browser: {
-        title: "Conversación y navegador en vivo",
-        body: "Scout pide permiso antes de usar un sitio nuevo, y lo ves navegar.",
-        alt: "La conversación de Scout con un pedido para usar el navegador, junto al navegador en vivo donde Scout escribe en un buscador",
-      },
-      screens: {
-        title: "Pantallas",
-        body: "Las páginas de Designer toman forma mientras las escribe.",
-        alt: "Designer escribiendo la página de una panadería, que toma forma en el área de pantallas",
-      },
-      chief: {
-        title: "Un Jefe para cada equipo",
-        body: "Sugiere los agentes que el trabajo necesita.",
-        alt: "El Jefe sugiriendo un agente nuevo, Designer, con nombre, modelo, función e instrucciones listos para editar",
-      },
-      routines: {
-        title: "Rutinas",
-        body: "Trabajo que corre con horario, con el último resultado a la vista.",
-        alt: "Las rutinas de un equipo: un resumen las mañanas de días hábiles, una revisión de la bandeja de entrada con un clic, un recordatorio de una sola vez, una revisión de enlaces cada dos horas y un repaso de las fuentes que espera la señal de otro agente",
-      },
-    },
-    note: "Las imágenes muestran equipos de ejemplo, no datos reales.",
-  },
+  demos: siteDemos,
   steps: {
     title: "Funcionando en tres pasos",
     items: {

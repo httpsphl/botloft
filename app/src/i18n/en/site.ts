@@ -1,6 +1,9 @@
 // The public site (spec 39), one page per language made when it is built.
 // It speaks to people who have not met Botloft yet: plain words, each
-// agent is an "agent" and what runs it is the "engine".
+// agent is an "agent" and what runs it is the "engine". What the agents say
+// in the page's demos is in siteDemos.ts.
+
+import { siteDemos } from "./siteDemos";
 
 export const site = {
   meta: {
@@ -37,76 +40,51 @@ export const site = {
     github: "Code on GitHub",
     needs: "You need Claude Code, signed in with your own plan.",
     needsLink: "How to install it",
-    shot: "Botloft with a research crew open: seven agents, each with its own color, state and job",
+    demo: "A crew at work in Botloft: Scout asks to use a website, finds sources and hands them to Writer",
   },
-  features: {
+  facts: {
+    label: "In short",
+    items: [
+      "Runs on your computer",
+      "Keeps going when you close it",
+      "Asks before it acts",
+      "Claude Code, Antigravity, Codex",
+      "Free, public code",
+    ],
+  },
+  cards: {
     title: "A crew that works while you do something else",
     lead: "Each agent has its own folder, memory and conversation. You talk to each one like in a chat app, and you decide what they may do.",
-    items: {
-      crew: {
-        title: "A crew for every goal",
-        body: "Say what the crew is for. Its Chief plans the work and suggests the agents it needs; you add each one with a click.",
-      },
-      agency: {
-        title: "Dozens of ready-made agents",
-        body: "A developer, a designer, a writer, a researcher, customer support: pick one for a job and change anything about it.",
-      },
-      maker: {
-        title: "The Maker builds for you",
-        body: "Ask for crews, agents and routines in your own words. You see the whole plan before anything is made, and Undo takes it back.",
-      },
-      chat: {
-        title: "Chat with every agent",
-        body: "Replies stream in as they are written. Send images and files, search every chat and open each edit an agent made.",
-      },
-      ask: {
-        title: "You decide what they may do",
-        body: "Before an agent runs a command, edits a file or opens a website, a card asks you first, unless you told it it may.",
-      },
-      handoff: {
-        title: "They hand work to each other",
-        body: "Agents send each other messages and tasks. Every message is saved before it is sent and retried until it arrives.",
-      },
-      always: {
-        title: "Always on",
-        body: "Agents keep working after you close Botloft and start when you sign in. Idle ones sleep, so they use no memory.",
-      },
-      routines: {
-        title: "Routines on a schedule",
-        body: "Weekday mornings, every two hours or any schedule you like. Or make a routine a shortcut you run with one click.",
-      },
-      phone: {
-        title: "From your phone",
-        body: "Approve requests, answer questions and chat from anywhere. What passes between the phone and your computer is sealed end to end.",
-      },
+    browser: {
+      title: "Watch them work",
+      body: "See every page an agent opens, live, and take control to sign in for it.",
+    },
+    ask: {
+      title: "You decide what they may do",
+      body: "A command, a file edit, a new website: a card asks you first, unless you told that agent it may.",
+    },
+    handoff: {
+      title: "They hand work to each other",
+      body: "Agents send each other messages and tasks. Every one is saved before it goes and retried until it arrives.",
+    },
+    routines: {
+      title: "Routines on a schedule",
+      body: "Weekday mornings, every two hours or any schedule. Or a shortcut you run with one click.",
+    },
+    phone: {
+      title: "From your phone",
+      body: "Approve, answer and chat from anywhere, sealed end to end between the phone and your computer.",
+    },
+    maker: {
+      title: "The Maker builds for you",
+      body: "Ask for crews, agents and routines in your own words. You see the whole plan before anything is made, and Undo takes it back.",
+    },
+    sleep: {
+      title: "Always on, never in the way",
+      body: "Agents keep working after you close Botloft. Idle ones sleep, using no memory, and wake with the same conversation.",
     },
   },
-  shots: {
-    title: "See them at work",
-    items: {
-      browser: {
-        title: "Chat and live browser",
-        body: "Scout asks before using a new site, and you watch it browse.",
-        alt: "Scout's chat with a request to use the browser, next to the live browser where Scout types in a search box",
-      },
-      screens: {
-        title: "Screens",
-        body: "Designer's pages take shape while it writes them.",
-        alt: "Designer writing a bakery landing page that takes shape in the screens area",
-      },
-      chief: {
-        title: "A Chief for each crew",
-        body: "It suggests the agents the work needs.",
-        alt: "The Chief suggesting a new agent, Designer, with its name, model, role and instructions ready to edit",
-      },
-      routines: {
-        title: "Routines",
-        body: "Work that runs on a schedule, with the last result at a glance.",
-        alt: "A crew's routines: a morning summary on weekdays, an inbox check run with a click, a one-time reminder, a link check every two hours and a source recheck that waits for another agent's signal",
-      },
-    },
-    note: "The pictures show sample crews, not real data.",
-  },
+  demos: siteDemos,
   steps: {
     title: "Up and running in three steps",
     items: {
