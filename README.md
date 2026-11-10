@@ -147,6 +147,12 @@ Open an area to see all of it. Areas marked (Windows) work on Windows only for n
   and Undo takes it back. Bring your Claude Code history or your claude.ai export so it knows your
   projects: you choose what goes and read the whole summary first, with keys, e-mails and numbers
   swapped out.
+- **Let the Maker change what you have.** Ask it to make a writer's posts shorter, add an agent to
+  a crew or turn a routine off: the card shows each change as before and after. Archiving an agent
+  or deleting a routine always asks, and Undo puts everything back.
+- **Instructions for all your agents.** Write once what every agent should follow, like the
+  language to answer in or how to name files, in Settings > Instructions for all. Agents get it
+  the next time they are free, without losing their conversation.
 - **Choose per agent.** Which engine and model it uses, how hard it thinks and how much it asks
   before acting. Its details read like a profile: role, instructions, folder and what it may do
   without asking.
@@ -163,11 +169,14 @@ Open an area to see all of it. Areas marked (Windows) work on Windows only for n
 
 - **Chat with every agent.** Replies stream in as they are written. Send images and files, or drop
   them on the chat. Search every chat with Ctrl+K.
+- **Stop an agent.** While a Claude Code agent works, a Stop button takes the place of Send. The
+  turn ends where it was, and a request still waiting for you is denied.
 - **Approve or deny.** When an agent wants to run a command, edit a file or open a website, a card
   asks you first, unless you told that agent it may. Each file edit shows how many lines it added
   and removed, and opens to its diff.
 - **Answer their questions.** An agent that needs your decision asks in its chat and in the
-  Questions box, and goes on with what it can, even in a routine at night.
+  Questions box, and goes on with what it can, even in a routine at night. When a reply ends with a
+  question, a 👍 or 👎 on it answers at once.
 - **See what they made.** Sounds, videos and pictures an agent made play and open right in its
   chat. The files panel says what each file is, with thumbnails for pictures.
 - **Keep the chats as long as you want.** For good, a year, 90 or 30 days (Settings > General >
@@ -238,6 +247,10 @@ Open an area to see all of it. Areas marked (Windows) work on Windows only for n
 
 - **They keep going.** Agents keep working after you close Botloft. They start when you sign in,
   come back soon after a crash and keep the computer awake while they work.
+- **Past the usage limit.** A turn the plan's limit cut short carries on by itself when the limit
+  resets, from where it stopped. With paid extra usage on your Claude account, agents keep working.
+- **No stuck turns.** A turn that shows nothing for half an hour is stopped, and the agent is
+  restarted if that does not work.
 - **They sleep when idle.** Agents that sit idle for a while sleep, so they use no memory, and wake
   with the same conversation when work comes. On a computer with little memory, you can also cap how
   many run at once.
@@ -468,7 +481,7 @@ your computer and is not affiliated with or endorsed by Anthropic, Google or Ope
 ## Status
 
 Botloft is young (version 0.x) and moves fast: the latest release is
-[0.19.0](https://github.com/httpsphl/botloft/releases/tag/v0.19.0) (2026-11-06), and the
+[0.20.0](https://github.com/httpsphl/botloft/releases/tag/v0.20.0) (2026-11-10), and the
 [releases page](https://github.com/httpsphl/botloft/releases) says what each version brought. Still
 open: a code-signed installer, and checking the phone page on an iPhone.
 
