@@ -1,6 +1,8 @@
 // The fake daemon's reactions (spec 8.9): the owner's emoji on a bot's
-// reply, waiting for the owner's next message, which takes them along.
+// reply, waiting for the owner's next message, which takes them along. A
+// 👍 or 👎 on a reply that asks something goes at once, as that message.
 
+import { answers, asks } from "../features/chat/asks";
 import type { FakeBotloft, Handlers } from "./fake";
 import { invalid, notFound } from "./fakeRules";
 import type { BotId, MessageId, Reaction } from "./protocol.gen";
@@ -25,6 +27,26 @@ export class FakeReactions {
         this.changed(botId, reaction.itemId, { ...reaction });
       }
     }
+  }
+
+  /** The owner's message with just the emoji, which takes what waits. */
+  private sendAnswer(botId: BotId, emoji: string): void {
+    const bot = this.fake.bot(botId);
+    this.fake.conversation.record({
+      id: this.fake.id("msg"),
+      crewId: bot.crewId,
+      fromKind: "owner",
+      fromBotId: null,
+      toBotId: botId,
+      kind: "note",
+      body: emoji,
+      taskId: null,
+      routineId: null,
+      questionId: null,
+      attachments: [],
+      replyTo: null,
+      createdAt: this.fake.now,
+    });
   }
 
   handlers(): Pick<Handlers, ReactionMethods> {
@@ -53,6 +75,12 @@ export class FakeReactions {
           }
           return null;
         }
+        const answer = answers(emoji, asks(item.body.text));
+        const before = this.reactions.get(itemId);
+        if (answer && before?.emoji === emoji && before.sentIn !== null) {
+          // That answer already went.
+          return { ...before };
+        }
         const reaction: Reaction = {
           botId,
           itemId,
@@ -62,6 +90,10 @@ export class FakeReactions {
         };
         this.reactions.set(itemId, reaction);
         this.changed(botId, itemId, { ...reaction });
+        if (answer) {
+          // A thumb on a question goes now, as the owner's message.
+          this.sendAnswer(botId, emoji);
+        }
         return { ...reaction };
       },
     };

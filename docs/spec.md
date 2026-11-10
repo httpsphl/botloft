@@ -515,13 +515,14 @@ O dono procura palavras em todas as conversas: o que ele mandou, o que outros bo
 
 ### 8.9 Reações
 
-O dono reage a uma fala do bot (item `reply`) com um emoji, sem gastar um turno: a reação não acorda o bot. Ela espera e vai junto com a próxima message do dono para esse bot.
+O dono reage a uma fala do bot (item `reply`) com um emoji, sem gastar um turno: a reação não acorda o bot. Ela espera e vai junto com a próxima message do dono para esse bot. A exceção é 👍 ou 👎 numa fala que pergunta algo: aí a reação é a resposta e vai na hora (abaixo).
 
-- Uma reação por fala, de uma lista fixa (`REACTIONS`, exportada para o app): 👍 ❤️ 😂 🎉 🙏 👀. Outro emoji troca a reação; `null` a tira.
+- Uma reação por fala, de uma lista fixa (`REACTIONS`, exportada para o app): 👍 👎 ❤️ 😂 🎉 🙏 👀. Outro emoji troca a reação; `null` a tira.
 - `reactions.set {botId, itemId, emoji}` confere que o item é uma fala do bot (`not_found` se não é do chat dele, `validation` se não é `reply` ou se o emoji não está na lista) e guarda a reação com a fala citada numa linha só, cortada em 120 caracteres. Devolve a reação, ou `null` quando tirou. `reactions.list {botId}` devolve as reações do bot.
 - Toda message do dono para o bot (`messages.send` e a resposta a uma pergunta, 23.4) leva as reações que esperam, na mesma transação em que é gravada: cada uma ganha `sentIn` com o id da message. O bot lê uma linha por reação antes do resto (9.3): `Reacted 👍 to: "<fala citada>"`. Trocar uma reação que já foi faz ela esperar de novo; tirar uma que já foi não avisa o bot.
+- **👍 e 👎 respondem uma pergunta.** A fala pergunta quando a última linha com texto, sem marcas de ênfase, código, aspas ou parênteses no fim, termina em `?` ou `？` (`asks::asked`; o app tem a mesma regra em `features/chat/asks.ts`). Nessa fala, 👍 ou 👎 cita a pergunta, a última frase dessa linha, cortada em 120 caracteres mantendo o fim. A reação vai na hora, numa message do dono que tem só o emoji, aparece no chat como qualquer message dele e leva junto as outras reações que esperam. O bot lê `Answered 👍 (yes) to your question: "<pergunta>"` (ou `👎 (no)`) e o emoji. Trocar 👍 por 👎 manda de novo, e o mesmo emoji de novo não manda nada. Os outros emojis numa pergunta, e 👍 numa fala que não pergunta, esperam como sempre. Aprovações (10.1) e as perguntas de `ask_owner` (23) não mudam: elas têm botões próprios.
 - `reaction.changed {botId, itemId, reaction}` avisa o app de toda reação posta, trocada, enviada ou tirada (`reaction: null`).
-- **No app** (15.3): na fala do bot, ao lado do botão de responder, o botão de reagir abre os seis emojis numa pílula. A reação fica embaixo da fala, com "<bot> vê junto com sua próxima mensagem" enquanto espera e "<bot> viu" depois que foi. Um clique nela, ou no mesmo emoji de novo, tira.
+- **No app** (15.3): na fala do bot, ao lado do botão de responder, o botão de reagir abre os sete emojis numa pílula. A reação fica embaixo da fala, com "<bot> vê junto com sua próxima mensagem" enquanto espera e "<bot> viu" depois que foi. Um clique nela, ou no mesmo emoji de novo, tira. Numa fala que pergunta, a pílula ganha em cima "👍 ou 👎 responde a pergunta agora", 👍 e 👎 se chamam "Responder sim agora" e "Responder não agora", e a resposta enviada diz "Enviado a <bot> como sua resposta".
 
 ## 9. Mensagens e entrega
 

@@ -172,14 +172,20 @@ pub const QUOTED_REACTION_MAX_CHARS: usize = 120;
 
 /// The owner's reactions since their last message (spec 8.9), one line
 /// each, above what that message says. Each is an emoji and the reply it
-/// is on, already quoted on one line.
+/// is on, already quoted on one line. A 👍 or 👎 on a reply that asked
+/// something says so: its quote is that question (`asks::asked`).
 pub fn with_reactions(reactions: &[(String, String)], text: &str) -> String {
     if reactions.is_empty() {
         return text.to_owned();
     }
     let lines: Vec<String> = reactions
         .iter()
-        .map(|(emoji, quote)| format!("Reacted {emoji} to: \"{quote}\""))
+        .map(
+            |(emoji, quote)| match crate::asks::answer_word(emoji, quote) {
+                Some(word) => format!("Answered {emoji} ({word}) to your question: \"{quote}\""),
+                None => format!("Reacted {emoji} to: \"{quote}\""),
+            },
+        )
         .collect();
     format!(
         "{}
@@ -309,6 +315,21 @@ Reacted 🎉 to: \"All tests pass.\"
 Next?"
         );
         assert_eq!(with_reactions(&[], "Next?"), "Next?");
+    }
+
+    #[test]
+    fn a_thumb_on_a_question_reads_as_the_answer() {
+        let reactions = [
+            ("👎".to_owned(), "Should I deploy now?".to_owned()),
+            ("❤️".to_owned(), "Is the draft good?".to_owned()),
+        ];
+        assert_eq!(
+            with_reactions(&reactions, "👎"),
+            "Answered 👎 (no) to your question: \"Should I deploy now?\"
+Reacted ❤️ to: \"Is the draft good?\"
+
+👎"
+        );
     }
 
     #[test]

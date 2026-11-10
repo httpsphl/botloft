@@ -2530,7 +2530,7 @@ export type QuestionsAnswerParams = { questionId: QuestionId, answer: string, };
 export type QuestionIdParams = { questionId: QuestionId, };
 
 /** The emoji the owner can react with (spec 8.9). */
-export const REACTIONS = ["👍", "❤️", "😂", "🎉", "🙏", "👀"] as const;
+export const REACTIONS = ["👍", "👎", "❤️", "😂", "🎉", "🙏", "👀"] as const;
 
 export type Reaction = { botId: BotId, 
 /**
