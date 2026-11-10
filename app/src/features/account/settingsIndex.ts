@@ -8,6 +8,7 @@ export type Page =
   | "general"
   | "appearance"
   | "chat"
+  | "instructions"
   | "alerts"
   | "island"
   | "account"
@@ -49,6 +50,7 @@ export function settingsIndex(t: ReturnType<typeof useT>): Entry[] {
     ),
     ...entry("appearance", s.theme, s.size, s.lessMotion),
     ...entry("chat", s.enterSends, s.followBot, s.approvalWait),
+    ...entry("instructions", t.instructions.label),
     ...entry(
       "alerts",
       s.notifyNeeds,

@@ -261,6 +261,7 @@ fn export_bindings() {
     out.decl::<ApprovalsAnswerParams>();
     out.decl::<Settings>();
     out.decl::<SettingsUpdateParams>();
+    out.decl::<OwnerInstructions>();
     routines::decls(&mut out);
     browser::decls(&mut out);
 
@@ -298,6 +299,16 @@ fn export_bindings() {
         method::SETTINGS_UPDATE,
         &out.name::<SettingsUpdateParams>(),
         &out.name::<Settings>(),
+    );
+    out.method(
+        method::INSTRUCTIONS_GET,
+        "undefined",
+        &out.name::<OwnerInstructions>(),
+    );
+    out.method(
+        method::INSTRUCTIONS_SET,
+        &out.name::<OwnerInstructions>(),
+        &out.name::<OwnerInstructions>(),
     );
     out.method(
         method::AGENTS_SET_PATH,

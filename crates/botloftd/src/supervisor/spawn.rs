@@ -110,6 +110,12 @@ pub(super) fn launch_spec(
         .bot_mcp_servers(&bot.id)
         .map_err(io::Error::other)?;
     let workspace = workspace::prepare_bot(daemon.workspace_env(), crew, &crews, bot, &servers)?;
+    // What the owner wrote for every agent (spec 7.10).
+    let owner = daemon
+        .store()
+        .owner_instructions()
+        .map_err(io::Error::other)?;
+    workspace::write_owner_rules(&workspace, &owner)?;
     // The names of its keys, for its rules (spec 32.4).
     let keys = crate::service::keys::listed(daemon, &bot.id).map_err(io::Error::other)?;
     crate::agent_keys::write_rules(&workspace, &keys)?;

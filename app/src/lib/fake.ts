@@ -19,6 +19,7 @@ import { crewHandlers } from "./fakeCrews";
 import { FakeDesktop } from "./fakeDesktop";
 import { FakeFiles } from "./fakeFiles";
 import { FakeImports } from "./fakeImports";
+import { instructionsHandlers } from "./fakeInstructions";
 import { islandHandlers } from "./fakeIsland";
 import { FakeKeys } from "./fakeKeys";
 import { FakeLesson } from "./fakeLesson";
@@ -95,6 +96,8 @@ export class FakeBotloft implements BotloftApi {
     makerBuildsWithoutAsking: false,
     historyDays: 0,
   };
+  /** What the owner wrote for every agent (spec 7.10). */
+  ownerInstructions = "";
   /** Folders the owner sent to the Recycle Bin with a delete, in order. */
   readonly recycled: string[] = [];
   /** Why the next folder cannot go to the bin, if it cannot. */
@@ -365,6 +368,7 @@ export class FakeBotloft implements BotloftApi {
     ...this.maker.handlers(),
     ...this.imports.handlers(),
     ...usageHandlers(this),
+    ...instructionsHandlers(this),
     ...islandHandlers(this),
     ...backupHandlers(this),
     ...cloudHandlers(this),

@@ -179,6 +179,8 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::SCREENS_LIST => reply(screens::list(daemon, parse(params)?)),
         method::SETTINGS_GET => reply(settings::get(daemon)),
         method::SETTINGS_UPDATE => reply(settings::update(daemon, parse(params)?)),
+        method::INSTRUCTIONS_GET => reply(service::instructions::get(daemon)),
+        method::INSTRUCTIONS_SET => reply(service::instructions::set(daemon, parse(params)?)),
         method::AGENTS_SET_PATH => reply(agents::set_path(daemon, parse(params)?)),
         method::USAGE_TOKENS => reply(usage::tokens(daemon, parse(params)?)),
         method::SESSION_HELLO => Err(RpcError::new(

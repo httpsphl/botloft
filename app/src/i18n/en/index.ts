@@ -14,6 +14,7 @@ import { crewTemplates } from "./crewTemplates";
 import { desktop } from "./desktop";
 import { files } from "./files";
 import { home } from "./home";
+import { instructions } from "./instructions";
 import { island } from "./island";
 import { keys } from "./keys";
 import { logins } from "./logins";
@@ -54,6 +55,7 @@ export const en = {
   desktop,
   files,
   home,
+  instructions,
   island,
   keys,
   messages,

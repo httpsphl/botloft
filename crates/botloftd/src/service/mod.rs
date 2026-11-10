@@ -19,6 +19,7 @@ pub mod desktop;
 pub mod files;
 mod import_sources;
 pub mod imports;
+pub mod instructions;
 pub mod interrupt;
 pub mod island;
 pub mod key_requests;

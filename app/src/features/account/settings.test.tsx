@@ -274,6 +274,7 @@ describe("the page of settings", () => {
       "General",
       "Appearance",
       "Chat",
+      "Instructions for all",
       "Notifications",
       "Island",
       "Account and phone",
