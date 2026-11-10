@@ -66,6 +66,8 @@ export const chat: Messages["chat"] = {
       }`,
     stoppedByOwner: (time: string, tokens: string | null) =>
       `Detenido por ti a los ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
+    stoppedByBotloft: (time: string, tokens: string | null) =>
+      `Detenido por Botloft a los ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
     stopped: (reason: string) => `El agente dejó de trabajar en esto: ${reason}`,
   },
   tools: {
@@ -405,6 +407,8 @@ export const chat: Messages["chat"] = {
       "La conversación se compactó: lo anterior ahora es un resumen, y vuelve a haber espacio.",
     autoCompacted: "La conversación estaba llena y se compactó: lo anterior ahora es un resumen.",
     freshStart: "Aquí empezó una conversación nueva: lo anterior ya no se recuerda.",
+    stuckTurn:
+      "No pasó nada en este turno durante 30 minutos, así que Botloft lo detuvo. Escribe al agente para intentarlo de nuevo.",
     compactFailed: (detail: string) => `No se pudo compactar la conversación: ${detail}`,
   },
 };

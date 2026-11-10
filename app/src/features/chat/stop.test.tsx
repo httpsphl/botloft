@@ -78,4 +78,24 @@ describe("stopping an agent", () => {
     expect(stopButton()).toBeNull();
     expect(sendButton()).not.toBeNull();
   });
+
+  test("a turn Botloft stopped because nothing happened says who stopped it", async () => {
+    const { fake, scout } = await scoutAtWork();
+    act(() => {
+      fake.chat.add(scout.id, {
+        kind: "notice",
+        level: "warning",
+        code: "stuck_turn",
+        text: "Nothing happened in this turn for 30 minutes, so Botloft stopped it.",
+      });
+      fake.chat.stopped(scout.id, true);
+    });
+    expect(
+      await screen.findByText(
+        "Nothing happened in this turn for 30 minutes, so Botloft stopped it. Write to the agent to try again.",
+      ),
+    ).toBeDefined();
+    expect(screen.getByText("Stopped by Botloft after 3.1 s · 1.9k tokens")).toBeDefined();
+    expect(screen.queryByText(/Stopped by you/)).toBeNull();
+  });
 });

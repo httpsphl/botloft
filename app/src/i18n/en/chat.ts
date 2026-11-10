@@ -72,6 +72,8 @@ export const chat = {
       }`,
     stoppedByOwner: (time: string, tokens: string | null) =>
       `Stopped by you after ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
+    stoppedByBotloft: (time: string, tokens: string | null) =>
+      `Stopped by Botloft after ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
     stopped: (reason: string) => `The agent stopped working on this: ${reason}`,
   },
   tools: {
@@ -423,6 +425,8 @@ export const chat = {
     autoCompacted:
       "The conversation was full, so it was compacted: what came before is now a summary.",
     freshStart: "A new conversation started here: what came before is not remembered.",
+    stuckTurn:
+      "Nothing happened in this turn for 30 minutes, so Botloft stopped it. Write to the agent to try again.",
     compactFailed: (detail: string) => `The conversation could not be compacted: ${detail}`,
   },
 };

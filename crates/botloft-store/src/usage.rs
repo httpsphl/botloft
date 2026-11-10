@@ -77,6 +77,7 @@ mod tests {
             tokens,
             error: None,
             stopped: false,
+            quiet: false,
         })
     }
 

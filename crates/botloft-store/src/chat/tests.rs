@@ -138,6 +138,7 @@ fn the_last_activity_skips_turn_ends() {
         tokens: None,
         error: None,
         stopped: false,
+        quiet: false,
     });
     fx.store
         .insert_chat_item(&item(bot, turn, 8))
@@ -169,6 +170,7 @@ fn the_last_reply_is_found_behind_newer_items() {
         tokens: None,
         error: None,
         stopped: false,
+        quiet: false,
     });
     fx.store
         .insert_chat_item(&item(bot, turn, 12))

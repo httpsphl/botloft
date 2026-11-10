@@ -52,6 +52,7 @@ impl Supervisor {
             .map(|crew| (crew.id.clone(), crew))
             .collect();
         self.release_limits(daemon.clock.now_ms());
+        self.watch_turns(&daemon);
         // Read before the supervisor lock, like the database.
         let sleep_after = daemon.settings.sleep_after();
         let max_running = daemon.settings.max_running();

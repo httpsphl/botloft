@@ -71,15 +71,25 @@ pub(crate) fn tool_finished(daemon: &Daemon, bot: &BotId, id: &str, failed: bool
     items::update(daemon, bot, &item.id, body);
 }
 
+/// Who cut a turn short, if anyone.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Stopped {
+    No,
+    /// `bots.interrupt` (spec 9.2).
+    ByOwner,
+    /// The turn went quiet (spec 7.9).
+    ByBotloft,
+}
+
 /// The line that closes a turn: how long it took, its tokens when the agent
-/// says, and the error it ended with, if any, or that the owner stopped it.
+/// says, and the error it ended with, if any, or who stopped it.
 pub(crate) fn turn_finished(
     daemon: &Daemon,
     bot: &BotId,
     duration_ms: u64,
     tokens: Option<TokenUsage>,
     error: Option<String>,
-    stopped: bool,
+    stopped: Stopped,
 ) {
     items::add(
         daemon,
@@ -88,7 +98,8 @@ pub(crate) fn turn_finished(
             duration_ms,
             tokens,
             error,
-            stopped,
+            stopped: stopped != Stopped::No,
+            quiet: stopped == Stopped::ByBotloft,
         }),
     );
 }
