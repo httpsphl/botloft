@@ -1,7 +1,8 @@
 // Telling the owner when a bot needs them or finishes (spec 15.1): a
 // Windows notification while Botloft is not in front (with the Windows
 // sound, if the owner wants sound), the chime while it is, and that bot
-// opened when the owner comes back from the notification.
+// opened when the owner comes back from the notification. "Finished" waits
+// for the real end: not while work it handed out is still coming back.
 
 import { useEffect } from "react";
 import { toolTitle } from "../features/chat/toolNames";
@@ -10,7 +11,7 @@ import type { Bot, BotId, BotState } from "../lib/protocol.gen";
 import { SYSTEM } from "../lib/system";
 import { type AppState, activityOf } from "../store/app";
 import { useAppStore, useHost } from "../store/context";
-import { prefs } from "./prefs";
+import { prefs, wantsDone } from "./prefs";
 import { playSound } from "./sounds";
 
 /** How long after a notification opening Botloft goes to its bot. */
@@ -49,6 +50,21 @@ export function endedQuietly(state: AppState, botId: BotId, now = Date.now()): b
       now - run.finishedAt < QUIET_MS
     );
   });
+}
+
+/**
+ * The bot stopped, but its work is not over (spec 15.1): a task it asked of
+ * another agent is still open, or something it left running in the
+ * background is. Either brings it back to work when it ends, and the turn
+ * after that is the one that finishes.
+ */
+export function stillWaiting(state: AppState, bot: Bot): boolean {
+  return (
+    bot.background.length > 0 ||
+    Object.values(state.tasks).some(
+      (task) => task.requesterBotId === bot.id && task.status === "open",
+    )
+  );
 }
 
 function notice(state: AppState, bot: Bot, kind: Kind): { title: string; body: string } {
@@ -91,7 +107,7 @@ export function useBotAlerts(): void {
         const kind = bot.archivedAt === null ? kindOf(before.get(bot.id), bot.state) : null;
         const wanted =
           kind === "done"
-            ? prefs.notifyDone.get() && !endedQuietly(state, bot.id)
+            ? wantsDone(bot.id) && !endedQuietly(state, bot.id) && !stillWaiting(state, bot)
             : prefs.notifyNeeds.get();
         if (!kind || !wanted) {
           continue;

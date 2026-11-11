@@ -49,6 +49,8 @@ export const bots: Messages["bots"] = {
     makeChief: "Tornar chefe da equipe",
     stopChief: "Deixar de ser chefe",
     markUnread: "Marcar como não lida",
+    doneOn: (bot) => `Avisar quando ${bot} terminar`,
+    doneOff: (bot) => `Não avisar quando ${bot} terminar`,
     markRead: "Marcar como lida",
     archive: "Arquivar agente",
     delete: "Excluir agente",

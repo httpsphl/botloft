@@ -234,7 +234,8 @@ export const account = {
     notifyNeedsHint: (system: string) =>
       `A ${system} notification when an agent asks for permission or needs you to sign in, if Botloft is not in front.`,
     notifyDone: "When an agent finishes",
-    notifyDoneHint: "A notification when an agent finishes what it was doing.",
+    notifyDoneHint:
+      "A notification when an agent finishes what it was doing, once the work it gave other agents is back. Each agent's menu can change this for that agent.",
     notifyRoutineFailed: "When a routine fails",
     notifyRoutineFailedHint:
       "A notification with the agent and the routine. A connected phone is told too, without what it is about.",

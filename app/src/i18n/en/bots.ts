@@ -53,6 +53,9 @@ export const bots = {
     makeChief: "Make crew chief",
     stopChief: "Stop being chief",
     markUnread: "Mark as unread",
+    /** Over the switch for all in Settings > Notifications (spec 15.1). */
+    doneOn: (bot: string) => `Tell me when ${bot} finishes`,
+    doneOff: (bot: string) => `Don't tell me when ${bot} finishes`,
     markRead: "Mark as read",
     archive: "Archive agent",
     delete: "Delete agent",
