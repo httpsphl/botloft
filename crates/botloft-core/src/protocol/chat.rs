@@ -73,6 +73,8 @@ text_enum!(
         Approval => "approval",
         /// A question for the owner (spec 23); `text` is the question.
         Question => "question",
+        /// A note for the owner (spec 23.10); `text` is the note.
+        Note => "note",
         /// A card the bot shows (spec 8.11); `text` is its title.
         Card => "card",
         Notice => "notice",

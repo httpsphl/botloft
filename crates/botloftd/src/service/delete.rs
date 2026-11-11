@@ -125,6 +125,7 @@ fn stop(daemon: &Daemon, bot: &BotId) {
 /// the store: the routines take their own lock before it.
 fn release(daemon: &Daemon, bot: &BotId) {
     daemon.routines.forget(bot);
+    daemon.failures.forget(bot);
     daemon.screens.forget(bot);
     daemon.media.forget(bot);
     // Its keys go with it (spec 32.2).

@@ -152,6 +152,17 @@ pub fn answer(question_id: &str, question: &str, body: &str) -> String {
     )
 }
 
+/// The owner's reply to a note the bot left them (spec 23.10), as
+/// [`answer`] for a question.
+pub fn note_reply(note_id: &str, note: &str, body: &str) -> String {
+    let quoted = crate::chat::one_line(note, QUOTED_QUESTION_MAX_CHARS);
+    format!(
+        "Reply to your note {note_id}: \"{quoted}\"
+
+{body}"
+    )
+}
+
 /// The owner's answer on a card the bot showed (spec 8.11): the button's
 /// label or the form's lines, after a line that names the card.
 pub fn card_answer(card_id: &str, title: &str, body: &str) -> String {

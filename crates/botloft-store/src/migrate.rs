@@ -59,6 +59,7 @@ const MIGRATIONS: &[(u32, &str)] = &[
         include_str!("../migrations/0042_routine_nothing_new.sql"),
     ),
     (43, include_str!("../migrations/0043_bot_versions.sql")),
+    (44, include_str!("../migrations/0044_question_kind.sql")),
 ];
 
 /// Schema version after every migration has run.

@@ -48,6 +48,7 @@ export const phone: Messages["phone"] = {
       tool: "Usou",
       approval: "Pede para usar",
       question: "Pergunta",
+      note: "Recado",
       card: "Cartão",
       notice: "Aviso",
     },
@@ -68,6 +69,7 @@ export const phone: Messages["phone"] = {
     tool: (summary: string) => `Usou: ${summary}`,
     approvalLine: (summary: string) => `Pediu para: ${summary}`,
     questionLine: (text: string) => `Perguntou: ${text}`,
+    noteLine: (text: string) => `Recado: ${text}`,
     composer: {
       label: (bot: string) => `Mensagem para ${bot}`,
       placeholder: "Escreva uma mensagem",
@@ -125,6 +127,12 @@ export const phone: Messages["phone"] = {
     dismissHint: (bot: string) => `Fecha a pergunta sem avisar ${bot}. Para ele saber, responda.`,
     failed: "Não foi enviado. Confira a conexão e tente de novo.",
     ended: { answered: "Você respondeu", dismissed: "Descartada" },
+    tells: (bot: string) => `${bot} deixou um recado`,
+    replyLabel: "Sua resposta, se quiser",
+    reply: "Responder",
+    seen: "Visto",
+    seenHint: (bot: string) => `Fecha o recado. Escrever para ${bot} também fecha.`,
+    noteEnded: { answered: "Você respondeu", dismissed: "Visto" },
   },
   settings: {
     notices: {

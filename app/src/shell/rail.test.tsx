@@ -41,7 +41,7 @@ describe("the rail", () => {
     act(() => {
       fake.questions.ask(scout.id, "Which client first?");
     });
-    expect(place("Questions").textContent).toContain("1 question waits for you");
+    expect(place("Inbox").textContent).toContain("1 question or note waits for you");
 
     fireEvent.click(place("Home"));
     expect(slot().dataset.open).toBe("true");

@@ -16,11 +16,13 @@ export type Row =
   | { kind: "notice"; key: string; item: ChatItem; notice: NoticeItem };
 
 /**
- * Tools whose card says it all: the bot asking the owner (spec 23.2) or
- * for a key (spec 32.5), and the plan it shows before long work (spec 10.5).
+ * Tools whose card says it all: the bot asking the owner (spec 23.2),
+ * leaving them a note (23.10) or asking for a key (spec 32.5), and the plan
+ * it shows before long work (spec 10.5).
  */
 const CARD_TOOLS = new Set([
   "mcp__botloft__ask_owner",
+  "mcp__botloft__tell_owner",
   "mcp__botloft__show_card",
   "mcp__botloft__ask_key",
   "mcp__botloft__show_plan",

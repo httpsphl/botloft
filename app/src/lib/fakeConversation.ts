@@ -157,6 +157,7 @@ export class FakeConversation {
           createdAt: this.fake.now,
         };
         this.record(message);
+        this.fake.questions.closeNotes(botId);
         return message;
       },
       "messages.list": ({ crewId, botId, before, limit }) => {

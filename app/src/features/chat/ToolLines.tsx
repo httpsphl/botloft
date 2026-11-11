@@ -21,8 +21,10 @@ import {
   type LucideIcon,
   Monitor,
   Network,
+  RotateCw,
   Send,
   SquareTerminal,
+  StickyNote,
   UserPen,
   UserPlus,
   Users,
@@ -63,6 +65,7 @@ const ICONS: Record<string, LucideIcon> = {
   Agent: Users,
   send_message: Send,
   suggest_bot: UserPlus,
+  retry_agent: RotateCw,
   change_bot: UserPen,
   ask_crew_access: Network,
   schedule_routine: AlarmClock,
@@ -71,6 +74,7 @@ const ICONS: Record<string, LucideIcon> = {
   delete_routine: AlarmClock,
   nothing_new: CircleCheck,
   browser_ask_owner: Hand,
+  tell_owner: StickyNote,
   show_card: LayoutDashboard,
 };
 

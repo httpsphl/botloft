@@ -706,9 +706,11 @@ Transporte: Streamable HTTP, só POST e resposta `application/json`, sem sessão
 | `ask_crew_access` | `crew` (nome da outra crew), `bot?` (handle de um bot dela), `access` (`talk`, `read`, `edit`), `why` (até 1 000) | `allowed` e, permitido, como usar; recusado ou sem resposta, o porquê (10.4) |
 | `crew_files`, `read_crew_file`, `write_crew_file` | `crew`, e `bot?`, `path` ou `path` e `content` | os arquivos de outra crew que o bot alcança, o texto de um, ou o aviso de que gravou (10.4) |
 | `change_bot` | `bot?` (handle de outro bot da crew, só o chefe), `name?`, `role?`, `instructions?` (até 8 000 caracteres), `model?`, `effort?`, `reason?` (até 1 000) | `done` e, mudado, `handle`, `name`, `role`, `model`, `effort` e quando vale; recusado ou sem resposta, o aviso de que nada mudou (10.3) |
+| `retry_agent` | `bot` (handle), `note?` (até 1 000 caracteres) | só o chefe: a última falha do bot vai de novo para ele, como mensagem do chefe, no máximo 2 vezes por hora (10.6) |
 | `share_file` | `files` (1 a 10 caminhos, absolutos ou relativos à pasta do bot) | `shown` (um `BotFile` por arquivo, 8.4) e um lembrete de que o dono vê cada um como cartão no chat; um arquivo fora das pastas do bot e não escrito por ele, ou que não existe, recusa a chamada inteira e diz qual e por quê |
 | `send_signal` | `name`, `note?` (até 2 000 caracteres) | o aviso normalizado e, para cada rotina da crew que o espera, se rodou e por que não (20.13) |
 | `ask_owner` | `question` (até 2 000 caracteres), `options?` (2 a 5, até 100 caracteres cada) | `question_id` e o lembrete de que a resposta chega depois, como mensagem; a tool não espera (23.2) |
+| `tell_owner` | `note` (até 2 000 caracteres) | `note_id`; deixa um recado ao dono, que não pergunta nada, no máximo 10 por hora (23.10) |
 | `show_card` | `card?` (o `card_id` de um cartão dele), `title` (até 100 caracteres), `blocks` (1 a 20) | `card_id` e `version`; mostra um cartão no chat, ou o mesmo de novo, mudado, como versão nova (8.11) |
 | `ask_key` | `name` (o nome da variável, 32.3), `why` (até 500 caracteres) | `request_id` e o lembrete de que a chave chega depois, num reinício com a variável e numa mensagem do Botloft; a tool não espera (32.5) |
 | `show_plan` | `summary` (até 300 caracteres), `steps` (2 a 8, até 200 caracteres cada), `alternative?` (até 300) | `start` (`plan`, `alternative` ou `false`) e o que fazer; espera até 20 s pelo dono (10.5) |
@@ -802,6 +804,18 @@ Um bot que entendeu errado o pedido gasta minutos e plano antes de o dono notar.
 - **Dados:** `bots.plan_first` (0 ou 1, desligado por padrão), em `Bot.planFirst` e em `bots.update {planFirst}`.
 - **No app:** o cartão diz "<bot> vai começar assim", com o resumo, os passos numerados e a alternativa, se houver. Embaixo, "Começa sozinho em N s", que conta até zero, e Começar agora, Fazer só isto, Mudar (abre o campo da nota) e Cancelar. Respondido, vira uma linha: "Começou", "Começou sozinho", "Fez só a alternativa", "Pediu mudanças" (com a nota) ou "Cancelado", com o plano a um clique. O celular (28) mostra o resumo, os passos e a alternativa num texto só, e pode começar agora, mudar ou cancelar.
 - **Fora desta etapa:** pausar a contagem para ler com calma e escolher o tempo de espera.
+
+### 10.6 Falhas vão para o chefe
+
+Um bot da crew cujo turno falha avisa o chefe dela (10.2), que pode fazê-lo tentar de novo, dizer o que mudar ou contar ao dono. Antes, a falha só chegava ao dono, no chat e nos avisos.
+
+- **O que é falha** (`failures.rs` no daemon, chamado de `turn_finished`): um turno que terminou com erro (`is_error` do Claude Code, o erro do Codex ou do Antigravity) ou que o Botloft parou porque ficou calado (7.9). Não é falha o turno que o dono parou (9.2), nem o que o limite de uso cortou: o bot fica `rate_limited` e segue sozinho quando o limite renova (7.3).
+- **Quem ouve:** só uma crew com chefe, e nunca o chefe sobre si mesmo. Um chefe arquivado não ouve; um chefe pausado recebe quando voltar, como qualquer mensagem.
+- **O relato:** uma mensagem do Botloft (`from_kind: system`) ao chefe: "@writer's turn failed: it ended with an error (api_error)." ou "…stopped: it showed nothing for half an hour…", o que o bot estava fazendo (a última mensagem que ele pegou, `Store::last_read_message`, até 1 000 caracteres, com quem mandou: o dono, outro bot ou a rotina) e o que o chefe pode fazer. Sem mensagem por trás, o relato diz que não há o que tentar de novo. No máximo um relato do mesmo bot a cada 10 minutos, para um bot que falha sempre não ficar acordando o chefe.
+- **`retry_agent {bot, note?}`** (tool do MCP, só o chefe; os outros recebem um erro que manda falar com o chefe): manda a última falha daquele bot de novo, como mensagem do chefe para ele, com "Please try this again. Your last try did not finish: …", a nota do chefe ("What to do differently: …", até 1 000 caracteres) e o pedido inteiro como era. Os anexos do pedido não vão de novo. No máximo 2 vezes por hora para cada bot; depois disso, a tool manda contar ao dono. Uma falha de mais de 24 horas não é tentada de novo.
+- **Regras do chefe** (seção "You lead this crew", 10.2): quando ouvir de uma falha, se importar, usar `retry_agent`, mandar o que mudar com `send_message` ou contar ao dono; se não importar, nada.
+- O registro das falhas, dos relatos e das novas tentativas fica só na memória do daemon: depois de reiniciar, uma falha de antes não é tentada de novo.
+- **Fora desta etapa:** uma mensagem que morreu sem chegar ao bot (entrega `dead`) e tentar de novo sozinho quando ninguém escreveu depois da falha.
 
 ## 11. Protocolo do app (JSON-RPC 2.0 sobre WebSocket)
 
@@ -1875,7 +1889,7 @@ Uma área de design ao lado do chat: cada página HTML que o bot faz aparece com
 
 ## 23. Perguntas ao dono
 
-Status: **P1 e P2 implementados** (23.9). É o item 2 da seção 18.
+Status: **P1 e P2 implementados** (23.9), com os recados (23.10). É o item 2 da seção 18.
 
 ### 23.1 O que é
 
@@ -1913,7 +1927,7 @@ Um bot que precisa de uma decisão ou de uma informação do dono pergunta com a
 
 ### 23.4 No chat
 
-- **Item `question`** (8.2): `{question}`, a `Question` inteira, criado quando o bot pergunta e regravado quando ela muda. A linha da conversa (`lastActivity`) ganha o `kind` `question`, com o texto da pergunta.
+- **Item `question`** (8.2): `{question}`, a `Question` inteira, criado quando o bot pergunta e regravado quando ela muda. A linha da conversa (`lastActivity`) ganha o `kind` `question`, com o texto da pergunta (`note` para um recado, 23.10).
 - **A resposta** chega como `inbound` (a message do dono, com `questionId`). O bot a lê assim (9.3), sem o envelope `[botloft]`, porque é o dono falando:
 
 ```
@@ -1922,24 +1936,23 @@ Answer to your question qst_01J9Z...: "<as primeiras 300 letras da pergunta>"
 <resposta>
 ```
 
-### 23.5 Caixa de perguntas
+### 23.5 Caixa de entrada
 
-`questions.list {status?}` devolve as perguntas de bots e crews ativos, da mais nova à mais velha; sem `status`, só as `open`. As de bots ou crews arquivados ficam de fora e voltam se eles forem restaurados. `question.changed {question}` avisa o app de toda pergunta nova ou que mudou, para a caixa não depender do chat de cada bot estar carregado.
+Era a caixa de perguntas; com os recados (23.10), virou a caixa de entrada. `questions.list {status?}` devolve as perguntas de bots e crews ativos, da mais nova à mais velha; sem `status`, só as `open`. As de bots ou crews arquivados ficam de fora e voltam se eles forem restaurados. `question.changed {question}` avisa o app de toda pergunta nova ou que mudou, para a caixa não depender do chat de cada bot estar carregado.
 
 ### 23.6 App (P2)
 
 - **Cartão no chat:** "<bot> pergunta", o texto da pergunta (markdown, como uma resposta do bot), as opções como botões e um campo para escrever outra resposta, com **Responder** e **Descartar**. Respondida, o cartão mostra a resposta e quando; descartada, "Descartada". Opção escolhida responde na hora, com o texto da opção.
-- **Caixa:** "Perguntas", no trilho de ícones (15.1), com o número de perguntas abertas na cor de aviso. Abre no meio da janela a lista das perguntas abertas, cada uma com o rosto e o nome do bot, a crew, a hora e o mesmo cartão para responder ali mesmo, e "Abrir conversa" para ir ao chat do bot. Como o nome já está na linha de cima, a cabeça do cartão diz só "Pergunta" (no chat, "<bot> pergunta"); o leitor de tela ouve "<bot> pergunta" nos dois. Sem perguntas: o mascote e "Nenhuma pergunta esperando você".
+- **Caixa:** "Caixa de entrada" (antes "Perguntas"), no trilho de ícones (15.1), com o ícone de caixa de entrada e o número de perguntas e recados abertos na cor de aviso. Abre no meio da janela a lista das perguntas abertas, cada uma com o rosto e o nome do bot, a crew, a hora e o mesmo cartão para responder ali mesmo, e "Abrir conversa" para ir ao chat do bot. Como o nome já está na linha de cima, a cabeça do cartão diz só "Pergunta" (no chat, "<bot> pergunta"); o leitor de tela ouve "<bot> pergunta" nos dois. Sem nada aberto: o mascote e "Nada esperando você".
 - Uma pergunta aberta conta como algo que espera o dono: marca o ícone na barra de tarefas e o ponto do botão da barra lateral escondida (15.1, 15.2).
 - Textos nos três idiomas (15.6).
 
 ### 23.7 Dados
 
-Tabela `questions`: `id, crew_id, bot_id, chat_item_id, text, options (JSON), status, answer, created_at, answered_at`, com índice em `(status, created_at)` e em `bot_id`. `messages` ganha `question_id`. Excluir um bot (7.6) solta `messages.question_id` das perguntas dele e apaga as perguntas, antes dos itens do chat.
+Tabela `questions`: `id, crew_id, bot_id, chat_item_id, text, options (JSON), status, answer, created_at, answered_at, kind`, com índice em `(status, created_at)` e em `bot_id`. `kind` (`question` ou `note`, migration 0044) vale `question` nas linhas de antes; um item do chat gravado antes, sem `kind`, também é lido como pergunta. `messages` ganha `question_id`. Excluir um bot (7.6) solta `messages.question_id` das perguntas dele e apaga as perguntas, antes dos itens do chat.
 
 ### 23.8 Fora desta etapa
 
-- Notificação do Windows quando chega uma pergunta.
 - Pergunta com prazo, ou que cai sozinha depois de um tempo.
 - Responder com anexos.
 
@@ -1949,6 +1962,26 @@ Tabela `questions`: `id, crew_id, bot_id, chat_item_id, text, options (JSON), st
 |---|---|---|
 | **P1** Perguntas no daemon | migration, tool `ask_owner`, item `question`, `questions.list`, `questions.answer`, `questions.dismiss`, `question.changed`, a resposta como message, regras do bot, exclusão, testes com `FakeRuntime` | com `FakeRuntime`, um bot pergunta, a tool volta na hora, o dono responde e o bot recebe a resposta pelo stdin com a pergunta citada |
 | **P2** App | cartão no chat, caixa de perguntas na barra lateral, marca de espera, textos nos três idiomas | com o Claude Code real, um bot pergunta, o dono responde pela caixa e o bot continua o trabalho com a resposta |
+
+### 23.10 Recados ao dono
+
+Um bot que tem algo que o dono deve saber logo, sem pergunta, deixa um **recado** com `tell_owner`: o que uma rotina achou, um trabalho longo que acabou, algo que quebrou e que o dono precisa consertar. Antes, isso ficava só na resposta do chat, que numa rotina ninguém lê na hora.
+
+- **A tool:** `tell_owner {note}`, até 2 000 caracteres, em markdown. Devolve `note_id` e o lembrete de que uma resposta do dono, se vier, chega depois como mensagem que começa com `Reply to your note`. Não espera nada. No máximo **10 recados por hora** por bot (contados pela hora de criação, abertos ou não); o 11º volta como erro, que manda juntar o resto num recado depois ou na resposta. O limite das perguntas abertas (23.2) não conta os recados.
+- **É uma pergunta com `kind: note`** (`QuestionKind`, `question` ou `note`): a mesma tabela, o mesmo item `question` no chat, `questions.list`, `question.changed`, a marca na barra de tarefas, a Home (15.1), a ilha (31.5) e o celular (28.7). Um recado não tem `options`.
+- **Estados:** `open` até o dono ver. **Responder** (`questions.answer`) fecha como `answered` e manda a resposta ao bot, como numa pergunta, mas lida como:
+
+```
+Reply to your note qst_01J9Z...: "<as primeiras 300 letras do recado>"
+
+<resposta>
+```
+
+- **Visto** (`questions.dismiss`) fecha como `dismissed` sem avisar o bot. **Escrever para aquele bot** também fecha: uma mensagem do dono pelo chat (`messages.send`, do computador ou do celular), a resposta a uma pergunta ou recado dele ou a resposta num cartão dele (8.11) fecha os recados abertos daquele bot como `dismissed`, cada um com seu `question.changed`. As perguntas abertas dele ficam abertas (23.3).
+- **No app:** o cartão diz "<bot> deixou um recado" (na caixa, "Recado"), com o ícone de nota na cor de destaque, o texto, um campo "Responda, se quiser" e os botões **Responder** e **Visto**. Fechado, vira uma linha: "Você respondeu" ou "Visto", com a hora. A linha da conversa diz "Recado: <texto>". A chamada da tool não aparece no chat, como `ask_owner`. A ilha e o celular mostram o mesmo cartão, com **Visto** (no celular, no lugar de Descartar).
+- **Aviso:** uma pergunta ou um recado novo é algo que espera o dono (15.1, "Quando um agente precisar de você"): com o Botloft na frente, o som; atrás, a ilha desce com ele (31.6) ou, sem ilha ou com a tela em silêncio, um aviso do Windows "<bot> tem uma pergunta para você" ou "<bot> deixou um recado", com as primeiras 140 letras do texto, sem as marcas do Markdown. Voltar pelo aviso, em até 10 minutos, abre o chat do bot. O celular é acordado como numa pergunta (28.8).
+- **Regras do bot** (5.1): quando o dono deve saber de algo logo e pode não estar lendo o chat (uma rotina achou o que ele pediu, um trabalho longo acabou, algo quebrou e ele precisa consertar), `tell_owner` com um recado curto. Não para cada passo, nem para o que acabou de responder no chat. Para uma resposta, `ask_owner`.
+- **Fora desta etapa:** abrir o chat contar como visto (só escrever conta) e um recado que cai sozinho depois de um tempo.
 
 ## 24. Desktop
 

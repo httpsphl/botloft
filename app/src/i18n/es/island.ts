@@ -74,5 +74,10 @@ export const island: Messages["island"] = {
     placeholder: "Escribe tu respuesta",
     send: "Responder",
     failed: "No se pudo enviar. Inténtalo de nuevo, o ábrelo en Botloft.",
+    tells: (bot) => `${bot} te dejó una nota`,
+    replyLabel: (bot) => `Tu respuesta para ${bot}`,
+    replyPlaceholder: "Responde, si quieres",
+    reply: "Responder",
+    seen: "Visto",
   },
 };

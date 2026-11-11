@@ -11,7 +11,7 @@ use botloft_core::protocol::{
 use botloft_core::{cards, chat, validate};
 use botloft_store::Store;
 
-use super::{ApiError, ApiResult, bots, messages, reactions};
+use super::{ApiError, ApiResult, bots, messages, questions, reactions};
 use crate::chat::items;
 use crate::state::Daemon;
 
@@ -123,5 +123,7 @@ pub fn act(daemon: &Daemon, params: ChatActParams) -> ApiResult<ChatItem> {
     items::changed(daemon, card_item.clone());
     messages::announce(daemon, None, &message, delivery, answer_item);
     reactions::announce_sent(daemon, reactions);
+    // The owner wrote to the bot: the notes it left them were seen (23.10).
+    questions::close_notes(daemon, &item.bot_id);
     Ok(card_item)
 }

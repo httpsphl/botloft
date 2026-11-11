@@ -4,7 +4,7 @@
 use serde_json::Value;
 
 use crate::command::{COMMAND_INPUT_MAX, is_command};
-use crate::protocol::{Activity, ActivityKind, ChatBody, NoticeCode, SenderKind};
+use crate::protocol::{Activity, ActivityKind, ChatBody, NoticeCode, QuestionKind, SenderKind};
 
 /// Longest tool input kept, in bytes.
 pub const TOOL_INPUT_MAX: usize = 4 * 1024;
@@ -210,7 +210,13 @@ pub fn activity(body: &ChatBody, at: i64) -> Option<Activity> {
             ActivityKind::Approval,
             item.explanation.as_ref().unwrap_or(&item.summary).clone(),
         ),
-        ChatBody::Question(item) => (ActivityKind::Question, item.question.text.clone()),
+        ChatBody::Question(item) => (
+            match item.question.kind {
+                QuestionKind::Question => ActivityKind::Question,
+                QuestionKind::Note => ActivityKind::Note,
+            },
+            item.question.text.clone(),
+        ),
         // Asking for a key is asking the owner (spec 32.5).
         ChatBody::KeyRequest(item) => (ActivityKind::Question, item.why.clone()),
         ChatBody::Card(card) => (ActivityKind::Card, card.title.clone()),

@@ -27,6 +27,7 @@ pub fn tools() -> Value {
         let more = [
             super::share::tool(),
             super::question::tool(),
+            super::question::note_tool(),
             super::card::tool(),
             super::key::tool(),
             super::plan::tool(),
@@ -43,6 +44,7 @@ pub fn tools() -> Value {
             super::skill::tool(),
         ])
         .chain(super::templates::tools())
+        .chain([super::retry::tool()])
         .chain([super::build::tool(), super::overview::tool()])
         .chain(super::activity::tools())
         .chain(super::crew_reach::tools())

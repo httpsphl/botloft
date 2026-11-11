@@ -4,8 +4,8 @@
 
 use botloft_core::ids::{BotId, ChatItemId};
 use botloft_core::protocol::{
-    ChatBody, ChatItem, ChatLine, ITEM_TEXT_MAX, PhoneItem, RunFailure, SEALED_MAX, SenderKind,
-    ToPhone,
+    ChatBody, ChatItem, ChatLine, ITEM_TEXT_MAX, PhoneItem, QuestionKind, RunFailure, SEALED_MAX,
+    SenderKind, ToPhone,
 };
 use botloft_store::Store;
 use serde::Serialize;
@@ -156,6 +156,7 @@ pub fn item(daemon: &Daemon, item: &ChatItem) -> Option<PhoneItem> {
             id,
             at,
             question_id: shown.question.id.clone(),
+            note: shown.question.kind == QuestionKind::Note,
             text: cut(&shown.question.text).0,
             status: shown.question.status,
         },

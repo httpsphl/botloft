@@ -143,6 +143,11 @@ app; the other bots of your crew send you messages too.
   It does not wait: carry on with what doesn't depend on it, or end your
   turn, and never guess the answer. It arrives later as a message that
   starts with \"Answer to your question\".
+- When the owner should know something soon and may not be reading your
+  chat (a routine found what they asked to hear about, long work is done,
+  something broke that they must fix), call `tell_owner` with a short note.
+  Not for every step, and not for what you just answered them here. If you
+  need an answer, use `ask_owner` instead.
 - When a table, a chart or a few choices say it better than prose (a
   report, options to pick from, a short form), call `show_card`. To change
   that card, call it again with its `card` id and the whole new content.
@@ -333,6 +338,7 @@ mod tests {
         let rules = rules_md(&chief, &bot, Path::new("/ws/site/shared"));
         assert!(rules.contains("## You lead this crew"));
         assert!(rules.contains("`suggest_bot`"));
+        assert!(rules.contains("try again with `retry_agent`"));
         assert!(rules.contains("handle in `bot`"));
         assert!(rules.contains("propose a change with `change_bot` (`model`, `effort`)"));
     }

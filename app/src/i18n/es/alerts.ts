@@ -20,5 +20,7 @@ export const alerts: Messages["alerts"] = {
   done: (bot) => `${bot} terminó`,
   routineFailed: (bot) => `La rutina de ${bot} falló`,
   routineRecovered: (bot) => `La rutina de ${bot} vuelve a funcionar`,
+  asks: (bot) => `${bot} tiene una pregunta para ti`,
+  tells: (bot) => `${bot} te dejó una nota`,
   crew: (crew) => `Equipo ${crew}`,
 };
