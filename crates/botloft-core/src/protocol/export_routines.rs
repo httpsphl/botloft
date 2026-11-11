@@ -6,7 +6,9 @@ use super::super::*;
 use super::Out;
 
 pub(super) fn decls(out: &mut Out) {
+    out.decl::<WaitOn>();
     out.decl::<Schedule>();
+    out.decl::<WaitEnd>();
     out.decl::<Overlap>();
     out.decl::<Missed>();
     out.decl::<RunStatus>();

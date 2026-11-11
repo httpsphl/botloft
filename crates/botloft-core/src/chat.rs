@@ -147,6 +147,7 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
         }
         "mcp__botloft__browser_open" => field(input, "url").map(str::to_owned),
         "mcp__botloft__search_history" => field(input, "query").map(str::to_owned),
+        "mcp__botloft__wait_for" => field(input, "name").map(str::to_owned),
         "mcp__botloft__share_file" => input.get("files").and_then(Value::as_array).map(|files| {
             let names: Vec<String> = files
                 .iter()

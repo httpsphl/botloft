@@ -31,7 +31,34 @@ pub enum Schedule {
         #[cfg_attr(test, ts(optional))]
         reminder: Option<bool>,
     },
+    /// Once, when something happens on the computer, or when `until` (Unix
+    /// ms) passes without it (spec 20.14). Only a bot sets one, for itself,
+    /// with `wait_for`.
+    Wait { on: WaitOn, until: i64 },
 }
+
+/// What a wait waits for (spec 20.14).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "what", rename_all = "snake_case")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub enum WaitOn {
+    /// The file at `path`, absolute, exists.
+    File { path: String },
+    /// No program called `name` runs any more.
+    Program { name: String },
+    /// The text of the page at `url` contains `text`.
+    Page { url: String, text: String },
+}
+
+text_enum!(
+    /// How a wait ended (spec 20.14).
+    WaitEnd, "wait end" {
+        /// What it waited for happened.
+        Happened => "happened",
+        /// Its time ran out first.
+        TimedOut => "timed_out",
+    }
+);
 
 text_enum!(
     /// What happens when a routine's time comes while its last run is still
@@ -135,6 +162,9 @@ pub struct RoutineRun {
     /// 20.5): the run ended quietly, with no report to read.
     #[serde(default)]
     pub nothing_new: bool,
+    /// For a wait (spec 20.14): whether it happened or ran out.
+    #[serde(default)]
+    pub waited: Option<WaitEnd>,
 }
 
 /// A signal a bot sent (spec 20.13).

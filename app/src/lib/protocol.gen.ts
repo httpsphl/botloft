@@ -2939,10 +2939,20 @@ historyDays?: number, };
 export type OwnerInstructions = { text: string, };
 
 /**
+ * What a wait waits for (spec 20.14).
+ */
+export type WaitOn = { "what": "file", path: string, } | { "what": "program", name: string, } | { "what": "page", url: string, text: string, };
+
+/**
  * When a routine runs (spec 20.2), kept as structure rather than cron text
  * so the app can show and edit it without jargon.
  */
-export type Schedule = { "kind": "weekly", days: Array<number>, time: string, } | { "kind": "interval", minutes: number, } | { "kind": "cron", expr: string, } | { "kind": "signal", name: string, } | { "kind": "manual" } | { "kind": "once", at: string, reminder?: boolean, };
+export type Schedule = { "kind": "weekly", days: Array<number>, time: string, } | { "kind": "interval", minutes: number, } | { "kind": "cron", expr: string, } | { "kind": "signal", name: string, } | { "kind": "manual" } | { "kind": "once", at: string, reminder?: boolean, } | { "kind": "wait", on: WaitOn, until: number, };
+
+/**
+ * How a wait ended (spec 20.14).
+ */
+export type WaitEnd = "happened" | "timed_out";
 
 /**
  * What happens when a routine's time comes while its last run is still
@@ -3000,7 +3010,11 @@ signal: RunSignal | null,
  * The bot said there was nothing new to report (`nothing_new`, spec
  * 20.5): the run ended quietly, with no report to read.
  */
-nothingNew: boolean, };
+nothingNew: boolean, 
+/**
+ * For a wait (spec 20.14): whether it happened or ran out.
+ */
+waited: WaitEnd | null, };
 
 export type Routine = { id: RoutineId, botId: BotId, name: string, 
 /**

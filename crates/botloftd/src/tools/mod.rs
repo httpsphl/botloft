@@ -46,6 +46,8 @@ mod signal;
 mod skill;
 mod suggest;
 mod templates;
+mod wait;
+mod wait_on;
 
 use std::sync::Arc;
 
@@ -74,7 +76,7 @@ const CACHE_TTL_MS: u64 = 60 * 60 * 1000;
 
 const INSTRUCTIONS: &str = "Tools to work with your Botloft crew: see who is in it, send notes \
     or tasks to other bots, report the result of tasks assigned to you and, for the crew's chief, \
-    suggest new bots (list_bot_templates and get_bot_template show the catalog of ready-made roles) and, to write the owner a summary, read what the crew's bots did with crew_activity; for the Maker, see the owner's crews with crews_overview and build or change crews with build. schedule_routine asks the owner for work at set times. ask_owner asks the owner a question without waiting; the answer arrives later as a message. tell_owner leaves the owner a note they should see soon, and asks nothing. show_card shows the owner a card with tables, charts, buttons or a form, and their answer arrives later as a message. search_history finds words in your own past conversations, for what is no longer in your context. ask_key asks the owner for a key, such as an API token, without it going through the chat. show_plan shows the owner your plan before long work, when your rules ask for it. send_signal tells the crew something happened, and the routines waiting for it run. share_file shows the \
+    suggest new bots (list_bot_templates and get_bot_template show the catalog of ready-made roles) and, to write the owner a summary, read what the crew's bots did with crew_activity; for the Maker, see the owner's crews with crews_overview and build or change crews with build. schedule_routine asks the owner for work at set times. ask_owner asks the owner a question without waiting; the answer arrives later as a message. tell_owner leaves the owner a note they should see soon, and asks nothing. show_card shows the owner a card with tables, charts, buttons or a form, and their answer arrives later as a message. search_history finds words in your own past conversations, for what is no longer in your context. ask_key asks the owner for a key, such as an API token, without it going through the chat. show_plan shows the owner your plan before long work, when your rules ask for it. send_signal tells the crew something happened, and the routines waiting for it run. wait_for wakes you once when a file appears, a program ends or a page shows some words, without using the owner's plan; use it instead of sleeping or checking again and again. share_file shows the \
     owner files you made, as cards in the chat they can open and save. The browser_ tools drive your own web browser, which the owner can watch \
     live and take over when you ask with browser_ask_owner. The desktop_ tools read the apps open on \
     the owner's own computer, app by app as the owner allows. The owner writes to you directly; messages from other bots and from Botloft start with \

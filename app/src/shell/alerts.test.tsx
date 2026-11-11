@@ -80,6 +80,7 @@ describe("notifications", () => {
       reason: null,
       skippedCount: 0,
       nothingNew,
+      waited: null,
       messageId: null,
       createdAt: Date.now(),
       finishedAt: Date.now(),

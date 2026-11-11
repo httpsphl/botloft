@@ -33,6 +33,7 @@ pub fn tools() -> Value {
             super::key::tool(),
             super::plan::tool(),
             super::signal::tool(),
+            super::wait::tool(),
         ]
         .into_iter()
         .chain(super::routine_catalog::tools())

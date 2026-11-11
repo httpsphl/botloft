@@ -157,6 +157,7 @@ fn fill(fx: &Fixture) -> Owned {
         finished_at: None,
         signal: None,
         nothing_new: false,
+        waited: None,
     };
     fx.store.fire_run(&run, &fired, &delivery).expect("run");
 

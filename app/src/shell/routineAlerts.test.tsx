@@ -39,6 +39,7 @@ async function failing(streak = 0) {
       reason: null,
       skippedCount: 0,
       nothingNew: false,
+      waited: null,
       messageId: null,
       createdAt: fake.now,
       finishedAt: fake.now,

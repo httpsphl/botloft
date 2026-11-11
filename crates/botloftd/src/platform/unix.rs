@@ -10,6 +10,7 @@ mod job;
 mod launchd;
 mod orphans;
 mod power;
+mod programs;
 #[cfg_attr(target_os = "macos", allow(dead_code))]
 mod systemd;
 
@@ -27,6 +28,7 @@ pub use self::job::ProcessJob;
 pub use self::launchd::{TASK_KIND, delete_task, find_task, register_task, run_task, stop_task};
 pub use self::orphans::track_groups;
 pub use self::power::KeepAwake;
+pub use self::programs::running_programs;
 #[cfg(not(target_os = "macos"))]
 pub use self::systemd::{TASK_KIND, delete_task, find_task, register_task, run_task, stop_task};
 

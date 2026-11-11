@@ -28,6 +28,16 @@ pub fn list(daemon: &Daemon, params: RoutinesListParams) -> ApiResult<Vec<Routin
 }
 
 pub fn create(daemon: &Daemon, params: RoutinesCreateParams) -> ApiResult<Routine> {
+    not_a_wait(&params.schedule)?;
+    insert(daemon, params)
+}
+
+/// A bot's wait for itself (spec 20.14), the one way to make one.
+pub(crate) fn create_wait(daemon: &Daemon, params: RoutinesCreateParams) -> ApiResult<Routine> {
+    insert(daemon, params)
+}
+
+fn insert(daemon: &Daemon, params: RoutinesCreateParams) -> ApiResult<Routine> {
     let name = name(&params.name)?;
     let prompt = validate::message("prompt", &params.prompt)?;
     let now = daemon.clock.now_ms();
@@ -59,6 +69,7 @@ pub fn create(daemon: &Daemon, params: RoutinesCreateParams) -> ApiResult<Routin
 /// Checks what `create` would, without making the routine: a bot's
 /// suggestion is checked before the owner sees it (spec 20.12).
 pub(crate) fn check(daemon: &Daemon, params: &RoutinesCreateParams) -> ApiResult<()> {
+    not_a_wait(&params.schedule)?;
     name(&params.name)?;
     validate::message("prompt", &params.prompt)?;
     let schedule = normalized(params.schedule.clone());
@@ -83,7 +94,11 @@ pub fn update(daemon: &Daemon, params: RoutinesUpdateParams) -> ApiResult<Routin
     }
     let now = daemon.clock.now_ms();
     let timing = params.schedule.is_some() || params.timezone.is_some();
+    if timing {
+        not_a_wait(&routine.schedule)?;
+    }
     if let Some(schedule) = params.schedule {
+        not_a_wait(&schedule)?;
         routine.schedule = normalized(schedule);
     }
     if let Some(timezone) = params.timezone {
@@ -239,6 +254,19 @@ fn name(input: &str) -> ApiResult<String> {
         )));
     }
     Ok(name.to_owned())
+}
+
+/// Only a bot makes a wait, with `wait_for`, and a wait's time never
+/// changes (spec 20.14).
+fn not_a_wait(schedule: &Schedule) -> ApiResult<()> {
+    if matches!(schedule, Schedule::Wait { .. }) {
+        return Err(ApiError::Rule {
+            reason: "wait_by_agent",
+            message: "only an agent sets a wait, with wait_for, and its time does not change"
+                .to_owned(),
+        });
+    }
+    Ok(())
 }
 
 /// A checked schedule, its runs at least five minutes apart.

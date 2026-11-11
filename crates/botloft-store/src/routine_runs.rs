@@ -9,7 +9,7 @@ use rusqlite::{OptionalExtension, Row, params};
 use crate::messages::optional_column;
 use crate::{Result, Store, parse_column};
 
-pub(crate) const RUN_COLUMNS: &str = "id, routine_id, scheduled_for, status, reason, skipped_count, message_id, created_at, finished_at, signal_name, signal_from, signal_note, nothing_new";
+pub(crate) const RUN_COLUMNS: &str = "id, routine_id, scheduled_for, status, reason, skipped_count, message_id, created_at, finished_at, signal_name, signal_from, signal_note, nothing_new, waited";
 
 pub(crate) fn run_from_row(row: &Row<'_>) -> rusqlite::Result<RoutineRun> {
     Ok(RoutineRun {
@@ -31,6 +31,7 @@ pub(crate) fn run_from_row(row: &Row<'_>) -> rusqlite::Result<RoutineRun> {
             None => None,
         },
         nothing_new: row.get(12)?,
+        waited: optional_column(row, 13)?,
     })
 }
 
@@ -58,7 +59,7 @@ impl Store {
     fn insert_run_in(conn: &rusqlite::Connection, run: &RoutineRun) -> Result<()> {
         conn.execute(
             &format!(
-                "INSERT INTO routine_runs ({RUN_COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)"
+                "INSERT INTO routine_runs ({RUN_COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)"
             ),
             params![
                 run.id.as_str(),
@@ -77,6 +78,7 @@ impl Store {
                     .map(BotId::as_str),
                 run.signal.as_ref().and_then(|signal| signal.note.as_deref()),
                 run.nothing_new,
+                run.waited.map(|end| end.as_str()),
             ],
         )?;
         Ok(())
