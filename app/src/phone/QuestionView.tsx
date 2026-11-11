@@ -1,5 +1,6 @@
 // A question waiting for the owner (spec 23, 28.7): the text, the ready
-// answers as buttons, a field for another one, and Dismiss.
+// answers as buttons, a field for another one, and Dismiss. A note the
+// agent left (23.10): the text, a field to reply, if they want, and Seen.
 
 import { useState } from "react";
 import { useT } from "../i18n";
@@ -21,6 +22,7 @@ export function QuestionView({
 }) {
   const t = useT().phone;
   const q = t.question;
+  const note = card.kind === "note";
   const [text, setText] = useState("");
   const [failed, setFailed] = useState(false);
 
@@ -34,7 +36,9 @@ export function QuestionView({
       <header className="flex items-center gap-3">
         <BotDot name={card.bot.name} color={card.bot.color} />
         <div className="min-w-0">
-          <p className="truncate font-semibold">{q.asks(card.bot.name)}</p>
+          <p className="truncate font-semibold">
+            {note ? q.tells(card.bot.name) : q.asks(card.bot.name)}
+          </p>
           <p className="truncate text-muted text-xs">
             {t.inbox.inCrew(card.crew)} · {when(card.createdAt)}
           </p>
@@ -60,7 +64,7 @@ export function QuestionView({
       )}
 
       <label className="flex flex-col gap-1 text-muted text-sm">
-        {q.answerLabel}
+        {note ? q.replyLabel : q.answerLabel}
         <textarea
           value={text}
           rows={2}
@@ -75,13 +79,15 @@ export function QuestionView({
           disabled={sending || text.trim() === ""}
           onClick={() => run(() => answer(text.trim()))}
         >
-          {sending ? q.sending : q.send}
+          {sending ? q.sending : note ? q.reply : q.send}
         </PhoneButton>
         <PhoneButton disabled={sending} onClick={() => run(dismiss)}>
-          {q.dismiss}
+          {note ? q.seen : q.dismiss}
         </PhoneButton>
       </div>
-      <p className="text-muted text-xs">{q.dismissHint(card.bot.name)}</p>
+      <p className="text-muted text-xs">
+        {note ? q.seenHint(card.bot.name) : q.dismissHint(card.bot.name)}
+      </p>
       {failed && (
         <p role="alert" className="text-danger text-sm">
           {q.failed}

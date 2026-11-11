@@ -211,7 +211,7 @@ export type BotModel = "default" | "fable" | "opus" | "sonnet" | "haiku";
 /**
  * What the conversation-list line shows; the app words it.
  */
-export type ActivityKind = "owner" | "message" | "reply" | "tool" | "approval" | "question" | "notice";
+export type ActivityKind = "owner" | "message" | "reply" | "tool" | "approval" | "question" | "note" | "notice";
 
 /**
  * The last thing in a bot's chat, for the conversation list.
@@ -1992,9 +1992,13 @@ cut: boolean,
 atComputer: boolean, };
 
 /**
- * A question waiting for the owner, as the phone shows it.
+ * A question or a note waiting for the owner, as the phone shows it.
  */
-export type QuestionCard = { questionId: QuestionId, bot: CardBot, crew: string, createdAt: number, text: string, options: Array<string>, };
+export type QuestionCard = { questionId: QuestionId, bot: CardBot, crew: string, createdAt: number, 
+/**
+ * A note asks nothing: the phone offers Seen instead of Dismiss.
+ */
+kind: QuestionKind, text: string, options: Array<string>, };
 
 /**
  * A routine run that failed, as the phone tells it.
@@ -2032,7 +2036,11 @@ failed?: RunFailure, };
  * One thing in a conversation, as the phone shows it (spec 28.12): the
  * text, and never the output of a tool.
  */
-export type PhoneItem = { "kind": "you", id: ChatItemId, at: number, text: string, cut: boolean, files?: Array<string>, } | { "kind": "bot_message", id: ChatItemId, at: number, from: string, text: string, cut: boolean, } | { "kind": "reply", id: ChatItemId, at: number, text: string, cut: boolean, } | { "kind": "tool", id: ChatItemId, at: number, summary: string, } | { "kind": "approval", id: ChatItemId, at: number, approvalId: ApprovalId, summary: string, status: ApprovalStatus, } | { "kind": "question", id: ChatItemId, at: number, questionId: QuestionId, text: string, status: QuestionStatus, } | { "kind": "failed", id: ChatItemId, at: number, error?: string, } | { "kind": "notice", id: ChatItemId, at: number, level: NoticeLevel, text: string, };
+export type PhoneItem = { "kind": "you", id: ChatItemId, at: number, text: string, cut: boolean, files?: Array<string>, } | { "kind": "bot_message", id: ChatItemId, at: number, from: string, text: string, cut: boolean, } | { "kind": "reply", id: ChatItemId, at: number, text: string, cut: boolean, } | { "kind": "tool", id: ChatItemId, at: number, summary: string, } | { "kind": "approval", id: ChatItemId, at: number, approvalId: ApprovalId, summary: string, status: ApprovalStatus, } | { "kind": "question", id: ChatItemId, at: number, questionId: QuestionId, 
+/**
+ * A note the bot left (spec 23.10), not a question.
+ */
+note: boolean, text: string, status: QuestionStatus, } | { "kind": "failed", id: ChatItemId, at: number, error?: string, } | { "kind": "notice", id: ChatItemId, at: number, level: NoticeLevel, text: string, };
 
 /**
  * A routine the owner runs with a tap (spec 20.2), as the phone shows it.
@@ -2526,15 +2534,22 @@ export type VersionsListParams = { botId: BotId, kind: VersionKind, };
  */
 export type VersionsRestoreParams = { versionId: VersionId, };
 
+export type QuestionKind = "question" | "note";
+
 export type QuestionStatus = "open" | "answered" | "dismissed";
 
 export type Question = { id: QuestionId, crewId: CrewId, botId: BotId, 
 /**
- * What the bot asks, markdown.
+ * A question or a note.
+ */
+kind: QuestionKind, 
+/**
+ * What the bot asks, or tells, markdown.
  */
 text: string, 
 /**
- * Ready answers the owner may pick; empty for a free answer only.
+ * Ready answers the owner may pick; empty for a free answer only, and
+ * for a note.
  */
 options: Array<string>, status: QuestionStatus, 
 /**

@@ -82,5 +82,11 @@ export const island = {
     placeholder: "Write your answer",
     send: "Answer",
     failed: "Could not send. Try again, or open it in Botloft.",
+    /** A note the agent left (spec 23.10). */
+    tells: (bot: string) => `${bot} left you a note`,
+    replyLabel: (bot: string) => `Your reply to ${bot}`,
+    replyPlaceholder: "Reply, if you want",
+    reply: "Reply",
+    seen: "Seen",
   },
 };

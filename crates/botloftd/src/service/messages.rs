@@ -56,7 +56,10 @@ pub fn send(daemon: &Daemon, params: MessagesSendParams) -> ApiResult<Message> {
         attachments,
         created_at: now,
     };
-    post(daemon, &store, message, None)
+    let sent = post(daemon, &store, message, None)?;
+    drop(store);
+    super::questions::close_notes(daemon, &sent.to_bot_id);
+    Ok(sent)
 }
 
 /// What the owner replies to (spec 9.3): something the bot wrote, or a

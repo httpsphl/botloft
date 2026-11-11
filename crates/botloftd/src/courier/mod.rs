@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use botloft_core::protocol::{AgentKind, BotState, Delivery, Message, SenderKind, Task};
+use botloft_core::protocol::{AgentKind, BotState, Delivery, Message, Question, SenderKind, Task};
 use botloft_store::{DeliveryOutcome, Store, StoreError};
 use tokio::sync::Notify;
 use tracing::{debug, warn};
@@ -257,8 +257,8 @@ struct Draft {
     task: Option<Task>,
     workspace: PathBuf,
     routine: Option<context::RoutineContext>,
-    /// The question an answer is for: its id and text.
-    question: Option<(String, String)>,
+    /// The question an answer is for, or the note a reply is for.
+    question: Option<Question>,
     /// The owner's reactions it takes to the bot: emoji and quote.
     reactions: Vec<(String, String)>,
 }
@@ -273,10 +273,7 @@ impl Draft {
             task: self.task.as_ref(),
             workspace: &self.workspace,
             routine: self.routine.as_ref(),
-            question: self
-                .question
-                .as_ref()
-                .map(|(id, text)| (id.as_str(), text.as_str())),
+            question: self.question.as_ref(),
             reactions: &self.reactions,
         };
         // Only agents the daemon runs get this far; the bot was checked at launch.

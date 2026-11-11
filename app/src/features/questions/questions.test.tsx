@@ -16,7 +16,7 @@ function crew() {
   return { fake, scout, writer };
 }
 
-const entry = () => within(rail()).getByRole("button", { name: "Questions" });
+const entry = () => within(rail()).getByRole("button", { name: "Inbox" });
 
 describe("questions to the owner", () => {
   test("a question in the chat is answered with a ready answer", async () => {
@@ -62,14 +62,12 @@ describe("questions to the owner", () => {
       fake.now += 1000;
       fake.questions.ask(writer.id, "Formal or casual?", ["Formal", "Casual"]);
     });
-    expect(entry().getAttribute("title")).toBe("2 questions wait for you");
+    expect(entry().getAttribute("title")).toBe("2 questions and notes wait for you");
     await waitFor(() => expect(host.attention).toBe(true));
 
     fireEvent.click(entry());
-    const box = await screen.findByRole("region", { name: "Questions" });
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Questions from your agents" }),
-    ).toBeDefined();
+    const box = await screen.findByRole("region", { name: "Inbox" });
+    expect(screen.getByRole("heading", { level: 1, name: "Inbox" })).toBeDefined();
     const cards = within(box).getAllByRole("region", { name: /asks$/ });
     expect(cards.map((card) => card.getAttribute("aria-label"))).toEqual([
       "Writer asks",
@@ -86,10 +84,10 @@ describe("questions to the owner", () => {
       expect(within(box).queryByRole("region", { name: "Scout asks" })).toBeNull(),
     );
     expect(fake.conversation.messages.at(-1)?.body).toBe("Acme, then Globex");
-    expect(entry().getAttribute("title")).toBe("1 question waits for you");
+    expect(entry().getAttribute("title")).toBe("1 question or note waits for you");
 
     fireEvent.click(within(box).getByRole("button", { name: "Dismiss" }));
-    await within(box).findByText("No question is waiting for you");
+    await within(box).findByText("Nothing is waiting for you");
     expect(fake.questions.asked[1]?.question.status).toBe("dismissed");
     expect(fake.conversation.messages).toHaveLength(1);
     await waitFor(() => expect(host.attention).toBe(false));
@@ -103,10 +101,10 @@ describe("questions to the owner", () => {
       fake.questions.ask(scout.id, "Ship on Friday?");
     });
     fireEvent.click(entry());
-    const box = await screen.findByRole("region", { name: "Questions" });
+    const box = await screen.findByRole("region", { name: "Inbox" });
     fireEvent.click(within(box).getByRole("button", { name: "Open the chat with Scout" }));
     const chat = await screen.findByRole("list", { name: "Messages" });
     expect(within(chat).getByRole("region", { name: "Scout asks" })).toBeDefined();
-    expect(screen.queryByRole("region", { name: "Questions" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Inbox" })).toBeNull();
   });
 });

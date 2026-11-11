@@ -1,19 +1,42 @@
 //! Tests for the questions bots ask the owner.
 
 use botloft_core::ids::{BotId, ChatItemId, QuestionId};
-use botloft_core::protocol::{ChatBody, ChatItem, Question, QuestionItem, QuestionStatus};
+use botloft_core::protocol::{
+    ChatBody, ChatItem, Question, QuestionItem, QuestionKind, QuestionStatus,
+};
 
 use crate::Store;
 use crate::tests::{Fixture, message_to};
 
 /// Asks `text` as `bot`; returns the question.
 pub(crate) fn ask(store: &Store, fx: &Fixture, bot: &BotId, text: &str, at: i64) -> Question {
+    keep(store, fx, bot, QuestionKind::Question, text, at)
+}
+
+/// Leaves the owner `text` as `bot`; returns the note.
+fn tell(store: &Store, fx: &Fixture, bot: &BotId, text: &str, at: i64) -> Question {
+    keep(store, fx, bot, QuestionKind::Note, text, at)
+}
+
+fn keep(
+    store: &Store,
+    fx: &Fixture,
+    bot: &BotId,
+    kind: QuestionKind,
+    text: &str,
+    at: i64,
+) -> Question {
+    let options = match kind {
+        QuestionKind::Question => vec!["Yes".into(), "No".into()],
+        QuestionKind::Note => Vec::new(),
+    };
     let question = Question {
         id: QuestionId::generate(),
         crew_id: fx.crew.id.clone(),
         bot_id: bot.clone(),
+        kind,
         text: text.into(),
-        options: vec!["Yes".into(), "No".into()],
+        options,
         status: QuestionStatus::Open,
         answer: None,
         created_at: at,
@@ -138,5 +161,58 @@ fn a_dismissed_question_leaves_the_box_and_archived_bots_hide_theirs() {
             .questions(QuestionStatus::Open)
             .expect("list")
             .is_empty()
+    );
+}
+
+#[test]
+fn notes_close_when_the_owner_writes_and_count_by_the_hour() {
+    let fx = Fixture::new();
+    let (scout, writer) = (&fx.bots[0].id, &fx.bots[1].id);
+    let question = ask(&fx.store, &fx, scout, "Ship on Friday?", 10);
+    let first = tell(&fx.store, &fx, scout, "The report is in work/.", 20);
+    let second = tell(&fx.store, &fx, scout, "The site is down.", 30);
+    let other = tell(&fx.store, &fx, writer, "Draft done.", 40);
+
+    assert_eq!(
+        fx.store.open_questions(scout).expect("count"),
+        1,
+        "notes are not questions"
+    );
+    assert_eq!(fx.store.notes_since(scout, 0).expect("since"), 2);
+    assert_eq!(fx.store.notes_since(scout, 25).expect("since"), 1);
+    let record = fx.store.question(&first.id).expect("find").expect("there");
+    assert_eq!(record.question.kind, QuestionKind::Note);
+    assert!(record.question.options.is_empty());
+
+    let closed = fx.store.close_notes(scout, 50).expect("close");
+    assert_eq!(
+        closed.iter().map(|(note, _)| &note.id).collect::<Vec<_>>(),
+        [&first.id, &second.id]
+    );
+    for (note, item) in &closed {
+        assert_eq!(note.status, QuestionStatus::Dismissed);
+        assert_eq!(note.answered_at, Some(50));
+        let ChatBody::Question(shown) = &item.body else {
+            panic!("note item");
+        };
+        assert_eq!(&shown.question, note);
+    }
+    let open: Vec<_> = fx
+        .store
+        .questions(QuestionStatus::Open)
+        .expect("list")
+        .into_iter()
+        .map(|q| q.id)
+        .collect();
+    assert_eq!(
+        open,
+        [other.id, question.id],
+        "the question and the other bot's note stay"
+    );
+    assert!(fx.store.close_notes(scout, 60).expect("again").is_empty());
+    assert_eq!(
+        fx.store.notes_since(scout, 0).expect("since"),
+        2,
+        "closed notes still count"
     );
 }

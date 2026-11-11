@@ -7,6 +7,7 @@ use super::Out;
 
 /// Before `ChatBody`, which holds `QuestionItem`.
 pub(super) fn decls(out: &mut Out) {
+    out.decl::<QuestionKind>();
     out.decl::<QuestionStatus>();
     out.decl::<Question>();
     out.decl::<QuestionItem>();

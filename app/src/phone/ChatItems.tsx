@@ -101,10 +101,12 @@ export function ChatItem({
           />
         );
       }
-      const ended = (t.question.ended as Record<string, string>)[item.status];
+      const ended = (
+        (item.note ? t.question.noteEnded : t.question.ended) as Record<string, string>
+      )[item.status];
       return (
         <p className="break-words text-muted text-sm">
-          {t.chats.questionLine(item.text)}
+          {item.note ? t.chats.noteLine(item.text) : t.chats.questionLine(item.text)}
           {ended && ` — ${ended}`}
         </p>
       );

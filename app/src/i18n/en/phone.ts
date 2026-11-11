@@ -49,6 +49,7 @@ export const phone = {
       tool: "Used",
       approval: "Asks to use",
       question: "Asks",
+      note: "Note",
       notice: "Notice",
     },
     inCrew: (crew: string) => `in ${crew}`,
@@ -68,6 +69,7 @@ export const phone = {
     tool: (summary: string) => `Used: ${summary}`,
     approvalLine: (summary: string) => `Asked to: ${summary}`,
     questionLine: (text: string) => `Asked: ${text}`,
+    noteLine: (text: string) => `Note: ${text}`,
     composer: {
       label: (bot: string) => `Message to ${bot}`,
       placeholder: "Write a message",
@@ -127,6 +129,13 @@ export const phone = {
       `Closes the question without telling ${bot}. To let it know, answer instead.`,
     failed: "Not sent. Check the connection and try again.",
     ended: { answered: "You answered", dismissed: "Dismissed" },
+    /** A note the bot left (spec 23.10). */
+    tells: (bot: string) => `${bot} left you a note`,
+    replyLabel: "Your reply, if you want",
+    reply: "Reply",
+    seen: "Seen",
+    seenHint: (bot: string) => `Closes the note. Writing to ${bot} closes it too.`,
+    noteEnded: { answered: "You replied", dismissed: "Seen" },
   },
   settings: {
     notices: {
