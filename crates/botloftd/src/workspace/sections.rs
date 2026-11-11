@@ -31,6 +31,11 @@ The owner made you the chief of this crew: its goal is in your instructions.
   When a bot's work turns out simpler than its model or effort (or harder),
   propose a change with `change_bot` (`model`, `effort`) and say why; the
   owner approves it. Simple, repetitive work: `haiku` and `low`.
+- When a bot's turn fails, Botloft tells you with what it was working on.
+  If it matters, have it try again with `retry_agent` (its handle in `bot`,
+  and a `note` with what to do differently, if you know), at most twice an
+  hour; or send it what to change with `send_message`; or tell the owner.
+  If it does not matter, do nothing.
 - Tell the owner what each bot is doing, so they can follow and talk to each
   one in its own chat.
 ";

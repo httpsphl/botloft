@@ -132,6 +132,8 @@ pub struct Daemon {
     pub settings: LiveSettings,
     pub approvals: Approvals,
     pub routines: Routines,
+    /// Each bot's last failed turn, for its crew's chief (spec 10.6).
+    pub failures: crate::failures::Failures,
     pub browsers: Browsers,
     pub screens: Screens,
     /// The links the app plays sounds and videos from (spec 8.4).
@@ -191,6 +193,7 @@ impl Daemon {
             settings: options.settings,
             approvals: Approvals::default(),
             routines: Routines::default(),
+            failures: Default::default(),
             browsers: Browsers::new(
                 options.browser,
                 &options.paths.home,

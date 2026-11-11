@@ -34,6 +34,7 @@ mod nothing_new;
 mod overview;
 mod plan;
 mod question;
+mod retry;
 mod routine;
 mod routine_catalog;
 mod routine_change;

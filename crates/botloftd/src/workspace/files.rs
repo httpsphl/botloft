@@ -328,6 +328,7 @@ mod tests {
         let rules = rules_md(&chief, &bot, Path::new("/ws/site/shared"));
         assert!(rules.contains("## You lead this crew"));
         assert!(rules.contains("`suggest_bot`"));
+        assert!(rules.contains("try again with `retry_agent`"));
         assert!(rules.contains("handle in `bot`"));
         assert!(rules.contains("propose a change with `change_bot` (`model`, `effort`)"));
     }

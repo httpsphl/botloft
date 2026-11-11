@@ -91,6 +91,8 @@ pub(crate) fn turn_finished(
     error: Option<String>,
     stopped: Stopped,
 ) {
+    // A failed turn goes to the crew's chief (spec 10.6).
+    crate::failures::turn_ended(daemon, bot, error.as_deref(), stopped == Stopped::ByBotloft);
     items::add(
         daemon,
         bot,
