@@ -50,6 +50,11 @@ export function RoutineRow({
     );
   const runNow = () =>
     attempt(r.failed.runNow, () => api.call("routines.runNow", { routineId: routine.id }));
+  // An agent's wait (spec 20.14): its time does not change, and it runs
+  // when what it waits for happens.
+  const wait = routine.schedule.kind === "wait" ? routine.schedule : null;
+  const edit = { label: r.edit, icon: Pencil, onSelect: () => setOpen("edit") };
+  const remove = { label: r.remove, icon: Trash2, danger: true, onSelect: () => setOpen("remove") };
 
   return (
     <li className="flex items-start gap-3 rounded-2xl bg-bubble px-4 py-3">
@@ -75,30 +80,27 @@ export function RoutineRow({
             {" · "}
             {!routine.enabled
               ? r.off
-              : routine.schedule.kind === "signal"
-                ? r.waitsSignal
-                : routine.schedule.kind === "manual"
-                  ? r.waitsClick
-                  : routine.nextRunAt !== null
-                    ? r.next(nextText(routine.nextRunAt, routine.timezone, r))
-                    : r.off}
+              : wait
+                ? r.until(nextText(wait.until, routine.timezone, r))
+                : routine.schedule.kind === "signal"
+                  ? r.waitsSignal
+                  : routine.schedule.kind === "manual"
+                    ? r.waitsClick
+                    : routine.nextRunAt !== null
+                      ? r.next(nextText(routine.nextRunAt, routine.timezone, r))
+                      : r.off}
           </span>
         </p>
         {routine.lastRun && (
           <LastRun run={routine.lastRun} streak={routine.failStreak} words={r.last} />
         )}
       </div>
-      <Button size="sm" icon={Play} onClick={runNow}>
-        {r.runNow}
-      </Button>
-      <Menu
-        label={r.more(routine.name)}
-        icon={Ellipsis}
-        items={[
-          { label: r.edit, icon: Pencil, onSelect: () => setOpen("edit") },
-          { label: r.remove, icon: Trash2, danger: true, onSelect: () => setOpen("remove") },
-        ]}
-      />
+      {!wait && (
+        <Button size="sm" icon={Play} onClick={runNow}>
+          {r.runNow}
+        </Button>
+      )}
+      <Menu label={r.more(routine.name)} icon={Ellipsis} items={wait ? [remove] : [edit, remove]} />
       {open === "edit" && <RoutineDialog bot={bot} routine={routine} onClose={close} />}
       {open === "remove" && (
         <Confirm

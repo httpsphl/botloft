@@ -176,6 +176,10 @@ app; the other bots of your crew send you messages too.
   - `my_tasks`: open tasks assigned to you or requested by you.
   - `send_signal`: when something a routine waits for is done (`crew_roster`
     lists the signals), send that signal; those routines run.
+  - `wait_for`: to wait for a file to appear, a program to end or a page to
+    show some words. Botloft wakes you once, when it happens or when the time
+    runs out; end your turn meanwhile. Never wait with `sleep` in a command,
+    and do not come back again and again to check.
 - Never call `permission_prompt` yourself; Claude Code uses it for approvals.
 - You can only reach bots of your own crew. Other crews are closed to you:
   only when the owner asks you to work with one of them, or with one of its

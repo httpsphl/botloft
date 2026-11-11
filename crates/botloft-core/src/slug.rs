@@ -13,6 +13,16 @@ const WINDOWS_RESERVED: &[&str] = &[
     "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
 ];
 
+/// Text as compared without accents, case or extra spaces (`Pedido  ENVIADO`
+/// and `pedido enviado` fold the same), for a wait on a page (spec 20.14).
+pub fn fold(text: &str) -> String {
+    deunicode::deunicode(text)
+        .to_lowercase()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 /// Turns a display name into lowercase ASCII letters, digits and single
 /// hyphens, transliterating accents (`Revisão` -> `revisao`).
 ///
@@ -114,6 +124,18 @@ mod tests {
         assert_eq!(slugify("Revisão de Código", "bot"), "revisao-de-codigo");
         assert_eq!(slugify("  Site -- Loja!! ", "crew"), "site-loja");
         assert_eq!(slugify("QA_Bot 2", "bot"), "qa-bot-2");
+    }
+
+    #[test]
+    fn folds_accents_case_and_spaces() {
+        assert_eq!(
+            fold(
+                "Pedido  ENVIADO
+ já"
+            ),
+            "pedido enviado ja"
+        );
+        assert_eq!(fold("Ação"), fold("acao"));
     }
 
     #[test]

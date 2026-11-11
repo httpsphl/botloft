@@ -22,7 +22,7 @@ use super::question::{self, ASK_OWNER, TELL_OWNER};
 use super::share::{self, SHARE_FILE};
 use super::signal::{self, SEND_SIGNAL};
 use super::{
-    activity, crew_reach, history, nothing_new, overview, retry, routine_change, templates,
+    activity, crew_reach, history, nothing_new, overview, retry, routine_change, templates, wait,
 };
 use crate::service::tasks::{self, BotMessage};
 use crate::service::{ApiError, bots, lead};
@@ -57,6 +57,7 @@ pub(super) fn call(daemon: &Daemon, bot: &BotId, params: &Value) -> Result<Value
             }
             ASK_KEY => parse(arguments).and_then(|args| key::ask(daemon, bot, args)),
             SEND_SIGNAL => parse(arguments).and_then(|args| signal::send(daemon, bot, args)),
+            wait::WAIT_FOR => parse(arguments).and_then(|args| wait::call(daemon, bot, args)),
             routine_change::MY_ROUTINES => routine_change::mine(daemon, bot),
             nothing_new::NOTHING_NEW => nothing_new::call(daemon, bot),
             retry::RETRY_AGENT => parse(arguments).and_then(|args| retry::call(daemon, bot, args)),

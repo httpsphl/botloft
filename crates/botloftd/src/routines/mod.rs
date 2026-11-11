@@ -10,28 +10,45 @@ mod cron;
 mod fire;
 pub mod schedule;
 pub mod signal;
+mod wait_page;
+pub mod waits;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
-use botloft_core::ids::{BotId, MessageId, RoutineRunId};
+use botloft_core::ids::{BotId, MessageId, RoutineId, RoutineRunId};
 use botloft_core::protocol::RunStatus;
 use tokio::sync::Notify;
 use tracing::warn;
 
 pub use self::fire::{fire_now, next_run_at};
+use self::waits::{PageTimes, SystemProbe, WaitProbe};
 use crate::state::{Daemon, Event};
 
 /// The longest the scheduler sleeps, to follow clock changes and sleep.
 const MAX_SLEEP: Duration = Duration::from_secs(60);
 
-#[derive(Default)]
 pub struct Routines {
     wake: Notify,
     /// The runs whose messages each bot's current turn took up. Messages
     /// that arrive during a turn may join it (spec 9.1).
     turns: Mutex<HashMap<BotId, Vec<RoutineRunId>>>,
+    /// What the waits look at (spec 20.14).
+    probe: Mutex<Arc<dyn WaitProbe>>,
+    /// When each wait on a page last read it.
+    pages: Mutex<PageTimes>,
+}
+
+impl Default for Routines {
+    fn default() -> Self {
+        Self {
+            wake: Notify::new(),
+            turns: Mutex::default(),
+            probe: Mutex::new(Arc::new(SystemProbe)),
+            pages: Mutex::default(),
+        }
+    }
 }
 
 impl Routines {
@@ -47,10 +64,34 @@ impl Routines {
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
+    /// What the waits look at now.
+    pub fn probe(&self) -> Arc<dyn WaitProbe> {
+        Arc::clone(&lock(&self.probe))
+    }
+
+    /// Waits look at `probe` from now on; tests give their own.
+    pub fn set_probe(&self, probe: Arc<dyn WaitProbe>) {
+        *lock(&self.probe) = probe;
+    }
+
+    fn page_due(&self, id: &RoutineId, now: i64, every: i64) -> bool {
+        lock(&self.pages).due(id, now, every)
+    }
+
+    fn forget_page(&self, id: &RoutineId) {
+        lock(&self.pages).forget(id);
+    }
+
     /// The bot was deleted, and its runs with it.
     pub(crate) fn forget(&self, bot: &BotId) {
         self.turns().remove(bot);
     }
+}
+
+fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 /// Runs the scheduler until the daemon stops. The first pass also ends the

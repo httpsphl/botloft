@@ -1,6 +1,6 @@
 //! Routines that wait for a signal from a bot of their crew (spec 20.13).
 
-use botloft_core::ids::{CrewId, RoutineId};
+use botloft_core::ids::{BotId, CrewId, RoutineId};
 use botloft_core::protocol::Routine;
 use rusqlite::params;
 
@@ -21,6 +21,25 @@ impl Store {
         ))?;
         let rows = stmt.query_map(params![crew.as_str(), name], from_row)?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    /// The waits still open (spec 20.14): enabled, of active bots in
+    /// active crews, oldest first.
+    pub fn wait_routines(&self) -> Result<Vec<Routine>> {
+        let mut stmt = self.conn.prepare_cached(&format!(
+            "SELECT {COLUMNS} FROM routines              WHERE enabled AND archived_at IS NULL                AND json_extract(schedule, '$.kind') = 'wait'                AND bot_id IN (SELECT b.id FROM bots b JOIN crews k ON k.id = b.crew_id                               WHERE b.archived_at IS NULL AND k.archived_at IS NULL)              ORDER BY created_at, id"
+        ))?;
+        let rows = stmt.query_map([], from_row)?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    /// How many waits the bot has open, enabled or not.
+    pub fn open_waits(&self, bot: &BotId) -> Result<u32> {
+        Ok(self.conn.query_row(
+            "SELECT count(*) FROM routines              WHERE bot_id = ?1 AND archived_at IS NULL                AND json_extract(schedule, '$.kind') = 'wait'",
+            [bot.as_str()],
+            |row| row.get(0),
+        )?)
     }
 
     /// When a signal last made the routine run (a skip does not count).

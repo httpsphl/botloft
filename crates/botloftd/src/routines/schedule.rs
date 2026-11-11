@@ -129,7 +129,9 @@ impl Plan {
                 }
                 Kind::Signal
             }
-            Schedule::Manual => Kind::Manual,
+            // Neither runs by the clock: the owner's click, or what a wait
+            // waits for (spec 20.14).
+            Schedule::Manual | Schedule::Wait { .. } => Kind::Manual,
             Schedule::Once { at, .. } => {
                 let local: DateTime = at.parse().map_err(|_| {
                     Problem::new(

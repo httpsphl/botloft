@@ -1,7 +1,7 @@
 //! The text a bot reads when a message arrives (spec 9.3). The first line
 //! always says who sent it; bots are told so in their rules.
 
-use crate::protocol::{MessageKind, Task};
+use crate::protocol::{MessageKind, Task, WaitEnd, WaitOn};
 
 /// Who the first line names.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -109,6 +109,14 @@ pub enum RoutineWhen<'a> {
         /// What the sender wrote with it.
         note: Option<&'a str>,
     },
+    /// What a wait waited for happened, or its time ran out (spec 20.14).
+    Wait {
+        on: &'a WaitOn,
+        ended: WaitEnd,
+        /// When it runs out, in local time like `2026-10-01 09:00`.
+        until: &'a str,
+        timezone: &'a str,
+    },
 }
 
 impl RoutineEnvelope<'_> {
@@ -133,6 +141,47 @@ impl RoutineEnvelope<'_> {
                 }
                 text
             }
+            RoutineWhen::Wait {
+                on,
+                ended: WaitEnd::Happened,
+                ..
+            } => format!(
+                "[botloft] wait \"{}\" · {}
+{watch}
+
+{}",
+                self.name,
+                wait_text(on, true),
+                self.body
+            ),
+            RoutineWhen::Wait {
+                on,
+                ended: WaitEnd::TimedOut,
+                until,
+                timezone,
+            } => format!(
+                "[botloft] wait \"{}\" · ran out at {until} ({timezone}): {}
+{watch}
+
+{}",
+                self.name,
+                wait_text(on, false),
+                self.body
+            ),
+        }
+    }
+}
+
+/// What happened, or did not, for a wait (spec 20.14).
+fn wait_text(on: &WaitOn, happened: bool) -> String {
+    match (on, happened) {
+        (WaitOn::File { path }, true) => format!("the file {path} appeared"),
+        (WaitOn::File { path }, false) => format!("the file {path} did not appear"),
+        (WaitOn::Program { name }, true) => format!("no program called {name} is running any more"),
+        (WaitOn::Program { name }, false) => format!("{name} is still running"),
+        (WaitOn::Page { url, text }, true) => format!("the page {url} shows \"{text}\""),
+        (WaitOn::Page { url, text }, false) => {
+            format!("the page {url} does not show \"{text}\"")
         }
     }
 }
@@ -411,6 +460,54 @@ Reacted ❤️ to: \"Is the draft good?\"
              Nobody is watching live: do the work, then report it in your reply. If nothing is new since the last run, call nothing_new and end without a reply.\n\n\
              Summarize shared/inbox."
         );
+    }
+
+    #[test]
+    fn a_wait_says_what_happened_or_that_it_ran_out() {
+        let file = WaitOn::File {
+            path: r"C:\work\report.pdf".into(),
+        };
+        let wait = |ended| {
+            RoutineEnvelope {
+                name: "Wait for the report",
+                when: RoutineWhen::Wait {
+                    on: &file,
+                    ended,
+                    until: "2026-11-12 09:00",
+                    timezone: "America/Sao_Paulo",
+                },
+                body: "Review it.",
+            }
+            .render()
+        };
+        assert!(
+            wait(WaitEnd::Happened).starts_with(
+                "[botloft] wait \"Wait for the report\" · the file C:\\work\\report.pdf appeared\n"
+            ),
+            "{}",
+            wait(WaitEnd::Happened)
+        );
+        let late = wait(WaitEnd::TimedOut);
+        assert!(
+            late.starts_with(
+                "[botloft] wait \"Wait for the report\" · ran out at 2026-11-12 09:00 \
+                 (America/Sao_Paulo): the file C:\\work\\report.pdf did not appear\n"
+            ),
+            "{late}"
+        );
+        assert!(late.ends_with("\n\nReview it."), "{late}");
+        let page = WaitOn::Page {
+            url: "https://shop.test/order".into(),
+            text: "Shipped".into(),
+        };
+        assert_eq!(
+            super::wait_text(&page, true),
+            "the page https://shop.test/order shows \"Shipped\""
+        );
+        let program = WaitOn::Program {
+            name: "ffmpeg".into(),
+        };
+        assert_eq!(super::wait_text(&program, false), "ffmpeg is still running");
     }
 
     #[test]

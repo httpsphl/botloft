@@ -44,7 +44,7 @@ export class FakeRoutines {
           missed: missed ?? "run_once",
           enabled: true,
           nextRunAt:
-            schedule.kind === "signal" || schedule.kind === "manual"
+            schedule.kind === "signal" || schedule.kind === "manual" || schedule.kind === "wait"
               ? null
               : schedule.kind === "once"
                 ? Date.parse(`${schedule.at}:00Z`)
@@ -129,6 +129,7 @@ export class FakeRoutines {
       reason: null,
       skippedCount: 0,
       nothingNew: false,
+      waited: null,
       messageId: message.id,
       createdAt: this.fake.now,
       finishedAt: null,

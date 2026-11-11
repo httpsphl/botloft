@@ -17,6 +17,7 @@ export const routines = {
   off: "Off",
   waitsSignal: "Waits for a signal",
   waitsClick: "A shortcut on Home",
+  until: (time: string) => `Until ${time}`,
   today: (time: string) => `today at ${time}`,
   tomorrow: (time: string) => `tomorrow at ${time}`,
   onDay: (day: string, time: string) => `${day} at ${time}`,
@@ -58,6 +59,9 @@ export const routines = {
     cron: (expr: string) => `Cron: ${expr}`,
     signal: (name: string) => `When an agent signals “${name}”`,
     manual: "When you click it",
+    waitFile: (file: string) => `When ${file} appears`,
+    waitProgram: (program: string) => `When ${program} ends`,
+    waitPage: (text: string, site: string) => `When “${text}” shows on ${site}`,
     once: (date: string, time: string) => `Once, ${date} at ${time}`,
   },
   tag: (name: string) => `Routine · ${name}`,
@@ -75,6 +79,14 @@ export const routines = {
     label: (bot: string, when: string) => `${bot} comes back to it ${when}`,
     cancel: (name: string) => `Cancel: ${name}`,
     failed: "Could not cancel it",
+    /** An agent waiting without its model (spec 20.14). */
+    wait: {
+      file: (file: string) => `${file} to appear`,
+      program: (program: string) => `${program} to end`,
+      page: (text: string, site: string) => `“${text}” on ${site}`,
+      label: (bot: string, what: string, until: string) =>
+        `${bot} waits for ${what}, until ${until}`,
+    },
   },
   dialog: {
     newTitle: (bot: string) => `New routine for ${bot}`,

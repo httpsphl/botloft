@@ -5,7 +5,7 @@
 use botloft_core::ids::{MessageId, RoutineId, RoutineRunId};
 use botloft_core::protocol::{
     Crew, Message, MessageKind, Missed, Overlap, Routine, RoutineRun, RunSignal, RunStatus,
-    Schedule, SenderKind, SkipReason,
+    Schedule, SenderKind, SkipReason, WaitEnd,
 };
 use botloft_store::{BotRecord, Store};
 use tracing::{debug, warn};
@@ -117,6 +117,8 @@ pub(super) enum Trigger {
     Now,
     /// A bot of the crew sent the signal it waits for (spec 20.13).
     Signal(RunSignal),
+    /// What a wait waited for happened, or its time ran out (spec 20.14).
+    Wait(WaitEnd),
 }
 
 /// Sends the routine's message, unless the bot is paused (for a scheduled
@@ -131,14 +133,17 @@ pub(super) fn attempt(
     trigger: Trigger,
 ) -> ApiResult<RoutineRun> {
     let now = daemon.clock.now_ms();
-    let (waits, signal) = match trigger {
-        Trigger::Schedule => (true, None),
-        Trigger::Now => (false, None),
-        Trigger::Signal(signal) => (true, Some(signal)),
+    let (waits, signal, waited) = match trigger {
+        Trigger::Schedule => (true, None, None),
+        Trigger::Now => (false, None, None),
+        Trigger::Signal(signal) => (true, Some(signal), None),
+        // A pause only delays it: what happened would be lost.
+        Trigger::Wait(ended) => (false, None, Some(ended)),
     };
     let skip = |reason| {
         let mut run = skipped(routine, at, reason, 1, now);
         run.signal.clone_from(&signal);
+        run.waited = waited;
         record(daemon, store, run.clone());
         Ok(run)
     };
@@ -181,6 +186,7 @@ pub(super) fn attempt(
         finished_at: None,
         signal,
         nothing_new: false,
+        waited,
     };
     let item = store.fire_run(&run, &message, &delivery)?;
     debug!(routine = %routine.id, run = %run.id, "routine fired");
@@ -208,6 +214,7 @@ pub(super) fn skipped(
         finished_at: Some(now),
         signal: None,
         nothing_new: false,
+        waited: None,
     }
 }
 
@@ -218,7 +225,7 @@ pub(super) fn record(daemon: &Daemon, store: &Store, run: RoutineRun) {
     }
 }
 
-fn save(daemon: &Daemon, routine: &Routine) {
+pub(super) fn save(daemon: &Daemon, routine: &Routine) {
     if let Err(err) = daemon.store().update_routine(routine) {
         warn!(routine = %routine.id, "could not save a routine: {err}");
         return;

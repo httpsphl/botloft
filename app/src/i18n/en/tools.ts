@@ -45,6 +45,7 @@ export const tools = {
     ask_owner: "Ask you a question",
     tell_owner: "Leave you a note",
     show_card: "Show you a card",
+    wait_for: "Wait for something",
     search_history: "Search past conversations",
     ask_key: "Ask you for a key",
     show_plan: "Show you the plan",

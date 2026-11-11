@@ -29,6 +29,7 @@ export function seedRoutines(fake: FakeBotloft, bots: { scout: BotId; analyst: B
       finishedAt: fake.now - HOUR,
       signal: null,
       nothingNew: false,
+      waited: null,
       ...run,
     };
   };
@@ -63,6 +64,16 @@ export function seedRoutines(fake: FakeBotloft, bots: { scout: BotId; analyst: B
     },
   });
   morning.nextRunAt = fake.now + 14 * HOUR;
+  // Scout waits for a file without its model (spec 20.14).
+  create(bots.scout, {
+    name: "Wait for the sales report",
+    prompt: "Read the sales report and add its numbers to the summary.",
+    schedule: {
+      kind: "wait",
+      on: { what: "file", path: "C:\\Botloft\\ops\\shared\\sales-report.pdf" },
+      until: fake.now + 20 * HOUR,
+    },
+  });
 
   const links = create(bots.scout, {
     name: "Check the links",

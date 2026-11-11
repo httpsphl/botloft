@@ -39,6 +39,7 @@ fn run(routine: &Routine, status: RunStatus, message: Option<MessageId>) -> Rout
         finished_at: None,
         signal: None,
         nothing_new: false,
+        waited: None,
     }
 }
 

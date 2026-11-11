@@ -14,6 +14,7 @@ import {
   Globe,
   Hand,
   History,
+  Hourglass,
   LayoutDashboard,
   LayoutTemplate,
   ListChecks,
@@ -78,6 +79,7 @@ const ICONS: Record<string, LucideIcon> = {
   tell_owner: StickyNote,
   show_card: LayoutDashboard,
   search_history: History,
+  wait_for: Hourglass,
 };
 
 /** The browser tools share the globe (spec 21.4), the desktop's the screen (24.6). */

@@ -181,6 +181,7 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
         loops.spawn("courier", courier::run(Arc::clone(&daemon)));
         loops.spawn("approvals", approvals::forget_turns(Arc::clone(&daemon)));
         loops.spawn("routines", routines::run(Arc::clone(&daemon)));
+        loops.spawn("waits", routines::waits::run(Arc::clone(&daemon)));
         loops.spawn("backup", botloftd::autobackup::run(Arc::clone(&daemon)));
         loops.spawn("phone relay", botloftd::mobile::run(Arc::clone(&daemon)));
         loops.spawn("browser", browser::run(Arc::clone(&daemon)));
