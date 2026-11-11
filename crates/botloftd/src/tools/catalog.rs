@@ -29,6 +29,7 @@ pub fn tools() -> Value {
             super::question::tool(),
             super::question::note_tool(),
             super::card::tool(),
+            super::history::tool(),
             super::key::tool(),
             super::plan::tool(),
             super::signal::tool(),

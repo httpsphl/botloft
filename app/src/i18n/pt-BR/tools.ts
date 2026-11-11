@@ -45,6 +45,7 @@ export const tools: Messages["tools"] = {
     ask_owner: "Fazer uma pergunta a você",
     tell_owner: "Deixar um recado para você",
     show_card: "Mostrar um cartão",
+    search_history: "Buscar em conversas antigas",
     ask_key: "Pedir uma chave a você",
     show_plan: "Mostrar o plano a você",
     browser: "Usar um site",

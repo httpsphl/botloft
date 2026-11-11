@@ -13,6 +13,7 @@ import {
   FileText,
   Globe,
   Hand,
+  History,
   LayoutDashboard,
   LayoutTemplate,
   ListChecks,
@@ -76,6 +77,7 @@ const ICONS: Record<string, LucideIcon> = {
   browser_ask_owner: Hand,
   tell_owner: StickyNote,
   show_card: LayoutDashboard,
+  search_history: History,
 };
 
 /** The browser tools share the globe (spec 21.4), the desktop's the screen (24.6). */

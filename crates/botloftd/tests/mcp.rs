@@ -77,6 +77,7 @@ async fn claude_code_discovers_the_server_and_lists_the_tools() {
             "ask_owner",
             "tell_owner",
             "show_card",
+            "search_history",
             "ask_key",
             "show_plan",
             "send_signal",
@@ -162,7 +163,7 @@ async fn earlier_revisions_start_with_initialize() {
     let listed = mcp::post(t.addr, &legacy, &list).await;
     assert_eq!(
         listed.body["result"]["tools"].as_array().map(Vec::len),
-        Some(52)
+        Some(53)
     );
     let unknown = json!({ "jsonrpc": "2.0", "id": 2, "method": "prompts/list" }).to_string();
     let unknown = mcp::post(t.addr, &legacy, &unknown).await;

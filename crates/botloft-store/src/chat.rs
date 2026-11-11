@@ -138,6 +138,19 @@ impl Store {
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
+    /// The items stored right after `after` in the bot's chat, oldest
+    /// first, at most `limit`; empty if `after` is not in the bot's chat.
+    pub fn chat_after(&self, bot: &BotId, after: &ChatItemId, limit: u32) -> Result<Vec<ChatItem>> {
+        let mut stmt = self.conn.prepare_cached(&format!(
+            "SELECT {COLUMNS} FROM chat_items \
+             WHERE bot_id = ?1 \
+               AND rowid > (SELECT rowid FROM chat_items WHERE id = ?2 AND bot_id = ?1) \
+             ORDER BY rowid LIMIT ?3"
+        ))?;
+        let rows = stmt.query_map(params![bot.as_str(), after.as_str(), limit], from_row)?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
     /// The bot's newest tool item for `tool_use_id`, to update it when the
     /// tool returns.
     pub fn tool_item(&self, bot: &BotId, tool_use_id: &str) -> Result<Option<ChatItem>> {
