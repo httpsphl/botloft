@@ -18,6 +18,7 @@ import { Markdown } from "./Markdown";
 import { MemoryNote } from "./MemoryNote";
 import { memoryOf, memoryPlaces } from "./memory";
 import { Repliable } from "./Replying";
+import { groupRepeat, repeatCounts } from "./repeats";
 import { runParts, splitDraft } from "./rows";
 import { SharedFiles } from "./SharedFiles";
 import { isSharedFiles } from "./shared";
@@ -140,6 +141,8 @@ function BotRunView({
   const places = useMemo(() => memoryPlaces(bot, crew), [bot, crew]);
   const memory = (item: ChatItem) => memoryOf(item, places, bot.workspace);
   const parts = runParts(items, (item) => memory(item) !== null);
+  // The same call counts across the whole turn, not one group (repeats.ts).
+  const repeats = useMemo(() => repeatCounts(items), [items]);
   // The bot is still on the last group of calls until it writes or stops.
   const busy = Boolean(live?.working && !live.draft);
   const tail = parts.at(-1)?.[0];
@@ -171,7 +174,13 @@ function BotRunView({
               return isSharedFiles(head) ? (
                 <SharedFiles key={head.id} item={head} botId={bot.id} bot={bot.name} />
               ) : (
-                <ToolGroup key={head.id} items={part} active={busy && index === parts.length - 1} />
+                <ToolGroup
+                  key={head.id}
+                  items={part}
+                  active={busy && index === parts.length - 1}
+                  repeat={groupRepeat(part, repeats)}
+                  bot={bot.name}
+                />
               );
             }
             case "reply":
