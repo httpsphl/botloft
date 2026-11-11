@@ -3,6 +3,7 @@
 
 pub mod asks;
 pub mod avatar;
+pub mod cards;
 pub mod chat;
 pub mod command;
 pub mod edits;

@@ -48,6 +48,7 @@ export const phone: Messages["phone"] = {
       tool: "Usó",
       approval: "Pide usar",
       question: "Pregunta",
+      card: "Tarjeta",
       notice: "Aviso",
     },
     inCrew: (crew: string) => `en ${crew}`,

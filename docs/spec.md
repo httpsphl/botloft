@@ -422,6 +422,7 @@ Todo item tem `id` (`cht_`), `botId`, `kind`, `createdAt` e `updatedAt`.
 | `tool` | `toolUseId`, `name`, `summary`, `explanation`, `input`, `status` (`running`, `done`, `failed`), `output`, `file`, `lines` | ferramenta usada pelo bot; `explanation` é o que o bot diz que um comando faz (10.1; ausente nas outras ferramentas, quando o bot não disse nada e nos itens antigos); `file` é o caminho completo que uma chamada de `Write`, `Edit`, `MultiEdit` ou `NotebookEdit` altera (ausente nas outras e nos itens antigos); `lines` (`added`, `removed`) são as linhas que um `Write`, `Edit` ou `MultiEdit` adiciona e remove (abaixo) |
 | `approval` | `approvalId`, `toolName`, `summary`, `explanation`, `input`, `status` (`pending`, `allowed`, `denied`, `expired`), `note` | pedido de permissão (10.1); `explanation` como no item `tool`, guardada só no item do chat |
 | `question` | `question` (a `Question`, 23.3) | pergunta do bot ao dono (23.4), regravada quando ele responde ou descarta |
+| `card` | `version`, `title`, `blocks`, `answer` (8.11) | cartão que o bot mostra com `show_card`; o `id` do item é o do cartão, e ele é regravado quando o bot o mostra de novo ou o dono responde |
 | `turn` | `durationMs`, `tokens` (8.7; `null` quando o Claude Code não disse e nos itens antigos), `error`, `stopped` (o dono parou o turno, 9.2; `error` fica `null`; `false` nos itens antigos), `quiet` (quem parou foi o Botloft, porque o turno ficou calado, 7.9; `stopped` também vem `true`; `false` nos itens antigos) | fim de um turno |
 | `notice` | `level` (`info`, `warning`, `error`), `code` (`signed_out`, `usage_limit`, `turn_failed`, `model_unavailable`, `compacted`, `auto_compacted`, `compact_failed`, `fresh_start`, `stuck_turn`; ausente em avisos antigos), `text` | avisos do daemon: limite de uso, login, turno com erro, conversa compactada (8.6), conversa nova pedida pelo dono (7.3), turno parado por ficar calado (7.9). O app escreve os avisos com `code` no idioma do dono; `text` fica em inglês para quem não conhece o código e, em `turn_failed` e `compact_failed`, traz o detalhe do erro |
 
@@ -535,6 +536,46 @@ Cada mudança na memória de um bot (o `CLAUDE.md` da pasta dele, 5.1) e nas ins
 - **`versions.list {botId, kind}`** devolve as versões, da mais nova para a mais antiga (até 100), com o texto inteiro. **`versions.restore {versionId}`** volta àquela versão: na memória, o daemon guarda antes o que está no arquivo e escreve o texto da versão; nas instruções, passa pelo mesmo `bots::update_by`. Voltar salva uma versão nova (`owner`, com `restoredFrom`), então também dá para desfazer. O bot lê a memória e as instruções quando começa uma conversa (5.1, 7.4). `version.created {version}` avisa o app de cada versão nova.
 - **No app:** nos detalhes do bot (15.1), a seção Instruções e uma seção Memória ("O que <bot> guarda de uma conversa para outra, no CLAUDE.md da pasta dele") têm um botão de histórico; a linha "Atualizou a memória de" no chat (15.3) também, só para a memória do próprio bot. O histórico abre num diálogo ("Histórico da memória de Scout"): uma linha por versão, com quem fez ("Scout mudou", "Você mudou", "Você voltou à versão de 14:32", "O Criador mudou", "Mudou fora do Botloft", "Como estava no começo"), quando e o "+N −M" em relação à anterior; a mais nova diz "Agora". Cada uma abre no diff contra a anterior (`diffLines`, como as edições do chat), e as outras têm "Voltar a esta versão", com confirmação que diz que a versão de agora fica no histórico.
 - Nada do texto da memória ou das instruções vai para o log; o log diz só o id da versão, o tipo e quem fez.
+
+### 8.11 Cartões do agente
+
+Um bot mostra ao dono um **cartão** no chat com `show_card`: texto, tabelas, gráficos, botões e um formulário. Serve para o que fica melhor que prosa: um relatório com números, opções para escolher, um pedido curto de dados. O bot pode mostrar o mesmo cartão de novo, mudado, e o dono responde com um botão ou com o formulário. Antes, só havia os cartões fixos (aprovação, pergunta, plano, rotina, chave).
+
+- **A tool:** `show_card {card?, title, blocks}`. `title` é uma linha de até 100 caracteres. `blocks` vai de 1 a 20 partes, cada uma com `type`:
+  - `text {text}`: markdown, até 4 000 caracteres.
+  - `table {columns, rows}`: até 12 colunas e 100 linhas, uma célula por coluna, até 200 caracteres cada. Números, sim/não e vazios viram texto.
+  - `chart {kind, labels, series, unit?}`: `bar` ou `line`, até 50 rótulos e 5 séries (`{name, values}`, um valor por rótulo, `null` onde não há).
+  - `buttons {buttons: [{id, label}]}`: até 6 botões no cartão.
+  - `form {fields, submit?}`: um formulário por cartão, até 10 campos `{id, label, kind, options?, required?}`, com `kind` `text`, `long_text`, `number`, `choice` (2 a 10 `options`) ou `check`.
+  - Ids de botões e campos têm até 40 letras, dígitos, `-` ou `_`, sem repetir no cartão. O cartão inteiro fica abaixo de 32 KB de JSON. Fora disso, a tool volta com o erro e nada aparece.
+- **Mostrar de novo:** com `card` (o `card_id` que a tool devolveu, de um cartão do próprio bot), o cartão muda no lugar onde estava, com `version` mais 1 e a resposta zerada. O chat não pula. Serve para um relatório que se atualiza ou para perguntar de novo.
+- **O cartão é o item do chat** (`kind: card`, 8.2), sem tabela própria: `{version, title, blocks, answer}`. A linha da conversa ganha o `kind` `card`, com o título ("Cartão: …").
+- **A resposta do dono** (`chat.act {itemId, version, button?, form?}`):
+  - Vale só para a versão que o dono vê. Outra versão volta como `conflict` ("mudou desde que você viu"). Cada versão aceita **uma** resposta; a segunda também é `conflict`.
+  - Um botão responde com o rótulo dele. O formulário responde com uma linha `Rótulo: valor` por campo, na ordem: um `check` vira ✓ ou ✗, um campo vazio vira —, um `number` aceita vírgula e um `choice` só aceita uma das opções. Campo obrigatório vazio, campo que não existe e botão que não existe voltam como erro de validação. O daemon confere tudo de novo; o app só segura o botão de enviar enquanto falta um obrigatório.
+  - Numa transação, o cartão guarda `answer {version, button, text, at}` e nasce uma message do dono para o bot com esse texto, em resposta ao cartão (`replyTo` com o id do cartão e o título). Ela vai pelo courier como qualquer outra, levando as reações pendentes (8.9).
+  - O bot a lê assim, sem o envelope `[botloft]`:
+
+```
+Answer on your card cht_01J9Z...: "<título>"
+
+<rótulo do botão, ou as linhas do formulário>
+```
+
+- **No app:** o cartão tem o ícone de painel na cor de destaque e o título. Quando o bot o mostrou de novo, aparece "Atualizado <hora>". Os blocos vêm em ordem:
+  - a tabela, com a cara das tabelas do chat e os números alinhados à direita;
+  - o gráfico, com um eixo só, a partir do zero;
+  - os botões;
+  - o formulário.
+  Respondido, os botões apagam e o rodapé diz "Você escolheu “…”" ou "Você enviou o formulário", com a hora. A mensagem do dono aparece no chat com o título do cartão citado em cima, como uma resposta (9.3), e o clique na citação leva ao cartão. A chamada da tool não aparece, como `ask_owner`.
+- **O gráfico:**
+  - Cinco cores categóricas, em ordem fixa (`card-chart.css`), próprias do tema claro e do escuro. Foram conferidas para daltonismo e contraste contra o fundo dos cartões nos dois temas.
+  - No claro, quatro delas ficam abaixo de 3:1 contra o fundo. Por isso todo gráfico tem legenda (de duas séries em diante), a dica com os valores ao passar o mouse sobre um rótulo e "Ver como tabela", com os mesmos números.
+  - Barras com 4 px arredondados na ponta e 2 px entre elas; linhas de 2 px com pontos de 8 px; uma falha na linha onde falta valor.
+- **No celular** (28), o cartão chega como uma resposta em markdown: o título, os textos, as tabelas e cada gráfico como tabela. Os botões e o formulário ficam no computador.
+- **Chaves do agente** (32.6): o título, os textos e as células passam pela mesma troca dos valores das chaves que as respostas.
+- **Regras do bot** (5.1): quando uma tabela, um gráfico ou poucas opções dizem melhor que prosa (um relatório, opções para escolher, um formulário curto), `show_card`. Para mudar o cartão, de novo com `card` e o conteúdo inteiro. A resposta chega depois, e cada versão aceita uma.
+- **Fora desta etapa:** a busca (8.8) não indexa os cartões; responder pelo celular ou pela ilha; outros gráficos (pizza, área, dispersão); campos de data e de arquivo.
 
 ## 9. Mensagens e entrega
 
@@ -668,6 +709,7 @@ Transporte: Streamable HTTP, só POST e resposta `application/json`, sem sessão
 | `share_file` | `files` (1 a 10 caminhos, absolutos ou relativos à pasta do bot) | `shown` (um `BotFile` por arquivo, 8.4) e um lembrete de que o dono vê cada um como cartão no chat; um arquivo fora das pastas do bot e não escrito por ele, ou que não existe, recusa a chamada inteira e diz qual e por quê |
 | `send_signal` | `name`, `note?` (até 2 000 caracteres) | o aviso normalizado e, para cada rotina da crew que o espera, se rodou e por que não (20.13) |
 | `ask_owner` | `question` (até 2 000 caracteres), `options?` (2 a 5, até 100 caracteres cada) | `question_id` e o lembrete de que a resposta chega depois, como mensagem; a tool não espera (23.2) |
+| `show_card` | `card?` (o `card_id` de um cartão dele), `title` (até 100 caracteres), `blocks` (1 a 20) | `card_id` e `version`; mostra um cartão no chat, ou o mesmo de novo, mudado, como versão nova (8.11) |
 | `ask_key` | `name` (o nome da variável, 32.3), `why` (até 500 caracteres) | `request_id` e o lembrete de que a chave chega depois, num reinício com a variável e numa mensagem do Botloft; a tool não espera (32.5) |
 | `show_plan` | `summary` (até 300 caracteres), `steps` (2 a 8, até 200 caracteres cada), `alternative?` (até 300) | `start` (`plan`, `alternative` ou `false`) e o que fazer; espera até 20 s pelo dono (10.5) |
 | `permission_prompt` | `tool_name`, `input`, `tool_use_id` | decisão do dono (10.1). Chamada pelo Claude Code, não pelo modelo |
@@ -813,6 +855,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `bots.delete` | `botId, recycleFolder?` | `{botId, crewId}`; exclui o bot, ativo ou arquivado; com `recycleFolder`, a pasta dele vai depois para a Lixeira (7.6) |
 | `chat.history` | `botId, before?, limit?` ou `botId, until` | `ChatItem[]`, mais novo primeiro; `limit` de 1 a 200, 50 se ausente; `until`: do item até o mais novo, até 1 000 (8.8) |
 | `chat.search` | `query, botId?, crewId?, before?, limit?` | `SearchHit[]`: itens com todas as palavras, mais novo primeiro, com um trecho em destaque (8.8) |
+| `chat.act` | `itemId, version, button?, form?` (`form`: valores por id do campo, texto; `check` é `true` ou `false`) | `ChatItem`: o cartão com a resposta; a resposta vai ao bot como message do dono; versão velha ou já respondida dá `conflict` (8.11) |
 | `approvals.answer` | `approvalId, allow, note?, input?, always?, once?` (`input`: a sugestão de bot como o dono a deixou, 10.2, ou `{"scope": ...}` de um pedido de outra crew, 10.4; `always`: com `allow`, grava o `always` do pedido como regra do bot, 10.1; `once`: com `allow`, um pedido de app do desktop ou de site vale só até o fim do turno do bot e nada é gravado, 24.2 e 21.5) | `Approval` |
 | `rules.list` | `botId` | `AllowRule[]`: o que o bot faz sem perguntar, da regra mais antiga à mais nova (10.1) |
 | `rules.delete` | `ruleId` | `{botId, rules}`: as regras que ficaram; o bot volta a perguntar pelo que saiu (10.1) |

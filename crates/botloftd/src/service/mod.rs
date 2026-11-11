@@ -8,6 +8,7 @@ pub mod autobackup;
 pub mod backup;
 pub mod bots;
 pub mod builds;
+pub mod cards;
 pub mod catalog;
 pub mod chat;
 pub mod cloud;

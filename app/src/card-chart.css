@@ -1,0 +1,47 @@
+/* The series colors and chart parts of an agent's card (spec 8.11). Five
+   categorical slots in a fixed order, checked for color blindness and
+   contrast on the card's light and dark backgrounds; three light ones sit
+   under 3:1, so every chart has a legend, a hover tip and a table view. */
+
+:root {
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+}
+
+[data-theme="dark"] {
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+}
+
+.card-chart-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.card-chart-tick {
+  fill: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.card-chart-hover {
+  fill: var(--sunken);
+  opacity: 0.6;
+}
+
+.card-chart-cross {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+
+/* A ring in the card's color keeps overlapping points apart. */
+.card-chart-point {
+  stroke: var(--bubble);
+  stroke-width: 2;
+}

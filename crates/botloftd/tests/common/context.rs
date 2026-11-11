@@ -96,6 +96,7 @@ pub fn kinds(s: &Setup) -> Vec<&'static str> {
             ChatBody::Turn(_) => "turn",
             ChatBody::Notice(_) => "notice",
             ChatBody::KeyRequest(_) => "key_request",
+            ChatBody::Card(_) => "card",
         })
         .collect()
 }

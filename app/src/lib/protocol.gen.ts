@@ -211,7 +211,7 @@ export type BotModel = "default" | "fable" | "opus" | "sonnet" | "haiku";
 /**
  * What the conversation-list line shows; the app words it.
  */
-export type ActivityKind = "owner" | "message" | "reply" | "tool" | "approval" | "question" | "notice";
+export type ActivityKind = "owner" | "message" | "reply" | "tool" | "approval" | "question" | "card" | "notice";
 
 /**
  * The last thing in a bot's chat, for the conversation list.
@@ -2646,10 +2646,100 @@ name: string,
  */
 why: string, status: KeyRequestStatus, };
 
+export type CardChartKind = "bar" | "line";
+
+export type CardSeries = { name: string, 
+/**
+ * One per label; `null` where there is no value.
+ */
+values: Array<number | null>, };
+
+export type CardButton = { 
+/**
+ * Unique in the card: letters, digits, `-` and `_`.
+ */
+id: string, label: string, };
+
+export type CardFieldKind = "text" | "long_text" | "number" | "choice" | "check";
+
+export type CardField = { 
+/**
+ * Unique in the card: letters, digits, `-` and `_`.
+ */
+id: string, label: string, kind: CardFieldKind, 
+/**
+ * For a choice: 2 to 10; empty otherwise.
+ */
+options: Array<string>, 
+/**
+ * The owner must fill it in; a check never is.
+ */
+required: boolean, };
+
+/**
+ * One part of a card, by `type`.
+ */
+export type CardBlock = { "type": "text", text: string, } | { "type": "table", columns: Array<string>, rows: Array<Array<string>>, } | { "type": "chart", kind: CardChartKind, labels: Array<string>, series: Array<CardSeries>, 
+/**
+ * What the values count, e.g. "R$" or "%".
+ */
+unit?: string, } | { "type": "buttons", buttons: Array<CardButton>, } | { "type": "form", fields: Array<CardField>, 
+/**
+ * The send button's label; the app's "Send" when absent.
+ */
+submit?: string, };
+
+/**
+ * What the owner answered to one version of a card.
+ */
+export type CardAnswer = { version: number, 
+/**
+ * The button pressed; `null` for the form.
+ */
+button: string | null, 
+/**
+ * What went to the bot, as the owner's message.
+ */
+text: string, 
+/**
+ * Unix time in milliseconds.
+ */
+at: number, };
+
+/**
+ * A card in the bot's chat; the chat item's id is the card's.
+ */
+export type CardItem = { 
+/**
+ * 1 when shown, one more each time the bot shows it again.
+ */
+version: number, title: string, blocks: Array<CardBlock>, 
+/**
+ * The owner's answer to this version; `null` until they answer.
+ */
+answer: CardAnswer | null, };
+
+/**
+ * `chat.act`: the owner presses a button of a card, or sends its form.
+ */
+export type ChatActParams = { itemId: ChatItemId, 
+/**
+ * The version the owner saw; another one is refused.
+ */
+version: number, 
+/**
+ * The button's id; or `form`.
+ */
+button?: string, 
+/**
+ * The form's values by field id: a check is "true" or "false".
+ */
+form?: { [key in string]: string }, };
+
 /**
  * What a chat item holds, by `kind`.
  */
-export type ChatBody = { "kind": "inbound" } & InboundItem | { "kind": "reply" } & ReplyItem | { "kind": "tool" } & ToolItem | { "kind": "approval" } & ApprovalItem | { "kind": "question" } & QuestionItem | { "kind": "turn" } & TurnItem | { "kind": "notice" } & NoticeItem | { "kind": "key_request" } & KeyRequestItem;
+export type ChatBody = { "kind": "inbound" } & InboundItem | { "kind": "reply" } & ReplyItem | { "kind": "tool" } & ToolItem | { "kind": "approval" } & ApprovalItem | { "kind": "question" } & QuestionItem | { "kind": "turn" } & TurnItem | { "kind": "notice" } & NoticeItem | { "kind": "key_request" } & KeyRequestItem | { "kind": "card" } & CardItem;
 
 /**
  * One entry of a bot's chat.
@@ -3236,6 +3326,7 @@ export interface RpcMethods {
   "usage.tokens": { params: UsageTokensParams; result: Array<BotTokens> };
   "versions.list": { params: VersionsListParams; result: Array<TextVersion> };
   "versions.restore": { params: VersionsRestoreParams; result: TextVersion };
+  "chat.act": { params: ChatActParams; result: ChatItem };
   "rules.list": { params: RulesListParams; result: Array<AllowRule> };
   "rules.delete": { params: RuleIdParams; result: BotRules };
   "desktop.grants": { params: DesktopGrantsParams; result: Array<DesktopGrant> };

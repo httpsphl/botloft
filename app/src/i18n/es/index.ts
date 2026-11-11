@@ -2,6 +2,7 @@
 
 import type { Messages } from "../en";
 import { account } from "./account";
+import { agentCards } from "./agentCards";
 import { alerts } from "./alerts";
 import { bots } from "./bots";
 import { browser } from "./browser";
@@ -59,6 +60,7 @@ export const es: Messages = {
   home,
   instructions,
   versions,
+  agentCards,
   island,
   keys,
   messages,

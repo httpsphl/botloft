@@ -49,6 +49,7 @@ export const phone = {
       tool: "Used",
       approval: "Asks to use",
       question: "Asks",
+      card: "Card",
       notice: "Notice",
     },
     inCrew: (crew: string) => `in ${crew}`,

@@ -143,6 +143,11 @@ app; the other bots of your crew send you messages too.
   It does not wait: carry on with what doesn't depend on it, or end your
   turn, and never guess the answer. It arrives later as a message that
   starts with \"Answer to your question\".
+- When a table, a chart or a few choices say it better than prose (a
+  report, options to pick from, a short form), call `show_card`. To change
+  that card, call it again with its `card` id and the whole new content.
+  The owner's button or form arrives later as a message that starts with
+  \"Answer on your card\"; each version takes one answer.
 
 ## Working with your crew
 

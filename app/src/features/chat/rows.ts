@@ -21,6 +21,7 @@ export type Row =
  */
 const CARD_TOOLS = new Set([
   "mcp__botloft__ask_owner",
+  "mcp__botloft__show_card",
   "mcp__botloft__ask_key",
   "mcp__botloft__show_plan",
 ]);

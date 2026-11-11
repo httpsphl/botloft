@@ -8,6 +8,7 @@ import { autoBackupHandlers } from "./fakeAutoBackup";
 import { backupHandlers } from "./fakeBackup";
 import { botHandlers } from "./fakeBots";
 import { FakeBrowser } from "./fakeBrowser";
+import { FakeCards } from "./fakeCards";
 import { catalogHandlers } from "./fakeCatalog";
 import { FakeChanges } from "./fakeChanges";
 import { FakeChat } from "./fakeChat";
@@ -124,6 +125,8 @@ export class FakeBotloft implements BotloftApi {
   readonly browser = new FakeBrowser(this);
   readonly screens = new FakeScreens(this);
   readonly questions = new FakeQuestions(this);
+  /** The cards bots show in their chats (spec 8.11). */
+  readonly cards = new FakeCards(this);
   readonly keys = new FakeKeys(this);
   readonly changes = new FakeChanges();
   readonly reactions = new FakeReactions(this);
@@ -364,6 +367,7 @@ export class FakeBotloft implements BotloftApi {
     ...this.screens.handlers(),
     ...this.routines.handlers(),
     ...this.questions.handlers(),
+    ...this.cards.handlers(),
     ...this.keys.handlers(),
     ...this.changes.handlers(),
     ...this.reactions.handlers(),

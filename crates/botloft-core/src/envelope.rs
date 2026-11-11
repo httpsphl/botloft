@@ -152,6 +152,17 @@ pub fn answer(question_id: &str, question: &str, body: &str) -> String {
     )
 }
 
+/// The owner's answer on a card the bot showed (spec 8.11): the button's
+/// label or the form's lines, after a line that names the card.
+pub fn card_answer(card_id: &str, title: &str, body: &str) -> String {
+    let title = crate::chat::one_line(title, QUOTED_QUESTION_MAX_CHARS);
+    format!(
+        "Answer on your card {card_id} \"{title}\":
+
+{body}"
+    )
+}
+
 /// Longest part of a chat item quoted in a message that replies to it, in
 /// characters.
 pub const QUOTED_REPLY_MAX_CHARS: usize = 300;

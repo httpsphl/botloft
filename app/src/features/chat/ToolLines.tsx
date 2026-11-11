@@ -13,6 +13,7 @@ import {
   FileText,
   Globe,
   Hand,
+  LayoutDashboard,
   LayoutTemplate,
   ListChecks,
   ListTodo,
@@ -70,6 +71,7 @@ const ICONS: Record<string, LucideIcon> = {
   delete_routine: AlarmClock,
   nothing_new: CircleCheck,
   browser_ask_owner: Hand,
+  show_card: LayoutDashboard,
 };
 
 /** The browser tools share the globe (spec 21.4), the desktop's the screen (24.6). */

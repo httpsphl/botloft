@@ -15,6 +15,7 @@ use serde_json::{Value, json};
 use tracing::warn;
 
 use super::Failure;
+use super::card::{self, SHOW_CARD};
 use super::catalog::{COMPLETE_TASK, CREW_ROSTER, MY_TASKS, SEND_MESSAGE};
 use super::key::{self, ASK_KEY};
 use super::question::{self, ASK_OWNER};
@@ -47,6 +48,7 @@ pub(super) fn call(daemon: &Daemon, bot: &BotId, params: &Value) -> Result<Value
             MY_TASKS => parse(arguments).and_then(|args| my_tasks(daemon, bot, args)),
             SHARE_FILE => parse(arguments).and_then(|args| share::share(daemon, bot, args)),
             ASK_OWNER => parse(arguments).and_then(|args| question::ask(daemon, bot, args)),
+            SHOW_CARD => parse(arguments).and_then(|args| card::show(daemon, bot, args)),
             ASK_KEY => parse(arguments).and_then(|args| key::ask(daemon, bot, args)),
             SEND_SIGNAL => parse(arguments).and_then(|args| signal::send(daemon, bot, args)),
             routine_change::MY_ROUTINES => routine_change::mine(daemon, bot),

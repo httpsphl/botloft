@@ -228,6 +228,7 @@ fn prepare(daemon: &Daemon, store: &Store, delivery: &Delivery) -> Result<Step, 
     let sender = sender.map(|sender| sender.handle);
     let routine = context::routine(store, &message)?;
     let question = context::question(store, &message)?;
+    let card = context::card(store, &message)?;
     let reactions = store
         .reactions_sent_in(&message.id)?
         .into_iter()
@@ -243,6 +244,7 @@ fn prepare(daemon: &Daemon, store: &Store, delivery: &Delivery) -> Result<Step, 
         task,
         routine,
         question,
+        card,
         reactions,
     })))
 }
@@ -259,6 +261,8 @@ struct Draft {
     routine: Option<context::RoutineContext>,
     /// The question an answer is for: its id and text.
     question: Option<(String, String)>,
+    /// The card the owner's answer is on: its id and title.
+    card: Option<(String, String)>,
     /// The owner's reactions it takes to the bot: emoji and quote.
     reactions: Vec<(String, String)>,
 }
@@ -277,6 +281,10 @@ impl Draft {
                 .question
                 .as_ref()
                 .map(|(id, text)| (id.as_str(), text.as_str())),
+            card: self
+                .card
+                .as_ref()
+                .map(|(id, title)| (id.as_str(), title.as_str())),
             reactions: &self.reactions,
         };
         // Only agents the daemon runs get this far; the bot was checked at launch.

@@ -161,6 +161,11 @@ pub fn item(daemon: &Daemon, item: &ChatItem) -> Option<PhoneItem> {
         },
         // Pasting a key is for the computer (spec 32.5).
         ChatBody::KeyRequest(_) => return None,
+        // Read-only on the phone: its buttons and form are at the computer.
+        ChatBody::Card(card) => {
+            let (text, cut) = cut(&botloft_core::cards::as_markdown(card));
+            PhoneItem::Reply { id, at, text, cut }
+        }
         ChatBody::Turn(turn) => {
             let error = turn.error.as_deref()?;
             PhoneItem::Failed {

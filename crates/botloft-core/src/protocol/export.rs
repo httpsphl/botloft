@@ -19,6 +19,8 @@ use crate::ids::{
 mod backup;
 #[path = "export_browser.rs"]
 mod browser;
+#[path = "export_cards.rs"]
+mod cards;
 #[path = "export_catalog.rs"]
 mod catalog;
 #[path = "export_changes.rs"]
@@ -255,6 +257,7 @@ fn export_bindings() {
     out.decl::<NoticeItem>();
     out.decl::<KeyRequestStatus>();
     out.decl::<KeyRequestItem>();
+    cards::decls(&mut out);
     out.decl::<ChatBody>();
     out.decl::<ChatItem>();
     out.decl::<ChatItemChanged>();
@@ -462,6 +465,7 @@ fn export_bindings() {
     session::methods(&mut out);
     usage::methods(&mut out);
     versions::methods(&mut out);
+    cards::methods(&mut out);
     rules::methods(&mut out);
     desktop::methods(&mut out);
     mcp::methods(&mut out);
