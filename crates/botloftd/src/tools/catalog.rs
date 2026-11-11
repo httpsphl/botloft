@@ -42,6 +42,7 @@ pub fn tools() -> Value {
             super::skill::tool(),
         ])
         .chain(super::templates::tools())
+        .chain([super::retry::tool()])
         .chain([super::build::tool(), super::overview::tool()])
         .chain(super::activity::tools())
         .chain(super::crew_reach::tools())

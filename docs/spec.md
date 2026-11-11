@@ -665,6 +665,7 @@ Transporte: Streamable HTTP, só POST e resposta `application/json`, sem sessão
 | `ask_crew_access` | `crew` (nome da outra crew), `bot?` (handle de um bot dela), `access` (`talk`, `read`, `edit`), `why` (até 1 000) | `allowed` e, permitido, como usar; recusado ou sem resposta, o porquê (10.4) |
 | `crew_files`, `read_crew_file`, `write_crew_file` | `crew`, e `bot?`, `path` ou `path` e `content` | os arquivos de outra crew que o bot alcança, o texto de um, ou o aviso de que gravou (10.4) |
 | `change_bot` | `bot?` (handle de outro bot da crew, só o chefe), `name?`, `role?`, `instructions?` (até 8 000 caracteres), `model?`, `effort?`, `reason?` (até 1 000) | `done` e, mudado, `handle`, `name`, `role`, `model`, `effort` e quando vale; recusado ou sem resposta, o aviso de que nada mudou (10.3) |
+| `retry_agent` | `bot` (handle), `note?` (até 1 000 caracteres) | só o chefe: a última falha do bot vai de novo para ele, como mensagem do chefe, no máximo 2 vezes por hora (10.6) |
 | `share_file` | `files` (1 a 10 caminhos, absolutos ou relativos à pasta do bot) | `shown` (um `BotFile` por arquivo, 8.4) e um lembrete de que o dono vê cada um como cartão no chat; um arquivo fora das pastas do bot e não escrito por ele, ou que não existe, recusa a chamada inteira e diz qual e por quê |
 | `send_signal` | `name`, `note?` (até 2 000 caracteres) | o aviso normalizado e, para cada rotina da crew que o espera, se rodou e por que não (20.13) |
 | `ask_owner` | `question` (até 2 000 caracteres), `options?` (2 a 5, até 100 caracteres cada) | `question_id` e o lembrete de que a resposta chega depois, como mensagem; a tool não espera (23.2) |
@@ -760,6 +761,18 @@ Um bot que entendeu errado o pedido gasta minutos e plano antes de o dono notar.
 - **Dados:** `bots.plan_first` (0 ou 1, desligado por padrão), em `Bot.planFirst` e em `bots.update {planFirst}`.
 - **No app:** o cartão diz "<bot> vai começar assim", com o resumo, os passos numerados e a alternativa, se houver. Embaixo, "Começa sozinho em N s", que conta até zero, e Começar agora, Fazer só isto, Mudar (abre o campo da nota) e Cancelar. Respondido, vira uma linha: "Começou", "Começou sozinho", "Fez só a alternativa", "Pediu mudanças" (com a nota) ou "Cancelado", com o plano a um clique. O celular (28) mostra o resumo, os passos e a alternativa num texto só, e pode começar agora, mudar ou cancelar.
 - **Fora desta etapa:** pausar a contagem para ler com calma e escolher o tempo de espera.
+
+### 10.6 Falhas vão para o chefe
+
+Um bot da crew cujo turno falha avisa o chefe dela (10.2), que pode fazê-lo tentar de novo, dizer o que mudar ou contar ao dono. Antes, a falha só chegava ao dono, no chat e nos avisos.
+
+- **O que é falha** (`failures.rs` no daemon, chamado de `turn_finished`): um turno que terminou com erro (`is_error` do Claude Code, o erro do Codex ou do Antigravity) ou que o Botloft parou porque ficou calado (7.9). Não é falha o turno que o dono parou (9.2), nem o que o limite de uso cortou: o bot fica `rate_limited` e segue sozinho quando o limite renova (7.3).
+- **Quem ouve:** só uma crew com chefe, e nunca o chefe sobre si mesmo. Um chefe arquivado não ouve; um chefe pausado recebe quando voltar, como qualquer mensagem.
+- **O relato:** uma mensagem do Botloft (`from_kind: system`) ao chefe: "@writer's turn failed: it ended with an error (api_error)." ou "…stopped: it showed nothing for half an hour…", o que o bot estava fazendo (a última mensagem que ele pegou, `Store::last_read_message`, até 1 000 caracteres, com quem mandou: o dono, outro bot ou a rotina) e o que o chefe pode fazer. Sem mensagem por trás, o relato diz que não há o que tentar de novo. No máximo um relato do mesmo bot a cada 10 minutos, para um bot que falha sempre não ficar acordando o chefe.
+- **`retry_agent {bot, note?}`** (tool do MCP, só o chefe; os outros recebem um erro que manda falar com o chefe): manda a última falha daquele bot de novo, como mensagem do chefe para ele, com "Please try this again. Your last try did not finish: …", a nota do chefe ("What to do differently: …", até 1 000 caracteres) e o pedido inteiro como era. Os anexos do pedido não vão de novo. No máximo 2 vezes por hora para cada bot; depois disso, a tool manda contar ao dono. Uma falha de mais de 24 horas não é tentada de novo.
+- **Regras do chefe** (seção "You lead this crew", 10.2): quando ouvir de uma falha, se importar, usar `retry_agent`, mandar o que mudar com `send_message` ou contar ao dono; se não importar, nada.
+- O registro das falhas, dos relatos e das novas tentativas fica só na memória do daemon: depois de reiniciar, uma falha de antes não é tentada de novo.
+- **Fora desta etapa:** uma mensagem que morreu sem chegar ao bot (entrega `dead`) e tentar de novo sozinho quando ninguém escreveu depois da falha.
 
 ## 11. Protocolo do app (JSON-RPC 2.0 sobre WebSocket)
 

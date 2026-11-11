@@ -2,7 +2,7 @@
 //! one conditional UPDATE, so a delivery never changes state twice by
 //! accident.
 
-use botloft_core::ids::{BotId, DeliveryId};
+use botloft_core::ids::{BotId, DeliveryId, MessageId};
 use botloft_core::protocol::{Delivery, DeliveryBacklog, DeliveryState};
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
@@ -208,6 +208,20 @@ impl Store {
             from_row,
         )
         .optional()?)
+    }
+
+    /// The message the bot took up last: what its current or latest turn
+    /// was working on (spec 10.6). Ties go by the order they were saved.
+    pub fn last_read_message(&self, bot: &BotId) -> Result<Option<MessageId>> {
+        Ok(self
+            .conn
+            .query_row(
+                "SELECT message_id FROM deliveries WHERE bot_id = ?1 AND read_at IS NOT NULL \
+                 ORDER BY read_at DESC, rowid DESC LIMIT 1",
+                [bot.as_str()],
+                |row| parse_column(row, 0),
+            )
+            .optional()?)
     }
 
     /// Deliveries written to the process of `generation` that it never
