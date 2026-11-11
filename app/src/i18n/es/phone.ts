@@ -48,6 +48,7 @@ export const phone: Messages["phone"] = {
       tool: "Usó",
       approval: "Pide usar",
       question: "Pregunta",
+      note: "Nota",
       notice: "Aviso",
     },
     inCrew: (crew: string) => `en ${crew}`,
@@ -67,6 +68,7 @@ export const phone: Messages["phone"] = {
     tool: (summary: string) => `Usó: ${summary}`,
     approvalLine: (summary: string) => `Pidió: ${summary}`,
     questionLine: (text: string) => `Preguntó: ${text}`,
+    noteLine: (text: string) => `Nota: ${text}`,
     composer: {
       label: (bot: string) => `Mensaje para ${bot}`,
       placeholder: "Escribe un mensaje",
@@ -126,6 +128,12 @@ export const phone: Messages["phone"] = {
       `Cierra la pregunta sin avisar a ${bot}. Para que lo sepa, responde.`,
     failed: "No se envió. Comprueba la conexión e inténtalo de nuevo.",
     ended: { answered: "Respondiste", dismissed: "Descartada" },
+    tells: (bot: string) => `${bot} te dejó una nota`,
+    replyLabel: "Tu respuesta, si quieres",
+    reply: "Responder",
+    seen: "Visto",
+    seenHint: (bot: string) => `Cierra la nota. Escribir a ${bot} también la cierra.`,
+    noteEnded: { answered: "Respondiste", dismissed: "Vista" },
   },
   settings: {
     notices: {

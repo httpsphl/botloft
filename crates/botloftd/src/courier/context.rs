@@ -2,7 +2,7 @@
 //! routine that sent it (spec 20.5) or the question it answers (spec 23.4).
 
 use botloft_core::envelope::{RoutineEnvelope, RoutineWhen};
-use botloft_core::protocol::Message;
+use botloft_core::protocol::{Message, Question};
 use botloft_store::{Store, StoreError};
 
 use crate::routines;
@@ -76,15 +76,10 @@ pub(super) fn routine(
     }))
 }
 
-/// The id and text of the question a message answers.
-pub(super) fn question(
-    store: &Store,
-    message: &Message,
-) -> Result<Option<(String, String)>, StoreError> {
+/// The question a message answers, or the note it replies to.
+pub(super) fn question(store: &Store, message: &Message) -> Result<Option<Question>, StoreError> {
     let Some(id) = &message.question_id else {
         return Ok(None);
     };
-    Ok(store
-        .question(id)?
-        .map(|record| (record.question.id.to_string(), record.question.text)))
+    Ok(store.question(id)?.map(|record| record.question))
 }

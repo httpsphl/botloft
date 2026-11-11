@@ -23,6 +23,7 @@ import {
   RotateCw,
   Send,
   SquareTerminal,
+  StickyNote,
   UserPen,
   UserPlus,
   Users,
@@ -72,6 +73,7 @@ const ICONS: Record<string, LucideIcon> = {
   delete_routine: AlarmClock,
   nothing_new: CircleCheck,
   browser_ask_owner: Hand,
+  tell_owner: StickyNote,
 };
 
 /** The browser tools share the globe (spec 21.4), the desktop's the screen (24.6). */

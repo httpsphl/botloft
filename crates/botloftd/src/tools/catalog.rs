@@ -27,6 +27,7 @@ pub fn tools() -> Value {
         let more = [
             super::share::tool(),
             super::question::tool(),
+            super::question::note_tool(),
             super::key::tool(),
             super::plan::tool(),
             super::signal::tool(),

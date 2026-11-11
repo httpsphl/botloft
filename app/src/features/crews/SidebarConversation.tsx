@@ -103,6 +103,8 @@ export function activityText(activity: Activity, t: Messages): string {
       return t.crews.sidebar.awaitingApproval(tool ? toolAction(tool, t.tools) : text);
     case "question":
       return t.questions.activity(plainText(text));
+    case "note":
+      return t.questions.noteActivity(plainText(text));
     case "tool": {
       if (!tool) {
         return text;

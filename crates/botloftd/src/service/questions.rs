@@ -1,28 +1,33 @@
-//! Questions a bot asks the owner without waiting (spec 23): asking, from
-//! the bot's tool, and `questions.*`, from the app.
+//! Questions a bot asks the owner without waiting (spec 23), and notes it
+//! leaves them (23.10): asking or telling, from the bot's tools, and
+//! `questions.*`, from the app.
 
 use botloft_core::ids::{BotId, ChatItemId, MessageId, QuestionId};
 use botloft_core::protocol::{
-    ChatBody, ChatItem, Message, MessageKind, OPEN_QUESTIONS_MAX, QUESTION_MAX_CHARS,
-    QUESTION_OPTION_MAX_CHARS, QUESTION_OPTIONS_MAX, QUESTION_OPTIONS_MIN, Question,
-    QuestionIdParams, QuestionItem, QuestionStatus, QuestionsAnswerParams, QuestionsListParams,
-    SenderKind,
+    ChatBody, ChatItem, Message, MessageKind, NOTES_PER_HOUR, OPEN_QUESTIONS_MAX,
+    QUESTION_MAX_CHARS, QUESTION_OPTION_MAX_CHARS, QUESTION_OPTIONS_MAX, QUESTION_OPTIONS_MIN,
+    Question, QuestionIdParams, QuestionItem, QuestionKind, QuestionStatus, QuestionsAnswerParams,
+    QuestionsListParams, SenderKind,
 };
 use botloft_core::validate;
 use botloft_store::Store;
+use tracing::warn;
 
 use super::{ApiError, ApiResult, bots, messages, reactions};
 use crate::chat::items;
 use crate::state::{Daemon, Event};
 
-/// What a bot asks: the text and the ready answers, if any.
+const HOUR_MS: i64 = 60 * 60_000;
+
+/// What a bot asks, or tells: the text and the ready answers, if any.
 pub struct Ask {
+    pub kind: QuestionKind,
     pub text: String,
     pub options: Vec<String>,
 }
 
-/// Checks and keeps a bot's question, and shows it in its chat and the
-/// owner's box.
+/// Checks and keeps a bot's question or note, and shows it in its chat and
+/// the owner's box.
 pub fn ask(daemon: &Daemon, bot: &BotId, ask: Ask) -> ApiResult<Question> {
     let text = ask.text.trim();
     if text.is_empty() {
@@ -33,20 +38,33 @@ pub fn ask(daemon: &Daemon, bot: &BotId, ask: Ask) -> ApiResult<Question> {
             "question must be at most {QUESTION_MAX_CHARS} characters"
         )));
     }
-    let options = options(ask.options)?;
+    let options = match ask.kind {
+        QuestionKind::Question => options(ask.options)?,
+        QuestionKind::Note => Vec::new(),
+    };
     let store = daemon.store();
     let (crew, record) = bots::active(&store, bot)?;
-    if store.open_questions(bot)? >= OPEN_QUESTIONS_MAX {
-        return Err(ApiError::Conflict(format!(
-            "you already have {OPEN_QUESTIONS_MAX} questions the owner has not answered; wait \
-             for an answer before asking another"
-        )));
-    }
     let now = daemon.clock.now_ms();
+    match ask.kind {
+        QuestionKind::Question if store.open_questions(bot)? >= OPEN_QUESTIONS_MAX => {
+            return Err(ApiError::Conflict(format!(
+                "you already have {OPEN_QUESTIONS_MAX} questions the owner has not answered; \
+                 wait for an answer before asking another"
+            )));
+        }
+        QuestionKind::Note if store.notes_since(bot, now - HOUR_MS)? >= NOTES_PER_HOUR => {
+            return Err(ApiError::Conflict(format!(
+                "you already left the owner {NOTES_PER_HOUR} notes in the last hour; put what \
+                 else they should know in one note later, or in your reply"
+            )));
+        }
+        _ => {}
+    }
     let question = Question {
         id: QuestionId::generate(),
         crew_id: crew.id,
         bot_id: record.id,
+        kind: ask.kind,
         text: text.to_owned(),
         options,
         status: QuestionStatus::Open,
@@ -140,7 +158,24 @@ pub fn answer(daemon: &Daemon, params: QuestionsAnswerParams) -> ApiResult<Quest
     messages::announce(daemon, None, &message, delivery, answered.answer_item);
     reactions::announce_sent(daemon, reactions);
     daemon.emit(Event::QuestionChanged(answered.question.clone()));
+    close_notes(daemon, &answered.question.bot_id);
     Ok(answered.question)
+}
+
+/// The owner wrote to `bot`: the notes it left them were seen (spec
+/// 23.10), and close as if dismissed. Its questions stay open.
+pub fn close_notes(daemon: &Daemon, bot: &BotId) {
+    let closed = match daemon.store().close_notes(bot, daemon.clock.now_ms()) {
+        Ok(closed) => closed,
+        Err(err) => {
+            warn!(bot = %bot, "could not close the notes the owner saw: {err}");
+            return;
+        }
+    };
+    for (note, item) in closed {
+        items::changed(daemon, item);
+        daemon.emit(Event::QuestionChanged(note));
+    }
 }
 
 /// The owner closes a question without answering; the bot is not told.

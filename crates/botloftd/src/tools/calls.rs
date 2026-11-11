@@ -17,7 +17,7 @@ use tracing::warn;
 use super::Failure;
 use super::catalog::{COMPLETE_TASK, CREW_ROSTER, MY_TASKS, SEND_MESSAGE};
 use super::key::{self, ASK_KEY};
-use super::question::{self, ASK_OWNER};
+use super::question::{self, ASK_OWNER, TELL_OWNER};
 use super::share::{self, SHARE_FILE};
 use super::signal::{self, SEND_SIGNAL};
 use super::{activity, crew_reach, nothing_new, overview, retry, routine_change, templates};
@@ -47,6 +47,7 @@ pub(super) fn call(daemon: &Daemon, bot: &BotId, params: &Value) -> Result<Value
             MY_TASKS => parse(arguments).and_then(|args| my_tasks(daemon, bot, args)),
             SHARE_FILE => parse(arguments).and_then(|args| share::share(daemon, bot, args)),
             ASK_OWNER => parse(arguments).and_then(|args| question::ask(daemon, bot, args)),
+            TELL_OWNER => parse(arguments).and_then(|args| question::tell(daemon, bot, args)),
             ASK_KEY => parse(arguments).and_then(|args| key::ask(daemon, bot, args)),
             SEND_SIGNAL => parse(arguments).and_then(|args| signal::send(daemon, bot, args)),
             routine_change::MY_ROUTINES => routine_change::mine(daemon, bot),

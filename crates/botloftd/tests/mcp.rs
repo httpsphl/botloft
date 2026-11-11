@@ -75,6 +75,7 @@ async fn claude_code_discovers_the_server_and_lists_the_tools() {
             "schedule_routine",
             "share_file",
             "ask_owner",
+            "tell_owner",
             "ask_key",
             "show_plan",
             "send_signal",

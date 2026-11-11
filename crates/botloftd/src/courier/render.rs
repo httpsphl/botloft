@@ -6,7 +6,7 @@ use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use botloft_core::envelope::{self, Envelope, Sender};
 use botloft_core::ids::random_uuid;
-use botloft_core::protocol::{Attachment, Message, SenderKind, Task};
+use botloft_core::protocol::{Attachment, Message, Question, QuestionKind, SenderKind, Task};
 use bytes::Bytes;
 use tracing::debug;
 
@@ -30,8 +30,9 @@ pub(super) struct Context<'a> {
     /// For a routine's message: the routine and what made it run (spec
     /// 20.5, 20.13).
     pub routine: Option<&'a RoutineContext>,
-    /// For the owner's answer to a question: its id and text (spec 23.4).
-    pub question: Option<(&'a str, &'a str)>,
+    /// For the owner's answer to a question (spec 23.4), or reply to a
+    /// note (23.10).
+    pub question: Option<&'a Question>,
     /// For the owner's message: the reactions it takes along, emoji and
     /// quote (spec 8.9).
     pub reactions: &'a [(String, String)],
@@ -59,7 +60,14 @@ pub(super) fn render(
                 None => body,
             };
             let text = match context.question {
-                Some((id, question)) => envelope::answer(id, question, &body),
+                Some(question) => match question.kind {
+                    QuestionKind::Question => {
+                        envelope::answer(question.id.as_str(), &question.text, &body)
+                    }
+                    QuestionKind::Note => {
+                        envelope::note_reply(question.id.as_str(), &question.text, &body)
+                    }
+                },
                 None => body,
             };
             envelope::with_reactions(context.reactions, &text)

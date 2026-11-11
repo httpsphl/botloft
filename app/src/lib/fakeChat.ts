@@ -64,7 +64,7 @@ export function activityLine(
       tool = body.toolName;
       break;
     case "question":
-      kind = "question";
+      kind = body.question.kind === "note" ? "note" : "question";
       text = body.question.text;
       break;
     case "notice":

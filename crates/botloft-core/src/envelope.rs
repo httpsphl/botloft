@@ -152,6 +152,17 @@ pub fn answer(question_id: &str, question: &str, body: &str) -> String {
     )
 }
 
+/// The owner's reply to a note the bot left them (spec 23.10), as
+/// [`answer`] for a question.
+pub fn note_reply(note_id: &str, note: &str, body: &str) -> String {
+    let quoted = crate::chat::one_line(note, QUOTED_QUESTION_MAX_CHARS);
+    format!(
+        "Reply to your note {note_id}: \"{quoted}\"
+
+{body}"
+    )
+}
+
 /// Longest part of a chat item quoted in a message that replies to it, in
 /// characters.
 pub const QUOTED_REPLY_MAX_CHARS: usize = 300;
