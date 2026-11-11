@@ -95,6 +95,9 @@ export const chat: Messages["chat"] = {
       other: (n: number) => (n === 1 ? "1 ferramenta usada" : `${n} ferramentas usadas`),
       failed: (n: number) => (n === 1 ? "1 falha" : `${n} falhas`),
     },
+    repeat: (n: number) => `Mesma chamada ${n}×`,
+    repeatHint: (bot: string, n: number, what: string) =>
+      `${bot} fez a mesma chamada ${n} vezes neste turno (${what}). Pode estar andando em círculos.`,
   },
   memory: {
     bot: "Atualizou a memória de",

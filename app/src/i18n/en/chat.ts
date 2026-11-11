@@ -105,6 +105,10 @@ export const chat = {
       other: (n: number) => (n === 1 ? "used 1 tool" : `used ${n} tools`),
       failed: (n: number) => `${n} failed`,
     },
+    /** The same call made again and again in one turn (spec 15.3). */
+    repeat: (n: number) => `Same call ${n}×`,
+    repeatHint: (bot: string, n: number, what: string) =>
+      `${bot} made the same call ${n} times in this turn (${what}). It may be going in circles.`,
   },
   /** A bot wrote down what it learned (spec 15.3), before the name. */
   memory: {
