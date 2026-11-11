@@ -133,6 +133,16 @@ function LastRun({ run, words }: { run: RoutineRun; words: Messages["routines"][
         </p>
       );
     case "done":
+      // The bot found nothing new and said so (spec 20.5): quiet, not a success to read.
+      if (run.nothingNew) {
+        return (
+          <p className={`${line} text-muted`}>
+            <CircleCheck aria-hidden size={12} />
+            {words.nothingNew}
+            {from}
+          </p>
+        );
+      }
       return (
         <p className={`${line} text-ok`}>
           <CircleCheck aria-hidden size={12} />

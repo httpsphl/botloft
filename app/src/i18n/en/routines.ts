@@ -23,6 +23,7 @@ export const routines = {
   last: {
     queued: "Running now",
     done: "Last run went fine",
+    nothingNew: "Last run found nothing new",
     failed: "Last run failed",
     overlap: "Last time was skipped: the run before hadn't finished",
     bot_paused: "Last time was skipped: the agent was paused",

@@ -33,7 +33,7 @@ async fn a_weekly_routine_fires_at_its_time_and_the_bot_knows_it() {
     assert_eq!(
         text_of(&lines[0]),
         "[botloft] routine \"Morning\" · scheduled 2026-10-01 09:00 (UTC)\n\
-         Nobody is watching live: do the work, then report it in your reply.\n\n\
+         Nobody is watching live: do the work, then report it in your reply. If nothing is new since the last run, call nothing_new and end without a reply.\n\n\
          Summarize what arrived in shared/inbox."
     );
     // Thursday 09:00 fired; Friday 09:00 is next.

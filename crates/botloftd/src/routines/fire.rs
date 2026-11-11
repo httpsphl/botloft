@@ -180,6 +180,7 @@ pub(super) fn attempt(
         created_at: now,
         finished_at: None,
         signal,
+        nothing_new: false,
     };
     let item = store.fire_run(&run, &message, &delivery)?;
     debug!(routine = %routine.id, run = %run.id, "routine fired");
@@ -206,6 +207,7 @@ pub(super) fn skipped(
         created_at: now,
         finished_at: Some(now),
         signal: None,
+        nothing_new: false,
     }
 }
 

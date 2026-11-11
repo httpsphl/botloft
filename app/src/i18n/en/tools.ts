@@ -37,6 +37,7 @@ export const tools = {
     my_routines: "See my routines",
     change_routine: "Change a routine",
     delete_routine: "Delete a routine",
+    nothing_new: "Nothing new to report",
     change_bot: "Change an agent",
     ask_crew_access: "Reach another crew",
     share_file: "Share a file",

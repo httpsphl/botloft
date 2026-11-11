@@ -35,6 +35,7 @@ async function failing() {
       status: "failed",
       reason: null,
       skippedCount: 0,
+      nothingNew: false,
       messageId: null,
       createdAt: fake.now,
       finishedAt: fake.now,

@@ -33,6 +33,7 @@ pub fn tools() -> Value {
         ]
         .into_iter()
         .chain(super::routine_catalog::tools())
+        .chain([super::nothing_new::tool()])
         .chain([
             super::bot_change::tool(),
             super::crew_access::tool(),
