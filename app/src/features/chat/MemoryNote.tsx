@@ -1,12 +1,14 @@
 // A line in the bot's turn saying it wrote down something it learned (spec
 // 15.3), with whose memory it was: its own, or the crew's. The arrow opens
-// what changed; the files button opens the whole memory.
+// what changed; the files button opens the whole memory, and the history
+// button every version of the bot's own (8.10).
 
-import { BookMarked, ChevronRight, Files } from "lucide-react";
+import { BookMarked, ChevronRight, Files, History } from "lucide-react";
 import { useContext, useState } from "react";
 import { useT } from "../../i18n";
-import type { ToolItem } from "../../lib/protocol.gen";
+import type { Bot, ToolItem } from "../../lib/protocol.gen";
 import { useArrival } from "../../ui/motion";
+import { VersionsDialog } from "../bots/VersionsDialog";
 import { ShowFile } from "../files/showFile";
 import { type MemoryChange, type MemoryOwner, memoryChange } from "./memory";
 
@@ -55,6 +57,7 @@ export function MemoryNote({
   owner,
   name,
   color,
+  bot,
 }: {
   tool: ToolItem;
   createdAt: number;
@@ -63,9 +66,12 @@ export function MemoryNote({
   name: string;
   /** The bot's color; the crew has none. */
   color?: string | undefined;
+  /** The bot, for the history of its own memory; none for the crew's. */
+  bot?: Bot | undefined;
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  const [history, setHistory] = useState(false);
   const showFile = useContext(ShowFile);
   const arrival = useArrival(createdAt);
   const change = memoryChange(tool);
@@ -119,7 +125,21 @@ export function MemoryNote({
             <Files aria-hidden size={14} />
           </button>
         )}
+        {bot && (
+          <button
+            type="button"
+            title={t.versions.memoryHistory}
+            aria-label={t.versions.memoryHistory}
+            onClick={() => setHistory(true)}
+            className="grid size-6 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-sunken hover:text-ink"
+          >
+            <History aria-hidden size={14} />
+          </button>
+        )}
       </div>
+      {history && bot && (
+        <VersionsDialog bot={bot} kind="memory" onClose={() => setHistory(false)} />
+      )}
       {open && change && (
         <div className="mt-1 mb-2 ml-7 flex animate-rise flex-col gap-1.5" data-selectable>
           <Change change={change} />

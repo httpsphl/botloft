@@ -87,6 +87,7 @@ mod session;
 mod settings;
 mod skills;
 mod usage;
+mod versions;
 
 pub use backup::*;
 pub use browser::*;
@@ -124,6 +125,7 @@ pub use session::*;
 pub use settings::*;
 pub use skills::*;
 pub use usage::*;
+pub use versions::*;
 
 /// Version negotiated in `session.hello`. 2 replaced the terminal with the
 /// chat (ADR 0001).
@@ -284,6 +286,9 @@ pub mod method {
     pub const QUESTIONS_DISMISS: &str = "questions.dismiss";
     pub const REACTIONS_LIST: &str = "reactions.list";
     pub const REACTIONS_SET: &str = "reactions.set";
+    /// The history of a bot's memory or instructions (spec 8.10).
+    pub const VERSIONS_LIST: &str = "versions.list";
+    pub const VERSIONS_RESTORE: &str = "versions.restore";
     pub const SETTINGS_GET: &str = "settings.get";
     pub const SETTINGS_UPDATE: &str = "settings.update";
     pub const INSTRUCTIONS_GET: &str = "instructions.get";
@@ -332,6 +337,8 @@ pub mod notification {
     pub const SCREEN_DRAFT: &str = "screen.draft";
     pub const QUESTION_CHANGED: &str = "question.changed";
     pub const REACTION_CHANGED: &str = "reaction.changed";
+    /// A new version of a bot's memory or instructions (spec 8.10).
+    pub const VERSION_CREATED: &str = "version.created";
     pub const CLOUD_SIGNED_IN: &str = "cloud.signed_in";
     pub const CLOUD_PROGRESS: &str = "cloud.progress";
     pub const CLOUD_SIGNIN_EXPIRED: &str = "cloud.signin_expired";

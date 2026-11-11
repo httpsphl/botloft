@@ -43,6 +43,7 @@ mod site_logins;
 mod tasks;
 mod today;
 mod usage;
+mod versions;
 
 use std::path::Path;
 use std::str::FromStr;

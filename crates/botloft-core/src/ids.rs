@@ -109,6 +109,10 @@ prefixed_id!(
     RoutineRunId, "routine run", "rrn_"
 );
 prefixed_id!(
+    /// Identifies one version of a bot's memory or instructions (spec 8.10).
+    VersionId, "version", "ver_"
+);
+prefixed_id!(
     /// Identifies a request a bot may make without asking (spec 10.1).
     RuleId, "rule", "rul_"
 );

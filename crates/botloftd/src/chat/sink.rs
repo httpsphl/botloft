@@ -112,6 +112,8 @@ pub(crate) fn message_read(daemon: &Daemon, bot: &BotId, uuid: &str) {
     match read {
         Ok(Some(delivery)) => {
             routines::turn_began(daemon, bot, &delivery.message_id);
+            // Its memory as the turn begins (spec 8.10).
+            crate::versions::turn_began(daemon, bot);
             daemon.emit(Event::DeliveryChanged(delivery));
         }
         Ok(None) => {}
@@ -140,6 +142,8 @@ pub(crate) fn finish_turn(daemon: &Daemon, bot: &BotId, generation: u64, failed:
         message_read(daemon, bot, &uuid);
     }
     routines::turn_ended(daemon, bot, failed);
+    // What the bot did to its memory in this turn (spec 8.10).
+    crate::versions::turn_ended(daemon, bot);
     screens::turn_ended(daemon, bot);
     daemon.crew_access.end_turn(bot);
     daemon.supervisor.turn_ended(bot, generation);

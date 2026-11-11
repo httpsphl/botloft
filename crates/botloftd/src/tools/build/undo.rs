@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use botloft_core::ids::{BotId, RoutineId};
 use botloft_core::protocol::{
     BotIdParams, Missed, Overlap, Routine, RoutineIdParams, RoutinesSetEnabledParams,
-    RoutinesUpdateParams, Schedule,
+    RoutinesUpdateParams, Schedule, VersionAuthor,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -19,6 +19,7 @@ use crate::service::{ApiResult, archive, bots, routines};
 use crate::state::Daemon;
 use crate::tools::bot_change::{self, Profile};
 use crate::tools::calls::explain;
+use crate::versions::Origin;
 
 /// How to put back one change.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -79,7 +80,14 @@ impl Undo {
             .map(drop),
             Self::Profile { bot_id, profile } => {
                 let now = Profile::of(&bots::find(&daemon.store(), bot_id)?);
-                bot_change::apply(daemon, bot_id, &now, profile).map(drop)
+                bot_change::apply(
+                    daemon,
+                    bot_id,
+                    &now,
+                    profile,
+                    Origin::by(VersionAuthor::Maker),
+                )
+                .map(drop)
             }
             Self::ArchiveRoutine { routine_id } => routines::archive(
                 daemon,
@@ -175,8 +183,14 @@ pub(crate) fn apply(
             let record = agent_of(daemon, &crew, &change.agent)?;
             let before = Profile::of(&record);
             let next = next_profile(daemon, &record, change)?;
-            let bot = bot_change::apply(daemon, &record.id, &before, &next)
-                .map_err(|err| format!("{}: {}", change.agent, explain(err)))?;
+            let bot = bot_change::apply(
+                daemon,
+                &record.id,
+                &before,
+                &next,
+                Origin::by(VersionAuthor::Maker),
+            )
+            .map_err(|err| format!("{}: {}", change.agent, explain(err)))?;
             journal.push(Undo::Profile {
                 bot_id: record.id,
                 profile: before,

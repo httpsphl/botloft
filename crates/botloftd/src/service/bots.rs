@@ -4,7 +4,7 @@ use botloft_core::ids::{BotId, CrewId};
 use botloft_core::protocol::{
     AgentKind, Bot, BotEffort, BotIdParams, BotModel, BotState, BotsCreateParams, BotsListParams,
     BotsRestartParams, BotsSetPausedParams, BotsUpdateParams, ChatBody, Crew, NoticeCode,
-    NoticeItem, NoticeLevel, PermissionMode,
+    NoticeItem, NoticeLevel, PermissionMode, VersionAuthor,
 };
 use botloft_core::{avatar, now_ms, slug, validate};
 use botloft_store::{BotRecord, Store};
@@ -12,6 +12,7 @@ use botloft_store::{BotRecord, Store};
 use super::{ApiError, ApiResult, crews, pick_slug};
 use crate::paths::SHARED_DIR;
 use crate::state::{Daemon, Event};
+use crate::versions::Origin;
 use crate::workspace;
 
 pub fn list(daemon: &Daemon, params: BotsListParams) -> ApiResult<Vec<Bot>> {
@@ -155,9 +156,17 @@ pub(crate) fn insert(
     Ok(record)
 }
 
+/// The owner changes a bot from the app.
 pub fn update(daemon: &Daemon, params: BotsUpdateParams) -> ApiResult<Bot> {
+    update_by(daemon, params, Origin::by(VersionAuthor::Owner))
+}
+
+/// Changes a bot; a change to its instructions goes into its history as
+/// `origin` made it (spec 8.10).
+pub fn update_by(daemon: &Daemon, params: BotsUpdateParams, origin: Origin) -> ApiResult<Bot> {
     let store = daemon.store();
     let (crew, mut record) = active(&store, &params.bot_id)?;
+    let instructions_before = record.instructions.clone();
     if params.name.is_some() {
         super::maker::refuse(&crew, "keeps its name in every language")?;
     }
@@ -198,8 +207,16 @@ pub fn update(daemon: &Daemon, params: BotsUpdateParams) -> ApiResult<Bot> {
     super::mcp::write_rules(daemon, &store, &crew, &record).map_err(ApiError::Workspace)?;
     store.update_bot(&record)?;
     let id = record.id.clone();
+    let instructions_after = record.instructions.clone();
     let bot = changed(daemon, &store, &crew, record);
     drop(store);
+    crate::versions::instructions_changed(
+        daemon,
+        &id,
+        &instructions_before,
+        &instructions_after,
+        origin,
+    );
     if relaunch {
         // The agent reads its rules when it starts.
         daemon.supervisor.launch_settings_changed(&id);
