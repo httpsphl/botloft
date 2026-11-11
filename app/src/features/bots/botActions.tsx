@@ -1,5 +1,7 @@
 import {
   Archive,
+  Bell,
+  BellOff,
   Crown,
   FileArchive,
   FileClock,
@@ -14,6 +16,7 @@ import {
 import { type ReactNode, useState } from "react";
 import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
+import { doneAlerts, useWantsDone } from "../../shell/prefs";
 import { useApi, useApp, useHost } from "../../store/context";
 import { isUnread } from "../../store/seen";
 import { Confirm } from "../../ui/Confirm";
@@ -46,6 +49,7 @@ export function useBotActions(
   const unread = useApp((state) => isUnread(state, bot.id));
   const markSeen = useApp((state) => state.markSeen);
   const markUnread = useApp((state) => state.markUnread);
+  const tellsDone = useWantsDone(bot.id);
   const chief = isChief(bot, crew);
   // The Maker is always there and works alone (spec 36.2): no chief, no
   // archive, no delete, so the menu does not offer them.
@@ -92,6 +96,14 @@ export function useBotActions(
     unread
       ? { label: words.markRead, icon: MailOpen, onSelect: () => markSeen(bot.id) }
       : { label: words.markUnread, icon: Mail, onSelect: () => markUnread(bot.id) },
+    // Over the switch for all in Settings > Notifications (spec 15.1).
+    tellsDone
+      ? {
+          label: words.doneOff(bot.name),
+          icon: BellOff,
+          onSelect: () => doneAlerts.set(bot.id, false),
+        }
+      : { label: words.doneOn(bot.name), icon: Bell, onSelect: () => doneAlerts.set(bot.id, true) },
     !maker && {
       label: words.archive,
       icon: Archive,

@@ -107,8 +107,68 @@ export function usePref<T extends Value>(choice: Pref<T>): T {
   return useSyncExternalStore(choice.subscribe, choice.get);
 }
 
+/**
+ * The owner's own choice for each agent, over the switch for all: true or
+ * false for the agents they set from the agent's menu, absent for the rest.
+ */
+function agentChoices(key: string) {
+  const listeners = new Set<() => void>();
+  const read = (): Record<string, boolean> => {
+    try {
+      const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? "{}");
+      return parsed && typeof parsed === "object" ? (parsed as Record<string, boolean>) : {};
+    } catch {
+      return {};
+    }
+  };
+  let current = read();
+  const save = (next: Record<string, boolean>) => {
+    current = next;
+    try {
+      localStorage.setItem(key, JSON.stringify(next));
+    } catch {
+      // Private storage off: the choice lasts for this window.
+    }
+    for (const listener of listeners) {
+      listener();
+    }
+  };
+  return {
+    get: (agent: string): boolean | undefined =>
+      typeof current[agent] === "boolean" ? current[agent] : undefined,
+    set: (agent: string, on: boolean) => save({ ...current, [agent]: on }),
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    reset: () => save({}),
+  };
+}
+
+/** Whether to tell when each agent finishes, from its menu (spec 15.1). */
+export const doneAlerts = agentChoices("botloft.doneAlerts");
+
+/** Whether the owner hears when `agent` finishes: its own choice, or the switch for all. */
+export function wantsDone(agent: string): boolean {
+  return doneAlerts.get(agent) ?? prefs.notifyDone.get();
+}
+
+function followDone(listener: () => void): () => void {
+  const offAgents = doneAlerts.subscribe(listener);
+  const offAll = prefs.notifyDone.subscribe(listener);
+  return () => {
+    offAgents();
+    offAll();
+  };
+}
+
+export function useWantsDone(agent: string): boolean {
+  return useSyncExternalStore(followDone, () => wantsDone(agent));
+}
+
 export function resetPrefs(): void {
   for (const choice of Object.values(prefs)) {
     choice.reset();
   }
+  doneAlerts.reset();
 }

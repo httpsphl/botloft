@@ -1,9 +1,13 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 import { FakeBotloft } from "../../lib/fake";
+import { resetPrefs, wantsDone } from "../../shell/prefs";
 import { crewOpened, openBot, renderApp, sidebar } from "../../test/app";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  resetPrefs();
+});
 
 /** A crew "Ops" with Scout and Writer, open on the crew's page. */
 async function twoBots() {
@@ -41,6 +45,7 @@ describe("an agent's right-click menu", () => {
       "Restart with a new conversation",
       "Open folder",
       "Mark as unread",
+      "Tell me when Scout finishes",
       "Archive agent",
       "Delete agent",
     ]);
@@ -139,5 +144,20 @@ describe("an agent's right-click menu", () => {
     fireEvent.pointerDown(row("Writer"));
     expect(rightClick("Writer")).toBeDefined();
     expect(screen.getAllByRole("menu")).toHaveLength(1);
+  });
+
+  test("turns the finished notice on or off for that agent alone", async () => {
+    const { scout, writer } = await twoBots();
+    fireEvent.click(
+      within(rightClick("Scout")).getByRole("menuitem", { name: "Tell me when Scout finishes" }),
+    );
+    expect(wantsDone(scout.id)).toBe(true);
+    expect(wantsDone(writer.id)).toBe(false);
+    const menu = rightClick("Scout");
+    expect(labels(menu)).toContain("Don't tell me when Scout finishes");
+    fireEvent.click(
+      within(menu).getByRole("menuitem", { name: "Don't tell me when Scout finishes" }),
+    );
+    expect(wantsDone(scout.id)).toBe(false);
   });
 });

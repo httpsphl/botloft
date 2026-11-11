@@ -208,6 +208,7 @@ describe("the Maker's menu", () => {
       "Restart with a new conversation",
       "Open folder",
       "Mark as unread",
+      "Tell me when The Maker finishes",
     ]);
     // A history comes from the menu too, once the chat is not empty.
     fireEvent.click(within(menu).getByRole("menuitem", { name: "Bring my Claude Code history" }));

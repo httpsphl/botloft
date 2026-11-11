@@ -241,7 +241,8 @@ export const account: Messages["account"] = {
     notifyNeedsHint: (system: string) =>
       `Un aviso de ${system} cuando un agente pide permiso o necesita que inicies sesión, si Botloft no está al frente.`,
     notifyDone: "Cuando un agente termine",
-    notifyDoneHint: "Un aviso cuando un agente termina lo que estaba haciendo.",
+    notifyDoneHint:
+      "Un aviso cuando un agente termina lo que estaba haciendo, después de que vuelva el trabajo que pasó a otros agentes. El menú de cada agente lo cambia solo para él.",
     notifyRoutineFailed: "Cuando una rutina falle",
     notifyRoutineFailedHint:
       "Un aviso con el agente y la rutina. Un teléfono conectado también recibe un aviso, sin decir de qué se trata.",
