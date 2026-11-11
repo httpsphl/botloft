@@ -25,6 +25,7 @@ export const routines: Messages["routines"] = {
   last: {
     queued: "Rodando agora",
     done: "A última rodou bem",
+    nothingNew: "A última não achou nada novo",
     failed: "A última falhou",
     overlap: "A última vez foi pulada: a anterior ainda não tinha terminado",
     bot_paused: "A última vez foi pulada: o agente estava pausado",

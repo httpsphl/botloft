@@ -31,6 +31,26 @@ function kindOf(before: BotState | undefined, now: BotState): Kind | null {
   return before === "busy" && now === "idle" ? "done" : null;
 }
 
+/** A run ended this recently is the turn that just ended: its run comes first. */
+const QUIET_MS = 10_000;
+
+/**
+ * The turn that just ended was a routine run with nothing new (spec 20.5):
+ * there is nothing to tell. The daemon closes the run before the bot goes
+ * idle, so its `routine.run` is already in the store.
+ */
+export function endedQuietly(state: AppState, botId: BotId, now = Date.now()): boolean {
+  return Object.values(state.routines).some((routine) => {
+    const run = routine.lastRun;
+    return (
+      routine.botId === botId &&
+      run?.nothingNew === true &&
+      run.finishedAt !== null &&
+      now - run.finishedAt < QUIET_MS
+    );
+  });
+}
+
 function notice(state: AppState, bot: Bot, kind: Kind): { title: string; body: string } {
   const words = t();
   const crew = state.crews[bot.crewId]?.name ?? "";
@@ -69,7 +89,10 @@ export function useBotAlerts(): void {
       }
       for (const bot of Object.values(state.bots)) {
         const kind = bot.archivedAt === null ? kindOf(before.get(bot.id), bot.state) : null;
-        const wanted = kind === "done" ? prefs.notifyDone.get() : prefs.notifyNeeds.get();
+        const wanted =
+          kind === "done"
+            ? prefs.notifyDone.get() && !endedQuietly(state, bot.id)
+            : prefs.notifyNeeds.get();
         if (!kind || !wanted) {
           continue;
         }

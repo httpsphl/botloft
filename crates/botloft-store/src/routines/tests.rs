@@ -37,6 +37,7 @@ fn run(routine: &Routine, status: RunStatus, message: Option<MessageId>) -> Rout
         created_at: 100,
         finished_at: None,
         signal: None,
+        nothing_new: false,
     }
 }
 
@@ -89,12 +90,20 @@ fn a_run_is_saved_with_its_message_and_ends_once() {
         Some(fired.id.clone())
     );
 
+    // The bot says there is nothing new while the run is open (spec 20.5).
+    assert!(!fired.nothing_new);
+    assert!(fx.store.mark_nothing_new(&fired.id).expect("mark"));
     let done = fx
         .store
         .finish_run(&fired.id, RunStatus::Done, 150)
         .expect("finish")
         .expect("was open");
     assert_eq!(done.finished_at, Some(150));
+    assert!(done.nothing_new, "the mark stays with the finished run");
+    assert!(
+        !fx.store.mark_nothing_new(&fired.id).expect("late"),
+        "a finished run takes no mark"
+    );
     assert_eq!(
         fx.store
             .finish_run(&fired.id, RunStatus::Failed, 160)

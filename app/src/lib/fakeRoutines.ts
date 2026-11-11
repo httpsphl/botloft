@@ -127,6 +127,7 @@ export class FakeRoutines {
       status: "queued",
       reason: null,
       skippedCount: 0,
+      nothingNew: false,
       messageId: message.id,
       createdAt: this.fake.now,
       finishedAt: null,

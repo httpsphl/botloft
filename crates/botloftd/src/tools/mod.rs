@@ -30,6 +30,7 @@ mod desktop_real;
 mod desktop_screen;
 mod era;
 mod key;
+mod nothing_new;
 mod overview;
 mod plan;
 mod question;

@@ -69,6 +69,28 @@ describe("routines", () => {
     expect(screen.getByText("Scout has no routines yet.")).toBeDefined();
   });
 
+  test("a run with nothing new reads quietly, not as a success", async () => {
+    await openRoutines((fake, botId) => {
+      const quiet = routine(fake, botId, "Inbox check");
+      quiet.lastRun = {
+        id: fake.id("rrn"),
+        routineId: quiet.id,
+        scheduledFor: Date.now(),
+        status: "done",
+        reason: null,
+        skippedCount: 0,
+        nothingNew: true,
+        messageId: null,
+        createdAt: Date.now(),
+        finishedAt: Date.now(),
+        signal: null,
+      };
+    });
+    const line = await screen.findByText("Last run found nothing new");
+    expect(line.className).toContain("text-muted");
+    expect(screen.queryByText("Last run went fine")).toBeNull();
+  });
+
   test("the owner creates one for weekdays at nine", async () => {
     const { fake, scout } = await openRoutines();
     const dialog = newRoutine("Morning summary");
@@ -222,6 +244,7 @@ describe("failed runs", () => {
           status: "failed",
           reason: null,
           skippedCount: 0,
+          nothingNew: false,
           messageId: null,
           createdAt: Date.now(),
           finishedAt: Date.now() + 1000,
