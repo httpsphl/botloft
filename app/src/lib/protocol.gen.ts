@@ -2872,7 +2872,13 @@ nextRunAt: number | null,
 /**
  * The latest run, skipped ones included.
  */
-lastRun: RoutineRun | null, createdAt: number, updatedAt: number, archivedAt: number | null, };
+lastRun: RoutineRun | null, 
+/**
+ * How many runs failed in a row since the last one that went well,
+ * skipped ones aside; from the second, the next run waits longer
+ * (spec 20.3).
+ */
+failStreak: number, createdAt: number, updatedAt: number, archivedAt: number | null, };
 
 export type RoutinesListParams = { botId?: BotId, };
 

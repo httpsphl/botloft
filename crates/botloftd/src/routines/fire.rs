@@ -262,6 +262,7 @@ fn end(daemon: &Daemon, run: &RoutineRunId, now: i64) {
     match ended {
         Ok(Some(run)) => {
             daemon.emit(Event::RoutineRun(run.clone()));
+            super::backoff::after_failure(daemon, &run.routine_id, now);
             announce_routine(daemon, &run.routine_id);
         }
         Ok(None) => {}

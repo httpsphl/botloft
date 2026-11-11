@@ -69,6 +69,29 @@ describe("routines", () => {
     expect(screen.getByText("Scout has no routines yet.")).toBeDefined();
   });
 
+  test("failures in a row say the next try waits longer", async () => {
+    await openRoutines((fake, botId) => {
+      const failing = routine(fake, botId, "Inbox check");
+      failing.failStreak = 3;
+      failing.lastRun = {
+        id: fake.id("rrn"),
+        routineId: failing.id,
+        scheduledFor: Date.now(),
+        status: "failed",
+        reason: null,
+        skippedCount: 0,
+        messageId: null,
+        createdAt: Date.now(),
+        finishedAt: Date.now(),
+        signal: null,
+      };
+    });
+    expect(
+      await screen.findByText("Failed 3 times in a row: it waits longer before the next try"),
+    ).toBeDefined();
+    expect(screen.queryByText("Last run failed")).toBeNull();
+  });
+
   test("the owner creates one for weekdays at nine", async () => {
     const { fake, scout } = await openRoutines();
     const dialog = newRoutine("Morning summary");

@@ -104,6 +104,20 @@ impl Store {
         Ok(u32::try_from(count).unwrap_or(0))
     }
 
+    /// How many runs of the routine failed in a row since the last one that
+    /// went well (spec 20.3). Skipped and open runs neither count nor break
+    /// the row. Run ids are ULIDs, so they sort in the order they were made.
+    pub fn fail_streak(&self, routine: &RoutineId) -> Result<u32> {
+        let count: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM routine_runs WHERE routine_id = ?1 AND status = 'failed' \
+             AND id > coalesce((SELECT max(id) FROM routine_runs \
+               WHERE routine_id = ?1 AND status = 'done'), '')",
+            [routine.as_str()],
+            |row| row.get(0),
+        )?;
+        Ok(u32::try_from(count).unwrap_or(0))
+    }
+
     /// The run that sent `message`, if a routine sent it.
     pub fn run_of_message(&self, message: &MessageId) -> Result<Option<RoutineRun>> {
         Ok(self

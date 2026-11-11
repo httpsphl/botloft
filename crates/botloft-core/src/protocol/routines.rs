@@ -102,6 +102,11 @@ pub struct Routine {
     pub next_run_at: Option<i64>,
     /// The latest run, skipped ones included.
     pub last_run: Option<RoutineRun>,
+    /// How many runs failed in a row since the last one that went well,
+    /// skipped ones aside; from the second, the next run waits longer
+    /// (spec 20.3).
+    #[serde(default)]
+    pub fail_streak: u32,
     pub created_at: i64,
     pub updated_at: i64,
     pub archived_at: Option<i64>,

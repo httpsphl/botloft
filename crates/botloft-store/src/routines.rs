@@ -25,6 +25,7 @@ pub(crate) fn from_row(row: &Row<'_>) -> rusqlite::Result<Routine> {
         enabled: row.get(8)?,
         next_run_at: row.get(9)?,
         last_run: None,
+        fail_streak: 0,
         created_at: row.get(10)?,
         updated_at: row.get(11)?,
         archived_at: row.get(12)?,
@@ -144,6 +145,7 @@ impl Store {
 
     fn with_last_run(&self, mut routine: Routine) -> Result<Routine> {
         routine.last_run = self.runs(&routine.id, None, 1)?.pop();
+        routine.fail_streak = self.fail_streak(&routine.id)?;
         Ok(routine)
     }
 }

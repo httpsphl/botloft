@@ -5,6 +5,7 @@
 //! fires what is due: a message on the bot's usual path (spec 9.1). A run
 //! ends with the turn that began with its message.
 
+mod backoff;
 mod cron;
 mod fire;
 pub mod schedule;
@@ -135,6 +136,9 @@ fn finish(daemon: &Daemon, run: &RoutineRunId, status: RunStatus) {
     match finished {
         Ok(Some(run)) => {
             daemon.emit(Event::RoutineRun(run.clone()));
+            if run.status == RunStatus::Failed {
+                backoff::after_failure(daemon, &run.routine_id, now);
+            }
             fire::announce_routine(daemon, &run.routine_id);
         }
         Ok(None) => {}

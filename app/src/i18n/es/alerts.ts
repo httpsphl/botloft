@@ -19,5 +19,6 @@ export const alerts: Messages["alerts"] = {
   signInBody: "Abre Botloft para iniciar sesión.",
   done: (bot) => `${bot} terminó`,
   routineFailed: (bot) => `La rutina de ${bot} falló`,
+  routineRecovered: (bot) => `La rutina de ${bot} vuelve a funcionar`,
   crew: (crew) => `Equipo ${crew}`,
 };

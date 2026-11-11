@@ -19,6 +19,7 @@ fn routine(fx: &Fixture, next: i64) -> Routine {
         enabled: true,
         next_run_at: Some(next),
         last_run: None,
+        fail_streak: 0,
         created_at: 0,
         updated_at: 0,
         archived_at: None,
@@ -38,6 +39,36 @@ fn run(routine: &Routine, status: RunStatus, message: Option<MessageId>) -> Rout
         finished_at: None,
         signal: None,
     }
+}
+
+#[test]
+fn failures_in_a_row_count_until_a_run_goes_well() {
+    let fx = Fixture::new();
+    let morning = routine(&fx, 1_000);
+    fx.store.insert_routine(&morning).expect("routine");
+    let streak = || fx.store.fail_streak(&morning.id).expect("streak");
+    let add = |status| {
+        fx.store
+            .insert_run(&run(&morning, status, None))
+            .expect("run")
+    };
+    assert_eq!(streak(), 0);
+    add(RunStatus::Failed);
+    add(RunStatus::Failed);
+    // A skipped run neither counts nor breaks the row.
+    add(RunStatus::Skipped);
+    add(RunStatus::Failed);
+    assert_eq!(streak(), 3);
+    let read = fx
+        .store
+        .routine(&morning.id)
+        .expect("read")
+        .expect("routine");
+    assert_eq!(read.fail_streak, 3, "the routine carries it");
+    add(RunStatus::Done);
+    assert_eq!(streak(), 0);
+    add(RunStatus::Failed);
+    assert_eq!(streak(), 1);
 }
 
 #[test]
