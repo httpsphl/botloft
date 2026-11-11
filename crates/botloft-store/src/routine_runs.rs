@@ -108,12 +108,13 @@ impl Store {
 
     /// How many runs of the routine failed in a row since the last one that
     /// went well (spec 20.3). Skipped and open runs neither count nor break
-    /// the row. Run ids are ULIDs, so they sort in the order they were made.
+    /// the row. Runs go by `rowid`, the order they were saved in: two ids made
+    /// in the same millisecond do not always sort in that order.
     pub fn fail_streak(&self, routine: &RoutineId) -> Result<u32> {
         let count: i64 = self.conn.query_row(
             "SELECT COUNT(*) FROM routine_runs WHERE routine_id = ?1 AND status = 'failed' \
-             AND id > coalesce((SELECT max(id) FROM routine_runs \
-               WHERE routine_id = ?1 AND status = 'done'), '')",
+             AND rowid > coalesce((SELECT max(rowid) FROM routine_runs \
+               WHERE routine_id = ?1 AND status = 'done'), 0)",
             [routine.as_str()],
             |row| row.get(0),
         )?;
