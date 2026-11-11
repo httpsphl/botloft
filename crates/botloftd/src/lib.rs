@@ -45,4 +45,5 @@ pub mod state;
 pub mod supervisor;
 pub mod tools;
 pub mod trash;
+pub mod versions;
 pub mod workspace;

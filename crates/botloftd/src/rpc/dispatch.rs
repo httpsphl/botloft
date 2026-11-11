@@ -11,7 +11,7 @@ use crate::service::{
     self, ApiError, ApiResult, agents, archive, attachments, autobackup, backup, bots, catalog,
     chat, cloud, crew_access, crews, delete, deliveries, desktop, files, island, keys, lead, mcp,
     messages, mobile, models, modes, permissions, questions, reactions, routines, rules, screens,
-    settings, tasks, usage,
+    settings, tasks, usage, versions,
 };
 use crate::state::Daemon;
 
@@ -176,6 +176,8 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::QUESTIONS_DISMISS => reply(questions::dismiss(daemon, parse(params)?)),
         method::REACTIONS_LIST => reply(reactions::list(daemon, parse(params)?)),
         method::REACTIONS_SET => reply(reactions::set(daemon, parse(params)?)),
+        method::VERSIONS_LIST => reply(versions::list(daemon, parse(params)?)),
+        method::VERSIONS_RESTORE => reply(versions::restore(daemon, parse(params)?)),
         method::SCREENS_LIST => reply(screens::list(daemon, parse(params)?)),
         method::SETTINGS_GET => reply(settings::get(daemon)),
         method::SETTINGS_UPDATE => reply(settings::update(daemon, parse(params)?)),

@@ -30,6 +30,7 @@ const DELETE_BOT: &[&str] = &[
     "DELETE FROM turn_costs WHERE bot_id = ?1",
     "DELETE FROM crew_access WHERE bot_id = ?1 OR target_bot_id = ?1",
     "DELETE FROM allow_rules WHERE bot_id = ?1",
+    "DELETE FROM bot_versions WHERE bot_id = ?1",
     "DELETE FROM routine_runs WHERE routine_id IN (SELECT id FROM routines WHERE bot_id = ?1)",
     // What the bot received goes with it.
     "UPDATE routine_runs SET message_id = NULL \

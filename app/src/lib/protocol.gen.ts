@@ -98,6 +98,11 @@ export type CrewAccessId = string;
 export type BuildId = string;
 
 /**
+ * Identifies one version of a bot's memory or instructions (spec 8.10).
+ */
+export type VersionId = string;
+
+/**
  * Identifies a summary of the owner's history made for the Maker
  * (spec 36.7).
  */
@@ -2490,6 +2495,37 @@ turns: number, tokens: TokenUsage,
  */
 planShare: number | null, };
 
+/**
+ * What changed.
+ */
+export type VersionKind = "memory" | "instructions";
+
+/**
+ * Who made a version.
+ */
+export type VersionAuthor = "start" | "owner" | "agent" | "maker" | "outside";
+
+export type TextVersion = { id: VersionId, botId: BotId, kind: VersionKind, author: VersionAuthor, 
+/**
+ * The whole text as it was; empty for a memory file that was gone.
+ */
+text: string, 
+/**
+ * The version the owner went back to, when this one did that.
+ */
+restoredFrom: VersionId | null, 
+/**
+ * Unix time in milliseconds.
+ */
+createdAt: number, };
+
+export type VersionsListParams = { botId: BotId, kind: VersionKind, };
+
+/**
+ * Puts the bot's memory or instructions back as `version_id` had them.
+ */
+export type VersionsRestoreParams = { versionId: VersionId, };
+
 export type QuestionStatus = "open" | "answered" | "dismissed";
 
 export type Question = { id: QuestionId, crewId: CrewId, botId: BotId, 
@@ -3198,6 +3234,8 @@ export interface RpcMethods {
   "bots.interrupt": { params: BotIdParams; result: Bot };
   "bots.stopTask": { params: BotsStopTaskParams; result: null };
   "usage.tokens": { params: UsageTokensParams; result: Array<BotTokens> };
+  "versions.list": { params: VersionsListParams; result: Array<TextVersion> };
+  "versions.restore": { params: VersionsRestoreParams; result: TextVersion };
   "rules.list": { params: RulesListParams; result: Array<AllowRule> };
   "rules.delete": { params: RuleIdParams; result: BotRules };
   "desktop.grants": { params: DesktopGrantsParams; result: Array<DesktopGrant> };
@@ -3322,6 +3360,7 @@ export interface RpcNotifications {
   "routine.run": RoutineRun;
   "question.changed": Question;
   "reaction.changed": ReactionChanged;
+  "version.created": TextVersion;
   "bot.rules": BotRules;
   "bot.desktop": BotDesktop;
   "desktop.changed": DesktopState;

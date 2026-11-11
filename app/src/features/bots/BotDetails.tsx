@@ -1,11 +1,12 @@
 // The details beside an agent's chat (spec 15.1): who it is (mascot, name,
-// role) with Edit, its instructions, what runs it and where it works, what
-// it may do without asking, and the ways to what Settings keeps for it.
+// role) with Edit, its instructions and memory with their history (8.10),
+// what runs it and where it works, what it may do without asking, and the
+// ways to what Settings keeps for it.
 
-import { FolderOpen, Pencil, X } from "lucide-react";
+import { FolderOpen, History, Pencil, X } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useT } from "../../i18n";
-import type { Bot } from "../../lib/protocol.gen";
+import type { Bot, VersionKind } from "../../lib/protocol.gen";
 import { useHost } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { SidePanel } from "../../ui/SidePanel";
@@ -14,6 +15,7 @@ import { BotPermissions } from "../permissions/BotPermissions";
 import { BotAvatar } from "./BotAvatar";
 import { BotDialog } from "./BotDialog";
 import { BotShortcuts } from "./BotShortcuts";
+import { VersionsDialog } from "./VersionsDialog";
 
 /** Lines of instructions shown before "Show all". */
 const FOLDED_LINES = 6;
@@ -27,13 +29,36 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function Instructions({ bot, onEdit }: { bot: Bot; onEdit(): void }) {
-  const words = useT().bots.details;
+/** A section's title with the button to its history (spec 8.10). */
+function Heading({
+  title,
+  history,
+  onHistory,
+}: {
+  title: string;
+  history: string;
+  onHistory(): void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <h3 className="font-semibold text-sm">{title}</h3>
+      <Button variant="ghost" size="sm" icon={History} label={history} onClick={onHistory} />
+    </div>
+  );
+}
+
+function Instructions({ bot, onEdit, onHistory }: { bot: Bot; onEdit(): void; onHistory(): void }) {
+  const t = useT();
+  const words = t.bots.details;
   const [open, setOpen] = useState(false);
   const long = bot.instructions.split("\n").length > FOLDED_LINES || bot.instructions.length > 420;
   return (
     <section aria-label={words.instructions} className="flex flex-col gap-2">
-      <h3 className="font-semibold text-sm">{words.instructions}</h3>
+      <Heading
+        title={words.instructions}
+        history={t.versions.instructionsHistory}
+        onHistory={onHistory}
+      />
       {bot.instructions ? (
         <div className="rounded-xl bg-bubble px-3 py-2.5">
           <p
@@ -66,11 +91,23 @@ function Instructions({ bot, onEdit }: { bot: Bot; onEdit(): void }) {
   );
 }
 
+/** What the agent keeps from one conversation to the next (spec 5.1, 8.10). */
+function Memory({ bot, onHistory }: { bot: Bot; onHistory(): void }) {
+  const words = useT().versions;
+  return (
+    <section aria-label={words.memory} className="flex flex-col gap-2">
+      <Heading title={words.memory} history={words.memoryHistory} onHistory={onHistory} />
+      <p className="text-muted text-xs leading-relaxed">{words.memoryAbout(bot.name)}</p>
+    </section>
+  );
+}
+
 export function Details({ bot, onClose }: { bot: Bot; onClose(): void }) {
   const t = useT();
   const words = t.bots.details;
   const host = useHost();
   const [editing, setEditing] = useState(false);
+  const [history, setHistory] = useState<VersionKind | null>(null);
   const model =
     bot.agent === "claude"
       ? bot.model === "default" && bot.modelInUse
@@ -103,7 +140,12 @@ export function Details({ bot, onClose }: { bot: Bot; onClose(): void }) {
             <p className="mt-0.5 text-ink-soft text-sm">{bot.role || words.noRole}</p>
           </div>
         </div>
-        <Instructions bot={bot} onEdit={() => setEditing(true)} />
+        <Instructions
+          bot={bot}
+          onEdit={() => setEditing(true)}
+          onHistory={() => setHistory("instructions")}
+        />
+        <Memory bot={bot} onHistory={() => setHistory("memory")} />
         <dl aria-label={words.about} className="m-0 flex flex-col rounded-xl bg-bubble py-1">
           <Fact label={words.engine}>
             <span className="truncate">{t.bots.dialog.agent.names[bot.agent]}</span>
@@ -137,6 +179,7 @@ export function Details({ bot, onClose }: { bot: Bot; onClose(): void }) {
         <BotShortcuts bot={bot} />
       </div>
       {editing && <BotDialog bot={bot} onClose={() => setEditing(false)} />}
+      {history && <VersionsDialog bot={bot} kind={history} onClose={() => setHistory(null)} />}
     </SidePanel>
   );
 }

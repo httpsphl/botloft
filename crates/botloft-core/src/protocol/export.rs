@@ -12,7 +12,7 @@ use crate::avatar::PALETTE;
 use crate::ids::{
     ApprovalId, AttachmentId, BotId, BuildId, ChatItemId, CrewAccessId, CrewId, DeliveryId,
     DesktopGrantId, ImportId, McpServerId, MessageId, QuestionId, RoutineId, RoutineRunId, RuleId,
-    TaskId,
+    TaskId, VersionId,
 };
 
 #[path = "export_backup.rs"]
@@ -63,6 +63,8 @@ mod session;
 mod skills;
 #[path = "export_usage.rs"]
 mod usage;
+#[path = "export_versions.rs"]
+mod versions;
 use crate::validate;
 
 const HEADER: &str = "\
@@ -144,6 +146,7 @@ fn export_bindings() {
     out.decl::<McpServerId>();
     out.decl::<CrewAccessId>();
     out.decl::<BuildId>();
+    out.decl::<VersionId>();
     out.decl::<ImportId>();
     out.decl::<Crew>();
     out.decl::<Build>();
@@ -245,6 +248,7 @@ fn export_bindings() {
     logins::decls(&mut out);
     out.decl::<ApprovalItem>();
     usage::decls(&mut out);
+    versions::decls(&mut out);
     questions::decls(&mut out);
     reactions::decls(&mut out);
     out.decl::<TurnItem>();
@@ -457,6 +461,7 @@ fn export_bindings() {
     );
     session::methods(&mut out);
     usage::methods(&mut out);
+    versions::methods(&mut out);
     rules::methods(&mut out);
     desktop::methods(&mut out);
     mcp::methods(&mut out);
@@ -524,6 +529,7 @@ fn export_bindings() {
     routines::notifications(&mut out);
     questions::notifications(&mut out);
     reactions::notifications(&mut out);
+    versions::notifications(&mut out);
     rules::notifications(&mut out);
     desktop::notifications(&mut out);
     permissions::notifications(&mut out);

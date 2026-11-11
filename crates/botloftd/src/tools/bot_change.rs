@@ -8,7 +8,7 @@ use botloft_core::chat::CHANGE_BOT_TOOL;
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{
     Bot, BotEffort, BotModel, BotsSetEffortParams, BotsSetModelParams, BotsUpdateParams,
-    PermissionMode,
+    PermissionMode, VersionAuthor,
 };
 use botloft_core::{slug, validate};
 use botloft_store::BotRecord;
@@ -20,6 +20,7 @@ use super::suggest::{INSTRUCTIONS_MAX, REASON_MAX};
 use crate::approvals::{self, Answer};
 use crate::service::{ApiError, ApiResult, bots, lead, models};
 use crate::state::Daemon;
+use crate::versions::Origin;
 
 pub const CHANGE_BOT: &str = "change_bot";
 
@@ -219,8 +220,9 @@ pub(super) fn apply(
     id: &BotId,
     before: &Profile,
     next: &Profile,
+    origin: Origin,
 ) -> ApiResult<Bot> {
-    let mut bot = bots::update(
+    let mut bot = bots::update_by(
         daemon,
         BotsUpdateParams {
             bot_id: id.clone(),
@@ -231,6 +233,7 @@ pub(super) fn apply(
             allowed_commands: None,
             plan_first: None,
         },
+        origin,
     )?;
     if next.model != before.model {
         bot = models::set_model(
@@ -278,7 +281,14 @@ async fn run(
         .map_err(explain)?
         .permission_mode;
     if mode == PermissionMode::BypassPermissions {
-        let bot = apply(daemon, &record.id, &before, &next).map_err(explain)?;
+        let bot = apply(
+            daemon,
+            &record.id,
+            &before,
+            &next,
+            Origin::by(VersionAuthor::Agent),
+        )
+        .map_err(explain)?;
         return Ok(done(
             &bot,
             caller,
@@ -297,7 +307,14 @@ async fn run(
         Some(Answer::Allowed { .. }) => {
             // Checked again: the crew may have changed while the owner read it.
             let next = after(daemon, &record, &args).map_err(explain)?;
-            let bot = apply(daemon, &record.id, &before, &next).map_err(explain)?;
+            let bot = apply(
+                daemon,
+                &record.id,
+                &before,
+                &next,
+                Origin::by(VersionAuthor::Agent),
+            )
+            .map_err(explain)?;
             Ok(done(&bot, caller, "The owner approved the change."))
         }
         Some(Answer::Denied { note }) => {

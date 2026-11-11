@@ -168,6 +168,7 @@ function BotRunView({
                     owner={owner}
                     name={owner === "bot" ? bot.name : (crew?.name ?? "")}
                     color={owner === "bot" ? bot.color : undefined}
+                    bot={owner === "bot" ? bot : undefined}
                   />
                 );
               }

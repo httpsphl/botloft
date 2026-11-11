@@ -26,6 +26,7 @@ import { seedPlan } from "./seedPlan";
 import { seedQuestions } from "./seedQuestions";
 import { seedRoutines } from "./seedRoutines";
 import { seedScreens } from "./seedScreens";
+import { seedVersions } from "./seedVersions";
 
 export function previewProps(search: string): { host: Host; connect: Connect } {
   const params = new URLSearchParams(search);
@@ -136,6 +137,7 @@ function seed(fake: FakeBotloft): void {
     planner: planner.id,
   });
   seedRoutines(fake, { scout: scout.id, analyst: analyst.id });
+  seedVersions(fake, scout.id);
   seedQuestions(fake, { scout: scout.id, analyst: analyst.id });
   seedKeys(fake, analyst.id, scout.id);
   seedPlan(fake, writer.id);

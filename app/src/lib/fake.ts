@@ -36,6 +36,7 @@ import { FakeScreens } from "./fakeScreens";
 import { searchHandlers } from "./fakeSearch";
 import { FakeSkills } from "./fakeSkills";
 import { usageHandlers } from "./fakeUsage";
+import { FakeVersions } from "./fakeVersions";
 import {
   type BackgroundTask,
   type Bot,
@@ -117,6 +118,8 @@ export class FakeBotloft implements BotloftApi {
   locale: string | null = null;
   readonly conversation = new FakeConversation(this);
   readonly routines = new FakeRoutines(this);
+  /** The history of each bot's memory and instructions (spec 8.10). */
+  readonly versions = new FakeVersions(this);
   readonly files = new FakeFiles(this);
   readonly browser = new FakeBrowser(this);
   readonly screens = new FakeScreens(this);
@@ -369,6 +372,7 @@ export class FakeBotloft implements BotloftApi {
     ...this.imports.handlers(),
     ...usageHandlers(this),
     ...instructionsHandlers(this),
+    ...this.versions.handlers(),
     ...islandHandlers(this),
     ...backupHandlers(this),
     ...cloudHandlers(this),

@@ -44,6 +44,7 @@ pub mod screens;
 pub mod settings;
 pub mod tasks;
 pub mod usage;
+pub mod versions;
 
 use botloft_core::protocol::{AgentKind, OwnerAccount, PROTOCOL_VERSION, SystemStatus, error_code};
 use botloft_core::slug;

@@ -34,6 +34,7 @@ import { skills } from "./skills";
 import { terminal } from "./terminal";
 import { tools } from "./tools";
 import { updates } from "./updates";
+import { versions } from "./versions";
 
 export const en = {
   common,
@@ -56,6 +57,7 @@ export const en = {
   files,
   home,
   instructions,
+  versions,
   island,
   keys,
   messages,

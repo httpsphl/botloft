@@ -33,6 +33,7 @@ pub(super) fn to_notification(event: &Event) -> String {
         Event::TaskChanged(task) => note(notification::TASK_CHANGED, task),
         Event::RoutineChanged(routine) => note(notification::ROUTINE_CHANGED, routine),
         Event::RoutineRun(run) => note(notification::ROUTINE_RUN, run),
+        Event::VersionCreated(version) => note(notification::VERSION_CREATED, version),
         Event::BrowserChanged(state) => note(notification::BROWSER_CHANGED, state),
         Event::BrowserAction(action) => note(notification::BROWSER_ACTION, action),
         Event::ScreenDraft(draft) => note(notification::SCREEN_DRAFT, draft),

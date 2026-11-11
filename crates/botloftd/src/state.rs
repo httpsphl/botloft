@@ -11,7 +11,7 @@ use botloft_core::protocol::{
     BrowserState, ChatDelta, ChatItemChanged, CloudProgress, CloudSignedIn, Crew, CrewDeleted,
     Delivery, DesktopAwayUse, DesktopState, FolderRecycled, McpOverview, Message,
     MobilePairRequest, MobileStatus, Question, ReactionChanged, Routine, RoutineRun, ScreenDraft,
-    Task,
+    Task, TextVersion,
 };
 use botloft_store::Store;
 use tokio::runtime::{Handle, RuntimeFlavor};
@@ -62,6 +62,8 @@ pub enum Event {
     TaskChanged(Task),
     RoutineChanged(Routine),
     RoutineRun(RoutineRun),
+    /// A new version of a bot's memory or instructions (spec 8.10).
+    VersionCreated(TextVersion),
     BrowserChanged(BrowserState),
     BrowserAction(BrowserAction),
     ScreenDraft(ScreenDraft),
