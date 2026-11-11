@@ -21,7 +21,9 @@ use super::key::{self, ASK_KEY};
 use super::question::{self, ASK_OWNER, TELL_OWNER};
 use super::share::{self, SHARE_FILE};
 use super::signal::{self, SEND_SIGNAL};
-use super::{activity, crew_reach, nothing_new, overview, retry, routine_change, templates};
+use super::{
+    activity, crew_reach, history, nothing_new, overview, retry, routine_change, templates,
+};
 use crate::service::tasks::{self, BotMessage};
 use crate::service::{ApiError, bots, lead};
 use crate::state::Daemon;
@@ -50,6 +52,9 @@ pub(super) fn call(daemon: &Daemon, bot: &BotId, params: &Value) -> Result<Value
             ASK_OWNER => parse(arguments).and_then(|args| question::ask(daemon, bot, args)),
             TELL_OWNER => parse(arguments).and_then(|args| question::tell(daemon, bot, args)),
             SHOW_CARD => parse(arguments).and_then(|args| card::show(daemon, bot, args)),
+            history::SEARCH_HISTORY => {
+                parse(arguments).and_then(|args| history::call(daemon, bot, args))
+            }
             ASK_KEY => parse(arguments).and_then(|args| key::ask(daemon, bot, args)),
             SEND_SIGNAL => parse(arguments).and_then(|args| signal::send(daemon, bot, args)),
             routine_change::MY_ROUTINES => routine_change::mine(daemon, bot),

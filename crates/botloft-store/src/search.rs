@@ -18,6 +18,8 @@ pub struct SearchFilter<'a> {
     /// Only items stored before this one.
     pub before: Option<&'a ChatItemId>,
     pub limit: u32,
+    /// Words of context around the match; 18 when `None`, at most 64.
+    pub snippet_words: Option<u32>,
 }
 
 /// A chat item that matched, with its crew and a snippet.
@@ -70,7 +72,7 @@ impl Store {
                 filter.limit,
                 SNIPPET_OPEN.to_string(),
                 SNIPPET_CLOSE.to_string(),
-                SNIPPET_TOKENS,
+                filter.snippet_words.unwrap_or(SNIPPET_TOKENS).min(64),
             ],
             |row| {
                 Ok(Found {

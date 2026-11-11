@@ -72,6 +72,7 @@ pub fn search(daemon: &Daemon, params: ChatSearchParams) -> ApiResult<Vec<Search
         crew: params.crew_id.as_ref(),
         before: params.before.as_ref(),
         limit,
+        snippet_words: None,
     };
     Ok(store
         .search_chat(&query, filter)?

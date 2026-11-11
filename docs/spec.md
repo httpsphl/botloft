@@ -514,6 +514,17 @@ O dono procura palavras em todas as conversas: o que ele mandou, o que outros bo
 
 **No app.** "Buscar", no trilho de ícones (15.1; ou Ctrl+K), abre a busca no meio da janela: um campo em pílula cinza, como a busca das Configurações e da agência, sem linha embaixo do topo, a escolha de uma equipe ou de todas, e os resultados conforme o dono escreve, cada um com o rosto e o nome do bot, a equipe, a hora, quem escreveu (o dono, outro bot, o Botloft ou o próprio bot) e o trecho com as palavras em destaque. "Mostrar mais" traz os anteriores. Um clique abre o chat do bot nesse ponto, com o item em destaque por um instante. A busca guarda o que foi digitado enquanto o app está aberto, e o texto volta selecionado, pronto para uma busca nova. Sem nada achado: "Nada encontrado".
 
+**O agente também busca.** Com a tool `search_history` (10), um bot procura no próprio chat o que saiu do contexto dele: uma decisão antiga, um nome, um número, um arquivo citado. Antes, depois de compactar ou numa sessão nova, ele só tinha o `CLAUDE.md` e perguntava de novo ou supunha.
+
+- **Onde procura:** só no chat do próprio bot, no mesmo índice e com as mesmas regras de palavras da busca do dono: o que o dono, outros bots e o Botloft mandaram a ele, o que ele respondeu, e as perguntas e recados dele (23) com as respostas. Nunca o chat de outro bot com o dono, nem de outra crew, como em `crew_activity` (29.2).
+- **Achar:** `search_history {query, before?, limit?}`, do mais novo ao mais velho, `limit` de 1 a 20 (10 se ausente); `before`, o `item_id` do último achado, pagina. Cada achado traz `item_id`, `at` (data e hora no fuso do computador, como `2026-11-10 14:05`), `from` (`owner`, `you`, `@handle`, `Botloft` ou `a deleted bot`), `kind` (`message`, `reply`, `question` ou `note`) e um trecho de umas 40 palavras em volta, com as palavras achadas entre `**`. A resposta diz o fuso e se pode haver mais.
+- **Ler em volta:** `search_history {around}`, com um `item_id`, devolve a conversa em volta, do mais velho ao mais novo: até 6 itens antes e 6 depois, contando só mensagens, respostas, perguntas, recados e cartões (8.11); ferramentas, aprovações e avisos ficam de fora. Cada texto vai até 2 000 caracteres. Uma pergunta vem com a resposta do dono, e um cartão em markdown, com o título e os blocos. Um item fora do chat do bot dá erro, sem dizer se existe.
+- `query` ou `around`, um dos dois e não os dois. A consulta precisa de pelo menos 2 letras ou números e tem até 200 caracteres.
+- **Privacidade:** a consulta e os resultados nunca vão ao log em `info` ou acima (13).
+- **Regras do bot** (5.1): quando o dono ou outro bot fala de algo de antes que ele não tem mais no contexto, `search_history` antes de perguntar de novo ou de supor.
+- **No app:** a linha da ferramenta diz "Buscar em conversas antigas", com a consulta.
+- **Fora desta etapa:** pôr trechos antigos sozinhos em toda mensagem (gasta contexto e traz o que não importa), o chefe buscar nos chats da crew e buscar nos arquivos.
+
 ### 8.9 Reações
 
 O dono reage a uma fala do bot (item `reply`) com um emoji, sem gastar um turno: a reação não acorda o bot. Ela espera e vai junto com a próxima message do dono para esse bot. A exceção é 👍 ou 👎 numa fala que pergunta algo: aí a reação é a resposta e vai na hora (abaixo).
@@ -712,6 +723,7 @@ Transporte: Streamable HTTP, só POST e resposta `application/json`, sem sessão
 | `ask_owner` | `question` (até 2 000 caracteres), `options?` (2 a 5, até 100 caracteres cada) | `question_id` e o lembrete de que a resposta chega depois, como mensagem; a tool não espera (23.2) |
 | `tell_owner` | `note` (até 2 000 caracteres) | `note_id`; deixa um recado ao dono, que não pergunta nada, no máximo 10 por hora (23.10) |
 | `show_card` | `card?` (o `card_id` de um cartão dele), `title` (até 100 caracteres), `blocks` (1 a 20) | `card_id` e `version`; mostra um cartão no chat, ou o mesmo de novo, mudado, como versão nova (8.11) |
+| `search_history` | `query` (até 200 caracteres), `before?` e `limit?` (1 a 20), ou `around` (um `item_id`) | os achados no chat do próprio bot (`item_id`, hora, quem, tipo e trecho) ou a conversa em volta de um deles (8.8) |
 | `ask_key` | `name` (o nome da variável, 32.3), `why` (até 500 caracteres) | `request_id` e o lembrete de que a chave chega depois, num reinício com a variável e numa mensagem do Botloft; a tool não espera (32.5) |
 | `show_plan` | `summary` (até 300 caracteres), `steps` (2 a 8, até 200 caracteres cada), `alternative?` (até 300) | `start` (`plan`, `alternative` ou `false`) e o que fazer; espera até 20 s pelo dono (10.5) |
 | `permission_prompt` | `tool_name`, `input`, `tool_use_id` | decisão do dono (10.1). Chamada pelo Claude Code, não pelo modelo |

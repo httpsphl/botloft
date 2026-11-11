@@ -146,6 +146,7 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
             field(input, "task").map(str::to_owned)
         }
         "mcp__botloft__browser_open" => field(input, "url").map(str::to_owned),
+        "mcp__botloft__search_history" => field(input, "query").map(str::to_owned),
         "mcp__botloft__share_file" => input.get("files").and_then(Value::as_array).map(|files| {
             let names: Vec<String> = files
                 .iter()
@@ -312,6 +313,20 @@ mod tests {
                 &json!({ "url": "https://example.com/a" })
             ),
             "https://example.com/a"
+        );
+        assert_eq!(
+            tool_summary(
+                "mcp__botloft__search_history",
+                &json!({ "query": "Lisbon budget" })
+            ),
+            "Lisbon budget"
+        );
+        assert_eq!(
+            tool_summary(
+                "mcp__botloft__search_history",
+                &json!({ "around": "cht_1" })
+            ),
+            ""
         );
         assert_eq!(
             tool_summary(

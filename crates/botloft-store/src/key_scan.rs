@@ -201,6 +201,7 @@ mod tests {
                 crew: None,
                 before: None,
                 limit: 50,
+                snippet_words: None,
             };
             fx.store.search_chat(&query, filter).expect("search").len()
         };
