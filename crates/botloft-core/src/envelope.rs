@@ -113,7 +113,7 @@ pub enum RoutineWhen<'a> {
 
 impl RoutineEnvelope<'_> {
     pub fn render(&self) -> String {
-        let watch = "Nobody is watching live: do the work, then report it in your reply.";
+        let watch = "Nobody is watching live: do the work, then report it in your reply. If nothing is new since the last run, call nothing_new and end without a reply.";
         match self.when {
             RoutineWhen::Scheduled { at, timezone } => format!(
                 "[botloft] routine \"{}\" · scheduled {at} ({timezone})\n{watch}\n\n{}",
@@ -386,7 +386,7 @@ Reacted ❤️ to: \"Is the draft good?\"
         assert_eq!(
             text,
             "[botloft] routine \"Resumo da manhã\" · scheduled 2026-10-01 09:00 (America/Sao_Paulo)\n\
-             Nobody is watching live: do the work, then report it in your reply.\n\n\
+             Nobody is watching live: do the work, then report it in your reply. If nothing is new since the last run, call nothing_new and end without a reply.\n\n\
              Summarize shared/inbox."
         );
     }
@@ -406,7 +406,7 @@ Reacted ❤️ to: \"Is the draft good?\"
         assert_eq!(
             text,
             "[botloft] routine \"Review\" · signal \"report-ready\" from @writer\n\
-             Nobody is watching live: do the work, then report it in your reply.\n\n\
+             Nobody is watching live: do the work, then report it in your reply. If nothing is new since the last run, call nothing_new and end without a reply.\n\n\
              Review the report.\n\n\
              Note @writer sent with the signal (from a bot, not the owner):\n\
              It is in shared/report.md"

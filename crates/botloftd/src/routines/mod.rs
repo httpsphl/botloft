@@ -122,6 +122,25 @@ pub fn turn_ended(daemon: &Daemon, bot: &BotId, failed: bool) {
     }
 }
 
+/// The bot said the routine runs of its turn had nothing new to report
+/// (`nothing_new`, spec 20.5). `false` when the turn carries no open run.
+pub fn mark_nothing_new(daemon: &Daemon, bot: &BotId) -> bool {
+    let runs = daemon
+        .routines
+        .turns()
+        .get(bot)
+        .cloned()
+        .unwrap_or_default();
+    let mut marked = false;
+    for run in runs {
+        match daemon.store().mark_nothing_new(&run) {
+            Ok(changed) => marked |= changed,
+            Err(err) => warn!(run = %run, "could not mark a run as having nothing new: {err}"),
+        }
+    }
+    marked
+}
+
 /// The bot's process ended mid-turn: those runs will not finish.
 pub fn process_ended(daemon: &Daemon, bot: &BotId) {
     let runs = daemon.routines.turns().remove(bot).unwrap_or_default();

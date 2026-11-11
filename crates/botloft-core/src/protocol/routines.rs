@@ -131,6 +131,10 @@ pub struct RoutineRun {
     /// The signal that made it run, for a routine that waits for one.
     #[serde(default)]
     pub signal: Option<RunSignal>,
+    /// The bot said there was nothing new to report (`nothing_new`, spec
+    /// 20.5): the run ended quietly, with no report to read.
+    #[serde(default)]
+    pub nothing_new: bool,
 }
 
 /// A signal a bot sent (spec 20.13).

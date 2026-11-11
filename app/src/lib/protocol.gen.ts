@@ -2854,7 +2854,12 @@ messageId: MessageId | null, createdAt: number, finishedAt: number | null,
 /**
  * The signal that made it run, for a routine that waits for one.
  */
-signal: RunSignal | null, };
+signal: RunSignal | null, 
+/**
+ * The bot said there was nothing new to report (`nothing_new`, spec
+ * 20.5): the run ended quietly, with no report to read.
+ */
+nothingNew: boolean, };
 
 export type Routine = { id: RoutineId, botId: BotId, name: string, 
 /**

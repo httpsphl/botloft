@@ -25,6 +25,7 @@ export const routines: Messages["routines"] = {
   last: {
     queued: "Ejecutándose ahora",
     done: "La última salió bien",
+    nothingNew: "La última no encontró nada nuevo",
     failed: "La última falló",
     failedRow: (n: number) => `Falló ${n} veces seguidas: espera más antes de volver a intentarlo`,
     overlap: "La última vez se saltó: la anterior no había terminado",

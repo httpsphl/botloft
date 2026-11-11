@@ -23,6 +23,7 @@ export const routines = {
   last: {
     queued: "Running now",
     done: "Last run went fine",
+    nothingNew: "Last run found nothing new",
     failed: "Last run failed",
     failedRow: (n: number) => `Failed ${n} times in a row: it waits longer before the next try`,
     overlap: "Last time was skipped: the run before hadn't finished",

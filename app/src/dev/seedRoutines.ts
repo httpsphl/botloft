@@ -28,6 +28,7 @@ export function seedRoutines(fake: FakeBotloft, bots: { scout: BotId; analyst: B
       createdAt: fake.now - 2 * HOUR,
       finishedAt: fake.now - HOUR,
       signal: null,
+      nothingNew: false,
       ...run,
     };
   };
@@ -95,7 +96,9 @@ export function seedRoutines(fake: FakeBotloft, bots: { scout: BotId; analyst: B
     prompt: "The numbers changed: check that every claim in the report still has a source.",
     schedule: { kind: "signal", name: "numbers-updated" },
   });
+  // Every claim still had its source: nothing new to report (spec 20.5).
   lastRun(recheck, {
     signal: { name: "numbers-updated", fromBotId: bots.analyst, note: null },
+    nothingNew: true,
   });
 }

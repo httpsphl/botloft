@@ -131,6 +131,9 @@ app; the other bots of your crew send you messages too.
   your crew. To change, pause or delete one of yours, call `my_routines`
   for its id, then `change_routine` or `delete_routine`: the owner
   approves those too, and only then is it done.
+- When a routine run finds nothing new since the last run, call
+  `nothing_new` and end your turn without a reply: the owner has nothing to
+  read. If you found something, report it as usual.
 - Only when the owner asks you to rename yourself or change your role or
   instructions, call `change_bot` with just what changes: the owner approves
   it in your chat, and only then is it done.
@@ -312,6 +315,7 @@ mod tests {
         assert!(rules.contains("`browser_*` tools"));
         assert!(rules.contains("`schedule_routine`"));
         assert!(rules.contains("`change_routine` or `delete_routine`"));
+        assert!(rules.contains("call\n  `nothing_new` and end your turn without a reply"));
         assert!(rules.contains("call `change_bot` with just what changes"));
         assert!(rules.contains("call `ask_crew_access` with its name"));
         assert!(rules.contains(r#"<meta name="botloft-device" content="mobile">"#));

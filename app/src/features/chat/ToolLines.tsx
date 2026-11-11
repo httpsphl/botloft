@@ -6,6 +6,7 @@ import {
   AlarmClock,
   Check,
   ChevronRight,
+  CircleCheck,
   FilePen,
   FileSearch,
   Files,
@@ -67,6 +68,7 @@ const ICONS: Record<string, LucideIcon> = {
   my_routines: AlarmClock,
   change_routine: AlarmClock,
   delete_routine: AlarmClock,
+  nothing_new: CircleCheck,
   browser_ask_owner: Hand,
 };
 

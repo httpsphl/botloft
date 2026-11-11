@@ -2,6 +2,7 @@ import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { FakeBotloft } from "../lib/fake";
 import { FakeHost } from "../lib/fakeHost";
+import type { RoutineRun } from "../lib/protocol.gen";
 import { SYSTEM } from "../lib/system";
 import { crewOpened, renderApp } from "../test/app";
 import { prefs, resetPrefs } from "./prefs";
@@ -59,6 +60,41 @@ describe("notifications", () => {
     act(() => fake.setBotState(scout.id, "busy"));
     act(() => fake.setBotState(scout.id, "idle"));
     expect(host.notices).toEqual([{ title: "Scout finished", body: "Crew Ops", sound: false }]);
+  });
+
+  test("stay quiet when the turn was a routine run with nothing new", async () => {
+    const { fake, host, scout } = await scoutBehind();
+    prefs.notifyDone.set(true);
+    const routine = fake.routines.handlers()["routines.create"]({
+      botId: scout.id,
+      name: "Inbox check",
+      prompt: "Tell me what arrived.",
+      schedule: { kind: "interval", minutes: 60 },
+      timezone: "UTC",
+    });
+    const run = (nothingNew: boolean): RoutineRun => ({
+      id: fake.id("rrn"),
+      routineId: routine.id,
+      scheduledFor: Date.now(),
+      status: "done",
+      reason: null,
+      skippedCount: 0,
+      nothingNew,
+      messageId: null,
+      createdAt: Date.now(),
+      finishedAt: Date.now(),
+      signal: null,
+    });
+    // The daemon closes the run, then the bot goes idle (spec 20.5).
+    act(() => fake.setBotState(scout.id, "busy"));
+    act(() => fake.emit({ name: "routine.run", params: run(true) }));
+    act(() => fake.setBotState(scout.id, "idle"));
+    expect(host.notices).toEqual([]);
+    // A run that found something still says so.
+    act(() => fake.setBotState(scout.id, "busy"));
+    act(() => fake.emit({ name: "routine.run", params: run(false) }));
+    act(() => fake.setBotState(scout.id, "idle"));
+    expect(host.notices).toEqual([{ title: "Scout finished", body: "Crew Ops", sound: true }]);
   });
 
   test("do not show while Botloft is in front, nor for what was there on opening", async () => {
