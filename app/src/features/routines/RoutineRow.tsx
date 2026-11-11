@@ -84,7 +84,9 @@ export function RoutineRow({
                     : r.off}
           </span>
         </p>
-        {routine.lastRun && <LastRun run={routine.lastRun} words={r.last} />}
+        {routine.lastRun && (
+          <LastRun run={routine.lastRun} streak={routine.failStreak} words={r.last} />
+        )}
       </div>
       <Button size="sm" icon={Play} onClick={runNow}>
         {r.runNow}
@@ -116,7 +118,16 @@ export function RoutineRow({
   );
 }
 
-function LastRun({ run, words }: { run: RoutineRun; words: Messages["routines"]["last"] }) {
+function LastRun({
+  run,
+  streak,
+  words,
+}: {
+  run: RoutineRun;
+  /** Failures in a row (spec 20.3); from two, the next try waits longer. */
+  streak: number;
+  words: Messages["routines"]["last"];
+}) {
   const line = "mt-1 flex items-center gap-1.5 text-xs";
   // Who sent the signal it ran for (spec 20.13), while that bot is around.
   const sender = useApp((state) =>
@@ -154,7 +165,7 @@ function LastRun({ run, words }: { run: RoutineRun; words: Messages["routines"][
       return (
         <p className={`${line} text-danger`}>
           <CircleAlert aria-hidden size={12} />
-          {words.failed}
+          {streak >= 2 ? words.failedRow(streak) : words.failed}
           {from}
         </p>
       );

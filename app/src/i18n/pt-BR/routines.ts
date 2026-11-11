@@ -27,6 +27,7 @@ export const routines: Messages["routines"] = {
     done: "A última rodou bem",
     nothingNew: "A última não achou nada novo",
     failed: "A última falhou",
+    failedRow: (n: number) => `Falhou ${n} vezes seguidas: espera mais antes de tentar de novo`,
     overlap: "A última vez foi pulada: a anterior ainda não tinha terminado",
     bot_paused: "A última vez foi pulada: o agente estava pausado",
     too_soon: "O último aviso foi pulado: chegou menos de 5 minutos depois do anterior",

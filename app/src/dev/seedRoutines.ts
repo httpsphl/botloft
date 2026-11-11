@@ -78,6 +78,8 @@ export function seedRoutines(fake: FakeBotloft, bots: { scout: BotId; analyst: B
     schedule: { kind: "weekly", days: [1, 4], time: "14:30" },
   });
   lastRun(numbers, { status: "failed" });
+  // Two failures in a row: the next try waits longer (spec 20.3).
+  numbers.failStreak = 2;
   numbers.nextRunAt = fake.now + 3 * 24 * HOUR;
 
   const backup = create(bots.analyst, {

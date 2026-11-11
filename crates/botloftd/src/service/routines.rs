@@ -47,6 +47,7 @@ pub fn create(daemon: &Daemon, params: RoutinesCreateParams) -> ApiResult<Routin
         enabled: true,
         next_run_at: plan.next_after(now, now),
         last_run: None,
+        fail_streak: 0,
         created_at: now,
         updated_at: now,
         archived_at: None,

@@ -136,6 +136,7 @@ fn fill(fx: &Fixture) -> Owned {
         enabled: true,
         next_run_at: Some(100),
         last_run: None,
+        fail_streak: 0,
         created_at: 0,
         updated_at: 0,
         archived_at: None,

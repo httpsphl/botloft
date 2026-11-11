@@ -25,6 +25,7 @@ export const routines = {
     done: "Last run went fine",
     nothingNew: "Last run found nothing new",
     failed: "Last run failed",
+    failedRow: (n: number) => `Failed ${n} times in a row: it waits longer before the next try`,
     overlap: "Last time was skipped: the run before hadn't finished",
     bot_paused: "Last time was skipped: the agent was paused",
     too_soon: "Last signal was skipped: it came less than 5 minutes after the one before",

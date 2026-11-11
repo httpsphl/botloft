@@ -17,5 +17,7 @@ export const alerts = {
   signInBody: "Open Botloft to sign in.",
   done: (bot: string) => `${bot} finished`,
   routineFailed: (bot: string) => `${bot}'s routine failed`,
+  /** It works again after failing (spec 20.9). */
+  routineRecovered: (bot: string) => `${bot}'s routine works again`,
   crew: (crew: string) => `Crew ${crew}`,
 };

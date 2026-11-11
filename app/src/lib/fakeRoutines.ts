@@ -50,6 +50,7 @@ export class FakeRoutines {
                 ? Date.parse(`${schedule.at}:00Z`)
                 : this.fake.now + HOUR,
           lastRun: null,
+          failStreak: 0,
           createdAt: this.fake.now,
           updatedAt: this.fake.now,
           archivedAt: null,
