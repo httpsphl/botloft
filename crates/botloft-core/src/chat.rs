@@ -219,6 +219,7 @@ pub fn activity(body: &ChatBody, at: i64) -> Option<Activity> {
         ),
         // Asking for a key is asking the owner (spec 32.5).
         ChatBody::KeyRequest(item) => (ActivityKind::Question, item.why.clone()),
+        ChatBody::Card(card) => (ActivityKind::Card, card.title.clone()),
         // A compaction is housekeeping, not news about the conversation.
         ChatBody::Notice(item)
             if matches!(

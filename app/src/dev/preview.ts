@@ -12,6 +12,7 @@ import type { Host } from "../lib/host";
 import { PROTOCOL_VERSION } from "../lib/protocol.gen";
 import { seedBrowser } from "./seedBrowser";
 import { seedCalls } from "./seedCalls";
+import { seedCards } from "./seedCards";
 import { seedChats } from "./seedChats";
 import { seedChief } from "./seedChief";
 import { seedContext } from "./seedContext";
@@ -139,6 +140,7 @@ function seed(fake: FakeBotloft): void {
   seedRoutines(fake, { scout: scout.id, analyst: analyst.id });
   seedVersions(fake, scout.id);
   seedQuestions(fake, { scout: scout.id, analyst: analyst.id });
+  seedCards(fake, analyst.id);
   seedKeys(fake, analyst.id, scout.id);
   seedPlan(fake, writer.id);
   seedBrowser(fake, scout.id);

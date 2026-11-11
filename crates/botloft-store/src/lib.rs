@@ -13,6 +13,7 @@ mod bot_skills;
 mod bots;
 mod browser_sites;
 mod builds;
+mod cards;
 mod chat;
 mod copier;
 mod crew_access;

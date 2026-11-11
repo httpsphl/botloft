@@ -11,6 +11,7 @@ import type { Bot, ChatItem, TurnItem } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
 import { useArrival } from "../../ui/motion";
 import { BotAvatar, moodOf } from "../bots/BotAvatar";
+import { AgentCard } from "../cards/AgentCard";
 import { QuestionCard } from "../questions/QuestionCard";
 import { ApprovalCard } from "./ApprovalCard";
 import { KeyRequestCard } from "./KeyRequestCard";
@@ -215,6 +216,17 @@ function BotRunView({
               return (
                 <Arriving key={head.id} id={head.id} at={head.createdAt}>
                   <KeyRequestCard id={head.id} request={head.body} bot={bot} />
+                </Arriving>
+              );
+            case "card":
+              return (
+                <Arriving key={head.id} id={head.id} at={head.createdAt}>
+                  <AgentCard
+                    id={head.id}
+                    card={head.body}
+                    bot={bot.name}
+                    updatedAt={head.updatedAt}
+                  />
                 </Arriving>
               );
             case "turn":

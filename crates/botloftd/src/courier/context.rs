@@ -2,7 +2,7 @@
 //! routine that sent it (spec 20.5) or the question it answers (spec 23.4).
 
 use botloft_core::envelope::{RoutineEnvelope, RoutineWhen};
-use botloft_core::protocol::{Message, Question};
+use botloft_core::protocol::{ChatBody, Message, Question};
 use botloft_store::{Store, StoreError};
 
 use crate::routines;
@@ -74,6 +74,22 @@ pub(super) fn routine(
         name: routine.name,
         trigger,
     }))
+}
+
+/// The id and title of the card the owner's message answers (spec 8.11).
+pub(super) fn card(
+    store: &Store,
+    message: &Message,
+) -> Result<Option<(String, String)>, StoreError> {
+    let Some(reply) = &message.reply_to else {
+        return Ok(None);
+    };
+    Ok(store
+        .chat_item(&reply.item_id)?
+        .and_then(|item| match item.body {
+            ChatBody::Card(card) => Some((item.id.to_string(), card.title)),
+            _ => None,
+        }))
 }
 
 /// The question a message answers, or the note it replies to.

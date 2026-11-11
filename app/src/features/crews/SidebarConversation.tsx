@@ -105,6 +105,8 @@ export function activityText(activity: Activity, t: Messages): string {
       return t.questions.activity(plainText(text));
     case "note":
       return t.questions.noteActivity(plainText(text));
+    case "card":
+      return t.agentCards.activity(text);
     case "tool": {
       if (!tool) {
         return text;

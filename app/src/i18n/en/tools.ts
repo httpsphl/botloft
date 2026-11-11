@@ -44,6 +44,7 @@ export const tools = {
     share_file: "Share a file",
     ask_owner: "Ask you a question",
     tell_owner: "Leave you a note",
+    show_card: "Show you a card",
     ask_key: "Ask you for a key",
     show_plan: "Show you the plan",
     browser: "Use a site",

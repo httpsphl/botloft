@@ -67,6 +67,10 @@ export function activityLine(
       kind = body.question.kind === "note" ? "note" : "question";
       text = body.question.text;
       break;
+    case "card":
+      kind = "card";
+      text = body.title;
+      break;
     case "notice":
       // A compaction is housekeeping, not news about the conversation.
       if (

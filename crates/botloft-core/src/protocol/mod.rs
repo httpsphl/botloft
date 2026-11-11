@@ -53,6 +53,7 @@ mod backup;
 mod browser;
 mod browser_input;
 mod builds;
+mod cards;
 mod catalog;
 mod changes;
 mod chat;
@@ -93,6 +94,7 @@ pub use backup::*;
 pub use browser::*;
 pub use browser_input::*;
 pub use builds::*;
+pub use cards::*;
 pub use catalog::*;
 pub use changes::*;
 pub use chat::*;
@@ -195,6 +197,8 @@ pub mod method {
     /// The owner read a bot's chat on the computer (spec 28.12).
     pub const CHAT_READ: &str = "chat.read";
     pub const CHAT_SEARCH: &str = "chat.search";
+    /// The owner presses a button of a card, or sends its form (spec 8.11).
+    pub const CHAT_ACT: &str = "chat.act";
     pub const APPROVALS_ANSWER: &str = "approvals.answer";
     pub const RULES_LIST: &str = "rules.list";
     pub const RULES_DELETE: &str = "rules.delete";

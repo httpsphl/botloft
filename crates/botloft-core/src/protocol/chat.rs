@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{AllowScope, Message, Question, TokenUsage};
+use super::{AllowScope, CardItem, Message, Question, TokenUsage};
 use crate::ids::{ApprovalId, BotId, ChatItemId};
 
 text_enum!(
@@ -75,6 +75,8 @@ text_enum!(
         Question => "question",
         /// A note for the owner (spec 23.10); `text` is the note.
         Note => "note",
+        /// A card the bot shows (spec 8.11); `text` is its title.
+        Card => "card",
         Notice => "notice",
     }
 );
@@ -113,6 +115,8 @@ pub enum ChatBody {
     /// The bot asks the owner for a key (spec 32.5); the item's id is the
     /// request's.
     KeyRequest(KeyRequestItem),
+    /// A card the bot shows (spec 8.11); the item's id is the card's.
+    Card(CardItem),
 }
 
 text_enum!(
