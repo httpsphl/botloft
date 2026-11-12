@@ -2,6 +2,7 @@
 //! missed while the daemon was away, a paused bot, a run still open, and
 //! the message a run sends.
 
+use botloft_core::ids::ConversationId;
 use botloft_core::ids::{MessageId, RoutineId, RoutineRunId};
 use botloft_core::protocol::{
     Crew, Message, MessageKind, Missed, Overlap, Routine, RoutineRun, RunSignal, RunStatus,
@@ -173,7 +174,8 @@ pub(super) fn attempt(
         attachments: Vec::new(),
         created_at: now,
     };
-    let delivery = messages::pending_delivery(&message);
+    let delivery =
+        messages::pending_delivery(&message, ConversationId::main_of(&message.to_bot_id));
     let run = RoutineRun {
         id: RoutineRunId::generate(),
         routine_id: routine.id.clone(),

@@ -2,12 +2,18 @@
 
 use std::time::Duration;
 
+use botloft_core::ids::{BotId, ConversationId};
 use botloft_core::protocol::{BotEffort, BotState, PermissionMode};
 use tokio::time::Instant;
 
 use crate::runtime::ProcessControl;
 
 pub(super) struct Slot {
+    /// The bot this conversation is of (spec 40).
+    pub bot: BotId,
+    /// The conversation it runs, and whether it is the bot's main one.
+    pub conversation: ConversationId,
+    pub main: bool,
     pub state: BotState,
     /// Generation of the current or last process.
     pub generation: Option<u64>,
@@ -55,8 +61,11 @@ pub(super) struct Slot {
 }
 
 impl Slot {
-    pub fn new(backoff: Backoff) -> Self {
+    pub fn new(bot: &BotId, conversation: &ConversationId, backoff: Backoff) -> Self {
         Self {
+            bot: bot.clone(),
+            conversation: conversation.clone(),
+            main: conversation.is_main_of(bot),
             state: BotState::Offline,
             generation: None,
             running: None,
@@ -185,16 +194,25 @@ fn random_below(bound: u64) -> u64 {
 mod tests {
     use super::*;
 
+    fn new_slot() -> Slot {
+        let bot = BotId::generate();
+        Slot::new(
+            &bot,
+            &ConversationId::main_of(&bot),
+            Backoff::new(Duration::ZERO, Duration::ZERO),
+        )
+    }
+
     #[test]
     fn counters_decide_the_working_state() {
-        let mut slot = Slot::new(Backoff::new(Duration::ZERO, Duration::ZERO));
+        let mut slot = new_slot();
         assert_eq!(slot.working_state(), BotState::Idle);
         slot.waiting = vec!["a".into(), "b".into()];
         assert_eq!(slot.working_state(), BotState::Busy);
         slot.approvals = 1;
         assert_eq!(slot.working_state(), BotState::NeedsApproval);
 
-        let mut slot = Slot::new(Backoff::new(Duration::ZERO, Duration::ZERO));
+        let mut slot = new_slot();
         slot.in_turn = true;
         assert_eq!(slot.working_state(), BotState::Busy);
         slot.in_turn = false;

@@ -2,6 +2,7 @@
 //! leaves them (23.10): asking or telling, from the bot's tools, and
 //! `questions.*`, from the app.
 
+use botloft_core::ids::ConversationId;
 use botloft_core::ids::{BotId, ChatItemId, MessageId, QuestionId};
 use botloft_core::protocol::{
     ChatBody, ChatItem, Message, MessageKind, NOTES_PER_HOUR, OPEN_QUESTIONS_MAX,
@@ -75,6 +76,7 @@ pub fn ask(daemon: &Daemon, bot: &BotId, ask: Ask) -> ApiResult<Question> {
     let item = ChatItem {
         id: ChatItemId::generate(),
         bot_id: bot.clone(),
+        conversation_id: botloft_core::ids::ConversationId::main_of(bot),
         body: ChatBody::Question(QuestionItem {
             question: question.clone(),
         }),
@@ -148,7 +150,8 @@ pub fn answer(daemon: &Daemon, params: QuestionsAnswerParams) -> ApiResult<Quest
         attachments: Vec::new(),
         created_at: daemon.clock.now_ms(),
     };
-    let delivery = messages::pending_delivery(&message);
+    let delivery =
+        messages::pending_delivery(&message, ConversationId::main_of(&message.to_bot_id));
     let answered = store
         .answer_question(&question.id, &message, &delivery)?
         .ok_or_else(|| already_closed(&question.id))?;

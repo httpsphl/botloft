@@ -7,7 +7,7 @@
 
 use std::collections::HashSet;
 
-use botloft_core::ids::BotId;
+use botloft_core::ids::{BotId, ConversationId};
 use botloft_core::protocol::BotState;
 use tracing::{debug, warn};
 
@@ -28,14 +28,14 @@ impl Supervisor {
         let Some(max) = max else {
             return starts;
         };
-        let starting: HashSet<&BotId> = starts.iter().map(Start::bot_id).collect();
+        let starting: HashSet<&ConversationId> = starts.iter().map(Start::conversation).collect();
         // Processes alive (stopping ones too, until they are gone) or being
         // made by an earlier pass.
         let running = inner
             .slots
             .iter()
-            .filter(|(bot, slot)| {
-                (slot.running.is_some() || slot.launching) && !starting.contains(bot)
+            .filter(|(conversation, slot)| {
+                (slot.running.is_some() || slot.launching) && !starting.contains(conversation)
             })
             .count();
         let mut room = max.saturating_sub(running);
@@ -69,7 +69,7 @@ impl Supervisor {
         }
         for start in waiting {
             let work = with_work.contains(start.bot_id());
-            self.wait_for_room(inner, start.bot_id(), work);
+            self.wait_for_room(inner, start.conversation(), work);
         }
         admitted
     }
@@ -90,7 +90,8 @@ impl Supervisor {
             })
             .collect();
         idle.sort_by_key(|(_, slot)| slot.idle_since);
-        for (bot, slot) in idle.into_iter().take(count) {
+        for (_, slot) in idle.into_iter().take(count) {
+            let bot = &slot.bot;
             slot.stop = Some(StopIntent::Halt(BotState::Sleeping));
             if let Some(running) = &slot.running
                 && let Err(err) = running.control.kill()
@@ -104,11 +105,12 @@ impl Supervisor {
     /// A start that did not fit: the agent waits asleep. One a message waits
     /// for keeps asking, so it starts as soon as there is room; any other
     /// starts when a message wakes it (7.7).
-    fn wait_for_room(&self, inner: &mut Inner, bot: &BotId, work: bool) {
-        if let Some(slot) = inner.slots.get_mut(bot) {
+    fn wait_for_room(&self, inner: &mut Inner, conversation: &ConversationId, work: bool) {
+        if let Some(slot) = inner.slots.get_mut(conversation) {
             slot.launching = false;
             slot.wake_asked = work;
-            self.set_state(bot, slot, BotState::Sleeping);
+            let bot = slot.bot.clone();
+            self.set_state(&bot, slot, BotState::Sleeping);
         }
     }
 }

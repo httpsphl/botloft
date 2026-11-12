@@ -21,15 +21,22 @@ impl Supervisor {
         } = &mut *inner;
         // A pass that read the bot just before must not start it again.
         gone.insert(bot.clone());
-        sessions.remove(bot);
-        let Some(slot) = slots.remove(bot) else {
-            return;
-        };
-        self.count_busy(slot.state, BotState::Offline);
-        if let Some(running) = slot.running {
-            tokens.remove(&running.token_hash);
-            if let Err(err) = running.control.kill() {
-                warn!(bot = %bot, "could not stop a deleted bot: {err}");
+        let conversations: Vec<_> = slots
+            .iter()
+            .filter(|(_, slot)| slot.bot == *bot)
+            .map(|(id, _)| id.clone())
+            .collect();
+        sessions.retain(|id, _| !id.is_main_of(bot) && !conversations.contains(id));
+        for id in conversations {
+            let Some(slot) = slots.remove(&id) else {
+                continue;
+            };
+            self.count_busy(slot.state, BotState::Offline);
+            if let Some(running) = slot.running {
+                tokens.remove(&running.token_hash);
+                if let Err(err) = running.control.kill() {
+                    warn!(bot = %bot, "could not stop a deleted bot: {err}");
+                }
             }
         }
     }

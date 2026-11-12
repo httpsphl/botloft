@@ -162,8 +162,9 @@ fn send(
             return None;
         }
     }
-    let outcome = match daemon.supervisor.write_message(
+    let outcome = match daemon.supervisor.write_message_to(
         &delivery.bot_id,
+        &delivery.conversation_id,
         &rendered.uuid,
         rendered.line.clone(),
     ) {
@@ -197,10 +198,15 @@ fn prepare(daemon: &Daemon, store: &Store, delivery: &Delivery) -> Result<Step, 
     if bot.archived_at.is_some() || crew.archived_at.is_some() {
         return Ok(Step::Drop("the bot was archived"));
     }
-    let state = daemon.supervisor.status(&bot.id).map(|(state, _)| state);
+    // Each conversation has its own process (spec 40).
+    let conversation = &delivery.conversation_id;
+    let state = daemon
+        .supervisor
+        .status_of(conversation)
+        .map(|(state, _)| state);
     if state == Some(BotState::Sleeping) {
         // It wakes, and the delivery goes once it is ready (spec 7.7).
-        daemon.supervisor.wake_up(&bot.id);
+        daemon.supervisor.wake_conversation(conversation);
         return Ok(Step::Wait);
     }
     let ready = matches!(

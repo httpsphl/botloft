@@ -35,12 +35,14 @@ impl Supervisor {
     ) {
         let mut inner = self.lock();
         let Inner { slots, tokens, .. } = &mut *inner;
-        let Some(slot) = slots.get_mut(bot) else {
+        // Generations are unique: one names the conversation too.
+        let Some(slot) = slots
+            .values_mut()
+            .find(|slot| slot.bot == *bot && slot.generation == Some(generation))
+        else {
             return;
         };
-        if slot.generation != Some(generation) {
-            return;
-        }
+        let main = slot.main;
         let Some(running) = slot.running.take() else {
             return;
         };
@@ -74,13 +76,16 @@ impl Supervisor {
             }
         }
         drop(inner);
-        approvals::expire_for_bot(daemon, bot);
         courier::requeue_unread(daemon, bot, generation);
-        routines::process_ended(daemon, bot);
-        context::process_ended(daemon, bot);
-        crate::background::process_ended(daemon, bot);
-        crate::screens::turn_ended(daemon, bot);
-        daemon.crew_access.end_turn(bot);
+        // Still the bot's, not each conversation's (spec 40.9, C2).
+        if main {
+            approvals::expire_for_bot(daemon, bot);
+            routines::process_ended(daemon, bot);
+            context::process_ended(daemon, bot);
+            crate::background::process_ended(daemon, bot);
+            crate::screens::turn_ended(daemon, bot);
+            daemon.crew_access.end_turn(bot);
+        }
         self.wake();
     }
 }
@@ -235,7 +240,14 @@ pub(super) async fn settle(
     tokio::time::sleep(after).await;
     if let Some(daemon) = daemon.upgrade() {
         daemon.supervisor.ready(&bot, generation);
-        crate::context::woke(&daemon, &bot);
+        // A compaction asked while it slept is the main conversation's (C2).
+        if daemon
+            .supervisor
+            .conversation_of(&bot, generation)
+            .is_main_of(&bot)
+        {
+            crate::context::woke(&daemon, &bot);
+        }
     }
 }
 

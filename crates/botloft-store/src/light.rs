@@ -47,6 +47,7 @@ pub(crate) fn light_copy(conn: &Connection, path: &Path) -> Result<()> {
         tx.execute(&format!("DELETE FROM {table}"), [])?;
     }
     tx.execute("UPDATE bots SET session_id = NULL, token_hash = NULL", [])?;
+    tx.execute("UPDATE conversations SET session_id = NULL", [])?;
     tx.commit()?;
     copy.execute_batch("VACUUM")?;
     Ok(())

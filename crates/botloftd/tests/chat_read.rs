@@ -29,6 +29,7 @@ async fn reading_a_chat_is_kept_in_the_bot() {
         .insert_chat_item(&ChatItem {
             id: ChatItemId::generate(),
             bot_id: id.clone(),
+            conversation_id: botloft_core::ids::ConversationId::main_of(&id),
             body: ChatBody::Reply(ReplyItem {
                 text: "Done.".into(),
             }),

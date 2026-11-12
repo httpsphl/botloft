@@ -8,7 +8,6 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use botloft_core::ids::BotId;
 use botloft_core::protocol::AgentKind;
 use bytes::Bytes;
 use serde_json::{Value, json};
@@ -17,6 +16,7 @@ use super::codex_decoder::CodexDecoder;
 use super::codex_wire::{CodexControl, Shared};
 use super::{Agent, AttachInput, LaunchFiles, LaunchPlan, OutputDecoder, Turn};
 use crate::runtime::ProcessControl;
+use crate::seat::Seat;
 use crate::state::Daemon;
 
 pub struct CodexAgent;
@@ -127,7 +127,7 @@ impl OutputDecoder for Silent {
         None
     }
 
-    fn handle(&mut self, _daemon: &Arc<Daemon>, _bot: &BotId, _generation: u64, _event: &Value) {}
+    fn handle(&mut self, _daemon: &Arc<Daemon>, _bot: &Seat, _generation: u64, _event: &Value) {}
 }
 
 /// The names of the MCP servers in the owner's `config.toml`, to switch off.

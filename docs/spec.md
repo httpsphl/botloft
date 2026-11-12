@@ -14,7 +14,7 @@ Princípios:
 
 1. **Daemon independente do app.** Fechar o app não derruba bot nenhum. O daemon é a única fonte de verdade.
 2. **O agente é o runtime.** Cada bot é uma sessão do agente que o dono escolheu, em modo headless (no Claude Code, `claude -p` com `stream-json` na entrada e na saída). Nada de SDK próprio de agente nem de loop reimplementado: o daemon só conversa com o processo pelo protocolo de linhas JSON.
-3. **Uma conversa por bot.** Tudo que o bot recebe (dono, outros bots, avisos do daemon) entra pelo stdin como mensagem, em ordem. Tudo que ele faz sai pelo stdout como eventos, que o daemon grava e o app mostra como chat.
+3. **Uma conversa principal por bot, e as outras que o dono abrir (40).** Cada conversa é um processo: tudo que ela recebe (dono, outros bots, avisos do daemon) entra pelo stdin como mensagem, em ordem. Tudo que ele faz sai pelo stdout como eventos, que o daemon grava e o app mostra como chat.
 4. **Durável antes de entregar.** Toda mensagem é gravada antes de sair. Entrega é pelo menos uma vez, com retry.
 5. **Sem serviços externos.** SQLite local, sem Redis, sem nuvem, sem telemetria no MVP.
 6. **Testável sem gastar token.** Um runtime falso implementa o mesmo contrato do runtime real.
@@ -234,7 +234,7 @@ Eventos de uma generation antiga são ignorados. Todo processo novo emite `bot.s
 
 - Bots não pausados rodam quando há o que fazer, e dormem quando não há (7.7). O supervisor reconcilia no boot, a cada 5 s e na hora em que um bot parado deve dormir.
 - Backoff exponencial com jitter entre `restart_backoff_initial_ms` e `restart_backoff_max_ms`; zera após 10 min de sessão estável.
-- **Sessão:** o daemon guarda em `bots.session_id` o id da conversa que o Claude Code tem em disco. O primeiro start usa `--session-id <uuid novo>`. O Claude Code só grava a conversa quando o primeiro turno dela começa (19): o id é guardado quando a mensagem desse turno volta no stdout (`user` com `isReplay`, 8.1), não no `system/init`, e de novo no `result` de cada turno (para o caso de o replay ter sido longo demais para ler). Daí em diante os starts usam `--resume <session_id>`. Um processo que termina antes disso (um reinício pedido logo depois de criar o bot, por exemplo) não deixou conversa, e o próximo start usa `--session-id` com outro uuid novo.
+- **Sessão:** o daemon guarda em `conversations.session_id` (40.3; antes, `bots.session_id`) o id da conversa que o Claude Code tem em disco, uma por conversa do bot. O primeiro start usa `--session-id <uuid novo>`. O Claude Code só grava a conversa quando o primeiro turno dela começa (19): o id é guardado quando a mensagem desse turno volta no stdout (`user` com `isReplay`, 8.1), não no `system/init`, e de novo no `result` de cada turno (para o caso de o replay ter sido longo demais para ler). Daí em diante os starts usam `--resume <session_id>`. Um processo que termina antes disso (um reinício pedido logo depois de criar o bot, por exemplo) não deixou conversa, e o próximo start usa `--session-id` com outro uuid novo.
 - **Conversa nova:** o próximo start vem com um id novo se a sessão retomada morrer em menos de `fresh_start_if_dies_within_s`, se o Claude Code disser que não acha a conversa (um `result` com `subtype: "error_during_execution"` e `No conversation found` em `errors`, sem turno antes; o processo sai logo depois, 19) ou se o dono pedir `bots.restart {fresh: true}`. Esse pedido do dono deixa no chat um aviso `fresh_start` ("Uma conversa nova começou aqui: o que veio antes não é mais lembrado."): o histórico continua no chat, e a linha mostra de onde o agente não lembra mais. Esse `result` não é um turno: não vira item no chat nem fecha turno pendente. A conversa deixada para trás sai de `bots.session_id`, para o daemon não tentar retomá-la depois de reiniciar. O histórico do chat fica no banco do daemon (seção 8) e não depende do transcript do Claude Code.
 - Mudanças em nome, papel ou instruções regravam as regras na hora, mas o bot só as lê no próximo start; o daemon não reinicia o bot sozinho.
 - `auth_error` não entra em loop de restart: fica parado até o owner pedir `bots.restart` ou até o daemon ver o Claude Code conectado de novo.
@@ -414,7 +414,7 @@ Blocos `thinking` não são gravados nem mostrados.
 
 ### 8.2 Itens
 
-Todo item tem `id` (`cht_`), `botId`, `kind`, `createdAt` e `updatedAt`.
+Todo item tem `id` (`cht_`), `botId`, `conversationId` (40), `kind`, `createdAt` e `updatedAt`.
 
 | `kind` | Campos | Origem |
 |---|---|---|
@@ -943,6 +943,7 @@ Pragmas: `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON`, `busy_time
 |---|---|
 | `crews` | `id, name, slug, paused, work_dir, lead_bot_id, color, created_at, archived_at` (`work_dir` é a pasta escolhida; `NULL` usa a `shared`. `lead_bot_id` é o chefe, sem chave estrangeira: ele é gravado junto com a crew. `color` é o `#RRGGBB` que o dono escolheu, `NULL` sem cor) |
 | `bots` | `id, crew_id, name, handle, slug, role, instructions, color, paused, permission_mode, agent, agent_model, model, model_in_use, effort, effort_default, token_hash, session_id, created_at, archived_at` (`effort_default` é o nível do próprio modelo, como o Claude Code disse: `low` a `max`, `none` ou `NULL`, 7.4) |
+| `conversations` | `id (cnv_), bot_id, main, title, title_by, session_id, created_at, archived_at`: as conversas de cada bot, a principal com o ULID do bot (40.3) |
 | `messages` | `id, crew_id, from_kind (owner/bot/system), from_bot_id, to_bot_id, kind (note/task/result/system), body, task_id, created_at`; `reply_item_id` e `reply_text` quando o dono respondeu a algo do chat (9.3; sem chave estrangeira, porque os itens saem antes das messages na exclusão, 7.6) |
 | `attachments` | `id, message_id, name, media_type, size, path, created_at` |
 | `deliveries` | `id, message_id, bot_id, state, attempts, next_attempt_at, lease_until, last_error, sent_generation, turn_uuid, read_at, updated_at` |
@@ -3850,3 +3851,77 @@ A seção `[site]` do `cloud.toml` tem `dir` (os arquivos de `app/dist-site`; a 
 ### 39.6 Privacidade (13)
 
 O site não tem cookies, contador de visitas nem nada de terceiros: as fontes, as imagens e o script vêm do próprio servidor. O navegador só guarda o idioma escolhido. O proxy guarda o IP por 7 dias, como em 27.7. O `/download` não guarda nada de quem clicou, e o pedido do servidor ao GitHub não leva nada dessa pessoa.
+
+## 40. Conversas
+
+Status: proposto (2026-11-12), ADR 0004. Pedido do dono, com as decisões dele: conversas rodando ao mesmo tempo, a principal recebendo o que vem de fora, título feito por IA.
+
+### 40.1 O que é
+
+Um agente pode ter várias **conversas**, como abas. Cada uma é uma sessão própria do motor, num processo próprio, com o seu chat, o seu contexto e o seu título. Todas trabalham na mesma pasta, com a mesma memória (`CLAUDE.md`), as mesmas regras, ferramentas, permissões, modelo, esforço, modo, navegador e desktop: o que muda de uma para outra é só o que foi conversado.
+
+- Todo agente tem uma **principal**, que não se arquiva nem se renomeia. É a conversa de hoje: a migration a cria a partir do chat e do `session_id` que o agente já tem.
+- O dono abre outras quando quiser. Uma conversa nova nasce dormindo e só ganha processo na primeira mensagem (7.7).
+- Primeira versão só no Claude Code. Agentes do Antigravity e do Codex ficam só com a principal (ADR 0004).
+
+### 40.2 Quem fala com qual conversa
+
+| De onde vem | Para onde vai |
+|---|---|
+| O dono, no chat aberto no app | a conversa aberta |
+| O dono pela ilha, pelo celular ou por um atalho de rotina | a principal |
+| Outro agente: nota, tarefa nova, pedido de acesso | a principal |
+| Rotina e lembrete criados pelo dono, avisos do daemon | a principal |
+| Resultado de uma tarefa, resposta do dono a uma pergunta (18), resposta a um pedido de acesso de crew, lembrete ou espera (20.14) criados pelo próprio agente | a conversa que pediu |
+
+Para a última linha, cada processo tem o **seu** token (10): o daemon sabe de que conversa veio cada chamada de ferramenta e grava a conversa em `tasks.requester_conversation_id`, `questions.conversation_id`, `routines.conversation_id` e no pedido de acesso. Uma conversa que pediu e foi arquivada devolve a resposta à principal.
+
+### 40.3 Dados
+
+- Tabela `conversations`: `id (cnv_), bot_id, title, title_by (owner/ai, nulo enquanto não tem), session_id, main, read_through, created_at, last_activity, archived_at`. Uma principal por agente (índice único parcial). O id da principal é `cnv_` com o ULID do agente, o que deixa a migration preencher tudo em SQL.
+- `conversation_id` em `chat_items` e `deliveries`, preenchido com a principal; nas tabelas de 40.2, nulo quer dizer a principal.
+- `bots.session_id` passa para a principal e deixa de ser lido; `bots.read_through` passa na C3.
+- Arquivar uma conversa para o processo dela e a tira da lista; a sessão do motor continua em disco e volta ao desarquivar. Apagar uma conversa fica para depois.
+- A cópia leve do backup (14.2) esvazia `conversations.session_id` como fazia com o dos bots; a busca (18.4) e o `search_history` (8.8) acham itens de qualquer conversa do agente e dizem de qual.
+
+### 40.4 Supervisor
+
+- O slot (7.2) passa a ser de uma conversa: estado, geração, fila `waiting`, sono, tentativas e reinício são de cada uma. Os tokens levam a `(agente, conversa, geração)`.
+- O estado do agente na tela é o resumo das conversas dele: precisa de você se alguma precisa, trabalhando se alguma trabalha, dormindo se todas dormem, senão pronto. `bot.state` continua; cada conversa tem o seu estado em `conversation.changed`. Até a C2, `bot.state` é o da principal.
+- **Acordadas por agente:** no máximo 3. Quando outra precisa acordar, a que está parada há mais tempo dorme antes, e a que esperava começa assim que ela sai; se todas estão trabalhando, a mensagem espera na fila até uma terminar o turno. O `max_running` (7.8) conta processos.
+- Cada conversa dorme sozinha depois do tempo de sono do agente (7.7). As outras dormem mesmo com o sono desligado, depois de 30 minutos paradas: só a principal fica sempre acordada. Reiniciar, trocar modelo, modo, esforço ou ferramentas reinicia todas as acordadas, cada uma com `--resume` quando estiver livre (7.4).
+- Os arquivos da pasta (5.1) são os mesmos para todas; a escrita atômica usa um nome temporário único, para dois inícios ao mesmo tempo não se atropelarem.
+
+### 40.5 Protocolo
+
+- `conversations.list {botId}` (as ativas, a principal primeiro e depois pela última atividade), `conversations.create {botId}`, `conversations.rename {conversationId, title}`, `conversations.archive {conversationId}`, `conversations.unarchive {conversationId}`, `conversations.archived {botId}`. Todos devolvem `Conversation {id, botId, title, titleBy, main, state, generation, context, background, lastActivity, readThrough, archivedAt, createdAt}`, ou a lista.
+- Ganham `conversationId` opcional (sem ele, a principal): `messages.send`, `chat.history`, `chat.read`, `bots.interrupt`, `bots.compact`, `bots.restart {fresh}` (numa conversa que não é a principal, `fresh` esquece só ela) e `bots.stopTask`.
+- `ChatItem` e `ChatDelta` ganham `conversationId`. Notificação nova `conversation.changed` (`Conversation`) a cada mudança de estado, título, contexto, segundo plano ou leitura. `Bot.context` e `Bot.background` continuam sendo os da principal.
+
+### 40.6 Título feito por IA
+
+- Depois da primeira resposta de uma conversa que não é a principal e não tem título, o daemon pede um título ao Claude Code: um `claude -p` de um turno só, numa pasta vazia própria (`<home>\titles`), com o Haiku, sem ferramentas, sem MCP, sem as configurações do dono e com um prompt de sistema curto. Ele lê o começo da primeira mensagem do dono (até 1.000 caracteres) e da resposta (até 500) e devolve um título de até 6 palavras, no idioma da conversa.
+- Enquanto isso, e se falhar, o título é o começo da primeira mensagem. Um título que o dono deu nunca é trocado.
+- As flags e o custo desse turno são verificados com teste real antes de entrar (19). O texto vai para a mesma conta do Claude que já recebe a conversa e não entra no log.
+
+### 40.7 App
+
+- **Barra lateral:** um agente com mais de uma conversa ganha uma seta. Aberta, ela lista a principal ("Principal") e as outras pelo título, com a hora da última atividade e a marca de não lida, e termina em "Nova conversa". Cada uma tem um menu com Renomear e Arquivar.
+- **Chat:** o cabeçalho mostra o título da conversa aberta, com "Nova conversa" ao lado. Clicar no agente abre a última conversa aberta dele. O medidor de contexto, Compactar, Começar do zero, Parar e as tarefas em segundo plano são da conversa aberta.
+- **Não lida:** cada conversa tem a sua; o agente fica marcado se alguma está.
+- O que ainda mostra só a principal na primeira versão: celular, ilha e visão geral do agente (33).
+- Textos nos três idiomas (15.6).
+
+### 40.8 Fora da primeira versão
+
+Conversas no Antigravity e no Codex, conversas abertas por outros agentes, mover mensagens de uma conversa para outra, modelo ou modo por conversa, apagar conversas, e escolher a conversa pelo celular.
+
+### 40.9 Marcos
+
+| Marco | O que entra | Teste |
+|---|---|---|
+| **C1** Dados e supervisor | migration, `cnv_`, store, supervisor, sessão, início e entregas por conversa, `conversationId` em `ChatItem`, `ChatDelta`, `Delivery` e `messages.send`; contexto, segundo plano, aprovações, perguntas e turnos de rotina seguem só a principal; princípio 3 e ADR 0004 | a suíte toda sem mudança de comportamento; `FakeRuntime` com duas conversas do mesmo agente rodando ao mesmo tempo, cada uma com a sua sessão e o seu stdin; limite de acordadas; sono por conversa |
+| **C2** Protocolo e roteamento | `conversations.*`, `conversationId` nos outros métodos de 40.5, `conversation.changed`, `bot.state` como resumo; contexto, segundo plano, aprovações, perguntas e turnos de rotina por conversa; respostas voltando à conversa que pediu (40.2) | courier e chat com `FakeRuntime`: tarefa, pergunta, acesso e lembrete pedidos numa conversa voltam a ela; arquivada volta à principal |
+| **C3** App | barra lateral, cabeçalho, nova, renomear, arquivar, não lida e controles por conversa | componentes com `FakeBotloft` |
+| **C4** Título por IA | o turno de 40.6, o que vale de reserva e o registro em 19 | unidade com `FakeRuntime`; teste real das flags |
+| **C5** O resto | busca e `search_history` dizendo a conversa, cópia leve, Criador e importação de histórico ignorando as conversas dos agentes | unidade e componentes |

@@ -10,9 +10,9 @@ use ts_rs::{Config, TS};
 use super::*;
 use crate::avatar::PALETTE;
 use crate::ids::{
-    ApprovalId, AttachmentId, BotId, BuildId, ChatItemId, CrewAccessId, CrewId, DeliveryId,
-    DesktopGrantId, ImportId, McpServerId, MessageId, QuestionId, RoutineId, RoutineRunId, RuleId,
-    TaskId, VersionId,
+    ApprovalId, AttachmentId, BotId, BuildId, ChatItemId, ConversationId, CrewAccessId, CrewId,
+    DeliveryId, DesktopGrantId, ImportId, McpServerId, MessageId, QuestionId, RoutineId,
+    RoutineRunId, RuleId, TaskId, VersionId,
 };
 
 #[path = "export_backup.rs"]
@@ -150,6 +150,7 @@ fn export_bindings() {
     out.decl::<BuildId>();
     out.decl::<VersionId>();
     out.decl::<ImportId>();
+    out.decl::<ConversationId>();
     out.decl::<Crew>();
     out.decl::<Build>();
     out.decl::<BuildIdParams>();

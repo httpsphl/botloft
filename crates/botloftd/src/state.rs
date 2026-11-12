@@ -75,6 +75,9 @@ pub enum Event {
     AutoBackupChanged(AutoBackupStatus),
     MobileChanged(MobileStatus),
     MobilePairRequest(MobilePairRequest),
+    /// Another conversation of a bot can take messages (spec 40). Only for
+    /// the courier: the apps hear of it with C2.
+    ConversationReady(crate::seat::Seat),
 }
 
 /// Events buffered per connection before a slow client is dropped.

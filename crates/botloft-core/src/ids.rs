@@ -143,6 +143,24 @@ prefixed_id!(
     /// (spec 36.7).
     ImportId, "import", "imp_"
 );
+prefixed_id!(
+    /// Identifies one conversation of a bot (spec 40).
+    ConversationId, "conversation", "cnv_"
+);
+
+impl ConversationId {
+    /// The main conversation of `bot`: `cnv_` with the bot's own ULID, so
+    /// anything that knows the bot knows it without the database.
+    pub fn main_of(bot: &BotId) -> Self {
+        let ulid = &bot.as_str()[BotId::PREFIX.len()..];
+        Self(format!("{}{ulid}", Self::PREFIX))
+    }
+
+    /// Whether this is the main conversation of `bot`.
+    pub fn is_main_of(&self, bot: &BotId) -> bool {
+        *self == Self::main_of(bot)
+    }
+}
 
 /// A random version 4 UUID, for Claude Code session ids and the uuid of
 /// each message written to a bot (spec 7.3, 9.2).

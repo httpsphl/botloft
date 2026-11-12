@@ -5,6 +5,7 @@ mod expire;
 
 use std::time::Duration;
 
+use botloft_core::ids::ConversationId;
 use botloft_core::ids::{BotId, MessageId, TaskId};
 use botloft_core::protocol::{
     Crew, Message, MessageKind, SenderKind, Task, TaskStatus, TasksListParams,
@@ -263,7 +264,7 @@ pub fn complete(
         attachments: Vec::new(),
         created_at: now,
     };
-    let delivery = pending_delivery(&report);
+    let delivery = pending_delivery(&report, ConversationId::main_of(&report.to_bot_id));
     let (settled, item) = store
         .settle_task(
             &task.id,

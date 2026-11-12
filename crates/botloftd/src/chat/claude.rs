@@ -3,16 +3,16 @@
 //! (spec 8.1). Fields are read defensively: the format is not documented
 //! and grows between Claude Code versions.
 
-use botloft_core::ids::BotId;
 use botloft_core::protocol::TokenUsage;
 use serde_json::Value;
 use tracing::debug;
 
 use super::{account, control, sink};
+use crate::seat::Seat;
 use crate::state::Daemon;
 use crate::{context, service};
 
-pub(crate) fn apply(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
+pub(crate) fn apply(daemon: &Daemon, bot: &Seat, generation: u64, event: &Value) {
     // Lines from a process that was replaced say nothing about the new one.
     if !daemon.supervisor.is_current(bot, generation) {
         return;
@@ -69,7 +69,7 @@ fn task_counts(event: &Value) -> (u32, u32) {
 
 /// Every turn starts with the mode and the model in use (spec 7.4), and,
 /// in an agent given claude.ai connectors, how each stands (spec 34.3).
-fn init(daemon: &Daemon, bot: &BotId, event: &Value) {
+fn init(daemon: &Daemon, bot: &Seat, event: &Value) {
     if let Some(mode) = event["permissionMode"].as_str() {
         service::modes::reported(daemon, bot, mode);
     }
@@ -100,7 +100,7 @@ pub(super) fn blocks(event: &Value) -> &[Value] {
         .map_or(&[], Vec::as_slice)
 }
 
-fn assistant(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
+fn assistant(daemon: &Daemon, bot: &Seat, generation: u64, event: &Value) {
     if let Some(error) = event["error"].as_str() {
         account::failed_turn(daemon, bot, generation, error, event);
         return;
@@ -126,7 +126,7 @@ fn assistant(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
 }
 
 /// The bot began the turn for a message the courier wrote (spec 9.1).
-fn replay(daemon: &Daemon, bot: &BotId, event: &Value) {
+fn replay(daemon: &Daemon, bot: &Seat, event: &Value) {
     super::session::began(daemon, bot, event);
     let Some(uuid) = event["uuid"].as_str() else {
         return;
@@ -134,7 +134,7 @@ fn replay(daemon: &Daemon, bot: &BotId, event: &Value) {
     sink::message_read(daemon, bot, uuid);
 }
 
-fn tool_results(daemon: &Daemon, bot: &BotId, event: &Value) {
+fn tool_results(daemon: &Daemon, bot: &Seat, event: &Value) {
     for block in blocks(event) {
         if block["type"] != "tool_result" {
             continue;
@@ -161,7 +161,7 @@ fn result_text(content: &Value) -> String {
     }
 }
 
-fn result(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
+fn result(daemon: &Daemon, bot: &Seat, generation: u64, event: &Value) {
     // No turn began, so none ended: nothing of this is for the chat.
     if super::session::missing(event) {
         debug!(bot = %bot, "Claude Code does not have the conversation to resume");

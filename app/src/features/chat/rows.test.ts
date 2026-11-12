@@ -14,7 +14,14 @@ let n = 0;
 
 function item(body: ChatBody, at = start): ChatItem {
   n += 1;
-  return { id: `cht_${n}`, botId: "bot_1", body, createdAt: at, updatedAt: at };
+  return {
+    id: `cht_${n}`,
+    botId: "bot_1",
+    conversationId: "cnv_1",
+    body,
+    createdAt: at,
+    updatedAt: at,
+  };
 }
 
 const reply = (text: string, at?: number) => item({ kind: "reply", text }, at);

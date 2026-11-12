@@ -7,6 +7,7 @@ fn item(bot: &BotId, body: ChatBody, at: i64) -> ChatItem {
     ChatItem {
         id: ChatItemId::generate(),
         bot_id: bot.clone(),
+        conversation_id: botloft_core::ids::ConversationId::main_of(bot),
         body,
         created_at: at,
         updated_at: at,

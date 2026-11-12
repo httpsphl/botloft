@@ -13,13 +13,13 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use botloft_core::ids::BotId;
 use botloft_core::protocol::{AgentKind, TokenUsage};
 use bytes::Bytes;
 use serde_json::{Map, Value, json};
 
 use super::{Agent, LaunchFiles, LaunchPlan, OutputDecoder, Turn};
 use crate::chat::sink;
+use crate::seat::Seat;
 use crate::state::Daemon;
 
 /// The bot's home, inside its folder.
@@ -191,7 +191,7 @@ impl OutputDecoder for AgyDecoder {
         Some(text)
     }
 
-    fn handle(&mut self, daemon: &Arc<Daemon>, bot: &BotId, generation: u64, event: &Value) {
+    fn handle(&mut self, daemon: &Arc<Daemon>, bot: &Seat, generation: u64, event: &Value) {
         if !daemon.supervisor.is_current(bot, generation) {
             return;
         }
@@ -214,7 +214,7 @@ fn step_update(event: &Value) -> Option<&Value> {
 }
 
 impl AgyDecoder {
-    fn step(&mut self, daemon: &Daemon, bot: &BotId, generation: u64, update: &Value) {
+    fn step(&mut self, daemon: &Daemon, bot: &Seat, generation: u64, update: &Value) {
         let conversation = update["conversation_id"].as_str().unwrap_or_default();
         match (update["step_type"].as_str(), update["state"].as_str()) {
             // The message was taken up: `agy` gives no id back, so it was the
@@ -251,7 +251,7 @@ impl AgyDecoder {
         }
     }
 
-    fn result(&mut self, daemon: &Daemon, bot: &BotId, generation: u64, result: &Value) {
+    fn result(&mut self, daemon: &Daemon, bot: &Seat, generation: u64, result: &Value) {
         self.flush(daemon, bot);
         let failed = result["status"].as_str() != Some("SUCCESS");
         let error = failed.then(|| {
@@ -284,7 +284,7 @@ impl AgyDecoder {
 
     /// What the last request held is what the conversation holds: its
     /// prompt, cached or not, and what it wrote.
-    fn context(&self, daemon: &Daemon, bot: &BotId, usage: &Value) {
+    fn context(&self, daemon: &Daemon, bot: &Seat, usage: &Value) {
         let count = |key: &str| usage[key].as_u64().unwrap_or_default();
         let used = count("input_tokens") + count("cache_read_tokens") + count("output_tokens");
         if used > 0 {
@@ -293,7 +293,7 @@ impl AgyDecoder {
     }
 
     /// The reply written so far becomes a chat item.
-    fn flush(&mut self, daemon: &Daemon, bot: &BotId) {
+    fn flush(&mut self, daemon: &Daemon, bot: &Seat) {
         let text = std::mem::take(&mut self.pending);
         sink::reply(daemon, bot, &text);
     }
