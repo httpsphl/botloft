@@ -193,3 +193,33 @@ async fn compacting_one_conversation_wakes_only_that_one() {
     assert!(!process.killed());
     assert_eq!(t.runtime.processes().len(), 1);
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_owner_reads_one_conversation_and_the_sidebar_lists_every_agent() {
+    let t = start().await;
+    let mut app = t.session().await;
+    let (bot, id) = sleeping_bot(&t, &mut app).await;
+    let other = open(&mut app, &id).await;
+    send(&mut app, &bot, "Plan the trip", Some(&other)).await;
+    let (process, line) = holding(&t, 1, "Plan the trip").await;
+    turn(&process, &line, "session-other", "Lisbon it is").await;
+    until_reply(&mut app, &bot, Some(&other), "Lisbon it is").await;
+
+    let all = app
+        .call("conversations.list", json!({}))
+        .await
+        .expect("all");
+    let all = all.as_array().expect("list");
+    assert_eq!(all.len(), 2);
+    let shown = all
+        .iter()
+        .find(|each| each["id"] == other.as_str())
+        .expect("other");
+    assert!(shown["lastReplyAt"].is_number(), "{shown}");
+    assert_eq!(shown["readThrough"], Value::Null);
+
+    let read = json!({ "botId": id, "conversationId": other });
+    app.call("chat.read", read).await.expect("read");
+    let after = changed(&mut app, &other, |each| !each["readThrough"].is_null()).await;
+    assert_eq!(after["readThrough"], shown["lastReplyAt"]);
+}

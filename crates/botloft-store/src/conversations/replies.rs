@@ -68,6 +68,39 @@ impl Store {
         Ok(())
     }
 
+    /// When the agent last replied in conversation `id`.
+    pub fn conversation_last_reply(&self, id: &ConversationId) -> Result<Option<i64>> {
+        Ok(cached_row(
+            &self.conn,
+            "SELECT MAX(created_at) FROM chat_items WHERE conversation_id = ?1 AND kind = 'reply'",
+            [id.as_str()],
+            |row| row.get(0),
+        )?)
+    }
+
+    /// What the owner read of conversation `id`; `None` while nothing.
+    pub fn conversation_read_through(&self, id: &ConversationId) -> Result<Option<i64>> {
+        Ok(cached_row(
+            &self.conn,
+            "SELECT read_through FROM conversations WHERE id = ?1",
+            [id.as_str()],
+            |row| row.get(0),
+        )
+        .optional()?
+        .flatten())
+    }
+
+    /// The owner read conversation `id` up to `at`; it never goes back.
+    pub fn set_conversation_read_through(&self, id: &ConversationId, at: i64) -> Result<()> {
+        cached_execute(
+            &self.conn,
+            "UPDATE conversations SET read_through = ?2 \
+             WHERE id = ?1 AND (read_through IS NULL OR read_through < ?2)",
+            params![id.as_str(), at],
+        )?;
+        Ok(())
+    }
+
     fn conversation_where(&self, sql: &str, id: &str) -> Result<Option<ConversationId>> {
         let found: Option<Option<String>> =
             cached_row(&self.conn, sql, [id], |row| row.get(0)).optional()?;

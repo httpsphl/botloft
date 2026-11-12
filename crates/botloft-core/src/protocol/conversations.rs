@@ -35,8 +35,24 @@ pub struct Conversation {
     pub background: Vec<BackgroundTask>,
     /// Its newest chat item, or when it was made: Unix milliseconds.
     pub last_activity: i64,
+    /// When the agent last replied in it, for the unread mark (spec 40.7).
+    pub last_reply_at: Option<i64>,
+    /// What the owner read of it (`chat.read`); the main one's is the
+    /// agent's `readThrough`.
+    pub read_through: Option<i64>,
     pub created_at: i64,
     pub archived_at: Option<i64>,
+}
+
+/// `conversations.list`: of one agent, or of every agent that is not
+/// archived when `botId` is absent (spec 40.5).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct ConversationsListParams {
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub bot_id: Option<BotId>,
 }
 
 /// `conversations.archive`, `conversations.unarchive`.

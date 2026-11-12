@@ -9,6 +9,7 @@ use super::Out;
 pub(super) fn decls(out: &mut Out) {
     out.decl::<TitleBy>();
     out.decl::<Conversation>();
+    out.decl::<ConversationsListParams>();
     out.decl::<ConversationIdParams>();
     out.decl::<ConversationsRenameParams>();
     out.decl::<BotConversationParams>();
@@ -19,7 +20,11 @@ pub(super) fn methods(out: &mut Out) {
     let many = out.name::<Vec<Conversation>>();
     let bot = out.name::<BotIdParams>();
     let id = out.name::<ConversationIdParams>();
-    out.method(method::CONVERSATIONS_LIST, &bot, &many);
+    out.method(
+        method::CONVERSATIONS_LIST,
+        &out.name::<ConversationsListParams>(),
+        &many,
+    );
     out.method(method::CONVERSATIONS_CREATE, &bot, &one);
     out.method(
         method::CONVERSATIONS_RENAME,

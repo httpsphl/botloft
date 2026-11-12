@@ -882,7 +882,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `bots.unarchive` | `botId` | `Bot`; `-32003` com a crew arquivada ou o `@handle` em uso (7.6) |
 | `bots.delete` | `botId, recycleFolder?` | `{botId, crewId}`; exclui o bot, ativo ou arquivado; com `recycleFolder`, a pasta dele vai depois para a Lixeira (7.6) |
 | `chat.history` | `botId, conversationId?, before?, limit?` ou `botId, conversationId?, until` | `ChatItem[]` de uma conversa, a principal sem `conversationId` (40.5), mais novo primeiro; `limit` de 1 a 200, 50 se ausente; `until`: do item até o mais novo, até 1 000 (8.8) |
-| `conversations.list` | `botId` | `Conversation[]`: as que não estão arquivadas, a principal primeiro e depois pela última atividade (40.5) |
+| `conversations.list` | `botId?` | `Conversation[]`: as que não estão arquivadas, a principal primeiro e depois pela última atividade; sem `botId`, as de todos os agentes ativos (40.5) |
 | `conversations.create` | `botId` | `Conversation`: uma nova, dormindo; `validation` para um agente que não é o Claude Code ou com 50 abertas |
 | `conversations.rename` | `conversationId, title` | `Conversation`, com `titleBy: owner`; `validation` para a principal |
 | `conversations.archive` | `conversationId` | `Conversation`; para o processo dela, e o que esperava por ela vai para a principal; `validation` para a principal |
@@ -3884,7 +3884,7 @@ Para a última linha, cada processo tem o **seu** token (10): o daemon sabe de q
 
 ### 40.3 Dados
 
-- Tabela `conversations`: `id (cnv_), bot_id, title, title_by (owner/ai, nulo enquanto não tem), session_id, main, created_at, archived_at`; `read_through` entra na C3. A última atividade não é guardada: é o item mais novo do chat da conversa, ou a criação dela. Um agente tem no máximo 50 conversas abertas. Uma principal por agente (índice único parcial). O id da principal é `cnv_` com o ULID do agente, o que deixa a migration preencher tudo em SQL.
+- Tabela `conversations`: `id (cnv_), bot_id, title, title_by (owner/ai, nulo enquanto não tem), session_id, main, created_at, archived_at`, e `read_through` (migration 0048, C3b). A última atividade não é guardada: é o item mais novo do chat da conversa, ou a criação dela. Um agente tem no máximo 50 conversas abertas. Uma principal por agente (índice único parcial). O id da principal é `cnv_` com o ULID do agente, o que deixa a migration preencher tudo em SQL.
 - `conversation_id` em `chat_items` e `deliveries`, preenchido com a principal; nas tabelas de 40.2, nulo quer dizer a principal.
 - `bots.session_id` passa para a principal e deixa de ser lido; `bots.read_through` passa na C3.
 - Arquivar uma conversa para o processo dela e a tira da lista; a sessão do motor continua em disco e volta ao desarquivar. Apagar uma conversa fica para depois.
@@ -3901,8 +3901,8 @@ Para a última linha, cada processo tem o **seu** token (10): o daemon sabe de q
 
 ### 40.5 Protocolo
 
-- `conversations.list {botId}` (as ativas, a principal primeiro e depois pela última atividade), `conversations.create {botId}`, `conversations.rename {conversationId, title}`, `conversations.archive {conversationId}`, `conversations.unarchive {conversationId}`, `conversations.archived {botId}`. Todos devolvem `Conversation {id, botId, title, titleBy, main, state, generation, context, background, lastActivity, createdAt, archivedAt}`, ou a lista; `readThrough` entra na C3. Uma arquivada tem o estado `archived`; uma que o supervisor ainda não pôs no lugar, `sleeping`.
-- Ganham `conversationId` opcional (sem ele, a principal): `messages.send`, `chat.history`, `bots.interrupt`, `bots.compact`, `bots.restart {fresh}` (numa conversa que não é a principal, `fresh` esquece só ela) e `bots.stopTask`; `chat.read` na C3. Uma arquivada dá `not_found`, menos no `chat.history`, que lê o chat dela. O celular lê só o chat da principal.
+- `conversations.list {botId?}` (as ativas, a principal primeiro e depois pela última atividade; sem `botId`, as de todos os agentes que não estão arquivados), `conversations.create {botId}`, `conversations.rename {conversationId, title}`, `conversations.archive {conversationId}`, `conversations.unarchive {conversationId}`, `conversations.archived {botId}`. Todos devolvem `Conversation {id, botId, title, titleBy, main, state, generation, context, background, lastActivity, lastReplyAt, readThrough, createdAt, archivedAt}`, ou a lista (`lastReplyAt` e `readThrough` desde a C3b). Uma arquivada tem o estado `archived`; uma que o supervisor ainda não pôs no lugar, `sleeping`.
+- Ganham `conversationId` opcional (sem ele, a principal): `messages.send`, `chat.history`, `bots.interrupt`, `bots.compact`, `bots.restart {fresh}` (numa conversa que não é a principal, `fresh` esquece só ela) e `bots.stopTask`; `chat.read` na C3b. Uma arquivada dá `not_found`, menos no `chat.history`, que lê o chat dela. O celular lê só o chat da principal.
 - `ChatItem` e `ChatDelta` ganham `conversationId`. Notificação nova `conversation.changed` (`Conversation`) a cada mudança de estado, título, arquivamento, contexto ou segundo plano. O supervisor e quem segue o contexto não leem o banco onde a mudança acontece: dizem só qual conversa mudou, e uma tarefa do daemon (`service/conversations.rs`, `follow`) monta a `Conversation` e a manda. `Bot.context` e `Bot.background` continuam sendo os da principal.
 
 ### 40.6 Título feito por IA
@@ -3913,9 +3913,9 @@ Para a última linha, cada processo tem o **seu** token (10): o daemon sabe de q
 
 ### 40.7 App
 
-- **Barra lateral:** um agente com mais de uma conversa ganha uma seta. Aberta, ela lista a principal ("Principal") e as outras pelo título, com a hora da última atividade e a marca de não lida, e termina em "Nova conversa". Cada uma tem um menu com Renomear e Arquivar.
+- **Barra lateral:** um agente com mais de uma conversa ganha, sob a linha dele, uma seta com "N conversas". Aberta, ela lista a principal ("Principal") e as outras pelo título, com a hora da última atividade e a marca de não lida, e termina em "Nova conversa"; ela já vem aberta enquanto o chat está noutra conversa. Cada uma, menos a principal, tem um menu (botão direito) com Renomear e Arquivar; arquivar pergunta antes. O app lê as conversas de todos os agentes ao conectar (`conversations.list` sem `botId`).
 - **Chat:** o cabeçalho mostra o título da conversa aberta ("Principal", o título, ou "Nova conversa" enquanto não tem), com "Nova conversa" ao lado, só nos agentes do Claude Code. Clicar no agente abre a última conversa aberta dele, guardada no app entre uma abertura e outra (`botloft.conversations` no `localStorage`); uma que foi arquivada abre a principal. O app lê a lista do agente quando o chat dele abre (`conversations.list`) e a mantém com `conversation.changed`. O estado, o medidor de contexto, Compactar, Começar do zero, Parar e as tarefas em segundo plano do chat são da conversa aberta: o app mostra o agente com o estado, o contexto e o segundo plano dela (`useSeat`). O rascunho do compositor é de cada conversa. O menu do agente (Reiniciar, Começar do zero) e a visão geral seguem a principal.
-- **Não lida:** cada conversa tem a sua; o agente fica marcado se alguma está.
+- **Não lida:** cada conversa tem a sua; o agente fica marcado se alguma está. A da principal é a do agente, como antes (`Bot.readThrough`, o celular junto). As outras guardam o que o dono viu no app pelo id delas, e no daemon em `conversations.read_through` (migration 0048), com `chat.read {botId, conversationId}`; `Conversation` leva `lastReplyAt` e `readThrough`.
 - O que ainda mostra só a principal na primeira versão: celular, ilha e visão geral do agente (33).
 - Textos nos três idiomas (15.6).
 

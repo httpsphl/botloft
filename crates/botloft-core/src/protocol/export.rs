@@ -413,7 +413,11 @@ fn export_bindings() {
         &out.name::<ChatHistoryParams>(),
         &out.name::<Vec<ChatItem>>(),
     );
-    out.method(method::CHAT_READ, &out.name::<BotIdParams>(), "null");
+    out.method(
+        method::CHAT_READ,
+        &out.name::<BotConversationParams>(),
+        "null",
+    );
     out.method(
         method::APPROVALS_ANSWER,
         &out.name::<ApprovalsAnswerParams>(),

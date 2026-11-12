@@ -27,6 +27,8 @@ export class FakeConversations {
       context: bot.context,
       background: bot.background,
       lastActivity: bot.lastReplyAt ?? bot.createdAt,
+      lastReplyAt: bot.lastReplyAt,
+      readThrough: bot.readThrough,
       createdAt: bot.createdAt,
       archivedAt: null,
     };
@@ -79,9 +81,31 @@ export class FakeConversations {
       context: null,
       background: [],
       lastActivity: now,
+      lastReplyAt: null,
+      readThrough: null,
       createdAt: now,
       archivedAt: null,
     };
+  }
+
+  /** An item went into another conversation's chat: its times move, quietly, as the daemon's do. */
+  touched(conversationId: ConversationId, at: number, reply: boolean): void {
+    const found = this.others.get(conversationId);
+    if (found) {
+      found.lastActivity = at;
+      if (reply) {
+        found.lastReplyAt = at;
+      }
+    }
+  }
+
+  /** The owner read another conversation (`chat.read`). */
+  read(conversationId: ConversationId): void {
+    const found = this.others.get(conversationId);
+    if (found?.lastReplyAt) {
+      found.readThrough = Math.max(found.readThrough ?? 0, found.lastReplyAt);
+      this.changed(found);
+    }
   }
 
   private of(botId: BotId, archived: boolean): Conversation[] {
@@ -109,7 +133,14 @@ export class FakeConversations {
 
   handlers(): Pick<Handlers, ConversationMethods> {
     return {
-      "conversations.list": ({ botId }) => [this.main(botId), ...this.of(botId, false)],
+      "conversations.list": ({ botId }) => {
+        const bots = botId
+          ? [botId]
+          : [...this.fake.bots.values()]
+              .filter((bot) => bot.archivedAt === null)
+              .map((bot) => bot.id);
+        return bots.flatMap((each) => [this.main(each), ...this.of(each, false)]);
+      },
       "conversations.archived": ({ botId }) => {
         this.fake.bot(botId, false);
         return this.of(botId, true);
