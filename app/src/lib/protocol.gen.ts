@@ -471,7 +471,22 @@ background: Array<BackgroundTask>,
 /**
  * Its newest chat item, or when it was made: Unix milliseconds.
  */
-lastActivity: number, createdAt: number, archivedAt: number | null, };
+lastActivity: number, 
+/**
+ * When the agent last replied in it, for the unread mark (spec 40.7).
+ */
+lastReplyAt: number | null, 
+/**
+ * What the owner read of it (`chat.read`); the main one's is the
+ * agent's `readThrough`.
+ */
+readThrough: number | null, createdAt: number, archivedAt: number | null, };
+
+/**
+ * `conversations.list`: of one agent, or of every agent that is not
+ * archived when `botId` is absent (spec 40.5).
+ */
+export type ConversationsListParams = { botId?: BotId, };
 
 /**
  * `conversations.archive`, `conversations.unarchive`.
@@ -3467,7 +3482,7 @@ export interface RpcMethods {
   "bots.delete": { params: BotsDeleteParams; result: BotDeleted };
   "bots.restart": { params: BotsRestartParams; result: Bot };
   "chat.history": { params: ChatHistoryParams; result: Array<ChatItem> };
-  "chat.read": { params: BotIdParams; result: null };
+  "chat.read": { params: BotConversationParams; result: null };
   "approvals.answer": { params: ApprovalsAnswerParams; result: Approval };
   "messages.send": { params: MessagesSendParams; result: Message };
   "messages.list": { params: MessagesListParams; result: Array<Message> };
@@ -3482,7 +3497,7 @@ export interface RpcMethods {
   "bots.compact": { params: BotConversationParams; result: Bot };
   "bots.interrupt": { params: BotConversationParams; result: Bot };
   "bots.stopTask": { params: BotsStopTaskParams; result: null };
-  "conversations.list": { params: BotIdParams; result: Array<Conversation> };
+  "conversations.list": { params: ConversationsListParams; result: Array<Conversation> };
   "conversations.create": { params: BotIdParams; result: Conversation };
   "conversations.rename": { params: ConversationsRenameParams; result: Conversation };
   "conversations.archive": { params: ConversationIdParams; result: Conversation };

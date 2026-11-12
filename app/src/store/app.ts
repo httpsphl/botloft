@@ -28,7 +28,7 @@ import type {
 import { type Call, withCall } from "./calls";
 import { conversationActions, loadOpen, withConversation } from "./conversations";
 import { withQuestion } from "./questions";
-import { loadMarked, loadSeen, loadSeenSince, seenActions, withReply } from "./seen";
+import { loadMarked, loadSeen, loadSeenSince, seenActions, seenKey, withReply } from "./seen";
 
 /** Parts of Settings the rest of the app opens them on. */
 export type SettingsPart = "tools" | "skills" | "keys";
@@ -129,6 +129,8 @@ export interface AppState {
   newConversation(botId: BotId): Promise<Conversation>;
   /** The owner is looking at the bot's chat: what it said so far is seen. */
   markSeen(botId: BotId): void;
+  /** The same for one conversation of the bot (spec 40.7). */
+  markSeenIn(botId: BotId, conversationId: ConversationId): void;
   /** Marks the bot unread until its chat is opened; leaves it if it is open. */
   markUnread(botId: BotId): void;
   /** Applies a record a call returned, before its notification arrives. */
@@ -401,7 +403,7 @@ export function applyEvent(state: AppState, event: ServerEvent): Partial<AppStat
       const reply = item.body.kind === "reply" ? item.updatedAt : null;
       return {
         activity: { ...state.activity, [item.botId]: activity },
-        replyAt: withReply(state.replyAt, item.botId, reply),
+        replyAt: withReply(state.replyAt, seenKey(item.botId, item.conversationId), reply),
       };
     }
     case "conversation.changed":

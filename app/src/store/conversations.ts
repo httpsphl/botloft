@@ -37,13 +37,27 @@ function ordered(list: Conversation[]): Conversation[] {
   );
 }
 
+/** Every agent's conversations, as the sidebar reads them on connecting. */
+export function withConversations(state: AppState, list: Conversation[]): Partial<AppState> {
+  const byBot: Record<BotId, Conversation[]> = {};
+  let replyAt = state.replyAt;
+  for (const conversation of list) {
+    byBot[conversation.botId] = [...(byBot[conversation.botId] ?? []), conversation];
+    const at = conversation.lastReplyAt;
+    // The main one's replies are the bot's own (`Bot.lastReplyAt`).
+    if (!conversation.main && at !== null && at > (replyAt[conversation.id] ?? 0)) {
+      replyAt = { ...replyAt, [conversation.id]: at };
+    }
+  }
+  const conversations = Object.fromEntries(
+    Object.entries(byBot).map(([botId, mine]) => [botId, ordered(mine)]),
+  );
+  return { conversations, replyAt };
+}
+
 /** A conversation that changed: in its agent's list, or out of it once archived. */
 export function withConversation(state: AppState, conversation: Conversation): Partial<AppState> {
-  const known = state.conversations[conversation.botId];
-  if (!known) {
-    // The list is read when the agent's chat opens.
-    return {};
-  }
+  const known = state.conversations[conversation.botId] ?? [];
   const others = known.filter((each) => each.id !== conversation.id);
   const list = conversation.archivedAt === null ? ordered([...others, conversation]) : others;
   return { conversations: { ...state.conversations, [conversation.botId]: list } };

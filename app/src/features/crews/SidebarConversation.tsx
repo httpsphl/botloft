@@ -15,6 +15,7 @@ import { ChiefBadge, isChief } from "../bots/ChiefBadge";
 import { ListAvatar } from "../bots/ListAvatar";
 import { START_PLAN_TOOL } from "../chat/StartPlanCard";
 import { toolAction, toolTitle } from "../chat/toolNames";
+import { SidebarConversations } from "./SidebarConversations";
 import { row } from "./SidebarPages";
 
 /** Memoized: a change to one bot re-renders only its own line. */
@@ -70,6 +71,7 @@ export const Conversation = memo(function Conversation({ bot, crew }: { bot: Bot
           </span>
         </span>
       </button>
+      <SidebarConversations bot={bot} />
       {menuAt && (
         <ContextMenu
           label={t.bots.header.menuOf(bot.name)}

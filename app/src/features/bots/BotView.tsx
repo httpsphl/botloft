@@ -5,6 +5,8 @@ import type { Bot, BotFile, Crew } from "../../lib/protocol.gen";
 import { useWindowVisible } from "../../shell/visibility";
 import { routinesOf } from "../../store/app";
 import { useApp } from "../../store/context";
+import { openConversationOf } from "../../store/conversations";
+import { seenKey } from "../../store/seen";
 import { PanelClosing, PanelRestored } from "../../ui/panelMotion";
 import { type Tab, Tabs, tabId } from "../../ui/Tabs";
 import { useStable } from "../../ui/useStable";
@@ -96,15 +98,17 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
     [files.files, openFiles],
   );
   const routines = useApp(useShallow((state) => routinesOf(state, bot.id)));
-  // While the owner can see the chat, each new reply is seen (spec 15.1).
+  // While the owner can see the chat, each new reply of the open
+  // conversation is seen (spec 15.1, 40.7).
   const visible = useWindowVisible();
-  const replyAt = useApp((state) => state.replyAt[bot.id]);
-  const markSeen = useApp((state) => state.markSeen);
+  const openId = useApp((state) => openConversationOf(state, bot.id));
+  const replyAt = useApp((state) => state.replyAt[seenKey(bot.id, openId)]);
+  const markSeenIn = useApp((state) => state.markSeenIn);
   useEffect(() => {
     if (visible && replyAt !== undefined) {
-      markSeen(bot.id);
+      markSeenIn(bot.id, openId);
     }
-  }, [bot.id, visible, replyAt, markSeen]);
+  }, [bot.id, openId, visible, replyAt, markSeenIn]);
   // A browser at rest is open, but the bot is not using it (spec 21.2).
   const browsing = useApp((state) => {
     const browser = state.browsers[bot.id];

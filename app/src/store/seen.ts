@@ -1,12 +1,15 @@
-// What the owner has seen of each bot (spec 15.1): when they last looked at
+// What the owner has seen of each bot (spec 15.1) and of each of its other
+// conversations (spec 40.7), kept under the conversation's id: when they last looked at
 // its chat, remembered across restarts of the app. A reply newer than that
 // marks the bot unread in the conversation list; a routine run that failed
 // after it marks the app's icon (`unseenFailures`).
 
 import type { StoreApi } from "zustand/vanilla";
 import type { BotloftApi } from "../lib/api";
-import type { BotId, CrewId, Routine } from "../lib/protocol.gen";
+import { mainConversationOf } from "../lib/conversations";
+import type { BotId, Conversation, ConversationId, CrewId, Routine } from "../lib/protocol.gen";
 import type { AppState } from "./app";
+import { openConversationOf } from "./conversations";
 
 const SEEN_KEY = "botloft.seen";
 const SINCE_KEY = "botloft.seenSince";
@@ -81,8 +84,22 @@ export function seenActions(
   get: StoreApi<AppState>["getState"],
   set: StoreApi<AppState>["setState"],
   api: BotloftApi,
-): Pick<AppState, "markSeen" | "markUnread"> {
+): Pick<AppState, "markSeen" | "markSeenIn" | "markUnread"> {
   return {
+    markSeenIn: (botId, conversationId) => {
+      if (conversationId === mainConversationOf(botId)) {
+        get().markSeen(botId);
+        return;
+      }
+      const { seenAt, replyAt } = get();
+      const next = {
+        ...seenAt,
+        [conversationId]: Math.max(Date.now(), replyAt[conversationId] ?? 0),
+      };
+      saveSeen(next);
+      api.call("chat.read", { botId, conversationId }).catch(() => {});
+      set({ seenAt: next });
+    },
     markSeen: (botId) => {
       const { seenAt, replyAt, markedUnread } = get();
       const next = { ...seenAt, [botId]: Math.max(Date.now(), replyAt[botId] ?? 0) };
@@ -114,20 +131,54 @@ export function seenActions(
   };
 }
 
-/**
- * The bot replied since the owner last looked at its chat, or the owner
- * marked it unread. The open chat is never unread.
- */
-export function isUnread(state: AppState, botId: BotId): boolean {
-  if (botId === state.selectedBotId || !state.bots[botId]) {
-    return false;
-  }
+/** The bot replied in its main conversation since the owner last looked, or they marked it unread. */
+function mainUnread(state: AppState, botId: BotId): boolean {
   if (state.markedUnread[botId]) {
     return true;
   }
   const at = state.replyAt[botId];
   const read = state.bots[botId]?.readThrough ?? 0;
   return at !== undefined && at > Math.max(state.seenAt[botId] ?? 0, state.seenSince, read);
+}
+
+/** The bot replied in another conversation since the owner last read it. */
+function otherUnread(state: AppState, conversation: Conversation): boolean {
+  const at = state.replyAt[conversation.id] ?? conversation.lastReplyAt;
+  const read = Math.max(
+    state.seenAt[conversation.id] ?? 0,
+    state.seenSince,
+    conversation.readThrough ?? 0,
+  );
+  return at !== null && at !== undefined && at > read;
+}
+
+/** One conversation has a reply the owner has not seen; the open one never has. */
+export function isConversationUnread(state: AppState, conversation: Conversation): boolean {
+  const { botId, id } = conversation;
+  if (botId === state.selectedBotId && openConversationOf(state, botId) === id) {
+    return false;
+  }
+  return conversation.main ? mainUnread(state, botId) : otherUnread(state, conversation);
+}
+
+/**
+ * The bot replied since the owner last looked at its chat, in any of its
+ * conversations, or the owner marked it unread. The open chat is never unread.
+ */
+export function isUnread(state: AppState, botId: BotId): boolean {
+  if (botId === state.selectedBotId || !state.bots[botId]) {
+    return false;
+  }
+  if (mainUnread(state, botId)) {
+    return true;
+  }
+  const others = state.conversations[botId] ?? [];
+  return others.some((conversation) => !conversation.main && otherUnread(state, conversation));
+}
+
+/** The key a conversation's seen and reply marks are kept under. */
+export function seenKey(botId: BotId, conversationId: ConversationId): string {
+  return conversationId === mainConversationOf(botId) ? botId : conversationId;
 }
 
 /** How many bots of `crewId` are unread. */

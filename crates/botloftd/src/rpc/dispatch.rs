@@ -88,9 +88,7 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::CONVERSATIONS_UNARCHIVE => reply(conversations::unarchive(daemon, parse(params)?)),
         method::CONVERSATIONS_ARCHIVED => reply(conversations::archived(daemon, parse(params)?)),
         method::CHAT_READ => {
-            let params: botloft_core::protocol::BotIdParams = parse(params)?;
-            daemon.mobile.owner_read(daemon, &params.bot_id);
-            Ok(Value::Null)
+            reply(conversations::read(daemon, parse(params)?).map(|()| Value::Null))
         }
         method::CHAT_SEARCH => reply(chat::search(daemon, parse(params)?)),
         method::CHAT_ACT => reply(crate::service::cards::act(daemon, parse(params)?)),

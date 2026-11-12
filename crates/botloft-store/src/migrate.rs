@@ -66,6 +66,7 @@ const MIGRATIONS: &[(u32, &str)] = &[
         47,
         include_str!("../migrations/0047_conversation_replies.sql"),
     ),
+    (48, include_str!("../migrations/0048_conversation_read.sql")),
 ];
 
 /// Schema version after every migration has run.

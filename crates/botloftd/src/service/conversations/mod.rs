@@ -2,18 +2,18 @@
 //! archives the conversations of an agent, and the app hears of each one
 //! as `conversation.changed`.
 
-use std::sync::Arc;
-
 use botloft_core::ids::ConversationId;
 use botloft_core::protocol::{
-    AgentKind, BotIdParams, BotState, Conversation, ConversationIdParams,
-    ConversationsRenameParams, TitleBy,
+    AgentKind, BotConversationParams, BotIdParams, Conversation, ConversationIdParams,
+    ConversationsListParams, ConversationsRenameParams, TitleBy,
 };
 use botloft_core::validate;
 use botloft_store::{BotRecord, ConversationRecord, Store};
-use tokio::sync::broadcast::error::RecvError;
-use tracing::warn;
 
+mod view;
+
+pub use self::view::follow;
+pub(crate) use self::view::{changed, view};
 use super::bots::{active, find};
 use super::{ApiError, ApiResult};
 use crate::seat::Seat;
@@ -22,18 +22,36 @@ use crate::state::{Daemon, Event};
 /// The most conversations an agent keeps open at once.
 pub const MAX_OPEN: usize = 50;
 
-pub fn list(daemon: &Daemon, params: BotIdParams) -> ApiResult<Vec<Conversation>> {
+/// The conversations of one agent, or of every agent that is not
+/// archived, for the sidebar (spec 40.7).
+pub fn list(daemon: &Daemon, params: ConversationsListParams) -> ApiResult<Vec<Conversation>> {
     let store = daemon.store();
-    find(&store, &params.bot_id)?;
-    let mut all: Vec<Conversation> = store
-        .conversations(Some(&params.bot_id))?
+    let records = match &params.bot_id {
+        Some(bot) => {
+            find(&store, bot)?;
+            store.conversations(Some(bot))?
+        }
+        None => {
+            let active: std::collections::HashSet<_> = store
+                .bots(None, false)?
+                .into_iter()
+                .map(|bot| bot.id)
+                .collect();
+            let all = store.conversations(None)?;
+            all.into_iter()
+                .filter(|record| active.contains(&record.bot_id))
+                .collect()
+        }
+    };
+    let mut all: Vec<Conversation> = records
         .into_iter()
         .map(|record| view(daemon, &store, record))
         .collect();
-    // The main one first, then the last one used.
+    // By agent, the main one first, then the last one used.
     all.sort_by(|a, b| {
-        b.main
-            .cmp(&a.main)
+        a.bot_id
+            .cmp(&b.bot_id)
+            .then(b.main.cmp(&a.main))
             .then(b.last_activity.cmp(&a.last_activity))
     });
     Ok(all)
@@ -150,6 +168,28 @@ fn announce(
     Ok(shown)
 }
 
+/// `chat.read`: the owner read a conversation on the computer. The main
+/// one's goes to the phone too (spec 28.12); another keeps its own.
+pub fn read(daemon: &Daemon, params: BotConversationParams) -> ApiResult<()> {
+    let seat = {
+        let store = daemon.store();
+        let record = find(&store, &params.bot_id)?;
+        let seat = seat_of(&store, &record, params.conversation_id, false)?;
+        if !seat.is_main()
+            && let Some(at) = store.conversation_last_reply(&seat.conversation)?
+        {
+            store.set_conversation_read_through(&seat.conversation, at)?;
+        }
+        seat
+    };
+    if seat.is_main() {
+        daemon.mobile.owner_read(daemon, &seat.bot);
+    } else {
+        changed(daemon, &seat.conversation);
+    }
+    Ok(())
+}
+
 /// The conversation of `bot` a request names: the main one when it names
 /// none. With `open`, an archived one is refused (spec 40.5).
 pub(crate) fn seat_of(
@@ -172,78 +212,5 @@ pub(crate) fn seat_of(
             "conversation {asked} of bot {} does not exist",
             bot.id
         ))),
-    }
-}
-
-/// The protocol view of a stored conversation, with what is live.
-pub(crate) fn view(daemon: &Daemon, store: &Store, record: ConversationRecord) -> Conversation {
-    let (state, generation) = if record.archived_at.is_some() {
-        (BotState::Archived, None)
-    } else {
-        // One the supervisor has not placed yet starts asleep (40.1).
-        let unseen = if record.main {
-            BotState::Offline
-        } else {
-            BotState::Sleeping
-        };
-        daemon
-            .supervisor
-            .status_of(&record.id)
-            .unwrap_or((unseen, None))
-    };
-    let last_activity = store
-        .conversation_activity(&record.id)
-        .unwrap_or_else(|err| {
-            warn!(bot = %record.bot_id, "could not read a conversation's activity: {err}");
-            None
-        })
-        .unwrap_or(record.created_at);
-    Conversation {
-        context: daemon.contexts.get_in(&record.id),
-        background: daemon.background.get_in(&record.id),
-        title_by: record.title_by.as_deref().and_then(|by| by.parse().ok()),
-        id: record.id,
-        bot_id: record.bot_id,
-        title: record.title,
-        main: record.main,
-        state,
-        generation,
-        last_activity,
-        created_at: record.created_at,
-        archived_at: record.archived_at,
-    }
-}
-
-/// Tells the app what a conversation is now. The caller holds no store.
-pub(crate) fn changed(daemon: &Daemon, id: &ConversationId) {
-    let shown = {
-        let store = daemon.store();
-        match store.conversation(id) {
-            Ok(Some(record)) => view(daemon, &store, record),
-            Ok(None) => return,
-            Err(err) => {
-                warn!("could not read a conversation: {err}");
-                return;
-            }
-        }
-    };
-    daemon.emit(Event::ConversationChanged(shown));
-}
-
-/// Turns what changed in a conversation's process, context or background
-/// into `conversation.changed`. The supervisor and the trackers cannot
-/// read the store where they change, so they only say which one.
-pub async fn follow(daemon: Arc<Daemon>) {
-    let mut events = daemon.subscribe();
-    loop {
-        let touched = match events.recv().await {
-            Ok(Event::SeatState(change)) => Some(change.seat.conversation),
-            Ok(Event::ConversationTouched(seat)) => Some(seat.conversation),
-            Ok(_) | Err(RecvError::Lagged(_)) => None,
-            Err(RecvError::Closed) => return,
-        };
-        if let Some(id) = touched {
-            changed(&daemon, &id);
-        }
     }
 }

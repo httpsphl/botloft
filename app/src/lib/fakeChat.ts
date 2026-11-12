@@ -112,6 +112,7 @@ export class FakeChat {
       updatedAt: this.fake.now,
     };
     this.items.push(item);
+    this.fake.conversations.touched(conversationId, item.updatedAt, body.kind === "reply");
     this.announce(item, true);
     return item;
   }
@@ -211,7 +212,12 @@ export class FakeChat {
 
   handlers(): Pick<Handlers, "chat.history" | "chat.read" | "approvals.answer"> {
     return {
-      "chat.read": () => null,
+      "chat.read": ({ botId, conversationId }) => {
+        if (conversationId && conversationId !== mainConversationOf(botId)) {
+          this.fake.conversations.read(conversationId);
+        }
+        return null;
+      },
       "chat.history": ({ botId, before, limit, until, conversationId }) => {
         this.fake.bot(botId, false);
         const of = conversationId ?? mainConversationOf(botId);
