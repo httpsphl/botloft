@@ -60,6 +60,7 @@ mod chat;
 mod chrome;
 mod cloud;
 mod connectors;
+mod conversations;
 mod crew_access;
 mod desktop;
 #[cfg(test)]
@@ -102,6 +103,7 @@ pub use chat::*;
 pub use chrome::*;
 pub use cloud::*;
 pub use connectors::*;
+pub use conversations::*;
 pub use crew_access::*;
 pub use desktop::*;
 pub use files::*;
@@ -196,6 +198,13 @@ pub mod method {
     pub const BOTS_DELETE: &str = "bots.delete";
     pub const BOTS_RESTART: &str = "bots.restart";
     pub const CHAT_HISTORY: &str = "chat.history";
+    /// The conversations of an agent (spec 40.5).
+    pub const CONVERSATIONS_LIST: &str = "conversations.list";
+    pub const CONVERSATIONS_CREATE: &str = "conversations.create";
+    pub const CONVERSATIONS_RENAME: &str = "conversations.rename";
+    pub const CONVERSATIONS_ARCHIVE: &str = "conversations.archive";
+    pub const CONVERSATIONS_UNARCHIVE: &str = "conversations.unarchive";
+    pub const CONVERSATIONS_ARCHIVED: &str = "conversations.archived";
     /// The owner read a bot's chat on the computer (spec 28.12).
     pub const CHAT_READ: &str = "chat.read";
     pub const CHAT_SEARCH: &str = "chat.search";
@@ -313,6 +322,8 @@ pub mod notification {
     pub const BOT_DELETED: &str = "bot.deleted";
     pub const FOLDER_RECYCLED: &str = "folder.recycled";
     pub const BOT_STATE: &str = "bot.state";
+    /// A conversation's state, title, context or background changed (spec 40.5).
+    pub const CONVERSATION_CHANGED: &str = "conversation.changed";
     pub const BOT_CONTEXT: &str = "bot.context";
     pub const BOT_BACKGROUND: &str = "bot.background";
     pub const BOT_RULES: &str = "bot.rules";

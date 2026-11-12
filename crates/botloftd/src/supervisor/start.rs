@@ -171,8 +171,9 @@ impl Supervisor {
             if launch.connected && speaks {
                 let _ = writer.write(control::mcp_request());
             }
-            context::process_started(daemon, &bot.id, launch.resumed);
         }
+        let seat = Seat::new(bot.id.clone(), conversation.clone());
+        context::process_started(daemon, &seat, launch.resumed);
         // A new conversation is on disk only once it has a turn (spec
         // 7.3); the one it takes the place of is left behind.
         if !launch.resumed
@@ -198,7 +199,6 @@ impl Supervisor {
         slot.state = BotState::Launching;
         self.announce(&bot.id, slot);
         debug!(bot = %bot.id, generation, pid = ?pid, resumed = launch.resumed, "bot started");
-        let seat = Seat::new(bot.id.clone(), conversation.clone());
         let reader = StreamReader::new(seat, generation, decoder);
         tokio::spawn(pump(self.daemon.clone(), reader, events));
         tokio::spawn(settle(

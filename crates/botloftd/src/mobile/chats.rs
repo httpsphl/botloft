@@ -184,16 +184,18 @@ pub fn item(daemon: &Daemon, item: &ChatItem) -> Option<PhoneItem> {
     })
 }
 
-/// A page of the chat, oldest first, and whether there are older ones.
+/// A page of the main conversation's chat, oldest first, and whether
+/// there are older ones: the phone shows only that one (spec 40.7).
 pub fn page(
     daemon: &Daemon,
     bot: &BotId,
     before: Option<&ChatItemId>,
 ) -> Option<(Vec<PhoneItem>, bool)> {
     bots::active(&daemon.store(), bot).ok()?;
+    let main = botloft_core::ids::ConversationId::main_of(bot);
     let mut found = daemon
         .store()
-        .chat_history(bot, before, PAGE + 1)
+        .chat_history_in(&main, before, PAGE + 1)
         .unwrap_or_default();
     let more = found.len() > PAGE as usize;
     found.truncate(PAGE as usize);

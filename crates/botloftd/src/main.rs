@@ -180,6 +180,11 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
         loops.spawn("supervisor", supervisor::run(Arc::clone(&daemon)));
         loops.spawn("courier", courier::run(Arc::clone(&daemon)));
         loops.spawn("approvals", approvals::forget_turns(Arc::clone(&daemon)));
+        // What changes in a conversation, as the apps hear it (spec 40.5).
+        loops.spawn(
+            "conversations",
+            botloftd::service::conversations::follow(Arc::clone(&daemon)),
+        );
         loops.spawn("routines", routines::run(Arc::clone(&daemon)));
         loops.spawn("waits", routines::waits::run(Arc::clone(&daemon)));
         loops.spawn("backup", botloftd::autobackup::run(Arc::clone(&daemon)));

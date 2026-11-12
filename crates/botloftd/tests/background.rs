@@ -80,6 +80,7 @@ async fn stopping_a_task_asks_claude_code_and_the_list_follows() {
             BotsStopTaskParams {
                 bot_id: s.bot.clone(),
                 task_id: task.to_owned(),
+                conversation_id: None,
             },
         )
     };

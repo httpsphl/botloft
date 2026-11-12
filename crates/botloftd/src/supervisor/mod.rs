@@ -17,6 +17,7 @@ mod sleep;
 mod slot;
 mod spawn;
 mod start;
+mod summary;
 mod turns;
 
 use std::collections::{HashMap, HashSet};
@@ -26,7 +27,7 @@ use std::time::Duration;
 
 use botloft_core::ids::{BotId, ConversationId};
 use botloft_core::now_ms;
-use botloft_core::protocol::{BotState, BotStateChanged};
+use botloft_core::protocol::BotState;
 use bytes::Bytes;
 use tokio::sync::{Notify, broadcast, watch};
 use tokio::time::Instant;
@@ -37,6 +38,7 @@ pub use self::settings::{ClaudeSource, SupervisorSettings};
 use self::slot::{Slot, StopIntent};
 use crate::runtime::Runtime;
 use crate::runtime::claude::Claude;
+use crate::seat::{Seat, SeatState};
 use crate::secrets::TokenHash;
 use crate::state::{Daemon, Event};
 
@@ -71,6 +73,8 @@ pub struct Supervisor {
     wake: Notify,
     /// How many bots are `busy`, for keeping the computer awake (spec 14).
     busy: watch::Sender<usize>,
+    /// What each bot's conversations announced (spec 40.4).
+    summaries: summary::Summaries,
 }
 
 #[derive(Default)]
@@ -122,6 +126,7 @@ impl Supervisor {
             reconcile_lock: tokio::sync::Mutex::new(()),
             wake: Notify::new(),
             busy: watch::Sender::new(0),
+            summaries: summary::Summaries::default(),
         }
     }
 
@@ -136,10 +141,17 @@ impl Supervisor {
         self.wake.notify_one();
     }
 
-    /// State and generation of the main conversation of a bot the
-    /// supervisor has seen.
+    /// What the app shows for a bot the supervisor has seen: the summary
+    /// of its conversations, with the main one's generation (spec 40.4).
     pub fn status(&self, bot: &BotId) -> Option<(BotState, Option<u64>)> {
-        self.status_of(&ConversationId::main_of(bot))
+        let inner = self.lock();
+        summary::summarize(
+            inner
+                .slots
+                .values()
+                .filter(|slot| slot.bot == *bot)
+                .map(Slot::seen),
+        )
     }
 
     /// State and generation of a conversation the supervisor has seen.
@@ -375,26 +387,27 @@ impl Supervisor {
         }
     }
 
-    /// Emits `bot.state`. A new process always announces itself, even when
-    /// the state name did not change, because its generation did.
+    /// Tells what the conversation of `slot` is doing, and `bot.state`
+    /// when the bot's summary changed (spec 40.4). A new process always
+    /// announces itself, even when the state name did not change,
+    /// because its generation did.
     fn announce(&self, bot: &BotId, slot: &Slot) {
-        // The bot's state is its main conversation's (spec 40.4); the
-        // courier hears when another can take messages.
-        if !slot.main {
-            if matches!(
-                slot.state,
-                BotState::Idle | BotState::Busy | BotState::NeedsApproval
-            ) {
-                let seat = crate::seat::Seat::new(bot.clone(), slot.conversation.clone());
-                let _ = self.events.send(Event::ConversationReady(seat));
-            }
-            return;
-        }
-        let _ = self.events.send(Event::BotState(BotStateChanged {
-            bot_id: bot.clone(),
+        let _ = self.events.send(Event::SeatState(SeatState {
+            seat: Seat::new(bot.clone(), slot.conversation.clone()),
             state: slot.state,
             generation: slot.generation,
         }));
+        if let Some(change) = self.summaries.note(bot, &slot.conversation, slot.seen()) {
+            let _ = self.events.send(Event::BotState(change));
+        }
+    }
+
+    /// A conversation left the supervisor: the bot's summary goes on
+    /// without it.
+    fn announce_gone(&self, bot: &BotId, conversation: &ConversationId) {
+        if let Some(change) = self.summaries.forget(bot, conversation) {
+            let _ = self.events.send(Event::BotState(change));
+        }
     }
 
     /// Kills every bot, for daemon shutdown.

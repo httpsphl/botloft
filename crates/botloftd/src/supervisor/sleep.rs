@@ -44,19 +44,18 @@ impl Supervisor {
         self.wake();
     }
 
-    /// A sleeping bot's next process starts a new conversation, and it
-    /// keeps sleeping. `false` when the bot does not sleep now.
-    pub(crate) fn start_fresh_asleep(&self, bot: &BotId) -> bool {
-        let main = ConversationId::main_of(bot);
+    /// A sleeping conversation's next process starts a new session, and
+    /// it keeps sleeping. `false` when it does not sleep now.
+    pub(crate) fn start_fresh_asleep(&self, conversation: &ConversationId) -> bool {
         let mut inner = self.lock();
-        let Some(slot) = inner.slots.get_mut(&main) else {
+        let Some(slot) = inner.slots.get_mut(conversation) else {
             return false;
         };
         if slot.state != BotState::Sleeping || slot.running.is_some() || slot.launching {
             return false;
         }
         slot.fresh_next = true;
-        inner.sessions.remove(&main);
+        inner.sessions.remove(conversation);
         true
     }
 

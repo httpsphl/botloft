@@ -396,4 +396,9 @@ pub struct BotsRestartParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub fresh: Option<bool>,
+    /// Restarts only this conversation, and `fresh` forgets only it; the
+    /// main one when absent (spec 40.5).
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub conversation_id: Option<crate::ids::ConversationId>,
 }

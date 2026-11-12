@@ -7,6 +7,7 @@ pub mod bots;
 pub mod browsing;
 pub mod cloud_server;
 pub mod context;
+pub mod conversations;
 #[cfg(windows)]
 pub mod desktop;
 pub mod maker;

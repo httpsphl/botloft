@@ -28,8 +28,9 @@ pub(super) fn methods(out: &mut Out) {
         &out.name::<BotsSetEffortParams>(),
         &bot,
     );
-    out.method(method::BOTS_COMPACT, &out.name::<BotIdParams>(), &bot);
-    out.method(method::BOTS_INTERRUPT, &out.name::<BotIdParams>(), &bot);
+    let seat = out.name::<BotConversationParams>();
+    out.method(method::BOTS_COMPACT, &seat, &bot);
+    out.method(method::BOTS_INTERRUPT, &seat, &bot);
     out.method(
         method::BOTS_STOP_TASK,
         &out.name::<BotsStopTaskParams>(),

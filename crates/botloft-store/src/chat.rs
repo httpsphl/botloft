@@ -2,7 +2,7 @@
 //! protocol's JSON, so new item kinds need no migration.
 
 use botloft_core::chat::activity;
-use botloft_core::ids::{BotId, ChatItemId};
+use botloft_core::ids::{BotId, ChatItemId, ConversationId};
 use botloft_core::protocol::{Activity, ChatBody, ChatItem};
 use rusqlite::types::Type;
 use rusqlite::{Connection, OptionalExtension, Row, params};
@@ -122,6 +122,47 @@ impl Store {
         ))?;
         let rows = stmt.query_map(
             params![bot.as_str(), before.map(ChatItemId::as_str), limit],
+            from_row,
+        )?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    /// A page of one conversation's chat, newest first (spec 40.5).
+    pub fn chat_history_in(
+        &self,
+        conversation: &ConversationId,
+        before: Option<&ChatItemId>,
+        limit: u32,
+    ) -> Result<Vec<ChatItem>> {
+        let mut stmt = self.conn.prepare_cached(&format!(
+            "SELECT {COLUMNS} FROM chat_items \
+             WHERE conversation_id = ?1 \
+               AND (?2 IS NULL OR rowid < (SELECT rowid FROM chat_items WHERE id = ?2)) \
+             ORDER BY rowid DESC LIMIT ?3"
+        ))?;
+        let rows = stmt.query_map(
+            params![conversation.as_str(), before.map(ChatItemId::as_str), limit],
+            from_row,
+        )?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    /// Every item of one conversation from `until` to the newest, newest
+    /// first, at most `limit`; empty if `until` is not in it.
+    pub fn chat_since_in(
+        &self,
+        conversation: &ConversationId,
+        until: &ChatItemId,
+        limit: u32,
+    ) -> Result<Vec<ChatItem>> {
+        let mut stmt = self.conn.prepare_cached(&format!(
+            "SELECT {COLUMNS} FROM chat_items \
+             WHERE conversation_id = ?1 \
+               AND rowid >= (SELECT rowid FROM chat_items WHERE id = ?2 AND conversation_id = ?1) \
+             ORDER BY rowid DESC LIMIT ?3"
+        ))?;
+        let rows = stmt.query_map(
+            params![conversation.as_str(), until.as_str(), limit],
             from_row,
         )?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)

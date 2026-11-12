@@ -594,7 +594,7 @@ Answer on your card cht_01J9Z...: "<título>"
 ### 9.1 Fluxo
 
 1. `messages.send` (owner) ou tool `send_message` (bot) grava `message`, `delivery` (`pending`) e o item `inbound` no chat do destinatário, numa transação. Anexos são gravados antes (9.5).
-2. O **courier** dorme até a próxima coisa com hora marcada: a primeira delivery da fila de algum bot vencer, um lease acabar ou uma task aberta passar do prazo; no mínimo 250 ms e no máximo `poll_interval_ms`. Acorda na hora, via notify, quando entra delivery nova ou termina um envio, e quando um bot passa a aceitar mensagens (`bot.state` em `idle`, `busy` ou `needs_approval`). Antes, acordava a cada 500 ms, parado ou não.
+2. O **courier** dorme até a próxima coisa com hora marcada: a primeira delivery da fila de algum bot vencer, um lease acabar ou uma task aberta passar do prazo; no mínimo 250 ms e no máximo `poll_interval_ms`. Acorda na hora, via notify, quando entra delivery nova ou termina um envio, e quando uma conversa de um bot passa a aceitar mensagens (o estado dela em `idle`, `busy` ou `needs_approval`, 40.4). Antes, acordava a cada 500 ms, parado ou não.
 3. Entrega em ordem, uma por vez por bot: de cada bot, só a delivery `pending` mais antiga pode sair, quando `next_attempt_at <= agora` e o bot não tem outra em `sending`. Ela vira `sending` com `lease_until`.
 4. Se o bot não está em `idle`/`busy`/`needs_approval`: volta para `pending` com `next_attempt_at` em 5 s, **sem** contar tentativa. Um bot `sleeping` é acordado na hora (7.7). Quando o bot passa a aceitar mensagens, as deliveries dele que nunca falharam (`attempts = 0`) vencem na hora, sem esperar esses 5 s; as que falharam mantêm o backoff, para uma mensagem que derruba o bot não voltar em seguida. Bot ou crew arquivados: a delivery vira `dead` na hora.
 5. Monta a mensagem (9.2) na hora do envio e escreve uma linha no stdin do processo, com timeout de 10 s.
@@ -875,13 +875,19 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `bots.setPermissionMode` | `botId, mode` (`default`, `accept_edits`, `plan`, `auto`, `bypass_permissions`) | `Bot`; o bot reinicia no novo modo quando nada estiver em andamento (7.4) |
 | `bots.setModel` | `botId, model` (`default`, `fable`, `opus`, `sonnet`, `haiku`) | `Bot`; o bot reinicia no novo modelo quando nada estiver em andamento (7.4) |
 | `bots.setEffort` | `botId, effort` (`default`, `low`, `medium`, `high`, `xhigh`, `max`) | `Bot`; o bot reinicia no novo esforço quando nada estiver em andamento (7.4) |
-| `bots.compact` | `botId` | `Bot`, com `context.compacting`; compacta a conversa depois do turno em andamento (8.6); um bot dormindo acorda para isso (7.7). `conflict` se o bot está pausado ou parado |
-| `bots.interrupt` | `botId` | `Bot`; para o que o bot está fazendo agora e nega os pedidos de permissão abertos dele (9.2). Sem nada rodando, não faz nada. `validation` para um agente que não é o Claude Code |
-| `bots.restart` | `botId, fresh?` | `Bot` |
+| `bots.compact` | `botId, conversationId?` | `Bot`, com `context.compacting`; compacta a conversa depois do turno em andamento (8.6); um bot dormindo acorda para isso (7.7). Sem `conversationId`, a principal (40.5). `conflict` se o bot está pausado ou parado |
+| `bots.interrupt` | `botId, conversationId?` | `Bot`; para o que a conversa está fazendo agora e nega os pedidos de permissão abertos do bot (9.2). Sem `conversationId`, a principal (40.5). Sem nada rodando, não faz nada. `validation` para um agente que não é o Claude Code |
+| `bots.restart` | `botId, fresh?, conversationId?` | `Bot`; reinicia só a conversa, a principal sem `conversationId`, e `fresh` esquece só ela (40.5) |
 | `bots.archive` | `botId` | `Bot` |
 | `bots.unarchive` | `botId` | `Bot`; `-32003` com a crew arquivada ou o `@handle` em uso (7.6) |
 | `bots.delete` | `botId, recycleFolder?` | `{botId, crewId}`; exclui o bot, ativo ou arquivado; com `recycleFolder`, a pasta dele vai depois para a Lixeira (7.6) |
-| `chat.history` | `botId, before?, limit?` ou `botId, until` | `ChatItem[]`, mais novo primeiro; `limit` de 1 a 200, 50 se ausente; `until`: do item até o mais novo, até 1 000 (8.8) |
+| `chat.history` | `botId, conversationId?, before?, limit?` ou `botId, conversationId?, until` | `ChatItem[]` de uma conversa, a principal sem `conversationId` (40.5), mais novo primeiro; `limit` de 1 a 200, 50 se ausente; `until`: do item até o mais novo, até 1 000 (8.8) |
+| `conversations.list` | `botId` | `Conversation[]`: as que não estão arquivadas, a principal primeiro e depois pela última atividade (40.5) |
+| `conversations.create` | `botId` | `Conversation`: uma nova, dormindo; `validation` para um agente que não é o Claude Code ou com 50 abertas |
+| `conversations.rename` | `conversationId, title` | `Conversation`, com `titleBy: owner`; `validation` para a principal |
+| `conversations.archive` | `conversationId` | `Conversation`; para o processo dela, e o que esperava por ela vai para a principal; `validation` para a principal |
+| `conversations.unarchive` | `conversationId` | `Conversation`, dormindo |
+| `conversations.archived` | `botId` | `Conversation[]`: as arquivadas, a última arquivada primeiro |
 | `chat.search` | `query, botId?, crewId?, before?, limit?` | `SearchHit[]`: itens com todas as palavras, mais novo primeiro, com um trecho em destaque (8.8) |
 | `chat.act` | `itemId, version, button?, form?` (`form`: valores por id do campo, texto; `check` é `true` ou `false`) | `ChatItem`: o cartão com a resposta; a resposta vai ao bot como message do dono; versão velha ou já respondida dá `conflict` (8.11) |
 | `approvals.answer` | `approvalId, allow, note?, input?, always?, once?` (`input`: a sugestão de bot como o dono a deixou, 10.2, ou `{"scope": ...}` de um pedido de outra crew, 10.4; `always`: com `allow`, grava o `always` do pedido como regra do bot, 10.1; `once`: com `allow`, um pedido de app do desktop ou de site vale só até o fim do turno do bot e nada é gravado, 24.2 e 21.5) | `Approval` |
@@ -921,7 +927,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 
 ### 11.3 Notificações do servidor
 
-`bot.state`, `bot.changed`, `bot.context` (8.6), `bot.rules` (10.1), `bot.sites` (21.5), `bot.deleted`, `crew.changed`, `crew.deleted`, `folder.recycled` (7.6), `chat.item`, `chat.delta`, `message.created`, `delivery.changed`, `task.changed`, das rotinas `routine.changed` e `routine.run` (20.8), e do navegador `browser.changed`, `browser.action` e, só para quem assiste, `browser.frame` (21.7), e das telas `screen.draft` (22.3), e das perguntas `question.changed` (23.5), e das reações `reaction.changed` (8.9), e do histórico `version.created` (8.10).
+`bot.state`, `bot.changed`, `bot.context` (8.6), `conversation.changed` (40.5), `bot.rules` (10.1), `bot.sites` (21.5), `bot.deleted`, `crew.changed`, `crew.deleted`, `folder.recycled` (7.6), `chat.item`, `chat.delta`, `message.created`, `delivery.changed`, `task.changed`, das rotinas `routine.changed` e `routine.run` (20.8), e do navegador `browser.changed`, `browser.action` e, só para quem assiste, `browser.frame` (21.7), e das telas `screen.draft` (22.3), e das perguntas `question.changed` (23.5), e das reações `reaction.changed` (8.9), e do histórico `version.created` (8.10).
 
 ### 11.4 Erros
 
@@ -3324,7 +3330,7 @@ Nomes de arquivo, branches, títulos de PR, descrições de tarefa e caminhos de
 ### 33.8 Protocolo e dados
 
 - `ContextUsage` (8.6) ganha `parts: ContextPart[]` (`kind`, `tokens`) e `memoryFiles: ContextFile[]` (`path`, `tokens`), vazios quando o motor não os dá.
-- `Bot` ganha `background: BackgroundTask[]` (`taskId`, `kind`: `command`, `agent`, `remote` ou `other`, `description` até 300 caracteres, `seenAt`; no máximo 50), com a notificação `bot.background {botId, tasks}` (11.3), que leva a lista inteira e só sai quando ela muda. Método `bots.stopTask {botId, taskId}` → `null`: `not_found` para uma tarefa que não está na lista, `conflict` com o processo parado. A lista mora no daemon (`background.rs`), não no banco.
+- `Bot` ganha `background: BackgroundTask[]` (`taskId`, `kind`: `command`, `agent`, `remote` ou `other`, `description` até 300 caracteres, `seenAt`; no máximo 50), com a notificação `bot.background {botId, tasks}` (11.3), que leva a lista inteira e só sai quando ela muda. Método `bots.stopTask {botId, taskId, conversationId?}` → `null`: `not_found` para uma tarefa que não está na lista, `conflict` com o processo parado. A lista mora no daemon (`background.rs`), não no banco, uma por conversa; `Bot.background` é a da principal (40.5).
 - `overview.changes {botId}` → `{repos: GitRepo[], events: GitEvent[], prs: PullRequest[], github: "ok" | "missing" | "signed_out" | "error" | null}` (`null` sem PR a perguntar). `PullRequest`: `number`, `url`, `title`, `state` (`open`, `draft`, `merged`, `closed`), `additions`, `deletions`, `checks` (`passed`, `failed`, `pending`). `GitRepo`: `path`, `name`, `branch`, `ahead`, `behind`, `files` (`path`, `status`: `modified`, `added`, `deleted`, `renamed`, `untracked`, `conflicted`, `added`/`removed` ou `null`), `more`. `GitEvent`: `kind` (`commit`, `push`, `branch`, `pr`), `sha`, `branch`, `action`, `number`, `url`, `at`.
 - Migration `agent_git_events`, apagada junto com o agente (7.6); entra na cópia de segurança (14.2) como o resto do agente.
 - App: `features/overview/`, textos nos três idiomas (15.6).
@@ -3874,11 +3880,11 @@ Um agente pode ter várias **conversas**, como abas. Cada uma é uma sessão pr�
 | Rotina e lembrete criados pelo dono, avisos do daemon | a principal |
 | Resultado de uma tarefa, resposta do dono a uma pergunta (18), resposta a um pedido de acesso de crew, lembrete ou espera (20.14) criados pelo próprio agente | a conversa que pediu |
 
-Para a última linha, cada processo tem o **seu** token (10): o daemon sabe de que conversa veio cada chamada de ferramenta e grava a conversa em `tasks.requester_conversation_id`, `questions.conversation_id`, `routines.conversation_id` e no pedido de acesso. Uma conversa que pediu e foi arquivada devolve a resposta à principal.
+Para a última linha, cada processo tem o **seu** token (10): o daemon sabe de que conversa veio cada chamada de ferramenta e grava a conversa em `tasks.requester_conversation_id`, `questions.conversation_id`, `routines.conversation_id` e no pedido de acesso. Uma conversa que pediu e foi arquivada devolve a resposta à principal; o que ainda esperava por ela na fila também vai para a principal, no arquivar e, se voltar à fila depois, quando o courier o pega.
 
 ### 40.3 Dados
 
-- Tabela `conversations`: `id (cnv_), bot_id, title, title_by (owner/ai, nulo enquanto não tem), session_id, main, read_through, created_at, last_activity, archived_at`. Uma principal por agente (índice único parcial). O id da principal é `cnv_` com o ULID do agente, o que deixa a migration preencher tudo em SQL.
+- Tabela `conversations`: `id (cnv_), bot_id, title, title_by (owner/ai, nulo enquanto não tem), session_id, main, created_at, archived_at`; `read_through` entra na C3. A última atividade não é guardada: é o item mais novo do chat da conversa, ou a criação dela. Um agente tem no máximo 50 conversas abertas. Uma principal por agente (índice único parcial). O id da principal é `cnv_` com o ULID do agente, o que deixa a migration preencher tudo em SQL.
 - `conversation_id` em `chat_items` e `deliveries`, preenchido com a principal; nas tabelas de 40.2, nulo quer dizer a principal.
 - `bots.session_id` passa para a principal e deixa de ser lido; `bots.read_through` passa na C3.
 - Arquivar uma conversa para o processo dela e a tira da lista; a sessão do motor continua em disco e volta ao desarquivar. Apagar uma conversa fica para depois.
@@ -3887,16 +3893,16 @@ Para a última linha, cada processo tem o **seu** token (10): o daemon sabe de q
 ### 40.4 Supervisor
 
 - O slot (7.2) passa a ser de uma conversa: estado, geração, fila `waiting`, sono, tentativas e reinício são de cada uma. Os tokens levam a `(agente, conversa, geração)`.
-- O estado do agente na tela é o resumo das conversas dele: precisa de você se alguma precisa, trabalhando se alguma trabalha, dormindo se todas dormem, senão pronto. `bot.state` continua; cada conversa tem o seu estado em `conversation.changed`. Até a C2, `bot.state` é o da principal.
+- O estado do agente na tela é o resumo das conversas dele: precisa de você se alguma precisa, trabalhando se alguma trabalha, dormindo se todas dormem, senão pronto. `bot.state` continua, com a generation da principal, e só sai quando o resumo muda; cada conversa tem o seu estado em `conversation.changed`. O que dentro do daemon espera o fim do turno do agente (o navegador, o contorno do desktop, o "Só desta vez") ouve o resumo; o courier ouve cada conversa.
 - **Acordadas por agente:** no máximo 3. Quando outra precisa acordar, a que está parada há mais tempo dorme antes, e a que esperava começa assim que ela sai; se todas estão trabalhando, a mensagem espera na fila até uma terminar o turno. O `max_running` (7.8) conta processos.
 - Cada conversa dorme sozinha depois do tempo de sono do agente (7.7). As outras dormem mesmo com o sono desligado, depois de 30 minutos paradas: só a principal fica sempre acordada. Reiniciar, trocar modelo, modo, esforço ou ferramentas reinicia todas as acordadas, cada uma com `--resume` quando estiver livre (7.4).
 - Os arquivos da pasta (5.1) são os mesmos para todas; a escrita atômica usa um nome temporário único, para dois inícios ao mesmo tempo não se atropelarem.
 
 ### 40.5 Protocolo
 
-- `conversations.list {botId}` (as ativas, a principal primeiro e depois pela última atividade), `conversations.create {botId}`, `conversations.rename {conversationId, title}`, `conversations.archive {conversationId}`, `conversations.unarchive {conversationId}`, `conversations.archived {botId}`. Todos devolvem `Conversation {id, botId, title, titleBy, main, state, generation, context, background, lastActivity, readThrough, archivedAt, createdAt}`, ou a lista.
-- Ganham `conversationId` opcional (sem ele, a principal): `messages.send`, `chat.history`, `chat.read`, `bots.interrupt`, `bots.compact`, `bots.restart {fresh}` (numa conversa que não é a principal, `fresh` esquece só ela) e `bots.stopTask`.
-- `ChatItem` e `ChatDelta` ganham `conversationId`. Notificação nova `conversation.changed` (`Conversation`) a cada mudança de estado, título, contexto, segundo plano ou leitura. `Bot.context` e `Bot.background` continuam sendo os da principal.
+- `conversations.list {botId}` (as ativas, a principal primeiro e depois pela última atividade), `conversations.create {botId}`, `conversations.rename {conversationId, title}`, `conversations.archive {conversationId}`, `conversations.unarchive {conversationId}`, `conversations.archived {botId}`. Todos devolvem `Conversation {id, botId, title, titleBy, main, state, generation, context, background, lastActivity, createdAt, archivedAt}`, ou a lista; `readThrough` entra na C3. Uma arquivada tem o estado `archived`; uma que o supervisor ainda não pôs no lugar, `sleeping`.
+- Ganham `conversationId` opcional (sem ele, a principal): `messages.send`, `chat.history`, `bots.interrupt`, `bots.compact`, `bots.restart {fresh}` (numa conversa que não é a principal, `fresh` esquece só ela) e `bots.stopTask`; `chat.read` na C3. Uma arquivada dá `not_found`, menos no `chat.history`, que lê o chat dela. O celular lê só o chat da principal.
+- `ChatItem` e `ChatDelta` ganham `conversationId`. Notificação nova `conversation.changed` (`Conversation`) a cada mudança de estado, título, arquivamento, contexto ou segundo plano. O supervisor e quem segue o contexto não leem o banco onde a mudança acontece: dizem só qual conversa mudou, e uma tarefa do daemon (`service/conversations.rs`, `follow`) monta a `Conversation` e a manda. `Bot.context` e `Bot.background` continuam sendo os da principal.
 
 ### 40.6 Título feito por IA
 
@@ -3921,7 +3927,8 @@ Conversas no Antigravity e no Codex, conversas abertas por outros agentes, mover
 | Marco | O que entra | Teste |
 |---|---|---|
 | **C1** Dados e supervisor | migration, `cnv_`, store, supervisor, sessão, início e entregas por conversa, `conversationId` em `ChatItem`, `ChatDelta`, `Delivery` e `messages.send`; contexto, segundo plano, aprovações, perguntas e turnos de rotina seguem só a principal; princípio 3 e ADR 0004 | a suíte toda sem mudança de comportamento; `FakeRuntime` com duas conversas do mesmo agente rodando ao mesmo tempo, cada uma com a sua sessão e o seu stdin; limite de acordadas; sono por conversa |
-| **C2** Protocolo e roteamento | `conversations.*`, `conversationId` nos outros métodos de 40.5, `conversation.changed`, `bot.state` como resumo; contexto, segundo plano, aprovações, perguntas e turnos de rotina por conversa; respostas voltando à conversa que pediu (40.2) | courier e chat com `FakeRuntime`: tarefa, pergunta, acesso e lembrete pedidos numa conversa voltam a ela; arquivada volta à principal |
+| **C2a** Protocolo | `conversations.*`, `conversationId` nos outros métodos de 40.5, `conversation.changed`, `bot.state` como resumo; contexto e segundo plano por conversa; o que esperava por uma arquivada vai para a principal | daemon com `FakeRuntime`: abrir, nomear, arquivar e voltar; estado de cada conversa e resumo do agente; Parar e Compactar só na conversa pedida; mensagem de uma arquivada chega à principal |
+| **C2b** Roteamento | aprovações, perguntas e turnos de rotina por conversa; respostas voltando à conversa que pediu (40.2); o token leva à conversa | courier e chat com `FakeRuntime`: tarefa, pergunta, acesso e lembrete pedidos numa conversa voltam a ela; arquivada volta à principal |
 | **C3** App | barra lateral, cabeçalho, nova, renomear, arquivar, não lida e controles por conversa | componentes com `FakeBotloft` |
 | **C4** Título por IA | o turno de 40.6, o que vale de reserva e o registro em 19 | unidade com `FakeRuntime`; teste real das flags |
 | **C5** O resto | busca e `search_history` dizendo a conversa, cópia leve, Criador e importação de histórico ignorando as conversas dos agentes | unidade e componentes |

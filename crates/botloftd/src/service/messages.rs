@@ -37,7 +37,8 @@ pub fn send(daemon: &Daemon, params: MessagesSendParams) -> ApiResult<Message> {
     let store = daemon.store();
     // Archived or deleted while the files were saved.
     let (crew, bot) = bots::active(&store, &params.bot_id)?;
-    let conversation = conversation_of(&store, &bot.id, params.conversation_id)?;
+    let conversation =
+        super::conversations::seat_of(&store, &bot, params.conversation_id, true)?.conversation;
     let reply_to = match &params.reply_to {
         Some(item) => Some(quote(&store, &bot.id, item)?),
         None => None,
@@ -61,25 +62,6 @@ pub fn send(daemon: &Daemon, params: MessagesSendParams) -> ApiResult<Message> {
     drop(store);
     super::questions::close_notes(daemon, &sent.to_bot_id);
     Ok(sent)
-}
-
-/// The conversation of `bot` the owner writes to: the main one, or one of
-/// its others that is not archived (spec 40.2).
-fn conversation_of(
-    store: &Store,
-    bot: &BotId,
-    asked: Option<ConversationId>,
-) -> ApiResult<ConversationId> {
-    let Some(asked) = asked else {
-        return Ok(ConversationId::main_of(bot));
-    };
-    if asked.is_main_of(bot) {
-        return Ok(asked);
-    }
-    match store.conversation(&asked)? {
-        Some(found) if found.bot_id == *bot && found.archived_at.is_none() => Ok(asked),
-        _ => Err(ApiError::NotFound(format!("conversation {asked}"))),
-    }
 }
 
 /// What the owner replies to (spec 9.3): something the bot wrote, or a

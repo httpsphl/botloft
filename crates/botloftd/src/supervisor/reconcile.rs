@@ -180,6 +180,7 @@ impl Supervisor {
                     self.count_busy(slot.state, BotState::Offline);
                     inner.slots.remove(&id);
                     inner.sessions.remove(&id);
+                    self.announce_gone(bot, &id);
                 }
                 None => {}
             }

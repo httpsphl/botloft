@@ -61,6 +61,15 @@ pub(super) struct Slot {
 }
 
 impl Slot {
+    /// What the conversation announces, for the bot's summary.
+    pub(super) fn seen(&self) -> super::summary::Seen {
+        super::summary::Seen {
+            state: self.state,
+            generation: self.generation,
+            main: self.main,
+        }
+    }
+
     pub fn new(bot: &BotId, conversation: &ConversationId, backoff: Backoff) -> Self {
         Self {
             bot: bot.clone(),

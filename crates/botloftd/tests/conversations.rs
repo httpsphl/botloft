@@ -5,85 +5,14 @@ mod common;
 
 use std::time::Duration;
 
-use botloft_core::ids::{BotId, ConversationId};
+use botloft_core::ids::ConversationId;
 use botloft_core::protocol::BotState;
-use botloft_store::ConversationRecord;
-use botloftd::runtime::fake::FakeProcess;
-use common::{Client, TestDaemon, stream};
-use serde_json::{Value, json};
+use common::TestDaemon;
+use common::conversations::{
+    holding, nth_process, open, replies, resumes, send, sleeping_bot, turn, until_reply,
+};
 
 const NAP: Duration = Duration::from_millis(300);
-
-/// The `n`th process the runtime started, waiting up to 5 s for it.
-async fn nth_process(t: &TestDaemon, n: usize) -> FakeProcess {
-    for _ in 0..500 {
-        if let Some(process) = t.runtime.processes().into_iter().nth(n) {
-            return process;
-        }
-        tokio::time::sleep(Duration::from_millis(10)).await;
-    }
-    panic!("process {n} never started");
-}
-
-/// A sleeping bot of a new crew, and its id.
-async fn sleeping_bot(t: &TestDaemon, app: &mut Client) -> (Value, BotId) {
-    let crew = app
-        .call("crews.create", json!({ "name": "Ops" }))
-        .await
-        .expect("crew");
-    let bot = json!({ "crewId": crew["id"], "name": "Scout", "role": "", "instructions": "" });
-    let bot = app.call("bots.create", bot).await.expect("bot");
-    t.until_state(&bot, BotState::Sleeping).await;
-    let id = bot["id"].as_str().expect("id").parse().expect("bot id");
-    (bot, id)
-}
-
-/// Another conversation of `bot`, as the owner will open it (C2).
-fn open(t: &TestDaemon, bot: &BotId) -> ConversationId {
-    let conversation = ConversationRecord::new(bot, t.daemon.clock.now_ms());
-    t.daemon
-        .store()
-        .insert_conversation(&conversation)
-        .expect("conversation");
-    t.daemon.supervisor.wake();
-    conversation.id
-}
-
-async fn send(app: &mut Client, bot: &Value, body: &str, conversation: Option<&ConversationId>) {
-    let mut params = json!({ "botId": bot["id"], "body": body });
-    if let Some(conversation) = conversation {
-        params["conversationId"] = json!(conversation.as_str());
-    }
-    app.call("messages.send", params).await.expect("send");
-}
-
-/// The process whose first message is `body`, among the first `count`.
-async fn holding(t: &TestDaemon, count: usize, body: &str) -> (FakeProcess, Value) {
-    for n in 0..count {
-        let process = nth_process(t, n).await;
-        let line = process.wait_lines(1).await.remove(0);
-        if line.to_string().contains(body) {
-            return (process, line);
-        }
-    }
-    panic!("no process got {body}");
-}
-
-/// The process takes up `line` in `session`, answers and ends the turn.
-async fn turn(process: &FakeProcess, line: &Value, session: &str, reply: &str) {
-    let mut opened = stream::replay(line);
-    opened["session_id"] = json!(session);
-    process.emit(stream::init(session)).await;
-    process.emit(opened).await;
-    process.emit(stream::text(reply)).await;
-    process.emit(stream::result(false)).await;
-}
-
-fn resumes(process: &FakeProcess) -> Option<String> {
-    let args = process.args();
-    let at = args.iter().position(|arg| arg == "--resume")?;
-    args.get(at + 1).cloned()
-}
 
 #[tokio::test(flavor = "multi_thread")]
 async fn two_conversations_run_at_once_each_with_its_own_session() {
@@ -91,7 +20,7 @@ async fn two_conversations_run_at_once_each_with_its_own_session() {
     t.daemon.settings.set_sleep_after(Some(NAP));
     let mut app = t.session().await;
     let (bot, id) = sleeping_bot(&t, &mut app).await;
-    let other = open(&t, &id);
+    let other = open(&mut app, &id).await;
 
     send(&mut app, &bot, "Hello main", None).await;
     send(&mut app, &bot, "Hello other", Some(&other)).await;
@@ -105,34 +34,14 @@ async fn two_conversations_run_at_once_each_with_its_own_session() {
     turn(&other_process, &other_line, "session-other", "Other here").await;
     turn(&main_process, &main_line, "session-main", "Main here").await;
 
-    // Each reply is in its own conversation.
-    let reply_in = async |app: &mut Client, text: &str| {
-        for _ in 0..200 {
-            let history = app
-                .call("chat.history", json!({ "botId": bot["id"] }))
-                .await
-                .expect("history");
-            let found = history
-                .as_array()
-                .expect("items")
-                .iter()
-                .find(|item| item["body"]["text"] == text)
-                .map(|item| item["conversationId"].clone());
-            if let Some(found) = found {
-                return found;
-            }
-            tokio::time::sleep(Duration::from_millis(25)).await;
-        }
-        panic!("no reply {text}");
-    };
-    let main = ConversationId::main_of(&id);
-    assert_eq!(reply_in(&mut app, "Main here").await, json!(main.as_str()));
-    assert_eq!(
-        reply_in(&mut app, "Other here").await,
-        json!(other.as_str())
-    );
+    // Each reply is in its own conversation's chat, and only there.
+    until_reply(&mut app, &bot, None, "Main here").await;
+    until_reply(&mut app, &bot, Some(&other), "Other here").await;
+    assert_eq!(replies(&mut app, &bot, None).await, ["Main here"]);
+    assert_eq!(replies(&mut app, &bot, Some(&other)).await, ["Other here"]);
 
     // Each one keeps its session, and resumes it once asleep.
+    let main = ConversationId::main_of(&id);
     let store_sessions = || {
         let store = t.daemon.store();
         (
@@ -144,14 +53,9 @@ async fn two_conversations_run_at_once_each_with_its_own_session() {
         store_sessions(),
         (Some("session-main".into()), Some("session-other".into()))
     );
+    // The bot sleeps once all of its conversations do.
     t.until_state(&bot, BotState::Sleeping).await;
-    for _ in 0..200 {
-        if other_process.killed() {
-            break;
-        }
-        tokio::time::sleep(Duration::from_millis(10)).await;
-    }
-    assert!(other_process.killed(), "the other conversation sleeps too");
+    assert!(main_process.killed() && other_process.killed());
     send(&mut app, &bot, "Again", Some(&other)).await;
     let again = nth_process(&t, 2).await;
     assert_eq!(resumes(&again).as_deref(), Some("session-other"));
@@ -167,7 +71,10 @@ async fn at_most_three_conversations_of_a_bot_are_awake() {
         .set_sleep_after(Some(Duration::from_secs(600)));
     let mut app = t.session().await;
     let (bot, id) = sleeping_bot(&t, &mut app).await;
-    let others: Vec<ConversationId> = (0..3).map(|_| open(&t, &id)).collect();
+    let mut others: Vec<ConversationId> = Vec::new();
+    for _ in 0..3 {
+        others.push(open(&mut app, &id).await);
+    }
 
     send(&mut app, &bot, "To main", None).await;
     for (n, other) in others.iter().enumerate() {

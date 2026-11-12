@@ -596,8 +596,9 @@ async fn an_agy_bot_cannot_be_stopped_mid_turn() {
     agy.until(BotState::Busy).await;
     let refused = botloftd::service::interrupt::interrupt(
         &agy.daemon,
-        botloft_core::protocol::BotIdParams {
+        botloft_core::protocol::BotConversationParams {
             bot_id: agy.bot.clone(),
+            conversation_id: None,
         },
     );
     assert!(

@@ -263,8 +263,9 @@ pub fn set_paused(daemon: &Daemon, params: BotsSetPausedParams) -> ApiResult<Bot
     Ok(bot)
 }
 
-/// Restarts the process; `fresh` drops the conversation. Also the way out
-/// of `auth_error` (spec 7.3).
+/// Restarts the process of one conversation, the main one by default;
+/// `fresh` drops what it held (spec 40.5). Also the way out of
+/// `auth_error` (spec 7.3).
 pub fn restart(daemon: &Daemon, params: BotsRestartParams) -> ApiResult<Bot> {
     let store = daemon.store();
     let (crew, record) = active(&store, &params.bot_id)?;
@@ -275,19 +276,22 @@ pub fn restart(daemon: &Daemon, params: BotsRestartParams) -> ApiResult<Bot> {
         )));
     }
     let fresh = params.fresh.unwrap_or(false);
+    let seat = super::conversations::seat_of(&store, &record, params.conversation_id, true)?;
     // A sleeping bot forgets its conversation and keeps sleeping (spec 7.7):
     // nothing to start until something comes for it.
-    if !(fresh && crate::context::forget_while_asleep(daemon, &store, &record.id)) {
-        daemon.supervisor.restart(&record.id, fresh);
+    if !(fresh && crate::context::forget_while_asleep(daemon, &store, &seat)) {
+        daemon
+            .supervisor
+            .restart_in(&record.id, &seat.conversation, fresh);
     }
     let bot = to_protocol(daemon, &store, &crew, record);
     // The chat takes the store itself.
     drop(store);
     if fresh {
         // The chat keeps what came before; this line says it is forgotten.
-        crate::chat::items::add(
+        crate::chat::items::add_to(
             daemon,
-            &bot.id,
+            &seat,
             ChatBody::Notice(NoticeItem {
                 level: NoticeLevel::Info,
                 code: Some(NoticeCode::FreshStart),

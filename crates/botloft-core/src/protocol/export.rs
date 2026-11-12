@@ -31,6 +31,8 @@ mod chrome;
 mod cloud;
 #[path = "export_connectors.rs"]
 mod connectors;
+#[path = "export_conversations.rs"]
+mod conversations;
 #[path = "export_crew_access.rs"]
 mod crew_access;
 #[path = "export_desktop.rs"]
@@ -162,6 +164,7 @@ fn export_bindings() {
     out.decl::<Activity>();
     session::decls(&mut out);
     out.decl::<Bot>();
+    conversations::decls(&mut out);
     out.decl::<ClientInfo>();
     out.decl::<HelloParams>();
     out.decl::<LocaleParams>();
@@ -464,6 +467,7 @@ fn export_bindings() {
         &out.name::<Vec<Task>>(),
     );
     session::methods(&mut out);
+    conversations::methods(&mut out);
     usage::methods(&mut out);
     versions::methods(&mut out);
     cards::methods(&mut out);
@@ -531,6 +535,7 @@ fn export_bindings() {
     );
     let _ = writeln!(out.text, "  \"{}\": {task};", notification::TASK_CHANGED);
     session::notifications(&mut out);
+    conversations::notifications(&mut out);
     routines::notifications(&mut out);
     questions::notifications(&mut out);
     reactions::notifications(&mut out);

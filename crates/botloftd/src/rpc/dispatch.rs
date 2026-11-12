@@ -9,9 +9,9 @@ use super::jsonrpc::{RpcError, empty_params};
 use crate::approvals;
 use crate::service::{
     self, ApiError, ApiResult, agents, archive, attachments, autobackup, backup, bots, catalog,
-    chat, cloud, crew_access, crews, delete, deliveries, desktop, files, island, keys, lead, mcp,
-    mcp_claude, messages, mobile, models, modes, permissions, questions, reactions, routines,
-    rules, screens, settings, tasks, usage, versions,
+    chat, cloud, conversations, crew_access, crews, delete, deliveries, desktop, files, island,
+    keys, lead, mcp, mcp_claude, messages, mobile, models, modes, permissions, questions,
+    reactions, routines, rules, screens, settings, tasks, usage, versions,
 };
 use crate::state::Daemon;
 
@@ -81,6 +81,12 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::BOTS_DELETE => reply(delete::bot(daemon, parse(params)?)),
         method::BOTS_RESTART => reply(bots::restart(daemon, parse(params)?)),
         method::CHAT_HISTORY => reply(chat::history(daemon, parse(params)?)),
+        method::CONVERSATIONS_LIST => reply(conversations::list(daemon, parse(params)?)),
+        method::CONVERSATIONS_CREATE => reply(conversations::create(daemon, parse(params)?)),
+        method::CONVERSATIONS_RENAME => reply(conversations::rename(daemon, parse(params)?)),
+        method::CONVERSATIONS_ARCHIVE => reply(conversations::archive(daemon, parse(params)?)),
+        method::CONVERSATIONS_UNARCHIVE => reply(conversations::unarchive(daemon, parse(params)?)),
+        method::CONVERSATIONS_ARCHIVED => reply(conversations::archived(daemon, parse(params)?)),
         method::CHAT_READ => {
             let params: botloft_core::protocol::BotIdParams = parse(params)?;
             daemon.mobile.owner_read(daemon, &params.bot_id);

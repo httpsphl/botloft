@@ -110,6 +110,53 @@ impl Store {
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
+    /// Names conversation `id`; `None` takes its name away.
+    pub fn set_conversation_title(
+        &self,
+        id: &ConversationId,
+        title: Option<&str>,
+        by: Option<&str>,
+    ) -> Result<()> {
+        cached_execute(
+            &self.conn,
+            "UPDATE conversations SET title = ?2, title_by = ?3 WHERE id = ?1",
+            params![id.as_str(), title, by],
+        )?;
+        Ok(())
+    }
+
+    /// Archives conversation `id` at `at`, or brings it back with `None`.
+    pub fn set_conversation_archived(&self, id: &ConversationId, at: Option<i64>) -> Result<()> {
+        cached_execute(
+            &self.conn,
+            "UPDATE conversations SET archived_at = ?2 WHERE id = ?1",
+            params![id.as_str(), at],
+        )?;
+        Ok(())
+    }
+
+    /// The archived conversations of `bot`, the last archived first.
+    pub fn archived_conversations(&self, bot: &BotId) -> Result<Vec<ConversationRecord>> {
+        let mut statement = self.conn.prepare_cached(&format!(
+            "SELECT {COLUMNS} FROM conversations \
+             WHERE archived_at IS NOT NULL AND bot_id = ?1 \
+             ORDER BY archived_at DESC, id"
+        ))?;
+        let rows = statement.query_map([bot.as_str()], from_row)?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    /// When the newest chat item of conversation `id` was made; `None`
+    /// while it has none.
+    pub fn conversation_activity(&self, id: &ConversationId) -> Result<Option<i64>> {
+        Ok(cached_row(
+            &self.conn,
+            "SELECT MAX(created_at) FROM chat_items WHERE conversation_id = ?1",
+            [id.as_str()],
+            |row| row.get(0),
+        )?)
+    }
+
     /// The session of the conversation `id`; `None` starts a new one.
     pub fn conversation_session(&self, id: &ConversationId) -> Result<Option<String>> {
         Ok(cached_row(
@@ -154,67 +201,4 @@ impl Store {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn store() -> (tempfile::TempDir, Store) {
-        let dir = tempfile::tempdir().expect("dir");
-        let store = Store::open(&dir.path().join("a.db")).expect("store");
-        store
-            .conn
-            .execute_batch(
-                "INSERT INTO crews (id, name, slug, created_at) VALUES ('crw_1', 'Ops', 'ops', 1);
-                 INSERT INTO bots (id, crew_id, name, handle, slug, role, instructions, color, \
-                  created_at)
-                  VALUES ('bot_01J9Z3K8000000000000000000', 'crw_1', 'Scout', 'scout', 'scout', \
-                  'r', 'i', 'c', 1);",
-            )
-            .expect("rows");
-        (dir, store)
-    }
-
-    #[test]
-    fn the_main_conversation_holds_the_session_of_the_bot() {
-        let (_dir, store) = store();
-        let bot: BotId = "bot_01J9Z3K8000000000000000000".parse().unwrap();
-        assert_eq!(store.session_id(&bot).unwrap(), None);
-        store.set_session_id(&bot, Some("session-1")).unwrap();
-        assert_eq!(
-            store.session_id(&bot).unwrap().as_deref(),
-            Some("session-1")
-        );
-        let main = store
-            .conversation(&ConversationId::main_of(&bot))
-            .unwrap()
-            .expect("main");
-        assert!(main.main);
-        assert_eq!(main.bot_id, bot);
-    }
-
-    #[test]
-    fn other_conversations_keep_their_own_session() {
-        let (_dir, store) = store();
-        let bot: BotId = "bot_01J9Z3K8000000000000000000".parse().unwrap();
-        store.set_session_id(&bot, Some("main-session")).unwrap();
-        let other = ConversationRecord::new(&bot, 5);
-        store.insert_conversation(&other).unwrap();
-        store
-            .set_conversation_session(&bot, &other.id, Some("other-session"))
-            .unwrap();
-        assert_eq!(
-            store.session_id(&bot).unwrap().as_deref(),
-            Some("main-session")
-        );
-        assert_eq!(
-            store.conversation_session(&other.id).unwrap().as_deref(),
-            Some("other-session")
-        );
-        let listed: Vec<bool> = store
-            .conversations(Some(&bot))
-            .unwrap()
-            .iter()
-            .map(|each| each.main)
-            .collect();
-        assert_eq!(listed, [true, false]);
-    }
-}
+mod tests;

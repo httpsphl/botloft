@@ -3,7 +3,7 @@
 use botloft_core::protocol::{ChatHistoryParams, ChatItem, ChatSearchParams, SearchHit};
 use botloft_store::{SearchFilter, fts_query};
 
-use super::{ApiError, ApiResult, bots, crews};
+use super::{ApiError, ApiResult, bots, conversations, crews};
 use crate::state::Daemon;
 
 const DEFAULT_LIMIT: u32 = 50;
@@ -15,7 +15,8 @@ const SEARCH_MAX_LIMIT: u32 = 100;
 /// Fewest letters worth searching for.
 const SEARCH_MIN_CHARS: usize = 2;
 
-/// A page of a bot's chat, newest first. Archived bots keep theirs.
+/// A page of one conversation's chat, newest first: the main one's when
+/// none is named (spec 40.5). Archived bots and conversations keep theirs.
 pub fn history(daemon: &Daemon, params: ChatHistoryParams) -> ApiResult<Vec<ChatItem>> {
     if let Some(until) = &params.until {
         if params.before.is_some() || params.limit.is_some() {
@@ -24,8 +25,9 @@ pub fn history(daemon: &Daemon, params: ChatHistoryParams) -> ApiResult<Vec<Chat
             ));
         }
         let store = daemon.store();
-        bots::find(&store, &params.bot_id)?;
-        let items = store.chat_since(&params.bot_id, until, UNTIL_MAX)?;
+        let record = bots::find(&store, &params.bot_id)?;
+        let seat = conversations::seat_of(&store, &record, params.conversation_id, false)?;
+        let items = store.chat_since_in(&seat.conversation, until, UNTIL_MAX)?;
         if items.is_empty() {
             return Err(ApiError::NotFound(format!(
                 "chat item {until} is not in this bot's chat"
@@ -40,8 +42,9 @@ pub fn history(daemon: &Daemon, params: ChatHistoryParams) -> ApiResult<Vec<Chat
         )));
     }
     let store = daemon.store();
-    bots::find(&store, &params.bot_id)?;
-    Ok(store.chat_history(&params.bot_id, params.before.as_ref(), limit)?)
+    let record = bots::find(&store, &params.bot_id)?;
+    let seat = conversations::seat_of(&store, &record, params.conversation_id, false)?;
+    Ok(store.chat_history_in(&seat.conversation, params.before.as_ref(), limit)?)
 }
 
 /// Chat items of active bots with every word of the query, newest first.
