@@ -35,6 +35,27 @@ export const connections: Messages["connections"] = {
     connecting: "Conectando…",
     failed: "No se pudo conectar la herramienta",
   },
+  fromClaude: {
+    title: "Traer herramientas de Claude Code",
+    intro:
+      "Estas son las herramientas configuradas en tu Claude Code. Elige las que tus agentes pueden usar: Botloft hace una copia, con las claves, y se quedan solo en este equipo.",
+    looking: "Mirando tu Claude Code…",
+    noFile: "No se encontró la configuración de Claude Code en este equipo.",
+    none: "Tu Claude Code no tiene herramientas propias.",
+    list: "Herramientas de Claude Code",
+    everyFolder: "Para todas las carpetas",
+    oneFolder: (folder: string) => `Solo en ${folder}`,
+    saved: "Ya está conectada aquí.",
+    kind: (kind: string) => `Se conecta por "${kind}", que Botloft todavía no admite.`,
+    field: (field: string) =>
+      `Tiene un ajuste que Botloft no conoce ("${field}"), como un inicio de sesión propio. Conéctala en claude.ai.`,
+    secrets: (names: string) => `Sus claves (${names}) vienen también.`,
+    after: "Después abre cada una y elige qué agentes la usan.",
+    bring: (count: number) =>
+      count === 1 ? "Traer 1 herramienta" : count ? `Traer ${count} herramientas` : "Traer",
+    bringing: "Trayendo…",
+    failed: "No se pudieron traer las herramientas",
+  },
   problems: {
     empty: "Pega primero la configuración de la herramienta.",
     notJson: "Eso no es un JSON válido. Pega el texto tal como está en el archivo.",
@@ -84,6 +105,7 @@ export const connections: Messages["connections"] = {
     add: "Agregar",
     addClaudeAi: "De claude.ai",
     addPaste: "Pegar una configuración",
+    addClaudeCode: "Desde Claude Code",
     fromClaudeAi: "claude.ai",
     yourOwn: "Tuya",
     connected: "Conectada",

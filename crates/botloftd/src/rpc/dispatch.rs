@@ -10,8 +10,8 @@ use crate::approvals;
 use crate::service::{
     self, ApiError, ApiResult, agents, archive, attachments, autobackup, backup, bots, catalog,
     chat, cloud, crew_access, crews, delete, deliveries, desktop, files, island, keys, lead, mcp,
-    messages, mobile, models, modes, permissions, questions, reactions, routines, rules, screens,
-    settings, tasks, usage, versions,
+    mcp_claude, messages, mobile, models, modes, permissions, questions, reactions, routines,
+    rules, screens, settings, tasks, usage, versions,
 };
 use crate::state::Daemon;
 
@@ -130,6 +130,8 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::MCP_SERVERS => reply(mcp::overview(daemon)),
         method::MCP_SAVE => reply(mcp::save(daemon, parse(params)?)),
         method::MCP_DELETE => reply(mcp::delete(daemon, parse(params)?)),
+        method::MCP_FROM_CLAUDE => reply(mcp_claude::servers(daemon)),
+        method::MCP_IMPORT_CLAUDE => reply(mcp_claude::import(daemon, parse(params)?)),
         method::BOT_MCP_SET => reply(mcp::set_bot(daemon, parse(params)?)),
         method::DESKTOP_GRANTS => reply(desktop::grants(daemon, parse(params)?)),
         method::DESKTOP_REVOKE => reply(desktop::revoke(daemon, parse(params)?)),

@@ -29,6 +29,7 @@ pub mod keys;
 pub mod lead;
 pub mod maker;
 pub mod mcp;
+pub mod mcp_claude;
 pub mod mcp_state;
 pub mod messages;
 pub mod mobile;

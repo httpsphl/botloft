@@ -2209,23 +2209,34 @@ O `system/init` só vem com o primeiro turno, e o bot fica calado até lá. Por 
 ### 25.6 Protocolo e dados
 
 - Tabela `mcp_servers`: `id (msv_), name, slug, kind (http/stdio), config (JSON sem segredos: url, command, args e os nomes dos campos secretos), description, created_at`. Tabela `bot_mcp_servers`: `bot_id, server_id`, única. Migration `0024_mcp_servers.sql`; a exclusão do bot (12) apaga as ligações dele, e a do servidor, as ligações e o arquivo de segredos.
-- Métodos (11.2): `mcp.servers` (`McpOverview`: os servidores, sem segredos, e os bots que usam algum), `mcp.save {serverId?, name, kind, url?, command?, args, headers, env, description}`, `mcp.delete {serverId}` (ambos devolvem o `McpOverview`) e `bot.mcp.set {botId, serverIds}` (devolve `BotMcp`). Notificações: `mcp.servers` (`McpOverview`) e `bot.mcp` (`BotMcp`). Quem cola o trecho do `.mcp.json` é o app, que o traduz para esses campos; o daemon não lê JSON do dono. Todo valor de `headers` e de `env` é segredo; ao editar um servidor, valor vazio mantém o guardado com aquele nome. `mcp.save` valida e recusa antes de gravar: nome que não vira um slug, `botloft`, nome de variável que comece com `BOTLOFT_`, URL que não seja `http(s)`, comando com endereço (ou o contrário), listas com mais de 32 itens, slug repetido (`conflict`).
+- Métodos (11.2): `mcp.servers` (`McpOverview`: os servidores, sem segredos, e os bots que usam algum), `mcp.save {serverId?, name, kind, url?, command?, args, headers, env, description}`, `mcp.delete {serverId}` (ambos devolvem o `McpOverview`) e `bot.mcp.set {botId, serverIds}` (devolve `BotMcp`); `mcp.fromClaude` e `mcp.importClaude {picks}` são de 25.8. Notificações: `mcp.servers` (`McpOverview`) e `bot.mcp` (`BotMcp`). Quem cola o trecho do `.mcp.json` é o app, que o traduz para esses campos; o único JSON do dono que o daemon lê é o do Claude Code dele (25.8). Todo valor de `headers` e de `env` é segredo; ao editar um servidor, valor vazio mantém o guardado com aquele nome. `mcp.save` valida e recusa antes de gravar: nome que não vira um slug, `botloft`, nome de variável que comece com `BOTLOFT_`, URL que não seja `http(s)`, comando com endereço (ou o contrário), listas com mais de 32 itens, slug repetido (`conflict`).
 - O log nunca guarda `headers`, `env`, argumentos nem o que as ferramentas devolveram (13).
 - Entra em `backup` (14.2) o cadastro e as ligações; os segredos não, e o dono digita de novo ao restaurar.
 
 ### 25.7 App
 
-- Configurações > **Ferramentas** (34.7), junto das do claude.ai: um cartão por ferramenta, que abre quem pode usá-la, com Editar e Remover; o diálogo de conectar abre em "Adicionar" > "Colar uma configuração".
+- Configurações > **Ferramentas** (34.7), junto das do claude.ai: um cartão por ferramenta, que abre quem pode usá-la, com Editar e Remover; o diálogo de conectar abre em "Adicionar" > "Colar uma configuração", e o de 25.8 em "Adicionar" > "Do Claude Code".
 - **Conectar.** O diálogo lê o trecho colado (`app/src/features/connections/paste.ts`): o `.mcp.json` de um projeto, um `{ "mcpServers": {...} }` ou as configurações de um servidor só, e nesse caso pede o nome. Recusa, dizendo qual, um campo que não conhece, um tipo que não aceita (`sse`) e um valor que não bate. Mostra o que cada ferramenta é, o que ela roda (em "Detalhes") e o aviso de 25.2; um programa só salva depois do "Entendi e confio nela".
 - **Editar** muda só o nome e o texto "para que serve": o que ela roda e as senhas não voltam a aparecer, e mudá-los é remover e conectar de novo. Remover pede confirmação e diz o que se perde (a ferramenta nos bots e o que foi permitido para sempre).
 - Visão geral do bot (33.6): as ferramentas ligadas, com o estado de 25.5 ao lado de cada uma e o motivo da falha em "Detalhes"; as chaves de 25.3 ficam no cartão de cada ferramenta, em Configurações > Ferramentas. Uma ferramenta de `mcp__<nome>__<tool>` aparece nos cartões como "tool (nome)".
 - Textos nos três idiomas (15.6), sem jargão ("ferramenta conectada", nunca "MCP").
 
-### 25.8 Fora desta etapa
+### 25.8 Trazer do Claude Code
+
+Pedido do dono em 2026-11-12: as ferramentas que ele já configurou no próprio Claude Code, sem copiar e colar uma por uma.
+
+- **De onde.** O `.claude.json` do Claude Code do dono: em `CLAUDE_CONFIG_DIR` quando ele definiu, senão no perfil (`%USERPROFILE%`), lidos do ambiente do dono como em 7.4. Entram os servidores de `mcpServers` (os de todas as pastas, escopo usuário) e os de `projects[<pasta>].mcpServers` (escopo local, com a pasta). Pastas dentro da casa do Botloft ou da raiz dos workspaces ficam de fora: são dos agentes. O `.mcp.json` de cada projeto e os servidores de plugins não entram.
+- **O que o app vê.** `mcp.fromClaude` devolve `ClaudeMcpServers {found, servers}`: nome, pasta (`null` para todas), tipo, endereço ou comando e argumentos, os **nomes** das variáveis e cabeçalhos, `saved` (já existe aqui uma ferramenta com o mesmo slug) e `problem`. Os valores dos segredos nunca vão para o app.
+- **O que não vem.** `problem` diz por quê: `{reason: "kind", kind}` para um tipo que o Botloft não aceita (`sse`, 25.9) e `{reason: "field", field}` para um campo que ele não conhece, como o `oauth` de um servidor com login próprio, que o Botloft não sabe repetir. O app mostra o motivo e não deixa marcar.
+- **Trazer.** `mcp.importClaude {picks: [{name, folder}]}` relê o arquivo e passa cada escolhido por `mcp.save` (25.2), com os segredos do arquivo. Nada é gravado quando um escolhido não existe mais, não pode vir, ou tem um nome já usado aqui ou repetido entre os escolhidos. Devolve o `McpOverview`. É uma cópia: mudar o Claude Code depois não muda o Botloft.
+- **App.** O diálogo lista as ferramentas com caixas de marcar, "Para todas as pastas" ou "Só em <pasta>", o aviso de 25.2 e quais chaves vêm junto; uma já conectada aparece como "Já está conectada aqui". Um programa marcado pede o mesmo "Entendi e confio nela" de colar. Depois, como as coladas, a ferramenta não está ligada a nenhum agente (25.3).
+- **Testes.** Unidade (`service/mcp_claude_tests.rs`) com um arquivo de exemplo; o app com `FakeBotloft` (`fromClaude.test.tsx`).
+
+### 25.9 Fora desta etapa
 
 Login por navegador de servidor remoto (o `/mcp` do Claude Code; as ferramentas do claude.ai, de login feito lá, entram pela seção 34), ferramentas liberadas por servidor inteiro, escolher só algumas tools de um servidor, ligar por crew, servidores que o próprio Botloft instala, e `sse`.
 
-### 25.9 Marcos
+### 25.10 Marcos
 
 | Marco | O que entra | Teste |
 |---|---|---|

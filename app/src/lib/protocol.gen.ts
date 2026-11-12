@@ -1400,6 +1400,53 @@ export type McpServerIdParams = { serverId: McpServerId, };
 export type BotMcpSetParams = { botId: BotId, serverIds: Array<McpServerId>, };
 
 /**
+ * Why a server of Claude Code cannot come as it is.
+ */
+export type ClaudeMcpProblem = { "reason": "kind", kind: string, } | { "reason": "field", field: string, };
+
+/**
+ * One server of Claude Code, without its secrets: only the names of its
+ * headers and variables come to the app.
+ */
+export type ClaudeMcpServer = { name: string, 
+/**
+ * The folder it is set for; `None` when it is for every folder.
+ */
+folder: string | null, 
+/**
+ * `None` when it cannot come ([`ClaudeMcpServer::problem`]).
+ */
+kind: McpKind | null, url: string | null, command: string | null, args: Array<string>, headerNames: Array<string>, envNames: Array<string>, 
+/**
+ * A tool with this name is connected in Botloft already.
+ */
+saved: boolean, problem: ClaudeMcpProblem | null, };
+
+/**
+ * The answer of `mcp.fromClaude`.
+ */
+export type ClaudeMcpServers = { 
+/**
+ * Claude Code's settings file was there to read.
+ */
+found: boolean, 
+/**
+ * Those for every folder first, then by folder; by name in each.
+ */
+servers: Array<ClaudeMcpServer>, };
+
+/**
+ * A server the owner picked, as `mcp.fromClaude` named it.
+ */
+export type ClaudeMcpPick = { name: string, folder: string | null, };
+
+/**
+ * Copies the picked servers, secrets and all, read again from Claude
+ * Code's file by the daemon: their values never pass through the app.
+ */
+export type McpImportParams = { picks: Array<ClaudeMcpPick>, };
+
+/**
  * One lasting access: the whole crew, or one bot of it.
  */
 export type CrewAccess = { id: CrewAccessId, 
@@ -3374,6 +3421,8 @@ export interface RpcMethods {
   "mcp.servers": { params: undefined; result: McpOverview };
   "mcp.save": { params: McpSaveParams; result: McpOverview };
   "mcp.delete": { params: McpServerIdParams; result: McpOverview };
+  "mcp.fromClaude": { params: undefined; result: ClaudeMcpServers };
+  "mcp.importClaude": { params: McpImportParams; result: McpOverview };
   "bot.mcp.set": { params: BotMcpSetParams; result: BotMcp };
   "crewAccess.list": { params: CrewAccessListParams; result: Array<CrewAccess> };
   "crewAccess.revoke": { params: CrewAccessIdParams; result: Array<CrewAccess> };

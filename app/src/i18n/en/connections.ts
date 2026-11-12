@@ -37,6 +37,27 @@ export const connections = {
     connecting: "Connecting…",
     failed: "Could not connect the tool",
   },
+  fromClaude: {
+    title: "Bring tools from Claude Code",
+    intro:
+      "These are the tools set up in your own Claude Code. Pick the ones your agents may use: Botloft copies them, keys included, and they stay on this computer.",
+    looking: "Looking at your Claude Code…",
+    noFile: "Claude Code's settings were not found on this computer.",
+    none: "Your Claude Code has no tools of its own.",
+    list: "Tools in Claude Code",
+    everyFolder: "For every folder",
+    oneFolder: (folder: string) => `Only in ${folder}`,
+    saved: "Already connected here.",
+    kind: (kind: string) => `It connects by "${kind}", which Botloft does not support yet.`,
+    field: (field: string) =>
+      `It has a setting Botloft does not know ("${field}"), like a sign-in of its own. Connect it on claude.ai instead.`,
+    secrets: (names: string) => `Its keys (${names}) come along.`,
+    after: "Then open each one and choose which agents use it.",
+    bring: (count: number) =>
+      count === 1 ? "Bring 1 tool" : count ? `Bring ${count} tools` : "Bring",
+    bringing: "Bringing…",
+    failed: "Could not bring the tools",
+  },
   problems: {
     empty: "Paste the tool's settings first.",
     notJson: "That is not valid JSON. Paste the text exactly as it is in the file.",
@@ -87,6 +108,7 @@ export const connections = {
     add: "Add",
     addClaudeAi: "From claude.ai",
     addPaste: "Paste a configuration",
+    addClaudeCode: "From Claude Code",
     fromClaudeAi: "claude.ai",
     yourOwn: "Yours",
     connected: "Connected",
