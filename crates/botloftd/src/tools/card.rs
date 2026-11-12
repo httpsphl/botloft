@@ -2,7 +2,7 @@
 //! with text, tables, charts, buttons or a form, or shows one again,
 //! changed. The owner's answer comes back later as their message.
 
-use botloft_core::ids::{BotId, ChatItemId};
+use botloft_core::ids::ChatItemId;
 use botloft_core::protocol::{
     CARD_BLOCKS_MAX, CARD_BUTTONS_MAX, CARD_FIELDS_MAX, CARD_TITLE_MAX_CHARS, CardBlock,
 };
@@ -10,6 +10,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 
 use super::calls::explain;
+use crate::seat::Seat;
 use crate::service::cards::{self, Show};
 use crate::state::Daemon;
 
@@ -92,7 +93,7 @@ pub(super) struct ShowArgs {
     blocks: Vec<Value>,
 }
 
-pub(super) fn show(daemon: &Daemon, bot: &BotId, args: ShowArgs) -> Result<Value, String> {
+pub(super) fn show(daemon: &Daemon, bot: &Seat, args: ShowArgs) -> Result<Value, String> {
     let card =
         match args.card.as_deref().map(str::trim) {
             None | Some("") => None,

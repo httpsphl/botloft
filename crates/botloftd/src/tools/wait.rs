@@ -2,7 +2,6 @@
 //! file appears, a program ends or a page shows some words, or when the
 //! time runs out. Botloft looks by itself, without the model.
 
-use botloft_core::ids::BotId;
 use botloft_core::protocol::{RoutinesCreateParams, Schedule};
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -11,6 +10,7 @@ use super::calls::explain;
 use super::routine::{PROMPT_MAX, system_zone};
 use super::wait_on::{self, TEXT_MAX_CHARS, describe};
 use crate::routines::schedule::Plan;
+use crate::seat::Seat;
 use crate::service::routines;
 use crate::state::Daemon;
 
@@ -104,7 +104,7 @@ pub(super) struct Args {
     then: String,
 }
 
-pub(super) fn call(daemon: &Daemon, bot: &BotId, args: Args) -> Result<Value, String> {
+pub(super) fn call(daemon: &Daemon, bot: &Seat, args: Args) -> Result<Value, String> {
     if !(1..=HOURS_MAX).contains(&args.hours) {
         return Err(format!("hours must be between 1 and {HOURS_MAX}"));
     }
@@ -147,7 +147,7 @@ pub(super) fn call(daemon: &Daemon, bot: &BotId, args: Args) -> Result<Value, St
     let routine = routines::create_wait(
         daemon,
         RoutinesCreateParams {
-            bot_id: bot.clone(),
+            bot_id: bot.bot.clone(),
             name: args.name,
             prompt: args.then,
             schedule,
@@ -157,6 +157,7 @@ pub(super) fn call(daemon: &Daemon, bot: &BotId, args: Args) -> Result<Value, St
         },
     )
     .map_err(explain)?;
+    crate::service::replies::keep_routine(daemon, bot, &routine);
     Ok(json!({
         "created": true,
         "routine_id": routine.id,

@@ -24,6 +24,7 @@ use super::signal::{self, SEND_SIGNAL};
 use super::{
     activity, crew_reach, history, nothing_new, overview, retry, routine_change, templates, wait,
 };
+use crate::seat::Seat;
 use crate::service::tasks::{self, BotMessage};
 use crate::service::{ApiError, bots, lead};
 use crate::state::Daemon;
@@ -31,7 +32,7 @@ use crate::state::Daemon;
 /// What the bot reads when a tool fails.
 type Outcome = Result<Value, String>;
 
-pub(super) fn call(daemon: &Daemon, bot: &BotId, params: &Value) -> Result<Value, Failure> {
+pub(super) fn call(daemon: &Daemon, bot: &Seat, params: &Value) -> Result<Value, Failure> {
     let Some(name) = params.get("name").and_then(Value::as_str) else {
         return Err(invalid("tools/call needs the name of a tool"));
     };
@@ -175,7 +176,7 @@ struct SendArgs {
     deadline_minutes: Option<u32>,
 }
 
-fn send(daemon: &Daemon, bot: &BotId, args: SendArgs) -> Outcome {
+fn send(daemon: &Daemon, bot: &Seat, args: SendArgs) -> Outcome {
     let task = match args.kind.as_deref() {
         None | Some("note") => false,
         Some("task") => true,
@@ -192,6 +193,9 @@ fn send(daemon: &Daemon, bot: &BotId, args: SendArgs) -> Outcome {
         deadline_minutes: args.deadline_minutes,
     };
     let (message, task) = tasks::send(daemon, bot, request).map_err(explain)?;
+    if let Some(task) = &task {
+        crate::service::replies::keep_task(daemon, bot, task);
+    }
     let to = bots::find(&daemon.store(), &message.to_bot_id).map_err(explain)?;
     let mut out = json!({
         "message_id": message.id,

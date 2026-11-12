@@ -14,6 +14,7 @@ use tracing::warn;
 use super::{ApiError, ApiResult, bots, messages};
 use crate::chat::items;
 use crate::mobile::cards::bot_and_crew;
+use crate::seat::Seat;
 use crate::state::Daemon;
 
 /// Requests a bot may leave open at once.
@@ -23,7 +24,7 @@ pub const WHY_MAX_CHARS: usize = 500;
 
 /// Checks the request and shows it in the bot's chat; the item's id is the
 /// request's.
-pub fn ask(daemon: &Daemon, bot: &BotId, name: &str, why: &str) -> ApiResult<ChatItemId> {
+pub fn ask(daemon: &Daemon, bot: &Seat, name: &str, why: &str) -> ApiResult<ChatItemId> {
     let name = keys::name(name)?;
     let why = why.trim();
     if why.is_empty() || why.chars().count() > WHY_MAX_CHARS {
@@ -41,7 +42,7 @@ pub fn ask(daemon: &Daemon, bot: &BotId, name: &str, why: &str) -> ApiResult<Cha
             )));
         }
     }
-    let item = items::add(
+    let item = items::add_to(
         daemon,
         bot,
         ChatBody::KeyRequest(KeyRequestItem {
@@ -141,7 +142,9 @@ pub fn close(
         attachments: Vec::new(),
         created_at: daemon.clock.now_ms(),
     };
-    if let Err(err) = messages::post(daemon, &store, note, None) {
+    // Back to the conversation that asked (spec 40.2).
+    let to = super::replies::or_main(store.item_conversation(id), bot);
+    if let Err(err) = messages::post_to(daemon, &store, note, None, to) {
         warn!(bot = %bot, "could not tell a bot about its key: {err}");
     }
     Ok(())

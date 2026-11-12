@@ -2,9 +2,9 @@
 //! new, the bot ends the run quietly instead of writing a report the owner
 //! would have to read.
 
-use botloft_core::ids::BotId;
 use serde_json::{Value, json};
 
+use crate::seat::Seat;
 use crate::state::Daemon;
 
 pub const NOTHING_NEW: &str = "nothing_new";
@@ -21,7 +21,7 @@ pub(super) fn tool() -> Value {
     })
 }
 
-pub(super) fn call(daemon: &Daemon, bot: &BotId) -> Result<Value, String> {
+pub(super) fn call(daemon: &Daemon, bot: &Seat) -> Result<Value, String> {
     if crate::routines::mark_nothing_new(daemon, bot) {
         Ok(json!({
             "done": true,

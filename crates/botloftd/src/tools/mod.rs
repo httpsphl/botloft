@@ -69,6 +69,7 @@ pub(crate) use self::routine::check_changed as check_changed_routine;
 pub(crate) use self::routine_change::check_changed as check_changed_routine_change;
 use crate::approvals;
 use crate::rpc::jsonrpc::{self, Request};
+use crate::seat::Seat;
 use crate::state::Daemon;
 
 /// How long clients may reuse `server/discover` and `tools/list`.
@@ -294,7 +295,7 @@ fn server_info() -> Value {
     json!({ "name": "botloft", "version": env!("CARGO_PKG_VERSION") })
 }
 
-fn answer(daemon: &Daemon, bot: &BotId, era: Era, request: &Request) -> Result<Value, Failure> {
+fn answer(daemon: &Daemon, bot: &Seat, era: Era, request: &Request) -> Result<Value, Failure> {
     let params = request.params.clone().unwrap_or_else(|| json!({}));
     let result = match (era, request.method.as_str()) {
         (_, "ping") => json!({}),

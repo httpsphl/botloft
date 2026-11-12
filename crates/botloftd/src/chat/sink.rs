@@ -109,7 +109,7 @@ pub(crate) fn turn_finished(
 
 /// The message written with `uuid` was taken up by the bot: its delivery is
 /// read, and a routine's run starts (spec 9.1).
-pub(crate) fn message_read(daemon: &Daemon, bot: &BotId, uuid: &str) {
+pub(crate) fn message_read(daemon: &Daemon, bot: &Seat, uuid: &str) {
     let now = daemon.clock.now_ms();
     let read = daemon.store().mark_read(uuid, now);
     match read {
@@ -142,7 +142,7 @@ pub(crate) fn session_started(daemon: &Daemon, bot: &Seat, session: &str) {
 /// Everything that follows the end of a turn, whatever the agent: the
 /// message whose replay could not be read, the routine's run, the screens,
 /// the access to other crews, the bot's state.
-pub(crate) fn finish_turn(daemon: &Daemon, bot: &BotId, generation: u64, failed: bool) {
+pub(crate) fn finish_turn(daemon: &Daemon, bot: &Seat, generation: u64, failed: bool) {
     if let Some(uuid) = daemon.supervisor.begun_unseen(bot, generation) {
         message_read(daemon, bot, &uuid);
     }

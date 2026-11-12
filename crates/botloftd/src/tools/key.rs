@@ -2,12 +2,12 @@
 //! token, and carries on. The owner types it in a form Botloft keeps out of
 //! the chat; the bot hears later, in a message, that it is in its environment.
 
-use botloft_core::ids::BotId;
 use botloft_core::keys::KEY_NAME_MAX;
 use serde::Deserialize;
 use serde_json::{Value, json};
 
 use super::calls::explain;
+use crate::seat::Seat;
 use crate::service::key_requests::{self, WHY_MAX_CHARS};
 use crate::state::Daemon;
 
@@ -54,7 +54,7 @@ pub(super) struct KeyArgs {
     why: String,
 }
 
-pub(super) fn ask(daemon: &Daemon, bot: &BotId, args: KeyArgs) -> Result<Value, String> {
+pub(super) fn ask(daemon: &Daemon, bot: &Seat, args: KeyArgs) -> Result<Value, String> {
     let id = key_requests::ask(daemon, bot, &args.name, &args.why).map_err(explain)?;
     Ok(json!({
         "request_id": id,

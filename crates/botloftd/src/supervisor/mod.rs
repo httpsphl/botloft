@@ -81,8 +81,8 @@ pub struct Supervisor {
 struct Inner {
     /// One per conversation of a bot (spec 40).
     slots: HashMap<ConversationId, Slot>,
-    /// Token hash of each running generation -> its bot.
-    tokens: HashMap<String, (BotId, u64)>,
+    /// Token hash of each running generation -> its bot and conversation.
+    tokens: HashMap<String, (Seat, u64)>,
     /// The session each conversation resumes: one Claude Code has on disk.
     /// The database has it too (spec 7.3).
     sessions: HashMap<ConversationId, String>,
@@ -351,8 +351,9 @@ impl Supervisor {
         self.wake();
     }
 
-    /// The bot and generation an MCP token belongs to.
-    pub fn token_owner(&self, token: &str) -> Option<(BotId, u64)> {
+    /// The bot, conversation and generation an MCP token belongs to: each
+    /// process has its own (spec 40.2).
+    pub fn token_owner(&self, token: &str) -> Option<(Seat, u64)> {
         self.lock()
             .tokens
             .get(&TokenHash::of(token).to_hex())

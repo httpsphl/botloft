@@ -81,10 +81,11 @@ impl Supervisor {
         courier::requeue_unread(daemon, bot, generation);
         context::process_ended(daemon, &seat);
         crate::background::process_ended(daemon, &seat);
-        // Still the bot's, not each conversation's, until C2b (40.9).
+        approvals::expire_for(daemon, &seat);
+        routines::process_ended(daemon, &seat);
+        // Screens being drawn and access only for this turn are the
+        // agent's, which goes on in its main conversation (spec 40.4).
         if main {
-            approvals::expire_for_bot(daemon, bot);
-            routines::process_ended(daemon, bot);
             crate::screens::turn_ended(daemon, bot);
             daemon.crew_access.end_turn(bot);
         }

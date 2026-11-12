@@ -20,12 +20,18 @@ async fn the_run_of_the_turn_takes_the_mark_and_keeps_it_when_done() {
     tick_after(&s, 5 * MINUTE);
     let lines = written(&s, 1).await;
     // The message waits: no turn carries the run yet.
-    assert!(!routines::mark_nothing_new(&s.daemon, &s.bot));
+    assert!(!routines::mark_nothing_new(
+        &s.daemon,
+        &botloftd::seat::Seat::main(&s.bot)
+    ));
 
     let process = s.runtime.process(1).await;
     process.emit(stream::replay(&lines[0])).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
-    assert!(routines::mark_nothing_new(&s.daemon, &s.bot));
+    assert!(routines::mark_nothing_new(
+        &s.daemon,
+        &botloftd::seat::Seat::main(&s.bot)
+    ));
     process.emit(stream::result(false)).await;
     tokio::time::sleep(Duration::from_millis(50)).await;
 
@@ -33,7 +39,10 @@ async fn the_run_of_the_turn_takes_the_mark_and_keeps_it_when_done() {
     assert_eq!(seen[0].status, RunStatus::Done);
     assert!(seen[0].nothing_new, "it ended quietly");
     // Once the turn is over, nothing is left to mark.
-    assert!(!routines::mark_nothing_new(&s.daemon, &s.bot));
+    assert!(!routines::mark_nothing_new(
+        &s.daemon,
+        &botloftd::seat::Seat::main(&s.bot)
+    ));
 
     // The next run starts without the mark and keeps none if the bot reports.
     tick_after(&s, 5 * MINUTE);

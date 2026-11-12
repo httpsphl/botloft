@@ -876,7 +876,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `bots.setModel` | `botId, model` (`default`, `fable`, `opus`, `sonnet`, `haiku`) | `Bot`; o bot reinicia no novo modelo quando nada estiver em andamento (7.4) |
 | `bots.setEffort` | `botId, effort` (`default`, `low`, `medium`, `high`, `xhigh`, `max`) | `Bot`; o bot reinicia no novo esforço quando nada estiver em andamento (7.4) |
 | `bots.compact` | `botId, conversationId?` | `Bot`, com `context.compacting`; compacta a conversa depois do turno em andamento (8.6); um bot dormindo acorda para isso (7.7). Sem `conversationId`, a principal (40.5). `conflict` se o bot está pausado ou parado |
-| `bots.interrupt` | `botId, conversationId?` | `Bot`; para o que a conversa está fazendo agora e nega os pedidos de permissão abertos do bot (9.2). Sem `conversationId`, a principal (40.5). Sem nada rodando, não faz nada. `validation` para um agente que não é o Claude Code |
+| `bots.interrupt` | `botId, conversationId?` | `Bot`; para o que a conversa está fazendo agora e nega os pedidos de permissão abertos dela (9.2). Sem `conversationId`, a principal (40.5). Sem nada rodando, não faz nada. `validation` para um agente que não é o Claude Code |
 | `bots.restart` | `botId, fresh?, conversationId?` | `Bot`; reinicia só a conversa, a principal sem `conversationId`, e `fresh` esquece só ela (40.5) |
 | `bots.archive` | `botId` | `Bot` |
 | `bots.unarchive` | `botId` | `Bot`; `-32003` com a crew arquivada ou o `@handle` em uso (7.6) |
@@ -3880,7 +3880,7 @@ Um agente pode ter várias **conversas**, como abas. Cada uma é uma sessão pr�
 | Rotina e lembrete criados pelo dono, avisos do daemon | a principal |
 | Resultado de uma tarefa, resposta do dono a uma pergunta (18), resposta a um pedido de acesso de crew, lembrete ou espera (20.14) criados pelo próprio agente | a conversa que pediu |
 
-Para a última linha, cada processo tem o **seu** token (10): o daemon sabe de que conversa veio cada chamada de ferramenta e grava a conversa em `tasks.requester_conversation_id`, `questions.conversation_id`, `routines.conversation_id` e no pedido de acesso. Uma conversa que pediu e foi arquivada devolve a resposta à principal; o que ainda esperava por ela na fila também vai para a principal, no arquivar e, se voltar à fila depois, quando o courier o pega.
+Para a última linha, cada processo tem o **seu** token (10): o daemon sabe de que conversa veio cada chamada de ferramenta. Uma tarefa guarda a conversa que a deu em `tasks.requester_conversation_id`, e uma rotina, lembrete ou espera que o agente fez para si guarda a dele em `routines.conversation_id` (migration 0047; nulo é a principal, e uma rotina para outro agente vai à principal dele). Pergunta, cartão, pedido de chave e pedido de permissão aparecem no chat da conversa que pediu, e a resposta volta à conversa do item. O pedido de acesso a outra crew espera na própria chamada, então a resposta já volta ao processo que pediu. Uma conversa que pediu e foi arquivada devolve a resposta à principal; o que ainda esperava por ela na fila também vai para a principal, no arquivar e, se voltar à fila depois, quando o courier o pega.
 
 ### 40.3 Dados
 
@@ -3896,6 +3896,7 @@ Para a última linha, cada processo tem o **seu** token (10): o daemon sabe de q
 - O estado do agente na tela é o resumo das conversas dele: precisa de você se alguma precisa, trabalhando se alguma trabalha, dormindo se todas dormem, senão pronto. `bot.state` continua, com a generation da principal, e só sai quando o resumo muda; cada conversa tem o seu estado em `conversation.changed`. O que dentro do daemon espera o fim do turno do agente (o navegador, o contorno do desktop, o "Só desta vez") ouve o resumo; o courier ouve cada conversa.
 - **Acordadas por agente:** no máximo 3. Quando outra precisa acordar, a que está parada há mais tempo dorme antes, e a que esperava começa assim que ela sai; se todas estão trabalhando, a mensagem espera na fila até uma terminar o turno. O `max_running` (7.8) conta processos.
 - Cada conversa dorme sozinha depois do tempo de sono do agente (7.7). As outras dormem mesmo com o sono desligado, depois de 30 minutos paradas: só a principal fica sempre acordada. Reiniciar, trocar modelo, modo, esforço ou ferramentas reinicia todas as acordadas, cada uma com `--resume` quando estiver livre (7.4).
+- Os pedidos de permissão abertos de uma conversa vencem quando o processo dela sai, e Parar nega só os dela. Os turnos de rotina também são de cada conversa: uma run termina com o turno da conversa que a pegou. As telas em desenho e o acesso a outra crew só por este turno continuam do agente e terminam com o processo da principal.
 - Os arquivos da pasta (5.1) são os mesmos para todas; a escrita atômica usa um nome temporário único, para dois inícios ao mesmo tempo não se atropelarem.
 
 ### 40.5 Protocolo
