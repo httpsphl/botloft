@@ -38,6 +38,21 @@ impl Supervisor {
         self.wake();
     }
 
+    /// A sleeping bot's next process starts a new conversation, and it
+    /// keeps sleeping. `false` when the bot does not sleep now.
+    pub(crate) fn start_fresh_asleep(&self, bot: &BotId) -> bool {
+        let mut inner = self.lock();
+        let Some(slot) = inner.slots.get_mut(bot) else {
+            return false;
+        };
+        if slot.state != BotState::Sleeping || slot.running.is_some() || slot.launching {
+            return false;
+        }
+        slot.fresh_next = true;
+        inner.sessions.remove(bot);
+        true
+    }
+
     /// Puts a bot to sleep, or keeps it asleep, when the owner's time says
     /// so (`None` never). Called for bots that should run, under the lock.
     pub(super) fn rest(

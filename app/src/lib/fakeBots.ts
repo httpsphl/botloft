@@ -104,7 +104,14 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
     },
     "bots.compact": ({ botId }) => {
       const bot = fake.bot(botId);
-      if (bot.state !== "idle" && bot.state !== "busy" && bot.state !== "needs_approval") {
+      // A sleeping bot wakes up first (spec 7.7).
+      const asleep = bot.state === "sleeping" && !bot.paused;
+      if (
+        !asleep &&
+        bot.state !== "idle" &&
+        bot.state !== "busy" &&
+        bot.state !== "needs_approval"
+      ) {
         throw conflict(`bot ${botId} is not running`);
       }
       // It waits behind the turn in progress; a test ends it with `setContext`.
@@ -148,8 +155,22 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
       bot.connectors = [...new Set(names)];
       return fake.changedBot(bot);
     },
-    "bots.restart": ({ botId }) => {
+    "bots.restart": ({ botId, fresh }) => {
       const bot = fake.bot(botId);
+      if (fresh) {
+        // The conversation is forgotten: nothing to count until it tells.
+        bot.context = null;
+        fake.chat.add(botId, {
+          kind: "notice",
+          level: "info",
+          code: "fresh_start",
+          text: "A new conversation started here: what came before is not remembered.",
+        });
+        // A sleeping bot keeps sleeping (spec 7.7).
+        if (bot.state === "sleeping") {
+          return fake.changedBot(bot);
+        }
+      }
       fake.setBotState(botId, "launching", (bot.generation ?? 0) + 1);
       return bot;
     },

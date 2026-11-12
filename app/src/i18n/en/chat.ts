@@ -291,6 +291,13 @@ export const chat = {
     compacting: "Compacting…",
     later: (bot: string) => `${bot} compacts the conversation when it finishes what it's doing.`,
     notRunning: (bot: string) => `${bot} is not running, so it cannot compact now.`,
+    asleep: (bot: string) => `${bot} is asleep: it wakes up first, then compacts.`,
+    waking: (bot: string) => `${bot} wakes up and compacts the conversation.`,
+    fresh: "Start fresh",
+    freshHint: (bot: string) =>
+      `Forgets this conversation without using your plan. ${bot}'s memory (CLAUDE.md) stays.`,
+    freshConfirm: "Start fresh",
+    freshFailed: "Could not start a new conversation",
     failed: "Could not compact the conversation",
   },
   suggestion: {

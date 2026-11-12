@@ -275,6 +275,13 @@ export const chat: Messages["chat"] = {
     compacting: "Compactando…",
     later: (bot: string) => `${bot} compacta a conversa quando terminar o que está fazendo.`,
     notRunning: (bot: string) => `${bot} não está rodando, então não dá para compactar agora.`,
+    asleep: (bot: string) => `${bot} está dormindo: acorda primeiro e depois compacta.`,
+    waking: (bot: string) => `${bot} acorda e compacta a conversa.`,
+    fresh: "Começar do zero",
+    freshHint: (bot: string) =>
+      `Esquece esta conversa sem gastar seu plano. A memória de ${bot} (CLAUDE.md) fica.`,
+    freshConfirm: "Começar do zero",
+    freshFailed: "Não deu para começar uma conversa nova",
     failed: "Não foi possível compactar a conversa",
   },
   suggestion: {
