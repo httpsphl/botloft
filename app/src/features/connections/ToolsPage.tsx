@@ -13,6 +13,7 @@ import { Menu } from "../../ui/Menu";
 import { attempt } from "../../ui/toast";
 import { AddToolDialog } from "./AddToolDialog";
 import { CONNECTORS_PAGE, useConnectorList } from "./connectorList";
+import { ImportClaudeDialog } from "./ImportClaudeDialog";
 import { type Opened, ToolDialog } from "./ToolDialog";
 import { ToolTile } from "./ToolTile";
 import { KNOWN_TOOLS, knownTool, TOOL_KINDS } from "./toolCatalog";
@@ -34,6 +35,7 @@ export function ToolsPage() {
   const [query, setQuery] = useState("");
   const [opened, setOpened] = useState<Opened | null>(null);
   const [adding, setAdding] = useState(false);
+  const [bringing, setBringing] = useState(false);
 
   const wanted = query.trim().toLowerCase();
   const matches = (name: string) => wanted === "" || name.toLowerCase().includes(wanted);
@@ -89,6 +91,7 @@ export function ToolsPage() {
           icon={Plus}
           items={[
             { label: p.addClaudeAi, onSelect: () => void openClaudeAi() },
+            { label: p.addClaudeCode, onSelect: () => setBringing(true) },
             { label: p.addPaste, onSelect: () => setAdding(true) },
           ]}
         />
@@ -244,6 +247,7 @@ export function ToolsPage() {
 
       {opened && <ToolDialog opened={opened} onClose={() => setOpened(null)} />}
       {adding && <AddToolDialog onClose={() => setAdding(false)} />}
+      {bringing && <ImportClaudeDialog onClose={() => setBringing(false)} />}
     </div>
   );
 }

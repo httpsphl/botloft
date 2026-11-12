@@ -72,7 +72,7 @@ pub(crate) fn write_rules(
 
 /// What a name becomes in the tools Claude Code shows: lowercase letters,
 /// digits and `_`, so `mcp__<slug>__<tool>` stays one token.
-fn slug_of(name: &str) -> String {
+pub(crate) fn slug_of(name: &str) -> String {
     let mut slug = String::new();
     for ch in name.chars().flat_map(char::to_lowercase) {
         let ch = if ch.is_ascii_alphanumeric() { ch } else { '_' };

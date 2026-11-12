@@ -21,7 +21,7 @@ use crate::platform;
 use crate::state::Daemon;
 
 /// The owner's own variables, as an agent gets them (spec 7.4).
-fn environment() -> Vec<(String, String)> {
+pub(crate) fn environment() -> Vec<(String, String)> {
     platform::user_environment()
         .map(|vars| {
             vars.into_iter()
