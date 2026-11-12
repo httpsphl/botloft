@@ -181,6 +181,27 @@ impl Store {
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
+    /// The items of one conversation stored right after `after`, oldest
+    /// first, at most `limit`; empty if `after` is not in it.
+    pub fn chat_after_in(
+        &self,
+        conversation: &ConversationId,
+        after: &ChatItemId,
+        limit: u32,
+    ) -> Result<Vec<ChatItem>> {
+        let mut stmt = self.conn.prepare_cached(&format!(
+            "SELECT {COLUMNS} FROM chat_items \
+             WHERE conversation_id = ?1 \
+               AND rowid > (SELECT rowid FROM chat_items WHERE id = ?2 AND conversation_id = ?1) \
+             ORDER BY rowid LIMIT ?3"
+        ))?;
+        let rows = stmt.query_map(
+            params![conversation.as_str(), after.as_str(), limit],
+            from_row,
+        )?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
     /// The items stored right after `after` in the bot's chat, oldest
     /// first, at most `limit`; empty if `after` is not in the bot's chat.
     pub fn chat_after(&self, bot: &BotId, after: &ChatItemId, limit: u32) -> Result<Vec<ChatItem>> {

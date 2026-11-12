@@ -79,17 +79,26 @@ export function conversationOf(state: AppState, botId: BotId): Conversation | nu
   return state.conversations[botId]?.find((each) => each.id === open) ?? null;
 }
 
+/** Remembers that the agent's chat is on `conversationId`. */
+export function rememberConversation(
+  get: StoreApi<AppState>["getState"],
+  set: StoreApi<AppState>["setState"],
+  botId: BotId,
+  conversationId: ConversationId,
+): void {
+  const next = { ...get().openConversations, [botId]: conversationId };
+  saveOpen(next);
+  set({ openConversations: next });
+}
+
 /** The store's conversation actions. */
 export function conversationActions(
   get: StoreApi<AppState>["getState"],
   set: StoreApi<AppState>["setState"],
   api: BotloftApi,
 ): Pick<AppState, "loadConversations" | "openConversation" | "newConversation"> {
-  const open = (botId: BotId, conversationId: ConversationId) => {
-    const next = { ...get().openConversations, [botId]: conversationId };
-    saveOpen(next);
-    set({ openConversations: next });
-  };
+  const open = (botId: BotId, conversationId: ConversationId) =>
+    rememberConversation(get, set, botId, conversationId);
   return {
     loadConversations: async (botId) => {
       const list = await api.call("conversations.list", { botId });

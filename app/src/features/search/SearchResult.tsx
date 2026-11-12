@@ -39,6 +39,13 @@ export function SearchResult({ hit }: { hit: SearchHit }) {
       : null;
   });
   const openAt = useApp((state) => state.openAt);
+  // Which of the agent's conversations it is in, when not the main one (spec 40.7).
+  const conversation = useApp(
+    (state) =>
+      state.conversations[hit.item.botId]?.find(
+        (each) => each.id === hit.item.conversationId && !each.main,
+      ) ?? null,
+  );
   if (!bot) {
     return null;
   }
@@ -54,13 +61,18 @@ export function SearchResult({ hit }: { hit: SearchHit }) {
       <button
         type="button"
         title={words.openHere(bot.name)}
-        onClick={() => openAt(bot.id, hit.item.id)}
+        onClick={() => openAt(bot.id, hit.item.id, hit.item.conversationId)}
         className="flex w-full gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-150 hover:bg-sunken"
       >
         <BotAvatar color={bot.color} size={32} still />
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="flex items-center gap-2 text-sm">
             <span className="truncate font-semibold">{bot.name}</span>
+            {conversation && (
+              <span className="truncate text-muted text-xs">
+                {conversation.title ?? t.conversations.untitled}
+              </span>
+            )}
             {crew && <span className="truncate text-muted text-xs">{words.inCrew(crew.name)}</span>}
             <time
               className="ml-auto shrink-0 text-muted text-xs"

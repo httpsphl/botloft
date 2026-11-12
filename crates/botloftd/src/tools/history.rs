@@ -4,7 +4,7 @@
 
 use botloft_core::ids::{BotId, ChatItemId};
 use botloft_core::protocol::{ChatItem, SNIPPET_CLOSE, SNIPPET_OPEN};
-use botloft_store::{SearchFilter, fts_query};
+use botloft_store::{SearchFilter, Store, fts_query};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
@@ -36,8 +36,9 @@ pub(super) fn tool() -> Value {
             before (a decision, a name, a number, a file) that you do not have, before you ask \
             again or guess. Every word must be there, in any order; accents and case do not \
             matter, and the last word may be the start of a word. Hits come newest first, with \
-            an excerpt. Then call it with `around` set to a hit's item_id to read the talk \
-            there. It never sees other bots' chats.",
+            an excerpt and the conversation they are in: `main`, or the title of another one \
+            the owner opened with you. Then call it with `around` set to a hit's item_id to \
+            read the talk there, in that conversation. It never sees other bots' chats.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -135,6 +136,7 @@ fn search(
                 "at": teller.at(hit.item.created_at),
                 "from": teller.from(&hit.item),
                 "kind": kind_of(&hit.item),
+                "conversation": conversation_of(&store, &hit.item),
                 "excerpt": marked(&hit.snippet),
             })
         })
@@ -168,11 +170,12 @@ fn read_around(daemon: &Daemon, bot: &BotId, around: &str) -> Result<Value, Stri
         .map_err(|err| explain(err.into()))?
         .filter(|item| &item.bot_id == bot)
         .ok_or_else(not_here)?;
+    // The talk around it is in its own conversation (spec 40.5).
     let older = store
-        .chat_history(bot, Some(&id), AROUND_SCAN)
+        .chat_history_in(&item.conversation_id, Some(&id), AROUND_SCAN)
         .map_err(|err| explain(err.into()))?;
     let newer = store
-        .chat_after(bot, &id, AROUND_SCAN)
+        .chat_after_in(&item.conversation_id, &id, AROUND_SCAN)
         .map_err(|err| explain(err.into()))?;
 
     let mut talk: Vec<&ChatItem> = older
@@ -208,6 +211,7 @@ fn read_around(daemon: &Daemon, bot: &BotId, around: &str) -> Result<Value, Stri
         .collect();
     Ok(json!({
         "around": id,
+        "conversation": conversation_of(&store, &item),
         "items": items,
         "note": format!(
             "Oldest first; the item you asked for has \"this\": true. Times are in {}. Tool calls \
@@ -215,6 +219,20 @@ fn read_around(daemon: &Daemon, bot: &BotId, around: &str) -> Result<Value, Stri
             teller.zone()
         ),
     }))
+}
+
+/// Which of the bot's conversations an item is in (spec 40): `main`, or
+/// the other one's title.
+fn conversation_of(store: &Store, item: &ChatItem) -> String {
+    if item.conversation_id.is_main_of(&item.bot_id) {
+        return "main".to_owned();
+    }
+    let title = store
+        .conversation(&item.conversation_id)
+        .ok()
+        .flatten()
+        .and_then(|conversation| conversation.title);
+    title.unwrap_or_else(|| "another conversation".to_owned())
 }
 
 fn item_id(text: &str, field: &str) -> Result<ChatItemId, String> {

@@ -184,7 +184,6 @@ function RenameDialog({ conversation, onClose }: { conversation: Conversation; o
           value={title}
           max={FIELD_LIMITS.name}
           maxLength={FIELD_LIMITS.name}
-          // biome-ignore lint/a11y/noAutofocus: the dialog opens to type the name
           autoFocus
           onChange={(event) => setTitle(event.target.value)}
         />
