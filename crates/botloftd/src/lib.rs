@@ -45,6 +45,7 @@ pub mod settings;
 pub mod skills;
 pub mod state;
 pub mod supervisor;
+pub mod titles;
 pub mod tools;
 pub mod trash;
 pub mod versions;
