@@ -153,6 +153,13 @@ function seed(fake: FakeBotloft): void {
   seedHands(fake, research.id);
   seedCalls(fake, { writer: writer.id, reviewer: reviewer.id });
   seedMedia(fake, scout.id);
+  // A second conversation of Scout's, beside its main one (spec 40.7).
+  const sources = fake.conversations.add(scout.id, "Sources for the Q4 report");
+  fake.chat.reply(
+    scout.id,
+    "I found four solid sources; the list is in shared/q4-sources.md.",
+    sources.id,
+  );
   const ops = fake.addCrew("Ops");
   const deploy = fake.addBot(ops.id, "Deploy", "Ships the site on Fridays");
   const watcher = fake.addBot(ops.id, "Watcher", "Keeps an eye on the error log");

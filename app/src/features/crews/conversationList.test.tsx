@@ -98,3 +98,25 @@ describe("the conversations in the sidebar", () => {
     );
   });
 });
+
+test("opening the agent on another conversation leaves its main one unread", async () => {
+  const fake = new FakeBotloft();
+  const ops = fake.addCrew("Ops");
+  const scout = fake.addBot(ops.id, "Scout");
+  fake.setBotState(scout.id, "idle");
+  fake.chat.reply(scout.id, "Main answer");
+  const trip = fake.conversations.add(scout.id, "Trip plans");
+  fake.chat.reply(scout.id, "Lisbon it is", trip.id);
+  localStorage.setItem("botloft.conversations", JSON.stringify({ [scout.id]: trip.id }));
+  renderApp(fake);
+  await crewOpened("Ops");
+  openBot("Scout");
+  expect(await within(messages()).findByText("Lisbon it is")).toBeDefined();
+  // Open on the other conversation, the list shows itself.
+  expect(within(list()).getByRole("button", { name: "Main, new reply" })).toBeDefined();
+  expect(
+    fake.calls.some(
+      (call) => call.method === "chat.read" && !("conversationId" in (call.params as object)),
+    ),
+  ).toBe(false);
+});

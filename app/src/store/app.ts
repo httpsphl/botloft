@@ -26,7 +26,12 @@ import type {
   TaskId,
 } from "../lib/protocol.gen";
 import { type Call, withCall } from "./calls";
-import { conversationActions, loadOpen, withConversation } from "./conversations";
+import {
+  conversationActions,
+  loadOpen,
+  openConversationOf,
+  withConversation,
+} from "./conversations";
 import { withQuestion } from "./questions";
 import { loadMarked, loadSeen, loadSeenSince, seenActions, seenKey, withReply } from "./seen";
 
@@ -213,7 +218,8 @@ export function createAppStore(api: BotloftApi): AppStore {
       }
       const change = { selectedCrewId: bot.crewId, selectedBotId: botId, page: null, focus };
       if (get().selectedBotId !== botId || get().page) {
-        get().markSeen(botId);
+        // What the chat opens on is seen, not the agent's other conversations.
+        get().markSeenIn(botId, openConversationOf(get(), botId));
         set(change);
       } else if (focus) {
         set({ focus });

@@ -91,14 +91,19 @@ export function seenActions(
         get().markSeen(botId);
         return;
       }
-      const { seenAt, replyAt } = get();
+      const { seenAt, replyAt, markedUnread } = get();
       const next = {
         ...seenAt,
         [conversationId]: Math.max(Date.now(), replyAt[conversationId] ?? 0),
       };
       saveSeen(next);
       api.call("chat.read", { botId, conversationId }).catch(() => {});
-      set({ seenAt: next });
+      // Opening the agent's chat ends the mark the owner put on it.
+      const { [botId]: wasMarked, ...marked } = markedUnread;
+      if (wasMarked) {
+        saveMarked(marked);
+      }
+      set(wasMarked ? { seenAt: next, markedUnread: marked } : { seenAt: next });
     },
     markSeen: (botId) => {
       const { seenAt, replyAt, markedUnread } = get();
