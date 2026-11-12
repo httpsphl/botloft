@@ -133,8 +133,13 @@ export class FakeConversation {
 
   handlers(): Conversation {
     return {
-      "messages.send": ({ botId, body, attachments, replyTo }) => {
+      "messages.send": ({ botId, body, attachments, replyTo, conversationId }) => {
         const bot = this.fake.bot(botId);
+        const to = conversationId ?? mainConversationOf(botId);
+        const open = this.fake.conversations.get(to);
+        if (!open || open.botId !== botId || open.archivedAt !== null) {
+          throw notFound(`conversation ${to}`);
+        }
         const files = attachments ?? [];
         if (!body.trim() && files.length === 0) {
           throw invalid("body must not be empty");
@@ -157,7 +162,7 @@ export class FakeConversation {
           replyTo: replyTo ? this.quote(botId, replyTo) : null,
           createdAt: this.fake.now,
         };
-        this.record(message);
+        this.record(message, to);
         this.fake.questions.closeNotes(botId);
         return message;
       },
@@ -206,13 +211,13 @@ export class FakeConversation {
   }
 
   /** Saves a message for the bot with its delivery and chat item. */
-  record(message: Message): Delivery {
+  record(message: Message, conversationId = mainConversationOf(message.toBotId)): Delivery {
     this.messages.push(message);
     const delivery: Delivery = {
       id: this.fake.id("dlv"),
       messageId: message.id,
       botId: message.toBotId,
-      conversationId: mainConversationOf(message.toBotId),
+      conversationId,
       state: "pending",
       attempts: 0,
       nextAttemptAt: this.fake.now,
@@ -223,7 +228,7 @@ export class FakeConversation {
     this.deliveries.set(delivery.id, delivery);
     this.fake.emit({ name: "message.created", params: message });
     this.fake.emit({ name: "delivery.changed", params: delivery });
-    this.fake.chat.add(message.toBotId, { kind: "inbound", message });
+    this.fake.chat.add(message.toBotId, { kind: "inbound", message }, conversationId);
     // Every message of the owner takes the reactions waiting (spec 8.9).
     if (message.fromKind === "owner") {
       this.fake.reactions.sendWith(message.toBotId, message.id);

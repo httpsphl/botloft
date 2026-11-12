@@ -9,6 +9,7 @@ import { useT } from "../../i18n";
 import type { Bot } from "../../lib/protocol.gen";
 import { useApi, useApp } from "../../store/context";
 import { attempt } from "../../ui/toast";
+import { useSeatParam } from "./seat";
 
 /** Whether the owner can stop `bot` now: it works, and its agent can be stopped. */
 export function canStop(bot: Bot): boolean {
@@ -18,6 +19,8 @@ export function canStop(bot: Bot): boolean {
 
 function StopButton({ bot }: { bot: Bot }) {
   const api = useApi();
+  // The open conversation's turn (spec 40.7).
+  const seatParam = useSeatParam();
   const putBot = useApp((state) => state.putBot);
   const t = useT().chat.composer;
   const [stopping, setStopping] = useState(false);
@@ -25,7 +28,7 @@ function StopButton({ bot }: { bot: Bot }) {
   const stop = async () => {
     setStopping(true);
     await attempt(t.stopFailed, async () => {
-      putBot(await api.call("bots.interrupt", { botId: bot.id }));
+      putBot(await api.call("bots.interrupt", { botId: bot.id, ...seatParam }));
     });
     setStopping(false);
   };

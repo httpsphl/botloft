@@ -13,6 +13,7 @@ import { Confirm } from "../../ui/Confirm";
 import { POPOVER } from "../../ui/surface";
 import { attempt } from "../../ui/toast";
 import { useDismiss } from "../../ui/useDismiss";
+import { useSeatParam } from "./seat";
 
 const RADIUS = 7;
 const AROUND = 2 * Math.PI * RADIUS;
@@ -21,6 +22,8 @@ const NEAR = 0.8;
 
 export function ContextMeter({ bot, onLater }: { bot: Bot; onLater(text: string): void }) {
   const api = useApi();
+  // The open conversation's (spec 40.7).
+  const seatParam = useSeatParam();
   const putBot = useApp((state) => state.putBot);
   const m = useT().chat.context;
   const [open, setOpen] = useState(false);
@@ -53,7 +56,7 @@ export function ContextMeter({ bot, onLater }: { bot: Bot; onLater(text: string)
     // It waits its turn behind what the bot is doing.
     const working = bot.state === "busy" || bot.state === "needs_approval";
     await attempt(m.failed, async () => {
-      putBot(await api.call("bots.compact", { botId: bot.id }));
+      putBot(await api.call("bots.compact", { botId: bot.id, ...seatParam }));
       if (working) {
         onLater(m.later(bot.name));
       } else if (asleep) {
@@ -71,7 +74,7 @@ export function ContextMeter({ bot, onLater }: { bot: Bot; onLater(text: string)
           onClose={() => setAsking(false)}
           onConfirm={() =>
             attempt(m.freshFailed, async () => {
-              putBot(await api.call("bots.restart", { botId: bot.id, fresh: true }));
+              putBot(await api.call("bots.restart", { botId: bot.id, fresh: true, ...seatParam }));
               setOpen(false);
             })
           }

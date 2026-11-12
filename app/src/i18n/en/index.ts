@@ -10,6 +10,7 @@ import { chat } from "./chat";
 import { chrome } from "./chrome";
 import { common } from "./common";
 import { connections } from "./connections";
+import { conversations } from "./conversations";
 import { crews } from "./crews";
 import { crewTemplates } from "./crewTemplates";
 import { desktop } from "./desktop";
@@ -50,6 +51,7 @@ export const en = {
   catalog,
   chat,
   connections,
+  conversations,
   logins,
   maker,
   crews,

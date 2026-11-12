@@ -216,18 +216,21 @@ export class FakeBotloft implements BotloftApi {
     bot.state = state;
     bot.generation = generation ?? bot.generation ?? 1;
     this.emit({ name: "bot.state", params: { botId, state, generation: bot.generation } });
+    this.conversations.mainChanged(botId);
   }
 
   /** What Claude Code tells about the bot's conversation (spec 8.6). */
   setContext(botId: BotId, context: ContextUsage | null): void {
     this.bot(botId).context = context;
     this.emit({ name: "bot.context", params: { botId, context } });
+    this.conversations.mainChanged(botId);
   }
 
   /** What the bot left running in the background (spec 33.4). */
   setBackground(botId: BotId, tasks: BackgroundTask[]): void {
     this.bot(botId).background = tasks;
     this.emit({ name: "bot.background", params: { botId, tasks } });
+    this.conversations.mainChanged(botId);
   }
 
   /** A new id with `prefix`, like the daemon's. */

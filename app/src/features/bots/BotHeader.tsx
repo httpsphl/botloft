@@ -15,6 +15,7 @@ import { Badge } from "../../ui/Badge";
 import { Button, FitLabel } from "../../ui/Button";
 import { Menu } from "../../ui/Menu";
 import { attempt } from "../../ui/toast";
+import { ConversationControls } from "../chat/ConversationControls";
 import { OverviewIcon } from "../overview/icon";
 import { BotAvatar, moodOf } from "./BotAvatar";
 import { BotStateBadge } from "./BotStateBadge";
@@ -113,6 +114,7 @@ export function BotHeader({
           <span className="truncate text-muted">{bot.role || words.noRole}</span>
         </div>
       </div>
+      <ConversationControls bot={bot} />
       {bot.paused ? (
         <Button variant="ghost" icon={Play} title={words.resume} onClick={() => setPaused(false)}>
           <FitLabel>{words.resume}</FitLabel>

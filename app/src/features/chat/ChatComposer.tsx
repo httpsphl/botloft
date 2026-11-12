@@ -33,6 +33,7 @@ import { ModelPicker } from "./ModelPicker";
 import { ModePicker } from "./ModePicker";
 import { ReplyBar, type ReplyTarget } from "./Replying";
 import { SendButtons } from "./SendButtons";
+import { useSeatParam } from "./seat";
 import type { Files, PendingFile } from "./useFiles";
 
 const MAX_HEIGHT_PX = 240;
@@ -84,10 +85,13 @@ export const ChatComposer = memo(function ChatComposer({
   const api = useApi();
   const t = useT();
   const botId = bot.id;
-  const [text, setShown] = useState(() => draftOf(botId));
+  // Each conversation keeps its own draft; the main one keeps the bot's.
+  const seatParam = useSeatParam();
+  const draftKey = seatParam.conversationId ?? botId;
+  const [text, setShown] = useState(() => draftOf(draftKey));
   const setText = (value: string) => {
     setShown(value);
-    keepDraft(botId, value);
+    keepDraft(draftKey, value);
     setKept(null);
   };
   /** Saved keys the owner pasted in the last message, sent by name (spec 32.6). */
@@ -138,6 +142,7 @@ export const ChatComposer = memo(function ChatComposer({
       const attachments = pending.map(({ name, mediaType, data }) => ({ name, mediaType, data }));
       const message = await api.call("messages.send", {
         botId: bot.id,
+        ...seatParam,
         body: text,
         ...(attachments.length > 0 ? { attachments } : {}),
         ...(replying ? { replyTo: replying.itemId } : {}),

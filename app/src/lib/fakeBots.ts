@@ -2,6 +2,7 @@
 // handles, colors, archiving, unarchiving, deleting and the notifications each change
 // sends.
 
+import { mainConversationOf } from "./conversations";
 import type { FakeBotloft, Handlers } from "./fake";
 import { purgeBot } from "./fakeDelete";
 import { checkName, conflict, invalid, notFound } from "./fakeRules";
@@ -155,17 +156,27 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
       bot.connectors = [...new Set(names)];
       return fake.changedBot(bot);
     },
-    "bots.restart": ({ botId, fresh }) => {
+    "bots.restart": ({ botId, fresh, conversationId }) => {
       const bot = fake.bot(botId);
+      const notice = {
+        kind: "notice",
+        level: "info",
+        code: "fresh_start",
+        text: "A new conversation started here: what came before is not remembered.",
+      } as const;
+      // Another conversation restarts on its own (spec 40.5).
+      if (conversationId && conversationId !== mainConversationOf(botId)) {
+        if (fresh) {
+          fake.conversations.set(conversationId, { context: null });
+          fake.chat.add(botId, notice, conversationId);
+        }
+        return bot;
+      }
       if (fresh) {
         // The conversation is forgotten: nothing to count until it tells.
         bot.context = null;
-        fake.chat.add(botId, {
-          kind: "notice",
-          level: "info",
-          code: "fresh_start",
-          text: "A new conversation started here: what came before is not remembered.",
-        });
+        fake.conversations.mainChanged(botId);
+        fake.chat.add(botId, notice);
         // A sleeping bot keeps sleeping (spec 7.7).
         if (bot.state === "sleeping") {
           return fake.changedBot(bot);
