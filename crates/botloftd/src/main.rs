@@ -185,6 +185,8 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
             "conversations",
             botloftd::service::conversations::follow(Arc::clone(&daemon)),
         );
+        // Names the conversations that are not the main one (spec 40.6).
+        loops.spawn("titles", botloftd::titles::run(Arc::clone(&daemon)));
         loops.spawn("routines", routines::run(Arc::clone(&daemon)));
         loops.spawn("waits", routines::waits::run(Arc::clone(&daemon)));
         loops.spawn("backup", botloftd::autobackup::run(Arc::clone(&daemon)));

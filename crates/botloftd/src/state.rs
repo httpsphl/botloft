@@ -162,6 +162,8 @@ pub struct Daemon {
     pub contexts: Contexts,
     pub background: crate::background::Backgrounds,
     pub connectors: crate::connectors::Connectors,
+    /// Titles made by AI for conversations (spec 40.6).
+    pub titles: crate::titles::Titles,
     /// The owner's own Chrome: tabs and turn (spec 37).
     pub chrome: crate::chrome::Chrome,
     /// Where the owner's skills are looked for (spec 38).
@@ -225,6 +227,7 @@ impl Daemon {
             contexts: Contexts::default(),
             background: Default::default(),
             connectors: Default::default(),
+            titles: Default::default(),
             chrome: Default::default(),
             skills: Default::default(),
             logins: Default::default(),
