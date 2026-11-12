@@ -101,12 +101,12 @@ export class FakeChat {
 
   constructor(private readonly fake: FakeBotloft) {}
 
-  /** Adds an item to the bot's chat and tells the app. */
-  add(botId: BotId, body: ChatBody): ChatItem {
+  /** Adds an item to one conversation of the bot, its main one by default, and tells the app. */
+  add(botId: BotId, body: ChatBody, conversationId = mainConversationOf(botId)): ChatItem {
     const item: ChatItem = {
       id: this.fake.id("cht"),
       botId,
-      conversationId: mainConversationOf(botId),
+      conversationId,
       body,
       createdAt: this.fake.now,
       updatedAt: this.fake.now,
@@ -116,16 +116,13 @@ export class FakeChat {
     return item;
   }
 
-  /** Text the bot is writing right now. */
-  delta(botId: BotId, text: string): void {
-    this.fake.emit({
-      name: "chat.delta",
-      params: { botId, conversationId: mainConversationOf(botId), text },
-    });
+  /** Text the bot is writing right now, in one of its conversations. */
+  delta(botId: BotId, text: string, conversationId = mainConversationOf(botId)): void {
+    this.fake.emit({ name: "chat.delta", params: { botId, conversationId, text } });
   }
 
-  reply(botId: BotId, text: string): ChatItem {
-    return this.add(botId, { kind: "reply", text });
+  reply(botId: BotId, text: string, conversationId = mainConversationOf(botId)): ChatItem {
+    return this.add(botId, { kind: "reply", text }, conversationId);
   }
 
   /** A tool call in `running`, or with `changes` applied. */
@@ -215,9 +212,12 @@ export class FakeChat {
   handlers(): Pick<Handlers, "chat.history" | "chat.read" | "approvals.answer"> {
     return {
       "chat.read": () => null,
-      "chat.history": ({ botId, before, limit, until }) => {
+      "chat.history": ({ botId, before, limit, until, conversationId }) => {
         this.fake.bot(botId, false);
-        const mine = this.items.filter((item) => item.botId === botId);
+        const of = conversationId ?? mainConversationOf(botId);
+        const mine = this.items.filter(
+          (item) => item.botId === botId && item.conversationId === of,
+        );
         if (until) {
           const at = mine.findIndex((item) => item.id === until);
           if (at < 0) {
@@ -228,7 +228,7 @@ export class FakeChat {
         const end = before ? this.items.findIndex((item) => item.id === before) : this.items.length;
         const older = this.items.slice(0, end < 0 ? this.items.length : end);
         return older
-          .filter((item) => item.botId === botId)
+          .filter((item) => item.botId === botId && item.conversationId === of)
           .reverse()
           .slice(0, limit ?? 50);
       },

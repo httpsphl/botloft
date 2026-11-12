@@ -10,6 +10,8 @@ import type {
   BotId,
   BrowserState,
   ChatItemId,
+  Conversation,
+  ConversationId,
   Crew,
   CrewId,
   Delivery,
@@ -24,6 +26,7 @@ import type {
   TaskId,
 } from "../lib/protocol.gen";
 import { type Call, withCall } from "./calls";
+import { conversationActions, loadOpen, withConversation } from "./conversations";
 import { withQuestion } from "./questions";
 import { loadMarked, loadSeen, loadSeenSince, seenActions, withReply } from "./seen";
 
@@ -97,6 +100,10 @@ export interface AppState {
    * A bot not in here opens with its overview (spec 33.2).
    */
   panels: Record<BotId, BotPanel | null>;
+  /** The conversations of each agent whose chat opened (spec 40.7), main first. */
+  conversations: Record<BotId, Conversation[]>;
+  /** The conversation each agent's chat is on (`conversations.ts`). */
+  openConversations: Record<BotId, ConversationId>;
   selectedCrewId: CrewId | null;
   selectedBotId: BotId | null;
   selectCrew(crewId: CrewId | null): void;
@@ -114,6 +121,12 @@ export interface AppState {
   /** Opens the bot's chat at one of its items. */
   openAt(botId: BotId, itemId: ChatItemId): void;
   setPanel(botId: BotId, panel: BotPanel | null): void;
+  /** Reads the agent's conversations. */
+  loadConversations(botId: BotId): Promise<void>;
+  /** Opens the agent's chat on one of its conversations. */
+  openConversation(botId: BotId, conversationId: ConversationId): void;
+  /** Opens a new conversation of the agent, and its chat on it. */
+  newConversation(botId: BotId): Promise<Conversation>;
   /** The owner is looking at the bot's chat: what it said so far is seen. */
   markSeen(botId: BotId): void;
   /** Marks the bot unread until its chat is opened; leaves it if it is open. */
@@ -229,6 +242,8 @@ export function createAppStore(api: BotloftApi): AppStore {
       replyAt: {},
       markedUnread: loadMarked(),
       panels: {},
+      conversations: {},
+      openConversations: loadOpen(),
       selectedCrewId: null,
       selectedBotId: null,
       selectCrew: (crewId) => {
@@ -258,6 +273,7 @@ export function createAppStore(api: BotloftApi): AppStore {
       clearSettingsBotId: () => set({ settingsBotId: null }),
       clearSettingsPart: () => set({ settingsPart: null }),
       ...seenActions(get, set, api),
+      ...conversationActions(get, set, api),
       setPanel: (botId, panel) => set((state) => ({ panels: { ...state.panels, [botId]: panel } })),
       putCrew: (crew) => set((state) => withCrew(state, crew)),
       putBot: (bot) => set((state) => withBot(state, bot)),
@@ -388,6 +404,8 @@ export function applyEvent(state: AppState, event: ServerEvent): Partial<AppStat
         replyAt: withReply(state.replyAt, item.botId, reply),
       };
     }
+    case "conversation.changed":
+      return withConversation(state, event.params);
     case "message.created":
       return withCall(state, event.params);
     case "delivery.changed":

@@ -32,6 +32,58 @@ export class FakeConversations {
     };
   }
 
+  /** The main conversation follows its bot: the app hears of it as the daemon tells it. */
+  mainChanged(botId: BotId): void {
+    this.fake.emit({ name: "conversation.changed", params: this.main(botId) });
+  }
+
+  /** Another conversation of `botId`, as a test opens it. */
+  add(botId: BotId, title: string | null = null): Conversation {
+    const made = this.make(botId);
+    made.title = title;
+    made.titleBy = title === null ? null : "owner";
+    this.others.set(made.id, made);
+    return structuredClone(made);
+  }
+
+  /** A conversation of the fake's, the main ones included. */
+  get(conversationId: ConversationId): Conversation | null {
+    const found = this.others.get(conversationId);
+    if (found) {
+      return structuredClone(found);
+    }
+    const botId = `bot_${conversationId.slice("cnv_".length)}`;
+    return this.fake.bots.has(botId) ? this.main(botId) : null;
+  }
+
+  /** What a test makes another conversation do. */
+  set(conversationId: ConversationId, change: Partial<Conversation>): void {
+    const found = this.others.get(conversationId);
+    if (!found) {
+      throw notFound(`conversation ${conversationId}`);
+    }
+    Object.assign(found, change);
+    this.changed(found);
+  }
+
+  private make(botId: BotId): Conversation {
+    const now = Date.now();
+    return {
+      id: this.fake.id("cnv"),
+      botId,
+      title: null,
+      titleBy: null,
+      main: false,
+      state: "sleeping",
+      generation: null,
+      context: null,
+      background: [],
+      lastActivity: now,
+      createdAt: now,
+      archivedAt: null,
+    };
+  }
+
   private of(botId: BotId, archived: boolean): Conversation[] {
     const mine = [...this.others.values()].filter(
       (each) => each.botId === botId && (each.archivedAt !== null) === archived,
@@ -67,21 +119,7 @@ export class FakeConversations {
         if (bot.agent !== "claude") {
           throw invalid(`agents that run on ${bot.agent} have only their main conversation`);
         }
-        const now = Date.now();
-        const made: Conversation = {
-          id: `cnv_${crypto.randomUUID().replaceAll("-", "").slice(0, 26).toUpperCase()}`,
-          botId,
-          title: null,
-          titleBy: null,
-          main: false,
-          state: "sleeping",
-          generation: null,
-          context: null,
-          background: [],
-          lastActivity: now,
-          createdAt: now,
-          archivedAt: null,
-        };
+        const made = this.make(botId);
         this.others.set(made.id, made);
         return this.changed(made);
       },
