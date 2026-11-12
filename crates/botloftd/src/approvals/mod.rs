@@ -28,6 +28,7 @@ use tracing::{debug, warn};
 pub use self::prompt::{PromptArgs, prompt};
 pub use self::turn::{ThisTurn, forget_turns};
 use crate::chat::items;
+use crate::seat::Seat;
 use crate::service::{ApiError, ApiResult};
 use crate::state::Daemon;
 
@@ -140,7 +141,7 @@ pub(crate) async fn ask_with(
     tool_use_id: &str,
     opened: impl FnOnce(&ApprovalId),
 ) -> Option<Answer> {
-    let (pending, waiting) = open(daemon, bot, tool_name, input, tool_use_id)?;
+    let (pending, waiting) = open(daemon, bot, generation, tool_name, input, tool_use_id)?;
     opened(&pending.record.approval.id);
     let wait = Wait {
         within: daemon.settings.approval_wait(),
@@ -160,7 +161,7 @@ pub(crate) async fn ask_briefly(
     input: &Value,
     within: Duration,
 ) -> Option<Answer> {
-    let (pending, waiting) = open(daemon, bot, tool_name, input, "")?;
+    let (pending, waiting) = open(daemon, bot, generation, tool_name, input, "")?;
     let wait = Wait {
         within,
         needs_owner: false,
@@ -305,10 +306,23 @@ pub fn answer(daemon: &Daemon, params: ApprovalsAnswerParams) -> ApiResult<Appro
     Ok(record.approval)
 }
 
-/// Expires the bot's open requests: its process is gone (spec 10.1).
+/// Expires the open requests of one conversation: its process is gone
+/// (spec 10.1, 40.4).
+pub fn expire_for(daemon: &Daemon, seat: &Seat) {
+    let now = daemon.clock.now_ms();
+    let expired = daemon.store().expire_approvals_in(&seat.conversation, now);
+    closed(daemon, seat, expired);
+}
+
+/// Expires the bot's open requests, in all its conversations.
 pub fn expire_for_bot(daemon: &Daemon, bot: &BotId) {
     let now = daemon.clock.now_ms();
-    let expired = match daemon.store().expire_approvals(Some(bot), now) {
+    let expired = daemon.store().expire_approvals(Some(bot), now);
+    closed(daemon, bot, expired);
+}
+
+fn closed(daemon: &Daemon, bot: &BotId, expired: botloft_store::Result<Vec<ApprovalRecord>>) {
+    let expired = match expired {
         Ok(expired) => expired,
         Err(err) => {
             warn!(bot = %bot, "could not expire approvals: {err}");
@@ -351,6 +365,7 @@ struct Pending {
 fn open(
     daemon: &Daemon,
     bot: &BotId,
+    generation: u64,
     tool_name: &str,
     input: &Value,
     tool_use_id: &str,
@@ -378,7 +393,8 @@ fn open(
     let item = ChatItem {
         id: ChatItemId::generate(),
         bot_id: bot.clone(),
-        conversation_id: botloft_core::ids::ConversationId::main_of(bot),
+        // In the conversation whose process asks (spec 40.2).
+        conversation_id: daemon.supervisor.conversation_of(bot, generation),
         body,
         created_at: now,
         updated_at: now,

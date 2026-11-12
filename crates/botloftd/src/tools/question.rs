@@ -2,7 +2,6 @@
 //! on. The answer comes back later as the owner's message. `tell_owner`
 //! (23.10): the bot leaves the owner a note, and asks nothing.
 
-use botloft_core::ids::BotId;
 use botloft_core::protocol::{
     NOTES_PER_HOUR, QUESTION_MAX_CHARS, QUESTION_OPTION_MAX_CHARS, QUESTION_OPTIONS_MAX,
     QUESTION_OPTIONS_MIN, QuestionKind,
@@ -11,6 +10,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 
 use super::calls::explain;
+use crate::seat::Seat;
 use crate::service::questions::{self, Ask};
 use crate::state::Daemon;
 
@@ -60,7 +60,7 @@ pub(super) struct AskArgs {
     options: Vec<String>,
 }
 
-pub(super) fn ask(daemon: &Daemon, bot: &BotId, args: AskArgs) -> Result<Value, String> {
+pub(super) fn ask(daemon: &Daemon, bot: &Seat, args: AskArgs) -> Result<Value, String> {
     let ask = Ask {
         kind: QuestionKind::Question,
         text: args.question,
@@ -114,7 +114,7 @@ pub(super) struct TellArgs {
     note: String,
 }
 
-pub(super) fn tell(daemon: &Daemon, bot: &BotId, args: TellArgs) -> Result<Value, String> {
+pub(super) fn tell(daemon: &Daemon, bot: &Seat, args: TellArgs) -> Result<Value, String> {
     let ask = Ask {
         kind: QuestionKind::Note,
         text: args.note,

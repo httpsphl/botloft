@@ -2,7 +2,6 @@
 //! leaves them (23.10): asking or telling, from the bot's tools, and
 //! `questions.*`, from the app.
 
-use botloft_core::ids::ConversationId;
 use botloft_core::ids::{BotId, ChatItemId, MessageId, QuestionId};
 use botloft_core::protocol::{
     ChatBody, ChatItem, Message, MessageKind, NOTES_PER_HOUR, OPEN_QUESTIONS_MAX,
@@ -16,6 +15,7 @@ use tracing::warn;
 
 use super::{ApiError, ApiResult, bots, messages, reactions};
 use crate::chat::items;
+use crate::seat::Seat;
 use crate::state::{Daemon, Event};
 
 const HOUR_MS: i64 = 60 * 60_000;
@@ -29,7 +29,7 @@ pub struct Ask {
 
 /// Checks and keeps a bot's question or note, and shows it in its chat and
 /// the owner's box.
-pub fn ask(daemon: &Daemon, bot: &BotId, ask: Ask) -> ApiResult<Question> {
+pub fn ask(daemon: &Daemon, bot: &Seat, ask: Ask) -> ApiResult<Question> {
     let text = ask.text.trim();
     if text.is_empty() {
         return Err(ApiError::validation("question must not be empty"));
@@ -75,8 +75,8 @@ pub fn ask(daemon: &Daemon, bot: &BotId, ask: Ask) -> ApiResult<Question> {
     };
     let item = ChatItem {
         id: ChatItemId::generate(),
-        bot_id: bot.clone(),
-        conversation_id: botloft_core::ids::ConversationId::main_of(bot),
+        bot_id: bot.bot.clone(),
+        conversation_id: bot.conversation.clone(),
         body: ChatBody::Question(QuestionItem {
             question: question.clone(),
         }),
@@ -150,8 +150,12 @@ pub fn answer(daemon: &Daemon, params: QuestionsAnswerParams) -> ApiResult<Quest
         attachments: Vec::new(),
         created_at: daemon.clock.now_ms(),
     };
-    let delivery =
-        messages::pending_delivery(&message, ConversationId::main_of(&message.to_bot_id));
+    // Back to the conversation that asked (spec 40.2).
+    let to = super::replies::or_main(
+        store.question_conversation(&question.id),
+        &message.to_bot_id,
+    );
+    let delivery = messages::pending_delivery(&message, to);
     let answered = store
         .answer_question(&question.id, &message, &delivery)?
         .ok_or_else(|| already_closed(&question.id))?;

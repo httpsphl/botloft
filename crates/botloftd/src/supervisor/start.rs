@@ -186,7 +186,7 @@ impl Supervisor {
         slot.fresh_next = false;
         slot.clear_work();
         slot.limited_until = None;
-        tokens.insert(launch.token_hash.clone(), (bot.id.clone(), generation));
+        tokens.insert(launch.token_hash.clone(), (seat.clone(), generation));
         slot.running = Some(Running {
             control: writer,
             started: Instant::now(),

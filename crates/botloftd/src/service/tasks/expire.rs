@@ -1,7 +1,6 @@
 //! Deadlines (spec 9.4): an open task past its deadline becomes `expired`
 //! and its requester is told. The courier runs this every cycle.
 
-use botloft_core::ids::ConversationId;
 use botloft_core::ids::MessageId;
 use botloft_core::protocol::{Message, MessageKind, SenderKind, Task, TaskStatus};
 use botloft_store::Store;
@@ -51,7 +50,8 @@ fn expire(daemon: &Daemon, store: &Store, task: &Task, now: i64) -> ApiResult<()
         attachments: Vec::new(),
         created_at: now,
     };
-    let delivery = pending_delivery(&notice, ConversationId::main_of(&notice.to_bot_id));
+    let to = crate::service::replies::or_main(store.task_conversation(&task.id), &notice.to_bot_id);
+    let delivery = pending_delivery(&notice, to);
     let open = [TaskStatus::Open];
     let expired = store.settle_task(
         &task.id,

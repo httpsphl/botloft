@@ -39,18 +39,18 @@ pub fn interrupt(daemon: &Daemon, params: BotConversationParams) -> ApiResult<Bo
             .write_control_to(&seat.conversation, control::interrupt_request())
             .map_err(|_| ApiError::Conflict(format!("bot {} is not running", record.id)))?;
         debug!(bot = %record.id, "interrupt asked");
-        // Still the bot's, not each conversation's, until C2b (40.9).
-        deny_open_requests(daemon, &record.id);
+        deny_open_requests(daemon, &seat);
     }
     let store = daemon.store();
     let (crew, record) = active(&store, &params.bot_id)?;
     Ok(to_protocol(daemon, &store, &crew, record))
 }
 
-/// A tool that waits for the owner is refused: the owner said no to all of
-/// it, and the card shows so instead of waiting until it expires.
-fn deny_open_requests(daemon: &Daemon, bot: &botloft_core::ids::BotId) {
-    let open = match daemon.store().pending_approvals(bot) {
+/// A tool of that conversation that waits for the owner is refused: the
+/// owner said no to all of it, and the card shows so instead of waiting
+/// until it expires. Other conversations keep theirs (spec 40.4).
+fn deny_open_requests(daemon: &Daemon, bot: &crate::seat::Seat) {
+    let open = match daemon.store().pending_approvals_in(&bot.conversation) {
         Ok(open) => open,
         Err(err) => {
             warn!(bot = %bot, "could not read the open requests: {err}");

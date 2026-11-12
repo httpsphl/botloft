@@ -14,6 +14,7 @@ use serde_json::{Value, json};
 
 use super::calls::{explain, parse, tool_result};
 use crate::approvals::{self, Answer};
+use crate::seat::Seat;
 use crate::service::{ApiError, ApiResult, bots, routines};
 use crate::state::Daemon;
 
@@ -58,6 +59,14 @@ impl Proposal {
     }
 }
 
+/// Creates the routine, kept in the conversation that asked when it is the
+/// agent's own.
+fn create(daemon: &Daemon, seat: &Seat, params: RoutinesCreateParams) -> ApiResult<Routine> {
+    let routine = routines::create(daemon, params)?;
+    crate::service::replies::keep_routine(daemon, seat, &routine);
+    Ok(routine)
+}
+
 pub(super) async fn schedule(
     daemon: &Daemon,
     bot: &BotId,
@@ -74,6 +83,11 @@ async fn run(
     arguments: Value,
 ) -> Result<Value, String> {
     let mut proposal: Proposal = parse(arguments)?;
+    // What it makes for itself fires in this conversation (spec 40.2).
+    let seat = Seat::new(
+        bot.clone(),
+        daemon.supervisor.conversation_of(bot, generation),
+    );
     // Only the daemon marks a reminder (spec 20.12).
     if let Schedule::Once { reminder, .. } = &mut proposal.schedule {
         *reminder = None;
@@ -95,7 +109,7 @@ async fn run(
         if let Schedule::Once { reminder, .. } = &mut params.schedule {
             *reminder = Some(true);
         }
-        let routine = routines::create(daemon, params).map_err(explain)?;
+        let routine = create(daemon, &seat, params).map_err(explain)?;
         return Ok(created_note(
             &routine,
             "It is a one-time return to your own work within a day, so it was set without \
@@ -108,7 +122,7 @@ async fn run(
         .map_err(explain)?
         .permission_mode;
     if mode == PermissionMode::BypassPermissions {
-        let routine = routines::create(daemon, params).map_err(explain)?;
+        let routine = create(daemon, &seat, params).map_err(explain)?;
         return Ok(created_note(
             &routine,
             "You bypass permissions, so it was created without asking the owner.",
@@ -118,7 +132,7 @@ async fn run(
     let input = serde_json::to_value(&proposal).map_err(|err| err.to_string())?;
     match approvals::ask(daemon, bot, generation, ROUTINE_TOOL, &input, "").await {
         Some(Answer::Allowed { input: None, .. }) => {
-            let routine = routines::create(daemon, params).map_err(explain)?;
+            let routine = create(daemon, &seat, params).map_err(explain)?;
             Ok(created_note(&routine, "The owner approved it."))
         }
         Some(Answer::Allowed {
@@ -127,7 +141,7 @@ async fn run(
         }) => {
             let changed: Proposal = serde_json::from_str(&changed)
                 .map_err(|err| format!("the owner's changes could not be read: {err}"))?;
-            let routine = routines::create(daemon, changed.params(target)).map_err(explain)?;
+            let routine = create(daemon, &seat, changed.params(target)).map_err(explain)?;
             Ok(created_note(
                 &routine,
                 "The owner changed it before approving it: read the name, prompt and schedule \

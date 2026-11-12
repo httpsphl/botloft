@@ -3,7 +3,6 @@
 //! which goes to the bot as the owner's message.
 
 use botloft_core::envelope::QUOTED_REPLY_MAX_CHARS;
-use botloft_core::ids::ConversationId;
 use botloft_core::ids::{BotId, ChatItemId, MessageId};
 use botloft_core::protocol::{
     CardAnswer, CardBlock, CardItem, ChatActParams, ChatBody, ChatItem, Message, MessageKind,
@@ -14,6 +13,7 @@ use botloft_store::Store;
 
 use super::{ApiError, ApiResult, bots, messages, questions, reactions};
 use crate::chat::items;
+use crate::seat::Seat;
 use crate::state::Daemon;
 
 /// What a bot shows: a new card, or `card` again, changed.
@@ -24,7 +24,7 @@ pub struct Show {
 }
 
 /// Checks the card and shows it; returns its id and version.
-pub fn show(daemon: &Daemon, bot: &BotId, show: Show) -> ApiResult<(ChatItemId, u32)> {
+pub fn show(daemon: &Daemon, bot: &Seat, show: Show) -> ApiResult<(ChatItemId, u32)> {
     let (title, blocks) = cards::check(&show.title, show.blocks)?;
     let version = {
         let store = daemon.store();
@@ -43,7 +43,7 @@ pub fn show(daemon: &Daemon, bot: &BotId, show: Show) -> ApiResult<(ChatItemId, 
     let item = match &show.card {
         // Shown again where it was: the chat does not move.
         Some(id) => items::update(daemon, bot, id, body),
-        None => items::add(daemon, bot, body),
+        None => items::add_to(daemon, bot, body),
     }
     .ok_or_else(|| ApiError::Conflict("could not save the card".to_owned()))?;
     Ok((item.id, version))
@@ -106,8 +106,8 @@ pub fn act(daemon: &Daemon, params: ChatActParams) -> ApiResult<ChatItem> {
         attachments: Vec::new(),
         created_at: now,
     };
-    let delivery =
-        messages::pending_delivery(&message, ConversationId::main_of(&message.to_bot_id));
+    // Back to the conversation the card is in (spec 40.2).
+    let delivery = messages::pending_delivery(&message, item.conversation_id.clone());
     let answered = ChatBody::Card(CardItem {
         answer: Some(CardAnswer {
             version: card.version,
