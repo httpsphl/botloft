@@ -2,20 +2,23 @@
 //! Code ends the turn that runs, kills the tool it waits on and the subagents
 //! it left in the background, and closes the turn with a `result` that the
 //! chat shows as stopped (spec 8.2). Messages it has not taken up yet stay in
-//! its queue and run next.
+//! its queue and run next. Each conversation of a bot stops on its own
+//! (spec 40.5).
 
-use botloft_core::protocol::{ApprovalsAnswerParams, Bot, BotIdParams, BotState};
+use botloft_core::protocol::{ApprovalsAnswerParams, Bot, BotConversationParams, BotState};
 use tracing::{debug, warn};
 
 use crate::approvals;
 use crate::chat::control;
 use crate::service::bots::{active, to_protocol};
+use crate::service::conversations::seat_of;
 use crate::service::{ApiError, ApiResult};
 use crate::state::Daemon;
 
-pub fn interrupt(daemon: &Daemon, params: BotIdParams) -> ApiResult<Bot> {
+pub fn interrupt(daemon: &Daemon, params: BotConversationParams) -> ApiResult<Bot> {
     let store = daemon.store();
     let (_, record) = active(&store, &params.bot_id)?;
+    let seat = seat_of(&store, &record, params.conversation_id, true)?;
     // `approvals::answer` takes the store again.
     drop(store);
     let agent = crate::agent::of(record.agent);
@@ -26,16 +29,17 @@ pub fn interrupt(daemon: &Daemon, params: BotIdParams) -> ApiResult<Bot> {
         )));
     }
     let working = matches!(
-        daemon.supervisor.status(&record.id),
+        daemon.supervisor.status_of(&seat.conversation),
         Some((BotState::Busy | BotState::NeedsApproval, _))
     );
     // A turn that ended by itself a moment ago leaves nothing to stop.
     if working {
         daemon
             .supervisor
-            .write_control(&record.id, control::interrupt_request())
+            .write_control_to(&seat.conversation, control::interrupt_request())
             .map_err(|_| ApiError::Conflict(format!("bot {} is not running", record.id)))?;
         debug!(bot = %record.id, "interrupt asked");
+        // Still the bot's, not each conversation's, until C2b (40.9).
         deny_open_requests(daemon, &record.id);
     }
     let store = daemon.store();

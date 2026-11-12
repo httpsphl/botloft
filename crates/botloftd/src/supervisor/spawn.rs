@@ -18,6 +18,7 @@ use crate::chat::{LIVE_TEXT_EVERY, StreamReader};
 use crate::platform;
 use crate::runtime::claude::Claude;
 use crate::runtime::{ProcessEvent, SpawnSpec};
+use crate::seat::Seat;
 use crate::secrets::{self, TokenHash};
 use crate::state::Daemon;
 use crate::{approvals, context, courier, mcp_secrets, routines, workspace};
@@ -43,6 +44,7 @@ impl Supervisor {
             return;
         };
         let main = slot.main;
+        let seat = Seat::new(bot.clone(), slot.conversation.clone());
         let Some(running) = slot.running.take() else {
             return;
         };
@@ -77,12 +79,12 @@ impl Supervisor {
         }
         drop(inner);
         courier::requeue_unread(daemon, bot, generation);
-        // Still the bot's, not each conversation's (spec 40.9, C2).
+        context::process_ended(daemon, &seat);
+        crate::background::process_ended(daemon, &seat);
+        // Still the bot's, not each conversation's, until C2b (40.9).
         if main {
             approvals::expire_for_bot(daemon, bot);
             routines::process_ended(daemon, bot);
-            context::process_ended(daemon, bot);
-            crate::background::process_ended(daemon, bot);
             crate::screens::turn_ended(daemon, bot);
             daemon.crew_access.end_turn(bot);
         }
@@ -240,14 +242,8 @@ pub(super) async fn settle(
     tokio::time::sleep(after).await;
     if let Some(daemon) = daemon.upgrade() {
         daemon.supervisor.ready(&bot, generation);
-        // A compaction asked while it slept is the main conversation's (C2).
-        if daemon
-            .supervisor
-            .conversation_of(&bot, generation)
-            .is_main_of(&bot)
-        {
-            crate::context::woke(&daemon, &bot);
-        }
+        let conversation = daemon.supervisor.conversation_of(&bot, generation);
+        crate::context::woke(&daemon, &Seat::new(bot, conversation));
     }
 }
 

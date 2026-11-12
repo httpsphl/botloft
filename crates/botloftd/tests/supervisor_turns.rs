@@ -168,6 +168,7 @@ async fn sign_in_errors_stop_the_bot_until_the_owner_restarts_it() {
     let restart = BotsRestartParams {
         bot_id: s.bot.clone(),
         fresh: None,
+        conversation_id: None,
     };
     bots::restart(&s.daemon, restart).expect("restart");
     s.runtime.process(2).await;

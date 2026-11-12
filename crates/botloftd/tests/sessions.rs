@@ -124,6 +124,7 @@ async fn a_fresh_restart_leaves_the_old_conversation_for_good() {
     let restart = BotsRestartParams {
         bot_id: s.bot.clone(),
         fresh: Some(true),
+        conversation_id: None,
     };
     bots::restart(&s.daemon, restart).expect("restart");
     let second = s.runtime.process(2).await;

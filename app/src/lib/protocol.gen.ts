@@ -339,7 +339,11 @@ seenAt: number, };
  */
 export type BotBackgroundChanged = { botId: BotId, tasks: Array<BackgroundTask>, };
 
-export type BotsStopTaskParams = { botId: BotId, taskId: string, };
+export type BotsStopTaskParams = { botId: BotId, taskId: string, 
+/**
+ * The conversation that runs it; the main one when absent (spec 40.5).
+ */
+conversationId?: ConversationId, };
 
 export type BotsSetEffortParams = { botId: BotId, effort: BotEffort, };
 
@@ -433,6 +437,58 @@ createdAt: number,
  * Unix time in milliseconds; `null` while the bot is active.
  */
 archivedAt: number | null, };
+
+/**
+ * Who gave a conversation its title (spec 40.6).
+ */
+export type TitleBy = "owner" | "ai";
+
+/**
+ * One conversation of an agent (spec 40.5).
+ */
+export type Conversation = { id: ConversationId, botId: BotId, 
+/**
+ * `null` until the owner or the AI names it; the main one has none.
+ */
+title: string | null, titleBy: TitleBy | null, 
+/**
+ * The agent's main conversation, which gets what comes from outside
+ * (spec 40.2) and is never renamed or archived.
+ */
+main: boolean, state: BotState, 
+/**
+ * The process it runs in; `null` while it has none.
+ */
+generation: number | null, 
+/**
+ * How full it is; `null` while that is not known (spec 8.6).
+ */
+context: ContextUsage | null, 
+/**
+ * What it left running in the background (spec 33.4).
+ */
+background: Array<BackgroundTask>, 
+/**
+ * Its newest chat item, or when it was made: Unix milliseconds.
+ */
+lastActivity: number, createdAt: number, archivedAt: number | null, };
+
+/**
+ * `conversations.archive`, `conversations.unarchive`.
+ */
+export type ConversationIdParams = { conversationId: ConversationId, };
+
+/**
+ * `conversations.rename`: the owner names a conversation, and the AI no
+ * longer does (spec 40.6).
+ */
+export type ConversationsRenameParams = { conversationId: ConversationId, title: string, };
+
+/**
+ * A method that acts on one conversation of a bot: the main one when
+ * `conversationId` is absent (spec 40.5).
+ */
+export type BotConversationParams = { botId: BotId, conversationId?: ConversationId, };
 
 /**
  * Identifies the connecting app in `session.hello`.
@@ -716,7 +772,12 @@ export type BotsRestartParams = { botId: BotId,
 /**
  * Start a new conversation instead of resuming the last one.
  */
-fresh?: boolean, };
+fresh?: boolean, 
+/**
+ * Restarts only this conversation, and `fresh` forgets only it; the
+ * main one when absent (spec 40.5).
+ */
+conversationId?: ConversationId, };
 
 /**
  * Params of the `bot.state` notification.
@@ -2910,7 +2971,11 @@ limit?: number,
  * 1,000 newest, to open the chat at a search result (spec 8.8).
  * Not with `before` or `limit`.
  */
-until?: ChatItemId, };
+until?: ChatItemId, 
+/**
+ * The conversation to read; the main one when absent (spec 40.5).
+ */
+conversationId?: ConversationId, };
 
 export type ApprovalsAnswerParams = { approvalId: ApprovalId, allow: boolean, 
 /**
@@ -3414,9 +3479,15 @@ export interface RpcMethods {
   "deliveries.retry": { params: DeliveryIdParams; result: Delivery };
   "tasks.list": { params: TasksListParams; result: Array<Task> };
   "bots.setEffort": { params: BotsSetEffortParams; result: Bot };
-  "bots.compact": { params: BotIdParams; result: Bot };
-  "bots.interrupt": { params: BotIdParams; result: Bot };
+  "bots.compact": { params: BotConversationParams; result: Bot };
+  "bots.interrupt": { params: BotConversationParams; result: Bot };
   "bots.stopTask": { params: BotsStopTaskParams; result: null };
+  "conversations.list": { params: BotIdParams; result: Array<Conversation> };
+  "conversations.create": { params: BotIdParams; result: Conversation };
+  "conversations.rename": { params: ConversationsRenameParams; result: Conversation };
+  "conversations.archive": { params: ConversationIdParams; result: Conversation };
+  "conversations.unarchive": { params: ConversationIdParams; result: Conversation };
+  "conversations.archived": { params: BotIdParams; result: Array<Conversation> };
   "usage.tokens": { params: UsageTokensParams; result: Array<BotTokens> };
   "versions.list": { params: VersionsListParams; result: Array<TextVersion> };
   "versions.restore": { params: VersionsRestoreParams; result: TextVersion };
@@ -3543,6 +3614,7 @@ export interface RpcNotifications {
   "task.changed": Task;
   "bot.context": BotContextChanged;
   "bot.background": BotBackgroundChanged;
+  "conversation.changed": Conversation;
   "routine.changed": Routine;
   "routine.run": RoutineRun;
   "question.changed": Question;

@@ -1,11 +1,12 @@
 //! What a bot left running in the background (spec 33.4): the live list
 //! Claude Code sends whenever it changes, and stopping one of its tasks.
 //! Nothing is stored: the tasks end with the process, and so does the list.
+//! Each conversation of a bot has its own (spec 40.4).
 
 use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard};
 
-use botloft_core::ids::BotId;
+use botloft_core::ids::{BotId, ConversationId};
 use botloft_core::protocol::{
     BackgroundKind, BackgroundTask, BotBackgroundChanged, BotsStopTaskParams,
 };
@@ -13,36 +14,44 @@ use serde_json::Value;
 use tracing::debug;
 
 use crate::chat::control;
+use crate::seat::Seat;
 use crate::service::bots::active;
+use crate::service::conversations::seat_of;
 use crate::service::{ApiError, ApiResult};
 use crate::state::{Daemon, Event};
 
-/// The most tasks kept for one bot.
+/// The most tasks kept for one conversation.
 const MAX_TASKS: usize = 50;
 /// The longest description kept, in characters.
 const MAX_DESCRIPTION: usize = 300;
 
 #[derive(Default)]
 pub struct Backgrounds {
-    bots: Mutex<HashMap<BotId, Vec<BackgroundTask>>>,
+    conversations: Mutex<HashMap<ConversationId, Vec<BackgroundTask>>>,
 }
 
 impl Backgrounds {
-    fn lock(&self) -> MutexGuard<'_, HashMap<BotId, Vec<BackgroundTask>>> {
-        self.bots
+    fn lock(&self) -> MutexGuard<'_, HashMap<ConversationId, Vec<BackgroundTask>>> {
+        self.conversations
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
-    /// What `bot` has running now; empty when nothing is.
+    /// What the main conversation of `bot` has running now; empty when
+    /// nothing is.
     pub fn get(&self, bot: &BotId) -> Vec<BackgroundTask> {
-        self.lock().get(bot).cloned().unwrap_or_default()
+        self.get_in(&ConversationId::main_of(bot))
+    }
+
+    /// What one conversation has running now (spec 40.5).
+    pub fn get_in(&self, conversation: &ConversationId) -> Vec<BackgroundTask> {
+        self.lock().get(conversation).cloned().unwrap_or_default()
     }
 }
 
 /// `system/background_tasks_changed`: the whole live list, which replaces
 /// the one before. Tasks Claude Code runs for itself (`ambient`) stay out.
-pub(crate) fn changed(daemon: &Daemon, bot: &BotId, event: &Value) {
+pub(crate) fn changed(daemon: &Daemon, bot: &Seat, event: &Value) {
     let now = daemon.clock.now_ms();
     let listed = event["tasks"].as_array().map_or(&[][..], Vec::as_slice);
     replace(daemon, bot, |before| {
@@ -82,45 +91,52 @@ fn kind_of(task_type: Option<&str>) -> BackgroundKind {
 }
 
 /// The process is gone, and what it ran in the background with it.
-pub(crate) fn process_ended(daemon: &Daemon, bot: &BotId) {
+pub(crate) fn process_ended(daemon: &Daemon, bot: &Seat) {
     replace(daemon, bot, |_| Vec::new());
 }
 
-/// Puts the new list in place and tells the app when it differs.
+/// Puts the new list in place and tells the app when it differs:
+/// `bot.background` is the main conversation's (spec 40.5).
 fn replace(
     daemon: &Daemon,
-    bot: &BotId,
+    seat: &Seat,
     make: impl FnOnce(&[BackgroundTask]) -> Vec<BackgroundTask>,
 ) {
     let tasks = {
-        let mut bots = daemon.background.lock();
-        let before = bots.get(bot).map_or(&[][..], Vec::as_slice);
+        let mut conversations = daemon.background.lock();
+        let before = conversations
+            .get(&seat.conversation)
+            .map_or(&[][..], Vec::as_slice);
         let after = make(before);
         if after == before {
             return;
         }
         if after.is_empty() {
-            bots.remove(bot);
+            conversations.remove(&seat.conversation);
         } else {
-            bots.insert(bot.clone(), after.clone());
+            conversations.insert(seat.conversation.clone(), after.clone());
         }
         after
     };
-    debug!(bot = %bot, tasks = tasks.len(), "background tasks");
-    daemon.emit(Event::BotBackground(BotBackgroundChanged {
-        bot_id: bot.clone(),
-        tasks,
-    }));
+    debug!(bot = %seat, tasks = tasks.len(), "background tasks");
+    if seat.is_main() {
+        daemon.emit(Event::BotBackground(BotBackgroundChanged {
+            bot_id: seat.bot.clone(),
+            tasks,
+        }));
+    }
+    daemon.emit(Event::ConversationTouched(seat.clone()));
 }
 
-/// `bots.stopTask`: asks the bot's process to end one of its tasks. It
-/// answers with a new list without it (spec 33.4).
+/// `bots.stopTask`: asks the conversation's process to end one of its
+/// tasks. It answers with a new list without it (spec 33.4).
 pub fn stop(daemon: &Daemon, params: BotsStopTaskParams) -> ApiResult<()> {
     let store = daemon.store();
     let (_, record) = active(&store, &params.bot_id)?;
+    let seat = seat_of(&store, &record, params.conversation_id, true)?;
     let known = daemon
         .background
-        .get(&record.id)
+        .get_in(&seat.conversation)
         .iter()
         .any(|task| task.task_id == params.task_id);
     if !known {
@@ -131,6 +147,9 @@ pub fn stop(daemon: &Daemon, params: BotsStopTaskParams) -> ApiResult<()> {
     }
     daemon
         .supervisor
-        .write_control(&record.id, control::stop_task_request(&params.task_id))
+        .write_control_to(
+            &seat.conversation,
+            control::stop_task_request(&params.task_id),
+        )
         .map_err(|_| ApiError::Conflict(format!("bot {} is not running", record.id)))
 }

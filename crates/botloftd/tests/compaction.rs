@@ -4,7 +4,7 @@
 mod common;
 
 use botloft_core::protocol::{
-    Bot, BotIdParams, BotState, BotsRestartParams, BotsSetPausedParams, NoticeCode,
+    Bot, BotConversationParams, BotState, BotsRestartParams, BotsSetPausedParams, NoticeCode,
 };
 use botloftd::context;
 use botloftd::runtime::fake::FakeProcess;
@@ -15,8 +15,9 @@ use common::supervised::{Setup, setup};
 use serde_json::{Value, json};
 
 fn compact(s: &Setup) -> Result<Bot, ApiError> {
-    let params = BotIdParams {
+    let params = BotConversationParams {
         bot_id: s.bot.clone(),
+        conversation_id: None,
     };
     context::compact(&s.daemon, params)
 }
@@ -245,6 +246,7 @@ async fn a_process_that_ends_takes_its_compaction_and_a_new_conversation_its_siz
     let restart = BotsRestartParams {
         bot_id: s.bot.clone(),
         fresh: Some(true),
+        conversation_id: None,
     };
     bots::restart(&s.daemon, restart).expect("restart");
     let third = s.runtime.process(3).await;

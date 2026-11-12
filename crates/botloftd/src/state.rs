@@ -75,9 +75,13 @@ pub enum Event {
     AutoBackupChanged(AutoBackupStatus),
     MobileChanged(MobileStatus),
     MobilePairRequest(MobilePairRequest),
-    /// Another conversation of a bot can take messages (spec 40). Only for
-    /// the courier: the apps hear of it with C2.
-    ConversationReady(crate::seat::Seat),
+    /// A conversation's process changed state (spec 40.4); the bot's own
+    /// `BotState` is the summary of these.
+    SeatState(crate::seat::SeatState),
+    /// A conversation's context or background changed: the daemon tells
+    /// the apps once it has read the rest (spec 40.5).
+    ConversationTouched(crate::seat::Seat),
+    ConversationChanged(botloft_core::protocol::Conversation),
 }
 
 /// Events buffered per connection before a slow client is dropped.

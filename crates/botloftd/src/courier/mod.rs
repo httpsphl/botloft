@@ -20,7 +20,7 @@ use tracing::{debug, warn};
 use self::render::{Context, Rendered, render};
 pub use self::requeue::{requeue_left_behind, requeue_unread};
 pub use self::settings::CourierSettings;
-use self::sleep::{became_ready, hasten, next_wait};
+use self::sleep::{became_ready, hasten, next_wait, rehome};
 use crate::agent::{self, ClaudeAgent};
 use crate::clock;
 use crate::service::tasks;
@@ -95,7 +95,7 @@ fn cycle(daemon: &Arc<Daemon>) {
         }
         tasks::expire_overdue(daemon, &store, now);
         match store.due_deliveries(now) {
-            Ok(due) => due,
+            Ok(due) => rehome(&store, due),
             Err(err) => {
                 warn!("courier could not read the queue: {err}");
                 return;

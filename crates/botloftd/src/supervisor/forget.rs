@@ -27,6 +27,7 @@ impl Supervisor {
             .map(|(id, _)| id.clone())
             .collect();
         sessions.retain(|id, _| !id.is_main_of(bot) && !conversations.contains(id));
+        self.summaries.forget_bot(bot);
         for id in conversations {
             let Some(slot) = slots.remove(&id) else {
                 continue;

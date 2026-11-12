@@ -46,6 +46,9 @@ pub(super) fn to_notification(event: &Event) -> Option<String> {
         Event::AutoBackupChanged(status) => note(notification::AUTOBACKUP_CHANGED, status),
         Event::MobileChanged(status) => note(notification::MOBILE_CHANGED, status),
         Event::MobilePairRequest(request) => note(notification::MOBILE_PAIR_REQUEST, request),
-        Event::ConversationReady(_) => return None,
+        Event::ConversationChanged(conversation) => {
+            note(notification::CONVERSATION_CHANGED, conversation)
+        }
+        Event::SeatState(_) | Event::ConversationTouched(_) => return None,
     })
 }

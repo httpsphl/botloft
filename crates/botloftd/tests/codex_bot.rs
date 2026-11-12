@@ -659,8 +659,9 @@ async fn the_owner_can_compact_a_codex_conversation() {
 
     botloftd::context::compact(
         &codex.daemon,
-        botloft_core::protocol::BotIdParams {
+        botloft_core::protocol::BotConversationParams {
             bot_id: codex.bot.clone(),
+            conversation_id: None,
         },
     )
     .expect("compact");

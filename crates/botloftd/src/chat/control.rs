@@ -6,7 +6,7 @@
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use botloft_core::ids::BotId;
+use crate::seat::Seat;
 use bytes::Bytes;
 use serde_json::{Value, json};
 use tracing::debug;
@@ -70,7 +70,7 @@ pub(crate) fn stop_task_request(task_id: &str) -> Bytes {
 
 /// A `control_response` from the bot's process. A request this Claude Code
 /// does not know fails, and what it would have told stays unknown.
-pub(super) fn answered(daemon: &Daemon, bot: &BotId, event: &Value) {
+pub(super) fn answered(daemon: &Daemon, bot: &Seat, event: &Value) {
     let response = &event["response"];
     let id = response["request_id"].as_str().unwrap_or_default();
     if response["subtype"] != "success" {

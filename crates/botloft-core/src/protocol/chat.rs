@@ -319,6 +319,10 @@ pub struct ChatHistoryParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub until: Option<ChatItemId>,
+    /// The conversation to read; the main one when absent (spec 40.5).
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub conversation_id: Option<ConversationId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

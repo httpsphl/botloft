@@ -1,7 +1,7 @@
 //! What the courier asks to plan its sleep and to catch up with a bot that
 //! became ready (spec 9.1).
 
-use botloft_core::ids::BotId;
+use botloft_core::ids::{BotId, ConversationId, DeliveryId};
 use rusqlite::params;
 
 use crate::{Result, Store};
@@ -39,6 +39,29 @@ impl Store {
              WHERE bot_id = ?1 AND state = 'pending' AND attempts = 0 AND next_attempt_at > ?2",
             )?
             .execute(params![bot.as_str(), now])?)
+    }
+
+    /// A pending delivery goes to another conversation of its bot: the
+    /// main one, when the one it waited for was archived (spec 40.2).
+    pub fn move_delivery(&self, id: &DeliveryId, conversation: &ConversationId) -> Result<()> {
+        self.conn
+            .prepare_cached(
+                "UPDATE deliveries SET conversation_id = ?2 WHERE id = ?1 AND state = 'pending'",
+            )?
+            .execute(params![id.as_str(), conversation.as_str()])?;
+        Ok(())
+    }
+
+    /// Every pending delivery of conversation `from` goes to `to`, as one
+    /// the owner archives gives what waited for it to the main one.
+    pub fn move_deliveries(&self, from: &ConversationId, to: &ConversationId) -> Result<usize> {
+        Ok(self
+            .conn
+            .prepare_cached(
+                "UPDATE deliveries SET conversation_id = ?2 \
+                 WHERE conversation_id = ?1 AND state = 'pending'",
+            )?
+            .execute(params![from.as_str(), to.as_str()])?)
     }
 
     /// The bots a message waits for, to go out or going out now: they come
