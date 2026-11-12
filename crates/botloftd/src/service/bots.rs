@@ -275,7 +275,11 @@ pub fn restart(daemon: &Daemon, params: BotsRestartParams) -> ApiResult<Bot> {
         )));
     }
     let fresh = params.fresh.unwrap_or(false);
-    daemon.supervisor.restart(&record.id, fresh);
+    // A sleeping bot forgets its conversation and keeps sleeping (spec 7.7):
+    // nothing to start until something comes for it.
+    if !(fresh && crate::context::forget_while_asleep(daemon, &store, &record.id)) {
+        daemon.supervisor.restart(&record.id, fresh);
+    }
     let bot = to_protocol(daemon, &store, &crew, record);
     // The chat takes the store itself.
     drop(store);

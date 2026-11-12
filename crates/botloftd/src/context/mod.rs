@@ -3,25 +3,26 @@
 //! when a turn ends and after a compaction, and follows the usage of each
 //! model request in between. Nothing is stored; a new daemon asks again.
 
+mod compact;
 mod parts;
 mod reload;
 
 use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard};
 
-use botloft_core::ids::{BotId, random_uuid};
+use botloft_core::ids::BotId;
 use botloft_core::protocol::{
-    Bot, BotContextChanged, BotIdParams, BotState, ChatBody, ContextFile, ContextPart,
-    ContextUsage, NoticeCode, NoticeItem, NoticeLevel,
+    BotContextChanged, ChatBody, ContextFile, ContextPart, ContextUsage, NoticeCode, NoticeItem,
+    NoticeLevel,
 };
-use bytes::Bytes;
-use serde_json::{Value, json};
+use serde_json::Value;
 use tracing::debug;
 
 use crate::chat::{control, items};
-use crate::service::bots::{active, to_protocol};
-use crate::service::{ApiError, ApiResult};
 use crate::state::{Daemon, Event};
+
+pub use self::compact::compact;
+pub(crate) use self::compact::{forget_while_asleep, woke};
 
 /// Claude Code's command that compacts the conversation.
 const COMPACT: &str = "/compact";
@@ -37,6 +38,9 @@ struct Entry {
     size: Option<Size>,
     /// A compaction is running, or waits behind the turn in progress.
     compacting: bool,
+    /// The owner asked to compact while the bot slept: it goes once the
+    /// bot is up again.
+    compact_on_wake: bool,
     reload: reload::Tracker,
 }
 
@@ -293,51 +297,9 @@ pub(crate) fn process_started(daemon: &Daemon, bot: &BotId, resumed: bool) {
 
 /// The process is gone, and a compaction it had not finished with it.
 pub(crate) fn process_ended(daemon: &Daemon, bot: &BotId) {
-    update(daemon, bot, |entry| entry.compacting = false);
-}
-
-/// `bots.compact`: writes `/compact` to the bot's process like a message,
-/// so it waits its turn behind what the bot is doing. Asking again while
-/// one is on its way changes nothing.
-pub fn compact(daemon: &Daemon, params: BotIdParams) -> ApiResult<Bot> {
-    let store = daemon.store();
-    let (crew, record) = active(&store, &params.bot_id)?;
-    let agent = crate::agent::of(record.agent);
-    if !agent.is_some_and(|agent| agent.can_compact()) {
-        return Err(ApiError::validation(format!(
-            "bots that run on {} cannot compact their conversation",
-            record.agent.as_str()
-        )));
-    }
-    if !daemon.contexts.compacting(&record.id) {
-        let not_running = || ApiError::Conflict(format!("bot {} is not running", record.id));
-        let ready = matches!(
-            daemon.supervisor.status(&record.id),
-            Some((BotState::Idle | BotState::Busy | BotState::NeedsApproval, _))
-        );
-        if !ready {
-            return Err(not_running());
+    update(daemon, bot, |entry| {
+        if !entry.compact_on_wake {
+            entry.compacting = false;
         }
-        if record.agent == botloft_core::protocol::AgentKind::Codex {
-            // Codex compacts as a turn of its own, asked by its wrapper.
-            let line = Bytes::from("{\"event\":\"compact\"}\n");
-            daemon
-                .supervisor
-                .write_control(&record.id, line)
-                .map_err(|_| not_running())?;
-        } else {
-            let uuid = random_uuid();
-            let line = json!({
-                "type": "user",
-                "uuid": uuid,
-                "message": { "role": "user", "content": [{ "type": "text", "text": COMPACT }] },
-            });
-            daemon
-                .supervisor
-                .write_message(&record.id, &uuid, Bytes::from(format!("{line}\n")))
-                .map_err(|_| not_running())?;
-        }
-        update(daemon, &record.id, |entry| entry.compacting = true);
-    }
-    Ok(to_protocol(daemon, &store, &crew, record))
+    });
 }

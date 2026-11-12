@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 import { FakeBotloft } from "../../lib/fake";
 import { tokens } from "../../lib/format";
@@ -133,6 +133,37 @@ describe("conversation space", () => {
     const button = within(menu).getByRole("button", { name: "Compact now" });
     expect((button as HTMLButtonElement).disabled).toBe(true);
     expect(within(menu).getByText("Scout is not running, so it cannot compact now.")).toBeDefined();
+  });
+
+  test("a sleeping agent wakes up to compact", async () => {
+    const { fake, scout } = await openScout();
+    act(() => fake.setBotState(scout.id, "sleeping"));
+    const menu = open();
+    expect(
+      within(menu).getByText("Scout is asleep: it wakes up first, then compacts."),
+    ).toBeDefined();
+    fireEvent.click(within(menu).getByRole("button", { name: "Compact now" }));
+    expect(await screen.findByText("Scout wakes up and compacts the conversation.")).toBeDefined();
+    expect(compactions(fake)).toHaveLength(1);
+  });
+
+  test("starting fresh forgets the conversation after asking, even asleep", async () => {
+    const { fake, scout } = await openScout();
+    act(() => fake.setBotState(scout.id, "sleeping"));
+    fireEvent.click(within(open()).getByRole("button", { name: "Start fresh" }));
+    const ask = await screen.findByRole("dialog", { name: "Start a new conversation?" });
+    fireEvent.click(within(ask).getByRole("button", { name: "Start fresh" }));
+    await waitFor(() =>
+      expect(fake.calls).toContainEqual({
+        method: "bots.restart",
+        params: { botId: scout.id, fresh: true },
+      }),
+    );
+    // Nothing is counted until a new conversation says how full it is.
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: /^Conversation space: / })).toBeNull(),
+    );
+    expect(fake.bot(scout.id).state).toBe("sleeping");
   });
 
   test("compacting by itself and a compaction that failed read in the owner's words", async () => {

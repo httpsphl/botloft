@@ -1,6 +1,7 @@
 // How full the bot's conversation is (spec 8.6): a ring below the chat
-// that opens the numbers, how far it is from compacting by itself, and
-// the button to compact it now.
+// that opens the numbers, how far it is from compacting by itself, the
+// button to compact it now (a sleeping bot wakes for it) and the one to
+// start fresh, which forgets it for free (7.7).
 
 import { useCallback, useRef, useState } from "react";
 import { useT } from "../../i18n";
@@ -8,6 +9,7 @@ import { tokens } from "../../lib/format";
 import type { Bot } from "../../lib/protocol.gen";
 import { useApi, useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
+import { Confirm } from "../../ui/Confirm";
 import { POPOVER } from "../../ui/surface";
 import { attempt } from "../../ui/toast";
 import { useDismiss } from "../../ui/useDismiss";
@@ -22,6 +24,8 @@ export function ContextMeter({ bot, onLater }: { bot: Bot; onLater(text: string)
   const putBot = useApp((state) => state.putBot);
   const m = useT().chat.context;
   const [open, setOpen] = useState(false);
+  const [asking, setAsking] = useState(false);
+  const bots = useT().bots.header;
   const root = useRef<HTMLDivElement>(null);
   const close = useCallback(() => setOpen(false), []);
   useDismiss(open, root, close);
@@ -42,6 +46,8 @@ export function ContextMeter({ bot, onLater }: { bot: Bot; onLater(text: string)
   // Claude Code and Codex answer a request to compact (spec 30).
   const compactable = claude || bot.agent === "codex";
   const running = bot.state === "idle" || bot.state === "busy" || bot.state === "needs_approval";
+  // A sleeping bot wakes up to compact (spec 7.7).
+  const asleep = bot.state === "sleeping" && !bot.paused;
 
   const compact = async () => {
     // It waits its turn behind what the bot is doing.
@@ -50,12 +56,29 @@ export function ContextMeter({ bot, onLater }: { bot: Bot; onLater(text: string)
       putBot(await api.call("bots.compact", { botId: bot.id }));
       if (working) {
         onLater(m.later(bot.name));
+      } else if (asleep) {
+        onLater(m.waking(bot.name));
       }
     });
   };
 
   return (
     <div ref={root} className="shrink-0">
+      {asking && (
+        <Confirm
+          title={bots.fresh.title}
+          confirmLabel={m.freshConfirm}
+          onClose={() => setAsking(false)}
+          onConfirm={() =>
+            attempt(m.freshFailed, async () => {
+              putBot(await api.call("bots.restart", { botId: bot.id, fresh: true }));
+              setOpen(false);
+            })
+          }
+        >
+          {bots.fresh.body(bot.name)}
+        </Confirm>
+      )}
       {open && (
         <div
           role="dialog"
@@ -95,15 +118,27 @@ export function ContextMeter({ bot, onLater }: { bot: Bot; onLater(text: string)
             <div className="mt-3 border-line border-t pt-3">
               <Button
                 size="sm"
-                disabled={compacting || !running}
+                disabled={compacting || !(running || asleep)}
                 aria-busy={compacting}
                 onClick={compact}
               >
                 {compacting ? m.compacting : m.compact}
               </Button>
               <p className="mt-1.5 text-muted text-xs">
-                {running || compacting ? m.compactHint(bot.name) : m.notRunning(bot.name)}
+                {running || compacting
+                  ? m.compactHint(bot.name)
+                  : asleep
+                    ? m.asleep(bot.name)
+                    : m.notRunning(bot.name)}
               </p>
+            </div>
+          )}
+          {!bot.paused && (
+            <div className="mt-3 border-line border-t pt-3">
+              <Button size="sm" disabled={compacting} onClick={() => setAsking(true)}>
+                {m.fresh}
+              </Button>
+              <p className="mt-1.5 text-muted text-xs">{m.freshHint(bot.name)}</p>
             </div>
           )}
         </div>

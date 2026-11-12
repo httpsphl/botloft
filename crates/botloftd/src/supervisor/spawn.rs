@@ -235,6 +235,7 @@ pub(super) async fn settle(
     tokio::time::sleep(after).await;
     if let Some(daemon) = daemon.upgrade() {
         daemon.supervisor.ready(&bot, generation);
+        crate::context::woke(&daemon, &bot);
     }
 }
 
