@@ -15,6 +15,7 @@ mod browser_sites;
 mod builds;
 mod cards;
 mod chat;
+mod conversations;
 mod copier;
 mod crew_access;
 mod crews;
@@ -55,6 +56,7 @@ use rusqlite::{Connection, Row, ffi};
 
 pub use approvals::ApprovalRecord;
 pub use bots::BotRecord;
+pub use conversations::ConversationRecord;
 pub use copier::Copier;
 pub use crew_access::{AccessKinds, CrewAccessRecord};
 pub use deliveries::DeliveryOutcome;
@@ -255,6 +257,7 @@ pub(crate) mod tests {
             id: DeliveryId::generate(),
             message_id: message.id.clone(),
             bot_id: bot.clone(),
+            conversation_id: botloft_core::ids::ConversationId::main_of(bot),
             state: DeliveryState::Pending,
             attempts: 0,
             next_attempt_at: 0,

@@ -139,6 +139,7 @@ mod tests {
         };
         let item = ChatItem {
             id: ChatItemId::generate(),
+            conversation_id: botloft_core::ids::ConversationId::main_of(&bot_id),
             bot_id,
             body: ChatBody::Approval(ApprovalItem {
                 approval_id: approval.id.clone(),

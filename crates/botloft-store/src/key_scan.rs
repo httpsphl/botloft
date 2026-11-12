@@ -159,6 +159,7 @@ mod tests {
         let item = ChatItem {
             id: ChatItemId::generate(),
             bot_id: fx.bots[bot].id.clone(),
+            conversation_id: botloft_core::ids::ConversationId::main_of(&fx.bots[bot].id),
             body: ChatBody::Reply(ReplyItem {
                 text: text.to_owned(),
             }),

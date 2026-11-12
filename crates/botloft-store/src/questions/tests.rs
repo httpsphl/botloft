@@ -45,6 +45,7 @@ fn keep(
     let item = ChatItem {
         id: ChatItemId::generate(),
         bot_id: bot.clone(),
+        conversation_id: botloft_core::ids::ConversationId::main_of(bot),
         body: ChatBody::Question(QuestionItem {
             question: question.clone(),
         }),

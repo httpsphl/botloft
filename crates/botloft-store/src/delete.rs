@@ -49,6 +49,7 @@ const DELETE_BOT: &[&str] = &[
     "UPDATE tasks SET origin_task_id = NULL WHERE origin_task_id IN \
      (SELECT id FROM tasks WHERE requester_bot_id = ?1 OR assignee_bot_id = ?1)",
     "DELETE FROM tasks WHERE requester_bot_id = ?1 OR assignee_bot_id = ?1",
+    "DELETE FROM conversations WHERE bot_id = ?1",
     "UPDATE crews SET lead_bot_id = NULL WHERE lead_bot_id = ?1",
 ];
 

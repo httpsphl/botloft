@@ -5,17 +5,25 @@ use botloft_core::ids::{BotId, ChatItemId};
 use botloft_core::protocol::{ChatBody, ChatItem, ChatItemChanged};
 use tracing::warn;
 
+use crate::seat::Seat;
 use crate::state::{Daemon, Event};
 
-/// Saves a new item for `bot` and announces it with the bot's new
-/// conversation-list line.
-pub(crate) fn add(daemon: &Daemon, bot: &BotId, mut body: ChatBody) -> Option<ChatItem> {
+/// Saves a new item in the main conversation of `bot` and announces it
+/// with the bot's new conversation-list line.
+pub(crate) fn add(daemon: &Daemon, bot: &BotId, body: ChatBody) -> Option<ChatItem> {
+    add_to(daemon, &Seat::main(bot), body)
+}
+
+/// Saves a new item in the conversation of `seat` and announces it.
+pub(crate) fn add_to(daemon: &Daemon, seat: &Seat, mut body: ChatBody) -> Option<ChatItem> {
+    let bot = &seat.bot;
     // An agent's key never gets kept as it is (spec 32.6).
     crate::agent_keys::redact_body(daemon, bot, &mut body);
     let now = daemon.clock.now_ms();
     let item = ChatItem {
         id: ChatItemId::generate(),
         bot_id: bot.clone(),
+        conversation_id: seat.conversation.clone(),
         body,
         created_at: now,
         updated_at: now,

@@ -6,13 +6,13 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use botloft_core::ids::BotId;
 use botloft_core::protocol::AgentKind;
 use bytes::Bytes;
 use serde_json::{Value, json};
 
 use super::{Agent, LaunchFiles, LaunchPlan, OutputDecoder, Turn};
 use crate::chat::claude;
+use crate::seat::Seat;
 use crate::state::Daemon;
 
 /// Tools the bot uses without asking: its crew tools (spec 7.4).
@@ -165,7 +165,7 @@ impl OutputDecoder for ClaudeDecoder {
         claude::live_text(event)
     }
 
-    fn handle(&mut self, daemon: &Arc<Daemon>, bot: &BotId, generation: u64, event: &Value) {
+    fn handle(&mut self, daemon: &Arc<Daemon>, bot: &Seat, generation: u64, event: &Value) {
         claude::apply(daemon, bot, generation, event);
     }
 }

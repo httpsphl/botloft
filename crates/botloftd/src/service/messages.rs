@@ -2,7 +2,7 @@
 //! (spec 9.1).
 
 use botloft_core::envelope::QUOTED_REPLY_MAX_CHARS;
-use botloft_core::ids::{BotId, ChatItemId, DeliveryId, MessageId};
+use botloft_core::ids::{BotId, ChatItemId, ConversationId, DeliveryId, MessageId};
 use botloft_core::protocol::{
     ChatBody, ChatItem, Delivery, DeliveryState, Message, MessageKind, MessageReply,
     MessagesListParams, MessagesSendParams, SenderKind, Task,
@@ -37,6 +37,7 @@ pub fn send(daemon: &Daemon, params: MessagesSendParams) -> ApiResult<Message> {
     let store = daemon.store();
     // Archived or deleted while the files were saved.
     let (crew, bot) = bots::active(&store, &params.bot_id)?;
+    let conversation = conversation_of(&store, &bot.id, params.conversation_id)?;
     let reply_to = match &params.reply_to {
         Some(item) => Some(quote(&store, &bot.id, item)?),
         None => None,
@@ -56,10 +57,29 @@ pub fn send(daemon: &Daemon, params: MessagesSendParams) -> ApiResult<Message> {
         attachments,
         created_at: now,
     };
-    let sent = post(daemon, &store, message, None)?;
+    let sent = post_to(daemon, &store, message, None, conversation)?;
     drop(store);
     super::questions::close_notes(daemon, &sent.to_bot_id);
     Ok(sent)
+}
+
+/// The conversation of `bot` the owner writes to: the main one, or one of
+/// its others that is not archived (spec 40.2).
+fn conversation_of(
+    store: &Store,
+    bot: &BotId,
+    asked: Option<ConversationId>,
+) -> ApiResult<ConversationId> {
+    let Some(asked) = asked else {
+        return Ok(ConversationId::main_of(bot));
+    };
+    if asked.is_main_of(bot) {
+        return Ok(asked);
+    }
+    match store.conversation(&asked)? {
+        Some(found) if found.bot_id == *bot && found.archived_at.is_none() => Ok(asked),
+        _ => Err(ApiError::NotFound(format!("conversation {asked}"))),
+    }
 }
 
 /// What the owner replies to (spec 9.3): something the bot wrote, or a
@@ -95,8 +115,20 @@ fn quote(store: &Store, bot: &BotId, item_id: &ChatItemId) -> ApiResult<MessageR
 pub(crate) fn post(
     daemon: &Daemon,
     store: &Store,
+    message: Message,
+    task: Option<Task>,
+) -> ApiResult<Message> {
+    let main = ConversationId::main_of(&message.to_bot_id);
+    post_to(daemon, store, message, task, main)
+}
+
+/// [`post`] to one conversation of the receiver (spec 40.2).
+pub(crate) fn post_to(
+    daemon: &Daemon,
+    store: &Store,
     mut message: Message,
     task: Option<Task>,
+    conversation: ConversationId,
 ) -> ApiResult<Message> {
     // Neither the sender's keys nor the receiver's are kept or passed on as
     // they are (spec 32.6).
@@ -104,7 +136,7 @@ pub(crate) fn post(
     if let Some(from) = &message.from_bot_id {
         crate::agent_keys::redact_text(daemon, from, &mut message.body);
     }
-    let delivery = pending_delivery(&message);
+    let delivery = pending_delivery(&message, conversation);
     let item = store.insert_message(&message, &delivery, task.as_ref())?;
     let reactions = reactions::sent_with(store, &message)?;
     announce(daemon, task, &message, delivery, item);
@@ -112,12 +144,13 @@ pub(crate) fn post(
     Ok(message)
 }
 
-/// A new delivery of `message`, due now.
-pub(crate) fn pending_delivery(message: &Message) -> Delivery {
+/// A new delivery of `message` to `conversation` of its receiver, due now.
+pub(crate) fn pending_delivery(message: &Message, conversation: ConversationId) -> Delivery {
     Delivery {
         id: DeliveryId::generate(),
         message_id: message.id.clone(),
         bot_id: message.to_bot_id.clone(),
+        conversation_id: conversation,
         state: DeliveryState::Pending,
         attempts: 0,
         next_attempt_at: message.created_at,

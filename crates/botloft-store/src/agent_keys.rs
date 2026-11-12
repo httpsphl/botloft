@@ -104,6 +104,7 @@ mod tests {
                 .insert_chat_item(&ChatItem {
                     id: id.clone(),
                     bot_id: bot.clone(),
+                    conversation_id: botloft_core::ids::ConversationId::main_of(bot),
                     body,
                     created_at: at,
                     updated_at: at,

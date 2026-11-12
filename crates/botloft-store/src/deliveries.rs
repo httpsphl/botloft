@@ -8,8 +8,8 @@ use rusqlite::{Connection, OptionalExtension, Row, params};
 
 use crate::{Result, Store, cached_execute, cached_row, parse_column, to_sql_int};
 
-const COLUMNS: &str =
-    "id, message_id, bot_id, state, attempts, next_attempt_at, last_error, read_at, updated_at";
+const COLUMNS: &str = "id, message_id, bot_id, state, attempts, next_attempt_at, last_error, read_at, updated_at, \
+     conversation_id";
 
 /// Longest list `deliveries` returns.
 const LIST_LIMIT: u32 = 500;
@@ -25,6 +25,7 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<Delivery> {
         last_error: row.get(6)?,
         read_at: row.get(7)?,
         updated_at: row.get(8)?,
+        conversation_id: parse_column(row, 9)?,
     })
 }
 
@@ -49,7 +50,7 @@ impl Store {
         cached_execute(
             conn,
             &format!(
-                "INSERT INTO deliveries ({COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
+                "INSERT INTO deliveries ({COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)"
             ),
             params![
                 delivery.id.as_str(),
@@ -61,6 +62,7 @@ impl Store {
                 delivery.last_error,
                 delivery.read_at,
                 delivery.updated_at,
+                delivery.conversation_id.as_str(),
             ],
         )?;
         Ok(())

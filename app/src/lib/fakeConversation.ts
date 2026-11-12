@@ -2,6 +2,7 @@
 // to play the bots' and the courier's part.
 
 import { decodedSize } from "./base64";
+import { mainConversationOf } from "./conversations";
 import type { FakeBotloft, Handlers } from "./fake";
 import { conflict, invalid, notFound } from "./fakeRules";
 import {
@@ -211,6 +212,7 @@ export class FakeConversation {
       id: this.fake.id("dlv"),
       messageId: message.id,
       botId: message.toBotId,
+      conversationId: mainConversationOf(message.toBotId),
       state: "pending",
       attempts: 0,
       nextAttemptAt: this.fake.now,

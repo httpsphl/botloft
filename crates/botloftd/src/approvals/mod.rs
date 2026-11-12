@@ -378,6 +378,7 @@ fn open(
     let item = ChatItem {
         id: ChatItemId::generate(),
         bot_id: bot.clone(),
+        conversation_id: botloft_core::ids::ConversationId::main_of(bot),
         body,
         created_at: now,
         updated_at: now,

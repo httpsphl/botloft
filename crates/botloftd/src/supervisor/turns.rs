@@ -19,10 +19,10 @@ impl Supervisor {
     ) {
         let mut inner = self.lock();
         let Inner { slots, .. } = &mut *inner;
-        if let Some(slot) = slots.get_mut(bot)
-            && slot.generation == Some(generation)
-            && slot.running.is_some()
-        {
+        // Generations are unique: one names the conversation too.
+        if let Some(slot) = slots.values_mut().find(|slot| {
+            slot.bot == *bot && slot.generation == Some(generation) && slot.running.is_some()
+        }) {
             change(self, slot);
         }
     }
@@ -90,10 +90,9 @@ impl Supervisor {
     pub(crate) fn oldest_message_began(&self, bot: &BotId, generation: u64) -> Option<String> {
         let mut inner = self.lock();
         let Inner { slots, .. } = &mut *inner;
-        let slot = slots.get_mut(bot)?;
-        if slot.generation != Some(generation) || slot.running.is_none() {
-            return None;
-        }
+        let slot = slots.values_mut().find(|slot| {
+            slot.bot == *bot && slot.generation == Some(generation) && slot.running.is_some()
+        })?;
         let uuid = (!slot.waiting.is_empty()).then(|| slot.waiting.remove(0));
         slot.in_turn = true;
         if slot.is_working() {
@@ -125,6 +124,14 @@ impl Supervisor {
             }
             supervisor.relaunch_if_idle(bot, slot);
         });
+        // Another conversation of the bot may wait for room (spec 40.4).
+        let waits =
+            self.lock().slots.values().any(|slot| {
+                slot.bot == *bot && slot.state == BotState::Sleeping && slot.wake_asked
+            });
+        if waits {
+            self.wake();
+        }
     }
 
     /// A tool waits for the owner (spec 10.1).
@@ -180,12 +187,13 @@ impl Supervisor {
     pub(super) fn release_limits(&self, now_ms: i64) {
         let mut inner = self.lock();
         let Inner { slots, .. } = &mut *inner;
-        for (bot, slot) in slots.iter_mut() {
+        for slot in slots.values_mut() {
             let over = slot.limited_until.is_some_and(|until| until <= now_ms);
             if slot.state == BotState::RateLimited && over && slot.running.is_some() {
                 slot.limited_until = None;
                 let next = slot.working_state();
-                self.set_state(bot, slot, next);
+                let bot = slot.bot.clone();
+                self.set_state(&bot, slot, next);
             }
         }
     }

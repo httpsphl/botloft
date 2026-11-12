@@ -162,7 +162,7 @@ async fn run(
                 Some(Ok(_)) => None,
             },
             event = events.recv() => match event {
-                Ok(event) => Some(to_notification(&event)),
+                Ok(event) => to_notification(&event),
                 Err(broadcast::error::RecvError::Lagged(skipped)) => {
                     // The client's view is stale; it reloads on reconnect.
                     warn!(skipped, "closing an app connection that fell behind");

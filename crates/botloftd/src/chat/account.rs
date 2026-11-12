@@ -8,6 +8,7 @@ use botloft_core::protocol::{
 use serde_json::Value;
 
 use super::{claude, items};
+use crate::seat::Seat;
 use crate::service::resume;
 use crate::state::Daemon;
 
@@ -79,7 +80,7 @@ pub(super) fn failed_turn(
     }
 }
 
-pub(super) fn rate_limit(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
+pub(super) fn rate_limit(daemon: &Daemon, bot: &Seat, generation: u64, event: &Value) {
     let info = &event["rate_limit_info"];
     let seconds = |value: &Value| value.as_i64().map(|s| s * 1000);
     let mut windows: Vec<UsageWindow> = info["unifiedWindows"]

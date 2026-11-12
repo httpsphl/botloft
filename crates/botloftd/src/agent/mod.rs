@@ -16,7 +16,6 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use botloft_core::ids::BotId;
 use botloft_core::protocol::{AgentKind, BotEffort, BotModel, PermissionMode};
 use bytes::Bytes;
 use serde_json::Value;
@@ -26,6 +25,7 @@ pub use claude::ClaudeAgent;
 pub use codex::{CodexAgent, models as codex_models};
 
 use crate::runtime::ProcessControl;
+use crate::seat::Seat;
 use crate::state::Daemon;
 
 /// One image that goes in the turn, already read and encoded.
@@ -112,7 +112,7 @@ pub trait OutputDecoder: Send {
     /// and tells the supervisor, through `chat::sink` for what every agent has
     /// and its own code for the rest. Lines from a process that was replaced
     /// say nothing about the new one.
-    fn handle(&mut self, daemon: &Arc<Daemon>, bot: &BotId, generation: u64, event: &Value);
+    fn handle(&mut self, daemon: &Arc<Daemon>, bot: &Seat, generation: u64, event: &Value);
 }
 
 pub trait Agent: Send + Sync + 'static {

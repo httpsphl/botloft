@@ -109,6 +109,11 @@ export type VersionId = string;
 export type ImportId = string;
 
 /**
+ * Identifies one conversation of a bot (spec 40).
+ */
+export type ConversationId = string;
+
+/**
  * A group of bots that can message each other and share a folder.
  */
 export type Crew = { id: CrewId, name: string, 
@@ -933,7 +938,11 @@ text: string, };
 /**
  * Getting one message into one bot's process.
  */
-export type Delivery = { id: DeliveryId, messageId: MessageId, botId: BotId, state: DeliveryState, 
+export type Delivery = { id: DeliveryId, messageId: MessageId, botId: BotId, 
+/**
+ * The conversation of the bot it goes to (spec 40.2).
+ */
+conversationId: ConversationId, state: DeliveryState, 
 /**
  * Failed attempts so far. Waiting for the bot to be ready is not one.
  */
@@ -991,7 +1000,12 @@ attachments?: Array<AttachmentUpload>,
 /**
  * A reply of the bot, or a message it got, in its chat (spec 9.3).
  */
-replyTo?: ChatItemId, };
+replyTo?: ChatItemId, 
+/**
+ * The conversation of the bot it goes to; the main one without it
+ * (spec 40.2).
+ */
+conversationId?: ConversationId, };
 
 /**
  * Newest first. Page back with `before` set to the oldest id received.
@@ -2806,7 +2820,11 @@ export type ChatBody = { "kind": "inbound" } & InboundItem | { "kind": "reply" }
 /**
  * One entry of a bot's chat.
  */
-export type ChatItem = { id: ChatItemId, botId: BotId, body: ChatBody, 
+export type ChatItem = { id: ChatItemId, botId: BotId, 
+/**
+ * The conversation of the bot it belongs to (spec 40).
+ */
+conversationId: ConversationId, body: ChatBody, 
 /**
  * Unix time in milliseconds.
  */
@@ -2877,7 +2895,7 @@ answeredAt: number | null, };
 /**
  * Text the bot is writing right now, in order (spec 8.3).
  */
-export type ChatDelta = { botId: BotId, text: string, };
+export type ChatDelta = { botId: BotId, conversationId: ConversationId, text: string, };
 
 /**
  * Newest first. Page back with `before` set to the oldest id received.

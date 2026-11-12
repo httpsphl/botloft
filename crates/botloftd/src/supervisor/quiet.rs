@@ -13,6 +13,7 @@ use tracing::{info, warn};
 use super::Supervisor;
 use super::slot::Slot;
 use crate::chat::{control, items};
+use crate::seat::Seat;
 use crate::state::Daemon;
 
 /// How long a working process may print nothing.
@@ -34,8 +35,10 @@ impl Supervisor {
     /// The process printed something: its turn is not stuck.
     pub(crate) fn heard(&self, bot: &BotId, generation: u64) {
         let mut inner = self.lock();
-        if let Some(slot) = inner.slots.get_mut(bot)
-            && slot.generation == Some(generation)
+        if let Some(slot) = inner
+            .slots
+            .values_mut()
+            .find(|slot| slot.bot == *bot && slot.generation == Some(generation))
         {
             slot.quiet_since = Some(Instant::now());
             slot.quiet_stop = None;
@@ -47,15 +50,15 @@ impl Supervisor {
         let mut inner = self.lock();
         inner
             .slots
-            .get_mut(bot)
-            .filter(|slot| slot.generation == Some(generation))
+            .values_mut()
+            .find(|slot| slot.bot == *bot && slot.generation == Some(generation))
             .is_some_and(|slot| std::mem::take(&mut slot.quiet_stopped))
     }
 
     /// Stops the turns that went quiet (checked while reconciling).
     pub(super) fn watch_turns(&self, daemon: &Daemon) {
         let now = Instant::now();
-        let steps: Vec<(BotId, Step)> = {
+        let steps: Vec<(Seat, Step)> = {
             let mut inner = self.lock();
             let last = inner.watched_at.replace(now);
             // Time the computer spent asleep is nobody's silence.
@@ -69,15 +72,18 @@ impl Supervisor {
             inner
                 .slots
                 .iter_mut()
-                .filter_map(|(bot, slot)| step(slot, now).map(|step| (bot.clone(), step)))
+                .filter_map(|(conversation, slot)| {
+                    let seat = Seat::new(slot.bot.clone(), conversation.clone());
+                    step(slot, now).map(|step| (seat, step))
+                })
                 .collect()
         };
-        for (bot, step) in steps {
+        for (seat, step) in steps {
             match step {
-                Step::Stop => self.stop_quiet(daemon, &bot),
+                Step::Stop => self.stop_quiet(daemon, &seat),
                 Step::Restart => {
-                    info!(bot = %bot, "a quiet turn did not stop: starting the bot again");
-                    self.restart(&bot, false);
+                    info!(bot = %seat, "a quiet turn did not stop: starting the bot again");
+                    self.restart_in(&seat.bot, &seat.conversation, false);
                 }
             }
         }
@@ -85,7 +91,7 @@ impl Supervisor {
 
     /// Asks the bot's agent to end the turn, or starts it again when the
     /// agent cannot be asked, and says so in the chat.
-    fn stop_quiet(&self, daemon: &Daemon, bot: &BotId) {
+    fn stop_quiet(&self, daemon: &Daemon, bot: &Seat) {
         info!(bot = %bot, "a turn printed nothing for {} minutes: stopping it", QUIET_FOR.as_secs() / 60);
         let agent = match daemon.store().bot(bot) {
             Ok(Some(record)) => crate::agent::of(record.agent),
@@ -97,12 +103,12 @@ impl Supervisor {
         };
         let asked = agent.is_some_and(|agent| agent.can_interrupt())
             && self
-                .write_control(bot, control::interrupt_request())
+                .write_control_to(&bot.conversation, control::interrupt_request())
                 .is_ok();
         if !asked {
-            self.restart(bot, false);
+            self.restart_in(&bot.bot, &bot.conversation, false);
         }
-        items::add(
+        items::add_to(
             daemon,
             bot,
             ChatBody::Notice(NoticeItem {

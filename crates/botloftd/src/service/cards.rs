@@ -3,6 +3,7 @@
 //! which goes to the bot as the owner's message.
 
 use botloft_core::envelope::QUOTED_REPLY_MAX_CHARS;
+use botloft_core::ids::ConversationId;
 use botloft_core::ids::{BotId, ChatItemId, MessageId};
 use botloft_core::protocol::{
     CardAnswer, CardBlock, CardItem, ChatActParams, ChatBody, ChatItem, Message, MessageKind,
@@ -105,7 +106,8 @@ pub fn act(daemon: &Daemon, params: ChatActParams) -> ApiResult<ChatItem> {
         attachments: Vec::new(),
         created_at: now,
     };
-    let delivery = messages::pending_delivery(&message);
+    let delivery =
+        messages::pending_delivery(&message, ConversationId::main_of(&message.to_bot_id));
     let answered = ChatBody::Card(CardItem {
         answer: Some(CardAnswer {
             version: card.version,

@@ -16,6 +16,7 @@ use botloft_core::protocol::ChatDelta;
 use tracing::{debug, warn};
 
 use crate::agent::OutputDecoder;
+use crate::seat::Seat;
 use crate::state::{Daemon, Event};
 
 /// Longest line kept; anything longer is dropped whole (spec 8.1).
@@ -31,7 +32,8 @@ const LIVE_TEXT_MAX: usize = 4 << 10;
 /// Splits one process's stdout into lines. Lines may arrive split across
 /// chunks, and one chunk may hold several.
 pub struct StreamReader {
-    bot: BotId,
+    /// The bot and the conversation the process holds (spec 40).
+    bot: Seat,
     generation: u64,
     /// Reads the lines: they are the agent's own protocol.
     decoder: Box<dyn OutputDecoder>,
@@ -43,7 +45,7 @@ pub struct StreamReader {
 }
 
 impl StreamReader {
-    pub fn new(bot: BotId, generation: u64, decoder: Box<dyn OutputDecoder>) -> Self {
+    pub fn new(bot: Seat, generation: u64, decoder: Box<dyn OutputDecoder>) -> Self {
         Self {
             bot,
             generation,
@@ -55,6 +57,10 @@ impl StreamReader {
     }
 
     pub fn bot(&self) -> &BotId {
+        &self.bot.bot
+    }
+
+    pub fn seat(&self) -> &Seat {
         &self.bot
     }
 
@@ -71,7 +77,8 @@ impl StreamReader {
     pub fn flush(&mut self, daemon: &Daemon) {
         if !self.live.is_empty() {
             daemon.emit(Event::ChatDelta(ChatDelta {
-                bot_id: self.bot.clone(),
+                bot_id: self.bot.bot.clone(),
+                conversation_id: self.bot.conversation.clone(),
                 text: std::mem::take(&mut self.live),
             }));
         }

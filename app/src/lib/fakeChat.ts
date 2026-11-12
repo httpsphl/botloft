@@ -1,6 +1,7 @@
 // The fake daemon's chats and approvals, with helpers for tests to play
 // the bot: live text, replies, tool calls and permission requests.
 
+import { mainConversationOf } from "./conversations";
 import type { FakeBotloft, Handlers } from "./fake";
 import { scopeOf } from "./fakeAllow";
 import { conflict, notFound } from "./fakeRules";
@@ -105,6 +106,7 @@ export class FakeChat {
     const item: ChatItem = {
       id: this.fake.id("cht"),
       botId,
+      conversationId: mainConversationOf(botId),
       body,
       createdAt: this.fake.now,
       updatedAt: this.fake.now,
@@ -116,7 +118,10 @@ export class FakeChat {
 
   /** Text the bot is writing right now. */
   delta(botId: BotId, text: string): void {
-    this.fake.emit({ name: "chat.delta", params: { botId, text } });
+    this.fake.emit({
+      name: "chat.delta",
+      params: { botId, conversationId: mainConversationOf(botId), text },
+    });
   }
 
   reply(botId: BotId, text: string): ChatItem {

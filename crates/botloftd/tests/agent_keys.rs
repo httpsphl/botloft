@@ -97,6 +97,7 @@ async fn what_the_agent_prints_and_the_owner_sends_keep_only_the_name() {
             body: format!("use {TOKEN} please"),
             attachments: None,
             reply_to: None,
+            conversation_id: None,
         },
     )
     .expect("send");

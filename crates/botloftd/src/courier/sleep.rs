@@ -44,6 +44,7 @@ pub(super) async fn became_ready(states: &mut broadcast::Receiver<Event>) -> Opt
             {
                 return Some(change.bot_id);
             }
+            Ok(Event::ConversationReady(seat)) => return Some(seat.bot),
             Ok(_) => {}
             Err(broadcast::error::RecvError::Lagged(_)) => return None,
             Err(broadcast::error::RecvError::Closed) => std::future::pending().await,

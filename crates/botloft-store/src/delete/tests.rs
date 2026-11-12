@@ -84,6 +84,7 @@ fn fill(fx: &Fixture) -> Owned {
     let item = ChatItem {
         id: ChatItemId::generate(),
         bot_id: scout.clone(),
+        conversation_id: botloft_core::ids::ConversationId::main_of(scout),
         body: ChatBody::Approval(ApprovalItem {
             approval_id: approval.id.clone(),
             tool_name: approval.tool_name.clone(),

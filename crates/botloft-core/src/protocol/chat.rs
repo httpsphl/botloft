@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::{AllowScope, CardItem, Message, Question, TokenUsage};
-use crate::ids::{ApprovalId, BotId, ChatItemId};
+use crate::ids::{ApprovalId, BotId, ChatItemId, ConversationId};
 
 text_enum!(
     /// Where a tool call the bot made stands.
@@ -88,6 +88,8 @@ text_enum!(
 pub struct ChatItem {
     pub id: ChatItemId,
     pub bot_id: BotId,
+    /// The conversation of the bot it belongs to (spec 40).
+    pub conversation_id: ConversationId,
     pub body: ChatBody,
     /// Unix time in milliseconds.
     pub created_at: i64,
@@ -294,6 +296,7 @@ pub struct ChatItemChanged {
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct ChatDelta {
     pub bot_id: BotId,
+    pub conversation_id: ConversationId,
     pub text: String,
 }
 

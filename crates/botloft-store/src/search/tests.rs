@@ -10,6 +10,7 @@ fn reply(store: &Store, bot: &BotId, text: &str) -> ChatItem {
     let item = ChatItem {
         id: ChatItemId::generate(),
         bot_id: bot.clone(),
+        conversation_id: botloft_core::ids::ConversationId::main_of(bot),
         body: ChatBody::Reply(ReplyItem { text: text.into() }),
         created_at: 0,
         updated_at: 0,
@@ -85,6 +86,7 @@ fn filters_paging_and_what_is_left_out() {
     let tool = ChatItem {
         id: ChatItemId::generate(),
         bot_id: scout.clone(),
+        conversation_id: botloft_core::ids::ConversationId::main_of(scout),
         body: ChatBody::Tool(ToolItem {
             tool_use_id: "toolu_1".into(),
             name: "Bash".into(),

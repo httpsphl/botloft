@@ -5,9 +5,10 @@ use botloft_core::protocol::notification;
 use super::jsonrpc;
 use crate::state::Event;
 
-pub(super) fn to_notification(event: &Event) -> String {
+/// `None` for what only the daemon hears.
+pub(super) fn to_notification(event: &Event) -> Option<String> {
     use jsonrpc::notification as note;
-    match event {
+    Some(match event {
         Event::CrewChanged(crew) => note(notification::CREW_CHANGED, crew),
         Event::CrewDeleted(crew) => note(notification::CREW_DELETED, crew),
         Event::BotChanged(bot) => note(notification::BOT_CHANGED, bot),
@@ -45,5 +46,6 @@ pub(super) fn to_notification(event: &Event) -> String {
         Event::AutoBackupChanged(status) => note(notification::AUTOBACKUP_CHANGED, status),
         Event::MobileChanged(status) => note(notification::MOBILE_CHANGED, status),
         Event::MobilePairRequest(request) => note(notification::MOBILE_PAIR_REQUEST, request),
-    }
+        Event::ConversationReady(_) => return None,
+    })
 }

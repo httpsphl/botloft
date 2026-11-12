@@ -9,7 +9,7 @@ use rusqlite::{Connection, OptionalExtension, Row, params};
 
 use crate::{Result, Store, cached_execute, cached_row, parse_column};
 
-pub(crate) const COLUMNS: &str = "id, bot_id, data, created_at, updated_at";
+pub(crate) const COLUMNS: &str = "id, bot_id, data, created_at, updated_at, conversation_id";
 
 pub(crate) fn from_row(row: &Row<'_>) -> rusqlite::Result<ChatItem> {
     let data: String = row.get(2)?;
@@ -18,6 +18,7 @@ pub(crate) fn from_row(row: &Row<'_>) -> rusqlite::Result<ChatItem> {
     Ok(ChatItem {
         id: parse_column(row, 0)?,
         bot_id: parse_column(row, 1)?,
+        conversation_id: parse_column(row, 5)?,
         body,
         created_at: row.get(3)?,
         updated_at: row.get(4)?,
@@ -52,8 +53,8 @@ impl Store {
     pub(crate) fn insert_chat_item_in(conn: &Connection, item: &ChatItem) -> Result<()> {
         cached_execute(
             conn,
-            "INSERT INTO chat_items (id, bot_id, kind, data, created_at, updated_at) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO chat_items (id, bot_id, kind, data, created_at, updated_at, \
+             conversation_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 item.id.as_str(),
                 item.bot_id.as_str(),
@@ -61,6 +62,7 @@ impl Store {
                 json(&item.body)?,
                 item.created_at,
                 item.updated_at,
+                item.conversation_id.as_str(),
             ],
         )?;
         Ok(())

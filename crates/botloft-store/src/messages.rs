@@ -154,6 +154,7 @@ impl Store {
         let item = ChatItem {
             id: ChatItemId::generate(),
             bot_id: message.to_bot_id.clone(),
+            conversation_id: delivery.conversation_id.clone(),
             body: ChatBody::Inbound(InboundItem {
                 message: message.clone(),
             }),

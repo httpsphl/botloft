@@ -77,6 +77,7 @@ async fn a_message_that_joins_the_runs_turn_leaves_the_run_to_it() {
             body: "one more thing".into(),
             attachments: None,
             reply_to: None,
+            conversation_id: None,
         },
     )
     .expect("send");

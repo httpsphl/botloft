@@ -13,14 +13,15 @@ use serde_json::Value;
 use tracing::warn;
 
 use super::items;
+use crate::seat::Seat;
 use crate::state::{Daemon, Event};
 use crate::{routines, screens};
 
 /// The bot's reply text; nothing for an empty one.
-pub(crate) fn reply(daemon: &Daemon, bot: &BotId, text: &str) {
+pub(crate) fn reply(daemon: &Daemon, bot: &Seat, text: &str) {
     let text = text.trim();
     if !text.is_empty() {
-        items::add(
+        items::add_to(
             daemon,
             bot,
             ChatBody::Reply(ReplyItem {
@@ -31,8 +32,8 @@ pub(crate) fn reply(daemon: &Daemon, bot: &BotId, text: &str) {
 }
 
 /// A tool the bot began to use, shown as running.
-pub(crate) fn tool_started(daemon: &Daemon, bot: &BotId, id: &str, name: &str, input: &Value) {
-    items::add(
+pub(crate) fn tool_started(daemon: &Daemon, bot: &Seat, id: &str, name: &str, input: &Value) {
+    items::add_to(
         daemon,
         bot,
         ChatBody::Tool(ToolItem {
@@ -85,7 +86,7 @@ pub(crate) enum Stopped {
 /// says, and the error it ended with, if any, or who stopped it.
 pub(crate) fn turn_finished(
     daemon: &Daemon,
-    bot: &BotId,
+    bot: &Seat,
     duration_ms: u64,
     tokens: Option<TokenUsage>,
     error: Option<String>,
@@ -93,7 +94,7 @@ pub(crate) fn turn_finished(
 ) {
     // A failed turn goes to the crew's chief (spec 10.6).
     crate::failures::turn_ended(daemon, bot, error.as_deref(), stopped == Stopped::ByBotloft);
-    items::add(
+    items::add_to(
         daemon,
         bot,
         ChatBody::Turn(TurnItem {
@@ -124,16 +125,18 @@ pub(crate) fn message_read(daemon: &Daemon, bot: &BotId, uuid: &str) {
 }
 
 /// The agent has a conversation the next start resumes (spec 7.3).
-pub(crate) fn session_started(daemon: &Daemon, bot: &BotId, session: &str) {
+pub(crate) fn session_started(daemon: &Daemon, bot: &Seat, session: &str) {
     let store = daemon.store();
-    let known = store.session_id(bot).ok().flatten();
+    let known = store.conversation_session(&bot.conversation).ok().flatten();
     if known.as_deref() != Some(session)
-        && let Err(err) = store.set_session_id(bot, Some(session))
+        && let Err(err) = store.set_conversation_session(&bot.bot, &bot.conversation, Some(session))
     {
         warn!(bot = %bot, "could not save the session id: {err}");
     }
     drop(store);
-    daemon.supervisor.remember_session(bot, session);
+    daemon
+        .supervisor
+        .remember_session(&bot.conversation, session);
 }
 
 /// Everything that follows the end of a turn, whatever the agent: the

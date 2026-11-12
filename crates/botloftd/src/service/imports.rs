@@ -184,6 +184,7 @@ pub fn send(daemon: &Daemon, params: ImportIdParams) -> ApiResult<ImportSent> {
                 data: BASE64.encode(&bytes),
             }]),
             reply_to: None,
+            conversation_id: None,
         },
     )?;
     daemon

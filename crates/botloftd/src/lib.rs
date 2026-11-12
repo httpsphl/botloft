@@ -37,6 +37,7 @@ pub mod routines;
 pub mod rpc;
 pub mod runtime;
 pub mod screens;
+pub mod seat;
 pub mod secrets;
 pub mod server;
 pub mod service;

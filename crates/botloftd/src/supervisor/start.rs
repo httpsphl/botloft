@@ -6,6 +6,7 @@
 use std::io;
 use std::sync::Arc;
 
+use botloft_core::ids::ConversationId;
 use botloft_core::protocol::{AgentKind, BotState, Crew};
 use botloft_store::BotRecord;
 use tokio::time::Instant;
@@ -19,12 +20,15 @@ use crate::chat::{StreamReader, control};
 use crate::context;
 use crate::runtime::Process;
 use crate::runtime::claude::Claude;
+use crate::seat::Seat;
 use crate::state::Daemon;
 
 /// A bot the reconcile pass decided to start.
 pub(super) struct Start {
     crew: Crew,
     bot: BotRecord,
+    /// The conversation of the bot this process holds (spec 40).
+    conversation: ConversationId,
     /// Claude Code, for the bots that run on it; others start without.
     claude: Option<Claude>,
     /// The conversation to resume; `None` starts a new one.
@@ -34,6 +38,10 @@ pub(super) struct Start {
 impl Start {
     pub(super) fn bot_id(&self) -> &botloft_core::ids::BotId {
         &self.bot.id
+    }
+
+    pub(super) fn conversation(&self) -> &ConversationId {
+        &self.conversation
     }
 }
 
@@ -45,6 +53,7 @@ impl Supervisor {
         inner: &mut Inner,
         crew: &Crew,
         bot: &BotRecord,
+        conversation: &ConversationId,
     ) -> Option<Start> {
         let Inner {
             slots,
@@ -52,7 +61,7 @@ impl Supervisor {
             claude,
             ..
         } = inner;
-        let slot = slots.get_mut(&bot.id)?;
+        let slot = slots.get_mut(conversation)?;
         let claude = match claude {
             ClaudeStatus::Ready(claude) => Some(claude.clone()),
             // A bot on another agent does not need Claude Code (spec 30).
@@ -68,11 +77,12 @@ impl Supervisor {
         let session = if slot.fresh_next {
             None
         } else {
-            sessions.get(&bot.id).cloned()
+            sessions.get(conversation).cloned()
         };
         Some(Start {
             crew: crew.clone(),
             bot: bot.clone(),
+            conversation: conversation.clone(),
             claude,
             session,
         })
@@ -90,16 +100,19 @@ impl Supervisor {
         )
         .and_then(|(spec, launch)| Ok((self.runtime.spawn(spec)?, launch)));
         let mut inner = self.lock();
-        self.commit(&mut inner, daemon, &start.bot, launched);
+        self.commit(&mut inner, daemon, &start, launched);
     }
 
     fn commit(
         &self,
         inner: &mut Inner,
         daemon: &Arc<Daemon>,
-        bot: &BotRecord,
+        start: &Start,
         launched: io::Result<(Process, Launch)>,
     ) {
+        let bot = &start.bot;
+        let conversation = &start.conversation;
+        let main = conversation.is_main_of(&bot.id);
         let Inner {
             slots,
             tokens,
@@ -109,7 +122,7 @@ impl Supervisor {
             ..
         } = inner;
         // Deleted while it started: the process goes with it.
-        let slot = match slots.get_mut(&bot.id) {
+        let slot = match slots.get_mut(conversation) {
             Some(slot) if !gone.contains(&bot.id) => slot,
             _ => {
                 if let Ok((process, _)) = launched
@@ -150,18 +163,22 @@ impl Supervisor {
                 let _ = writer.write(ask);
             }
         }
-        // Each connected tool says whether it came up (spec 25.5).
-        crate::service::mcp_state::forget(daemon, &bot.id);
-        if launch.connected && speaks {
-            let _ = writer.write(control::mcp_request());
+        // What is still the bot's, not each conversation's, follows the
+        // main one (spec 40.9, C2).
+        if main {
+            // Each connected tool says whether it came up (spec 25.5).
+            crate::service::mcp_state::forget(daemon, &bot.id);
+            if launch.connected && speaks {
+                let _ = writer.write(control::mcp_request());
+            }
+            context::process_started(daemon, &bot.id, launch.resumed);
         }
-        context::process_started(daemon, &bot.id, launch.resumed);
         // A new conversation is on disk only once it has a turn (spec
         // 7.3); the one it takes the place of is left behind.
         if !launch.resumed
-            && let Some(old) = sessions.remove(&bot.id)
+            && let Some(old) = sessions.remove(conversation)
         {
-            replaced.push((bot.id.clone(), old));
+            replaced.push((bot.id.clone(), conversation.clone(), old));
         }
         slot.generation = Some(generation);
         slot.restart_at = None;
@@ -181,7 +198,8 @@ impl Supervisor {
         slot.state = BotState::Launching;
         self.announce(&bot.id, slot);
         debug!(bot = %bot.id, generation, pid = ?pid, resumed = launch.resumed, "bot started");
-        let reader = StreamReader::new(bot.id.clone(), generation, decoder);
+        let seat = Seat::new(bot.id.clone(), conversation.clone());
+        let reader = StreamReader::new(seat, generation, decoder);
         tokio::spawn(pump(self.daemon.clone(), reader, events));
         tokio::spawn(settle(
             self.daemon.clone(),
