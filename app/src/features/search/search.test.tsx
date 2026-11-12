@@ -112,3 +112,24 @@ test("snippets split into text and found words", () => {
     { text: "more", found: true },
   ]);
 });
+
+test("a result in another conversation says so and opens there", async () => {
+  const fake = new FakeBotloft();
+  const ops = fake.addCrew("Ops");
+  const scout = fake.addBot(ops.id, "Scout");
+  fake.setBotState(scout.id, "idle");
+  fake.chat.reply(scout.id, "Main talk about soup.");
+  const trip = fake.conversations.add(scout.id, "Trip plans");
+  fake.chat.reply(scout.id, "Lisbon hotels are booked.", trip.id);
+  renderApp(fake);
+  await crewOpened("Ops");
+  fireEvent.keyDown(window, { key: "k", ctrlKey: true });
+  const results = await search("hotels");
+  const row = within(results).getByRole("button", { name: /Scout/ });
+  expect(row.textContent).toContain("Trip plans");
+
+  fireEvent.click(row);
+  const chat = await screen.findByRole("list", { name: "Messages" });
+  expect(await within(chat).findByText("Lisbon hotels are booked.")).toBeDefined();
+  expect(within(chat).queryByText("Main talk about soup.")).toBeNull();
+});

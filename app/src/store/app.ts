@@ -30,6 +30,7 @@ import {
   conversationActions,
   loadOpen,
   openConversationOf,
+  rememberConversation,
   withConversation,
 } from "./conversations";
 import { withQuestion } from "./questions";
@@ -123,8 +124,8 @@ export interface AppState {
   clearSettingsPart(): void;
   /** The Permissions page took where to open. */
   clearPermissionsAt(): void;
-  /** Opens the bot's chat at one of its items. */
-  openAt(botId: BotId, itemId: ChatItemId): void;
+  /** Opens the bot's chat at one of its items, in its conversation when given (spec 40.7). */
+  openAt(botId: BotId, itemId: ChatItemId, conversationId?: ConversationId): void;
   setPanel(botId: BotId, panel: BotPanel | null): void;
   /** Reads the agent's conversations. */
   loadConversations(botId: BotId): Promise<void>;
@@ -261,7 +262,12 @@ export function createAppStore(api: BotloftApi): AppStore {
         }
       },
       selectBot: (botId) => openBot(botId, null),
-      openAt: (botId, itemId) => openBot(botId, { botId, itemId }),
+      openAt: (botId, itemId, conversationId) => {
+        if (conversationId) {
+          rememberConversation(get, set, botId, conversationId);
+        }
+        openBot(botId, { botId, itemId });
+      },
       openPage: (page) => {
         if (get().page !== page) {
           set({ page, selectedCrewId: null, selectedBotId: null });
