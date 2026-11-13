@@ -22,7 +22,9 @@ const split = (usedTokens: number): ContextUsage => ({
     { kind: "skills", tokens: 2_210 },
     { kind: "buffer", tokens: 33_000 },
   ],
-  memoryFiles: [{ path: "C:\\Users\\owner\\Botloft\\ops\\scout\\CLAUDE.md", tokens: 299 }],
+  memoryFiles: [
+    { path: "C:\\Users\\owner\\Botloft\\ops\\scout\\CLAUDE.md", tokens: 299, lines: 40 },
+  ],
 });
 
 async function openOverview(
@@ -92,6 +94,35 @@ describe("the overview's conversation space (spec 33.3)", () => {
     expect(item.textContent).toContain("CLAUDE.md");
     expect(item.textContent).toContain("scout");
     expect(item.getAttribute("title")).toBe("C:\\Users\\owner\\Botloft\\ops\\scout\\CLAUDE.md");
+  });
+
+  test("warns when the agent's own memory is past 200 lines and asks it to tidy", async () => {
+    const long = (path: string, lines: number) => ({
+      ...split(24_200),
+      memoryFiles: [{ path, tokens: 4_000, lines }],
+    });
+    const own = "c:/users/owner/botloft/ops/scout/CLAUDE.md";
+    // Exactly 200 lines, or another file that long: no warning.
+    for (const context of [
+      long(own, 200),
+      long("C:\\Users\\owner\\Botloft\\ops\\shared\\CLAUDE.md", 900),
+    ]) {
+      const { panel } = await openOverview(context);
+      expect(within(panel).queryByRole("alert")).toBeNull();
+      cleanup();
+    }
+    const { fake, scout, panel } = await openOverview(long(own, 248));
+    const alert = within(panel).getByRole("alert");
+    expect(alert.textContent).toContain("Scout's memory has 248 lines");
+    fireEvent.click(within(alert).getByRole("button", { name: "Ask Scout to tidy it" }));
+    expect(await within(alert).findByRole("button", { name: "Asked" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+    const sent = fake.calls.filter((call) => call.method === "messages.send");
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.params).toMatchObject({ botId: scout.id });
+    expect(JSON.stringify(sent[0]?.params)).toContain("over 200 lines");
   });
 
   test("an engine that gives only the total says so", async () => {

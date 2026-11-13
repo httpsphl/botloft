@@ -40,6 +40,19 @@ export function freeTokens(context: ContextUsage, parts: ContextPart[]): number 
   return Math.max(0, context.windowTokens - context.usedTokens - buffer);
 }
 
+/** Past this, the agent's own memory is too long (spec 8.12). */
+export const MEMORY_LINES = 200;
+
+/** Whether `path` is the agent's own memory, the CLAUDE.md in its folder. */
+export function isOwnMemory(path: string, workspace: string): boolean {
+  const plain = (value: string) =>
+    value
+      .replace(/[\\/]+/g, "/")
+      .replace(/\/$/, "")
+      .toLowerCase();
+  return plain(path) === `${plain(workspace)}/claude.md`;
+}
+
 /** "CLAUDE.md" and the folder it is in, from an absolute path. */
 export function fileAndFolder(path: string): { name: string; folder: string } {
   const pieces = path.split(/[\\/]+/).filter(Boolean);

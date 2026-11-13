@@ -28,6 +28,14 @@ export const overview = {
     },
     memory: "Memory files",
     memoryHint: (bot: string) => `What ${bot} reads at the start of every conversation.`,
+    longMemory: (bot: string, lines: number) => `${bot}'s memory has ${lines} lines`,
+    longMemoryHint: (bot: string) =>
+      `All of it is read at the start of every conversation. Past 200 lines it uses more of your plan, and ${bot} follows it less closely.`,
+    tidy: (bot: string) => `Ask ${bot} to tidy it`,
+    tidyAsked: "Asked",
+    tidyFailed: "Could not send the request",
+    tidyRequest:
+      "Your memory (CLAUDE.md) is over 200 lines. Tidy it the way your rules say: merge repeats, drop what is past its date or no longer true, and move details into files in memory/.",
   },
   background: {
     title: "Running in the background",

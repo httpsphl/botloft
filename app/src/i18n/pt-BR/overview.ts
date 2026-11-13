@@ -30,6 +30,14 @@ export const overview: Messages["overview"] = {
     },
     memory: "Arquivos de memória",
     memoryHint: (bot) => `O que ${bot} lê no começo de toda conversa.`,
+    longMemory: (bot, lines) => `A memória de ${bot} tem ${lines} linhas`,
+    longMemoryHint: (bot) =>
+      `Ela é lida inteira no começo de toda conversa. Acima de 200 linhas, gasta mais do seu plano e ${bot} a segue com menos cuidado.`,
+    tidy: (bot) => `Pedir para ${bot} arrumar`,
+    tidyAsked: "Pedido enviado",
+    tidyFailed: "Não deu para enviar o pedido",
+    tidyRequest:
+      "Sua memória (CLAUDE.md) passou de 200 linhas. Arrume-a como suas regras dizem: junte o que se repete, tire o que venceu ou não vale mais e mova os detalhes para arquivos em memory/.",
   },
   background: {
     title: "Em segundo plano",

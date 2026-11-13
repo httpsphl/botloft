@@ -1,15 +1,24 @@
 // How full the agent's conversation is, and with what (spec 33.3): the
 // total, a bar with a color per part, the parts with their share of the
-// window, the memory files, and the button to compact now.
+// window, the memory files (with a warning when the agent's own memory
+// is too long, spec 8.12), and the button to compact now.
 
-import { useId } from "react";
+import { useId, useState } from "react";
 import { useT } from "../../i18n";
 import { planPercent, tokens } from "../../lib/format";
 import type { Bot, ContextFile, ContextUsage } from "../../lib/protocol.gen";
 import { useApi, useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
+import { Callout } from "../../ui/Callout";
 import { attempt } from "../../ui/toast";
-import { fileAndFolder, freeTokens, liveParts, PART_COLORS } from "./parts";
+import {
+  fileAndFolder,
+  freeTokens,
+  isOwnMemory,
+  liveParts,
+  MEMORY_LINES,
+  PART_COLORS,
+} from "./parts";
 
 export function ContextSection({ bot }: { bot: Bot }) {
   const w = useT().overview.context;
@@ -112,6 +121,8 @@ function Part({
 
 function MemoryFiles({ bot, files }: { bot: Bot; files: ContextFile[] }) {
   const w = useT().overview.context;
+  const own = files.find((file) => isOwnMemory(file.path, bot.workspace));
+  const lines = own?.lines ?? 0;
   return (
     <div className="flex flex-col gap-1.5">
       <p className="font-medium text-sm">{w.memory}</p>
@@ -134,7 +145,30 @@ function MemoryFiles({ bot, files }: { bot: Bot; files: ContextFile[] }) {
           );
         })}
       </ul>
+      {lines > MEMORY_LINES && <LongMemory bot={bot} lines={lines} />}
     </div>
+  );
+}
+
+/** The agent's memory is past the size Claude Code advises: the owner can
+ * ask the agent to tidy it the way its rules say. */
+function LongMemory({ bot, lines }: { bot: Bot; lines: number }) {
+  const w = useT().overview.context;
+  const api = useApi();
+  const [asked, setAsked] = useState(false);
+  const ask = async () => {
+    const body = w.tidyRequest;
+    if (await attempt(w.tidyFailed, () => api.call("messages.send", { botId: bot.id, body }))) {
+      setAsked(true);
+    }
+  };
+  return (
+    <Callout tone="warn" title={w.longMemory(bot.name, lines)}>
+      <p>{w.longMemoryHint(bot.name)}</p>
+      <Button size="sm" className="mt-2" disabled={asked} onClick={ask}>
+        {asked ? w.tidyAsked : w.tidy(bot.name)}
+      </Button>
+    </Callout>
   );
 }
 

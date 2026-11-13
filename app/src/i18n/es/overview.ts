@@ -30,6 +30,14 @@ export const overview: Messages["overview"] = {
     },
     memory: "Archivos de memoria",
     memoryHint: (bot) => `Lo que ${bot} lee al comienzo de cada conversación.`,
+    longMemory: (bot, lines) => `La memoria de ${bot} tiene ${lines} líneas`,
+    longMemoryHint: (bot) =>
+      `Se lee entera al empezar cada conversación. Con más de 200 líneas gasta más de tu plan, y ${bot} la sigue con menos cuidado.`,
+    tidy: (bot) => `Pedir a ${bot} que la ordene`,
+    tidyAsked: "Pedido enviado",
+    tidyFailed: "No se pudo enviar el pedido",
+    tidyRequest:
+      "Tu memoria (CLAUDE.md) pasó de 200 líneas. Ordénala como dicen tus reglas: junta lo repetido, quita lo vencido o lo que ya no vale y mueve los detalles a archivos en memory/.",
   },
   background: {
     title: "En segundo plano",
