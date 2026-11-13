@@ -1,6 +1,9 @@
 //! What a bot's conversation holds, part by part (spec 33.3), from the
 //! categories in Claude Code's answer to `get_context_usage`.
 
+use std::fs;
+use std::path::Path;
+
 use botloft_core::protocol::{ContextFile, ContextPart, ContextPartKind};
 use serde_json::Value;
 
@@ -19,6 +22,9 @@ const ORDER: [ContextPartKind; 9] = [
 
 /// The most memory files kept: a bot loads a handful.
 const MAX_FILES: usize = 20;
+/// The biggest memory file whose lines are counted: Claude Code skips a
+/// bigger one.
+const MAX_COUNTED: u64 = 4 * 1024 * 1024;
 
 /// The categories that fill the conversation, grouped into the parts the app
 /// names. Deferred tools and the free space are left out: they take no room.
@@ -56,23 +62,33 @@ fn kind_of(category: &Value) -> ContextPartKind {
     }
 }
 
-/// The memory files the conversation holds, as Claude Code lists them.
+/// The memory files the conversation holds, as Claude Code lists them,
+/// with their lines: the agent's own memory should stay under 200
+/// (spec 8.12).
 pub(super) fn memory_files(body: &Value) -> Vec<ContextFile> {
     body["memoryFiles"]
         .as_array()
         .map_or(&[][..], Vec::as_slice)
         .iter()
         .filter_map(|file| {
+            let path = file["path"].as_str().filter(|path| !path.is_empty())?;
             Some(ContextFile {
-                path: file["path"]
-                    .as_str()
-                    .filter(|path| !path.is_empty())?
-                    .to_owned(),
+                path: path.to_owned(),
                 tokens: file["tokens"].as_u64().unwrap_or(0),
+                lines: lines_of(Path::new(path)),
             })
         })
         .take(MAX_FILES)
         .collect()
+}
+
+/// The lines of a memory file, counted as an editor does.
+fn lines_of(path: &Path) -> Option<u32> {
+    if fs::metadata(path).ok()?.len() > MAX_COUNTED {
+        return None;
+    }
+    let text = fs::read(path).ok()?;
+    u32::try_from(String::from_utf8_lossy(&text).lines().count()).ok()
 }
 
 #[cfg(test)]
@@ -138,5 +154,23 @@ mod tests {
         assert_eq!(files.len(), 1);
         assert!(files[0].path.ends_with("CLAUDE.md"));
         assert_eq!(files[0].tokens, 299);
+        // Not on this computer: no lines.
+        assert_eq!(files[0].lines, None);
+    }
+
+    #[test]
+    fn memory_files_say_how_many_lines_they_have() {
+        let dir = tempfile::tempdir().expect("dir");
+        let memory = dir.path().join("CLAUDE.md");
+        fs::write(&memory, "# Memory\n\n- one\r\n- two\n").expect("memory");
+        let answer = json!({"memoryFiles": [
+            {"path": memory.to_string_lossy(), "tokens": 9},
+            {"path": dir.path().join("gone.md").to_string_lossy(), "tokens": 1},
+        ]});
+        let lines: Vec<_> = memory_files(&answer)
+            .iter()
+            .map(|file| file.lines)
+            .collect();
+        assert_eq!(lines, [Some(4), None]);
     }
 }

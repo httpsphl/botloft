@@ -114,6 +114,10 @@ pub struct ContextFile {
     /// As Claude Code gives it: absolute.
     pub path: String,
     pub tokens: u64,
+    /// How many lines it has, as the daemon read it (spec 8.12); none
+    /// when it could not be read.
+    #[serde(default)]
+    pub lines: Option<u32>,
 }
 
 /// Params of the `bot.context` notification.

@@ -263,7 +263,12 @@ export type ContextFile = {
 /**
  * As Claude Code gives it: absolute.
  */
-path: string, tokens: number, };
+path: string, tokens: number, 
+/**
+ * How many lines it has, as the daemon read it (spec 8.12); none
+ * when it could not be read.
+ */
+lines: number | null, };
 
 /**
  * How full a bot's conversation is, in tokens, as Claude Code counts it

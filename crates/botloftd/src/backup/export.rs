@@ -28,9 +28,10 @@ fn regenerated(relative: &Path) -> bool {
             .any(|pair| named(&pair[0], ".claude") && named(&pair[1], "settings.json"))
 }
 
-/// The files of a bot's folder that the light copy takes: its memory and its
-/// rules. `relative` starts with the crew's slug, and only a bot in `bots`
-/// (`crew/bot`, lower case) can have any.
+/// The files of a bot's folder that the light copy takes: its memory, with
+/// the topics in `memory/` (spec 8.12), and its rules. `relative` starts
+/// with the crew's slug, and only a bot in `bots` (`crew/bot`, lower case)
+/// can have any.
 fn light_allows(relative: &Path, is_dir: bool, bots: &HashSet<String>) -> bool {
     let names: Vec<String> = relative
         .components()
@@ -42,13 +43,14 @@ fn light_allows(relative: &Path, is_dir: bool, bots: &HashSet<String>) -> bool {
         return match names.len() {
             0 | 1 => true,
             2 => bot,
-            3 => is(2, ".claude"),
+            3 => is(2, ".claude") || is(2, "memory"),
             4 => is(2, ".claude") && is(3, "rules"),
             _ => true,
         };
     }
     match names.len() {
         3 => bot && (is(2, "claude.md") || is(2, "claude.local.md")),
+        4 if is(2, "memory") => bot,
         len if len >= 5 => bot && is(2, ".claude") && is(3, "rules"),
         _ => false,
     }
@@ -251,6 +253,8 @@ mod tests {
         assert!(takes("site/scout/.claude/rules", true));
         assert!(takes("site/scout/.claude/rules/botloft.md", false));
         assert!(takes("site/scout/.claude/rules/more/x.md", false));
+        assert!(takes("site/scout/memory", true));
+        assert!(takes("site/scout/memory/clients.md", false));
         // The rest of the bot's folder, the shared folder and other files.
         assert!(!takes("site/shared", true));
         assert!(!takes("site/shared/CLAUDE.md", false));
@@ -260,5 +264,7 @@ mod tests {
         assert!(!takes("site/scout/.claude/projects", true));
         assert!(!takes("site/scout/.claude/settings.json", false));
         assert!(!takes("site/CLAUDE.md", false));
+        assert!(!takes("site/scout/memory/old", true));
+        assert!(!takes("site/other/memory/clients.md", false));
     }
 }

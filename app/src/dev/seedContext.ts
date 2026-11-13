@@ -30,8 +30,8 @@ const holds = (usedTokens: number, windowTokens: number): ContextUsage => {
       { kind: "buffer", tokens: 33_000 },
     ],
     memoryFiles: [
-      { path: "C:\\Users\\owner\\Botloft\\research\\scout\\CLAUDE.md", tokens: 940 },
-      { path: "C:\\Users\\owner\\Botloft\\research\\shared\\CLAUDE.md", tokens: 300 },
+      { path: "C:\\Users\\owner\\Botloft\\research\\scout\\CLAUDE.md", tokens: 4_120, lines: 248 },
+      { path: "C:\\Users\\owner\\Botloft\\research\\shared\\CLAUDE.md", tokens: 300, lines: 18 },
     ],
   };
 };
