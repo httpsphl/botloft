@@ -102,6 +102,12 @@ impl Agent for ClaudeAgent {
         args.push(plan.mcp_config.as_os_str().to_owned());
         args.push("--add-dir".into());
         args.push(plan.work_folder.as_os_str().to_owned());
+        // The owner's plugins it was given, each a copy in its folder (spec
+        // 41.3).
+        for dir in plan.plugin_dirs {
+            args.push("--plugin-dir".into());
+            args.push(dir.as_os_str().to_owned());
+        }
         // Without the flag, Claude Code uses the default of the owner's plan.
         if let Some(model) = plan.model.cli_value() {
             args.push("--model".into());
@@ -192,6 +198,7 @@ mod tests {
             connectors: &[],
             blocked_servers: &[],
             chrome: false,
+            plugin_dirs: &[],
         }
     }
 
@@ -212,6 +219,29 @@ mod tests {
         assert!(args.contains(&"--permission-prompt-tool".to_owned()));
         assert!(args.contains(&"--no-chrome".to_owned()));
         assert!(!args.contains(&"--chrome".to_owned()));
+        assert!(!args.contains(&"--plugin-dir".to_owned()));
+    }
+
+    #[test]
+    fn each_plugin_given_is_one_plugin_dir() {
+        let dirs = [
+            PathBuf::from("w/.claude/plugins/data"),
+            PathBuf::from("w/.claude/plugins/vercel"),
+        ];
+        let args = strings(ClaudeAgent.args(&LaunchPlan {
+            plugin_dirs: &dirs,
+            ..plan(false, BotModel::Default, BotEffort::Default)
+        }));
+        let given: Vec<_> = args
+            .iter()
+            .enumerate()
+            .filter(|(_, arg)| *arg == "--plugin-dir")
+            .map(|(at, _)| args[at + 1].replace('\\', "/"))
+            .collect();
+        assert_eq!(
+            given,
+            ["w/.claude/plugins/data", "w/.claude/plugins/vercel"]
+        );
     }
 
     #[test]

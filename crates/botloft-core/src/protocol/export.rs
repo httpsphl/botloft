@@ -51,6 +51,8 @@ mod mcp;
 mod mobile;
 #[path = "export_permissions.rs"]
 mod permissions;
+#[path = "export_plugins.rs"]
+mod plugins;
 #[path = "export_questions.rs"]
 mod questions;
 #[path = "export_reactions.rs"]
@@ -240,6 +242,7 @@ fn export_bindings() {
     mcp::decls(&mut out);
     crew_access::decls(&mut out);
     chrome::decls(&mut out);
+    plugins::decls(&mut out);
     skills::decls(&mut out);
     permissions::decls(&mut out);
     catalog::decls(&mut out);
@@ -481,6 +484,7 @@ fn export_bindings() {
     crew_access::methods(&mut out);
     permissions::methods(&mut out);
     chrome::methods(&mut out);
+    plugins::methods(&mut out);
     skills::methods(&mut out);
     catalog::methods(&mut out);
     imports::methods(&mut out);

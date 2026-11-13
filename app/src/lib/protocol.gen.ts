@@ -1614,6 +1614,94 @@ export type ChromeTurn = {
 botId: BotId | null, };
 
 /**
+ * Where a plugin comes from.
+ */
+export type PluginSource = "claude_code" | "claude_ai" | "kept";
+
+/**
+ * A plugin the owner can give to agents (spec 41.1).
+ */
+export type Plugin = { 
+/**
+ * Its name, which is how Botloft and Claude Code know it.
+ */
+name: string, 
+/**
+ * What it does, from its manifest; may be empty.
+ */
+description: string, 
+/**
+ * Its version, from its manifest.
+ */
+version: string | null, source: PluginSource, 
+/**
+ * Its skills and commands, as the agent calls them
+ * (`<plugin>:<name>`).
+ */
+skills: Array<string>, 
+/**
+ * Its subagents, as the agent calls them.
+ */
+agents: Array<string>, 
+/**
+ * When its hooks run commands by themselves: the hook events.
+ */
+hooks: Array<string>, 
+/**
+ * The language servers it runs by itself.
+ */
+languageServers: Array<string>, 
+/**
+ * Its MCP servers, which agents do not get (spec 41.4).
+ */
+mcpServers: Array<string>, 
+/**
+ * It brings programs the agent can run in its terminal (`bin/`).
+ */
+programs: boolean, 
+/**
+ * It asks for settings (`userConfig`) the agents do not get.
+ */
+needsSettings: boolean, 
+/**
+ * The agents that have it: the ones chosen and, when it is for
+ * everyone, every agent on Claude Code.
+ */
+botIds: Array<BotId>, 
+/**
+ * Every agent on Claude Code uses it, the ones made later included
+ * (spec 41.3). `everyone` in the list gives every plugin to every
+ * agent.
+ */
+everyone: boolean, };
+
+/**
+ * What `plugins.list` answers.
+ */
+export type PluginList = { 
+/**
+ * By name.
+ */
+plugins: Array<Plugin>, 
+/**
+ * Every agent on Claude Code uses every plugin, the ones that come
+ * later included (spec 41.3).
+ */
+everyone: boolean, };
+
+/**
+ * `plugins.share`: the agents that may use a plugin, in place of those
+ * before.
+ */
+export type PluginsShareParams = { name: string, botIds: Array<BotId>, };
+
+/**
+ * `plugins.everyone`: one plugin, or with no name every plugin, for every
+ * agent on Claude Code, or not any more.
+ */
+export type PluginsEveryoneParams = { name?: string, on: boolean, };
+
+/**
  * Where a skill comes from.
  */
 export type SkillSource = "personal" | "claude_ai" | "kept";
@@ -3557,6 +3645,9 @@ export interface RpcMethods {
   "chrome.set": { params: ChromeSetParams; result: BotChrome };
   "chrome.status": { params: undefined; result: ChromeTurn };
   "chrome.stop": { params: undefined; result: ChromeTurn };
+  "plugins.list": { params: undefined; result: PluginList };
+  "plugins.share": { params: PluginsShareParams; result: Plugin };
+  "plugins.everyone": { params: PluginsEveryoneParams; result: PluginList };
   "skills.list": { params: undefined; result: SkillList };
   "skills.share": { params: SkillsShareParams; result: Skill };
   "skills.everyone": { params: SkillsEveryoneParams; result: SkillList };

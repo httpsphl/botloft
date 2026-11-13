@@ -64,6 +64,8 @@ pub struct LaunchPlan<'a> {
     pub blocked_servers: &'a [String],
     /// Whether the owner gave it their own Chrome (spec 37.2).
     pub chrome: bool,
+    /// The copies of the owner's plugins it loads (spec 41.3).
+    pub plugin_dirs: &'a [PathBuf],
 }
 
 /// What an agent needs to write the files it reads at start, once the bot

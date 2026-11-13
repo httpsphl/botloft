@@ -33,6 +33,7 @@ pub mod media;
 pub mod mobile;
 pub mod paths;
 pub mod platform;
+pub mod plugins;
 pub mod routines;
 pub mod rpc;
 pub mod runtime;
