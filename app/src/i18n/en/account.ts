@@ -347,6 +347,7 @@ export const account = {
     tools: "Tools",
     logins: "Logins",
     skills: "Skills",
+    plugins: "Plugins",
     keys: "Agents' keys",
     permissions: "Permissions",
     account: "Account and phone",

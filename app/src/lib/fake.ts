@@ -30,6 +30,7 @@ import { FakeMaker } from "./fakeMaker";
 import { FakeMcp } from "./fakeMcp";
 import { mobileHandlers } from "./fakeMobile";
 import { FakeSites } from "./fakePermissions";
+import { FakePlugins } from "./fakePlugins";
 import { FakeQuestions } from "./fakeQuestions";
 import { FakeReactions } from "./fakeReactions";
 import { FakeRoutines } from "./fakeRoutines";
@@ -114,6 +115,7 @@ export class FakeBotloft implements BotloftApi {
   readonly sites = new FakeSites(this);
   readonly chrome = new FakeChrome(this);
   readonly skills = new FakeSkills(this);
+  readonly plugins = new FakePlugins(this);
   readonly mcp = new FakeMcp(this);
   readonly logins = new FakeLogins(this);
   readonly conversations = new FakeConversations(this);
@@ -364,6 +366,7 @@ export class FakeBotloft implements BotloftApi {
     ...this.sites.handlers(),
     ...this.chrome.handlers(),
     ...this.skills.handlers(),
+    ...this.plugins.handlers(),
     ...this.mcp.handlers(),
     ...this.logins.handlers(),
     ...this.conversation.handlers(),

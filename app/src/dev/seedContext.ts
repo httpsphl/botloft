@@ -105,6 +105,31 @@ export function seedContext(
     description: "Checks a site in the browser for broken pages.",
   });
   fake.skills.add({ name: "weekly-report", description: "Sums up the week's sales." });
+  // The plugins on in the owner's Claude Code, one given to Scout (spec 41).
+  fake.plugins.add({
+    name: "vercel",
+    description: "Build and deploy web apps and agents.",
+    version: "0.50.0",
+    skills: ["vercel:bootstrap", "vercel:deploy", "vercel:env", "vercel:nextjs"],
+    agents: ["vercel:deployment-expert"],
+    hooks: ["PostToolUse", "SessionEnd", "SessionStart"],
+    mcpServers: ["vercel"],
+    botIds: [bots.scout],
+  });
+  fake.plugins.add({
+    name: "data",
+    description: "Write SQL, explore datasets, and turn raw data into clear stories.",
+    version: "1.1.0",
+    source: "claude_ai",
+    skills: ["data:analyze", "data:sql-queries", "data:write-query"],
+    mcpServers: ["bigquery", "hex"],
+  });
+  fake.plugins.add({
+    name: "frontend-design",
+    description: "Distinctive, intentional visual design for new interfaces.",
+    version: "1.1.1",
+    skills: ["frontend-design:frontend-design"],
+  });
   fake.changes.byBot.set(bots.scout, {
     repos: [
       {

@@ -15,6 +15,7 @@ import {
   Palette,
   PanelTop,
   Plug,
+  Puzzle,
   ScrollText,
   Search,
   ShieldCheck,
@@ -31,6 +32,7 @@ import { KeysSettings } from "../keys/KeysSettings";
 import { PastedKeys } from "../keys/PastedKeys";
 import { LoginsPage } from "../logins/LoginsPage";
 import { PermissionsSettings } from "../permissions/PermissionsSettings";
+import { PluginsPage } from "../plugins/PluginsPage";
 import { SkillsPage } from "../skills/SkillsPage";
 import { AboutSettings } from "./AboutSettings";
 import { AccountSettings } from "./AccountSettings";
@@ -65,6 +67,7 @@ const GROUPS: { id: GroupId; pages: { id: Page; icon: LucideIcon }[] }[] = [
       { id: "tools", icon: Plug },
       { id: "logins", icon: KeyRound },
       { id: "skills", icon: Sparkles },
+      { id: "plugins", icon: Puzzle },
       { id: "keys", icon: KeySquare },
       { id: "permissions", icon: LockKeyhole },
     ],
@@ -110,6 +113,7 @@ export function SettingsPage() {
     tools: s.tools,
     logins: s.logins,
     skills: s.skills,
+    plugins: s.plugins,
     keys: s.keys,
     permissions: s.permissions,
     backup: s.backup,
@@ -221,6 +225,7 @@ export function SettingsPage() {
                 {page === "tools" && <ToolsPage />}
                 {page === "logins" && <LoginsPage />}
                 {page === "skills" && <SkillsPage />}
+                {page === "plugins" && <PluginsPage />}
                 {page === "keys" && <KeysSettings />}
                 {page === "permissions" && <PermissionsSettings />}
                 {page === "backup" && <BackupSettings goToAccount={() => open("account")} />}
