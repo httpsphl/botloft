@@ -8,6 +8,7 @@ pub(super) fn decls(out: &mut Out) {
     out.decl::<Skill>();
     out.decl::<SkillList>();
     out.decl::<SkillsShareParams>();
+    out.decl::<SkillsEveryoneParams>();
 }
 
 pub(super) fn methods(out: &mut Out) {
@@ -16,5 +17,10 @@ pub(super) fn methods(out: &mut Out) {
         method::SKILLS_SHARE,
         &out.name::<SkillsShareParams>(),
         &out.name::<Skill>(),
+    );
+    out.method(
+        method::SKILLS_EVERYONE,
+        &out.name::<SkillsEveryoneParams>(),
+        &out.name::<SkillList>(),
     );
 }

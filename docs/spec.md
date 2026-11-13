@@ -3779,7 +3779,7 @@ O daemon não guarda nada do que o agente vê no Chrome: o que as tools devolvem
 
 ## 38. As skills do dono
 
-Status: **SK1 e SK2 feitos** (daemon e app, com os testes de 38.8); falta o teste manual com o Claude Code real (38.8). O dono pediu em 2026-11-05 que os agentes usem as skills dele, como o Claude Code do desktop faz, e escolheu no mesmo dia, entre as opções desenhadas, escolher por agente, como as ferramentas do claude.ai (34).
+Status: **SK1, SK2 e SK3 feitos** (daemon e app, com os testes de 38.8); falta o teste manual com o Claude Code real (38.8). O dono pediu em 2026-11-05 que os agentes usem as skills dele, como o Claude Code do desktop faz, e escolheu no mesmo dia, entre as opções desenhadas, escolher por agente, como as ferramentas do claude.ai (34). Em 2026-11-13 pediu para dar uma skill, ou todas, a todos os agentes com um clique, e escolheu que isso fique valendo para os agentes e as skills que vierem depois (SK3).
 
 ### 38.1 O que é
 
@@ -3795,23 +3795,25 @@ O Claude Code carrega como skill de projeto uma pasta em `<workspace>\.claude\sk
 
 ### 38.3 Como chega ao agente
 
-- **A escolha:** tabela `bot_skills (bot_id, name)`. Um agente novo não tem nenhuma.
+- **A escolha:** tabela `bot_skills (bot_id, name)`, as escolhidas um agente por um. Um agente novo não tem nenhuma dessas.
+- **Para todos:** uma skill em `skills_everyone (name)` vai para todo agente do Claude Code, inclusive os criados depois. A marca `all_skills_everyone` (tabela `settings`) dá todas as skills a todos: as que o dono tem e as guardadas que algum agente ainda usa (38.3), inclusive as que ele puser na pasta depois. O que um agente usa é a soma das três, e a lista (`Skill.botIds`) diz essa soma. Tirar o "para todos" não mexe em `bot_skills`: cada agente volta a ter só o que foi escolhido para ele. Uma skill que entra na pasta do dono com a marca ligada chega a cada agente no próximo início dele, sem reiniciá-lo. Uma original apagada que só valia pela marca sai da lista e dos agentes; a que foi dada um por um ou para todos fica, guardada.
 - **A cópia do Botloft:** ao dar uma skill (`skills.share`), o daemon copia a pasta do dono para `<home>\skills\<nome>`. Essa cópia é a que vai para os agentes, e ela fica mesmo se o dono apagar o original (a lista a mostra como "guardada", `kept`). Quando nenhum agente tem mais uma skill guardada, a cópia sai.
 - **A cada início do agente:** a cópia do Botloft é refeita a partir do original, quando ele ainda existe, e vai para `<workspace>\.claude\skills\<nome>`. As pastas que o Botloft pôs ali e saíram da escolha são apagadas. Uma pasta que o próprio agente fez com o mesmo nome fica como está, e a skill do dono não entra.
 - **A marca:** cada cópia tem um arquivo `.botloft-skill`, e o daemon só substitui ou apaga pastas com ela. A cópia nunca segue um link de dentro da skill, deixa de fora `.git`, e para em 2.000 arquivos ou 50 MB. Ela é montada ao lado, numa pasta com ponto, e trocada no fim.
-- **Mudar a escolha** reinicia cada agente que ganhou ou perdeu a skill, com `--resume`, quando nada estiver em andamento, como em 34.4.
+- **Mudar a escolha** (de um agente, para todos ou todas para todos) reinicia cada agente do Claude Code cujas skills mudaram, comparando a soma de antes e a de depois, com `--resume`, quando nada estiver em andamento, como em 34.4.
+- **A cópia do Botloft que sobra** (de uma skill que o dono apagou e que nenhum agente usa mais, nem pelo "para todos") sai depois de cada mudança.
 - **O que a skill faz** vale como no Claude Code do dono: as ferramentas de `allowed-tools` rodam sem cartão no turno em que ela é usada, e os hooks e as linhas `` !`comando` `` rodam (19). Por isso o app mostra esses avisos antes de o dono dar a skill (38.4). Escrever na `.claude` do agente continua pedindo aprovação nos modos Manual e Aceitar edições (19).
 
 ### 38.4 Quem pode dar
 
-O dono, em Configurações → Conta e conexões → **Skills**, ou no cartão quando o agente pede (38.5). A página tem uma linha que explica o que são, e um cartão por skill: o nome, o que faz (duas linhas), a origem ("Sua", "claude.ai" ou "Guardada pelo Botloft"), quantos agentes a usam e um triângulo quando há o que saber antes de dar. O cartão aberto mostra a descrição inteira, "Antes de dar" (as ferramentas que ela roda sem perguntar, os comandos que roda sozinha, os outros arquivos) e "Quem pode usar", uma chave por agente do Claude Code agrupada por crew, como em 34.7. Sem nenhuma skill, a página diz onde elas ficam. A linha Skills dos Detalhes do agente do Claude Code diz as dele e abre a página. O cartão de `ask_skill` no chat diz "<agente> quer usar a sua skill <nome>", com o porquê e "Dar a skill"; respondido, vira uma linha. `skills.share` com um agente que não é do Claude Code é `conflict`; uma skill que o daemon não acha é `not_found`.
+O dono, em Configurações → Conta e conexões → **Skills**, ou no cartão quando o agente pede (38.5). A página tem uma linha que explica o que são; com alguma skill, um bloco com a chave **"Todas as skills para todos os agentes"** e a linha "Os agentes do Claude Code usam todas as suas skills, inclusive as que você adicionar depois, e os agentes que você criar depois também." Ligar pergunta antes: "Dar as 47 skills a todos os agentes?", que cada agente recebe uma cópia e recomeça quando terminar o que está fazendo, na mesma conversa, e que cada um lê um resumo de todas as skills em toda conversa, o que gasta um pouco mais do plano; quando há, quantas delas rodam ferramentas sem perguntar ou comandos sozinhas (os avisos de "Antes de dar"). "Dar a todos" chama `skills.everyone {on: true}`; desligar é na hora, sem pergunta. Com mais de 6 skills, uma busca ("Buscar skills") filtra os cartões pelo nome e pela descrição, sem ligar para acento nem maiúscula, e sem nenhum diz "Nenhuma skill com …"; a busca do topo das Configurações acha a chave pelo nome. Depois, um cartão por skill: o nome, o que faz (duas linhas), a origem ("Sua", "claude.ai" ou "Guardada pelo Botloft"), quantos agentes a usam ("Todos os agentes" quando ela é para todos) e um triângulo quando há o que saber antes de dar. O cartão aberto mostra a descrição inteira, "Antes de dar" (as ferramentas que ela roda sem perguntar, os comandos que roda sozinha, os outros arquivos) e "Quem pode usar": primeiro a chave **"Todos os agentes"**, com "Inclusive os agentes que você criar depois." (`skills.everyone {name, on}`, sem pergunta: os avisos estão logo acima), e embaixo uma chave por agente do Claude Code agrupada por crew, como em 34.7. Com a skill para todos, as chaves dos agentes ficam ligadas e travadas; com todas para todos, a chave "Todos os agentes" também, com a linha "Todas as skills estão ligadas para todos, no alto de Skills." Sem nenhuma skill, a página diz onde elas ficam. A linha Skills dos Detalhes do agente do Claude Code diz as dele e abre a página. O cartão de `ask_skill` no chat diz "<agente> quer usar a sua skill <nome>", com o porquê e "Dar a skill"; respondido, vira uma linha. `skills.share` com um agente que não é do Claude Code é `conflict`; uma skill que o daemon não acha é `not_found`.
 
 ### 38.5 O agente pede
 
 - **`ask_skill {name, why?}`** (tool do MCP do Botloft, `why` até 300 caracteres):
   - um agente que não é do Claude Code recebe erro;
   - o nome tem de ser de uma skill do dono, sem diferença de maiúsculas; se não for, o erro diz isso;
-  - uma que ele já tem volta `done`;
+  - uma que ele já tem, escolhida para ele ou para todos, volta `done`;
   - senão, abre no chat um pedido de aprovação (10.1) com a tool `mcp__botloft__ask_skill` e o resumo = o nome, e espera.
 - **Permitido:** a skill entra na escolha do agente, ele reinicia com `--resume` quando o turno acaba e uma mensagem de sistema na fila diz que ela está em `.claude/skills` e que ele siga, como em 34.6.
 
@@ -3829,6 +3831,7 @@ A cópia do Botloft é o que vai para os agentes, então uma skill dada continua
 |---|---|---|
 | **SK1** Daemon | a busca das skills e o frontmatter, a cópia do Botloft, `bot_skills`, a cópia na pasta do agente com a marca, as regras, `skills.list`, `skills.share`, `ask_skill` | `FakeRuntime`: a lista com descrição, ferramentas e arquivos; dar uma skill e ver a cópia e as regras no início seguinte; o original apagado e a cópia guardada; tirar e ver a pasta sair; a pasta do próprio agente intacta; `TestDaemon`: `ask_skill` com nome errado e permitido |
 | **SK2** App | Configurações → Skills com os cartões, os avisos e as chaves por agente; o cartão de `ask_skill`; os Detalhes do agente; três idiomas | `FakeBotloft`; teste manual com o Claude Code real: dar uma skill a um agente e vê-la em `get_context_usage` como `projectSettings` |
+| **SK3** Para todos | `skills_everyone`, `all_skills_everyone`, `skills.everyone`, a soma em `skills.list` e no início do agente, o reinício pela diferença; a chave do alto com a pergunta, "Todos os agentes" no cartão aberto, a busca; três idiomas | `FakeRuntime`: uma skill para todos chega à pasta, todas para todos também (com uma que entra depois na lista), tirar deixa só a escolhida e as regras dizem isso; `TestDaemon`: um agente criado depois recebe as de todos, `ask_skill` de uma que é para todos volta `done`, desligar volta às escolhas de cada um; `FakeBotloft`: as duas chaves, a pergunta e a busca. **Feito** (2026-11-13); teste manual com o Claude Code real |
 
 ### 38.9 Privacidade (13)
 
@@ -3836,8 +3839,8 @@ O conteúdo das skills não vai ao log: só que o dono mudou quem usa uma. As c�
 
 ### 38.10 Protocolo e dados
 
-- Migration 0040: `bot_skills (bot_id, name)`, apagada com o agente (7.6).
-- `skills.list` → `SkillList {skills: [Skill {name, description, source, allowedTools, runsCommands, hasFiles, botIds}]}` (`source`: `personal`, `claude_ai`, `kept`). `skills.share {name, botIds}` → `Skill`.
+- Migration 0040: `bot_skills (bot_id, name)`, apagada com o agente (7.6). Migration 0049: `skills_everyone (name)`; a marca de todas para todos é a linha `all_skills_everyone` da tabela `settings`. As duas vão na cópia leve (14.2).
+- `skills.list` → `SkillList {skills: [Skill {name, description, source, allowedTools, runsCommands, hasFiles, botIds, everyone}], everyone}` (`source`: `personal`, `claude_ai`, `kept`; `Skill.everyone`, a skill para todos; `SkillList.everyone`, todas para todos; `botIds`, a soma, só de agentes ativos do Claude Code). `skills.share {name, botIds}` → `Skill`, as escolhidas um por um. `skills.everyone {name?, on}` → `SkillList`: com `name`, a skill para todos ou não (`not_found` se o daemon não a acha); sem `name`, todas para todos ou não.
 - `botloft_core::chat::SKILL_TOOL` = `mcp__botloft__ask_skill`: o pedido de 38.5 é um `ApprovalItem` com `summary` = o nome e `input` = `{name, why}`.
 
 ## 39. O site

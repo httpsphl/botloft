@@ -34,8 +34,13 @@ pub struct Skill {
     pub runs_commands: bool,
     /// It brings other files than `SKILL.md`: scripts, references.
     pub has_files: bool,
-    /// The agents that have it.
+    /// The agents that have it: the ones chosen and, when it is for
+    /// everyone, every agent on Claude Code.
     pub bot_ids: Vec<BotId>,
+    /// Every agent on Claude Code uses it, the ones made later included
+    /// (spec 38.3). `everyone` in the list gives every skill to every agent.
+    #[serde(default)]
+    pub everyone: bool,
 }
 
 /// What `skills.list` answers.
@@ -45,6 +50,10 @@ pub struct Skill {
 pub struct SkillList {
     /// By name.
     pub skills: Vec<Skill>,
+    /// Every agent on Claude Code uses every skill, the ones that come
+    /// later included (spec 38.3).
+    #[serde(default)]
+    pub everyone: bool,
 }
 
 /// `skills.share`: the agents that may use a skill, in place of those
@@ -55,4 +64,16 @@ pub struct SkillList {
 pub struct SkillsShareParams {
     pub name: String,
     pub bot_ids: Vec<BotId>,
+}
+
+/// `skills.everyone`: one skill, or with no name every skill, for every
+/// agent on Claude Code, or not any more.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct SkillsEveryoneParams {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, ts(optional))]
+    pub name: Option<String>,
+    pub on: bool,
 }

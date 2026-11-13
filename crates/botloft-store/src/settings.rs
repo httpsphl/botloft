@@ -31,7 +31,7 @@ impl Store {
         Ok(())
     }
 
-    fn setting(&self, key: &str) -> Result<Option<String>> {
+    pub(crate) fn setting(&self, key: &str) -> Result<Option<String>> {
         let mut stmt = self
             .conn
             .prepare_cached("SELECT value FROM settings WHERE key = ?1")?;

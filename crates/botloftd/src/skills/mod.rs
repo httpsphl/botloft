@@ -1,11 +1,14 @@
 //! The owner's skills in the agents (spec 38): the skills in the owner's
 //! own Claude Code folder and the claude.ai ones kept there, which agents
-//! may use each one, and the copy each agent gets in its `.claude\skills`.
-//! Only agents on Claude Code get them.
+//! may use each one (chosen one by one, or every agent), and the copy each
+//! agent gets in its `.claude\skills`. Only agents on Claude Code get them.
 
 mod copy;
+mod give;
 mod meta;
 mod rules;
+
+pub use give::{everyone, share};
 
 use std::collections::BTreeMap;
 use std::io;
@@ -14,12 +17,13 @@ use std::sync::Mutex;
 
 use botloft_core::ids::{BotId, MessageId};
 use botloft_core::protocol::{
-    Message, MessageKind, SenderKind, Skill, SkillList, SkillSource, SkillsShareParams,
+    AgentKind, Message, MessageKind, SenderKind, Skill, SkillList, SkillSource, SkillsShareParams,
 };
-use tracing::{info, warn};
+use botloft_store::BotRecord;
+use tracing::warn;
 
+use crate::service::ApiResult;
 use crate::service::bots::active;
-use crate::service::{ApiError, ApiResult};
 use crate::state::Daemon;
 
 /// Where the owner's skills are looked for; the owner's own folder unless
@@ -95,24 +99,58 @@ fn library(daemon: &Daemon) -> PathBuf {
     daemon.paths.home.join("skills")
 }
 
-/// `skills.list`: the owner's skills, and the ones only Botloft's copy is
-/// left of that an agent still has.
-pub fn list(daemon: &Daemon) -> ApiResult<SkillList> {
-    let found = found(daemon);
-    let store = daemon.store();
-    let live: Vec<BotId> = store
-        .bots(None, false)?
-        .into_iter()
-        .map(|bot| bot.id)
-        .collect();
-    let mut skills = Vec::new();
+/// The skills there are, by name: the owner's, and the ones only Botloft's
+/// copy is left of that an agent still has.
+fn names(daemon: &Daemon, found: &BTreeMap<String, Found>) -> botloft_store::Result<Vec<String>> {
+    let (given, everyone) = {
+        let store = daemon.store();
+        (store.given_skills()?, store.everyone_skills()?)
+    };
     let mut names: Vec<String> = found.keys().cloned().collect();
-    for name in store.given_skills()? {
-        if !found.contains_key(&name) && valid(&name) && library(daemon).join(&name).is_dir() {
+    for name in given.into_iter().chain(everyone) {
+        if !names.contains(&name) && valid(&name) && library(daemon).join(&name).is_dir() {
             names.push(name);
         }
     }
     names.sort();
+    Ok(names)
+}
+
+/// The skills an agent on Claude Code uses, out of `names` (spec 38.3): the
+/// ones chosen for it, the ones for every agent, and all of them when the
+/// owner gave every skill to every agent.
+fn chosen(daemon: &Daemon, bot: &BotId, names: &[String]) -> botloft_store::Result<Vec<String>> {
+    let store = daemon.store();
+    if store.all_skills_everyone()? {
+        return Ok(names.to_vec());
+    }
+    let mut chosen = store.bot_skills(bot)?;
+    chosen.extend(store.everyone_skills()?);
+    chosen.retain(|name| names.contains(name));
+    chosen.sort();
+    chosen.dedup();
+    Ok(chosen)
+}
+
+fn on_claude_code(bot: &BotRecord) -> bool {
+    bot.agent == AgentKind::Claude
+}
+
+/// `skills.list`: the owner's skills, and the ones only Botloft's copy is
+/// left of that an agent still has.
+pub fn list(daemon: &Daemon) -> ApiResult<SkillList> {
+    let found = found(daemon);
+    let names = names(daemon, &found)?;
+    let store = daemon.store();
+    let all = store.all_skills_everyone()?;
+    let everyone = store.everyone_skills()?;
+    let claude: Vec<BotId> = store
+        .bots(None, false)?
+        .into_iter()
+        .filter(on_claude_code)
+        .map(|bot| bot.id)
+        .collect();
+    let mut skills = Vec::new();
     for name in names {
         let (dir, source) = match found.get(&name) {
             Some(found) => (found.dir.clone(), found.source),
@@ -121,11 +159,16 @@ pub fn list(daemon: &Daemon) -> ApiResult<SkillList> {
         let Some(meta) = meta::read(&dir) else {
             continue;
         };
-        let bot_ids = store
-            .skill_bots(&name)?
-            .into_iter()
-            .filter(|bot| live.contains(bot))
-            .collect();
+        let for_everyone = everyone.contains(&name);
+        let bot_ids = if all || for_everyone {
+            claude.clone()
+        } else {
+            store
+                .skill_bots(&name)?
+                .into_iter()
+                .filter(|bot| claude.contains(bot))
+                .collect()
+        };
         skills.push(Skill {
             name,
             description: meta.description,
@@ -134,73 +177,12 @@ pub fn list(daemon: &Daemon) -> ApiResult<SkillList> {
             runs_commands: meta.runs_commands,
             has_files: meta.has_files,
             bot_ids,
+            everyone: for_everyone,
         });
     }
-    Ok(SkillList { skills })
-}
-
-/// `skills.share`: the agents that may use the skill, in place of those
-/// before. Each agent that gained or lost it starts again, with
-/// `--resume`, once nothing is under way.
-pub fn share(daemon: &Daemon, params: SkillsShareParams) -> ApiResult<Skill> {
-    let name = params.name.trim().to_owned();
-    let source = found(daemon).remove(&name).map(|found| found.dir);
-    if !valid(&name) || (source.is_none() && !library(daemon).join(&name).is_dir()) {
-        return Err(ApiError::NotFound(format!("skill {name}")));
-    }
-    let mut wanted: Vec<BotId> = Vec::new();
-    {
-        let store = daemon.store();
-        for bot in params.bot_ids {
-            active(&store, &bot)?;
-            if !wanted.contains(&bot) {
-                wanted.push(bot);
-            }
-        }
-    }
-    if let Some(bot) = wanted
-        .iter()
-        .find(|bot| !crate::connectors::on_claude(daemon, bot))
-    {
-        return Err(ApiError::Conflict(format!(
-            "only agents on Claude Code can use skills, and {bot} is not one"
-        )));
-    }
-    if let Some(source) = &source {
-        let copy = library(daemon).join(&name);
-        std::fs::create_dir_all(library(daemon)).map_err(ApiError::Workspace)?;
-        copy::copy_skill(source, &copy).map_err(ApiError::Workspace)?;
-    }
-    let had = daemon.store().skill_bots(&name)?;
-    daemon.store().set_skill_bots(&name, &wanted)?;
-    for bot in had.iter().chain(&wanted) {
-        if had.contains(bot) != wanted.contains(bot) {
-            daemon.supervisor.launch_settings_changed(bot);
-        }
-    }
-    info!("the owner chose which agents use a skill");
-    if let Some(skill) = list(daemon)?
-        .skills
-        .into_iter()
-        .find(|skill| skill.name == name)
-    {
-        return Ok(skill);
-    }
-    // The original is gone and no agent has it any more: Botloft's copy
-    // goes too.
-    let copy = library(daemon).join(&name);
-    let meta = meta::read(&copy).unwrap_or_default();
-    if copy::is_ours(&copy) {
-        std::fs::remove_dir_all(&copy).map_err(ApiError::Workspace)?;
-    }
-    Ok(Skill {
-        name,
-        description: meta.description,
-        source: SkillSource::Kept,
-        allowed_tools: meta.allowed_tools,
-        runs_commands: meta.runs_commands,
-        has_files: meta.has_files,
-        bot_ids: Vec::new(),
+    Ok(SkillList {
+        skills,
+        everyone: all,
     })
 }
 
@@ -212,8 +194,10 @@ pub(crate) fn launch(daemon: &Daemon, bot: &BotId, workspace: &Path) -> io::Resu
         copy::sync(&library(daemon), workspace, &[])?;
         return rules::write(workspace, &[], &[]);
     }
-    let chosen = daemon.store().bot_skills(bot).map_err(io::Error::other)?;
     let found = found(daemon);
+    let chosen = names(daemon, &found)
+        .and_then(|names| chosen(daemon, bot, &names))
+        .map_err(io::Error::other)?;
     for name in &chosen {
         if let Some(found) = found.get(name) {
             let copy = library(daemon).join(name);
@@ -243,10 +227,11 @@ pub(crate) fn known(daemon: &Daemon, name: &str) -> Option<String> {
         .find(|have| have.to_lowercase() == wanted)
 }
 
+/// Whether the agent uses the skill `name`, chosen for it or for every
+/// agent.
 pub(crate) fn given(daemon: &Daemon, bot: &BotId, name: &str) -> bool {
-    daemon
-        .store()
-        .bot_skills(bot)
+    names(daemon, &found(daemon))
+        .and_then(|names| chosen(daemon, bot, &names))
         .is_ok_and(|names| names.iter().any(|have| have == name))
 }
 

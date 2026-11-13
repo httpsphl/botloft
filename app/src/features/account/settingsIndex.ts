@@ -66,7 +66,7 @@ export function settingsIndex(t: ReturnType<typeof useT>): Entry[] {
     ...entry("account", t.account.cloud.title, t.account.mobile.title, t.account.mobile.connect),
     ...entry("tools", s.tools),
     ...entry("logins", s.logins, t.logins.title, t.logins.signIn),
-    ...entry("skills", s.skills, t.skills.title),
+    ...entry("skills", s.skills, t.skills.title, t.skills.everyone.all),
     ...entry("keys", s.keys, t.keys.details.title, t.keys.details.add),
     ...entry(
       "permissions",

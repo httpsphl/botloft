@@ -63,6 +63,89 @@ describe("Settings > Skills (spec 38.4)", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
     expect(await within(page).findByText("Yours · 1 agent")).toBeDefined();
   });
+
+  test("one switch gives a skill to every agent, and taking it back leaves the choices", async () => {
+    const { fake, scout } = crewOf();
+    renderApp(fake);
+    const page = await openSkills();
+    fireEvent.click(await within(page).findByRole("button", { name: /deploy/ }));
+    const dialog = await screen.findByRole("dialog", { name: "deploy" });
+    expect(within(dialog).getByText("The agents you make later too.")).toBeDefined();
+    fireEvent.click(within(dialog).getByRole("switch", { name: "Every agent" }));
+    const locked = await within(dialog).findByRole("switch", { name: "Scout can use it" });
+    await waitFor(() => expect(locked.getAttribute("aria-checked")).toBe("true"));
+    expect(locked).toHaveProperty("disabled", true);
+    expect(fake.calls.find((each) => each.method === "skills.everyone")?.params).toEqual({
+      name: "deploy",
+      on: true,
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    expect(await within(page).findByText("Yours · Every agent")).toBeDefined();
+
+    fireEvent.click(within(page).getByRole("button", { name: /deploy/ }));
+    const again = await screen.findByRole("dialog", { name: "deploy" });
+    fireEvent.click(within(again).getByRole("switch", { name: "Every agent" }));
+    const free = within(again).getByRole("switch", { name: "Scout can use it" });
+    await waitFor(() => expect(free).toHaveProperty("disabled", false));
+    expect(free.getAttribute("aria-checked")).toBe("false");
+    expect(fake.skills.skills[0]?.botIds).not.toContain(scout.id);
+  });
+
+  test("every skill goes to every agent after a question that says what they run", async () => {
+    const { fake } = crewOf();
+    renderApp(fake);
+    const page = await openSkills();
+    const all = await within(page).findByRole("switch", { name: "Every skill for every agent" });
+    fireEvent.click(all);
+    const ask = await screen.findByRole("dialog", { name: "Give all 2 skills to every agent?" });
+    expect(
+      within(ask).getByText("1 of them runs tools without asking you, or commands by itself."),
+    ).toBeDefined();
+    fireEvent.click(within(ask).getByRole("button", { name: "Give to every agent" }));
+    await waitFor(() => expect(fake.skills.everyone).toBe(true));
+    expect(await within(page).findByText("claude.ai · Every agent")).toBeDefined();
+    expect(all.getAttribute("aria-checked")).toBe("true");
+
+    // Each skill says so and cannot be changed on its own.
+    fireEvent.click(within(page).getByRole("button", { name: /pdf/ }));
+    const dialog = await screen.findByRole("dialog", { name: "pdf" });
+    expect(
+      within(dialog).getByText("Every skill is on for every agent, at the top of Skills."),
+    ).toBeDefined();
+    expect(within(dialog).getByRole("switch", { name: "Every agent" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+
+    // Off at once, without asking.
+    fireEvent.click(all);
+    await waitFor(() => expect(fake.skills.everyone).toBe(false));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(await within(page).findByText("claude.ai · No agent yet")).toBeDefined();
+  });
+
+  test("with many skills, a search finds one by its name or what it does", async () => {
+    const { fake } = crewOf();
+    for (const name of ["animate", "brandkit", "graphify", "humanizer", "minimalist-ui"]) {
+      fake.skills.add({
+        name,
+        description: name === "graphify" ? "Builds a knowledge graph." : "",
+      });
+    }
+    renderApp(fake);
+    const page = await openSkills();
+    const search = await within(page).findByRole("searchbox", { name: "Search skills" });
+    fireEvent.change(search, { target: { value: "HUMAN" } });
+    const cards = within(page).getAllByRole("listitem");
+    expect(cards.map((card) => card.textContent?.split("No description")[0])).toEqual([
+      "humanizer",
+    ]);
+    fireEvent.change(search, { target: { value: "knowledge" } });
+    expect(within(page).getByRole("button", { name: /graphify/ })).toBeDefined();
+    fireEvent.change(search, { target: { value: "nothing like it" } });
+    expect(within(page).getByText('No skill matches "nothing like it".')).toBeDefined();
+  });
 });
 
 describe("skills in the chat and the details (spec 38.5)", () => {

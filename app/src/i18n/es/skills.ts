@@ -25,6 +25,25 @@ export const skills: typeof en = {
   canUse: (bot) => `${bot} puede usarla`,
   noAgents: "Aún no hay agentes de Claude Code.",
   shareFailed: "No se pudo cambiar quién usa esta skill.",
+  search: "Buscar skills",
+  nothingFound: (query) => `Ninguna skill con "${query}".`,
+  everyone: {
+    all: "Todas las skills para todos los agentes",
+    allHint:
+      "Los agentes de Claude Code usan todas tus skills, también las que agregues después, y los agentes que crees después también.",
+    allAsk: (count) => `¿Dar las ${count} skills a todos los agentes?`,
+    allBody:
+      "Cada agente de Claude Code recibe una copia de cada una y vuelve a empezar cuando termina lo que está haciendo, en la misma conversación. Cada agente lee un resumen de todas las skills en cada conversación, lo que gasta un poco más de tu plan.",
+    allRisky: (count) =>
+      count === 1
+        ? "1 de ellas ejecuta herramientas sin preguntarte, o comandos por sí sola."
+        : `${count} de ellas ejecutan herramientas sin preguntarte, o comandos por sí solas.`,
+    allGive: "Dar a todos",
+    one: "Todos los agentes",
+    oneHint: "También los agentes que crees después.",
+    byAll: "Todas las skills están activadas para todos, arriba en Skills.",
+    failed: "No se pudo cambiar quién usa tus skills.",
+  },
   request: {
     asks: (bot, name) => `${bot} pide la skill ${name}`,
     wants: (bot, name) => `${bot} quiere usar tu skill ${name}`,
