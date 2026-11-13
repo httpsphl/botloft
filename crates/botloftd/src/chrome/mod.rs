@@ -4,6 +4,7 @@
 
 mod prompt;
 mod rules;
+pub(crate) mod seen;
 mod turn;
 
 use std::io;
@@ -36,12 +37,16 @@ pub fn given(daemon: &Daemon, bot: &BotId) -> bool {
 }
 
 /// Whether `bot` starts with `--chrome` (spec 37.2), with its rules
-/// written. Only agents on Claude Code get it. A new process has no tab
-/// group yet, so the tabs the agent opened before are forgotten.
+/// written. Only agents on Claude Code get it. Without the Chrome, the
+/// tabs it knew are forgotten; with it, another conversation's process
+/// may still use them, and every answer of the Chrome says where they
+/// are (`seen`).
 pub(crate) fn launch(daemon: &Daemon, bot: &BotId, workspace: &Path) -> io::Result<bool> {
     let on_claude = crate::connectors::on_claude(daemon, bot);
     let chrome = on_claude && given(daemon, bot);
-    daemon.chrome.tabs.forget(bot);
+    if !chrome {
+        daemon.chrome.tabs.forget(bot);
+    }
     rules::write(workspace, on_claude, chrome)?;
     Ok(chrome)
 }

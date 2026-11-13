@@ -66,11 +66,19 @@ impl Tabs {
             .cloned()
     }
 
-    fn set(&self, bot: &BotId, tabs: &[i64], site: &str) {
+    pub(super) fn set(&self, bot: &BotId, tabs: &[i64], site: &str) {
         let mut all = self.lock();
         let known = all.entry(bot.clone()).or_default();
         for tab in tabs {
             known.insert(*tab, site.to_owned());
+        }
+    }
+
+    /// The tab is at no site the daemon knows: a new tab, a page of the
+    /// Chrome itself.
+    pub(super) fn unset(&self, bot: &BotId, tab: i64) {
+        if let Some(tabs) = self.lock().get_mut(bot) {
+            tabs.remove(&tab);
         }
     }
 
@@ -180,10 +188,12 @@ fn target(daemon: &Daemon, bot: &BotId, action: &str, input: &Value) -> (Option<
     collect(input, &mut urls, &mut tabs);
     tabs.sort_unstable();
     tabs.dedup();
+    // Back and forward act on the tab, at the site it is on.
+    urls.retain(|url| !matches!(url.trim(), "back" | "forward"));
     let mut found = BTreeSet::new();
     let mut unknown = false;
     for url in &urls {
-        match sites::site_of(url) {
+        match site_of(url) {
             Some(site) => {
                 found.insert(site);
             }
@@ -208,6 +218,17 @@ fn target(daemon: &Daemon, bot: &BotId, action: &str, input: &Value) -> (Option<
         .then(|| found.into_iter().next())
         .flatten();
     (site, tabs)
+}
+
+/// The site of an address the Chrome opens. Without a protocol it opens
+/// `https://` (the `navigate` tool says so).
+pub(super) fn site_of(url: &str) -> Option<String> {
+    let url = url.trim();
+    if url.contains("://") {
+        sites::site_of(url)
+    } else {
+        sites::site_of(&format!("https://{url}"))
+    }
 }
 
 /// Every `url` and `tabId` in a call's input, at any depth: a batch nests
@@ -271,5 +292,12 @@ mod tests {
         collect(&input, &mut urls, &mut tabs);
         assert_eq!(urls, ["https://suno.com/song/1"]);
         assert_eq!(tabs, [7, 7]);
+    }
+
+    #[test]
+    fn an_address_without_a_protocol_is_https() {
+        assert_eq!(site_of("example.com/a").as_deref(), Some("example.com"));
+        assert_eq!(site_of("https://www.suno.com").as_deref(), Some("suno.com"));
+        assert_eq!(site_of("chrome://newtab/"), None);
     }
 }

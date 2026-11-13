@@ -60,6 +60,8 @@ pub(crate) fn tool_finished(daemon: &Daemon, bot: &BotId, id: &str, failed: bool
     let ChatBody::Tool(tool) = item.body else {
         return;
     };
+    // The Chrome's answers say where the agent's tabs are (spec 37.3).
+    crate::chrome::seen::learned(daemon, bot, &tool.name, output);
     let body = ChatBody::Tool(ToolItem {
         status: if failed {
             ToolStatus::Failed
