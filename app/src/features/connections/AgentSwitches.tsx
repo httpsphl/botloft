@@ -14,6 +14,7 @@ export function AgentSwitches({
   onChange,
   label,
   empty,
+  locked,
 }: {
   /** The agents that may have it, archived ones left out by the caller. */
   bots: Bot[];
@@ -22,6 +23,8 @@ export function AgentSwitches({
   /** The switch's name for screen readers: "Scout can use it". */
   label(bot: Bot): string;
   empty: string;
+  /** Shown but not changed one by one: given to every agent. */
+  locked?: boolean;
 }) {
   const crews = useApp(useShallow(crewList));
   if (bots.length === 0) {
@@ -42,6 +45,7 @@ export function AgentSwitches({
               <span className="min-w-0 flex-1 break-words text-sm">{bot.name}</span>
               <Switch
                 checked={uses(bot)}
+                disabled={locked}
                 label={label(bot)}
                 onChange={(next) => onChange(bot, next)}
               />

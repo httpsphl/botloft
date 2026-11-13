@@ -189,6 +189,7 @@ pub mod method {
     pub const CHROME_STOP: &str = "chrome.stop";
     pub const SKILLS_LIST: &str = "skills.list";
     pub const SKILLS_SHARE: &str = "skills.share";
+    pub const SKILLS_EVERYONE: &str = "skills.everyone";
     pub const LOGINS_LIST: &str = "logins.list";
     pub const LOGINS_OPEN: &str = "logins.open";
     pub const LOGINS_SHARE: &str = "logins.share";

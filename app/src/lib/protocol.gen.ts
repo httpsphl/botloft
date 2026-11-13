@@ -1644,9 +1644,15 @@ runsCommands: boolean,
  */
 hasFiles: boolean, 
 /**
- * The agents that have it.
+ * The agents that have it: the ones chosen and, when it is for
+ * everyone, every agent on Claude Code.
  */
-botIds: Array<BotId>, };
+botIds: Array<BotId>, 
+/**
+ * Every agent on Claude Code uses it, the ones made later included
+ * (spec 38.3). `everyone` in the list gives every skill to every agent.
+ */
+everyone: boolean, };
 
 /**
  * What `skills.list` answers.
@@ -1655,13 +1661,24 @@ export type SkillList = {
 /**
  * By name.
  */
-skills: Array<Skill>, };
+skills: Array<Skill>, 
+/**
+ * Every agent on Claude Code uses every skill, the ones that come
+ * later included (spec 38.3).
+ */
+everyone: boolean, };
 
 /**
  * `skills.share`: the agents that may use a skill, in place of those
  * before.
  */
 export type SkillsShareParams = { name: string, botIds: Array<BotId>, };
+
+/**
+ * `skills.everyone`: one skill, or with no name every skill, for every
+ * agent on Claude Code, or not any more.
+ */
+export type SkillsEveryoneParams = { name?: string, on: boolean, };
 
 /**
  * A site the owner let a bot use in its browser (spec 21.5).
@@ -3542,6 +3559,7 @@ export interface RpcMethods {
   "chrome.stop": { params: undefined; result: ChromeTurn };
   "skills.list": { params: undefined; result: SkillList };
   "skills.share": { params: SkillsShareParams; result: Skill };
+  "skills.everyone": { params: SkillsEveryoneParams; result: SkillList };
   "catalog.list": { params: CatalogListParams; result: Array<BotTemplate> };
   "catalog.get": { params: CatalogGetParams; result: BotTemplateFull };
   "catalog.add": { params: CatalogAddParams; result: Bot };

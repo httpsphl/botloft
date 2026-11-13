@@ -97,6 +97,14 @@ export function seedContext(
     description: "Reads and fills in PDF files.",
     source: "claude_ai",
   });
+  // Enough of them for the page's search (spec 38.4).
+  fake.skills.add({ name: "humanizer", description: "Rewrites text so it reads like a person." });
+  fake.skills.add({ name: "invoice", description: "Makes an invoice from an order." });
+  fake.skills.add({
+    name: "web-qa",
+    description: "Checks a site in the browser for broken pages.",
+  });
+  fake.skills.add({ name: "weekly-report", description: "Sums up the week's sales." });
   fake.changes.byBot.set(bots.scout, {
     repos: [
       {

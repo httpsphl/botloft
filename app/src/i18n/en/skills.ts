@@ -27,6 +27,25 @@ export const skills = {
   canUse: (bot: string) => `${bot} can use it`,
   noAgents: "No agent on Claude Code yet.",
   shareFailed: "Could not change who uses this skill.",
+  search: "Search skills",
+  nothingFound: (query: string) => `No skill matches "${query}".`,
+  everyone: {
+    all: "Every skill for every agent",
+    allHint:
+      "Agents on Claude Code use all your skills, the ones you add later too, and so do the agents you make later.",
+    allAsk: (count: number) => `Give all ${count} skills to every agent?`,
+    allBody:
+      "Each agent on Claude Code gets a copy of every one and starts again once it finishes what it is doing, in the same conversation. Each agent reads a short summary of every skill in every conversation, which uses a little more of your plan.",
+    allRisky: (count: number) =>
+      count === 1
+        ? "1 of them runs tools without asking you, or commands by itself."
+        : `${count} of them run tools without asking you, or commands by themselves.`,
+    allGive: "Give to every agent",
+    one: "Every agent",
+    oneHint: "The agents you make later too.",
+    byAll: "Every skill is on for every agent, at the top of Skills.",
+    failed: "Could not change who uses your skills.",
+  },
   request: {
     asks: (bot: string, name: string) => `${bot} asks for the skill ${name}`,
     wants: (bot: string, name: string) => `${bot} wants to use your skill ${name}`,
