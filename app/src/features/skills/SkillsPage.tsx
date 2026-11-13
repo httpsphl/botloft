@@ -42,7 +42,9 @@ export function SkillsPage() {
       {skills !== null && skills.length > 0 && (
         <AllForEveryone
           on={everyone}
-          skills={skills}
+          count={skills.length}
+          risky={skills.filter((skill) => warningsOf(skill, words.warnings).length > 0).length}
+          words={words.everyone}
           onChange={(on) => forEveryone(undefined, on)}
         />
       )}

@@ -26,6 +26,7 @@ import { onboarding } from "./onboarding";
 import { overview } from "./overview";
 import { permissions } from "./permissions";
 import { phone } from "./phone";
+import { plugins } from "./plugins";
 import { questions } from "./questions";
 import { routines } from "./routines";
 import { screens } from "./screens";
@@ -68,6 +69,7 @@ export const en = {
   overview,
   permissions,
   phone,
+  plugins,
   questions,
   routines,
   screens,

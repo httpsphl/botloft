@@ -150,6 +150,8 @@ pub(super) fn launch_spec(
     let chrome = crate::chrome::launch(daemon, &bot.id, &workspace)?;
     // The owner's skills it was given, copied into its folder (spec 38.3).
     crate::skills::launch(daemon, &bot.id, &workspace)?;
+    // And the owner's plugins, each loaded from its copy there (spec 41.3).
+    let plugins = crate::plugins::launch(daemon, &bot.id, &workspace)?;
     let args = agent.args(&LaunchPlan {
         session: &session,
         resumed,
@@ -162,6 +164,7 @@ pub(super) fn launch_spec(
         connectors: &connectors.chosen,
         blocked_servers: &connectors.blocked,
         chrome,
+        plugin_dirs: &plugins,
     });
 
     let mut env = platform::user_environment()?;

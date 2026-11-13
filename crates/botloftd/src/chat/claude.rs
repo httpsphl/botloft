@@ -77,6 +77,7 @@ fn init(daemon: &Daemon, bot: &Seat, event: &Value) {
         service::models::reported(daemon, bot, model);
     }
     crate::connectors::seen(daemon, &event["mcp_servers"]);
+    crate::plugins::not_loaded(bot, event);
 }
 
 /// The piece of reply text a `stream_event` carries, if that is what it is

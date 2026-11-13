@@ -1,30 +1,43 @@
-// "Every skill for every agent" at the top of Settings > Skills (spec 38.4):
-// turning it on asks first, saying how many skills there are and how many
-// run things without asking; turning it off is at once.
+// "Every skill for every agent" at the top of Settings > Skills (spec 38.4),
+// and the same for plugins (spec 41.5): turning it on asks first, saying
+// how many there are and how many run things without asking; turning it
+// off is at once.
 
 import { useId, useState } from "react";
 import { useT } from "../../i18n";
-import type { Skill } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
 import { Dialog } from "../../ui/Dialog";
 import { Switch } from "../../ui/Switch";
-import { warningsOf } from "./SkillWarnings";
+
+/** The words of one page's switch and question. */
+export interface EveryoneWords {
+  all: string;
+  allHint: string;
+  allAsk(count: number): string;
+  allBody: string;
+  allRisky(count: number): string;
+  allGive: string;
+}
 
 export function AllForEveryone({
   on,
-  skills,
+  count,
+  risky,
+  words,
   onChange,
 }: {
   on: boolean;
-  skills: Skill[];
+  /** How many there are to give. */
+  count: number;
+  /** How many of them run things without asking. */
+  risky: number;
+  words: EveryoneWords;
   onChange(on: boolean): Promise<unknown>;
 }) {
   const t = useT();
-  const words = t.skills;
   const id = useId();
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
-  const risky = skills.filter((skill) => warningsOf(skill, words.warnings).length > 0).length;
   const give = async () => {
     setBusy(true);
     try {
@@ -38,9 +51,9 @@ export function AllForEveryone({
     <div className="flex items-center gap-3 rounded-xl bg-bubble px-3.5 py-3">
       <div className="min-w-0 flex-1">
         <p id={id} className="font-medium text-sm">
-          {words.everyone.all}
+          {words.all}
         </p>
-        <p className="text-muted text-xs leading-relaxed">{words.everyone.allHint}</p>
+        <p className="text-muted text-xs leading-relaxed">{words.allHint}</p>
       </div>
       <Switch
         checked={on}
@@ -49,20 +62,20 @@ export function AllForEveryone({
       />
       {asking && (
         <Dialog
-          title={words.everyone.allAsk(skills.length)}
+          title={words.allAsk(count)}
           onClose={() => setAsking(false)}
           footer={
             <>
               <Button onClick={() => setAsking(false)}>{t.common.cancel}</Button>
               <Button variant="primary" disabled={busy} onClick={() => void give()}>
-                {words.everyone.allGive}
+                {words.allGive}
               </Button>
             </>
           }
         >
           <div className="flex flex-col gap-2 text-ink-soft text-sm leading-relaxed">
-            <p>{words.everyone.allBody}</p>
-            {risky > 0 && <p className="text-warn">{words.everyone.allRisky(risky)}</p>}
+            <p>{words.allBody}</p>
+            {risky > 0 && <p className="text-warn">{words.allRisky(risky)}</p>}
           </div>
         </Dialog>
       )}

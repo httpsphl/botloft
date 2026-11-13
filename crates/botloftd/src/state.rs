@@ -166,6 +166,8 @@ pub struct Daemon {
     pub titles: crate::titles::Titles,
     /// The owner's own Chrome: tabs and turn (spec 37).
     pub chrome: crate::chrome::Chrome,
+    /// Where the owner's plugins are looked for, and their copies (spec 41).
+    pub plugins: crate::plugins::Plugins,
     /// Where the owner's skills are looked for (spec 38).
     pub skills: crate::skills::Skills,
     /// The shared site logins' window and profile (spec 35).
@@ -229,6 +231,7 @@ impl Daemon {
             connectors: Default::default(),
             titles: Default::default(),
             chrome: Default::default(),
+            plugins: Default::default(),
             skills: Default::default(),
             logins: Default::default(),
             mcp_states: Default::default(),

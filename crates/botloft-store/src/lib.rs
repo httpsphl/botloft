@@ -9,6 +9,7 @@ mod allow_rules;
 mod approvals;
 mod bot_chrome;
 mod bot_connectors;
+mod bot_plugins;
 mod bot_skills;
 mod bots;
 mod browser_sites;

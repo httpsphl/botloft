@@ -15,6 +15,7 @@ export type Page =
   | "tools"
   | "logins"
   | "skills"
+  | "plugins"
   | "keys"
   | "permissions"
   | "backup"
@@ -67,6 +68,7 @@ export function settingsIndex(t: ReturnType<typeof useT>): Entry[] {
     ...entry("tools", s.tools),
     ...entry("logins", s.logins, t.logins.title, t.logins.signIn),
     ...entry("skills", s.skills, t.skills.title, t.skills.everyone.all),
+    ...entry("plugins", s.plugins, t.plugins.title, t.plugins.everyone.all),
     ...entry("keys", s.keys, t.keys.details.title, t.keys.details.add),
     ...entry(
       "permissions",

@@ -428,6 +428,7 @@ mod tests {
             connectors: &[],
             blocked_servers: &[],
             chrome: false,
+            plugin_dirs: &[],
         };
         let text = |args: Vec<OsString>| -> Vec<String> {
             args.into_iter()

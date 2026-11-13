@@ -162,6 +162,8 @@ pub fn new_daemon_with(
         cloud,
         secrets,
     });
+    // Tests never read the plugins of whoever runs them (spec 41.1).
+    daemon.plugins.use_root(dir.path().join("claude"));
     Parts {
         daemon,
         runtime,
