@@ -161,6 +161,13 @@ Open an area to see all of it. Areas marked (Windows) work on Windows only for n
 - **See inside an agent.** The overview, beside the chat when the window has room, shows what fills
   its conversation, what it left running in the background (and a way to stop it), what changed in
   its git folders and its pull requests' checks.
+- **A memory that stays useful.** Agents write their memory as one dated note per line that says
+  where it came from, and only your notes count as orders. When an agent's memory passes 200 lines,
+  the overview says so, with a button that asks the agent to tidy it.
+- **Every version kept.** Each change to an agent's memory or instructions is kept, and Undo brings
+  an older one back.
+- **They remember what was said.** Agents can search their own past conversations, and when an
+  agent's turn fails, its crew's chief hears of it and can have it try again.
 
 </details>
 
@@ -169,8 +176,14 @@ Open an area to see all of it. Areas marked (Windows) work on Windows only for n
 
 - **Chat with every agent.** Replies stream in as they are written. Send images and files, or drop
   them on the chat. Search every chat with Ctrl+K.
+- **Several conversations per agent.** Open a new conversation with an agent on Claude Code for a
+  separate subject. Each one keeps its own context, runs at the same time as the others and gets a
+  title written by AI. They are listed under the agent in the sidebar, and a reply always goes back
+  to the conversation that asked.
 - **Stop an agent.** While a Claude Code agent works, a Stop button takes the place of Send. The
   turn ends where it was, and a request still waiting for you is denied.
+- **Run a skill by name.** Type `/` and the name of a skill the agent has, like `/humanizer`, at
+  the start of a message.
 - **Approve or deny.** When an agent wants to run a command, edit a file or open a website, a card
   asks you first, unless you told that agent it may. Each file edit shows how many lines it added
   and removed, and opens to its diff.
@@ -179,6 +192,10 @@ Open an area to see all of it. Areas marked (Windows) work on Windows only for n
   question, a 👍 or 👎 on it answers at once.
 - **See what they made.** Sounds, videos and pictures an agent made play and open right in its
   chat. The files panel says what each file is, with thumbnails for pictures.
+- **Cards and notes.** Agents can show a table, a chart, buttons or a short form in the chat, and
+  your choice goes back to them. They can also leave you a note that needs no answer.
+- **Know when it is really done.** "Finished" comes only at the real end of an agent's work, and
+  you can turn it on or off per agent. A call an agent makes again and again is marked in its chat.
 - **Keep the chats as long as you want.** For good, a year, 90 or 30 days (Settings > General >
   History).
 
@@ -191,8 +208,8 @@ Open an area to see all of it. Areas marked (Windows) work on Windows only for n
   it arrives, or marked as failed so you can retry it.
 - **Walls between crews.** An agent reaches another crew only when you allow it: once, for that
   agent, or for the whole crew.
-- **One conversation per agent.** Your messages, other agents' messages and Botloft's notices reach
-  it in order.
+- **A main conversation for each agent.** Messages from other agents, routines and Botloft's
+  notices reach it there, in order, together with yours.
 
 </details>
 
@@ -222,10 +239,13 @@ Open an area to see all of it. Areas marked (Windows) work on Windows only for n
 - **Your claude.ai tools.** The tools you connected on claude.ai, like Google Calendar, Gmail, Drive
   or Notion, work in your agents with the login you made there. Choose which agents use each in
   Settings > Tools; an agent that needs one asks for it in the chat.
-- **Tools of your own.** Add any MCP server, like a LinkedIn reader or your company's system. Agents
-  still ask you before using it.
+- **Tools of your own.** Add any MCP server, like a LinkedIn reader or your company's system, or
+  bring the ones you set up in Claude Code. Agents still ask you before using them.
 - **Your skills.** Settings > Skills lists the skills of your Claude Code and of claude.ai, says what
-  each one runs before you give it, and has a switch for each agent.
+  each one runs before you give it, and has a switch for each agent. One switch gives a skill to
+  every agent, and another gives every skill to every agent, the ones that come later too.
+- **Your Claude Code plugins.** Settings > Plugins gives the plugins on in your Claude Code to
+  agents, with their skills, commands and agents: one agent at a time, or every agent.
 - **Keys stay out of the chat.** When an agent needs a token or password for another service, it
   asks for it by name; you type it in a hidden field and the agent gets it as an environment
   variable.
@@ -239,6 +259,10 @@ Open an area to see all of it. Areas marked (Windows) work on Windows only for n
   overlaps handled.
 - **On a signal.** A routine can wait for another agent to say its part is done.
 - **As a shortcut.** Run one with a click from the home, the chat, the island or your phone.
+- **Wait without spending.** A routine can wait for a file to appear, a program to end or a page
+  to change before the agent starts, without using your plan while it waits.
+- **Quiet when nothing changed.** A run that finds nothing new ends without bothering you, and after
+  failures in a row a routine waits longer between tries and tells you when it works again.
 
 </details>
 
@@ -378,9 +402,10 @@ flowchart LR
 - **Your engine is the runtime.** Each agent is a real session of the engine you chose (`claude -p`
   for Claude Code, `agy -p` for Antigravity and `codex app-server` for Codex) with its own
   workspace, memory and conversation. There is no custom agent SDK and no API key to manage.
-- **One conversation per agent.** Your messages, messages from other agents and notices from the
-  daemon reach the agent in order. What it does comes back as a chat: replies, tool use and
-  requests you allow or deny.
+- **Conversations.** Each agent has a main conversation, where your messages, messages from other
+  agents and notices from the daemon arrive in order, and an agent on Claude Code can have more,
+  each its own session. What it does comes back as a chat: replies, tool use and requests you allow
+  or deny.
 - **Durable before delivered.** Every message is written to SQLite before it is sent and retried
   until it is delivered or marked as failed, which you can retry.
 
@@ -481,7 +506,7 @@ your computer and is not affiliated with or endorsed by Anthropic, Google or Ope
 ## Status
 
 Botloft is young (version 0.x) and moves fast: the latest release is
-[0.20.0](https://github.com/httpsphl/botloft/releases/tag/v0.20.0) (2026-11-10), and the
+[0.21.0](https://github.com/httpsphl/botloft/releases/tag/v0.21.0) (2026-11-14), and the
 [releases page](https://github.com/httpsphl/botloft/releases) says what each version brought. Still
 open: a code-signed installer, and checking the phone page on an iPhone.
 
