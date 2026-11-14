@@ -9,8 +9,8 @@ use rusqlite::Connection;
 use crate::{Result, Store};
 
 /// Emptied in the light copy, children before parents. The chats, what the
-/// bots were asked and answered, the runs of the routines, the usage of the
-/// plan and what this computer let a bot use on the desktop.
+/// bots were asked and answered, the runs of the routines, what the bots
+/// cost and what this computer let a bot use on the desktop.
 const EMPTIED: &[&str] = &[
     "reactions",
     "questions",
@@ -22,11 +22,16 @@ const EMPTIED: &[&str] = &[
     "chat_items",
     "routine_runs",
     "turn_costs",
-    "plan_readings",
     "desktop_grants",
 ];
 
 impl Store {
+    /// A consistent copy of the whole database at `path`, which must not
+    /// exist yet (spec 14.2). The daemon makes it with a [`crate::Copier`].
+    pub fn snapshot_to(&self, path: &Path) -> Result<()> {
+        crate::copier::vacuum_into(&self.conn, path)
+    }
+
     /// A copy of the database at `path` (which must not exist yet) without
     /// the conversations and the rest of [`EMPTIED`]. The sessions the bots
     /// had with Claude Code stay behind: another computer does not have them.

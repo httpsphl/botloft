@@ -66,16 +66,17 @@ export const chat: Messages["chat"] = {
   },
   run: {
     working: "Trabajando",
-    done: (time: string, tokens: string | null) =>
-      `Terminado en ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
-    took: (time: string, tokens: TurnTokens | null) =>
-      `Tardó ${time}${
-        tokens === null ? "" : `. Leyó ${tokens.read} tokens y escribió ${tokens.wrote}.`
-      }`,
-    stoppedByOwner: (time: string, tokens: string | null) =>
-      `Detenido por ti a los ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
-    stoppedByBotloft: (time: string, tokens: string | null) =>
-      `Detenido por Botloft a los ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
+    done: (time: string, spent: string | null) =>
+      `Terminado en ${time}${spent === null ? "" : ` · ${spent}`}`,
+    tokens: (count: string) => `${count} tokens`,
+    took: (time: string, tokens: TurnTokens | null, cost: string | null) =>
+      `Tardó ${time}.${
+        tokens === null ? "" : ` Leyó ${tokens.read} tokens y escribió ${tokens.wrote}.`
+      }${cost === null ? "" : ` A precio de API: ${cost}, incluido en tu plan.`}`,
+    stoppedByOwner: (time: string, spent: string | null) =>
+      `Detenido por ti a los ${time}${spent === null ? "" : ` · ${spent}`}`,
+    stoppedByBotloft: (time: string, spent: string | null) =>
+      `Detenido por Botloft a los ${time}${spent === null ? "" : ` · ${spent}`}`,
     stopped: (reason: string) => `El agente dejó de trabajar en esto: ${reason}`,
   },
   tools: {

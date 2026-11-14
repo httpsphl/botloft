@@ -2770,10 +2770,45 @@ archived: boolean,
  */
 turns: number, tokens: TokenUsage, 
 /**
- * About how much of the weekly plan the bot used in the period, 0 to
- * 1; `null` until Botloft has learned it (spec 8.7).
+ * What the bot's turns would cost at API list prices, in US dollars;
+ * `null` when its engine does not say (spec 8.7). The owner's plan
+ * does not charge it.
  */
-planShare: number | null, };
+cost: number | null, };
+
+/**
+ * How `usage.costs` groups the cost (spec 8.7).
+ */
+export type CostBy = "model" | "day" | "routine";
+
+export type UsageCostsParams = { 
+/**
+ * Counts what was spent at or after this Unix time in ms.
+ */
+since: number, by: CostBy, };
+
+/**
+ * The cost of one model, day or routine since the time asked for.
+ */
+export type CostGroup = { 
+/**
+ * The model's id, the day (`2026-11-14`) or the routine's id; empty for
+ * the cost with no model (from before Botloft kept it) or not from a
+ * routine.
+ */
+key: string, 
+/**
+ * At API list prices, in US dollars.
+ */
+cost: number, 
+/**
+ * The routine's name; absent elsewhere and for a deleted routine.
+ */
+name?: string, 
+/**
+ * The bot the routine belongs to.
+ */
+botName?: string, color?: string, };
 
 /**
  * What changed.
@@ -2892,6 +2927,12 @@ export type TurnItem = { durationMs: number,
  * and on turns stored before it was kept.
  */
 tokens: TokenUsage | null, 
+/**
+ * What the turn would cost at API list prices, in millionths of a US
+ * dollar (spec 8.7); `null` when the engine does not say and on turns
+ * stored before it was kept.
+ */
+costMicros: number | null, 
 /**
  * Why the turn failed, e.g. `rate_limit`; `null` when it worked and
  * when the owner stopped it.
@@ -3639,6 +3680,7 @@ export interface RpcMethods {
   "conversations.unarchive": { params: ConversationIdParams; result: Conversation };
   "conversations.archived": { params: BotIdParams; result: Array<Conversation> };
   "usage.tokens": { params: UsageTokensParams; result: Array<BotTokens> };
+  "usage.costs": { params: UsageCostsParams; result: Array<CostGroup> };
   "versions.list": { params: VersionsListParams; result: Array<TextVersion> };
   "versions.restore": { params: VersionsRestoreParams; result: TextVersion };
   "chat.act": { params: ChatActParams; result: ChatItem };

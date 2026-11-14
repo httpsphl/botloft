@@ -16,6 +16,7 @@ import { seedCards } from "./seedCards";
 import { seedChats } from "./seedChats";
 import { seedChief } from "./seedChief";
 import { seedContext } from "./seedContext";
+import { seedCosts } from "./seedCosts";
 import { seedDesktop } from "./seedDesktop";
 import { seedHands } from "./seedHands";
 import { seedKeys } from "./seedKeys";
@@ -138,6 +139,12 @@ function seed(fake: FakeBotloft): void {
     planner: planner.id,
   });
   seedRoutines(fake, { scout: scout.id, analyst: analyst.id });
+  seedCosts(fake, {
+    scout: scout.id,
+    writer: writer.id,
+    reviewer: reviewer.id,
+    analyst: analyst.id,
+  });
   seedVersions(fake, scout.id);
   seedQuestions(fake, { scout: scout.id, analyst: analyst.id });
   seedCards(fake, analyst.id);

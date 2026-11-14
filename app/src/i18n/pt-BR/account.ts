@@ -32,10 +32,10 @@ export const account: Messages["account"] = {
     extraUsage: "O limite do plano passou. Seus agentes seguem trabalhando no uso extra da conta.",
     plan: (plan: string) => `Plano: ${plan}`,
     updated: (relative: string) => `Atualizado ${relative}`,
-    tokens: {
-      title: "Uso por agente",
+    costs: {
+      title: "Gasto dos agentes",
       intro:
-        "Quanto do seu plano semanal cada agente usou, e os tokens por trás disso: os pedaços de texto que um agente lê e escreve.",
+        "Quanto o trabalho de cada agente custaria a preço de API. O seu plano não cobra esse valor: ele mostra quais agentes, modelos e rotinas pesam mais.",
       period: "Período",
       periods: {
         hour: "Última hora",
@@ -44,19 +44,26 @@ export const account: Messages["account"] = {
         month: "30 dias",
         all: "Tudo",
       },
+      view: "Ver por",
+      views: {
+        agents: "Agentes",
+        models: "Modelos",
+        days: "Dias",
+        routines: "Rotinas",
+      },
       empty: "Nenhum agente trabalhou nesse período.",
-      failed: "Não deu para carregar os tokens",
+      failed: "Não deu para carregar o gasto",
       archived: "arquivado",
-      /** `crew` is null on the total of all bots. */
+      /** `crew` is null on the total of all agents. */
       detail: (crew: string | null, times: number) =>
         `${crew === null ? "" : `${crew} · `}Trabalhou ${times === 1 ? "1 vez" : `${times} vezes`}`,
-      total: "Todos os agentes",
-      share: (percent) => `≈ ${percent} da semana`,
-      tokensUsed: (count) => `${count} tokens`,
-      estimate:
-        "≈ Estimativa: o Botloft aprende quanto do seu plano o trabalho dos agentes consome pelo quanto o plano semanal sobe enquanto eles trabalham. O que você usa fora do Botloft também faz o plano subir, então os agentes podem aparecer com um pouco mais do que usaram.",
-      learning:
-        "A parte de cada agente no seu plano semanal aparece depois que o plano subir alguns pontos com os agentes trabalhando. Até lá, os tokens.",
+      total: "Total",
+      share: (percent) => `${percent} do total`,
+      noPrice: (count) => `${count} tokens · sem preço`,
+      noModel: "Modelo não registrado (trabalho antigo)",
+      notRoutine: "Conversas e pedidos",
+      deletedRoutine: "Uma rotina apagada",
+      note: "Preço de API do que os agentes usaram. O seu plano não cobra esse valor: ele serve para comparar.",
     },
   },
   backup: {

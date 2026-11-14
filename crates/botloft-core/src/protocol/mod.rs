@@ -319,6 +319,7 @@ pub mod method {
     pub const INSTRUCTIONS_SET: &str = "instructions.set";
     pub const AGENTS_SET_PATH: &str = "agents.setPath";
     pub const USAGE_TOKENS: &str = "usage.tokens";
+    pub const USAGE_COSTS: &str = "usage.costs";
 }
 
 /// Server notification method names.

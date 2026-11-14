@@ -157,7 +157,7 @@ pub struct Daemon {
     /// Other crews a bot may reach for its current turn (spec 10.4).
     pub crew_access: crate::service::crew_access::TurnAccess,
     /// What each bot's process had cost by its last turn (spec 8.7).
-    pub costs: crate::service::plan::CostMeter,
+    pub costs: crate::service::costs::CostMeter,
     pub trash: Arc<dyn Trash>,
     pub contexts: Contexts,
     pub background: crate::background::Backgrounds,

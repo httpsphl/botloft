@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use axum::http::StatusCode;
 use botloft_core::envelope::due;
 use botloft_core::ids::{BotId, TaskId};
-use botloft_core::protocol::{BotsListParams, Task, TaskStatus, error_code};
+use botloft_core::protocol::{AgentKind, BotsListParams, Task, TaskStatus, error_code};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
@@ -134,7 +134,11 @@ fn roster(daemon: &Daemon, bot: &BotId) -> Outcome {
     };
     let crew_bots = bots::list(daemon, list).map_err(explain)?;
     let now = daemon.clock.now_ms();
-    let week = crate::service::plan::shares(&daemon.store(), now - 7 * 86_400_000, now);
+    // What each one cost in the last 7 days at API prices (spec 8.7).
+    let week = daemon
+        .store()
+        .bot_costs(now - 7 * 86_400_000)
+        .unwrap_or_default();
     let others: Vec<_> = crew_bots
         .iter()
         .filter(|other| other.id != me.id)
@@ -146,9 +150,9 @@ fn roster(daemon: &Daemon, bot: &BotId) -> Outcome {
                 "state": other.state,
                 "model": other.model,
                 "effort": other.effort,
-                "week_plan_percent": week.as_ref().map(|shares| {
-                    let share = shares.get(&other.id).copied().unwrap_or_default();
-                    (share * 10_000.0).round() / 100.0
+                "week_cost_usd": (other.agent == AgentKind::Claude).then(|| {
+                    let cost = week.get(&other.id).copied().unwrap_or_default();
+                    (cost * 100.0).round() / 100.0
                 }),
                 "chief": lead::is_lead(&crew, &other.id),
             })

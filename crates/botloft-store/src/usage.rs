@@ -1,4 +1,5 @@
-//! Tokens per bot (spec 8.7), summed from the `turn` items of the chat.
+//! Tokens and cost per bot (spec 8.7): the tokens summed from the `turn`
+//! items of the chat, the cost from `turn_costs`.
 
 use botloft_core::protocol::{BotTokens, TokenUsage};
 use rusqlite::{Row, params};
@@ -11,24 +12,34 @@ fn count(row: &Row<'_>, index: usize) -> rusqlite::Result<u64> {
 }
 
 impl Store {
-    /// Each bot's tokens in turns that ended at or after `since`, the bot
-    /// that used the most first. Bots with no such turn are left out.
-    pub fn turn_tokens(&self, since: i64) -> Result<Vec<BotTokens>> {
+    /// Each bot's tokens and cost from `since` on: the dearest bot first,
+    /// then the bots with no price by their tokens. A bot on Claude always
+    /// has a price (0 for turns from before Botloft kept it); the other
+    /// engines give none. Bots with neither a turn nor a cost in the period
+    /// are left out.
+    pub fn bot_usage(&self, since: i64) -> Result<Vec<BotTokens>> {
         let mut stmt = self.conn.prepare_cached(
-            "SELECT b.id, b.name, b.color, b.archived_at IS NOT NULL, COUNT(*), \
-                    SUM(json_extract(c.data, '$.tokens.input')), \
-                    SUM(json_extract(c.data, '$.tokens.cacheWrite')), \
-                    SUM(json_extract(c.data, '$.tokens.cacheRead')), \
-                    SUM(json_extract(c.data, '$.tokens.output')) AS output, \
-                    COALESCE(SUM(json_extract(c.data, '$.tokens.reloaded')), 0) AS reloaded, \
-                    w.name \
-             FROM chat_items c JOIN bots b ON b.id = c.bot_id JOIN crews w ON w.id = b.crew_id \
-             WHERE c.kind = 'turn' AND c.created_at >= ?1 \
-               AND json_type(c.data, '$.tokens') = 'object' \
-             GROUP BY b.id \
-             ORDER BY SUM(json_extract(c.data, '$.tokens.input')) \
-                    + SUM(json_extract(c.data, '$.tokens.cacheWrite')) + output DESC, \
-                    b.name, w.name",
+            "WITH t AS ( \
+                SELECT bot_id, COUNT(*) AS turns, \
+                       SUM(json_extract(data, '$.tokens.input')) AS input, \
+                       SUM(json_extract(data, '$.tokens.cacheWrite')) AS cache_write, \
+                       SUM(json_extract(data, '$.tokens.cacheRead')) AS cache_read, \
+                       SUM(json_extract(data, '$.tokens.output')) AS output, \
+                       COALESCE(SUM(json_extract(data, '$.tokens.reloaded')), 0) AS reloaded \
+                FROM chat_items \
+                WHERE kind = 'turn' AND created_at >= ?1 \
+                  AND json_type(data, '$.tokens') = 'object' \
+                GROUP BY bot_id), \
+             k AS (SELECT bot_id, SUM(cost) AS cost FROM turn_costs WHERE at >= ?1 GROUP BY bot_id) \
+             SELECT b.id, b.name, b.color, b.archived_at IS NOT NULL, COALESCE(t.turns, 0), \
+                    COALESCE(t.input, 0), COALESCE(t.cache_write, 0), COALESCE(t.cache_read, 0), \
+                    COALESCE(t.output, 0), COALESCE(t.reloaded, 0), w.name, \
+                    CASE WHEN b.agent = 'claude' THEN COALESCE(k.cost, 0) ELSE k.cost END AS cost \
+             FROM bots b JOIN crews w ON w.id = b.crew_id \
+             LEFT JOIN t ON t.bot_id = b.id LEFT JOIN k ON k.bot_id = b.id \
+             WHERE t.bot_id IS NOT NULL OR k.bot_id IS NOT NULL \
+             ORDER BY cost IS NULL, cost DESC, \
+                      COALESCE(t.input + t.cache_write + t.output, 0) DESC, b.name, w.name",
         )?;
         let rows = stmt.query_map(params![since], |row| {
             Ok(BotTokens {
@@ -45,7 +56,7 @@ impl Store {
                     cache_read: count(row, 7)?,
                     output: count(row, 8)?,
                 },
-                plan_share: None,
+                cost: row.get(11)?,
             })
         })?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
@@ -76,6 +87,7 @@ mod tests {
         ChatBody::Turn(TurnItem {
             duration_ms: 1000,
             tokens,
+            cost_micros: None,
             error: None,
             stopped: false,
             quiet: false,
@@ -105,7 +117,7 @@ mod tests {
         add(&fx, scout, reply, 26);
         add(&fx, writer, turn(Some(tokens(500, 0))), 40);
 
-        let all = fx.store.turn_tokens(10).expect("tokens");
+        let all = fx.store.bot_usage(10).expect("tokens");
         let order: Vec<&BotId> = all.iter().map(|b| &b.bot_id).collect();
         assert_eq!(order, [writer, scout], "the bot that used the most first");
         let scout_tokens = &all[1];
@@ -123,6 +135,56 @@ mod tests {
                 output: 6,
             }
         );
-        assert!(fx.store.turn_tokens(41).expect("tokens").is_empty());
+        assert!(fx.store.bot_usage(41).expect("tokens").is_empty());
+    }
+
+    #[test]
+    fn the_dearest_bot_comes_first_and_a_cost_alone_counts() {
+        let fx = Fixture::new();
+        let (scout, writer) = (&fx.bots[0].id, &fx.bots[1].id);
+        // Scout used many tokens, on a cheap model.
+        add(&fx, scout, turn(Some(tokens(5_000, 900))), 10);
+        let cost = |bot, cost| {
+            fx.store
+                .add_turn_cost(&crate::TurnCost {
+                    bot,
+                    at: 10,
+                    cost,
+                    model: None,
+                    run: None,
+                })
+                .expect("cost");
+        };
+        cost(scout, 0.05);
+        // A compaction costs but leaves no turn.
+        cost(writer, 0.40);
+        let all = fx.store.bot_usage(0).expect("usage");
+        let order: Vec<&BotId> = all.iter().map(|b| &b.bot_id).collect();
+        assert_eq!(order, [writer, scout]);
+        assert_eq!(all[0].turns, 0);
+        assert_eq!(all[0].tokens, TokenUsage::default());
+        assert_eq!(all[0].cost, Some(0.40));
+        assert_eq!(all[1].cost, Some(0.05));
+    }
+
+    #[test]
+    fn only_a_bot_on_another_engine_has_no_price() {
+        let fx = Fixture::new();
+        let (scout, writer) = (&fx.bots[0].id, &fx.bots[1].id);
+        fx.store
+            .conn
+            .execute(
+                "UPDATE bots SET agent = 'codex' WHERE id = ?1",
+                [writer.as_str()],
+            )
+            .expect("codex");
+        // Turns from before Botloft kept the cost.
+        add(&fx, scout, turn(Some(tokens(1, 2))), 10);
+        add(&fx, writer, turn(Some(tokens(900, 900))), 10);
+        let all = fx.store.bot_usage(0).expect("usage");
+        let order: Vec<&BotId> = all.iter().map(|b| &b.bot_id).collect();
+        assert_eq!(order, [scout, writer], "the bots with no price go last");
+        assert_eq!(all[0].cost, Some(0.0));
+        assert_eq!(all[1].cost, None);
     }
 }

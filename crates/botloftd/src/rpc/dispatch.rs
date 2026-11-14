@@ -197,6 +197,7 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::INSTRUCTIONS_SET => reply(service::instructions::set(daemon, parse(params)?)),
         method::AGENTS_SET_PATH => reply(agents::set_path(daemon, parse(params)?)),
         method::USAGE_TOKENS => reply(usage::tokens(daemon, parse(params)?)),
+        method::USAGE_COSTS => reply(usage::costs(daemon, parse(params)?)),
         method::SESSION_HELLO => Err(RpcError::new(
             error_code::CONFLICT,
             "this connection is already authenticated",

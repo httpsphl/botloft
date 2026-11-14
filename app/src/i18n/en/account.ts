@@ -32,10 +32,10 @@ export const account = {
     extraUsage: "Past your plan's limit. Your agents keep working on the account's extra usage.",
     plan: (plan: string) => `Plan: ${plan}`,
     updated: (relative: string) => `Updated ${relative}`,
-    tokens: {
-      title: "Use by agent",
+    costs: {
+      title: "What the agents cost",
       intro:
-        "How much of your weekly plan each agent used, and the tokens behind it: the pieces of text an agent reads and writes.",
+        "What each agent's work would cost at API prices. Your plan does not charge it: it shows which agents, models and routines weigh the most.",
       period: "Period",
       periods: {
         hour: "Last hour",
@@ -44,19 +44,26 @@ export const account = {
         month: "30 days",
         all: "All time",
       },
+      view: "Show by",
+      views: {
+        agents: "Agents",
+        models: "Models",
+        days: "Days",
+        routines: "Routines",
+      },
       empty: "No agent worked in this period.",
-      failed: "Could not load the tokens",
+      failed: "Could not load the costs",
       archived: "archived",
-      /** `crew` is null on the total of all bots. */
+      /** `crew` is null on the total of all agents. */
       detail: (crew: string | null, times: number) =>
         `${crew === null ? "" : `${crew} · `}Worked ${times === 1 ? "once" : `${times} times`}`,
-      total: "All agents",
-      share: (percent: string) => `≈ ${percent} of the week`,
-      tokensUsed: (count: string) => `${count} tokens`,
-      estimate:
-        "≈ Estimated: Botloft learns how much of your plan the agents' work takes from how the weekly plan rises while they work. What you use outside Botloft also raises it, so the agents may show a little more than they used.",
-      learning:
-        "Each agent's share of your weekly plan shows up once the plan has gone up a few points while the agents work. Until then, the tokens.",
+      total: "Total",
+      share: (percent: string) => `${percent} of the total`,
+      noPrice: (count: string) => `${count} tokens · no price`,
+      noModel: "Model not recorded (older work)",
+      notRoutine: "Chats and requests",
+      deletedRoutine: "A deleted routine",
+      note: "API prices for what the agents used. Your plan does not charge this amount: it is there to compare.",
     },
   },
   backup: {

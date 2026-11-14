@@ -83,9 +83,10 @@ fn crew_tools() -> Value {
             "description": "Lists the other bots of your crew with their handle, name, role and \
                 current state (idle, busy, offline...). Use it to find who can help and the \
                 handle to send a message to. Each bot also shows its model, effort and \
-                `week_plan_percent`: about how much of the owner's weekly plan it used in the \
-                last 7 days (null until Botloft has learned it). With `crew`, the bots of another \
-                crew you were let in to (ask_crew_access).",
+                `week_cost_usd`: what its work of the last 7 days would cost at API prices, in \
+                US dollars, to compare the bots (the owner's plan does not charge it; null for a \
+                bot whose engine gives no price). With `crew`, the bots of another crew you were \
+                let in to (ask_crew_access).",
             "inputSchema": {
                 "type": "object",
                 "properties": {

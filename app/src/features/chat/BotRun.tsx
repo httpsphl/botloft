@@ -6,7 +6,7 @@
 import { CircleAlert } from "lucide-react";
 import { memo, type ReactNode, useMemo } from "react";
 import { useT } from "../../i18n";
-import { duration, tokens, usedTokens } from "../../lib/format";
+import { dollars, duration, tokens, usedTokens } from "../../lib/format";
 import type { Bot, ChatItem, TurnItem } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
 import { useArrival } from "../../ui/motion";
@@ -49,9 +49,11 @@ function TurnEnd({ turn }: { turn: TurnItem }) {
     read: tokens(used.input + used.cacheWrite),
     wrote: tokens(used.output),
   };
-  const spent = used && tokens(usedTokens(used));
+  // The API price when the agent says it (spec 8.7), else the tokens.
+  const cost = typeof turn.costMicros === "number" ? dollars(turn.costMicros / 1_000_000) : null;
+  const spent = cost ?? (used && t.chat.run.tokens(tokens(usedTokens(used))));
   return (
-    <p className="px-1 text-muted text-xs" title={t.chat.run.took(time, detail)}>
+    <p className="px-1 text-muted text-xs" title={t.chat.run.took(time, detail, cost)}>
       {turn.quiet
         ? t.chat.run.stoppedByBotloft(time, spent)
         : turn.stopped

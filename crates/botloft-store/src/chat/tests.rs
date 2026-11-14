@@ -137,6 +137,7 @@ fn the_last_activity_skips_turn_ends() {
     let turn = ChatBody::Turn(TurnItem {
         duration_ms: 1000,
         tokens: None,
+        cost_micros: None,
         error: None,
         stopped: false,
         quiet: false,
@@ -169,6 +170,7 @@ fn the_last_reply_is_found_behind_newer_items() {
     let turn = ChatBody::Turn(TurnItem {
         duration_ms: 1000,
         tokens: None,
+        cost_micros: None,
         error: None,
         stopped: false,
         quiet: false,

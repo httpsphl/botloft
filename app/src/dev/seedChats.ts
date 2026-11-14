@@ -138,7 +138,7 @@ export function seedChats(fake: FakeBotloft, crew: Crew): void {
     body: "Turn shared/summaries/week-39.md into this week's report draft.",
   });
   talk.read(note.delivery.id);
-  chat.turn(crew.scout);
+  chat.turn(crew.scout, null, undefined, 184_000);
   at(90);
   chat.finish(chat.tool(crew.writer, "Read", { summary: "week-39.md" }), "42 lines");
   chat.reply(crew.writer, "Starting the draft. I'll keep the three highlights as sections.");
