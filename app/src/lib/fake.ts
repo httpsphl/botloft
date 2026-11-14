@@ -38,7 +38,7 @@ import { conflict, invalid, notFound, slugify } from "./fakeRules";
 import { FakeScreens } from "./fakeScreens";
 import { searchHandlers } from "./fakeSearch";
 import { FakeSkills } from "./fakeSkills";
-import { usageHandlers } from "./fakeUsage";
+import { type FakeCostPart, usageHandlers } from "./fakeUsage";
 import { FakeVersions } from "./fakeVersions";
 import {
   type BackgroundTask,
@@ -139,8 +139,8 @@ export class FakeBotloft implements BotloftApi {
   readonly imports = new FakeImports(this);
   /** Clock for created and updated times. */
   now = Date.now();
-  /** Plan share per token for `usage.tokens`; `null`, not learned yet. */
-  planSharePerToken: number | null = null;
+  /** What the bots' turns cost, as the daemon's `turn_costs` (spec 8.7). */
+  costParts: FakeCostPart[] = [];
   closed = false;
   private state: ConnectionState = { kind: "open", daemonVersion: "0.1.0" };
   private readonly listeners = new Set<(event: ServerEvent) => void>();

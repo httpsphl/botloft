@@ -65,6 +65,14 @@ impl Routines {
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
+    /// The run the seat's open turn carries, the first if it carries more
+    /// (spec 8.7: its cost goes to that routine).
+    pub fn run_of_turn(&self, seat: &Seat) -> Option<RoutineRunId> {
+        self.turns()
+            .get(seat)
+            .and_then(|runs| runs.first().cloned())
+    }
+
     /// What the waits look at now.
     pub fn probe(&self) -> Arc<dyn WaitProbe> {
         Arc::clone(&lock(&self.probe))

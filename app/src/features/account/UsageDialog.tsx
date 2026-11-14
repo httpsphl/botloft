@@ -7,7 +7,7 @@ import type { AgentUsage, UsageWindow } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
 import { Callout } from "../../ui/Callout";
 import { Dialog } from "../../ui/Dialog";
-import { TokensByBot } from "./TokensByBot";
+import { AgentCosts } from "./AgentCosts";
 
 export function UsageDialog({ onClose }: { onClose(): void }) {
   const t = useT();
@@ -66,7 +66,7 @@ export function UsageDialog({ onClose }: { onClose(): void }) {
             );
           })
         )}
-        <TokensByBot />
+        <AgentCosts />
       </div>
     </Dialog>
   );

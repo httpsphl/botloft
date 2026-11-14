@@ -151,11 +151,18 @@ export class FakeChat {
     return this.update(item.id, { ...item.body, status: failed ? "failed" : "done", output });
   }
 
-  turn(botId: BotId, error: string | null = null, tokens: TokenUsage = TURN_TOKENS): ChatItem {
+  /** A turn's end; `costMicros` is its API price in millionths of a dollar (spec 8.7). */
+  turn(
+    botId: BotId,
+    error: string | null = null,
+    tokens: TokenUsage = TURN_TOKENS,
+    costMicros: number | null = null,
+  ): ChatItem {
     return this.add(botId, {
       kind: "turn",
       durationMs: 4200,
       tokens,
+      costMicros,
       error,
       stopped: false,
       quiet: false,
@@ -171,6 +178,7 @@ export class FakeChat {
       kind: "turn",
       durationMs: 3100,
       tokens: { ...TURN_TOKENS, output: 90 },
+      costMicros: null,
       error: null,
       stopped: true,
       quiet,

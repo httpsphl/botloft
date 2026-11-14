@@ -84,13 +84,15 @@ pub(crate) enum Stopped {
     ByBotloft,
 }
 
-/// The line that closes a turn: how long it took, its tokens when the agent
-/// says, and the error it ended with, if any, or who stopped it.
+/// The line that closes a turn: how long it took, its tokens and API price
+/// (in US dollars) when the agent says, and the error it ended with, if any,
+/// or who stopped it.
 pub(crate) fn turn_finished(
     daemon: &Daemon,
     bot: &Seat,
     duration_ms: u64,
     tokens: Option<TokenUsage>,
+    cost: Option<f64>,
     error: Option<String>,
     stopped: Stopped,
 ) {
@@ -102,11 +104,17 @@ pub(crate) fn turn_finished(
         ChatBody::Turn(TurnItem {
             duration_ms,
             tokens,
+            cost_micros: cost.map(micros),
             error,
             stopped: stopped != Stopped::No,
             quiet: stopped == Stopped::ByBotloft,
         }),
     );
+}
+
+/// Dollars as millionths of a dollar, as the chat item keeps them.
+fn micros(cost: f64) -> u64 {
+    (cost * 1_000_000.0).round().max(0.0) as u64
 }
 
 /// The message written with `uuid` was taken up by the bot: its delivery is

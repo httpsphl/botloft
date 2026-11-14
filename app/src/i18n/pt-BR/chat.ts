@@ -1,5 +1,4 @@
 import type { Messages } from "../en";
-import type { TurnTokens } from "../en/chat";
 import { startPlan } from "./startPlan";
 
 export const chat: Messages["chat"] = {
@@ -66,16 +65,16 @@ export const chat: Messages["chat"] = {
   },
   run: {
     working: "Trabalhando",
-    done: (time: string, tokens: string | null) =>
-      `Concluído em ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
-    took: (time: string, tokens: TurnTokens | null) =>
-      `Levou ${time}${
-        tokens === null ? "" : `. Leu ${tokens.read} tokens e escreveu ${tokens.wrote}.`
-      }`,
-    stoppedByOwner: (time: string, tokens: string | null) =>
-      `Parado por você em ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
-    stoppedByBotloft: (time: string, tokens: string | null) =>
-      `Parado pelo Botloft em ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
+    done: (time, spent) => `Concluído em ${time}${spent === null ? "" : ` · ${spent}`}`,
+    tokens: (count) => `${count} tokens`,
+    took: (time, tokens, cost) =>
+      `Levou ${time}.${
+        tokens === null ? "" : ` Leu ${tokens.read} tokens e escreveu ${tokens.wrote}.`
+      }${cost === null ? "" : ` A preço de API: ${cost}, incluído no seu plano.`}`,
+    stoppedByOwner: (time, spent) =>
+      `Parado por você em ${time}${spent === null ? "" : ` · ${spent}`}`,
+    stoppedByBotloft: (time, spent) =>
+      `Parado pelo Botloft em ${time}${spent === null ? "" : ` · ${spent}`}`,
     stopped: (reason: string) => `O agente parou de trabalhar nisto: ${reason}`,
   },
   tools: {

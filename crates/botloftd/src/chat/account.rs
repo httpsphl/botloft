@@ -104,7 +104,6 @@ pub(super) fn rate_limit(daemon: &Daemon, bot: &Seat, generation: u64, event: &V
     // working on it: `rejected` stops the bots only without it (spec 19).
     let limited = status == "rejected" && !extra_usage;
     let now = daemon.clock.now_ms();
-    crate::service::plan::observed(daemon, &windows, now);
     daemon.set_usage(AccountUsage {
         status,
         resets_at,

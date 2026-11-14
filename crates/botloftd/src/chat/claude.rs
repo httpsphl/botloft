@@ -173,7 +173,7 @@ fn result(daemon: &Daemon, bot: &Seat, generation: u64, event: &Value) {
     // A turn ran, so the conversation is on disk even when the replay that
     // says so was too long to read (spec 7.3).
     super::session::began(daemon, bot, event);
-    crate::service::plan::turn_ended(daemon, bot, generation, event);
+    let cost = crate::service::costs::turn_ended(daemon, bot, generation, event);
     let reloaded = context::reloaded(daemon, bot);
     let failed = event["is_error"].as_bool() == Some(true);
     // The owner stopped it (`bots.interrupt`, spec 9.2): Claude Code says the
@@ -209,6 +209,7 @@ fn result(daemon: &Daemon, bot: &Seat, generation: u64, event: &Value) {
             bot,
             event["duration_ms"].as_u64().unwrap_or_default(),
             used,
+            cost,
             error,
             stopped,
         );

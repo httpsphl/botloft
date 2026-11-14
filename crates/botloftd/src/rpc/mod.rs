@@ -197,6 +197,7 @@ const ASIDE: &[&str] = &[
     method::SCREENS_LIST,
     method::ATTACHMENTS_READ,
     method::USAGE_TOKENS,
+    method::USAGE_COSTS,
     method::CHAT_SEARCH,
     // Reading the owner's whole history takes a while (spec 36.7).
     method::IMPORTS_SCAN,

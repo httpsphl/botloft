@@ -72,16 +72,17 @@ export const chat = {
   },
   run: {
     working: "Working",
-    done: (time: string, tokens: string | null) =>
-      `Done in ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
-    took: (time: string, tokens: TurnTokens | null) =>
-      `Took ${time}${
-        tokens === null ? "" : `. Read ${tokens.read} tokens and wrote ${tokens.wrote}.`
-      }`,
-    stoppedByOwner: (time: string, tokens: string | null) =>
-      `Stopped by you after ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
-    stoppedByBotloft: (time: string, tokens: string | null) =>
-      `Stopped by Botloft after ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
+    done: (time: string, spent: string | null) =>
+      `Done in ${time}${spent === null ? "" : ` · ${spent}`}`,
+    tokens: (count: string) => `${count} tokens`,
+    took: (time: string, tokens: TurnTokens | null, cost: string | null) =>
+      `Took ${time}.${
+        tokens === null ? "" : ` Read ${tokens.read} tokens and wrote ${tokens.wrote}.`
+      }${cost === null ? "" : ` At API prices: ${cost}, included in your plan.`}`,
+    stoppedByOwner: (time: string, spent: string | null) =>
+      `Stopped by you after ${time}${spent === null ? "" : ` · ${spent}`}`,
+    stoppedByBotloft: (time: string, spent: string | null) =>
+      `Stopped by Botloft after ${time}${spent === null ? "" : ` · ${spent}`}`,
     stopped: (reason: string) => `The agent stopped working on this: ${reason}`,
   },
   tools: {

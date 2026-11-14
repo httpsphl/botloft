@@ -276,6 +276,7 @@ impl AgyDecoder {
             bot,
             (seconds * 1000.0) as u64,
             tokens,
+            None,
             error,
             sink::Stopped::No,
         );

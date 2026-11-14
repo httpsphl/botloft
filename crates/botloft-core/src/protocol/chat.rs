@@ -236,6 +236,11 @@ pub struct TurnItem {
     /// and on turns stored before it was kept.
     #[serde(default)]
     pub tokens: Option<TokenUsage>,
+    /// What the turn would cost at API list prices, in millionths of a US
+    /// dollar (spec 8.7); `null` when the engine does not say and on turns
+    /// stored before it was kept.
+    #[serde(default)]
+    pub cost_micros: Option<u64>,
     /// Why the turn failed, e.g. `rate_limit`; `null` when it worked and
     /// when the owner stopped it.
     pub error: Option<String>,
