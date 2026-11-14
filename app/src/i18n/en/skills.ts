@@ -45,6 +45,15 @@ export const skills = {
     oneHint: "The agents you make later too.",
     byAll: "Every skill is on for every agent, at the top of Skills.",
     failed: "Could not change who uses your skills.",
+    allTooBig: (count: number) =>
+      count === 1
+        ? "1 is too big to give and stays out."
+        : `${count} are too big to give and stay out.`,
+  },
+  tooBig: {
+    card: "Too big to give",
+    title: "Too big to give to agents",
+    body: "Each agent gets its own copy of a skill, of up to 2,000 files and 50 MB, and this one is bigger. A folder of downloaded packages inside it, such as node_modules, is often why.",
   },
   request: {
     asks: (bot: string, name: string) => `${bot} asks for the skill ${name}`,

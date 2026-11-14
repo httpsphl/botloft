@@ -24,6 +24,7 @@ export class FakeSkills {
       hasFiles: false,
       botIds: [],
       everyone: false,
+      tooBig: false,
       ...skill,
     };
     this.skills.push(made);
@@ -36,8 +37,11 @@ export class FakeSkills {
     const claude = [...this.fake.bots.values()]
       .filter((bot) => bot.archivedAt === null && bot.agent === "claude")
       .map((bot) => bot.id);
-    const botIds =
-      this.everyone || skill.everyone ? claude : skill.botIds.filter((id) => claude.includes(id));
+    const botIds = skill.tooBig
+      ? []
+      : this.everyone || skill.everyone
+        ? claude
+        : skill.botIds.filter((id) => claude.includes(id));
     return { ...skill, botIds };
   }
 

@@ -1740,7 +1740,12 @@ botIds: Array<BotId>,
  * Every agent on Claude Code uses it, the ones made later included
  * (spec 38.3). `everyone` in the list gives every skill to every agent.
  */
-everyone: boolean, };
+everyone: boolean, 
+/**
+ * Too big for Botloft's copy (2,000 files or 50 MB): no agent gets it
+ * (spec 38.3).
+ */
+tooBig: boolean, };
 
 /**
  * What `skills.list` answers.

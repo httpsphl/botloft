@@ -22,6 +22,9 @@ use crate::state::Daemon;
 pub fn share(daemon: &Daemon, params: SkillsShareParams) -> ApiResult<Skill> {
     let name = params.name.trim().to_owned();
     let source = source(daemon, &name)?;
+    if !params.bot_ids.is_empty() {
+        refuse_too_big(daemon, &name)?;
+    }
     let mut wanted: Vec<BotId> = Vec::new();
     {
         let store = daemon.store();
@@ -61,6 +64,7 @@ pub fn share(daemon: &Daemon, params: SkillsShareParams) -> ApiResult<Skill> {
                 has_files: meta.has_files,
                 bot_ids: Vec::new(),
                 everyone: false,
+                too_big: false,
             }
         }
     };
@@ -78,6 +82,7 @@ pub fn everyone(daemon: &Daemon, params: SkillsEveryoneParams) -> ApiResult<Skil
             let name = name.trim().to_owned();
             let source = source(daemon, &name)?;
             if params.on {
+                refuse_too_big(daemon, &name)?;
                 keep_copy(daemon, &name, source.as_deref())?;
             }
             daemon.store().set_skill_everyone(&name, params.on)?;
@@ -108,6 +113,16 @@ fn source(daemon: &Daemon, name: &str) -> ApiResult<Option<PathBuf>> {
         return Err(ApiError::NotFound(format!("skill {name}")));
     }
     Ok(source)
+}
+
+/// A skill too big for a copy cannot be given (spec 38.3).
+fn refuse_too_big(daemon: &Daemon, name: &str) -> ApiResult<()> {
+    if super::too_big(daemon, name) {
+        return Err(ApiError::Conflict(format!(
+            "the skill {name} is too big to give: Botloft copies up to 2,000 files and 50 MB"
+        )));
+    }
+    Ok(())
 }
 
 /// Botloft's copy, which the agents get and which stays if the owner

@@ -288,3 +288,53 @@ async fn an_agent_made_later_gets_the_skills_for_every_agent() {
             .is_err()
     );
 }
+
+#[tokio::test(start_paused = true)]
+async fn a_skill_too_big_to_copy_is_listed_but_reaches_no_agent() {
+    let s = setup().await;
+    let root = tempfile::tempdir().expect("root");
+    owner_skills(root.path());
+    let big = root.path().join("big");
+    std::fs::create_dir_all(big.join("node_modules")).expect("big");
+    std::fs::write(big.join("SKILL.md"), "---\ndescription: Too big.\n---\n").expect("skill");
+    for n in 0..2001 {
+        std::fs::write(big.join("node_modules").join(format!("{n}.js")), "").expect("file");
+    }
+    s.daemon.skills.use_root(root.path().to_path_buf());
+    let first = s.runtime.process(1).await;
+    s.until(BotState::Idle).await;
+
+    let all = skills::everyone(
+        &s.daemon,
+        SkillsEveryoneParams {
+            name: None,
+            on: true,
+        },
+    )
+    .expect("all");
+    let listed = all
+        .skills
+        .iter()
+        .find(|skill| skill.name == "big")
+        .expect("listed");
+    assert!(listed.too_big && listed.bot_ids.is_empty());
+    s.runtime.process(2).await;
+    let skills_dir = first.spec.cwd.join(".claude/skills");
+    assert!(skills_dir.join("deploy").is_dir());
+    assert!(!skills_dir.join("big").exists());
+    let rules =
+        std::fs::read_to_string(first.spec.cwd.join(".claude/rules/skills.md")).expect("rules");
+    assert!(!rules.contains("- big"), "{rules}");
+
+    let one = SkillsEveryoneParams {
+        name: Some("big".into()),
+        on: true,
+    };
+    let refused = skills::everyone(&s.daemon, one).expect_err("too big");
+    assert!(refused.to_string().contains("too big"), "{refused}");
+    let share = SkillsShareParams {
+        name: "big".into(),
+        bot_ids: vec![s.bot.clone()],
+    };
+    assert!(skills::share(&s.daemon, share).is_err());
+}

@@ -25,6 +25,9 @@ export function SkillsPage() {
   const [open, setOpen] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const opened = skills?.find((skill) => skill.name === open);
+  // A skill too big to copy goes to no agent (spec 38.3).
+  const givable = skills?.filter((skill) => !skill.tooBig) ?? [];
+  const tooBig = (skills?.length ?? 0) - givable.length;
   const wanted = plain(query);
   const shown =
     skills?.filter(
@@ -42,8 +45,9 @@ export function SkillsPage() {
       {skills !== null && skills.length > 0 && (
         <AllForEveryone
           on={everyone}
-          count={skills.length}
-          risky={skills.filter((skill) => warningsOf(skill, words.warnings).length > 0).length}
+          count={givable.length}
+          risky={givable.filter((skill) => warningsOf(skill, words.warnings).length > 0).length}
+          left={tooBig > 0 ? words.everyone.allTooBig(tooBig) : undefined}
           words={words.everyone}
           onChange={(on) => forEveryone(undefined, on)}
         />
@@ -93,9 +97,11 @@ export function SkillsPage() {
                 </span>
                 <span className="text-muted text-xs">
                   {words.source[skill.source]} ·{" "}
-                  {everyone || skill.everyone
-                    ? words.everyone.one
-                    : words.agents(skill.botIds.length)}
+                  {skill.tooBig
+                    ? words.tooBig.card
+                    : everyone || skill.everyone
+                      ? words.everyone.one
+                      : words.agents(skill.botIds.length)}
                 </span>
               </button>
             </li>

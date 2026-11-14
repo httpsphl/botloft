@@ -23,6 +23,7 @@ export function AllForEveryone({
   on,
   count,
   risky,
+  left,
   words,
   onChange,
 }: {
@@ -31,6 +32,8 @@ export function AllForEveryone({
   count: number;
   /** How many of them run things without asking. */
   risky: number;
+  /** What stays out, when something does. */
+  left?: string | undefined;
   words: EveryoneWords;
   onChange(on: boolean): Promise<unknown>;
 }) {
@@ -76,6 +79,7 @@ export function AllForEveryone({
           <div className="flex flex-col gap-2 text-ink-soft text-sm leading-relaxed">
             <p>{words.allBody}</p>
             {risky > 0 && <p className="text-warn">{words.allRisky(risky)}</p>}
+            {left && <p>{left}</p>}
           </div>
         </Dialog>
       )}

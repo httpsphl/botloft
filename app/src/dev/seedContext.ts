@@ -103,6 +103,8 @@ export function seedContext(
   fake.skills.add({
     name: "web-qa",
     description: "Checks a site in the browser for broken pages.",
+    // Its downloaded packages put it past the copy limit (spec 38.3).
+    tooBig: true,
   });
   fake.skills.add({ name: "weekly-report", description: "Sums up the week's sales." });
   // The plugins on in the owner's Claude Code, one given to Scout (spec 41).

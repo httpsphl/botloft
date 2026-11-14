@@ -50,6 +50,9 @@ impl Skills {
 struct Found {
     dir: PathBuf,
     source: SkillSource,
+    /// Small enough for a copy (spec 38.3); a skill that is not goes to
+    /// no agent.
+    fits: bool,
 }
 
 /// A folder name Botloft accepts as a skill's: what Claude Code would load,
@@ -73,8 +76,16 @@ fn skills_in(dir: &Path, source: SkillSource, into: &mut BTreeMap<String, Found>
         let name = entry.file_name().to_string_lossy().into_owned();
         let path = entry.path();
         // The folder itself may be a link the owner made; it is followed.
-        if valid(&name) && path.join("SKILL.md").is_file() {
-            into.entry(name).or_insert(Found { dir: path, source });
+        if valid(&name) && path.join("SKILL.md").is_file() && !into.contains_key(&name) {
+            let fits = copy::fits(&path);
+            into.insert(
+                name,
+                Found {
+                    dir: path,
+                    source,
+                    fits,
+                },
+            );
         }
     }
 }
@@ -99,16 +110,24 @@ fn library(daemon: &Daemon) -> PathBuf {
     daemon.paths.home.join("skills")
 }
 
-/// The skills there are, by name: the owner's, and the ones only Botloft's
-/// copy is left of that an agent still has.
+/// The skills an agent can get, by name: the owner's that fit in a copy,
+/// and the ones only Botloft's copy is left of that an agent still has.
 fn names(daemon: &Daemon, found: &BTreeMap<String, Found>) -> botloft_store::Result<Vec<String>> {
     let (given, everyone) = {
         let store = daemon.store();
         (store.given_skills()?, store.everyone_skills()?)
     };
-    let mut names: Vec<String> = found.keys().cloned().collect();
+    let mut names: Vec<String> = found
+        .iter()
+        .filter(|(_, found)| found.fits)
+        .map(|(name, _)| name.clone())
+        .collect();
     for name in given.into_iter().chain(everyone) {
-        if !names.contains(&name) && valid(&name) && library(daemon).join(&name).is_dir() {
+        if !found.contains_key(&name)
+            && !names.contains(&name)
+            && valid(&name)
+            && library(daemon).join(&name).is_dir()
+        {
             names.push(name);
         }
     }
@@ -140,7 +159,15 @@ fn on_claude_code(bot: &BotRecord) -> bool {
 /// left of that an agent still has.
 pub fn list(daemon: &Daemon) -> ApiResult<SkillList> {
     let found = found(daemon);
-    let names = names(daemon, &found)?;
+    let mut names = names(daemon, &found)?;
+    // Too big for a copy: listed, so the owner sees why, and given to no one.
+    names.extend(
+        found
+            .iter()
+            .filter(|(_, found)| !found.fits)
+            .map(|(name, _)| name.clone()),
+    );
+    names.sort();
     let store = daemon.store();
     let all = store.all_skills_everyone()?;
     let everyone = store.everyone_skills()?;
@@ -160,7 +187,10 @@ pub fn list(daemon: &Daemon) -> ApiResult<SkillList> {
             continue;
         };
         let for_everyone = everyone.contains(&name);
-        let bot_ids = if all || for_everyone {
+        let too_big = found.get(&name).is_some_and(|found| !found.fits);
+        let bot_ids = if too_big {
+            Vec::new()
+        } else if all || for_everyone {
             claude.clone()
         } else {
             store
@@ -178,6 +208,7 @@ pub fn list(daemon: &Daemon) -> ApiResult<SkillList> {
             has_files: meta.has_files,
             bot_ids,
             everyone: for_everyone,
+            too_big,
         });
     }
     Ok(SkillList {
@@ -209,8 +240,9 @@ pub(crate) fn launch(daemon: &Daemon, bot: &BotId, workspace: &Path) -> io::Resu
     }
     copy::sync(&library(daemon), workspace, &chosen)?;
     let others: Vec<String> = found
-        .into_keys()
-        .filter(|name| !chosen.contains(name))
+        .into_iter()
+        .filter(|(name, found)| found.fits && !chosen.contains(name))
+        .map(|(name, _)| name)
         .collect();
     rules::write(workspace, &chosen, &others)
 }
@@ -225,6 +257,12 @@ pub(crate) fn known(daemon: &Daemon, name: &str) -> Option<String> {
         .into_iter()
         .map(|skill| skill.name)
         .find(|have| have.to_lowercase() == wanted)
+}
+
+/// Whether the owner's skill `name` is too big for a copy, so no agent can
+/// have it.
+pub(crate) fn too_big(daemon: &Daemon, name: &str) -> bool {
+    found(daemon).get(name).is_some_and(|found| !found.fits)
 }
 
 /// Whether the agent uses the skill `name`, chosen for it or for every
