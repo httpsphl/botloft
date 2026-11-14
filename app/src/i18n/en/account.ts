@@ -16,7 +16,7 @@ export const account = {
   usage: {
     title: "Usage",
     intro:
-      "How much of your Claude plan your agents have used. It updates whenever an agent works.",
+      "How much of your Claude plan is used: everything on your account, Botloft and the rest.",
     empty: "Usage shows up after an agent's first reply.",
     windows: {
       five_hour: "5-hour window",
@@ -32,6 +32,11 @@ export const account = {
     extraUsage: "Past your plan's limit. Your agents keep working on the account's extra usage.",
     plan: (plan: string) => `Plan: ${plan}`,
     updated: (relative: string) => `Updated ${relative}`,
+    /** The windows were read from the account (spec 8.13). */
+    fromAccount: (relative: string) => `From your Claude account, ${relative}`,
+    /** The windows came from what an agent saw. */
+    fromAgents: (relative: string) => `Updated ${relative}, when an agent worked`,
+    modelWeek: (model: string) => `This week, ${model}`,
     costs: {
       title: "What the agents cost",
       intro:

@@ -192,6 +192,8 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
         loops.spawn("backup", botloftd::autobackup::run(Arc::clone(&daemon)));
         loops.spawn("phone relay", botloftd::mobile::run(Arc::clone(&daemon)));
         loops.spawn("browser", browser::run(Arc::clone(&daemon)));
+        // The plan read from the owner's Claude account (spec 8.13).
+        loops.spawn("plan usage", botloftd::plan_usage::run(Arc::clone(&daemon)));
         // The outline around the window a bot uses (spec 24.9).
         loops.spawn(
             "desktop outline",

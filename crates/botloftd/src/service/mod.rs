@@ -20,7 +20,7 @@ pub mod delete;
 pub mod deliveries;
 pub mod desktop;
 pub mod files;
-mod import_sources;
+pub(crate) mod import_sources;
 pub mod imports;
 pub mod instructions;
 pub mod interrupt;
@@ -134,7 +134,11 @@ pub fn status(daemon: &Daemon) -> ApiResult<SystemStatus> {
             claude: daemon.supervisor.claude_account(),
         },
         deliveries,
-        usage: daemon.usage(),
+        usage: {
+            // Someone looks: the plan is read again when it is time (spec 8.13).
+            daemon.plan_reader.wanted();
+            daemon.usage()
+        },
         enabled_agents: [AgentKind::Claude, AgentKind::Agy, AgentKind::Codex]
             .into_iter()
             .filter(|kind| daemon.supervisor.agent_enabled(*kind))

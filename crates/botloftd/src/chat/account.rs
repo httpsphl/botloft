@@ -92,6 +92,7 @@ pub(super) fn rate_limit(daemon: &Daemon, bot: &Seat, generation: u64, event: &V
                     name: name.clone(),
                     utilization: window["utilization"].as_f64().unwrap_or_default(),
                     resets_at: seconds(&window["resetsAt"]),
+                    model: None,
                 })
                 .collect()
         })
@@ -110,6 +111,7 @@ pub(super) fn rate_limit(daemon: &Daemon, bot: &Seat, generation: u64, event: &V
         windows,
         observed_at: now,
         extra_usage,
+        from_account: false,
     });
     if limited {
         let until = resume::until(daemon, resets_at);

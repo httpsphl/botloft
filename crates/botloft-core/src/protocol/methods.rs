@@ -162,6 +162,10 @@ pub struct AccountUsage {
     /// usage: a `rejected` status then does not stop the agents.
     #[serde(default)]
     pub extra_usage: bool,
+    /// The windows were read from the owner's Claude account (spec 8.13),
+    /// not from what the agents' Claude Code reported.
+    #[serde(default)]
+    pub from_account: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -174,6 +178,11 @@ pub struct UsageWindow {
     pub utilization: f64,
     /// Unix time in milliseconds.
     pub resets_at: Option<i64>,
+    /// The model a window of its own is for, as the account names it
+    /// ("Fable"); absent for the window of every model (spec 8.13).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, ts(optional))]
+    pub model: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
