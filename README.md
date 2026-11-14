@@ -182,8 +182,8 @@ Open an area to see all of it. Areas marked (Windows) work on Windows only for n
   to the conversation that asked.
 - **Stop an agent.** While a Claude Code agent works, a Stop button takes the place of Send. The
   turn ends where it was, and a request still waiting for you is denied.
-- **Run a skill by name.** Type `/` and the name of a skill the agent has, like `/humanizer`, at
-  the start of a message.
+- **Run a skill by name.** Type `/` at the start of a message to an agent on Claude Code: a menu
+  lists its skills and plugin commands, with what each one does, and narrows as you type.
 - **Approve or deny.** When an agent wants to run a command, edit a file or open a website, a card
   asks you first, unless you told that agent it may. Each file edit shows how many lines it added
   and removed, and opens to its diff.
