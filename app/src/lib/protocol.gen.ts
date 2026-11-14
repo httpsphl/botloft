@@ -557,7 +557,12 @@ utilization: number,
 /**
  * Unix time in milliseconds.
  */
-resetsAt: number | null, };
+resetsAt: number | null, 
+/**
+ * The model a window of its own is for, as the account names it
+ * ("Fable"); absent for the window of every model (spec 8.13).
+ */
+model?: string, };
 
 /**
  * The account's usage, from Claude Code's `rate_limit_event` (spec 8.1).
@@ -579,7 +584,12 @@ observedAt: number,
  * The account went past the plan's limit and runs on its paid extra
  * usage: a `rejected` status then does not stop the agents.
  */
-extraUsage: boolean, };
+extraUsage: boolean, 
+/**
+ * The windows were read from the owner's Claude account (spec 8.13),
+ * not from what the agents' Claude Code reported.
+ */
+fromAccount: boolean, };
 
 /**
  * What `claude auth status` says about the account (spec 7.3).

@@ -66,6 +66,7 @@ describe("account area", () => {
         resetsAt: now + 2 * 3600_000,
         observedAt: now,
         extraUsage: false,
+        fromAccount: false,
         windows: [
           { name: "five_hour", utilization: 0.34, resetsAt: now + 2 * 3600_000 },
           { name: "seven_day", utilization: 0.915, resetsAt: null },
@@ -80,6 +81,34 @@ describe("account area", () => {
     expect(dialog.textContent).toContain("34% used");
     expect(dialog.textContent).toContain("Resets in 2 hr.");
     expect(dialog.textContent).toContain("92% used");
+    expect(dialog.textContent).toContain("when an agent worked");
+  });
+
+  test("usage read from the account shows each model's own week and says where it came from", async () => {
+    const fake = new FakeBotloft();
+    const now = Date.now();
+    fake.system = {
+      ...fake.system,
+      usage: {
+        status: "allowed",
+        resetsAt: null,
+        observedAt: now,
+        extraUsage: false,
+        fromAccount: true,
+        windows: [
+          { name: "seven_day", utilization: 0.8, resetsAt: null },
+          { name: "seven_day", utilization: 0.3, resetsAt: null, model: "Fable" },
+        ],
+      },
+    };
+    renderApp(fake);
+    await openAccount();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Usage" }));
+    const dialog = screen.getByRole("dialog", { name: "Usage" });
+    expect(within(dialog).getByRole("progressbar", { name: "This week" })).toBeDefined();
+    expect(within(dialog).getByRole("progressbar", { name: "This week, Fable" })).toBeDefined();
+    expect(dialog.textContent).toContain("30% used");
+    expect(dialog.textContent).toContain("From your Claude account");
   });
 
   test("usage past the limit on extra usage says the agents keep working", async () => {
@@ -92,6 +121,7 @@ describe("account area", () => {
         resetsAt: now + 3600_000,
         observedAt: now,
         extraUsage: true,
+        fromAccount: false,
         windows: [{ name: "five_hour", utilization: 1, resetsAt: now + 3600_000 }],
       },
     };
@@ -113,6 +143,7 @@ describe("account area", () => {
         resetsAt: null,
         observedAt: now,
         extraUsage: false,
+        fromAccount: false,
         windows: [{ name: "five_hour", utilization: 0.2, resetsAt: null }],
       },
       agentUsage: [
@@ -124,6 +155,7 @@ describe("account area", () => {
             resetsAt: now + 3 * 86_400_000,
             observedAt: now,
             extraUsage: false,
+            fromAccount: false,
             windows: [{ name: "thirty_day", utilization: 1, resetsAt: now + 3 * 86_400_000 }],
           },
         },

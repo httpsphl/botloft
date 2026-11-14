@@ -96,9 +96,11 @@ function seed(fake: FakeBotloft): void {
       resetsAt: now + 2 * 3600_000,
       observedAt: now - 5 * 60_000,
       extraUsage: false,
+      fromAccount: true,
       windows: [
         { name: "five_hour", utilization: 0.34, resetsAt: now + 2 * 3600_000 },
         { name: "seven_day", utilization: 0.62, resetsAt: now + 3 * 86_400_000 },
+        { name: "seven_day", utilization: 0.3, resetsAt: now + 3 * 86_400_000, model: "Fable" },
       ],
     },
   };

@@ -46,6 +46,7 @@ pub(super) fn parse(limits: &Value, now_ms: i64) -> Option<AgentUsage> {
             windows,
             observed_at: now_ms,
             extra_usage: false,
+            from_account: false,
         },
     })
 }
@@ -58,6 +59,7 @@ fn window(value: &Value) -> Option<UsageWindow> {
         utilization: (used as f64 / 100.0).clamp(0.0, 1.0),
         // Seconds in Codex, milliseconds here.
         resets_at: value["resetsAt"].as_i64().map(|seconds| seconds * 1000),
+        model: None,
     })
 }
 

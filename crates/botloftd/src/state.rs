@@ -158,6 +158,8 @@ pub struct Daemon {
     pub crew_access: crate::service::crew_access::TurnAccess,
     /// What each bot's process had cost by its last turn (spec 8.7).
     pub costs: crate::service::costs::CostMeter,
+    /// Reads the plan from the owner's Claude account (spec 8.13).
+    pub plan_reader: crate::plan_usage::PlanReader,
     pub trash: Arc<dyn Trash>,
     pub contexts: Contexts,
     pub background: crate::background::Backgrounds,
@@ -225,6 +227,7 @@ impl Daemon {
             cloud: crate::cloud::Cloud::new(options.cloud),
             crew_access: Default::default(),
             costs: Default::default(),
+            plan_reader: Default::default(),
             trash: options.trash,
             contexts: Contexts::default(),
             background: Default::default(),
@@ -296,11 +299,21 @@ impl Daemon {
             .clone()
     }
 
+    /// What the agents' Claude Code saw (spec 8.1), over the account's
+    /// reading when there is one.
     pub(crate) fn set_usage(&self, usage: AccountUsage) {
-        *self
-            .usage
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(usage);
+        let mut current = self.usage.lock().unwrap_or_else(|p| p.into_inner());
+        crate::plan_usage::merge(&mut current, usage);
+    }
+
+    /// The windows read from the owner's Claude account (spec 8.13).
+    pub(crate) fn set_account_windows(
+        &self,
+        windows: Vec<botloft_core::protocol::UsageWindow>,
+        now: i64,
+    ) {
+        let mut current = self.usage.lock().unwrap_or_else(|p| p.into_inner());
+        crate::plan_usage::from_account(&mut current, windows, now);
     }
 
     /// The account usage the agents other than Claude Code last reported.

@@ -14,8 +14,7 @@ export const account: Messages["account"] = {
   },
   usage: {
     title: "Uso",
-    intro:
-      "Quanto do seu plano do Claude os seus agentes já usaram. Atualiza sempre que um agente trabalha.",
+    intro: "Quanto do seu plano do Claude já foi usado: tudo na sua conta, o Botloft e o resto.",
     empty: "O uso aparece depois da primeira resposta de um agente.",
     windows: {
       five_hour: "Janela de 5 horas",
@@ -32,6 +31,9 @@ export const account: Messages["account"] = {
     extraUsage: "O limite do plano passou. Seus agentes seguem trabalhando no uso extra da conta.",
     plan: (plan: string) => `Plano: ${plan}`,
     updated: (relative: string) => `Atualizado ${relative}`,
+    fromAccount: (relative: string) => `Da sua conta Claude, ${relative}`,
+    fromAgents: (relative: string) => `Atualizado ${relative}, quando um agente trabalhou`,
+    modelWeek: (model: string) => `Esta semana, ${model}`,
     costs: {
       title: "Gasto dos agentes",
       intro:

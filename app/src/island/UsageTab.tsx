@@ -8,6 +8,7 @@ import { useT } from "../i18n";
 import type { BotloftApi } from "../lib/api";
 import { fromNow } from "../lib/format";
 import type { AgentUsage, Bot, Routine, UsageWindow } from "../lib/protocol.gen";
+import { windowKey, windowName } from "../lib/usageWindows";
 
 /** From here on, a window shows in the warning color (spec 31.4). */
 export const WARN_AT = 0.8;
@@ -83,7 +84,7 @@ function Bar({ window }: { window: UsageWindow }) {
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex justify-between gap-3 text-[13px]">
-        <span className="font-medium">{words.windows[window.name] ?? window.name}</span>
+        <span className="font-medium">{windowName(window, words)}</span>
         <span className={warn ? "text-[var(--island-warn)]" : "island-muted"}>
           {words.used(percent)}
           {window.resetsAt !== null && ` · ${words.resets(fromNow(window.resetsAt))}`}
@@ -127,13 +128,13 @@ export function UsageTab({
           <p className="island-muted text-[13px]">{t.account.usage.empty}</p>
         )}
         {usage.claude.map((window) => (
-          <Bar key={window.name} window={window} />
+          <Bar key={windowKey(window)} window={window} />
         ))}
         {usage.others.map((other) => (
           <div key={other.agent} className="flex flex-col gap-3">
             <span className="island-muted text-xs">{t.island.engines[other.agent]}</span>
             {other.usage.windows.map((window) => (
-              <Bar key={window.name} window={window} />
+              <Bar key={windowKey(window)} window={window} />
             ))}
           </div>
         ))}
