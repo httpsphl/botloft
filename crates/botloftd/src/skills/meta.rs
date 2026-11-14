@@ -33,6 +33,17 @@ pub(super) fn read(dir: &Path) -> Option<Meta> {
     Some(meta)
 }
 
+/// What the Markdown file at `file` says it does (`description` with
+/// `when_to_use`): a skill's `SKILL.md` or a plugin's command. `None`
+/// without the file or a description.
+pub(super) fn description(file: &Path) -> Option<String> {
+    if std::fs::metadata(file).ok()?.len() > SKILL_MD_MAX {
+        return None;
+    }
+    let text = std::fs::read_to_string(file).ok()?;
+    Some(parse(&text).description).filter(|description| !description.is_empty())
+}
+
 /// The frontmatter between the first two `---` lines, and the body after.
 fn split(text: &str) -> (&str, &str) {
     let text = text.trim_start_matches('\u{feff}');

@@ -35,6 +35,14 @@ export const chat: Messages["chat"] = {
       `Para o que ${bot} está fazendo agora. Uma mensagem que ainda espera na fila vem depois.`,
     stopFailed: "Não foi possível parar",
   },
+  slash: {
+    label: "Skills e comandos",
+    looking: "Procurando as skills…",
+    none: (bot) =>
+      `${bot} ainda não tem skills para chamar pelo nome. Dê skills em Configurações > Skills.`,
+    noMatch: (query) => `Nenhuma skill tem "${query}" no nome.`,
+    from: { owner: "Sua", plugin: "Plugin", agent: "Do agente", claude_code: "Claude Code" },
+  },
   files: {
     tooMany: (max: number) => `Uma mensagem pode levar até ${max} arquivos.`,
     tooBig: (size: string) =>

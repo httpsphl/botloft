@@ -1774,6 +1774,26 @@ export type SkillsShareParams = { name: string, botIds: Array<BotId>, };
 export type SkillsEveryoneParams = { name?: string, on: boolean, };
 
 /**
+ * Where a name in the menu of `/` comes from (spec 38.11).
+ */
+export type SlashSource = "owner" | "plugin" | "agent" | "claude_code";
+
+/**
+ * A skill or command the owner can run by typing `/` and its name.
+ */
+export type SlashCommand = { name: string, 
+/**
+ * What it does, from its file in the agent's folder; may be empty.
+ */
+description: string, from: SlashSource, };
+
+/**
+ * What `bots.commands` answers: the agent's skills and plugin commands, by
+ * name. Empty for an agent that is not on Claude Code.
+ */
+export type SlashCommandList = { commands: Array<SlashCommand>, };
+
+/**
  * A site the owner let a bot use in its browser (spec 21.5).
  */
 export type BrowserSite = { botId: BotId, 
@@ -3656,6 +3676,7 @@ export interface RpcMethods {
   "skills.list": { params: undefined; result: SkillList };
   "skills.share": { params: SkillsShareParams; result: Skill };
   "skills.everyone": { params: SkillsEveryoneParams; result: SkillList };
+  "bots.commands": { params: BotIdParams; result: SlashCommandList };
   "catalog.list": { params: CatalogListParams; result: Array<BotTemplate> };
   "catalog.get": { params: CatalogGetParams; result: BotTemplateFull };
   "catalog.add": { params: CatalogAddParams; result: Bot };

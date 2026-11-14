@@ -15,6 +15,7 @@ pub mod mcp;
 pub mod mobile;
 pub mod routines;
 pub mod site;
+pub mod skills;
 pub mod stream;
 pub mod supervised;
 

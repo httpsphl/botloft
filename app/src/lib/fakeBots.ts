@@ -8,7 +8,8 @@ import { purgeBot } from "./fakeDelete";
 import { checkName, conflict, invalid, notFound } from "./fakeRules";
 import { AVATAR_PALETTE, type Bot } from "./protocol.gen";
 
-type BotMethods = Extract<keyof Handlers, `bots.${string}`>;
+// The menu of "/" (`bots.commands`) is the skills' fake's.
+type BotMethods = Exclude<Extract<keyof Handlers, `bots.${string}`>, "bots.commands">;
 
 export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
   return {

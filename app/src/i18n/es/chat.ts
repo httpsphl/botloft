@@ -35,6 +35,14 @@ export const chat: Messages["chat"] = {
       `Detiene lo que ${bot} está haciendo ahora. Un mensaje que todavía espera en la fila viene después.`,
     stopFailed: "No se pudo detener",
   },
+  slash: {
+    label: "Skills y comandos",
+    looking: "Buscando las skills…",
+    none: (bot) =>
+      `${bot} todavía no tiene skills para llamar por su nombre. Dale skills en Configuración > Skills.`,
+    noMatch: (query) => `Ninguna skill tiene "${query}" en el nombre.`,
+    from: { owner: "Tuya", plugin: "Plugin", agent: "Del agente", claude_code: "Claude Code" },
+  },
   files: {
     tooMany: (max: number) => `Un mensaje puede llevar hasta ${max} archivos.`,
     tooBig: (size: string) =>

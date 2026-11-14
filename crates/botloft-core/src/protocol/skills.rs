@@ -70,6 +70,40 @@ pub struct SkillsShareParams {
     pub bot_ids: Vec<BotId>,
 }
 
+text_enum!(
+    /// Where a name in the menu of `/` comes from (spec 38.11).
+    SlashSource, "slash source" {
+        /// One of the owner's skills, given to the agent.
+        Owner => "owner",
+        /// A plugin's skill or command (`plugin:name`).
+        Plugin => "plugin",
+        /// A skill the agent made in its own folder.
+        Agent => "agent",
+        /// One that comes with Claude Code.
+        ClaudeCode => "claude_code",
+    }
+);
+
+/// A skill or command the owner can run by typing `/` and its name.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct SlashCommand {
+    pub name: String,
+    /// What it does, from its file in the agent's folder; may be empty.
+    pub description: String,
+    pub from: SlashSource,
+}
+
+/// What `bots.commands` answers: the agent's skills and plugin commands, by
+/// name. Empty for an agent that is not on Claude Code.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct SlashCommandList {
+    pub commands: Vec<SlashCommand>,
+}
+
 /// `skills.everyone`: one skill, or with no name every skill, for every
 /// agent on Claude Code, or not any more.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
