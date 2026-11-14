@@ -42,6 +42,14 @@ export const chat = {
       `Stops what ${bot} is doing now. A message still waiting in line comes after.`,
     stopFailed: "Could not stop",
   },
+  slash: {
+    label: "Skills and commands",
+    looking: "Looking for skills…",
+    none: (bot: string) =>
+      `${bot} has no skills to run by name yet. Give it some in Settings > Skills.`,
+    noMatch: (query: string) => `No skill has "${query}" in its name.`,
+    from: { owner: "Yours", plugin: "Plugin", agent: "Its own", claude_code: "Claude Code" },
+  },
   files: {
     tooMany: (max: number) => `A message can carry up to ${max} files.`,
     tooBig: (size: string) => `Files in one message can add up to ${size}. Send them in parts.`,

@@ -4,16 +4,22 @@
 //! agent gets in its `.claude\skills`. Only agents on Claude Code get them.
 
 mod copy;
+mod found;
 mod give;
 mod meta;
 mod rules;
+mod slash;
 
+pub use found::Skills;
 pub use give::{everyone, share};
+pub use slash::commands;
+pub(crate) use slash::seen;
+
+use found::{Found, found, valid};
 
 use std::collections::BTreeMap;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
 
 use botloft_core::ids::{BotId, MessageId};
 use botloft_core::protocol::{
@@ -25,85 +31,6 @@ use tracing::warn;
 use crate::service::ApiResult;
 use crate::service::bots::active;
 use crate::state::Daemon;
-
-/// Where the owner's skills are looked for; the owner's own folder unless
-/// a test says otherwise.
-#[derive(Default)]
-pub struct Skills {
-    root: Mutex<Option<PathBuf>>,
-}
-
-impl Skills {
-    /// Looks for the owner's skills in `root` instead of
-    /// `~/.claude/skills`.
-    pub fn use_root(&self, root: PathBuf) {
-        *self.root.lock().unwrap_or_else(|p| p.into_inner()) = Some(root);
-    }
-
-    fn root(&self) -> Option<PathBuf> {
-        let set = self.root.lock().unwrap_or_else(|p| p.into_inner()).clone();
-        set.or_else(|| std::env::home_dir().map(|home| home.join(".claude").join("skills")))
-    }
-}
-
-/// A skill found in the owner's folders.
-struct Found {
-    dir: PathBuf,
-    source: SkillSource,
-    /// Small enough for a copy (spec 38.3); a skill that is not goes to
-    /// no agent.
-    fits: bool,
-}
-
-/// A folder name Botloft accepts as a skill's: what Claude Code would load,
-/// and safe to join to a path.
-fn valid(name: &str) -> bool {
-    !name.is_empty()
-        && name.len() <= 128
-        && !name.starts_with('.')
-        && !name.eq_ignore_ascii_case("synced")
-        && name
-            .chars()
-            .all(|ch| ch.is_alphanumeric() || matches!(ch, '-' | '_' | '.' | ' '))
-}
-
-/// The skills in `dir`: each folder with a `SKILL.md`.
-fn skills_in(dir: &Path, source: SkillSource, into: &mut BTreeMap<String, Found>) {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return;
-    };
-    for entry in entries.filter_map(Result::ok) {
-        let name = entry.file_name().to_string_lossy().into_owned();
-        let path = entry.path();
-        // The folder itself may be a link the owner made; it is followed.
-        if valid(&name) && path.join("SKILL.md").is_file() && !into.contains_key(&name) {
-            let fits = copy::fits(&path);
-            into.insert(
-                name,
-                Found {
-                    dir: path,
-                    source,
-                    fits,
-                },
-            );
-        }
-    }
-}
-
-/// The owner's skills by name: their own win over the claude.ai ones.
-fn found(daemon: &Daemon) -> BTreeMap<String, Found> {
-    let mut all = BTreeMap::new();
-    let Some(root) = daemon.skills.root() else {
-        return all;
-    };
-    skills_in(&root, SkillSource::Personal, &mut all);
-    if let Ok(accounts) = std::fs::read_dir(root.join("synced")) {
-        for account in accounts.filter_map(Result::ok) {
-            skills_in(&account.path(), SkillSource::ClaudeAi, &mut all);
-        }
-    }
-    all
-}
 
 /// Botloft's own copies of the skills it gave (spec 38.3).
 fn library(daemon: &Daemon) -> PathBuf {

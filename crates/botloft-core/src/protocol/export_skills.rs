@@ -9,6 +9,9 @@ pub(super) fn decls(out: &mut Out) {
     out.decl::<SkillList>();
     out.decl::<SkillsShareParams>();
     out.decl::<SkillsEveryoneParams>();
+    out.decl::<SlashSource>();
+    out.decl::<SlashCommand>();
+    out.decl::<SlashCommandList>();
 }
 
 pub(super) fn methods(out: &mut Out) {
@@ -22,5 +25,10 @@ pub(super) fn methods(out: &mut Out) {
         method::SKILLS_EVERYONE,
         &out.name::<SkillsEveryoneParams>(),
         &out.name::<SkillList>(),
+    );
+    out.method(
+        method::BOTS_COMMANDS,
+        &out.name::<BotIdParams>(),
+        &out.name::<SlashCommandList>(),
     );
 }

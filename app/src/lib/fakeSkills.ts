@@ -4,13 +4,15 @@
 
 import type { FakeBotloft, Handlers } from "./fake";
 import { conflict, notFound } from "./fakeRules";
-import type { BotId, Skill, SkillList } from "./protocol.gen";
+import type { BotId, Skill, SkillList, SlashCommand } from "./protocol.gen";
 
 export class FakeSkills {
   /** Each with the agents chosen one by one in `botIds`. */
   readonly skills: Skill[] = [];
   /** Every skill for every agent on Claude Code. */
   everyone = false;
+  /** What each agent's menu of "/" lists (spec 38.11). */
+  readonly slash = new Map<BotId, SlashCommand[]>();
 
   constructor(private readonly fake: FakeBotloft) {}
 
@@ -57,8 +59,11 @@ export class FakeSkills {
     return skill;
   }
 
-  handlers(): Pick<Handlers, "skills.list" | "skills.share" | "skills.everyone"> {
+  handlers(): Pick<Handlers, "skills.list" | "skills.share" | "skills.everyone" | "bots.commands"> {
     return {
+      "bots.commands": ({ botId }) => ({
+        commands: this.fake.bot(botId).agent === "claude" ? (this.slash.get(botId) ?? []) : [],
+      }),
       "skills.list": () => this.list(),
       "skills.share": ({ name, botIds }) => {
         const skill = this.find(name);

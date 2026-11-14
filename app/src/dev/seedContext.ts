@@ -107,6 +107,18 @@ export function seedContext(
     tooBig: true,
   });
   fake.skills.add({ name: "weekly-report", description: "Sums up the week's sales." });
+  // What Scout can run by typing "/" (spec 38.11).
+  fake.skills.slash.set(bots.scout, [
+    { name: "code-review", description: "", from: "claude_code" },
+    { name: "dataviz", description: "", from: "claude_code" },
+    {
+      name: "deploy",
+      description: "Builds the site and ships it to the server, checking the build first.",
+      from: "owner",
+    },
+    { name: "humanizer", description: "Rewrites text so it reads like a person.", from: "owner" },
+    { name: "vercel:deploy", description: "Deploys the site to Vercel.", from: "plugin" },
+  ]);
   // The plugins on in the owner's Claude Code, one given to Scout (spec 41).
   fake.plugins.add({
     name: "vercel",

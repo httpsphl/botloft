@@ -192,6 +192,7 @@ pub mod method {
     pub const SKILLS_LIST: &str = "skills.list";
     pub const SKILLS_SHARE: &str = "skills.share";
     pub const SKILLS_EVERYONE: &str = "skills.everyone";
+    pub const BOTS_COMMANDS: &str = "bots.commands";
     pub const PLUGINS_LIST: &str = "plugins.list";
     pub const PLUGINS_SHARE: &str = "plugins.share";
     pub const PLUGINS_EVERYONE: &str = "plugins.everyone";

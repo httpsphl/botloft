@@ -75,6 +75,7 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::SKILLS_LIST => reply(crate::skills::list(daemon)),
         method::SKILLS_SHARE => reply(crate::skills::share(daemon, parse(params)?)),
         method::SKILLS_EVERYONE => reply(crate::skills::everyone(daemon, parse(params)?)),
+        method::BOTS_COMMANDS => reply(crate::skills::commands(daemon, parse(params)?)),
         method::PLUGINS_LIST => reply(crate::plugins::list(daemon)),
         method::PLUGINS_SHARE => reply(crate::plugins::share(daemon, parse(params)?)),
         method::PLUGINS_EVERYONE => reply(crate::plugins::everyone(daemon, parse(params)?)),
