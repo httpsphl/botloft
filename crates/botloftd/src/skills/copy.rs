@@ -24,7 +24,7 @@ pub(super) fn copy_skill(from: &Path, to: &Path) -> io::Result<()> {
         std::fs::remove_dir_all(&staging)?;
     }
     let mut budget = (MAX_FILES, MAX_BYTES);
-    let copied = copy_dir(from, &staging, &mut budget)
+    let copied = walk(from, Some(&staging), &mut budget)
         .and_then(|()| std::fs::write(staging.join(MARK), b"Copied by Botloft (spec 38.3).\n"));
     if let Err(err) = copied {
         let _ = std::fs::remove_dir_all(&staging);
@@ -36,8 +36,20 @@ pub(super) fn copy_skill(from: &Path, to: &Path) -> io::Result<()> {
     std::fs::rename(&staging, to)
 }
 
-fn copy_dir(from: &Path, to: &Path, budget: &mut (usize, u64)) -> io::Result<()> {
-    std::fs::create_dir_all(to)?;
+/// Whether the skill in `from` is small enough for a copy: at most
+/// `MAX_FILES` files and `MAX_BYTES` bytes, counted the way a copy takes them.
+/// A folder that cannot be read counts as fitting: its copy fails later.
+pub(super) fn fits(from: &Path) -> bool {
+    let mut budget = (MAX_FILES, MAX_BYTES);
+    !matches!(walk(from, None, &mut budget), Err(err) if err.kind() == io::ErrorKind::FileTooLarge)
+}
+
+/// Goes through the skill as a copy takes it, against `budget`, copying
+/// each file to `to` when there is one.
+fn walk(from: &Path, to: Option<&Path>, budget: &mut (usize, u64)) -> io::Result<()> {
+    if let Some(to) = to {
+        std::fs::create_dir_all(to)?;
+    }
     for entry in std::fs::read_dir(from)? {
         let entry = entry?;
         let kind = entry.file_type()?;
@@ -49,17 +61,22 @@ fn copy_dir(from: &Path, to: &Path, budget: &mut (usize, u64)) -> io::Result<()>
         if name == MARK || name == ".git" {
             continue;
         }
-        let target = to.join(&name);
+        let target = to.map(|to| to.join(&name));
         if kind.is_dir() {
-            copy_dir(&entry.path(), &target, budget)?;
+            walk(&entry.path(), target.as_deref(), budget)?;
         } else if kind.is_file() {
             let size = entry.metadata()?.len();
             if budget.0 == 0 || size > budget.1 {
-                return Err(io::Error::other("the skill is too big to copy"));
+                return Err(io::Error::new(
+                    io::ErrorKind::FileTooLarge,
+                    "the skill is too big to copy",
+                ));
             }
             budget.0 -= 1;
             budget.1 -= size;
-            std::fs::copy(entry.path(), &target)?;
+            if let Some(target) = target {
+                std::fs::copy(entry.path(), target)?;
+            }
         }
     }
     Ok(())
@@ -135,5 +152,25 @@ mod tests {
         sync(&library, &workspace, &[]).expect("none");
         assert!(!deploy.exists());
         assert!(workspace.join(".claude/skills/review").is_dir());
+    }
+
+    #[test]
+    fn a_skill_past_the_file_limit_does_not_fit_unless_in_git() {
+        let root = tempfile::tempdir().expect("dir");
+        let big = root.path().join("big");
+        skill(&big, "big");
+        let modules = big.join("node_modules");
+        std::fs::create_dir_all(&modules).expect("modules");
+        // SKILL.md and run.py are two files already.
+        for n in 0..MAX_FILES - 2 {
+            std::fs::write(modules.join(format!("{n}.js")), "").expect("file");
+        }
+        assert!(fits(&big));
+        std::fs::write(modules.join("one-more.js"), "").expect("file");
+        assert!(!fits(&big));
+        assert!(copy_skill(&big, &root.path().join("copy")).is_err());
+        // The same files under .git are not copied, so they do not count.
+        std::fs::rename(&modules, big.join(".git")).expect("git");
+        assert!(fits(&big));
     }
 }

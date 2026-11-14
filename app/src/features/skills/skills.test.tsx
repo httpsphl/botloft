@@ -125,6 +125,23 @@ describe("Settings > Skills (spec 38.4)", () => {
     expect(await within(page).findByText("claude.ai · No agent yet")).toBeDefined();
   });
 
+  test("a skill too big to copy says so and cannot be given", async () => {
+    const { fake } = crewOf();
+    fake.skills.add({ name: "web-qa", description: "Checks a site.", tooBig: true });
+    renderApp(fake);
+    const page = await openSkills();
+    expect(await within(page).findByText("Yours · Too big to give")).toBeDefined();
+    fireEvent.click(within(page).getByRole("switch", { name: "Every skill for every agent" }));
+    const ask = await screen.findByRole("dialog", { name: "Give all 2 skills to every agent?" });
+    expect(within(ask).getByText("1 is too big to give and stays out.")).toBeDefined();
+    fireEvent.click(within(ask).getByRole("button", { name: "Cancel" }));
+
+    fireEvent.click(within(page).getByRole("button", { name: /web-qa/ }));
+    const dialog = await screen.findByRole("dialog", { name: "web-qa" });
+    expect(within(dialog).getByRole("alert").textContent).toContain("Too big to give to agents");
+    expect(within(dialog).queryByRole("switch")).toBeNull();
+  });
+
   test("with many skills, a search finds one by its name or what it does", async () => {
     const { fake } = crewOf();
     for (const name of ["animate", "brandkit", "graphify", "humanizer", "minimalist-ui"]) {

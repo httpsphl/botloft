@@ -43,6 +43,15 @@ export const skills: typeof en = {
     oneHint: "Inclusive os agentes que você criar depois.",
     byAll: "Todas as skills estão ligadas para todos, no alto de Skills.",
     failed: "Não deu para mudar quem usa as suas skills.",
+    allTooBig: (count) =>
+      count === 1
+        ? "1 é grande demais para dar e fica de fora."
+        : `${count} são grandes demais para dar e ficam de fora.`,
+  },
+  tooBig: {
+    card: "Grande demais para dar",
+    title: "Grande demais para dar aos agentes",
+    body: "Cada agente recebe a própria cópia de uma skill, de até 2.000 arquivos e 50 MB, e esta passa disso. Uma pasta de pacotes baixados dentro dela, como node_modules, costuma ser o motivo.",
   },
   request: {
     asks: (bot, name) => `${bot} pede a skill ${name}`,

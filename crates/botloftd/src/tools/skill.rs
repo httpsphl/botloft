@@ -72,6 +72,12 @@ async fn run(daemon: &Daemon, bot: &BotId, generation: u64, args: Value) -> Resu
             args.name.trim()
         )
     })?;
+    if crate::skills::too_big(daemon, &name) {
+        return Err(format!(
+            "{name} is too big for Botloft to give you (over 2,000 files or 50 MB). Go on \
+             without it."
+        ));
+    }
     if crate::skills::given(daemon, bot, &name) {
         return Ok(json!({
             "done": true,

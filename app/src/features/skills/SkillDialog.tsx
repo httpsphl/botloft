@@ -6,6 +6,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useT } from "../../i18n";
 import type { Skill } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
+import { Callout } from "../../ui/Callout";
 import { Dialog } from "../../ui/Dialog";
 import { Switch } from "../../ui/Switch";
 import { AgentSwitches } from "../connections/AgentSwitches";
@@ -42,37 +43,43 @@ export function SkillDialog({
         </p>
         {skill.source === "kept" && <p className="text-muted text-xs">{words.kept}</p>}
         <SkillWarnings skill={skill} />
-        <section className="flex flex-col gap-2">
-          <h3 className="font-semibold text-sm">{words.who}</h3>
-          <div className="flex items-center gap-3 rounded-xl bg-bubble px-3.5 py-2.5">
-            <div className="min-w-0 flex-1">
-              <p id={id} className="text-sm">
-                {words.everyone.one}
-              </p>
-              <p className="text-muted text-xs">
-                {allForEveryone ? words.everyone.byAll : words.everyone.oneHint}
-              </p>
+        {skill.tooBig ? (
+          <Callout tone="warn" title={words.tooBig.title}>
+            <p>{words.tooBig.body}</p>
+          </Callout>
+        ) : (
+          <section className="flex flex-col gap-2">
+            <h3 className="font-semibold text-sm">{words.who}</h3>
+            <div className="flex items-center gap-3 rounded-xl bg-bubble px-3.5 py-2.5">
+              <div className="min-w-0 flex-1">
+                <p id={id} className="text-sm">
+                  {words.everyone.one}
+                </p>
+                <p className="text-muted text-xs">
+                  {allForEveryone ? words.everyone.byAll : words.everyone.oneHint}
+                </p>
+              </div>
+              <Switch
+                checked={everyone}
+                disabled={allForEveryone}
+                labelledBy={id}
+                onChange={(on) => onEveryone(on)}
+              />
             </div>
-            <Switch
-              checked={everyone}
-              disabled={allForEveryone}
-              labelledBy={id}
-              onChange={(on) => onEveryone(on)}
+            <AgentSwitches
+              bots={bots}
+              uses={(bot) => skill.botIds.includes(bot.id)}
+              onChange={(bot, on) =>
+                onShare(
+                  on ? [...skill.botIds, bot.id] : skill.botIds.filter((each) => each !== bot.id),
+                )
+              }
+              label={(bot) => words.canUse(bot.name)}
+              empty={words.noAgents}
+              locked={everyone}
             />
-          </div>
-          <AgentSwitches
-            bots={bots}
-            uses={(bot) => skill.botIds.includes(bot.id)}
-            onChange={(bot, on) =>
-              onShare(
-                on ? [...skill.botIds, bot.id] : skill.botIds.filter((each) => each !== bot.id),
-              )
-            }
-            label={(bot) => words.canUse(bot.name)}
-            empty={words.noAgents}
-            locked={everyone}
-          />
-        </section>
+          </section>
+        )}
       </div>
     </Dialog>
   );

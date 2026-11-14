@@ -41,6 +41,10 @@ pub struct Skill {
     /// (spec 38.3). `everyone` in the list gives every skill to every agent.
     #[serde(default)]
     pub everyone: bool,
+    /// Too big for Botloft's copy (2,000 files or 50 MB): no agent gets it
+    /// (spec 38.3).
+    #[serde(default)]
+    pub too_big: bool,
 }
 
 /// What `skills.list` answers.
