@@ -14,7 +14,7 @@ use super::desktop_grant::{blocking, describe, granted, heading, used};
 use super::desktop_real::{enter, instead, needs_real, real_allowed};
 use crate::desktop::STOPPED;
 use crate::platform::desktop::{
-    self as platform, Acted, Action, Control, DesktopError, Window, by_reference, render,
+    self as platform, Acted, Action, Control, DesktopError, Reading, Window, by_reference, render,
 };
 use crate::state::Daemon;
 
@@ -74,6 +74,29 @@ fn point(rect: Option<[i32; 4]>, frame: [i32; 4]) -> Option<(f64, f64)> {
     ((0.0..=1.0).contains(&x) && (0.0..=1.0).contains(&y)).then_some((x, y))
 }
 
+/// What the bot is told when only a window's frame came back: the page of
+/// an app built on Chromium was not ready in time (spec 24.5).
+const PREPARING: &str = "Only the window's frame came back: this app shows a web page \
+    (it is built on Chromium, like Chrome, Edge, Slack, Teams or VS Code) and has not \
+    prepared it for reading yet. Call desktop_look again in a few seconds.";
+
+/// Window `window` as the bot reads it: its heading, its controls from
+/// line `from`, where to go on and whether the page was not ready.
+pub(super) fn reading_text(window: &Window, reading: &Reading, from: usize) -> String {
+    let (text, next) = render(&reading.controls, from);
+    let mut answer = format!("{}\n{text}", heading(window));
+    if let Some(next) = next {
+        answer.push_str(&format!(
+            "\nThere is more: call desktop_look with from: {next}."
+        ));
+    }
+    if reading.preparing {
+        answer.push('\n');
+        answer.push_str(PREPARING);
+    }
+    answer
+}
+
 /// The window read again after an action, with `said` first: kept as the
 /// bot's reading and shown on its panel.
 pub(super) async fn answered(
@@ -85,23 +108,17 @@ pub(super) async fn answered(
 ) -> Result<String, String> {
     tokio::time::sleep(SETTLE).await;
     let id = window.id;
-    let controls = blocking(move || platform::read(id)).await?;
+    let reading = blocking(move || platform::read(id)).await?;
     // Its title may have changed too.
     let window = blocking(platform::windows)
         .await?
         .into_iter()
         .find(|after| after.id == id)
         .unwrap_or(window);
-    let (text, next) = render(&controls, 0);
-    daemon.desktop.keep(bot, id, controls);
+    let text = reading_text(&window, &reading, 0);
+    daemon.desktop.keep(bot, id, reading.controls);
     used(daemon, bot, &window, Some(action));
-    let mut answer = format!("{said}\n{}\n{text}", heading(&window));
-    if let Some(next) = next {
-        answer.push_str(&format!(
-            "\nThere is more: call desktop_look with from: {next}."
-        ));
-    }
-    Ok(answer)
+    Ok(format!("{said}\n{text}"))
 }
 
 pub(super) async fn act(
@@ -194,7 +211,51 @@ pub(super) async fn act(
 
 #[cfg(test)]
 mod tests {
-    use super::point;
+    use std::path::PathBuf;
+
+    use super::{point, reading_text};
+    use crate::platform::desktop::{App, Control, Reading, Window};
+
+    #[test]
+    fn a_page_not_ready_yet_is_said_after_the_frame() {
+        let window = Window {
+            id: 7,
+            title: "Inbox".to_owned(),
+            class: "Chrome_WidgetWin_1".to_owned(),
+            app: App {
+                path: PathBuf::from(r"C:\Apps\Chat\chat.exe"),
+                name: "Chat".to_owned(),
+            },
+            minimized: false,
+            elevated: false,
+        };
+        let frame = Reading {
+            controls: vec![Control {
+                kind: "button",
+                name: "Close".to_owned(),
+                enabled: true,
+                ..Control::default()
+            }],
+            preparing: true,
+        };
+        let text = reading_text(&window, &frame, 0);
+        assert!(
+            text.starts_with("Window 7: \"Inbox\" (Chat)\n[d1] button \"Close\"\nOnly the"),
+            "{text}"
+        );
+        assert!(
+            text.ends_with("Call desktop_look again in a few seconds."),
+            "{text}"
+        );
+        let ready = Reading {
+            preparing: false,
+            ..frame
+        };
+        assert_eq!(
+            reading_text(&window, &ready, 0),
+            "Window 7: \"Inbox\" (Chat)\n[d1] button \"Close\""
+        );
+    }
 
     #[test]
     fn a_controls_point_is_its_middle_within_the_window() {

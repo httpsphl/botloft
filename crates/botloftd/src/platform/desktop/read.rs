@@ -32,6 +32,17 @@ pub struct Control {
     pub rect: Option<[i32; 4]>,
 }
 
+/// A window read through its accessibility tree.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Reading {
+    /// Its controls, in the order they sit in it.
+    pub controls: Vec<Control>,
+    /// The window shows a web page its app has not prepared for reading
+    /// yet, so only the frame came back: an app built on Chromium builds a
+    /// page's tree a moment after the first reading asks for it (24.5).
+    pub preparing: bool,
+}
+
 /// The `ref` of the control at `index` in a reading.
 pub fn reference(index: usize) -> String {
     format!("d{}", index + 1)

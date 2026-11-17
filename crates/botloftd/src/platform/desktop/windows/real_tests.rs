@@ -25,6 +25,7 @@ fn center(control: &Control) -> Spot {
 fn find(window: &TestWindow, what: impl Fn(&Control) -> bool) -> Control {
     read(window.id)
         .expect("read")
+        .controls
         .into_iter()
         .find(|control| what(control))
         .expect("the control")
@@ -45,6 +46,7 @@ fn a_real_click_and_real_typing_reach_the_window() {
     std::thread::sleep(std::time::Duration::from_millis(200));
     let values: Vec<Option<String>> = read(window.id)
         .expect("read")
+        .controls
         .into_iter()
         .map(|control| control.value)
         .collect();

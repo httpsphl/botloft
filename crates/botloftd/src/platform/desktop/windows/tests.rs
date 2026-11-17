@@ -1,13 +1,15 @@
 //! With real windows: a window of the test's own, painted red, found in
-//! the list, pictured, minimized and closed.
+//! the list, pictured, minimized, read and closed.
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use windows::Win32::UI::WindowsAndMessaging::{SW_MINIMIZE, ShowWindow};
 
 use super::super::{DesktopError, never, read, render, windows as listed};
 use super::capture;
+use super::chromium::shows_page;
 use super::test_window::TestWindow;
+use super::uia::PAGE_WAIT;
 
 #[test]
 fn the_list_has_the_window_with_its_app() {
@@ -77,7 +79,10 @@ fn a_minimized_window_is_listed_but_has_nothing_to_see_and_a_closed_one_is_gone(
 #[test]
 fn a_window_reads_as_its_controls_and_never_shows_a_password() {
     let window = TestWindow::open("Botloft desktop test: read");
-    let controls = read(window.id).expect("read");
+    assert!(!shows_page(window.id));
+    let reading = read(window.id).expect("read");
+    assert!(!reading.preparing, "it shows no web page to wait for");
+    let controls = reading.controls;
     let (text, next) = render(&controls, 0);
     assert_eq!(next, None);
     assert!(text.contains(r#"button "Save""#), "{text}");
@@ -94,4 +99,24 @@ fn a_window_reads_as_its_controls_and_never_shows_a_password() {
     let id = window.id;
     drop(window);
     assert!(read(id).is_err());
+}
+
+#[test]
+fn a_page_chromium_has_not_built_for_readers_is_waited_for_then_said() {
+    let window = TestWindow::with_page("Botloft desktop test: page");
+    assert!(shows_page(window.id));
+    let started = Instant::now();
+    let reading = read(window.id).expect("read");
+    // Nothing builds a page here: the reading waits for it, then says so,
+    // with the frame it has.
+    assert!(reading.preparing);
+    assert!(started.elapsed() >= PAGE_WAIT, "{:?}", started.elapsed());
+    assert!(
+        reading
+            .controls
+            .iter()
+            .any(|control| control.name == "Save"),
+        "{:?}",
+        reading.controls
+    );
 }

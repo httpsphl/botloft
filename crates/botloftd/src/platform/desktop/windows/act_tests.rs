@@ -9,6 +9,7 @@ use super::test_window::{ITEMS, TestWindow};
 fn named(window: &TestWindow, kind: &str, name: &str) -> Control {
     read(window.id)
         .expect("read")
+        .controls
         .into_iter()
         .find(|control| control.kind == kind && control.name == name)
         .unwrap_or_else(|| panic!("no {kind} {name:?} in the window"))
@@ -17,6 +18,7 @@ fn named(window: &TestWindow, kind: &str, name: &str) -> Control {
 fn with_value(window: &TestWindow, value: &str) -> Control {
     read(window.id)
         .expect("read")
+        .controls
         .into_iter()
         .find(|control| control.value.as_deref() == Some(value))
         .unwrap_or_else(|| panic!("no control with the value {value:?}"))
@@ -75,6 +77,7 @@ fn a_password_field_is_never_typed_in() {
     let window = TestWindow::open("Botloft desktop test: password");
     let field = read(window.id)
         .expect("read")
+        .controls
         .into_iter()
         .find(|control| control.password)
         .expect("the password field");
@@ -90,6 +93,7 @@ fn an_option_is_chosen_and_a_long_list_scrolls() {
     let window = TestWindow::open("Botloft desktop test: choose");
     let size = read(window.id)
         .expect("read")
+        .controls
         .into_iter()
         .find(|control| control.kind == "combo box")
         .expect("the combo box");
@@ -99,6 +103,7 @@ fn an_option_is_chosen_and_a_long_list_scrolls() {
     let chosen = || {
         read(window.id)
             .ok()?
+            .controls
             .into_iter()
             .find(|control| control.kind == "combo box")
             .and_then(|control| control.value)
@@ -118,12 +123,14 @@ fn an_option_is_chosen_and_a_long_list_scrolls() {
     let shown = |name: &str| {
         read(window.id)
             .expect("read")
+            .controls
             .iter()
             .any(|control| control.name == name)
     };
     assert!(!shown(&last), "the end of the list starts out of sight");
     let list = read(window.id)
         .expect("read")
+        .controls
         .into_iter()
         .find(|control| control.kind == "list")
         .expect("the list");

@@ -13,13 +13,13 @@ use serde_json::{Value, json};
 use tracing::debug;
 
 use super::calls::explain;
-use super::desktop_act::{Ask, act, answered};
+use super::desktop_act::{Ask, act, answered, reading_text};
 use super::desktop_grant::{blocking, granted, heading, used};
 use super::desktop_list::{in_reach, list};
 use super::desktop_real::{click_at, press};
 use super::desktop_screen::whole;
 use crate::desktop::STOPPED;
-use crate::platform::desktop::{self as platform, Action, Scroll, render};
+use crate::platform::desktop::{self as platform, Action, Scroll};
 use crate::state::Daemon;
 
 pub(super) const PREFIX: &str = "desktop_";
@@ -205,17 +205,11 @@ async fn run(daemon: &Daemon, bot: &BotId, generation: u64, tool: Tool) -> Resul
                 return Err(STOPPED.to_owned());
             }
             let id = window.id;
-            let controls = blocking(move || platform::read(id)).await?;
-            let (text, next) = render(&controls, from);
-            daemon.desktop.keep(bot, id, controls);
+            let reading = blocking(move || platform::read(id)).await?;
+            let text = reading_text(&window, &reading, from);
+            daemon.desktop.keep(bot, id, reading.controls);
             used(daemon, bot, &window, None);
-            let mut reading = format!("{}\n{text}", heading(&window));
-            if let Some(next) = next {
-                reading.push_str(&format!(
-                    "\nThere is more: call desktop_look with from: {next}."
-                ));
-            }
-            Ok(Reply::Text(reading))
+            Ok(Reply::Text(text))
         }
         Tool::Screenshot { window, why } => {
             let Some(window) = window else {
