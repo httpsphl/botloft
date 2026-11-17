@@ -4,8 +4,10 @@
 mod claude;
 mod daemon;
 mod open;
+mod quiet;
 mod save;
 mod sign_in;
+mod summon;
 #[cfg(unix)]
 mod terminal;
 mod window;
@@ -138,6 +140,39 @@ fn launched_at_sign_in() -> bool {
     sign_in::launched_at_sign_in()
 }
 
+/// Whether Windows would hold back a notification now: full screen, a
+/// presentation or "Do not disturb" (spec 31.6).
+#[tauri::command]
+fn quiet_now() -> bool {
+    quiet::now()
+}
+
+/// Whether the main window is on screen and has the focus, for the island
+/// (spec 31.6): then what waits already shows in the chat.
+#[tauri::command]
+fn main_in_front(app: tauri::AppHandle) -> bool {
+    in_front(&app)
+}
+
+fn in_front(app: &tauri::AppHandle) -> bool {
+    use tauri::Manager as _;
+    app.get_webview_window("main").is_some_and(|window| {
+        window.is_visible().unwrap_or(false)
+            && window.is_focused().unwrap_or(false)
+            && !window.is_minimized().unwrap_or(false)
+    })
+}
+
+/// The event the island hears when the main window comes to the front or
+/// leaves it: in front, it hides (spec 31.6).
+const FRONT_EVENT: &str = "botloft://front";
+
+/// Turns calling the island with the right Ctrl on or off (spec 31.6).
+#[tauri::command]
+fn set_summon(app: tauri::AppHandle, on: bool, hold_ms: u64) {
+    summon::set(&app, on, hold_ms);
+}
+
 /// Whether `url` is a plain web link, safe to hand to the default browser.
 fn is_web_link(url: &str) -> bool {
     let rest = url
@@ -182,6 +217,23 @@ pub fn run() {
             }
             Ok(())
         })
+        // The island keeps the app alive while hidden: when the main window
+        // closes for good, the app ends with it (spec 31.3).
+        .on_window_event(|window, event| {
+            if window.label() != "main" {
+                return;
+            }
+            match event {
+                tauri::WindowEvent::Destroyed => tauri::Manager::app_handle(window).exit(0),
+                // The island hides while the main window is in front.
+                tauri::WindowEvent::Focused(_) => {
+                    use tauri::Emitter as _;
+                    let app = tauri::Manager::app_handle(window);
+                    let _ = app.emit_to("island", FRONT_EVENT, in_front(app));
+                }
+                _ => {}
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             daemon_status,
             daemon_install,
@@ -195,7 +247,10 @@ pub fn run() {
             save_file_as,
             open_url,
             open_at_sign_in,
-            launched_at_sign_in
+            launched_at_sign_in,
+            quiet_now,
+            main_in_front,
+            set_summon
         ])
         .run(tauri::generate_context!())
         .expect("error while running the Botloft app");

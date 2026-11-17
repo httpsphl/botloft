@@ -138,7 +138,7 @@ export function seedChats(fake: FakeBotloft, crew: Crew): void {
     body: "Turn shared/summaries/week-39.md into this week's report draft.",
   });
   talk.read(note.delivery.id);
-  chat.turn(crew.scout);
+  chat.turn(crew.scout, null, undefined, 184_000);
   at(90);
   chat.finish(chat.tool(crew.writer, "Read", { summary: "week-39.md" }), "42 lines");
   chat.reply(crew.writer, "Starting the draft. I'll keep the three highlights as sections.");
@@ -155,7 +155,11 @@ export function seedChats(fake: FakeBotloft, crew: Crew): void {
     lines: { added: 5, removed: 1 },
   });
   chat.finish(outline, "The file has been updated.");
-  chat.reply(crew.writer, "The outline is in. Writing the sections now.");
+  // Ends with a question, so 👍 or 👎 answers it (spec 8.9).
+  chat.reply(
+    crew.writer,
+    "The outline is in. Writing the sections now.\n\nShould I add a short part on small evals too?",
+  );
   chat.tool(crew.writer, "Write", { summary: "week-39-report.md" });
 
   at(40);
@@ -199,10 +203,16 @@ export function seedChats(fake: FakeBotloft, crew: Crew): void {
   chat.finish(chat.tool(crew.analyst, "Read", { summary: "week-39-report.md" }), "118 lines");
   chat.add(crew.analyst, {
     kind: "notice",
-    level: "warning",
-    text: "The account reached its usage limit. Messages wait until it resets.",
+    level: "error",
+    code: "usage_limit",
+    text: "The account reached its usage limit. Messages wait until it resets, and then the agent carries on where it stopped.",
   });
   chat.turn(crew.analyst, "rate_limit");
+  // What carries the cut turn on once the limit resets (spec 7.3).
+  talk.say({
+    to: crew.analyst,
+    body: "Your last turn stopped when the account reached its usage limit. This message comes once the limit resets: carry on with that work from where you stopped, without redoing what is already done. If it was finished, there is nothing more to do.",
+  });
 
   at(8);
   void fake.call("messages.send", {

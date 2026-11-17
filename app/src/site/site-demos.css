@@ -1,0 +1,162 @@
+/* The site's demos (spec 39.4): how a scene's parts come and go
+   (player.ts) and the pieces of the app's interface they share. The
+   opening window is in site-window.css, the cards' scenes in
+   site-cards.css and site-cards-more.css. */
+
+@layer components {
+  /* Without the script every scene shows its end; with it, a part shows
+     from its step on and comes in softly. */
+  :root:not(.site-js) [data-scene] [data-until] {
+    display: none;
+  }
+
+  .site-js [data-scene] :is([data-at], [data-until]):not(.is-on) {
+    display: none;
+  }
+
+  .site-js [data-scene] [data-at].is-on {
+    animation: demo-in 420ms var(--ease-out) both;
+  }
+
+  @keyframes demo-in {
+    from {
+      opacity: 0;
+      translate: 0 6px;
+    }
+  }
+
+  @keyframes demo-spin {
+    to {
+      rotate: 1turn;
+    }
+  }
+
+  /* Less motion: the scenes stand at their end (main.tsx), and motion.css
+     stills what is left. */
+
+  /* The pieces of the app: states, cards, buttons and the quiet lines. */
+  .demo-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+
+  .demo-state[data-state="working"] {
+    color: var(--work);
+  }
+
+  .demo-state[data-state="approval"] {
+    color: var(--warn);
+  }
+
+  .demo-card {
+    max-width: 30rem;
+    padding: 1rem;
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    background: #1a1a1a;
+  }
+
+  .demo-card-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.6rem;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .demo-card-title code,
+  .demo-command,
+  .demo-settled code {
+    font-family: var(--font-mono);
+  }
+
+  .demo-badge {
+    display: inline-grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 999px;
+    background: #262626;
+    color: var(--ink-soft);
+  }
+
+  .demo-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.8rem;
+  }
+
+  .demo-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    height: 2rem;
+    padding: 0 0.8rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 0.6rem;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    transition:
+      transform 150ms var(--ease-out),
+      box-shadow 200ms ease;
+  }
+
+  .demo-btn[data-kind="yes"] {
+    border-color: var(--ink);
+    background: var(--ink);
+    color: var(--canvas);
+  }
+
+  .demo-btn[data-kind="no"] {
+    border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+    color: var(--danger);
+  }
+
+  .demo-settled {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .demo-settled svg {
+    color: var(--ok);
+  }
+
+  .demo-settled code {
+    font-weight: 400;
+    color: var(--muted);
+  }
+
+  .demo-quiet {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+
+  .demo-reply {
+    max-width: 34rem;
+    line-height: 1.55;
+    color: var(--ink);
+  }
+
+  .demo-own {
+    align-self: flex-end;
+    max-width: 78%;
+    padding: 0.6rem 1rem;
+    border-radius: 1.25rem;
+    background: var(--bubble-own);
+    color: var(--bubble-own-ink);
+  }
+}

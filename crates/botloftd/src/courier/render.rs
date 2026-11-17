@@ -6,7 +6,7 @@ use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use botloft_core::envelope::{self, Envelope, Sender};
 use botloft_core::ids::random_uuid;
-use botloft_core::protocol::{Attachment, Message, SenderKind, Task};
+use botloft_core::protocol::{Attachment, Message, Question, QuestionKind, SenderKind, Task};
 use bytes::Bytes;
 use tracing::debug;
 
@@ -30,8 +30,11 @@ pub(super) struct Context<'a> {
     /// For a routine's message: the routine and what made it run (spec
     /// 20.5, 20.13).
     pub routine: Option<&'a RoutineContext>,
-    /// For the owner's answer to a question: its id and text (spec 23.4).
-    pub question: Option<(&'a str, &'a str)>,
+    /// For the owner's answer to a question (spec 23.4), or reply to a
+    /// note (23.10).
+    pub question: Option<&'a Question>,
+    /// For the owner's answer on a card: its id and title (spec 8.11).
+    pub card: Option<(&'a str, &'a str)>,
     /// For the owner's message: the reactions it takes along, emoji and
     /// quote (spec 8.9).
     pub reactions: &'a [(String, String)],
@@ -54,12 +57,20 @@ pub(super) fn render(
         // The owner is the session's user: their words go as written.
         SenderKind::Owner => {
             let body = with_attachment_list(&message.body, &message.attachments);
-            let body = match &message.reply_to {
-                Some(reply) => envelope::reply(&reply.text, &body),
-                None => body,
+            let body = match (&message.reply_to, context.card) {
+                (Some(_), Some((id, title))) => envelope::card_answer(id, title, &body),
+                (Some(reply), None) => envelope::reply(&reply.text, &body),
+                (None, _) => body,
             };
             let text = match context.question {
-                Some((id, question)) => envelope::answer(id, question, &body),
+                Some(question) => match question.kind {
+                    QuestionKind::Question => {
+                        envelope::answer(question.id.as_str(), &question.text, &body)
+                    }
+                    QuestionKind::Note => {
+                        envelope::note_reply(question.id.as_str(), &question.text, &body)
+                    }
+                },
                 None => body,
             };
             envelope::with_reactions(context.reactions, &text)
@@ -175,6 +186,7 @@ mod tests {
             workspace: dir.path(),
             routine: None,
             question: None,
+            card: None,
             reactions: &[],
         };
         let owner = render(
@@ -213,6 +225,7 @@ mod tests {
             workspace: dir.path(),
             routine: None,
             question: None,
+            card: None,
             reactions: &[],
         };
         let mut owner = message(SenderKind::Owner, "Make it yearly");
@@ -259,6 +272,7 @@ Make it yearly"
             workspace: dir.path(),
             routine: None,
             question: None,
+            card: None,
             reactions: &[],
         };
         let line = parse(&render(&owner, &context, 0, &ClaudeAgent));

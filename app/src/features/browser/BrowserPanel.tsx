@@ -86,8 +86,8 @@ export function BrowserPanel({
 
   return (
     <SidePanel label={t.panel(bot.name)} name="computer" defaultWidth={600} expanded={expanded}>
-      <header className="flex h-11 shrink-0 items-center justify-between border-line border-b pr-1.5 pl-4">
-        <h2 className="flex items-center gap-2 font-semibold text-sm">
+      <header className="flex h-11 shrink-0 items-center justify-between pr-1.5 pl-4">
+        <h2 className="flex items-center gap-2 font-semibold text-base">
           {t.heading}
           {resting ? (
             <Badge tone="quiet" icon={Moon} title={t.restingWhy(bot.name)}>

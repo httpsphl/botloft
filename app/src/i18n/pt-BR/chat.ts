@@ -1,5 +1,4 @@
 import type { Messages } from "../en";
-import type { TurnTokens } from "../en/chat";
 import { startPlan } from "./startPlan";
 
 export const chat: Messages["chat"] = {
@@ -13,6 +12,9 @@ export const chat: Messages["chat"] = {
       "Peça qualquer coisa que a pasta e as ferramentas dele permitam fazer. Você também pode anexar arquivos e imagens.",
     messages: "Mensagens",
     dropToAttach: "Solte para anexar à sua mensagem",
+    waiting: (count: number) =>
+      count === 1 ? "1 pedido esperando você" : `${count} pedidos esperando você`,
+    showWaiting: "Mostrar",
   },
   composer: {
     paused: (bot: string) =>
@@ -27,6 +29,18 @@ export const chat: Messages["chat"] = {
     keys: "Enter para enviar, Shift+Enter para uma nova linha",
     keysWithCtrl: "Ctrl+Enter para enviar, Enter para uma nova linha",
     send: "Enviar",
+    stop: (bot: string) => `Parar ${bot}`,
+    stopHint: (bot: string) =>
+      `Para o que ${bot} está fazendo agora. Uma mensagem que ainda espera na fila vem depois.`,
+    stopFailed: "Não foi possível parar",
+  },
+  slash: {
+    label: "Skills e comandos",
+    looking: "Procurando as skills…",
+    none: (bot) =>
+      `${bot} ainda não tem skills para chamar pelo nome. Dê skills em Configurações > Skills.`,
+    noMatch: (query) => `Nenhuma skill tem "${query}" no nome.`,
+    from: { owner: "Sua", plugin: "Plugin", agent: "Do agente", claude_code: "Claude Code" },
   },
   files: {
     tooMany: (max: number) => `Uma mensagem pode levar até ${max} arquivos.`,
@@ -51,12 +65,16 @@ export const chat: Messages["chat"] = {
   },
   run: {
     working: "Trabalhando",
-    done: (time: string, tokens: string | null) =>
-      `Concluído em ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
-    took: (time: string, tokens: TurnTokens | null) =>
-      `Levou ${time}${
-        tokens === null ? "" : `. Leu ${tokens.read} tokens e escreveu ${tokens.wrote}.`
-      }`,
+    done: (time, spent) => `Concluído em ${time}${spent === null ? "" : ` · ${spent}`}`,
+    tokens: (count) => `${count} tokens`,
+    took: (time, tokens, cost) =>
+      `Levou ${time}.${
+        tokens === null ? "" : ` Leu ${tokens.read} tokens e escreveu ${tokens.wrote}.`
+      }${cost === null ? "" : ` A preço de API: ${cost}, incluído no seu plano.`}`,
+    stoppedByOwner: (time, spent) =>
+      `Parado por você em ${time}${spent === null ? "" : ` · ${spent}`}`,
+    stoppedByBotloft: (time, spent) =>
+      `Parado pelo Botloft em ${time}${spent === null ? "" : ` · ${spent}`}`,
     stopped: (reason: string) => `O agente parou de trabalhar nisto: ${reason}`,
   },
   tools: {
@@ -84,6 +102,9 @@ export const chat: Messages["chat"] = {
       other: (n: number) => (n === 1 ? "1 ferramenta usada" : `${n} ferramentas usadas`),
       failed: (n: number) => (n === 1 ? "1 falha" : `${n} falhas`),
     },
+    repeat: (n: number) => `Mesma chamada ${n}×`,
+    repeatHint: (bot: string, n: number, what: string) =>
+      `${bot} fez a mesma chamada ${n} vezes neste turno (${what}). Pode estar andando em círculos.`,
   },
   memory: {
     bot: "Atualizou a memória de",
@@ -105,6 +126,10 @@ export const chat: Messages["chat"] = {
     remove: "Tirar a reação",
     waiting: (bot) => `${bot} vê junto com sua próxima mensagem`,
     seen: (bot) => `${bot} viu`,
+    answerHint: "👍 ou 👎 responde a pergunta agora",
+    answerYes: "Responder sim agora",
+    answerNo: "Responder não agora",
+    answered: (bot) => `Enviado a ${bot} como sua resposta`,
     failed: "Não foi possível salvar a reação",
   },
   approval: {
@@ -114,10 +139,12 @@ export const chat: Messages["chat"] = {
     unexplained: (bot: string) =>
       `${bot} não disse para que serve este comando. Na dúvida, negue e pergunte.`,
     command: "Ver o comando",
-    noteLabel: (bot: string) => `Observação para ${bot} se você negar`,
-    notePlaceholder: "Por que não? Vai para o agente se você negar (opcional)",
+    noteLabel: (bot: string) => `Por que você nega, para ${bot}`,
+    notePlaceholder: "Por que não? O agente lê isto (opcional)",
     allow: "Permitir",
+    once: "Só desta vez",
     deny: "Negar",
+    back: "Voltar",
     always: {
       command: "Permitir sempre este comando",
       site: (site: string) => `Permitir sempre em ${site}`,
@@ -255,6 +282,13 @@ export const chat: Messages["chat"] = {
     compacting: "Compactando…",
     later: (bot: string) => `${bot} compacta a conversa quando terminar o que está fazendo.`,
     notRunning: (bot: string) => `${bot} não está rodando, então não dá para compactar agora.`,
+    asleep: (bot: string) => `${bot} está dormindo: acorda primeiro e depois compacta.`,
+    waking: (bot: string) => `${bot} acorda e compacta a conversa.`,
+    fresh: "Começar do zero",
+    freshHint: (bot: string) =>
+      `Esquece esta conversa sem gastar seu plano. A memória de ${bot} (CLAUDE.md) fica.`,
+    freshConfirm: "Começar do zero",
+    freshFailed: "Não deu para começar uma conversa nova",
     failed: "Não foi possível compactar a conversa",
   },
   suggestion: {
@@ -384,13 +418,16 @@ export const chat: Messages["chat"] = {
     signedOut:
       "O Claude Code não está conectado a uma conta, ou a conta não pode ser usada agora. Entre no Claude ou confira o seu plano do Claude.",
     usageLimit:
-      "Seu plano do Claude atingiu o limite de uso. As mensagens ficam esperando até o limite renovar.",
+      "Seu plano do Claude atingiu o limite de uso. As mensagens ficam esperando até o limite renovar, e aí o agente continua de onde parou.",
     modelUnavailable:
       "O modelo deste agente não está disponível: talvez não faça parte do seu plano do Claude. Escolha outro modelo abaixo do chat.",
     turnFailed: (detail: string) => `O agente não conseguiu terminar isto: ${detail}`,
     compacted:
       "A conversa foi compactada: o que veio antes agora é um resumo, e há espaço de novo.",
     autoCompacted: "A conversa ficou cheia e foi compactada: o que veio antes agora é um resumo.",
+    freshStart: "Uma conversa nova começou aqui: o que veio antes não é mais lembrado.",
+    stuckTurn:
+      "Nada aconteceu neste turno por 30 minutos, então o Botloft o parou. Escreva para o agente tentar de novo.",
     compactFailed: (detail: string) => `Não foi possível compactar a conversa: ${detail}`,
   },
 };

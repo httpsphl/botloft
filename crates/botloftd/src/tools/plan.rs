@@ -127,11 +127,11 @@ async fn run(daemon: &Daemon, bot: &BotId, generation: u64, args: Value) -> Resu
     });
     let answer = approvals::ask_briefly(daemon, bot, generation, SHOW_PLAN_TOOL, &input, within);
     Ok(match answer.await {
-        Some(Answer::Allowed { input: Some(_) }) => json!({
+        Some(Answer::Allowed { input: Some(_), .. }) => json!({
             "start": ALTERNATIVE,
             "note": "The owner picked your alternative: do only that, not the whole plan.",
         }),
-        Some(Answer::Allowed { input: None }) => go("The owner said start: go ahead."),
+        Some(Answer::Allowed { input: None, .. }) => go("The owner said start: go ahead."),
         Some(Answer::Denied { note: Some(note) }) => json!({
             "start": false,
             "change": note,

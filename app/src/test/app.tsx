@@ -16,13 +16,37 @@ export const sidebar = () => screen.getByRole("navigation", { name: "Crews" });
 /** The icons at the far left (shell/Rail.tsx). */
 export const rail = () => screen.getByRole("navigation", { name: "Places" });
 
-/** Waits for the first crew to open. */
+/**
+ * Opens the crew from the list, as the owner would: the app opens on its
+ * home (spec 15.1). A crew already open stays.
+ */
 export async function crewOpened(name: string) {
+  const open = screen.queryByRole("heading", { level: 1, name });
+  if (open) {
+    return open;
+  }
+  // In the list or on the home's card, in any language.
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const [crew] = await screen.findAllByRole("button", { name: new RegExp(`^${escaped}`) });
+  if (crew) {
+    fireEvent.click(crew);
+  }
   return screen.findByRole("heading", { level: 1, name });
 }
 
 export function openBot(name: string) {
   fireEvent.click(within(sidebar()).getByRole("button", { name: new RegExp(name) }));
+}
+
+/**
+ * From the open agent's details, one of its rows that lead to Settings
+ * ("Your desktop", "Keys"...); returns the Settings page it opens.
+ */
+export async function settingsFromDetails(bot: string, row: RegExp) {
+  fireEvent.click(screen.getByRole("button", { name: /^Show details/ }));
+  const details = screen.getByRole("complementary", { name: `About ${bot}` });
+  fireEvent.click(await within(details).findByRole("button", { name: row }));
+  return screen.findByRole("region", { name: "Settings" });
 }
 
 export function openTab(name: string | RegExp) {

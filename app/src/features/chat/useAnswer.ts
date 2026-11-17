@@ -6,13 +6,17 @@ import { attempt } from "../../ui/toast";
 /**
  * Answering a request; the note goes to the bot on a denial. `input` is a
  * bot suggestion as the owner changed it (spec 10.2); `always` allows the
- * request for good (spec 10.1).
+ * request for good (spec 10.1); `once` allows an app on the desktop or a
+ * site only until the bot's turn ends (spec 24.2, 21.5).
  */
-export function useAnswer(approval: ApprovalItem, failed: { allow: string; deny: string }) {
+export function useAnswer(
+  approval: Pick<ApprovalItem, "approvalId">,
+  failed: { allow: string; deny: string },
+) {
   const api = useApi();
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
-  const answer = async (allow: boolean, input?: string, always = false) => {
+  const answer = async (allow: boolean, input?: string, always = false, once = false) => {
     setBusy(true);
     const trimmed = note.trim();
     await attempt(allow ? failed.allow : failed.deny, () =>
@@ -22,6 +26,7 @@ export function useAnswer(approval: ApprovalItem, failed: { allow: string; deny:
         ...(allow || !trimmed ? {} : { note: trimmed }),
         ...(allow && input !== undefined ? { input } : {}),
         ...(allow && always ? { always } : {}),
+        ...(allow && once ? { once } : {}),
       }),
     );
     setBusy(false);

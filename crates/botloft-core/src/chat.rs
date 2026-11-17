@@ -4,7 +4,7 @@
 use serde_json::Value;
 
 use crate::command::{COMMAND_INPUT_MAX, is_command};
-use crate::protocol::{Activity, ActivityKind, ChatBody, NoticeCode, SenderKind};
+use crate::protocol::{Activity, ActivityKind, ChatBody, NoticeCode, QuestionKind, SenderKind};
 
 /// Longest tool input kept, in bytes.
 pub const TOOL_INPUT_MAX: usize = 4 * 1024;
@@ -27,6 +27,8 @@ pub const CHANGE_BOT_TOOL: &str = "mcp__botloft__change_bot";
 pub const SHOW_PLAN_TOOL: &str = "mcp__botloft__show_plan";
 /// A bot asking to reach another crew (spec 10.4).
 pub const CREW_ACCESS_TOOL: &str = "mcp__botloft__ask_crew_access";
+/// A bot asking for a tool of the owner's claude.ai account (spec 34.6).
+pub const CONNECTOR_TOOL: &str = "mcp__botloft__ask_connector";
 /// A bot asking to use its browser on a site (spec 21.5). Not a tool the
 /// model calls: the daemon opens this request from inside the `browser_*`
 /// tools.
@@ -37,9 +39,21 @@ pub const DESKTOP_TOOL: &str = "mcp__botloft__desktop";
 /// A bot asking the owner to do something in its browser themselves (spec
 /// 21.10), opened from inside `browser_ask_owner`.
 pub const BROWSER_HELP_TOOL: &str = "mcp__botloft__browser_help";
+/// The Maker building crews, agents and routines in one go (spec 36.4).
+pub const BUILD_TOOL: &str = "mcp__botloft__build";
+/// A bot asking for the owner's own Chrome (spec 37.3).
+pub const CHROME_TOOL: &str = "mcp__botloft__ask_chrome";
+/// The start of the tools of the owner's Chrome, from the Claude in Chrome
+/// extension (spec 37): `mcp__claude-in-chrome__navigate`.
+pub const CHROME_TOOLS: &str = "mcp__claude-in-chrome__";
+/// A bot asking for one of the owner's skills (spec 38.5).
+pub const SKILL_TOOL: &str = "mcp__botloft__ask_skill";
 /// Longest bot or routine suggestion kept, in bytes: the owner reads and
 /// edits all of it.
 pub const SUGGESTION_INPUT_MAX: usize = 64 * 1024;
+/// Longest plan of the Maker kept, in bytes: several crews, each with its
+/// agents' instructions.
+pub const BUILD_INPUT_MAX: usize = 256 * 1024;
 /// Longest tool output kept, in bytes.
 pub const TOOL_OUTPUT_MAX: usize = 8 * 1024;
 /// Longest activity line, in characters.
@@ -75,6 +89,7 @@ pub fn tool_input_max(tool: &str) -> usize {
     match tool {
         PLAN_TOOL | SHOW_PLAN_TOOL => PLAN_INPUT_MAX,
         SUGGEST_TOOL | ROUTINE_TOOL | CHANGE_ROUTINE_TOOL | CHANGE_BOT_TOOL => SUGGESTION_INPUT_MAX,
+        BUILD_TOOL => BUILD_INPUT_MAX,
         tool if is_command(tool) => COMMAND_INPUT_MAX,
         _ => TOOL_INPUT_MAX,
     }
@@ -118,10 +133,11 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
             field(input, "to").map(|to| format!("@{}", to.trim_start_matches('@')))
         }
         SUGGEST_TOOL | ROUTINE_TOOL | CHANGE_ROUTINE_TOOL | DELETE_ROUTINE_TOOL
-        | CHANGE_BOT_TOOL => field(input, "name").map(str::to_owned),
+        | CHANGE_BOT_TOOL | CONNECTOR_TOOL | SKILL_TOOL => field(input, "name").map(str::to_owned),
         BROWSER_SITE_TOOL => field(input, "site").map(str::to_owned),
         CREW_ACCESS_TOOL => field(input, "crew").map(str::to_owned),
         SHOW_PLAN_TOOL => field(input, "summary").map(str::to_owned),
+        BUILD_TOOL => field(input, "title").map(str::to_owned),
         DESKTOP_TOOL => field(input, "app").map(str::to_owned),
         "mcp__botloft__desktop_look" | "mcp__botloft__desktop_screenshot" => {
             field(input, "why").map(str::to_owned)
@@ -130,6 +146,8 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
             field(input, "task").map(str::to_owned)
         }
         "mcp__botloft__browser_open" => field(input, "url").map(str::to_owned),
+        "mcp__botloft__search_history" => field(input, "query").map(str::to_owned),
+        "mcp__botloft__wait_for" => field(input, "name").map(str::to_owned),
         "mcp__botloft__share_file" => input.get("files").and_then(Value::as_array).map(|files| {
             let names: Vec<String> = files
                 .iter()
@@ -141,6 +159,11 @@ pub fn tool_summary(name: &str, input: &Value) -> String {
         // Element refs ("e12") mean nothing to the owner, and a direction
         // needs words: the app says those (spec 21.8).
         "mcp__botloft__browser_press" => field(input, "key").map(str::to_owned),
+        CHROME_TOOL => field(input, "why").map(str::to_owned),
+        // The daemon puts the site of the tab in what it shows (spec 37.3).
+        tool if tool.starts_with(CHROME_TOOLS) => field(input, "site")
+            .or_else(|| field(input, "url"))
+            .map(str::to_owned),
         _ => None,
     };
     one_line(&summary.unwrap_or_default(), SUMMARY_MAX_CHARS)
@@ -189,7 +212,16 @@ pub fn activity(body: &ChatBody, at: i64) -> Option<Activity> {
             ActivityKind::Approval,
             item.explanation.as_ref().unwrap_or(&item.summary).clone(),
         ),
-        ChatBody::Question(item) => (ActivityKind::Question, item.question.text.clone()),
+        ChatBody::Question(item) => (
+            match item.question.kind {
+                QuestionKind::Question => ActivityKind::Question,
+                QuestionKind::Note => ActivityKind::Note,
+            },
+            item.question.text.clone(),
+        ),
+        // Asking for a key is asking the owner (spec 32.5).
+        ChatBody::KeyRequest(item) => (ActivityKind::Question, item.why.clone()),
+        ChatBody::Card(card) => (ActivityKind::Card, card.title.clone()),
         // A compaction is housekeeping, not news about the conversation.
         ChatBody::Notice(item)
             if matches!(
@@ -282,6 +314,20 @@ mod tests {
                 &json!({ "url": "https://example.com/a" })
             ),
             "https://example.com/a"
+        );
+        assert_eq!(
+            tool_summary(
+                "mcp__botloft__search_history",
+                &json!({ "query": "Lisbon budget" })
+            ),
+            "Lisbon budget"
+        );
+        assert_eq!(
+            tool_summary(
+                "mcp__botloft__search_history",
+                &json!({ "around": "cht_1" })
+            ),
+            ""
         );
         assert_eq!(
             tool_summary(

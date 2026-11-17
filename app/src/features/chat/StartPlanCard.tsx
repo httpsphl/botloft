@@ -70,7 +70,7 @@ function Plan({ plan }: { plan: StartPlan }) {
         ))}
       </ol>
       {plan.alternative && (
-        <p className="rounded-lg bg-sunken px-3 py-2 text-ink-soft">
+        <p className="rounded-xl bg-panel px-3 py-2 text-ink-soft">
           <span className="font-medium text-ink">{p.alternative}: </span>
           {plan.alternative}
         </p>

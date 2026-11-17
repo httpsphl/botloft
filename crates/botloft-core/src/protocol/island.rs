@@ -3,17 +3,39 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{ApprovalCard, EditLines, QuestionCard};
-use crate::ids::BotId;
+use super::{ApprovalCard, CardBot, EditLines, QuestionCard};
+use crate::ids::{BotId, ChatItemId};
 
 /// Every request and question waiting for the owner, oldest first, as the
-/// phone sees them (spec 31.5, 28.5).
+/// phone sees them (spec 31.5, 28.5), and the bots' requests for a key,
+/// which only the app sees (spec 32.5).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct Cards {
     pub approvals: Vec<ApprovalCard>,
     pub questions: Vec<QuestionCard>,
+    /// The open requests for a key, oldest first. The phone never gets
+    /// them: the key is pasted in the chat's card, at the computer.
+    pub keys: Vec<KeyCard>,
+}
+
+/// A bot's open request for a key, as the home and the island list it: who
+/// asks, for which key and why. It is answered only in the chat's card.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct KeyCard {
+    /// The request's id, which is the chat item's (spec 32.9).
+    pub request_id: ChatItemId,
+    pub bot: CardBot,
+    pub crew: String,
+    /// Unix time in milliseconds.
+    pub created_at: i64,
+    /// The key's name, as in spec 32.3.
+    pub name: String,
+    /// What the bot needs it for, in its own words.
+    pub why: String,
 }
 
 /// Params of `activity.today`.

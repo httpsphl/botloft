@@ -130,6 +130,7 @@ fn hello(daemon: &Daemon, request: jsonrpc::Request) -> Result<HelloResult, RpcE
     debug!(client = %params.client.name, version = %params.client.version, "app connected");
     if let Some(locale) = &params.client.locale {
         daemon.desktop.set_locale(locale);
+        crate::service::maker::localize(daemon, locale);
     }
     Ok(HelloResult {
         daemon_version: env!("CARGO_PKG_VERSION").to_owned(),
@@ -161,7 +162,7 @@ async fn run(
                 Some(Ok(_)) => None,
             },
             event = events.recv() => match event {
-                Ok(event) => Some(to_notification(&event)),
+                Ok(event) => to_notification(&event),
                 Err(broadcast::error::RecvError::Lagged(skipped)) => {
                     // The client's view is stale; it reloads on reconnect.
                     warn!(skipped, "closing an app connection that fell behind");
@@ -192,10 +193,15 @@ async fn run(
 const ASIDE: &[&str] = &[
     method::FILES_LIST,
     method::FILES_READ,
+    method::FILES_MEDIA,
     method::SCREENS_LIST,
     method::ATTACHMENTS_READ,
     method::USAGE_TOKENS,
+    method::USAGE_COSTS,
     method::CHAT_SEARCH,
+    // Reading the owner's whole history takes a while (spec 36.7).
+    method::IMPORTS_SCAN,
+    method::IMPORTS_CREATE,
     // They wait for the network, a copy's transfer for minutes (spec 27.5).
     method::CLOUD_STATUS,
     method::CLOUD_SIGNIN,
@@ -238,6 +244,9 @@ fn route(
     };
     // Watching a browser belongs to this connection (spec 21.7).
     let result = match request.method.as_str() {
+        // Answered here, ahead of nothing: the app hears that the
+        // connection lives (spec 11).
+        method::SESSION_PING => Ok(Value::Null),
         method::BROWSER_WATCH | method::BROWSER_UNWATCH => {
             frames.send_replace(None);
             watch.request(daemon, &request.method, request.params)
@@ -262,6 +271,8 @@ fn route(
         method::BROWSER_WINDOW => watch.window(daemon, request.params),
         // The browser starting outlives the request too (spec 21.10).
         method::BROWSER_START => watch.start(daemon, request.params),
+        // So does a login window (spec 35.2).
+        method::LOGINS_OPEN => logins_open(daemon, request.params),
         name if ASIDE.contains(&name) => return Routed::Aside(request),
         _ => return Routed::InOrder(request),
     };
@@ -302,4 +313,13 @@ fn reply(id: &Value, result: Result<Value, RpcError>) -> String {
         Ok(value) => jsonrpc::success(id, value),
         Err(err) => jsonrpc::failure(id, &err),
     }
+}
+
+/// `logins.open`: its window outlives the request (spec 35.2).
+fn logins_open(daemon: &Arc<Daemon>, params: Option<Value>) -> Result<Value, RpcError> {
+    let params = serde_json::from_value(params.unwrap_or(Value::Null))
+        .map_err(|err| RpcError::new(error_code::INVALID_PARAMS, err.to_string()))?;
+    let opened = crate::logins::open(daemon, params)?;
+    serde_json::to_value(opened)
+        .map_err(|err| RpcError::new(error_code::INTERNAL_ERROR, err.to_string()))
 }

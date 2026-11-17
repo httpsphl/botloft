@@ -22,6 +22,8 @@ pub(super) fn decls(out: &mut Out) {
     out.decl::<DesktopBotParams>();
     out.decl::<DesktopAwayUse>();
     out.decl::<DesktopWholeParams>();
+    out.decl::<DesktopApp>();
+    out.decl::<DesktopGrantAppParams>();
 }
 
 pub(super) fn methods(out: &mut Out) {
@@ -54,6 +56,14 @@ pub(super) fn methods(out: &mut Out) {
     let away = out.name::<Vec<DesktopAwayUse>>();
     out.method(method::DESKTOP_AWAY_USES, "undefined", &away);
     out.method(method::DESKTOP_DISMISS_AWAY, "undefined", "null");
+    let apps = out.name::<Vec<DesktopApp>>();
+    out.method(method::DESKTOP_APPS, "undefined", &apps);
+    out.method(
+        method::DESKTOP_GRANT_APP,
+        &out.name::<DesktopGrantAppParams>(),
+        &out.name::<BotDesktop>(),
+    );
+    out.method(method::DESKTOP_STOP_ALL, "undefined", "null");
 }
 
 pub(super) fn notifications(out: &mut Out) {

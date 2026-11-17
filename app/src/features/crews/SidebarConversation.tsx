@@ -15,6 +15,7 @@ import { ChiefBadge, isChief } from "../bots/ChiefBadge";
 import { ListAvatar } from "../bots/ListAvatar";
 import { START_PLAN_TOOL } from "../chat/StartPlanCard";
 import { toolAction, toolTitle } from "../chat/toolNames";
+import { SidebarConversations } from "./SidebarConversations";
 import { row } from "./SidebarPages";
 
 /** Memoized: a change to one bot re-renders only its own line. */
@@ -41,20 +42,20 @@ export const Conversation = memo(function Conversation({ bot, crew }: { bot: Bot
           event.preventDefault();
           setMenuAt(menuPoint(event));
         }}
-        className={`${row} gap-2.5 px-2.5 py-2 ${selected || menuAt ? "bg-sunken" : ""}`}
+        className={`${row} gap-3 px-2.5 py-2 ${selected || menuAt ? "bg-sunken" : ""}`}
       >
-        <ListAvatar bot={bot} crewPaused={crew.paused} size={32} />
+        <ListAvatar bot={bot} crewPaused={crew.paused} size={36} />
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-2">
             <span className="flex min-w-0 flex-1 items-center gap-1">
-              <span className={`truncate text-sm ${unread ? "font-semibold" : "font-medium"}`}>
+              <span className={`truncate text-base ${unread ? "font-semibold" : "font-medium"}`}>
                 {bot.name}
               </span>
               {isChief(bot, crew) && <ChiefBadge crew={crew} compact />}
             </span>
             {activity && (
               <time
-                className={`shrink-0 text-xs ${unread ? "font-semibold text-accent-text" : "text-muted"}`}
+                className="shrink-0 text-muted text-xs"
                 dateTime={new Date(activity.at).toISOString()}
               >
                 {when(activity.at)}
@@ -70,6 +71,7 @@ export const Conversation = memo(function Conversation({ bot, crew }: { bot: Bot
           </span>
         </span>
       </button>
+      <SidebarConversations bot={bot} />
       {menuAt && (
         <ContextMenu
           label={t.bots.header.menuOf(bot.name)}
@@ -90,7 +92,7 @@ export const Conversation = memo(function Conversation({ bot, crew }: { bot: Bot
  * words: the chat renders its Markdown, a line would show the marks raw. A
  * command or a path keeps its own characters.
  */
-function activityText(activity: Activity, t: Messages): string {
+export function activityText(activity: Activity, t: Messages): string {
   const { text, tool } = activity;
   switch (activity.kind) {
     case "owner":
@@ -103,6 +105,10 @@ function activityText(activity: Activity, t: Messages): string {
       return t.crews.sidebar.awaitingApproval(tool ? toolAction(tool, t.tools) : text);
     case "question":
       return t.questions.activity(plainText(text));
+    case "note":
+      return t.questions.noteActivity(plainText(text));
+    case "card":
+      return t.agentCards.activity(text);
     case "tool": {
       if (!tool) {
         return text;

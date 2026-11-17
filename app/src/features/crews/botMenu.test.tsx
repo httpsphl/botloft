@@ -1,9 +1,13 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 import { FakeBotloft } from "../../lib/fake";
+import { resetPrefs, wantsDone } from "../../shell/prefs";
 import { crewOpened, openBot, renderApp, sidebar } from "../../test/app";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  resetPrefs();
+});
 
 /** A crew "Ops" with Scout and Writer, open on the crew's page. */
 async function twoBots() {
@@ -37,9 +41,11 @@ describe("an agent's right-click menu", () => {
     expect(offered).toEqual([
       "Edit",
       "Make crew chief",
+      "Restart",
       "Restart with a new conversation",
       "Open folder",
       "Mark as unread",
+      "Tell me when Scout finishes",
       "Archive agent",
       "Delete agent",
     ]);
@@ -85,12 +91,24 @@ describe("an agent's right-click menu", () => {
     expect(fake.bots.get(writer.id)?.archivedAt).toBeNull();
   });
 
+  test("restarts from the menu, where the header's Restart moved", async () => {
+    const { fake, scout } = await twoBots();
+    fireEvent.click(within(rightClick("Scout")).getByRole("menuitem", { name: "Restart" }));
+    await waitFor(() =>
+      expect(fake.calls.filter((call) => call.method === "bots.restart")).toEqual([
+        { method: "bots.restart", params: { botId: scout.id, fresh: false } },
+      ]),
+    );
+  });
+
   test("edits from the menu and keeps a paused agent from restarting", async () => {
     const { fake, scout } = await twoBots();
     await fake.call("bots.setPaused", { botId: scout.id, paused: true });
     const menu = rightClick("Scout");
-    const fresh = within(menu).getByRole("menuitem", { name: "Restart with a new conversation" });
-    expect((fresh as HTMLButtonElement).disabled).toBe(true);
+    for (const name of ["Restart", "Restart with a new conversation"]) {
+      const restart = within(menu).getByRole("menuitem", { name });
+      expect((restart as HTMLButtonElement).disabled).toBe(true);
+    }
     fireEvent.click(within(menu).getByRole("menuitem", { name: "Edit" }));
     expect(screen.getByRole("dialog", { name: "Edit Scout" })).toBeDefined();
   });
@@ -126,5 +144,20 @@ describe("an agent's right-click menu", () => {
     fireEvent.pointerDown(row("Writer"));
     expect(rightClick("Writer")).toBeDefined();
     expect(screen.getAllByRole("menu")).toHaveLength(1);
+  });
+
+  test("turns the finished notice on or off for that agent alone", async () => {
+    const { scout, writer } = await twoBots();
+    fireEvent.click(
+      within(rightClick("Scout")).getByRole("menuitem", { name: "Tell me when Scout finishes" }),
+    );
+    expect(wantsDone(scout.id)).toBe(true);
+    expect(wantsDone(writer.id)).toBe(false);
+    const menu = rightClick("Scout");
+    expect(labels(menu)).toContain("Don't tell me when Scout finishes");
+    fireEvent.click(
+      within(menu).getByRole("menuitem", { name: "Don't tell me when Scout finishes" }),
+    );
+    expect(wantsDone(scout.id)).toBe(false);
   });
 });

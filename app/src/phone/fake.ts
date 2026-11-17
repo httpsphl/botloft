@@ -3,7 +3,9 @@
 
 import type { ApprovalCard, FromPhone, QuestionCard, ToPhone } from "../lib/protocol.gen";
 import type { PhoneApi, PhoneState } from "./client";
+import { HomeTalk, noHome } from "./home";
 import type { NoticeState } from "./notices";
+import { type Outgoing, UploadError } from "./outgoing";
 import type { LockApi } from "./PinSettings";
 import { noChats, type SeenStore, Talk } from "./talk";
 
@@ -19,6 +21,7 @@ export class FakePhone implements PhoneApi {
     ended: {},
     name: "Celular da Ana",
     ...noChats,
+    ...noHome,
   };
   /** What the screens asked of the computer, in order. */
   readonly asked: FromPhone[] = [];
@@ -33,8 +36,34 @@ export class FakePhone implements PhoneApi {
         return this.sendable;
       },
       seen,
+      undefined,
+      async (file) => {
+        if (this.uploadFails) {
+          throw new UploadError(this.uploadFails);
+        }
+        this.uploaded.push(file);
+        return {
+          id: `fil_fake${this.uploaded.length}`,
+          key: "fake-key",
+          name: file.name,
+          mediaType: file.type,
+          size: file.blob.size,
+        };
+      },
     );
   }
+  private readonly home = new HomeTalk(
+    () => this.state,
+    (change) => this.set(change),
+    async (message) => {
+      this.asked.push(message);
+      return this.sendable;
+    },
+  );
+  /** The files the screens left on the "server". */
+  readonly uploaded: Outgoing[] = [];
+  /** Why the next files fail to go up, for a test of the failure. */
+  uploadFails: string | null = null;
   private readonly listeners = new Set<() => void>();
   /** How notices stand; the buttons change it as the browser would. */
   notices: NoticeState = "off";
@@ -84,15 +113,19 @@ export class FakePhone implements PhoneApi {
     this.notices = this.notices === "on" ? "off" : this.notices;
     return this.notices;
   };
-  /** Plays a message the computer sends about conversations. */
+  /** Plays a message the computer sends about conversations or the Home. */
   receive(message: ToPhone): void {
-    this.talk.handle(message);
+    if (!this.talk.handle(message)) {
+      this.home.handle(message);
+    }
   }
 
   openChat = (botId: string) => this.talk.open(botId);
   closeChat = () => this.talk.leave();
   olderItems = () => this.talk.older();
-  write = (text: string) => this.talk.write(text);
+  write = (text: string, files?: Outgoing[]) => this.talk.write(text, files);
+  askHome = () => this.home.ask();
+  runShortcut = (routineId: string) => this.home.run(routineId);
   disconnect = async () => {
     this.calls.push({ method: "disconnect", args: [] });
     this.set({ session: "left" });

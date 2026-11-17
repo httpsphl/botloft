@@ -92,6 +92,28 @@ export type McpServerId = string;
 export type CrewAccessId = string;
 
 /**
+ * Identifies what the Maker built in one go, so it can be undone
+ * (spec 36.4).
+ */
+export type BuildId = string;
+
+/**
+ * Identifies one version of a bot's memory or instructions (spec 8.10).
+ */
+export type VersionId = string;
+
+/**
+ * Identifies a summary of the owner's history made for the Maker
+ * (spec 36.7).
+ */
+export type ImportId = string;
+
+/**
+ * Identifies one conversation of a bot (spec 40).
+ */
+export type ConversationId = string;
+
+/**
  * A group of bots that can message each other and share a folder.
  */
 export type Crew = { id: CrewId, name: string, 
@@ -123,6 +145,12 @@ autoMode: boolean,
  */
 color: string | null, 
 /**
+ * [`MAKER_CREW`] for the crew Botloft keeps for the Maker (spec 36.2),
+ * which the app does not list with the owner's crews; `null` for the
+ * owner's own.
+ */
+system: string | null, 
+/**
  * Unix time in milliseconds.
  */
 createdAt: number, 
@@ -132,9 +160,41 @@ createdAt: number,
 archivedAt: number | null, };
 
 /**
+ * A plan of the Maker that was built.
+ */
+export type Build = { id: BuildId, 
+/**
+ * The Maker.
+ */
+botId: BotId, 
+/**
+ * The request the owner allowed; `null` when the Maker built without
+ * asking (spec 36.4).
+ */
+approvalId: ApprovalId | null, title: string, 
+/**
+ * The crews it made, in the plan's order.
+ */
+crewIds: Array<CrewId>, 
+/**
+ * Unix time in milliseconds.
+ */
+appliedAt: number, 
+/**
+ * Until when it can be undone, Unix time in milliseconds.
+ */
+undoUntil: number, 
+/**
+ * Unix time in milliseconds; `null` while it stands.
+ */
+undoneAt: number | null, };
+
+export type BuildIdParams = { buildId: BuildId, };
+
+/**
  * Lifecycle state of a bot (spec 7.1).
  */
-export type BotState = "offline" | "launching" | "idle" | "busy" | "needs_approval" | "rate_limited" | "auth_error" | "backoff" | "archived";
+export type BotState = "offline" | "launching" | "idle" | "sleeping" | "busy" | "needs_approval" | "rate_limited" | "auth_error" | "backoff" | "archived";
 
 /**
  * How much a bot may do without asking the owner: Claude Code's
@@ -156,7 +216,7 @@ export type BotModel = "default" | "fable" | "opus" | "sonnet" | "haiku";
 /**
  * What the conversation-list line shows; the app words it.
  */
-export type ActivityKind = "owner" | "message" | "reply" | "tool" | "approval" | "question" | "notice";
+export type ActivityKind = "owner" | "message" | "reply" | "tool" | "approval" | "question" | "note" | "card" | "notice";
 
 /**
  * The last thing in a bot's chat, for the conversation list.
@@ -189,6 +249,28 @@ export type BotEffort = "default" | "low" | "medium" | "high" | "xhigh" | "max";
 export type ModelEffort = "none" | "low" | "medium" | "high" | "xhigh" | "max";
 
 /**
+ * What a part of a bot's conversation is (spec 33.3), from the
+ * categories Claude Code counts.
+ */
+export type ContextPartKind = "messages" | "instructions" | "tools" | "connected_tools" | "memory" | "skills" | "agents" | "buffer" | "other";
+
+export type ContextPart = { kind: ContextPartKind, tokens: number, };
+
+/**
+ * A memory file in a bot's conversation.
+ */
+export type ContextFile = { 
+/**
+ * As Claude Code gives it: absolute.
+ */
+path: string, tokens: number, 
+/**
+ * How many lines it has, as the daemon read it (spec 8.12); none
+ * when it could not be read.
+ */
+lines: number | null, };
+
+/**
  * How full a bot's conversation is, in tokens, as Claude Code counts it
  * (spec 8.6).
  */
@@ -213,7 +295,16 @@ compacting: boolean,
 /**
  * Unix time in milliseconds.
  */
-updatedAt: number, };
+updatedAt: number, 
+/**
+ * What the conversation holds, part by part, as of Claude Code's last
+ * answer (spec 33.3); empty when the agent does not say.
+ */
+parts: Array<ContextPart>, 
+/**
+ * The memory files the agent loaded.
+ */
+memoryFiles: Array<ContextFile>, };
 
 /**
  * Params of the `bot.context` notification.
@@ -224,6 +315,40 @@ export type BotContextChanged = { botId: BotId,
  * known yet.
  */
 context: ContextUsage | null, };
+
+/**
+ * What a bot left running in the background (spec 33.4), from
+ * Claude Code's `task_type`.
+ */
+export type BackgroundKind = "command" | "agent" | "remote" | "other";
+
+/**
+ * A task a bot left running in the background (spec 33.4).
+ */
+export type BackgroundTask = { 
+/**
+ * Claude Code's id, which `bots.stopTask` takes.
+ */
+taskId: string, kind: BackgroundKind, 
+/**
+ * What the bot said it is.
+ */
+description: string, 
+/**
+ * When the daemon first saw it running, in Unix milliseconds.
+ */
+seenAt: number, };
+
+/**
+ * Params of the `bot.background` notification: the whole live list.
+ */
+export type BotBackgroundChanged = { botId: BotId, tasks: Array<BackgroundTask>, };
+
+export type BotsStopTaskParams = { botId: BotId, taskId: string, 
+/**
+ * The conversation that runs it; the main one when absent (spec 40.5).
+ */
+conversationId?: ConversationId, };
 
 export type BotsSetEffortParams = { botId: BotId, effort: BotEffort, };
 
@@ -276,7 +401,15 @@ effortDefault: ModelEffort | null,
 /**
  * How full the conversation is; `null` until Claude Code said so.
  */
-context: ContextUsage | null, state: BotState, 
+context: ContextUsage | null, 
+/**
+ * What the bot left running in the background (spec 33.4).
+ */
+background: Array<BackgroundTask>, 
+/**
+ * The claude.ai connectors it may use, by name (spec 34.4).
+ */
+connectors: Array<string>, state: BotState, 
 /**
  * Current process generation; `null` if the bot has not started since
  * the daemon did. Changes on every (re)start.
@@ -309,6 +442,73 @@ createdAt: number,
  * Unix time in milliseconds; `null` while the bot is active.
  */
 archivedAt: number | null, };
+
+/**
+ * Who gave a conversation its title (spec 40.6).
+ */
+export type TitleBy = "owner" | "ai";
+
+/**
+ * One conversation of an agent (spec 40.5).
+ */
+export type Conversation = { id: ConversationId, botId: BotId, 
+/**
+ * `null` until the owner or the AI names it; the main one has none.
+ */
+title: string | null, titleBy: TitleBy | null, 
+/**
+ * The agent's main conversation, which gets what comes from outside
+ * (spec 40.2) and is never renamed or archived.
+ */
+main: boolean, state: BotState, 
+/**
+ * The process it runs in; `null` while it has none.
+ */
+generation: number | null, 
+/**
+ * How full it is; `null` while that is not known (spec 8.6).
+ */
+context: ContextUsage | null, 
+/**
+ * What it left running in the background (spec 33.4).
+ */
+background: Array<BackgroundTask>, 
+/**
+ * Its newest chat item, or when it was made: Unix milliseconds.
+ */
+lastActivity: number, 
+/**
+ * When the agent last replied in it, for the unread mark (spec 40.7).
+ */
+lastReplyAt: number | null, 
+/**
+ * What the owner read of it (`chat.read`); the main one's is the
+ * agent's `readThrough`.
+ */
+readThrough: number | null, createdAt: number, archivedAt: number | null, };
+
+/**
+ * `conversations.list`: of one agent, or of every agent that is not
+ * archived when `botId` is absent (spec 40.5).
+ */
+export type ConversationsListParams = { botId?: BotId, };
+
+/**
+ * `conversations.archive`, `conversations.unarchive`.
+ */
+export type ConversationIdParams = { conversationId: ConversationId, };
+
+/**
+ * `conversations.rename`: the owner names a conversation, and the AI no
+ * longer does (spec 40.6).
+ */
+export type ConversationsRenameParams = { conversationId: ConversationId, title: string, };
+
+/**
+ * A method that acts on one conversation of a bot: the main one when
+ * `conversationId` is absent (spec 40.5).
+ */
+export type BotConversationParams = { botId: BotId, conversationId?: ConversationId, };
 
 /**
  * Identifies the connecting app in `session.hello`.
@@ -357,7 +557,12 @@ utilization: number,
 /**
  * Unix time in milliseconds.
  */
-resetsAt: number | null, };
+resetsAt: number | null, 
+/**
+ * The model a window of its own is for, as the account names it
+ * ("Fable"); absent for the window of every model (spec 8.13).
+ */
+model?: string, };
 
 /**
  * The account's usage, from Claude Code's `rate_limit_event` (spec 8.1).
@@ -374,7 +579,17 @@ resetsAt: number | null, windows: Array<UsageWindow>,
 /**
  * Unix time in milliseconds.
  */
-observedAt: number, };
+observedAt: number, 
+/**
+ * The account went past the plan's limit and runs on its paid extra
+ * usage: a `rejected` status then does not stop the agents.
+ */
+extraUsage: boolean, 
+/**
+ * The windows were read from the owner's Claude account (spec 8.13),
+ * not from what the agents' Claude Code reported.
+ */
+fromAccount: boolean, };
 
 /**
  * What `claude auth status` says about the account (spec 7.3).
@@ -593,7 +808,12 @@ export type BotsRestartParams = { botId: BotId,
 /**
  * Start a new conversation instead of resuming the last one.
  */
-fresh?: boolean, };
+fresh?: boolean, 
+/**
+ * Restarts only this conversation, and `fresh` forgets only it; the
+ * main one when absent (spec 40.5).
+ */
+conversationId?: ConversationId, };
 
 /**
  * Params of the `bot.state` notification.
@@ -761,6 +981,16 @@ export type FileData = { mediaType: string,
 data: string, };
 
 /**
+ * Where the app plays a sound or video of the bot's (spec 8.4): an address
+ * on the daemon's own server, read in pieces as it plays.
+ */
+export type MediaLink = { 
+/**
+ * `http://127.0.0.1:<port>/media/<token>`.
+ */
+url: string, };
+
+/**
  * Text sent to a bot, by the owner, another bot or the daemon.
  */
 export type Message = { id: MessageId, crewId: CrewId, fromKind: SenderKind, 
@@ -805,7 +1035,11 @@ text: string, };
 /**
  * Getting one message into one bot's process.
  */
-export type Delivery = { id: DeliveryId, messageId: MessageId, botId: BotId, state: DeliveryState, 
+export type Delivery = { id: DeliveryId, messageId: MessageId, botId: BotId, 
+/**
+ * The conversation of the bot it goes to (spec 40.2).
+ */
+conversationId: ConversationId, state: DeliveryState, 
 /**
  * Failed attempts so far. Waiting for the bot to be ready is not one.
  */
@@ -863,7 +1097,12 @@ attachments?: Array<AttachmentUpload>,
 /**
  * A reply of the bot, or a message it got, in its chat (spec 9.3).
  */
-replyTo?: ChatItemId, };
+replyTo?: ChatItemId, 
+/**
+ * The conversation of the bot it goes to; the main one without it
+ * (spec 40.2).
+ */
+conversationId?: ConversationId, };
 
 /**
  * Newest first. Page back with `before` set to the oldest id received.
@@ -906,7 +1145,7 @@ export type NoticeLevel = "info" | "warning" | "error";
 /**
  * What a notice is about, so the app can say it in the owner's language.
  */
-export type NoticeCode = "signed_out" | "api_key_failed" | "usage_limit" | "turn_failed" | "model_unavailable" | "compacted" | "auto_compacted" | "compact_failed";
+export type NoticeCode = "signed_out" | "api_key_failed" | "usage_limit" | "turn_failed" | "model_unavailable" | "compacted" | "auto_compacted" | "compact_failed" | "fresh_start" | "stuck_turn";
 
 export type InboundItem = { message: Message, };
 
@@ -1162,6 +1401,28 @@ export type DesktopWholeParams = { botId: BotId, level: DesktopLevel,
 acceptedRisks: boolean, };
 
 /**
+ * An app open on the owner's desktop that a bot may be given, by its
+ * executable (spec 24.2): the result of `desktop.apps`, without the ones
+ * never granted (24.3).
+ */
+export type DesktopApp = { path: string, 
+/**
+ * The app's name for people ("Microsoft Excel").
+ */
+name: string, };
+
+/**
+ * `desktop.grantApp`: the owner gives a bot an app that is open now
+ * before the bot asks (spec 24.10). Like a request allowed in the chat,
+ * it only raises the level of a grant already there.
+ */
+export type DesktopGrantAppParams = { botId: BotId, 
+/**
+ * The executable, as `desktop.apps` gave it.
+ */
+path: string, level: DesktopLevel, };
+
+/**
  * How Claude Code reaches the server.
  */
 export type McpKind = "stdio" | "http";
@@ -1250,6 +1511,53 @@ export type McpServerIdParams = { serverId: McpServerId, };
 export type BotMcpSetParams = { botId: BotId, serverIds: Array<McpServerId>, };
 
 /**
+ * Why a server of Claude Code cannot come as it is.
+ */
+export type ClaudeMcpProblem = { "reason": "kind", kind: string, } | { "reason": "field", field: string, };
+
+/**
+ * One server of Claude Code, without its secrets: only the names of its
+ * headers and variables come to the app.
+ */
+export type ClaudeMcpServer = { name: string, 
+/**
+ * The folder it is set for; `None` when it is for every folder.
+ */
+folder: string | null, 
+/**
+ * `None` when it cannot come ([`ClaudeMcpServer::problem`]).
+ */
+kind: McpKind | null, url: string | null, command: string | null, args: Array<string>, headerNames: Array<string>, envNames: Array<string>, 
+/**
+ * A tool with this name is connected in Botloft already.
+ */
+saved: boolean, problem: ClaudeMcpProblem | null, };
+
+/**
+ * The answer of `mcp.fromClaude`.
+ */
+export type ClaudeMcpServers = { 
+/**
+ * Claude Code's settings file was there to read.
+ */
+found: boolean, 
+/**
+ * Those for every folder first, then by folder; by name in each.
+ */
+servers: Array<ClaudeMcpServer>, };
+
+/**
+ * A server the owner picked, as `mcp.fromClaude` named it.
+ */
+export type ClaudeMcpPick = { name: string, folder: string | null, };
+
+/**
+ * Copies the picked servers, secrets and all, read again from Claude
+ * Code's file by the daemon: their values never pass through the app.
+ */
+export type McpImportParams = { picks: Array<ClaudeMcpPick>, };
+
+/**
  * One lasting access: the whole crew, or one bot of it.
  */
 export type CrewAccess = { id: CrewAccessId, 
@@ -1283,6 +1591,258 @@ export type CrewAccessListParams = { botId: BotId, };
 export type CrewAccessIdParams = { accessId: CrewAccessId, };
 
 /**
+ * An agent the owner gave their Chrome to (spec 37.2).
+ */
+export type ChromeGrant = { botId: BotId, 
+/**
+ * Unix time in milliseconds.
+ */
+givenAt: number, };
+
+/**
+ * `chrome.set`: gives the owner's Chrome to an agent, or takes it back.
+ */
+export type ChromeSetParams = { botId: BotId, on: boolean, 
+/**
+ * The owner read the risks and ticked that they understood them;
+ * giving needs it.
+ */
+acceptedRisks: boolean, };
+
+/**
+ * One agent's Chrome: the result of `chrome.set` and the params of the
+ * `bot.chrome` notification.
+ */
+export type BotChrome = { botId: BotId, 
+/**
+ * Unix time in milliseconds; `null` when the agent does not have it.
+ */
+givenAt: number | null, };
+
+/**
+ * Who acts in the owner's Chrome now (spec 37.4): the result of
+ * `chrome.status` and the params of `chrome.turn`.
+ */
+export type ChromeTurn = { 
+/**
+ * `null` when no agent has the turn.
+ */
+botId: BotId | null, };
+
+/**
+ * Where a plugin comes from.
+ */
+export type PluginSource = "claude_code" | "claude_ai" | "kept";
+
+/**
+ * A plugin the owner can give to agents (spec 41.1).
+ */
+export type Plugin = { 
+/**
+ * Its name, which is how Botloft and Claude Code know it.
+ */
+name: string, 
+/**
+ * What it does, from its manifest; may be empty.
+ */
+description: string, 
+/**
+ * Its version, from its manifest.
+ */
+version: string | null, source: PluginSource, 
+/**
+ * Its skills and commands, as the agent calls them
+ * (`<plugin>:<name>`).
+ */
+skills: Array<string>, 
+/**
+ * Its subagents, as the agent calls them.
+ */
+agents: Array<string>, 
+/**
+ * When its hooks run commands by themselves: the hook events.
+ */
+hooks: Array<string>, 
+/**
+ * The language servers it runs by itself.
+ */
+languageServers: Array<string>, 
+/**
+ * Its MCP servers, which agents do not get (spec 41.4).
+ */
+mcpServers: Array<string>, 
+/**
+ * It brings programs the agent can run in its terminal (`bin/`).
+ */
+programs: boolean, 
+/**
+ * It asks for settings (`userConfig`) the agents do not get.
+ */
+needsSettings: boolean, 
+/**
+ * The agents that have it: the ones chosen and, when it is for
+ * everyone, every agent on Claude Code.
+ */
+botIds: Array<BotId>, 
+/**
+ * Every agent on Claude Code uses it, the ones made later included
+ * (spec 41.3). `everyone` in the list gives every plugin to every
+ * agent.
+ */
+everyone: boolean, };
+
+/**
+ * What `plugins.list` answers.
+ */
+export type PluginList = { 
+/**
+ * By name.
+ */
+plugins: Array<Plugin>, 
+/**
+ * Every agent on Claude Code uses every plugin, the ones that come
+ * later included (spec 41.3).
+ */
+everyone: boolean, };
+
+/**
+ * `plugins.share`: the agents that may use a plugin, in place of those
+ * before.
+ */
+export type PluginsShareParams = { name: string, botIds: Array<BotId>, };
+
+/**
+ * `plugins.everyone`: one plugin, or with no name every plugin, for every
+ * agent on Claude Code, or not any more.
+ */
+export type PluginsEveryoneParams = { name?: string, on: boolean, };
+
+/**
+ * Where a skill comes from.
+ */
+export type SkillSource = "personal" | "claude_ai" | "kept";
+
+/**
+ * A skill the owner can give to agents (spec 38.1).
+ */
+export type Skill = { 
+/**
+ * Its folder's name, which is how Botloft knows it.
+ */
+name: string, 
+/**
+ * What it does and when, from its `SKILL.md`; may be empty.
+ */
+description: string, source: SkillSource, 
+/**
+ * Tools Claude Code runs without asking while the skill is used
+ * (`allowed-tools`).
+ */
+allowedTools: Array<string>, 
+/**
+ * It runs commands by itself: hooks, or `` !`command` `` lines.
+ */
+runsCommands: boolean, 
+/**
+ * It brings other files than `SKILL.md`: scripts, references.
+ */
+hasFiles: boolean, 
+/**
+ * The agents that have it: the ones chosen and, when it is for
+ * everyone, every agent on Claude Code.
+ */
+botIds: Array<BotId>, 
+/**
+ * Every agent on Claude Code uses it, the ones made later included
+ * (spec 38.3). `everyone` in the list gives every skill to every agent.
+ */
+everyone: boolean, 
+/**
+ * Too big for Botloft's copy (2,000 files or 50 MB): no agent gets it
+ * (spec 38.3).
+ */
+tooBig: boolean, };
+
+/**
+ * What `skills.list` answers.
+ */
+export type SkillList = { 
+/**
+ * By name.
+ */
+skills: Array<Skill>, 
+/**
+ * Every agent on Claude Code uses every skill, the ones that come
+ * later included (spec 38.3).
+ */
+everyone: boolean, };
+
+/**
+ * `skills.share`: the agents that may use a skill, in place of those
+ * before.
+ */
+export type SkillsShareParams = { name: string, botIds: Array<BotId>, };
+
+/**
+ * `skills.everyone`: one skill, or with no name every skill, for every
+ * agent on Claude Code, or not any more.
+ */
+export type SkillsEveryoneParams = { name?: string, on: boolean, };
+
+/**
+ * Where a name in the menu of `/` comes from (spec 38.11).
+ */
+export type SlashSource = "owner" | "plugin" | "agent" | "claude_code";
+
+/**
+ * A skill or command the owner can run by typing `/` and its name.
+ */
+export type SlashCommand = { name: string, 
+/**
+ * What it does, from its file in the agent's folder; may be empty.
+ */
+description: string, from: SlashSource, };
+
+/**
+ * What `bots.commands` answers: the agent's skills and plugin commands, by
+ * name. Empty for an agent that is not on Claude Code.
+ */
+export type SlashCommandList = { commands: Array<SlashCommand>, };
+
+/**
+ * A site the owner let a bot use in its browser (spec 21.5).
+ */
+export type BrowserSite = { botId: BotId, 
+/**
+ * The host in lowercase, without `www.`; it covers its subdomains.
+ */
+site: string, 
+/**
+ * Unix time in milliseconds.
+ */
+allowedAt: number, };
+
+/**
+ * A bot's sites after one was taken away: the result of `sites.revoke`
+ * and the params of the `bot.sites` notification.
+ */
+export type BotSites = { botId: BotId, 
+/**
+ * Oldest first.
+ */
+sites: Array<BrowserSite>, };
+
+/**
+ * `sites.revoke`: the bot asks for the site again the next time.
+ */
+export type SitesRevokeParams = { botId: BotId, site: string, };
+
+/**
+ * The result of `permissions.list`: every bot's, oldest first in each list.
+ */
+export type Permissions = { desktop: Array<DesktopGrant>, sites: Array<BrowserSite>, rules: Array<AllowRule>, crewAccess: Array<CrewAccess>, chrome: Array<ChromeGrant>, };
+
+/**
  * The group a role is listed under.
  */
 export type BotTemplateCategory = "code" | "design" | "content" | "research" | "business" | "product" | "marketing" | "learning" | "finance" | "people" | "security" | "health" | "games" | "legal";
@@ -1311,6 +1871,127 @@ export type CatalogAddParams = { crewId: CrewId, templateId: string,
  * In the owner's language, as the app writes it.
  */
 name: string, role: string, };
+
+/**
+ * Where a history comes from.
+ */
+export type ImportSource = "claude_code" | "claude_ai";
+
+export type ImportsScanParams = { source: ImportSource, 
+/**
+ * The ZIP of a claude.ai export, where it is; read there, never copied.
+ */
+path?: string, };
+
+/**
+ * One project of the history, as the list shows it: no text of it.
+ */
+export type ImportProject = { 
+/**
+ * What `imports.create` takes to bring it.
+ */
+key: string, 
+/**
+ * The folder the project was worked in.
+ */
+path: string, sessions: number, 
+/**
+ * How many requests the owner typed in it.
+ */
+prompts: number, 
+/**
+ * Unix time in milliseconds of its first and last request; `null`
+ * without any.
+ */
+firstAt: number | null, lastAt: number | null, };
+
+/**
+ * What a claude.ai export holds, as the list shows it: no text of it.
+ */
+export type ImportConversations = { count: number, 
+/**
+ * Unix time in milliseconds of the first and last conversation.
+ */
+firstAt: number | null, lastAt: number | null, 
+/**
+ * The names of the claude.ai projects, when the export has them.
+ */
+projects: Array<string>, };
+
+/**
+ * What there is to bring, newest project first.
+ */
+export type ImportScan = { source: ImportSource, 
+/**
+ * Claude Code's projects; empty for an export of claude.ai.
+ */
+projects: Array<ImportProject>, 
+/**
+ * What an export of claude.ai holds; `null` for Claude Code.
+ */
+conversations: ImportConversations | null, };
+
+export type ImportsCreateParams = { source: ImportSource, 
+/**
+ * Claude Code's projects to bring, by `key`; empty for claude.ai.
+ */
+keys: Array<string>, 
+/**
+ * The ZIP of a claude.ai export.
+ */
+path?: string, 
+/**
+ * For claude.ai, only the conversations started in this period, Unix
+ * time in milliseconds.
+ */
+from?: number, to?: number, };
+
+/**
+ * A summary made and kept for the owner to read before it goes.
+ */
+export type ImportDraft = { importId: ImportId, 
+/**
+ * The whole summary, in markdown, as the Maker would read it.
+ */
+text: string, chars: number, 
+/**
+ * About how many tokens of the owner's plan reading it takes.
+ */
+tokensEstimate: number, 
+/**
+ * Projects that left it to keep it under the limit, by path; for
+ * claude.ai, how many conversations left it.
+ */
+cut: Array<string>, 
+/**
+ * What was swapped out, by kind (`key`, `email`, `number`, `card`).
+ */
+redactions: { [key in string]: number }, 
+/**
+ * The period it covers, Unix time in milliseconds.
+ */
+from: number | null, to: number | null, };
+
+export type ImportIdParams = { importId: ImportId, };
+
+export type ImportSent = { 
+/**
+ * The owner's message to the Maker that carries the summary.
+ */
+messageId: MessageId, };
+
+/**
+ * A summary made, as the store keeps it: never its text.
+ */
+export type Import = { id: ImportId, source: ImportSource, 
+/**
+ * Unix time in milliseconds.
+ */
+createdAt: number, sentAt: number | null, sentMessageId: MessageId | null, 
+/**
+ * The projects it covers, by path.
+ */
+scope: Array<string>, chars: number, redactions: { [key in string]: number }, };
 
 /**
  * How much a backup carries (spec 14.2).
@@ -1566,13 +2247,14 @@ export type MobileRevokeParams = { phoneId: string, };
 export type MobilePairRequest = { pairId: string, name: string, code: string, };
 
 /**
- * The bot that asks, as the phone shows it.
+ * The bot that asks, as the phone shows it. The id lets the app's home
+ * open the bot's chat (spec 15.1); the phone's chat list has it already.
  */
-export type CardBot = { name: string, color: string, };
+export type CardBot = { id: BotId, name: string, color: string, };
 
 /**
  * A request waiting for the owner, as the phone shows it (spec 28.5). It
- * carries what the owner needs to decide, and nothing else of the bot.
+ * carries what the owner needs to decide, and of the bot only who it is.
  */
 export type ApprovalCard = { approvalId: ApprovalId, bot: CardBot, crew: string, 
 /**
@@ -1598,9 +2280,22 @@ cut: boolean,
 atComputer: boolean, };
 
 /**
- * A question waiting for the owner, as the phone shows it.
+ * A question or a note waiting for the owner, as the phone shows it.
  */
-export type QuestionCard = { questionId: QuestionId, bot: CardBot, crew: string, createdAt: number, text: string, options: Array<string>, };
+export type QuestionCard = { questionId: QuestionId, bot: CardBot, crew: string, createdAt: number, 
+/**
+ * A note asks nothing: the phone offers Seen instead of Dismiss.
+ */
+kind: QuestionKind, text: string, options: Array<string>, };
+
+/**
+ * A routine run that failed, as the phone tells it.
+ */
+export type RunFailure = { routine: string, 
+/**
+ * Unix time in milliseconds.
+ */
+at: number, };
 
 /**
  * A bot in the phone's list of conversations (spec 28.12).
@@ -1618,29 +2313,86 @@ last?: Activity,
  * Up to when the owner read this chat on the computer, so the phone
  * does not mark as new what was read there.
  */
-readAt?: number, };
+readAt?: number, 
+/**
+ * The bot's routine that failed last (spec 20.9, 28.12): the phone
+ * shows it until the owner reads the chat, here or there.
+ */
+failed?: RunFailure, };
 
 /**
  * One thing in a conversation, as the phone shows it (spec 28.12): the
  * text, and never the output of a tool.
  */
-export type PhoneItem = { "kind": "you", id: ChatItemId, at: number, text: string, cut: boolean, } | { "kind": "bot_message", id: ChatItemId, at: number, from: string, text: string, cut: boolean, } | { "kind": "reply", id: ChatItemId, at: number, text: string, cut: boolean, } | { "kind": "tool", id: ChatItemId, at: number, summary: string, } | { "kind": "approval", id: ChatItemId, at: number, approvalId: ApprovalId, summary: string, status: ApprovalStatus, } | { "kind": "question", id: ChatItemId, at: number, questionId: QuestionId, text: string, status: QuestionStatus, } | { "kind": "failed", id: ChatItemId, at: number, error?: string, } | { "kind": "notice", id: ChatItemId, at: number, level: NoticeLevel, text: string, };
+export type PhoneItem = { "kind": "you", id: ChatItemId, at: number, text: string, cut: boolean, files?: Array<string>, } | { "kind": "bot_message", id: ChatItemId, at: number, from: string, text: string, cut: boolean, } | { "kind": "reply", id: ChatItemId, at: number, text: string, cut: boolean, } | { "kind": "tool", id: ChatItemId, at: number, summary: string, } | { "kind": "approval", id: ChatItemId, at: number, approvalId: ApprovalId, summary: string, status: ApprovalStatus, } | { "kind": "question", id: ChatItemId, at: number, questionId: QuestionId, 
+/**
+ * A note the bot left (spec 23.10), not a question.
+ */
+note: boolean, text: string, status: QuestionStatus, } | { "kind": "failed", id: ChatItemId, at: number, error?: string, } | { "kind": "notice", id: ChatItemId, at: number, level: NoticeLevel, text: string, };
+
+/**
+ * A routine the owner runs with a tap (spec 20.2), as the phone shows it.
+ * The agent's name and color come from its line in the list (28.12).
+ */
+export type PhoneShortcut = { routineId: RoutineId, name: string, botId: BotId, };
 
 /**
  * What the computer sends the phone, sealed (spec 28.3).
  */
-export type ToPhone = { "t": "snapshot", approvals: Array<ApprovalCard>, questions: Array<QuestionCard>, } | { "t": "approval.open", card: ApprovalCard, } | { "t": "approval.closed", approvalId: ApprovalId, status: ApprovalStatus, } | { "t": "question.open", card: QuestionCard, } | { "t": "question.closed", questionId: QuestionId, status: QuestionStatus, } | { "t": "chats", bots: Array<ChatLine>, first: boolean, } | { "t": "history", req: number, botId: BotId, items: Array<PhoneItem>, more: boolean, done: boolean, } | { "t": "sent", clientId: string, ok: boolean, reason?: string, } | { "t": "item", botId: BotId, item: PhoneItem, } | { "t": "live", botId: BotId, text: string, } | { "t": "state", botId: BotId, state: BotState, } | { "t": "line", bot: ChatLine, } | { "t": "read", botId: BotId, upto: number, };
+export type ToPhone = { "t": "snapshot", approvals: Array<ApprovalCard>, questions: Array<QuestionCard>, } | { "t": "approval.open", card: ApprovalCard, } | { "t": "approval.closed", approvalId: ApprovalId, status: ApprovalStatus, } | { "t": "question.open", card: QuestionCard, } | { "t": "question.closed", questionId: QuestionId, status: QuestionStatus, } | { "t": "chats", bots: Array<ChatLine>, first: boolean, } | { "t": "history", req: number, botId: BotId, items: Array<PhoneItem>, more: boolean, done: boolean, } | { "t": "sent", clientId: string, ok: boolean, reason?: string, } | { "t": "item", botId: BotId, item: PhoneItem, } | { "t": "live", botId: BotId, text: string, } | { "t": "state", botId: BotId, state: BotState, } | { "t": "line", bot: ChatLine, } | { "t": "read", botId: BotId, upto: number, } | { "t": "home", shortcuts: Array<PhoneShortcut>, today?: DayActivity, } | { "t": "ran", clientId: string, ok: boolean, reason?: string, };
+
+export type PhoneFile = { 
+/**
+ * The file on the server (`fil_...`).
+ */
+id: string, 
+/**
+ * The AES-256-GCM key that opens it, base64url; it seals this file only.
+ */
+key: string, name: string, mediaType: string, 
+/**
+ * The bytes of the file itself.
+ */
+size: number, };
 
 /**
  * What the phone sends the computer, sealed (spec 28.3).
  */
-export type FromPhone = { "t": "sync" } | { "t": "approval.answer", approvalId: ApprovalId, allow: boolean, note?: string, } | { "t": "question.answer", questionId: QuestionId, answer: string, } | { "t": "question.dismiss", questionId: QuestionId, } | { "t": "chats" } | { "t": "history", req: number, botId: BotId, before?: ChatItemId, } | { "t": "send", clientId: string, botId: BotId, text: string, } | { "t": "watch", botId?: BotId, };
+export type FromPhone = { "t": "sync" } | { "t": "approval.answer", approvalId: ApprovalId, allow: boolean, note?: string, } | { "t": "question.answer", questionId: QuestionId, answer: string, } | { "t": "question.dismiss", questionId: QuestionId, } | { "t": "chats" } | { "t": "history", req: number, botId: BotId, before?: ChatItemId, } | { "t": "send", clientId: string, botId: BotId, text: string, files?: Array<PhoneFile>, } | { "t": "watch", botId?: BotId, } | { "t": "home", since: number, } | { "t": "routine.run", clientId: string, routineId: RoutineId, };
+
+/**
+ * A bot's open request for a key, as the home and the island list it: who
+ * asks, for which key and why. It is answered only in the chat's card.
+ */
+export type KeyCard = { 
+/**
+ * The request's id, which is the chat item's (spec 32.9).
+ */
+requestId: ChatItemId, bot: CardBot, crew: string, 
+/**
+ * Unix time in milliseconds.
+ */
+createdAt: number, 
+/**
+ * The key's name, as in spec 32.3.
+ */
+name: string, 
+/**
+ * What the bot needs it for, in its own words.
+ */
+why: string, };
 
 /**
  * Every request and question waiting for the owner, oldest first, as the
- * phone sees them (spec 31.5, 28.5).
+ * phone sees them (spec 31.5, 28.5), and the bots' requests for a key,
+ * which only the app sees (spec 32.5).
  */
-export type Cards = { approvals: Array<ApprovalCard>, questions: Array<QuestionCard>, };
+export type Cards = { approvals: Array<ApprovalCard>, questions: Array<QuestionCard>, 
+/**
+ * The open requests for a key, oldest first. The phone never gets
+ * them: the key is pasted in the chat's card, at the computer.
+ */
+keys: Array<KeyCard>, };
 
 /**
  * Params of `activity.today`.
@@ -1691,6 +2443,275 @@ lines: EditLines,
  */
 busiest: BusyBot | null, };
 
+/**
+ * A key of an agent, without its value (spec 32.2).
+ */
+export type AgentKey = { name: string, 
+/**
+ * What the key is, as the owner wrote it; empty without one.
+ */
+description: string, 
+/**
+ * When its value last changed, in Unix ms.
+ */
+setAt: number, 
+/**
+ * The value is not on this computer, e.g. after restoring a copy.
+ */
+missing: boolean, };
+
+export type KeysListParams = { botId: BotId, };
+
+export type KeysSetParams = { botId: BotId, name: string, value: string, description?: string, 
+/**
+ * The bot's request this answers (spec 32.5); its name must match.
+ */
+requestId?: ChatItemId, };
+
+export type KeysDeleteParams = { botId: BotId, name: string, };
+
+/**
+ * `keys.dismiss`: the owner does not give the key now.
+ */
+export type KeysDismissParams = { requestId: ChatItemId, };
+
+/**
+ * Something in the conversations that looks like a pasted key (spec 32.7),
+ * once per value however many times it shows up.
+ */
+export type KeyHit = { 
+/**
+ * Opaque; names the value to `keys.scrub` without carrying it.
+ */
+id: string, 
+/**
+ * How it starts and its last 4 characters, like `sk-…a1b2`.
+ */
+preview: string, 
+/**
+ * The agents whose conversations have it, the latest first.
+ */
+botIds: Array<BotId>, 
+/**
+ * How many texts have it: messages, chat items, requests, questions.
+ */
+places: number, 
+/**
+ * The newest of those, in Unix ms.
+ */
+lastAt: number, };
+
+export type KeyKeep = { botId: BotId, name: string, };
+
+/**
+ * What to do with one hit: keep it as a key of an agent, or just take it
+ * out of Botloft.
+ */
+export type KeyScrub = { id: string, 
+/**
+ * The agent and the name to save it as; `null` deletes it.
+ */
+keep: KeyKeep | null, };
+
+/**
+ * `keys.scrub`; answers with what is left to scan.
+ */
+export type KeysScrubParams = { hits: Array<KeyScrub>, };
+
+/**
+ * How a file differs from the last commit, from `git status`.
+ */
+export type GitFileStatus = "modified" | "added" | "deleted" | "renamed" | "untracked" | "conflicted";
+
+/**
+ * A changed file in a repository.
+ */
+export type GitFile = { 
+/**
+ * Relative to the repository, with `/`.
+ */
+path: string, status: GitFileStatus, 
+/**
+ * Lines added and removed against the last commit; `null` for a new
+ * file, a binary one or a repository with no commit yet.
+ */
+added: number | null, removed: number | null, };
+
+/**
+ * A git repository one of the agent's folders is in.
+ */
+export type GitRepo = { 
+/**
+ * Absolute path of the repository's top folder.
+ */
+path: string, 
+/**
+ * Its folder name.
+ */
+name: string, 
+/**
+ * `null` when no branch is checked out.
+ */
+branch: string | null, 
+/**
+ * Commits ahead of and behind its upstream; 0 without one.
+ */
+ahead: number, behind: number, 
+/**
+ * The first changed files, at most 200.
+ */
+files: Array<GitFile>, 
+/**
+ * How many more changed files there are.
+ */
+more: number, };
+
+/**
+ * What the agent did in git, from Claude Code's `gitOperation`.
+ */
+export type GitEventKind = "commit" | "push" | "branch" | "pr";
+
+/**
+ * One thing the agent did in git (spec 33.5).
+ */
+export type GitEvent = { kind: GitEventKind, 
+/**
+ * A commit's short sha.
+ */
+sha: string | null, branch: string | null, 
+/**
+ * As Claude Code says it: `committed`, `amended`, `merged`, `created`...
+ */
+action: string | null, 
+/**
+ * A pull request's number and link.
+ */
+number: number | null, url: string | null, 
+/**
+ * Unix time in milliseconds.
+ */
+at: number, };
+
+/**
+ * Where a pull request stands on GitHub.
+ */
+export type PullState = "open" | "draft" | "merged" | "closed";
+
+/**
+ * How a pull request's checks went, counted.
+ */
+export type PullChecks = { passed: number, failed: number, 
+/**
+ * Queued or running.
+ */
+pending: number, };
+
+/**
+ * A pull request the agent opened or touched, as GitHub has it now.
+ */
+export type PullRequest = { number: number, url: string, title: string, state: PullState, additions: number, deletions: number, checks: PullChecks, };
+
+/**
+ * Whether the owner's `gh` could tell about the pull requests.
+ */
+export type GithubAccess = "ok" | "missing" | "signed_out" | "error";
+
+/**
+ * What `overview.changes` answers.
+ */
+export type OverviewChanges = { repos: Array<GitRepo>, 
+/**
+ * Newest first, at most 50.
+ */
+events: Array<GitEvent>, 
+/**
+ * The newest pull requests of `events`, at most 5, as GitHub has them.
+ */
+prs: Array<PullRequest>, 
+/**
+ * `null` when there was no pull request to ask about.
+ */
+github: GithubAccess | null, };
+
+/**
+ * How a connector stands, as Claude Code reports it.
+ */
+export type ConnectorState = "connected" | "needs_auth" | "pending" | "failed";
+
+/**
+ * A connector of the owner's claude.ai account (spec 34.1).
+ */
+export type Connector = { 
+/**
+ * Its plain name, without "claude.ai ": "Google Calendar".
+ */
+name: string, state: ConnectorState, };
+
+/**
+ * What `connectors.list` answers.
+ */
+export type ConnectorList = { connectors: Array<Connector>, 
+/**
+ * When they were looked for, in Unix milliseconds.
+ */
+checkedAt: number, };
+
+export type ConnectorsListParams = { 
+/**
+ * Look again even when they were found before.
+ */
+refresh: boolean, };
+
+export type BotsSetConnectorsParams = { botId: BotId, 
+/**
+ * Plain names, as `connectors.list` gives them.
+ */
+names: Array<string>, };
+
+/**
+ * A site the owner signed in to, and the agents that have the login.
+ */
+export type SiteLogin = { 
+/**
+ * The host in lowercase without `www.`, as in spec 21.5: "reddit.com".
+ */
+site: string, 
+/**
+ * When the owner last signed in, in Unix milliseconds.
+ */
+signedAt: number, botIds: Array<BotId>, };
+
+/**
+ * What `logins.list` answers, and `logins.changed` brings.
+ */
+export type LoginList = { logins: Array<SiteLogin>, 
+/**
+ * The site of the window open for the owner to sign in, if any.
+ */
+window: string | null, };
+
+/**
+ * `logins.changed`: the list after a change. When a window closed,
+ * `closed` names its site and `found` says whether a login was there.
+ */
+export type LoginsChanged = { list: LoginList, closed: string | null, found: boolean | null, };
+
+export type LoginsOpenParams = { 
+/**
+ * The page to sign in on: "reddit.com" or "https://www.reddit.com/login".
+ */
+address: string, };
+
+export type LoginsOpenResult = { site: string, };
+
+export type LoginsShareParams = { site: string, 
+/**
+ * Every agent that should have the login; the others lose it.
+ */
+botIds: Array<BotId>, };
+
+export type LoginsSiteParams = { site: string, };
+
 export type ApprovalItem = { approvalId: ApprovalId, toolName: string, summary: string, 
 /**
  * What the bot says the command is for, as in `ToolItem`. The bot
@@ -1707,7 +2728,12 @@ note: string | null,
  * request cannot be allowed for good. Kept only here, like the
  * explanation.
  */
-always: AllowScope | null, };
+always: AllowScope | null, 
+/**
+ * Allowed only for the bot's turn, not saved (spec 24.2, 21.5).
+ * Kept only here, like the explanation.
+ */
+once?: boolean, };
 
 /**
  * Tokens of one turn, as the `usage` of Claude Code's `result` event: the
@@ -1760,20 +2786,93 @@ archived: boolean,
  */
 turns: number, tokens: TokenUsage, 
 /**
- * About how much of the weekly plan the bot used in the period, 0 to
- * 1; `null` until Botloft has learned it (spec 8.7).
+ * What the bot's turns would cost at API list prices, in US dollars;
+ * `null` when its engine does not say (spec 8.7). The owner's plan
+ * does not charge it.
  */
-planShare: number | null, };
+cost: number | null, };
+
+/**
+ * How `usage.costs` groups the cost (spec 8.7).
+ */
+export type CostBy = "model" | "day" | "routine";
+
+export type UsageCostsParams = { 
+/**
+ * Counts what was spent at or after this Unix time in ms.
+ */
+since: number, by: CostBy, };
+
+/**
+ * The cost of one model, day or routine since the time asked for.
+ */
+export type CostGroup = { 
+/**
+ * The model's id, the day (`2026-11-14`) or the routine's id; empty for
+ * the cost with no model (from before Botloft kept it) or not from a
+ * routine.
+ */
+key: string, 
+/**
+ * At API list prices, in US dollars.
+ */
+cost: number, 
+/**
+ * The routine's name; absent elsewhere and for a deleted routine.
+ */
+name?: string, 
+/**
+ * The bot the routine belongs to.
+ */
+botName?: string, color?: string, };
+
+/**
+ * What changed.
+ */
+export type VersionKind = "memory" | "instructions";
+
+/**
+ * Who made a version.
+ */
+export type VersionAuthor = "start" | "owner" | "agent" | "maker" | "outside";
+
+export type TextVersion = { id: VersionId, botId: BotId, kind: VersionKind, author: VersionAuthor, 
+/**
+ * The whole text as it was; empty for a memory file that was gone.
+ */
+text: string, 
+/**
+ * The version the owner went back to, when this one did that.
+ */
+restoredFrom: VersionId | null, 
+/**
+ * Unix time in milliseconds.
+ */
+createdAt: number, };
+
+export type VersionsListParams = { botId: BotId, kind: VersionKind, };
+
+/**
+ * Puts the bot's memory or instructions back as `version_id` had them.
+ */
+export type VersionsRestoreParams = { versionId: VersionId, };
+
+export type QuestionKind = "question" | "note";
 
 export type QuestionStatus = "open" | "answered" | "dismissed";
 
 export type Question = { id: QuestionId, crewId: CrewId, botId: BotId, 
 /**
- * What the bot asks, markdown.
+ * A question or a note.
+ */
+kind: QuestionKind, 
+/**
+ * What the bot asks, or tells, markdown.
  */
 text: string, 
 /**
- * Ready answers the owner may pick; empty for a free answer only.
+ * Ready answers the owner may pick; empty for a free answer only, and
+ * for a note.
  */
 options: Array<string>, status: QuestionStatus, 
 /**
@@ -1805,7 +2904,7 @@ export type QuestionsAnswerParams = { questionId: QuestionId, answer: string, };
 export type QuestionIdParams = { questionId: QuestionId, };
 
 /** The emoji the owner can react with (spec 8.9). */
-export const REACTIONS = ["👍", "❤️", "😂", "🎉", "🙏", "👀"] as const;
+export const REACTIONS = ["👍", "👎", "❤️", "😂", "🎉", "🙏", "👀"] as const;
 
 export type Reaction = { botId: BotId, 
 /**
@@ -1845,9 +2944,26 @@ export type TurnItem = { durationMs: number,
  */
 tokens: TokenUsage | null, 
 /**
- * Why the turn failed, e.g. `rate_limit`; `null` when it worked.
+ * What the turn would cost at API list prices, in millionths of a US
+ * dollar (spec 8.7); `null` when the engine does not say and on turns
+ * stored before it was kept.
  */
-error: string | null, };
+costMicros: number | null, 
+/**
+ * Why the turn failed, e.g. `rate_limit`; `null` when it worked and
+ * when the owner stopped it.
+ */
+error: string | null, 
+/**
+ * The owner stopped the turn (`bots.interrupt`, spec 8.2); `false` on
+ * turns stored before it was kept.
+ */
+stopped: boolean, 
+/**
+ * Botloft stopped it, not the owner: it printed nothing for half an
+ * hour (spec 7.9). `stopped` is true too.
+ */
+quiet: boolean, };
 
 export type NoticeItem = { level: NoticeLevel, 
 /**
@@ -1860,14 +2976,123 @@ code?: NoticeCode,
 text: string, };
 
 /**
+ * Where a request for a key stands (spec 32.5).
+ */
+export type KeyRequestStatus = "open" | "saved" | "dismissed";
+
+export type KeyRequestItem = { 
+/**
+ * The key's name, as in spec 32.3.
+ */
+name: string, 
+/**
+ * What the bot needs it for, in its own words.
+ */
+why: string, status: KeyRequestStatus, };
+
+export type CardChartKind = "bar" | "line";
+
+export type CardSeries = { name: string, 
+/**
+ * One per label; `null` where there is no value.
+ */
+values: Array<number | null>, };
+
+export type CardButton = { 
+/**
+ * Unique in the card: letters, digits, `-` and `_`.
+ */
+id: string, label: string, };
+
+export type CardFieldKind = "text" | "long_text" | "number" | "choice" | "check";
+
+export type CardField = { 
+/**
+ * Unique in the card: letters, digits, `-` and `_`.
+ */
+id: string, label: string, kind: CardFieldKind, 
+/**
+ * For a choice: 2 to 10; empty otherwise.
+ */
+options: Array<string>, 
+/**
+ * The owner must fill it in; a check never is.
+ */
+required: boolean, };
+
+/**
+ * One part of a card, by `type`.
+ */
+export type CardBlock = { "type": "text", text: string, } | { "type": "table", columns: Array<string>, rows: Array<Array<string>>, } | { "type": "chart", kind: CardChartKind, labels: Array<string>, series: Array<CardSeries>, 
+/**
+ * What the values count, e.g. "R$" or "%".
+ */
+unit?: string, } | { "type": "buttons", buttons: Array<CardButton>, } | { "type": "form", fields: Array<CardField>, 
+/**
+ * The send button's label; the app's "Send" when absent.
+ */
+submit?: string, };
+
+/**
+ * What the owner answered to one version of a card.
+ */
+export type CardAnswer = { version: number, 
+/**
+ * The button pressed; `null` for the form.
+ */
+button: string | null, 
+/**
+ * What went to the bot, as the owner's message.
+ */
+text: string, 
+/**
+ * Unix time in milliseconds.
+ */
+at: number, };
+
+/**
+ * A card in the bot's chat; the chat item's id is the card's.
+ */
+export type CardItem = { 
+/**
+ * 1 when shown, one more each time the bot shows it again.
+ */
+version: number, title: string, blocks: Array<CardBlock>, 
+/**
+ * The owner's answer to this version; `null` until they answer.
+ */
+answer: CardAnswer | null, };
+
+/**
+ * `chat.act`: the owner presses a button of a card, or sends its form.
+ */
+export type ChatActParams = { itemId: ChatItemId, 
+/**
+ * The version the owner saw; another one is refused.
+ */
+version: number, 
+/**
+ * The button's id; or `form`.
+ */
+button?: string, 
+/**
+ * The form's values by field id: a check is "true" or "false".
+ */
+form?: { [key in string]: string }, };
+
+/**
  * What a chat item holds, by `kind`.
  */
-export type ChatBody = { "kind": "inbound" } & InboundItem | { "kind": "reply" } & ReplyItem | { "kind": "tool" } & ToolItem | { "kind": "approval" } & ApprovalItem | { "kind": "question" } & QuestionItem | { "kind": "turn" } & TurnItem | { "kind": "notice" } & NoticeItem;
+export type ChatBody = { "kind": "inbound" } & InboundItem | { "kind": "reply" } & ReplyItem | { "kind": "tool" } & ToolItem | { "kind": "approval" } & ApprovalItem | { "kind": "question" } & QuestionItem | { "kind": "turn" } & TurnItem | { "kind": "notice" } & NoticeItem | { "kind": "key_request" } & KeyRequestItem | { "kind": "card" } & CardItem;
 
 /**
  * One entry of a bot's chat.
  */
-export type ChatItem = { id: ChatItemId, botId: BotId, body: ChatBody, 
+export type ChatItem = { id: ChatItemId, botId: BotId, 
+/**
+ * The conversation of the bot it belongs to (spec 40).
+ */
+conversationId: ConversationId, body: ChatBody, 
 /**
  * Unix time in milliseconds.
  */
@@ -1938,7 +3163,7 @@ answeredAt: number | null, };
 /**
  * Text the bot is writing right now, in order (spec 8.3).
  */
-export type ChatDelta = { botId: BotId, text: string, };
+export type ChatDelta = { botId: BotId, conversationId: ConversationId, text: string, };
 
 /**
  * Newest first. Page back with `before` set to the oldest id received.
@@ -1953,7 +3178,11 @@ limit?: number,
  * 1,000 newest, to open the chat at a search result (spec 8.8).
  * Not with `before` or `limit`.
  */
-until?: ChatItemId, };
+until?: ChatItemId, 
+/**
+ * The conversation to read; the main one when absent (spec 40.5).
+ */
+conversationId?: ConversationId, };
 
 export type ApprovalsAnswerParams = { approvalId: ApprovalId, allow: boolean, 
 /**
@@ -1970,7 +3199,13 @@ input?: string,
  * With `allow`, the bot no longer asks for what the request's
  * `always` covers (spec 10.1). Ignored for a request without one.
  */
-always?: boolean, };
+always?: boolean, 
+/**
+ * With `allow`, a request for an app on the desktop or a site in the
+ * browser holds only until the bot's turn ends, and nothing is saved
+ * (spec 24.2, 21.5). Ignored for other requests.
+ */
+once?: boolean, };
 
 /**
  * The daemon's part of the app's Settings.
@@ -1991,6 +3226,11 @@ keepAwake: boolean,
  */
 approvalWaitMinutes: number, 
 /**
+ * Minutes idle before a bot's process stops until something comes
+ * for it (spec 7.7); 0 never.
+ */
+sleepAfterMinutes: number, 
+/**
  * The agent bots are made for when nothing says otherwise: new bots,
  * the chief of a new crew, the bots of a template (spec 30).
  */
@@ -1999,7 +3239,17 @@ defaultAgent: AgentKind,
  * The experimental agents (Antigravity and Codex) can be chosen for
  * new bots. Off, bots that already use one keep working (spec 30).
  */
-showExperimentalAgents: boolean, };
+showExperimentalAgents: boolean, 
+/**
+ * The Maker builds its plans without the owner's card; each build can
+ * still be undone (spec 36.4).
+ */
+makerBuildsWithoutAsking: boolean, 
+/**
+ * Days the chats, messages and routine runs are kept; 0 keeps them
+ * for good, which is the default (spec 12.1).
+ */
+historyDays: number, };
 
 /**
  * The settings to change; the ones left out stay as they are.
@@ -2008,13 +3258,38 @@ export type SettingsUpdateParams = { startWithWindows?: boolean, keepAwake?: boo
 /**
  * From 1 to [`APPROVAL_WAIT_MAX_MINUTES`].
  */
-approvalWaitMinutes?: number, defaultAgent?: AgentKind, showExperimentalAgents?: boolean, };
+approvalWaitMinutes?: number, 
+/**
+ * From 0 (never) to [`SLEEP_AFTER_MAX_MINUTES`].
+ */
+sleepAfterMinutes?: number, defaultAgent?: AgentKind, showExperimentalAgents?: boolean, makerBuildsWithoutAsking?: boolean, 
+/**
+ * From 0 (for good) to [`HISTORY_MAX_DAYS`].
+ */
+historyDays?: number, };
+
+/**
+ * What the owner wrote for every agent to follow, in Settings (spec 7.10):
+ * the result of `instructions.get` and `instructions.set`, and what
+ * `instructions.set` takes. Empty when there are none.
+ */
+export type OwnerInstructions = { text: string, };
+
+/**
+ * What a wait waits for (spec 20.14).
+ */
+export type WaitOn = { "what": "file", path: string, } | { "what": "program", name: string, } | { "what": "page", url: string, text: string, };
 
 /**
  * When a routine runs (spec 20.2), kept as structure rather than cron text
  * so the app can show and edit it without jargon.
  */
-export type Schedule = { "kind": "weekly", days: Array<number>, time: string, } | { "kind": "interval", minutes: number, } | { "kind": "cron", expr: string, } | { "kind": "signal", name: string, };
+export type Schedule = { "kind": "weekly", days: Array<number>, time: string, } | { "kind": "interval", minutes: number, } | { "kind": "cron", expr: string, } | { "kind": "signal", name: string, } | { "kind": "manual" } | { "kind": "once", at: string, reminder?: boolean, } | { "kind": "wait", on: WaitOn, until: number, };
+
+/**
+ * How a wait ended (spec 20.14).
+ */
+export type WaitEnd = "happened" | "timed_out";
 
 /**
  * What happens when a routine's time comes while its last run is still
@@ -2067,7 +3342,16 @@ messageId: MessageId | null, createdAt: number, finishedAt: number | null,
 /**
  * The signal that made it run, for a routine that waits for one.
  */
-signal: RunSignal | null, };
+signal: RunSignal | null, 
+/**
+ * The bot said there was nothing new to report (`nothing_new`, spec
+ * 20.5): the run ended quietly, with no report to read.
+ */
+nothingNew: boolean, 
+/**
+ * For a wait (spec 20.14): whether it happened or ran out.
+ */
+waited: WaitEnd | null, };
 
 export type Routine = { id: RoutineId, botId: BotId, name: string, 
 /**
@@ -2085,7 +3369,13 @@ nextRunAt: number | null,
 /**
  * The latest run, skipped ones included.
  */
-lastRun: RoutineRun | null, createdAt: number, updatedAt: number, archivedAt: number | null, };
+lastRun: RoutineRun | null, 
+/**
+ * How many runs failed in a row since the last one that went well,
+ * skipped ones aside; from the second, the next run waits longer
+ * (spec 20.3).
+ */
+failStreak: number, createdAt: number, updatedAt: number, archivedAt: number | null, };
 
 export type RoutinesListParams = { botId?: BotId, };
 
@@ -2351,10 +3641,13 @@ done: boolean, };
 export interface RpcMethods {
   "session.hello": { params: HelloParams; result: HelloResult };
   "session.setLocale": { params: LocaleParams; result: null };
+  "session.ping": { params: undefined; result: null };
   "system.status": { params: undefined; result: SystemStatus };
   "system.refresh": { params: undefined; result: SystemStatus };
   "settings.get": { params: undefined; result: Settings };
   "settings.update": { params: SettingsUpdateParams; result: Settings };
+  "instructions.get": { params: undefined; result: OwnerInstructions };
+  "instructions.set": { params: OwnerInstructions; result: OwnerInstructions };
   "agents.setPath": { params: AgentsSetPathParams; result: AgentCheck };
   "crews.list": { params: undefined; result: Array<Crew> };
   "crews.create": { params: CrewsCreateParams; result: Crew };
@@ -2365,6 +3658,7 @@ export interface RpcMethods {
   "crews.setWorkFolder": { params: CrewsSetWorkFolderParams; result: Crew };
   "crews.setLead": { params: CrewsSetLeadParams; result: Crew };
   "crews.archive": { params: CrewIdParams; result: Crew };
+  "crews.unarchive": { params: CrewIdParams; result: Crew };
   "crews.delete": { params: CrewsDeleteParams; result: CrewDeleted };
   "archive.list": { params: undefined; result: Archive };
   "bots.list": { params: BotsListParams; result: Array<Bot> };
@@ -2376,22 +3670,36 @@ export interface RpcMethods {
   "bots.setAgentModel": { params: BotsSetAgentModelParams; result: Bot };
   "agents.models": { params: AgentsModelsParams; result: AgentModel[] };
   "bots.archive": { params: BotIdParams; result: Bot };
+  "bots.unarchive": { params: BotIdParams; result: Bot };
   "bots.delete": { params: BotsDeleteParams; result: BotDeleted };
   "bots.restart": { params: BotsRestartParams; result: Bot };
   "chat.history": { params: ChatHistoryParams; result: Array<ChatItem> };
-  "chat.read": { params: BotIdParams; result: null };
+  "chat.read": { params: BotConversationParams; result: null };
   "approvals.answer": { params: ApprovalsAnswerParams; result: Approval };
   "messages.send": { params: MessagesSendParams; result: Message };
   "messages.list": { params: MessagesListParams; result: Array<Message> };
   "attachments.read": { params: AttachmentIdParams; result: AttachmentData };
   "files.list": { params: FilesListParams; result: Array<BotFile> };
   "files.read": { params: FilesReadParams; result: FileData };
+  "files.media": { params: FilesReadParams; result: MediaLink };
   "deliveries.list": { params: DeliveriesListParams; result: Array<Delivery> };
   "deliveries.retry": { params: DeliveryIdParams; result: Delivery };
   "tasks.list": { params: TasksListParams; result: Array<Task> };
   "bots.setEffort": { params: BotsSetEffortParams; result: Bot };
-  "bots.compact": { params: BotIdParams; result: Bot };
+  "bots.compact": { params: BotConversationParams; result: Bot };
+  "bots.interrupt": { params: BotConversationParams; result: Bot };
+  "bots.stopTask": { params: BotsStopTaskParams; result: null };
+  "conversations.list": { params: ConversationsListParams; result: Array<Conversation> };
+  "conversations.create": { params: BotIdParams; result: Conversation };
+  "conversations.rename": { params: ConversationsRenameParams; result: Conversation };
+  "conversations.archive": { params: ConversationIdParams; result: Conversation };
+  "conversations.unarchive": { params: ConversationIdParams; result: Conversation };
+  "conversations.archived": { params: BotIdParams; result: Array<Conversation> };
   "usage.tokens": { params: UsageTokensParams; result: Array<BotTokens> };
+  "usage.costs": { params: UsageCostsParams; result: Array<CostGroup> };
+  "versions.list": { params: VersionsListParams; result: Array<TextVersion> };
+  "versions.restore": { params: VersionsRestoreParams; result: TextVersion };
+  "chat.act": { params: ChatActParams; result: ChatItem };
   "rules.list": { params: RulesListParams; result: Array<AllowRule> };
   "rules.delete": { params: RuleIdParams; result: BotRules };
   "desktop.grants": { params: DesktopGrantsParams; result: Array<DesktopGrant> };
@@ -2404,15 +3712,39 @@ export interface RpcMethods {
   "desktop.resume": { params: DesktopBotParams; result: DesktopState };
   "desktop.awayUses": { params: undefined; result: Array<DesktopAwayUse> };
   "desktop.dismissAway": { params: undefined; result: null };
+  "desktop.apps": { params: undefined; result: Array<DesktopApp> };
+  "desktop.grantApp": { params: DesktopGrantAppParams; result: BotDesktop };
+  "desktop.stopAll": { params: undefined; result: null };
   "mcp.servers": { params: undefined; result: McpOverview };
   "mcp.save": { params: McpSaveParams; result: McpOverview };
   "mcp.delete": { params: McpServerIdParams; result: McpOverview };
+  "mcp.fromClaude": { params: undefined; result: ClaudeMcpServers };
+  "mcp.importClaude": { params: McpImportParams; result: McpOverview };
   "bot.mcp.set": { params: BotMcpSetParams; result: BotMcp };
   "crewAccess.list": { params: CrewAccessListParams; result: Array<CrewAccess> };
   "crewAccess.revoke": { params: CrewAccessIdParams; result: Array<CrewAccess> };
+  "permissions.list": { params: undefined; result: Permissions };
+  "sites.revoke": { params: SitesRevokeParams; result: BotSites };
+  "chrome.set": { params: ChromeSetParams; result: BotChrome };
+  "chrome.status": { params: undefined; result: ChromeTurn };
+  "chrome.stop": { params: undefined; result: ChromeTurn };
+  "plugins.list": { params: undefined; result: PluginList };
+  "plugins.share": { params: PluginsShareParams; result: Plugin };
+  "plugins.everyone": { params: PluginsEveryoneParams; result: PluginList };
+  "skills.list": { params: undefined; result: SkillList };
+  "skills.share": { params: SkillsShareParams; result: Skill };
+  "skills.everyone": { params: SkillsEveryoneParams; result: SkillList };
+  "bots.commands": { params: BotIdParams; result: SlashCommandList };
   "catalog.list": { params: CatalogListParams; result: Array<BotTemplate> };
   "catalog.get": { params: CatalogGetParams; result: BotTemplateFull };
   "catalog.add": { params: CatalogAddParams; result: Bot };
+  "builds.list": { params: undefined; result: Array<Build> };
+  "builds.undo": { params: BuildIdParams; result: Build };
+  "imports.scan": { params: ImportsScanParams; result: ImportScan };
+  "imports.create": { params: ImportsCreateParams; result: ImportDraft };
+  "imports.send": { params: ImportIdParams; result: ImportSent };
+  "imports.forget": { params: ImportIdParams; result: null };
+  "imports.list": { params: undefined; result: Array<Import> };
   "backup.export": { params: BackupExportParams; result: BackupExported };
   "backup.stage": { params: BackupStageParams; result: BackupManifest };
   "backup.confirm": { params: undefined; result: null };
@@ -2437,6 +3769,19 @@ export interface RpcMethods {
   "mobile.revoke": { params: MobileRevokeParams; result: MobileStatus };
   "cards.list": { params: undefined; result: Cards };
   "activity.today": { params: ActivityTodayParams; result: DayActivity };
+  "keys.list": { params: KeysListParams; result: Array<AgentKey> };
+  "keys.set": { params: KeysSetParams; result: Array<AgentKey> };
+  "keys.delete": { params: KeysDeleteParams; result: Array<AgentKey> };
+  "keys.dismiss": { params: KeysDismissParams; result: null };
+  "keys.scan": { params: undefined; result: Array<KeyHit> };
+  "keys.scrub": { params: KeysScrubParams; result: Array<KeyHit> };
+  "overview.changes": { params: BotIdParams; result: OverviewChanges };
+  "connectors.list": { params: ConnectorsListParams; result: ConnectorList };
+  "bots.setConnectors": { params: BotsSetConnectorsParams; result: Bot };
+  "logins.list": { params: undefined; result: LoginList };
+  "logins.open": { params: LoginsOpenParams; result: LoginsOpenResult };
+  "logins.share": { params: LoginsShareParams; result: SiteLogin };
+  "logins.remove": { params: LoginsSiteParams; result: LoginList };
   "routines.list": { params: RoutinesListParams; result: Array<Routine> };
   "routines.create": { params: RoutinesCreateParams; result: Routine };
   "routines.update": { params: RoutinesUpdateParams; result: Routine };
@@ -2481,17 +3826,24 @@ export interface RpcNotifications {
   "delivery.changed": Delivery;
   "task.changed": Task;
   "bot.context": BotContextChanged;
+  "bot.background": BotBackgroundChanged;
+  "conversation.changed": Conversation;
   "routine.changed": Routine;
   "routine.run": RoutineRun;
   "question.changed": Question;
   "reaction.changed": ReactionChanged;
+  "version.created": TextVersion;
   "bot.rules": BotRules;
   "bot.desktop": BotDesktop;
   "desktop.changed": DesktopState;
   "desktop.frame": DesktopFrame;
   "desktop.away": Array<DesktopAwayUse>;
+  "bot.sites": BotSites;
+  "bot.chrome": BotChrome;
+  "chrome.turn": ChromeTurn;
   "mcp.servers": McpOverview;
   "bot.mcp": BotMcp;
+  "logins.changed": LoginsChanged;
   "cloud.signed_in": CloudSignedIn;
   "cloud.progress": CloudProgress;
   "cloud.signin_expired": null;

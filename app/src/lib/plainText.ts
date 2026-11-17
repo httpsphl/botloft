@@ -36,6 +36,8 @@ export function plainText(markdown: string): string {
   for (const [mark, keep] of SPANS) {
     text = text.replace(mark, keep);
   }
+  // A preview cut inside a span ("**a co…") leaves its opening mark alone.
+  text = text.replace(/(^|\s)(?:\*\*|__|~~|`)(?=\S)/g, "$1");
   return text
     .replace(/\\([\\`*_{}[\]()#+\-.!>~|])/g, "$1")
     .replace(/\s+/g, " ")

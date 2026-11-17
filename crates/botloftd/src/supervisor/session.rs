@@ -3,7 +3,7 @@
 //! only one that had a turn is remembered; one that Claude Code lost, or
 //! that a new one took the place of, is forgotten.
 
-use botloft_core::ids::BotId;
+use botloft_core::ids::{BotId, ConversationId};
 use tracing::warn;
 
 use super::Supervisor;
@@ -12,8 +12,10 @@ use crate::state::Daemon;
 impl Supervisor {
     /// A turn began in `session`: Claude Code has it on disk from here on,
     /// and the next start resumes it.
-    pub(crate) fn remember_session(&self, bot: &BotId, session: &str) {
-        self.lock().sessions.insert(bot.clone(), session.to_owned());
+    pub(crate) fn remember_session(&self, conversation: &ConversationId, session: &str) {
+        self.lock()
+            .sessions
+            .insert(conversation.clone(), session.to_owned());
     }
 
     /// Claude Code does not have the conversation this process was told to
@@ -32,11 +34,11 @@ impl Supervisor {
             return;
         }
         let store = daemon.store();
-        for (bot, session) in replaced {
+        for (bot, conversation, session) in replaced {
             // A turn of the new conversation may have been saved already.
-            let stored = store.session_id(&bot).ok().flatten();
+            let stored = store.conversation_session(&conversation).ok().flatten();
             if stored.as_deref() == Some(session.as_str())
-                && let Err(err) = store.set_session_id(&bot, None)
+                && let Err(err) = store.set_conversation_session(&bot, &conversation, None)
             {
                 warn!(bot = %bot, "could not forget the old session id: {err}");
             }

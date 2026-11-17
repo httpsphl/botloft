@@ -55,14 +55,14 @@ export function EditDiff({ diffs }: { diffs: DiffLine[][] }) {
         <pre
           // biome-ignore lint/suspicious/noArrayIndexKey: a fixed list, with no ids
           key={n}
-          className="max-h-64 overflow-auto rounded-lg border border-line bg-sunken py-1.5 font-mono text-xs leading-relaxed"
+          className="max-h-64 overflow-auto rounded-xl bg-bubble py-2 font-mono text-xs leading-relaxed"
         >
           {lines.map((line, i) => (
             <span
               // biome-ignore lint/suspicious/noArrayIndexKey: lines of one fixed text
               key={i}
               data-kind={line.kind}
-              className={`flex whitespace-pre-wrap break-all px-2.5 ${LINE[line.kind]}`}
+              className={`flex whitespace-pre-wrap break-all px-3 ${LINE[line.kind]}`}
             >
               <span
                 aria-hidden={line.kind === "same"}

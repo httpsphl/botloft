@@ -2,12 +2,18 @@
 
 use std::time::Duration;
 
+use botloft_core::ids::{BotId, ConversationId};
 use botloft_core::protocol::{BotEffort, BotState, PermissionMode};
 use tokio::time::Instant;
 
 use crate::runtime::ProcessControl;
 
 pub(super) struct Slot {
+    /// The bot this conversation is of (spec 40).
+    pub bot: BotId,
+    /// The conversation it runs, and whether it is the bot's main one.
+    pub conversation: ConversationId,
+    pub main: bool,
     pub state: BotState,
     /// Generation of the current or last process.
     pub generation: Option<u64>,
@@ -27,6 +33,9 @@ pub(super) struct Slot {
     /// subagent finished. Messages that arrive meanwhile may join it, so
     /// one `result` can close the turn of several messages.
     pub in_turn: bool,
+    /// A line too long to read was dropped in this turn: it may have been
+    /// the replay of a waiting message (spec 8.1).
+    pub dropped_in_turn: bool,
     /// Subagents Claude Code runs in the background, between turns too.
     pub agents: u32,
     /// Permission requests waiting for the owner.
@@ -36,11 +45,36 @@ pub(super) struct Slot {
     /// A new permission mode, model or effort waits for the running turn
     /// to end (spec 7.4).
     pub restart_when_idle: bool,
+    /// Every background task Claude Code lists, commands and monitors
+    /// too: they die with the process, so the bot does not sleep (7.7).
+    pub tasks: u32,
+    /// Since when the bot is `idle`, for its sleep.
+    pub idle_since: Option<Instant>,
+    /// Something came for the sleeping bot: it starts at the next pass.
+    pub wake_asked: bool,
+    /// Since when the busy process has printed nothing (spec 7.9).
+    pub quiet_since: Option<Instant>,
+    /// When Botloft asked a turn that went quiet to stop.
+    pub quiet_stop: Option<Instant>,
+    /// The next end of a turn answers Botloft's request, not the owner's.
+    pub quiet_stopped: bool,
 }
 
 impl Slot {
-    pub fn new(backoff: Backoff) -> Self {
+    /// What the conversation announces, for the bot's summary.
+    pub(super) fn seen(&self) -> super::summary::Seen {
+        super::summary::Seen {
+            state: self.state,
+            generation: self.generation,
+            main: self.main,
+        }
+    }
+
+    pub fn new(bot: &BotId, conversation: &ConversationId, backoff: Backoff) -> Self {
         Self {
+            bot: bot.clone(),
+            conversation: conversation.clone(),
+            main: conversation.is_main_of(bot),
             state: BotState::Offline,
             generation: None,
             running: None,
@@ -51,10 +85,17 @@ impl Slot {
             stop: None,
             waiting: Vec::new(),
             in_turn: false,
+            dropped_in_turn: false,
             agents: 0,
             approvals: 0,
             limited_until: None,
             restart_when_idle: false,
+            tasks: 0,
+            idle_since: None,
+            wake_asked: false,
+            quiet_since: None,
+            quiet_stop: None,
+            quiet_stopped: false,
         }
     }
 
@@ -62,8 +103,13 @@ impl Slot {
     pub fn clear_work(&mut self) {
         self.waiting.clear();
         self.in_turn = false;
+        self.dropped_in_turn = false;
         self.agents = 0;
+        self.tasks = 0;
         self.approvals = 0;
+        self.quiet_since = None;
+        self.quiet_stop = None;
+        self.quiet_stopped = false;
     }
 
     /// A turn, a subagent or an approval is in progress.
@@ -157,16 +203,25 @@ fn random_below(bound: u64) -> u64 {
 mod tests {
     use super::*;
 
+    fn new_slot() -> Slot {
+        let bot = BotId::generate();
+        Slot::new(
+            &bot,
+            &ConversationId::main_of(&bot),
+            Backoff::new(Duration::ZERO, Duration::ZERO),
+        )
+    }
+
     #[test]
     fn counters_decide_the_working_state() {
-        let mut slot = Slot::new(Backoff::new(Duration::ZERO, Duration::ZERO));
+        let mut slot = new_slot();
         assert_eq!(slot.working_state(), BotState::Idle);
         slot.waiting = vec!["a".into(), "b".into()];
         assert_eq!(slot.working_state(), BotState::Busy);
         slot.approvals = 1;
         assert_eq!(slot.working_state(), BotState::NeedsApproval);
 
-        let mut slot = Slot::new(Backoff::new(Duration::ZERO, Duration::ZERO));
+        let mut slot = new_slot();
         slot.in_turn = true;
         assert_eq!(slot.working_state(), BotState::Busy);
         slot.in_turn = false;

@@ -14,9 +14,9 @@ async function synced(fake: FakeBotloft) {
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("app store", () => {
-  test("loads crews, agents and the system status, and selects the first crew", async () => {
+  test("loads crews, agents and the system status, and stays on the home", async () => {
     const fake = new FakeBotloft();
-    const ops = fake.addCrew("Ops");
+    fake.addCrew("Ops");
     const research = fake.addCrew("Research");
     fake.addBot(research.id, "Scout");
     const { store } = await synced(fake);
@@ -25,7 +25,8 @@ describe("app store", () => {
     expect(state.system?.claudeVersion).toBe("2.1.284");
     expect(crewList(state).map((crew) => crew.name)).toEqual(["Ops", "Research"]);
     expect(botsOf(state, research.id).map((bot) => bot.handle)).toEqual(["scout"]);
-    expect(state.selectedCrewId).toBe(ops.id);
+    // The app opens on the home (spec 15.1), not on a crew.
+    expect(state.selectedCrewId).toBeNull();
   });
 
   test("a chat item moves the agent's list line, not the agent", async () => {

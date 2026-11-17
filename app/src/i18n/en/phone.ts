@@ -20,7 +20,6 @@ export const phone = {
     names: { iphone: "iPhone", ipad: "iPad", android: "Android phone", other: "Phone" },
   },
   inbox: {
-    title: "Waiting for you",
     empty: "Nothing is waiting for you",
     emptyBody: "When an agent needs you, it shows up here.",
     loading: "Checking what is waiting…",
@@ -29,7 +28,15 @@ export const phone = {
     thisPhone: "This phone",
     inCrew: (crew: string) => `in ${crew}`,
   },
-  tabs: { requests: "Requests", chats: "Chats", newReply: "new reply" },
+  /** The Home (spec 28.15). */
+  home: { running: "Starting…" },
+  tabs: { home: "Home", chats: "Chats", newReply: "new reply" },
+  /** A routine that failed (spec 28.12). */
+  failed: {
+    label: (routine: string, bot: string) => `${bot}'s routine “${routine}” failed`,
+    row: (routine: string) => `“${routine}” failed`,
+    open: "Open the conversation",
+  },
   chats: {
     empty: "No agents yet",
     emptyBody: "When you create an agent on your computer, it shows up here.",
@@ -42,6 +49,8 @@ export const phone = {
       tool: "Used",
       approval: "Asks to use",
       question: "Asks",
+      note: "Note",
+      card: "Card",
       notice: "Notice",
     },
     inCrew: (crew: string) => `in ${crew}`,
@@ -55,16 +64,25 @@ export const phone = {
     loadingOlder: "Loading…",
     busy: (bot: string) => `${bot} is working…`,
     from: (name: string) => `From ${name}`,
+    attached: (count: number) => (count === 1 ? "1 file" : `${count} files`),
     cut: "Cut: too long for a phone. The whole text is on your computer.",
     failedTurn: "The turn failed",
     tool: (summary: string) => `Used: ${summary}`,
     approvalLine: (summary: string) => `Asked to: ${summary}`,
     questionLine: (text: string) => `Asked: ${text}`,
+    noteLine: (text: string) => `Note: ${text}`,
     composer: {
       label: (bot: string) => `Message to ${bot}`,
       placeholder: "Write a message",
       send: "Send",
       tooLong: "Too long to send from the phone.",
+      photo: "Send a photo",
+      file: "Send a file",
+      chosen: "To send",
+      remove: (name: string) => `Remove ${name}`,
+      tooBig: (name: string) => `“${name}” is over 20 MB.`,
+      tooMany: "Up to 10 files in one message.",
+      preparing: "Getting the photo ready…",
     },
     pending: {
       sending: "Sending…",
@@ -73,7 +91,9 @@ export const phone = {
       reasons: {
         offline: "Check the connection and try again.",
         timeout: "The computer did not answer. Check it is on and try again.",
-        invalid: "The agent cannot take this text.",
+        invalid: "The agent cannot take this message.",
+        too_big: "A file is over 20 MB.",
+        queue_full: "Too many files wait for the computer. Try again once it takes them.",
         not_found: "This agent is gone.",
         rate_limited: "Too many messages in a minute. Wait a bit.",
         failed: "Something went wrong. Try again.",
@@ -110,6 +130,13 @@ export const phone = {
       `Closes the question without telling ${bot}. To let it know, answer instead.`,
     failed: "Not sent. Check the connection and try again.",
     ended: { answered: "You answered", dismissed: "Dismissed" },
+    /** A note the bot left (spec 23.10). */
+    tells: (bot: string) => `${bot} left you a note`,
+    replyLabel: "Your reply, if you want",
+    reply: "Reply",
+    seen: "Seen",
+    seenHint: (bot: string) => `Closes the note. Writing to ${bot} closes it too.`,
+    noteEnded: { answered: "You replied", dismissed: "Seen" },
   },
   settings: {
     notices: {

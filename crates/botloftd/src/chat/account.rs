@@ -8,6 +8,8 @@ use botloft_core::protocol::{
 use serde_json::Value;
 
 use super::{claude, items};
+use crate::seat::Seat;
+use crate::service::resume;
 use crate::state::Daemon;
 
 /// Errors that restarting cannot fix: Claude Code needs the owner.
@@ -19,8 +21,6 @@ const SIGN_IN_ERRORS: &[&str] = &[
 ];
 /// The model does not exist or the account cannot use it (spec 7.4).
 const MODEL_NOT_FOUND: &str = "model_not_found";
-/// When a rate limit gives no reset time.
-const DEFAULT_LIMIT_MS: i64 = 5 * 60 * 1000;
 
 /// An API error ended the turn: say so, and stop or pause the bot when
 /// only the owner or time can fix it (spec 7.2).
@@ -74,7 +74,9 @@ fn notice_for(error: &str, detail: String, key_failed: bool) -> (NoticeCode, Str
     } else if error == "rate_limit" {
         (
             NoticeCode::UsageLimit,
-            "The account reached its usage limit. Messages wait until it resets.".to_owned(),
+            "The account reached its usage limit. Messages wait until it resets, and then the \
+             agent carries on where it stopped."
+                .to_owned(),
         )
     } else if error == MODEL_NOT_FOUND {
         (
@@ -95,15 +97,12 @@ fn after_notice(daemon: &Daemon, bot: &BotId, generation: u64, error: &str) {
     if SIGN_IN_ERRORS.contains(&error) {
         daemon.supervisor.signed_out(bot, generation);
     } else if error == "rate_limit" {
-        let until = daemon
-            .usage()
-            .and_then(|usage| usage.resets_at)
-            .unwrap_or_else(|| daemon.clock.now_ms() + DEFAULT_LIMIT_MS);
-        daemon.supervisor.rate_limited(bot, generation, until);
+        let resets_at = daemon.usage().and_then(|usage| usage.resets_at);
+        resume::cut_turn(daemon, bot, generation, resets_at);
     }
 }
 
-pub(super) fn rate_limit(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
+pub(super) fn rate_limit(daemon: &Daemon, bot: &Seat, generation: u64, event: &Value) {
     let info = &event["rate_limit_info"];
     let seconds = |value: &Value| value.as_i64().map(|s| s * 1000);
     let mut windows: Vec<UsageWindow> = info["unifiedWindows"]
@@ -115,6 +114,7 @@ pub(super) fn rate_limit(daemon: &Daemon, bot: &BotId, generation: u64, event: &
                     name: name.clone(),
                     utilization: window["utilization"].as_f64().unwrap_or_default(),
                     resets_at: seconds(&window["resetsAt"]),
+                    model: None,
                 })
                 .collect()
         })
@@ -122,24 +122,49 @@ pub(super) fn rate_limit(daemon: &Daemon, bot: &BotId, generation: u64, event: &
     windows.sort_by(|a, b| a.name.cmp(&b.name));
     let status = info["status"].as_str().unwrap_or("unknown").to_owned();
     let resets_at = seconds(&info["resetsAt"]);
-    let limited = !status.starts_with("allowed");
+    let extra_usage = using_extra_usage(info);
+    // Past a window of the plan, an account with paid extra usage keeps
+    // working on it: `rejected` stops the bots only without it (spec 19).
+    let limited = status == "rejected" && !extra_usage;
     let now = daemon.clock.now_ms();
-    crate::service::plan::observed(daemon, &windows, now);
     daemon.set_usage(AccountUsage {
         status,
         resets_at,
         windows,
         observed_at: now,
+        extra_usage,
+        from_account: false,
     });
     if limited {
-        let until = resets_at.unwrap_or_else(|| daemon.clock.now_ms() + DEFAULT_LIMIT_MS);
+        let until = resume::until(daemon, resets_at);
         daemon.supervisor.rate_limited(bot, generation, until);
     }
 }
 
+/// Claude Code says the turns run on the account's paid extra usage with
+/// either of two flags (seen in 2.1.309, spec 19).
+fn using_extra_usage(info: &Value) -> bool {
+    ["isUsingOverage", "overageInUse"]
+        .iter()
+        .any(|flag| info[*flag].as_bool() == Some(true))
+}
+
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
+
     use super::*;
+
+    #[test]
+    fn either_flag_means_extra_usage() {
+        assert!(using_extra_usage(&json!({ "isUsingOverage": true })));
+        assert!(using_extra_usage(&json!({ "overageInUse": true })));
+        // Extra usage that is only allowed is not in use yet.
+        assert!(!using_extra_usage(
+            &json!({ "overageStatus": "allowed", "isUsingOverage": false })
+        ));
+        assert!(!using_extra_usage(&json!({})));
+    }
 
     #[test]
     fn a_failed_key_in_the_environment_is_told_apart_from_signing_out() {

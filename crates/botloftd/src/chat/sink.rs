@@ -13,14 +13,15 @@ use serde_json::Value;
 use tracing::warn;
 
 use super::items;
+use crate::seat::Seat;
 use crate::state::{Daemon, Event};
 use crate::{routines, screens};
 
 /// The bot's reply text; nothing for an empty one.
-pub(crate) fn reply(daemon: &Daemon, bot: &BotId, text: &str) {
+pub(crate) fn reply(daemon: &Daemon, bot: &Seat, text: &str) {
     let text = text.trim();
     if !text.is_empty() {
-        items::add(
+        items::add_to(
             daemon,
             bot,
             ChatBody::Reply(ReplyItem {
@@ -31,8 +32,8 @@ pub(crate) fn reply(daemon: &Daemon, bot: &BotId, text: &str) {
 }
 
 /// A tool the bot began to use, shown as running.
-pub(crate) fn tool_started(daemon: &Daemon, bot: &BotId, id: &str, name: &str, input: &Value) {
-    items::add(
+pub(crate) fn tool_started(daemon: &Daemon, bot: &Seat, id: &str, name: &str, input: &Value) {
+    items::add_to(
         daemon,
         bot,
         ChatBody::Tool(ToolItem {
@@ -59,6 +60,8 @@ pub(crate) fn tool_finished(daemon: &Daemon, bot: &BotId, id: &str, failed: bool
     let ChatBody::Tool(tool) = item.body else {
         return;
     };
+    // The Chrome's answers say where the agent's tabs are (spec 37.3).
+    crate::chrome::seen::learned(daemon, bot, &tool.name, output);
     let body = ChatBody::Tool(ToolItem {
         status: if failed {
             ToolStatus::Failed
@@ -68,37 +71,62 @@ pub(crate) fn tool_finished(daemon: &Daemon, bot: &BotId, id: &str, failed: bool
         output: (!output.is_empty()).then(|| clip(output, TOOL_OUTPUT_MAX)),
         ..tool
     });
-    items::update(daemon, &item.id, body);
+    items::update(daemon, bot, &item.id, body);
 }
 
-/// The line that closes a turn: how long it took, its tokens when the agent
-/// says, and the error it ended with, if any.
+/// Who cut a turn short, if anyone.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Stopped {
+    No,
+    /// `bots.interrupt` (spec 9.2).
+    ByOwner,
+    /// The turn went quiet (spec 7.9).
+    ByBotloft,
+}
+
+/// The line that closes a turn: how long it took, its tokens and API price
+/// (in US dollars) when the agent says, and the error it ended with, if any,
+/// or who stopped it.
 pub(crate) fn turn_finished(
     daemon: &Daemon,
-    bot: &BotId,
+    bot: &Seat,
     duration_ms: u64,
     tokens: Option<TokenUsage>,
+    cost: Option<f64>,
     error: Option<String>,
+    stopped: Stopped,
 ) {
-    items::add(
+    // A failed turn goes to the crew's chief (spec 10.6).
+    crate::failures::turn_ended(daemon, bot, error.as_deref(), stopped == Stopped::ByBotloft);
+    items::add_to(
         daemon,
         bot,
         ChatBody::Turn(TurnItem {
             duration_ms,
             tokens,
+            cost_micros: cost.map(micros),
             error,
+            stopped: stopped != Stopped::No,
+            quiet: stopped == Stopped::ByBotloft,
         }),
     );
 }
 
+/// Dollars as millionths of a dollar, as the chat item keeps them.
+fn micros(cost: f64) -> u64 {
+    (cost * 1_000_000.0).round().max(0.0) as u64
+}
+
 /// The message written with `uuid` was taken up by the bot: its delivery is
 /// read, and a routine's run starts (spec 9.1).
-pub(crate) fn message_read(daemon: &Daemon, bot: &BotId, uuid: &str) {
+pub(crate) fn message_read(daemon: &Daemon, bot: &Seat, uuid: &str) {
     let now = daemon.clock.now_ms();
     let read = daemon.store().mark_read(uuid, now);
     match read {
         Ok(Some(delivery)) => {
             routines::turn_began(daemon, bot, &delivery.message_id);
+            // Its memory as the turn begins (spec 8.10).
+            crate::versions::turn_began(daemon, bot);
             daemon.emit(Event::DeliveryChanged(delivery));
         }
         Ok(None) => {}
@@ -107,22 +135,30 @@ pub(crate) fn message_read(daemon: &Daemon, bot: &BotId, uuid: &str) {
 }
 
 /// The agent has a conversation the next start resumes (spec 7.3).
-pub(crate) fn session_started(daemon: &Daemon, bot: &BotId, session: &str) {
+pub(crate) fn session_started(daemon: &Daemon, bot: &Seat, session: &str) {
     let store = daemon.store();
-    let known = store.session_id(bot).ok().flatten();
+    let known = store.conversation_session(&bot.conversation).ok().flatten();
     if known.as_deref() != Some(session)
-        && let Err(err) = store.set_session_id(bot, Some(session))
+        && let Err(err) = store.set_conversation_session(&bot.bot, &bot.conversation, Some(session))
     {
         warn!(bot = %bot, "could not save the session id: {err}");
     }
     drop(store);
-    daemon.supervisor.remember_session(bot, session);
+    daemon
+        .supervisor
+        .remember_session(&bot.conversation, session);
 }
 
 /// Everything that follows the end of a turn, whatever the agent: the
-/// routine's run, the screens, the access to other crews, the bot's state.
-pub(crate) fn finish_turn(daemon: &Daemon, bot: &BotId, generation: u64, failed: bool) {
+/// message whose replay could not be read, the routine's run, the screens,
+/// the access to other crews, the bot's state.
+pub(crate) fn finish_turn(daemon: &Daemon, bot: &Seat, generation: u64, failed: bool) {
+    if let Some(uuid) = daemon.supervisor.begun_unseen(bot, generation) {
+        message_read(daemon, bot, &uuid);
+    }
     routines::turn_ended(daemon, bot, failed);
+    // What the bot did to its memory in this turn (spec 8.10).
+    crate::versions::turn_ended(daemon, bot);
     screens::turn_ended(daemon, bot);
     daemon.crew_access.end_turn(bot);
     daemon.supervisor.turn_ended(bot, generation);

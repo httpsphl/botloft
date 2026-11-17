@@ -21,6 +21,7 @@ import { security } from "./catalogSecurity";
 export const catalog = {
   title: "Agent agency",
   open: "Agent agency",
+  short: "Agency",
   openHint: "Ready-made agents you can add to this crew",
   intro:
     "Pick an agent for the job. It joins this crew ready to work, and you can change anything about it afterwards.",
@@ -50,6 +51,8 @@ export const catalog = {
   none: "No agent matches that.",
   loading: "Loading the agents…",
   add: "Add to crew",
+  /** The button on an agent's line, where its name is beside it. */
+  addShort: "Add",
   learnMore: "Learn more",
   back: "Back to all agents",
   seeAll: "See all agents",

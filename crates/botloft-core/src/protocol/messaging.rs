@@ -4,7 +4,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::ids::{
-    AttachmentId, BotId, ChatItemId, CrewId, DeliveryId, MessageId, QuestionId, RoutineId, TaskId,
+    AttachmentId, BotId, ChatItemId, ConversationId, CrewId, DeliveryId, MessageId, QuestionId,
+    RoutineId, TaskId,
 };
 
 text_enum!(
@@ -164,6 +165,8 @@ pub struct Delivery {
     pub id: DeliveryId,
     pub message_id: MessageId,
     pub bot_id: BotId,
+    /// The conversation of the bot it goes to (spec 40.2).
+    pub conversation_id: ConversationId,
     pub state: DeliveryState,
     /// Failed attempts so far. Waiting for the bot to be ready is not one.
     pub attempts: u32,
@@ -225,6 +228,11 @@ pub struct MessagesSendParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub reply_to: Option<ChatItemId>,
+    /// The conversation of the bot it goes to; the main one without it
+    /// (spec 40.2).
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub conversation_id: Option<ConversationId>,
 }
 
 /// Newest first. Page back with `before` set to the oldest id received.

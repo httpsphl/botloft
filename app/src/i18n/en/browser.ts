@@ -64,8 +64,9 @@ export const browser = {
   site: {
     wants: (bot: string) => `${bot} wants to use the browser on`,
     asks: (bot: string, site: string) => `${bot} asks to use ${site}`,
-    why: "Once you allow a site, it won't ask again for it.",
+    why: "Once you allow a site, it won't ask again for it. Only this time lasts until the agent finishes what it is doing now.",
     allowed: (site: string) => `You allowed ${site}`,
+    allowedOnce: (site: string) => `You allowed ${site}, only this time`,
     denied: (site: string) => `You declined ${site}`,
     expired: (site: string) => `No answer about ${site}`,
   },

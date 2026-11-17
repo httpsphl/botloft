@@ -80,8 +80,8 @@ export function TerminalPanel({ bot, onClose }: { bot: Bot; onClose(): void }) {
 
   return (
     <SidePanel label={t.panel(bot.name)} name="computer" defaultWidth={600}>
-      <header className="flex h-11 shrink-0 items-center justify-between border-line border-b pr-1.5 pl-4">
-        <h2 className="font-semibold text-sm">{t.heading}</h2>
+      <header className="flex h-11 shrink-0 items-center justify-between pr-1.5 pl-4">
+        <h2 className="font-semibold text-base">{t.heading}</h2>
         <Button variant="ghost" size="sm" icon={X} label={t.close} onClick={onClose} />
       </header>
       <div className="flex min-h-0 flex-1 flex-col p-3">

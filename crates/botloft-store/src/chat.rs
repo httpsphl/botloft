@@ -2,14 +2,14 @@
 //! protocol's JSON, so new item kinds need no migration.
 
 use botloft_core::chat::activity;
-use botloft_core::ids::{BotId, ChatItemId};
+use botloft_core::ids::{BotId, ChatItemId, ConversationId};
 use botloft_core::protocol::{Activity, ChatBody, ChatItem};
 use rusqlite::types::Type;
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
 use crate::{Result, Store, cached_execute, cached_row, parse_column};
 
-const COLUMNS: &str = "id, bot_id, data, created_at, updated_at";
+pub(crate) const COLUMNS: &str = "id, bot_id, data, created_at, updated_at, conversation_id";
 
 pub(crate) fn from_row(row: &Row<'_>) -> rusqlite::Result<ChatItem> {
     let data: String = row.get(2)?;
@@ -18,6 +18,7 @@ pub(crate) fn from_row(row: &Row<'_>) -> rusqlite::Result<ChatItem> {
     Ok(ChatItem {
         id: parse_column(row, 0)?,
         bot_id: parse_column(row, 1)?,
+        conversation_id: parse_column(row, 5)?,
         body,
         created_at: row.get(3)?,
         updated_at: row.get(4)?,
@@ -34,6 +35,8 @@ fn kind(body: &ChatBody) -> &'static str {
         ChatBody::Question(_) => "question",
         ChatBody::Turn(_) => "turn",
         ChatBody::Notice(_) => "notice",
+        ChatBody::KeyRequest(_) => "key_request",
+        ChatBody::Card(_) => "card",
     }
 }
 
@@ -50,8 +53,8 @@ impl Store {
     pub(crate) fn insert_chat_item_in(conn: &Connection, item: &ChatItem) -> Result<()> {
         cached_execute(
             conn,
-            "INSERT INTO chat_items (id, bot_id, kind, data, created_at, updated_at) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO chat_items (id, bot_id, kind, data, created_at, updated_at, \
+             conversation_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 item.id.as_str(),
                 item.bot_id.as_str(),
@@ -59,6 +62,7 @@ impl Store {
                 json(&item.body)?,
                 item.created_at,
                 item.updated_at,
+                item.conversation_id.as_str(),
             ],
         )?;
         Ok(())
@@ -123,6 +127,47 @@ impl Store {
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
+    /// A page of one conversation's chat, newest first (spec 40.5).
+    pub fn chat_history_in(
+        &self,
+        conversation: &ConversationId,
+        before: Option<&ChatItemId>,
+        limit: u32,
+    ) -> Result<Vec<ChatItem>> {
+        let mut stmt = self.conn.prepare_cached(&format!(
+            "SELECT {COLUMNS} FROM chat_items \
+             WHERE conversation_id = ?1 \
+               AND (?2 IS NULL OR rowid < (SELECT rowid FROM chat_items WHERE id = ?2)) \
+             ORDER BY rowid DESC LIMIT ?3"
+        ))?;
+        let rows = stmt.query_map(
+            params![conversation.as_str(), before.map(ChatItemId::as_str), limit],
+            from_row,
+        )?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    /// Every item of one conversation from `until` to the newest, newest
+    /// first, at most `limit`; empty if `until` is not in it.
+    pub fn chat_since_in(
+        &self,
+        conversation: &ConversationId,
+        until: &ChatItemId,
+        limit: u32,
+    ) -> Result<Vec<ChatItem>> {
+        let mut stmt = self.conn.prepare_cached(&format!(
+            "SELECT {COLUMNS} FROM chat_items \
+             WHERE conversation_id = ?1 \
+               AND rowid >= (SELECT rowid FROM chat_items WHERE id = ?2 AND conversation_id = ?1) \
+             ORDER BY rowid DESC LIMIT ?3"
+        ))?;
+        let rows = stmt.query_map(
+            params![conversation.as_str(), until.as_str(), limit],
+            from_row,
+        )?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
     /// Every item from `until` to the newest, newest first, at most
     /// `limit`; empty if `until` is not in the bot's chat.
     pub fn chat_since(&self, bot: &BotId, until: &ChatItemId, limit: u32) -> Result<Vec<ChatItem>> {
@@ -133,6 +178,40 @@ impl Store {
              ORDER BY rowid DESC LIMIT ?3"
         ))?;
         let rows = stmt.query_map(params![bot.as_str(), until.as_str(), limit], from_row)?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    /// The items of one conversation stored right after `after`, oldest
+    /// first, at most `limit`; empty if `after` is not in it.
+    pub fn chat_after_in(
+        &self,
+        conversation: &ConversationId,
+        after: &ChatItemId,
+        limit: u32,
+    ) -> Result<Vec<ChatItem>> {
+        let mut stmt = self.conn.prepare_cached(&format!(
+            "SELECT {COLUMNS} FROM chat_items \
+             WHERE conversation_id = ?1 \
+               AND rowid > (SELECT rowid FROM chat_items WHERE id = ?2 AND conversation_id = ?1) \
+             ORDER BY rowid LIMIT ?3"
+        ))?;
+        let rows = stmt.query_map(
+            params![conversation.as_str(), after.as_str(), limit],
+            from_row,
+        )?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    /// The items stored right after `after` in the bot's chat, oldest
+    /// first, at most `limit`; empty if `after` is not in the bot's chat.
+    pub fn chat_after(&self, bot: &BotId, after: &ChatItemId, limit: u32) -> Result<Vec<ChatItem>> {
+        let mut stmt = self.conn.prepare_cached(&format!(
+            "SELECT {COLUMNS} FROM chat_items \
+             WHERE bot_id = ?1 \
+               AND rowid > (SELECT rowid FROM chat_items WHERE id = ?2 AND bot_id = ?1) \
+             ORDER BY rowid LIMIT ?3"
+        ))?;
+        let rows = stmt.query_map(params![bot.as_str(), after.as_str(), limit], from_row)?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 

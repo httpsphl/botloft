@@ -1,6 +1,6 @@
 //! `approvals` table: permission requests waiting for the owner (spec 10.1).
 
-use botloft_core::ids::{ApprovalId, BotId, ChatItemId};
+use botloft_core::ids::{ApprovalId, BotId, ChatItemId, ConversationId};
 use botloft_core::protocol::{Approval, ApprovalStatus};
 use rusqlite::{OptionalExtension, Row, params};
 
@@ -104,6 +104,34 @@ impl Store {
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
+    /// The requests of one conversation that still wait for the owner: its
+    /// approvals' chat items are in it (spec 40.2).
+    pub fn pending_approvals_in(&self, conversation: &ConversationId) -> Result<Vec<ApprovalId>> {
+        let mut stmt = self.conn.prepare_cached(
+            "SELECT id FROM approvals WHERE status = 'pending' \
+             AND chat_item_id IN (SELECT id FROM chat_items WHERE conversation_id = ?1)",
+        )?;
+        let rows = stmt.query_map([conversation.as_str()], |row| parse_column(row, 0))?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    /// Expires the pending approvals of one conversation: its process is
+    /// gone.
+    pub fn expire_approvals_in(
+        &self,
+        conversation: &ConversationId,
+        now: i64,
+    ) -> Result<Vec<ApprovalRecord>> {
+        let mut stmt = self.conn.prepare_cached(&format!(
+            "UPDATE approvals SET status = 'expired', answered_at = ?2 \
+             WHERE status = 'pending' \
+               AND chat_item_id IN (SELECT id FROM chat_items WHERE conversation_id = ?1) \
+             RETURNING {COLUMNS}, tool_use_id"
+        ))?;
+        let rows = stmt.query_map(params![conversation.as_str(), now], from_row)?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
     /// Expires every pending approval, of one bot or of all: their process
     /// is gone, so nobody waits for the answer.
     pub fn expire_approvals(&self, bot: Option<&BotId>, now: i64) -> Result<Vec<ApprovalRecord>> {
@@ -139,6 +167,7 @@ mod tests {
         };
         let item = ChatItem {
             id: ChatItemId::generate(),
+            conversation_id: botloft_core::ids::ConversationId::main_of(&bot_id),
             bot_id,
             body: ChatBody::Approval(ApprovalItem {
                 approval_id: approval.id.clone(),
@@ -149,6 +178,7 @@ mod tests {
                 status: ApprovalStatus::Pending,
                 note: None,
                 always: None,
+                once: None,
             }),
             created_at: 10,
             updated_at: 10,

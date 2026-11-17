@@ -28,6 +28,8 @@ pub struct Config {
     pub start_with_windows: bool,
     /// Keep the computer awake while a bot works (spec 14).
     pub keep_awake: bool,
+    /// The Maker builds without asking the owner first (spec 36.4).
+    pub maker_builds_without_asking: bool,
     pub log_level: String,
     pub supervisor: SupervisorConfig,
     pub courier: CourierConfig,
@@ -49,6 +51,7 @@ impl Default for Config {
             experimental_agents: Vec::new(),
             start_with_windows: true,
             keep_awake: true,
+            maker_builds_without_asking: false,
             log_level: "info".to_owned(),
             supervisor: SupervisorConfig::default(),
             courier: CourierConfig::default(),
@@ -105,18 +108,28 @@ impl Default for CourierConfig {
 pub struct BotsConfig {
     /// How long a permission request waits for the owner (spec 10.1).
     pub approval_timeout_minutes: u64,
+    /// Minutes idle before a bot sleeps (spec 7.7); 0 never.
+    pub sleep_after_minutes: u64,
+    /// Most agents whose process runs at once (spec 7.8); 0 no limit.
+    pub max_running: usize,
     /// Largest attachment, per file (spec 9.5).
     pub attachment_max_mb: u64,
     /// Most bots a chief's suggestions can bring a crew to (spec 10.2).
     pub max_per_crew: usize,
+    /// Days the chats, messages and routine runs are kept (spec 12.1); 0
+    /// keeps them for good.
+    pub history_days: u64,
 }
 
 impl Default for BotsConfig {
     fn default() -> Self {
         Self {
             approval_timeout_minutes: 60,
+            sleep_after_minutes: 30,
+            max_running: 0,
             attachment_max_mb: 20,
             max_per_crew: 12,
+            history_days: 0,
         }
     }
 }

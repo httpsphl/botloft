@@ -1,11 +1,12 @@
-// One bot's chat, kept current (spec 8.3 and 15.1): the newest page on
+// One conversation of a bot, kept current (spec 8.3, 15.1 and 40.7): the newest page on
 // every connection, older pages on demand, items that are new or changed
 // by `chat.item`, and the text being written by `chat.delta`.
 
 import { useCallback, useEffect, useState } from "react";
 import { errorText } from "../../lib/api";
-import type { BotId, ChatItem, ChatItemId } from "../../lib/protocol.gen";
+import type { BotId, ChatItem, ChatItemId, ConversationId } from "../../lib/protocol.gen";
 import { useApi, useApp } from "../../store/context";
+import { type ChatSeat, seatParam } from "./seat";
 
 const PAGE = 50;
 
@@ -44,8 +45,17 @@ function merge(history: ChatItem[], live: ChatItem[]): ChatItem[] {
   return items;
 }
 
-/** With `focus`, the chat loads from that item to the newest (spec 8.8). */
-export function useChat(botId: BotId, focus: ChatItemId | null = null) {
+/**
+ * The chat of `seat`, the bot's main conversation when null. With `focus`,
+ * it loads from that item to the newest (spec 8.8).
+ */
+export function useChat(
+  botId: BotId,
+  focus: ChatItemId | null = null,
+  seat: ChatSeat | null = null,
+) {
+  const conversationId: ConversationId | null = seat?.conversationId ?? null;
+  const main = seat?.main ?? true;
   const api = useApi();
   const open = useApp((state) => state.connection.kind === "open");
   const [page, setPage] = useState<ChatPage>(EMPTY);
@@ -58,7 +68,11 @@ export function useChat(botId: BotId, focus: ChatItemId | null = null) {
     setPage({ ...EMPTY });
     // Subscribed first: what arrives while the page loads is newer.
     const unsubscribe = api.subscribe((event) => {
-      if (event.name === "chat.item" && event.params.item.botId === botId) {
+      if (
+        event.name === "chat.item" &&
+        event.params.item.botId === botId &&
+        (conversationId === null || event.params.item.conversationId === conversationId)
+      ) {
         const { item } = event.params;
         // A reply takes the place of its live text; a turn ends it.
         const ends = item.body.kind === "reply" || item.body.kind === "turn";
@@ -67,15 +81,20 @@ export function useChat(botId: BotId, focus: ChatItemId | null = null) {
           items: withItem(current.items, item),
           draft: ends ? "" : current.draft,
         }));
-      } else if (event.name === "chat.delta" && event.params.botId === botId) {
+      } else if (
+        event.name === "chat.delta" &&
+        event.params.botId === botId &&
+        (conversationId === null || event.params.conversationId === conversationId)
+      ) {
         const { text } = event.params;
         setPage((current) => ({ ...current, draft: current.draft + text }));
       }
     });
-    const newest = () => api.call("chat.history", { botId, limit: PAGE });
+    const of = seatParam(main || conversationId === null ? null : { conversationId, main });
+    const newest = () => api.call("chat.history", { botId, ...of, limit: PAGE });
     // An item that is gone opens the chat as usual.
     const first = focus
-      ? api.call("chat.history", { botId, until: focus }).catch(newest)
+      ? api.call("chat.history", { botId, ...of, until: focus }).catch(newest)
       : newest();
     first.then(
       (history) => {
@@ -99,7 +118,7 @@ export function useChat(botId: BotId, focus: ChatItemId | null = null) {
       alive = false;
       unsubscribe();
     };
-  }, [api, open, botId, focus]);
+  }, [api, open, botId, focus, conversationId, main]);
 
   const oldest = page.items[0]?.id;
   const loadOlder = useCallback(async () => {
@@ -108,7 +127,8 @@ export function useChat(botId: BotId, focus: ChatItemId | null = null) {
     }
     setPage((current) => ({ ...current, loading: true }));
     try {
-      const older = await api.call("chat.history", { botId, before: oldest, limit: PAGE });
+      const of = seatParam(main || conversationId === null ? null : { conversationId, main });
+      const older = await api.call("chat.history", { botId, ...of, before: oldest, limit: PAGE });
       setPage((current) => ({
         ...current,
         items: [...older.reverse(), ...current.items],
@@ -119,7 +139,7 @@ export function useChat(botId: BotId, focus: ChatItemId | null = null) {
     } catch (error) {
       setPage((current) => ({ ...current, loading: false, error: errorText(error) }));
     }
-  }, [api, botId, oldest]);
+  }, [api, botId, oldest, conversationId, main]);
 
   return { ...page, loadOlder };
 }

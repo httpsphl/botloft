@@ -1,6 +1,7 @@
 // A panel beside the main area whose width the owner sets by dragging its
 // left edge (or with the arrow keys), remembered per panel. It never takes
-// more than the main area can spare, so the chat keeps its room. It slides
+// more than the main area can spare, so the chat keeps its room, and the
+// room of the agents list, once hidden, goes to the chat too. It slides
 // open and closed at the right edge (panelMotion.ts).
 
 import {
@@ -12,6 +13,7 @@ import {
   useState,
 } from "react";
 import { useT } from "../i18n";
+import { prefs, usePref } from "../shell/prefs";
 import { usePanelMotion } from "./panelMotion";
 
 const MIN_PX = 256;
@@ -19,6 +21,11 @@ const MAX_PX = 900;
 const KEY_STEP_PX = 24;
 /** What the main area keeps whatever the panel's width, in rem. */
 const KEEP_FOR_MAIN = "22rem";
+/**
+ * With the agents list hidden, the main area also keeps the list's room
+ * (sidebar.css): hiding it widens the chat, not the panel.
+ */
+const KEEP_WITHOUT_LIST = `(${KEEP_FOR_MAIN} + var(--sidebar-width, 18rem))`;
 
 function stored(name: string, fallback: number): number {
   try {
@@ -56,6 +63,8 @@ export function SidePanel({
   children: ReactNode;
 }) {
   const t = useT();
+  const listShown = usePref(prefs.sidebar);
+  const keep = listShown ? KEEP_FOR_MAIN : KEEP_WITHOUT_LIST;
   const [width, setWidth] = useState(() => stored(name, defaultWidth));
   const panel = useRef<HTMLElement>(null);
   const drag = useRef<{ x: number; width: number; scale: number } | null>(null);
@@ -115,8 +124,8 @@ export function SidePanel({
       inert={motion === "closing"}
       style={
         {
-          width: expanded ? `calc(100% - ${KEEP_FOR_MAIN})` : width,
-          maxWidth: `calc(100% - ${KEEP_FOR_MAIN})`,
+          width: expanded ? `calc(100% - ${keep})` : width,
+          maxWidth: `calc(100% - ${keep})`,
           minWidth: MIN_PX,
           "--panel-from": `${from}px`,
         } as CSSProperties

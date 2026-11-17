@@ -7,12 +7,15 @@ pub mod bots;
 pub mod browsing;
 pub mod cloud_server;
 pub mod context;
+pub mod conversations;
 #[cfg(windows)]
 pub mod desktop;
+pub mod maker;
 pub mod mcp;
 pub mod mobile;
 pub mod routines;
 pub mod site;
+pub mod skills;
 pub mod stream;
 pub mod supervised;
 
@@ -150,13 +153,18 @@ pub fn new_daemon_with(
         },
         bots: bot_settings(),
         browser: BrowserSettings::default(),
-        settings: LiveSettings::new(None, &Config::default()).with_approval_wait(approval_wait),
+        // Bots never sleep unless a test says so (spec 7.7).
+        settings: LiveSettings::new(None, &Config::default())
+            .with_approval_wait(approval_wait)
+            .with_sleep_after(None),
         trash: Arc::new(trash.clone()),
         // The owner is always right there, unless a test says otherwise.
         owner_idle: Arc::new(|| Some(Duration::ZERO)),
         cloud,
         secrets,
     });
+    // Tests never read the plugins of whoever runs them (spec 41.1).
+    daemon.plugins.use_root(dir.path().join("claude"));
     Parts {
         daemon,
         runtime,
@@ -251,6 +259,7 @@ impl TestDaemon {
         }
         // The phone's relay waits until a phone is wanted (spec 28).
         tokio::spawn(botloftd::mobile::run(Arc::clone(&parts.daemon)));
+        tokio::spawn(botloftd::approvals::forget_turns(Arc::clone(&parts.daemon)));
         tokio::spawn(server::serve(
             Arc::clone(&parts.daemon),
             listener,

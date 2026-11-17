@@ -7,17 +7,33 @@ import {
   Bell,
   DatabaseBackup,
   Info,
+  KeyRound,
+  KeySquare,
+  LockKeyhole,
   type LucideIcon,
   MessageSquare,
   Palette,
+  PanelTop,
   Plug,
+  Puzzle,
+  ScrollText,
   Search,
+  ShieldCheck,
   SlidersHorizontal,
   Smartphone,
+  Sparkles,
 } from "lucide-react";
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useT } from "../../i18n";
-import { ConnectedToolsSettings } from "../connections/ConnectedToolsSettings";
+import { SYSTEM } from "../../lib/system";
+import { useApp } from "../../store/context";
+import { ToolsPage } from "../connections/ToolsPage";
+import { KeysSettings } from "../keys/KeysSettings";
+import { PastedKeys } from "../keys/PastedKeys";
+import { LoginsPage } from "../logins/LoginsPage";
+import { PermissionsSettings } from "../permissions/PermissionsSettings";
+import { PluginsPage } from "../plugins/PluginsPage";
+import { SkillsPage } from "../skills/SkillsPage";
 import { AboutSettings } from "./AboutSettings";
 import { AccountSettings } from "./AccountSettings";
 import { AlertsSettings } from "./AlertsSettings";
@@ -26,6 +42,8 @@ import { ArchivedSettings } from "./ArchivedSettings";
 import { BackupSettings } from "./BackupSettings";
 import { ChatSettings } from "./ChatSettings";
 import { GeneralSettings } from "./GeneralSettings";
+import { InstructionsSettings } from "./InstructionsSettings";
+import { IslandSettings } from "./IslandSettings";
 import { type Page, plain, search, settingsIndex } from "./settingsIndex";
 
 type GroupId = "groupDaily" | "groupConnect" | "groupData" | "groupBotloft";
@@ -37,7 +55,9 @@ const GROUPS: { id: GroupId; pages: { id: Page; icon: LucideIcon }[] }[] = [
       { id: "general", icon: SlidersHorizontal },
       { id: "appearance", icon: Palette },
       { id: "chat", icon: MessageSquare },
+      { id: "instructions", icon: ScrollText },
       { id: "alerts", icon: Bell },
+      { id: "island", icon: PanelTop },
     ],
   },
   {
@@ -45,38 +65,79 @@ const GROUPS: { id: GroupId; pages: { id: Page; icon: LucideIcon }[] }[] = [
     pages: [
       { id: "account", icon: Smartphone },
       { id: "tools", icon: Plug },
+      { id: "logins", icon: KeyRound },
+      { id: "skills", icon: Sparkles },
+      { id: "plugins", icon: Puzzle },
+      { id: "keys", icon: KeySquare },
+      { id: "permissions", icon: LockKeyhole },
     ],
   },
   {
     id: "groupData",
     pages: [
       { id: "backup", icon: DatabaseBackup },
+      { id: "security", icon: ShieldCheck },
       { id: "archived", icon: Archive },
     ],
   },
   { id: "groupBotloft", pages: [{ id: "about", icon: Info }] },
 ];
 
+/** The island only runs on Windows for now (spec 31.10). */
+const groups = GROUPS.map((group) => ({
+  ...group,
+  pages: group.pages.filter((page) => page.id !== "island" || SYSTEM === "Windows"),
+}));
+
 export function SettingsPage() {
   const t = useT();
   const s = t.account.settings;
-  const [page, setPage] = useState<Page>("general");
+  // Opened on the Permissions page from an agent's details or panel.
+  const permissionsAt = useApp((state) => state.permissionsAt);
+  // Or on another part, from elsewhere in the app (an agent's tools, keys).
+  const settingsPart = useApp((state) => state.settingsPart);
+  const clearSettingsPart = useApp((state) => state.clearSettingsPart);
+  const [page, setPage] = useState<Page>(
+    permissionsAt ? "permissions" : (settingsPart ?? "general"),
+  );
   const [query, setQuery] = useState("");
   const id = useId();
   const names: Record<Page, string> = {
     general: s.general,
     appearance: s.appearance,
     chat: s.chat,
+    instructions: t.instructions.page,
     alerts: s.alerts,
+    island: s.islandPart,
     account: s.account,
     tools: s.tools,
+    logins: s.logins,
+    skills: s.skills,
+    plugins: s.plugins,
+    keys: s.keys,
+    permissions: s.permissions,
     backup: s.backup,
+    security: s.security,
     archived: s.archived,
     about: s.about,
   };
   const entries = useMemo(() => settingsIndex(t), [t]);
   const found = search(entries, query, names);
   const searching = plain(query) !== "";
+
+  useEffect(() => {
+    if (permissionsAt) {
+      setPage("permissions");
+      setQuery("");
+    }
+  }, [permissionsAt]);
+  useEffect(() => {
+    if (settingsPart) {
+      setPage(settingsPart);
+      setQuery("");
+      clearSettingsPart();
+    }
+  }, [settingsPart, clearSettingsPart]);
 
   const open = (to: Page) => {
     setPage(to);
@@ -93,7 +154,7 @@ export function SettingsPage() {
             <Search
               aria-hidden
               size={14}
-              className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2.5 text-muted"
+              className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3.5 text-muted"
             />
             <input
               type="search"
@@ -101,7 +162,7 @@ export function SettingsPage() {
               placeholder={s.search}
               spellCheck={false}
               onChange={(event) => setQuery(event.target.value)}
-              className="h-8 w-full rounded-lg border border-line-strong bg-canvas pr-2.5 pl-8 text-ink text-sm outline-none placeholder:text-muted focus:border-accent"
+              className="h-9 w-full rounded-full border border-transparent bg-sunken pr-4 pl-9 text-ink text-sm outline-none transition-colors placeholder:text-muted focus:border-line-strong focus:bg-panel"
             />
           </label>
         </header>
@@ -109,15 +170,13 @@ export function SettingsPage() {
         <div className="flex gap-6">
           <nav aria-label={s.pages} className="flex w-48 shrink-0 flex-col gap-0.5 self-start">
             <div role="tablist" aria-orientation="vertical" className="flex flex-col gap-0.5">
-              {GROUPS.map((group) => (
+              {groups.map((group) => (
                 <div
                   key={group.id}
                   role="presentation"
                   className="flex flex-col gap-0.5 pt-4 first:pt-0"
                 >
-                  <p className="px-2.5 pb-1 font-semibold text-muted text-xs uppercase tracking-[0.12em]">
-                    {s[group.id]}
-                  </p>
+                  <p className="px-2.5 pb-1 font-medium text-muted text-xs">{s[group.id]}</p>
                   {group.pages.map(({ id: each, icon: Icon }) => {
                     const selected = each === page && !searching;
                     return (
@@ -129,10 +188,10 @@ export function SettingsPage() {
                         aria-selected={selected}
                         aria-controls={`${id}-panel`}
                         onClick={() => open(each)}
-                        className={`flex min-h-8 items-center gap-2 rounded-lg px-2.5 py-1 text-left font-medium text-sm transition-colors ${
+                        className={`flex min-h-9 items-center gap-2.5 rounded-xl px-2.5 py-1 text-left font-medium text-sm transition-colors ${
                           selected
-                            ? "bg-sunken text-ink"
-                            : "text-ink-soft hover:bg-sunken hover:text-ink"
+                            ? "bg-bubble text-ink"
+                            : "text-ink-soft hover:bg-bubble hover:text-ink"
                         }`}
                       >
                         <Icon aria-hidden size={15} className="shrink-0" />
@@ -159,10 +218,18 @@ export function SettingsPage() {
                 {page === "general" && <GeneralSettings />}
                 {page === "appearance" && <AppearanceSettings />}
                 {page === "chat" && <ChatSettings />}
+                {page === "instructions" && <InstructionsSettings />}
                 {page === "alerts" && <AlertsSettings />}
+                {page === "island" && <IslandSettings />}
                 {page === "account" && <AccountSettings />}
-                {page === "tools" && <ConnectedToolsSettings />}
+                {page === "tools" && <ToolsPage />}
+                {page === "logins" && <LoginsPage />}
+                {page === "skills" && <SkillsPage />}
+                {page === "plugins" && <PluginsPage />}
+                {page === "keys" && <KeysSettings />}
+                {page === "permissions" && <PermissionsSettings />}
                 {page === "backup" && <BackupSettings goToAccount={() => open("account")} />}
+                {page === "security" && <PastedKeys />}
                 {page === "archived" && <ArchivedSettings />}
                 {page === "about" && <AboutSettings />}
               </>

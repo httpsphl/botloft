@@ -24,12 +24,13 @@ export function AutoModeSwitch({
   const hintId = useId();
   if (!card) {
     return (
-      <div
-        title={t.hint}
-        className="flex shrink-0 items-center gap-2 rounded-xl border border-line px-2.5 py-1.5 text-sm"
-      >
-        <span id={labelId} className="font-medium">
+      <div title={t.hint} className="flex shrink-0 items-center gap-2 px-2.5 py-1.5 text-sm">
+        {/* In a narrow header the short word shows; the whole label is read aloud. */}
+        <span id={labelId} className="sr-only font-medium @2xl:not-sr-only">
           {t.label}
+        </span>
+        <span aria-hidden className="font-medium @2xl:hidden">
+          {t.short}
         </span>
         <Switch
           checked={checked}

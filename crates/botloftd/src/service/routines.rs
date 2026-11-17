@@ -28,6 +28,16 @@ pub fn list(daemon: &Daemon, params: RoutinesListParams) -> ApiResult<Vec<Routin
 }
 
 pub fn create(daemon: &Daemon, params: RoutinesCreateParams) -> ApiResult<Routine> {
+    not_a_wait(&params.schedule)?;
+    insert(daemon, params)
+}
+
+/// A bot's wait for itself (spec 20.14), the one way to make one.
+pub(crate) fn create_wait(daemon: &Daemon, params: RoutinesCreateParams) -> ApiResult<Routine> {
+    insert(daemon, params)
+}
+
+fn insert(daemon: &Daemon, params: RoutinesCreateParams) -> ApiResult<Routine> {
     let name = name(&params.name)?;
     let prompt = validate::message("prompt", &params.prompt)?;
     let now = daemon.clock.now_ms();
@@ -47,6 +57,7 @@ pub fn create(daemon: &Daemon, params: RoutinesCreateParams) -> ApiResult<Routin
         enabled: true,
         next_run_at: plan.next_after(now, now),
         last_run: None,
+        fail_streak: 0,
         created_at: now,
         updated_at: now,
         archived_at: None,
@@ -58,6 +69,7 @@ pub fn create(daemon: &Daemon, params: RoutinesCreateParams) -> ApiResult<Routin
 /// Checks what `create` would, without making the routine: a bot's
 /// suggestion is checked before the owner sees it (spec 20.12).
 pub(crate) fn check(daemon: &Daemon, params: &RoutinesCreateParams) -> ApiResult<()> {
+    not_a_wait(&params.schedule)?;
     name(&params.name)?;
     validate::message("prompt", &params.prompt)?;
     let schedule = normalized(params.schedule.clone());
@@ -82,7 +94,11 @@ pub fn update(daemon: &Daemon, params: RoutinesUpdateParams) -> ApiResult<Routin
     }
     let now = daemon.clock.now_ms();
     let timing = params.schedule.is_some() || params.timezone.is_some();
+    if timing {
+        not_a_wait(&routine.schedule)?;
+    }
     if let Some(schedule) = params.schedule {
+        not_a_wait(&schedule)?;
         routine.schedule = normalized(schedule);
     }
     if let Some(timezone) = params.timezone {
@@ -145,6 +161,26 @@ pub fn archive(daemon: &Daemon, params: RoutineIdParams) -> ApiResult<Routine> {
     Ok(changed(daemon, &store, routine))
 }
 
+/// Brings back a routine archived on its own (undoing a build, spec 36.4).
+/// It counts from now: times that passed meanwhile are not missed.
+pub(crate) fn unarchive(daemon: &Daemon, id: &botloft_core::ids::RoutineId) -> ApiResult<Routine> {
+    let store = daemon.store();
+    let mut routine = find(&store, id)?;
+    if routine.archived_at.is_none() {
+        return Ok(routine);
+    }
+    let now = daemon.clock.now_ms();
+    routine.archived_at = None;
+    routine.next_run_at = if routine.enabled {
+        routines::next_run_at(&routine, now, now)
+    } else {
+        None
+    };
+    routine.updated_at = now;
+    store.update_routine(&routine)?;
+    Ok(changed(daemon, &store, routine))
+}
+
 pub fn runs(daemon: &Daemon, params: RoutinesRunsParams) -> ApiResult<Vec<RoutineRun>> {
     let limit = params.limit.unwrap_or(DEFAULT_LIMIT);
     if !(1..=MAX_LIMIT).contains(&limit) {
@@ -157,10 +193,10 @@ pub fn runs(daemon: &Daemon, params: RoutinesRunsParams) -> ApiResult<Vec<Routin
     Ok(store.runs(&params.routine_id, params.before.as_ref(), limit)?)
 }
 
-/// Archives the routines of a bot that was archived (spec 20.3).
-pub(crate) fn archive_of(daemon: &Daemon, store: &Store, bot: &BotId) {
-    let now = daemon.clock.now_ms();
-    let archived = match store.archive_routines_of(bot, now) {
+/// Archives the routines of a bot that was archived (spec 20.3), at the
+/// bot's own time, so unarchiving it knows which ones went with it.
+pub(crate) fn archive_of(daemon: &Daemon, store: &Store, bot: &BotId, at: i64) {
+    let archived = match store.archive_routines_of(bot, at) {
         Ok(archived) => archived,
         Err(err) => {
             warn!(bot = %bot, "could not archive the bot's routines: {err}");
@@ -171,6 +207,36 @@ pub(crate) fn archive_of(daemon: &Daemon, store: &Store, bot: &BotId) {
         if let Ok(Some(routine)) = store.routine(&id) {
             daemon.emit(Event::RoutineChanged(routine));
         }
+    }
+}
+
+/// Brings back the routines archived with the bot at `at`. They count from
+/// now: times that passed while archived are not missed.
+pub(crate) fn unarchive_of(daemon: &Daemon, store: &Store, bot: &BotId, at: i64) {
+    let routines = match store.routines(Some(bot), true) {
+        Ok(routines) => routines,
+        Err(err) => {
+            warn!(bot = %bot, "could not read the bot's routines: {err}");
+            return;
+        }
+    };
+    let now = daemon.clock.now_ms();
+    for mut routine in routines {
+        if routine.archived_at != Some(at) {
+            continue;
+        }
+        routine.archived_at = None;
+        routine.next_run_at = if routine.enabled {
+            routines::next_run_at(&routine, now, now)
+        } else {
+            None
+        };
+        routine.updated_at = now;
+        if let Err(err) = store.update_routine(&routine) {
+            warn!(routine = %routine.id, "could not bring the routine back: {err}");
+            continue;
+        }
+        changed(daemon, store, routine);
     }
 }
 
@@ -188,6 +254,19 @@ fn name(input: &str) -> ApiResult<String> {
         )));
     }
     Ok(name.to_owned())
+}
+
+/// Only a bot makes a wait, with `wait_for`, and a wait's time never
+/// changes (spec 20.14).
+fn not_a_wait(schedule: &Schedule) -> ApiResult<()> {
+    if matches!(schedule, Schedule::Wait { .. }) {
+        return Err(ApiError::Rule {
+            reason: "wait_by_agent",
+            message: "only an agent sets a wait, with wait_for, and its time does not change"
+                .to_owned(),
+        });
+    }
+    Ok(())
 }
 
 /// A checked schedule, its runs at least five minutes apart.

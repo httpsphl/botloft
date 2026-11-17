@@ -15,6 +15,11 @@ pub(super) fn decls(out: &mut Out) {
     out.decl::<McpSaveParams>();
     out.decl::<McpServerIdParams>();
     out.decl::<BotMcpSetParams>();
+    out.decl::<ClaudeMcpProblem>();
+    out.decl::<ClaudeMcpServer>();
+    out.decl::<ClaudeMcpServers>();
+    out.decl::<ClaudeMcpPick>();
+    out.decl::<McpImportParams>();
 }
 
 pub(super) fn methods(out: &mut Out) {
@@ -27,6 +32,16 @@ pub(super) fn methods(out: &mut Out) {
     out.method(
         method::MCP_DELETE,
         &out.name::<McpServerIdParams>(),
+        &out.name::<McpOverview>(),
+    );
+    out.method(
+        method::MCP_FROM_CLAUDE,
+        "undefined",
+        &out.name::<ClaudeMcpServers>(),
+    );
+    out.method(
+        method::MCP_IMPORT_CLAUDE,
+        &out.name::<McpImportParams>(),
         &out.name::<McpOverview>(),
     );
     out.method(

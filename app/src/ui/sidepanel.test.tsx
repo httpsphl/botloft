@@ -1,11 +1,15 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { prefs } from "../shell/prefs";
 import { PanelClosing, PanelRestored } from "./panelMotion";
 import { SidePanel } from "./SidePanel";
 
 beforeEach(() => localStorage.clear());
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  prefs.sidebar.reset();
+});
 
 const panel = () => (
   <SidePanel label="Details" name="test" defaultWidth={320}>
@@ -50,6 +54,22 @@ describe("side panel", () => {
     localStorage.setItem("botloft.panel.test", "12");
     render(panel());
     expect(width()).toBe(320);
+  });
+
+  test("hiding the agents list widens the chat, not an expanded panel", () => {
+    const { container } = render(
+      <SidePanel label="Browser" name="computer" defaultWidth={600} expanded>
+        page
+      </SidePanel>,
+    );
+    const aside = container.querySelector("aside") as HTMLElement;
+    expect(aside.style.width).toBe("calc(100% - 22rem)");
+    // The list's room is kept for the chat, so the panel stays as wide.
+    act(() => prefs.sidebar.set(false));
+    expect(aside.style.width).toBe("calc(100% - (22rem + var(--sidebar-width, 18rem)))");
+    expect(aside.style.maxWidth).toBe(aside.style.width);
+    act(() => prefs.sidebar.set(true));
+    expect(aside.style.width).toBe("calc(100% - 22rem)");
   });
 });
 

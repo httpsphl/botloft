@@ -10,6 +10,7 @@ fn reply(store: &Store, bot: &BotId, text: &str) -> ChatItem {
     let item = ChatItem {
         id: ChatItemId::generate(),
         bot_id: bot.clone(),
+        conversation_id: botloft_core::ids::ConversationId::main_of(bot),
         body: ChatBody::Reply(ReplyItem { text: text.into() }),
         created_at: 0,
         updated_at: 0,
@@ -85,6 +86,7 @@ fn filters_paging_and_what_is_left_out() {
     let tool = ChatItem {
         id: ChatItemId::generate(),
         bot_id: scout.clone(),
+        conversation_id: botloft_core::ids::ConversationId::main_of(scout),
         body: ChatBody::Tool(ToolItem {
             tool_use_id: "toolu_1".into(),
             name: "Bash".into(),
@@ -170,6 +172,49 @@ fn chat_since_opens_the_chat_at_an_item() {
             .expect("other")
             .is_empty()
     );
+}
+
+#[test]
+fn chat_after_reads_on_from_an_item_and_snippets_can_be_longer() {
+    let fx = Fixture::new();
+    let (scout, writer) = (&fx.bots[0].id, &fx.bots[1].id);
+    let one = reply(&fx.store, scout, "one");
+    for word in ["two", "three", "four"] {
+        reply(&fx.store, scout, word);
+    }
+    let after = fx.store.chat_after(scout, &one.id, 2).expect("after");
+    let words: Vec<&str> = after
+        .iter()
+        .map(|item| match &item.body {
+            ChatBody::Reply(reply) => reply.text.as_str(),
+            _ => "",
+        })
+        .collect();
+    assert_eq!(words, ["two", "three"]);
+    assert!(
+        fx.store
+            .chat_after(writer, &one.id, 2)
+            .expect("other")
+            .is_empty()
+    );
+
+    let long = (0..60)
+        .map(|n| format!("w{n}"))
+        .collect::<Vec<_>>()
+        .join(" ");
+    reply(&fx.store, scout, &format!("{long} needle {long}"));
+    let words_in = |snippet_words| {
+        let filter = SearchFilter {
+            snippet_words,
+            ..SearchFilter::default()
+        };
+        find(&fx.store, "needle", filter)[0]
+            .snippet
+            .split_whitespace()
+            .count()
+    };
+    assert!(words_in(None) < 25);
+    assert!(words_in(Some(40)) >= 38);
 }
 
 #[test]

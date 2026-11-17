@@ -75,12 +75,13 @@ async fn run(
 
     let input = serde_json::to_value(&suggestion).map_err(|err| err.to_string())?;
     match approvals::ask(daemon, bot, generation, SUGGEST_TOOL, &input, "").await {
-        Some(Answer::Allowed { input: None }) => {
+        Some(Answer::Allowed { input: None, .. }) => {
             let created = create(daemon, bot, new, &suggestion)?;
             Ok(created_note(&created, "The owner approved it."))
         }
         Some(Answer::Allowed {
             input: Some(changed),
+            ..
         }) => {
             let changed: Suggestion = serde_json::from_str(&changed)
                 .map_err(|err| format!("the owner's changes could not be read: {err}"))?;

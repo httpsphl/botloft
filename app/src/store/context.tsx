@@ -2,12 +2,15 @@
 
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 import { useStore } from "zustand";
+import { createStore, type StoreApi } from "zustand/vanilla";
 import type { BotloftApi } from "../lib/api";
 import type { Host } from "../lib/host";
+import { ApiContext, ApiProvider } from "./apiContext";
 import { type AppState, type AppStore, createAppStore } from "./app";
 import { syncStore } from "./sync";
 
-const ApiContext = createContext<BotloftApi | null>(null);
+export { ApiProvider, useOptionalApi } from "./apiContext";
+
 const StoreContext = createContext<AppStore | null>(null);
 const HostContext = createContext<Host | null>(null);
 
@@ -20,9 +23,9 @@ export function DaemonProvider({ api, children }: { api: BotloftApi; children: R
   const [store] = useState(() => createAppStore(api));
   useEffect(() => syncStore(store, api), [store, api]);
   return (
-    <ApiContext.Provider value={api}>
+    <ApiProvider api={api}>
       <StoreContext.Provider value={store}>{children}</StoreContext.Provider>
-    </ApiContext.Provider>
+    </ApiProvider>
   );
 }
 
@@ -41,13 +44,16 @@ export function useApi(): BotloftApi {
   return required(useContext(ApiContext), "BotloftApi");
 }
 
-/** The API where there is one: a mascot also shows outside the app (Setup). */
-export function useOptionalApi(): BotloftApi | null {
-  return useContext(ApiContext);
-}
-
 export function useApp<T>(selector: (state: AppState) => T): T {
   return useStore(required(useContext(StoreContext), "AppStore"), selector);
+}
+
+const NO_STORE: StoreApi<AppState | null> = createStore<AppState | null>()(() => null);
+
+/** From the store where there is one, else `fallback`: a mascot also shows outside the app. */
+export function useOptionalApp<T>(selector: (state: AppState) => T, fallback: T): T {
+  const store = useContext(StoreContext) as StoreApi<AppState | null> | null;
+  return useStore(store ?? NO_STORE, (state) => (state ? selector(state) : fallback));
 }
 
 /** The store itself, for actions that set state outside the store's own. */

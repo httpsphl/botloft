@@ -3,4 +3,4 @@
 
 /** A row of the sidebar, as the conversations are. */
 export const row =
-  "relative flex w-full items-center rounded-lg text-left transition-colors duration-150 hover:bg-sunken";
+  "relative flex w-full items-center rounded-xl text-left transition-colors duration-150 hover:bg-sunken";

@@ -35,5 +35,12 @@ pub fn init(logs_dir: &Path, level: &str) -> anyhow::Result<WorkerGuard> {
         .with(fmt::layer().with_ansi(false).with_writer(file))
         .with(fmt::layer().with_writer(std::io::stderr))
         .try_init()?;
+    // A panic only reaches stderr, which nobody sees when the daemon runs
+    // as a service: the log has to say where it happened.
+    let previous = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        tracing::error!("{info}");
+        previous(info);
+    }));
     Ok(guard)
 }

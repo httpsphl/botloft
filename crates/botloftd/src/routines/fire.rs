@@ -5,7 +5,7 @@
 use botloft_core::ids::{MessageId, RoutineId, RoutineRunId};
 use botloft_core::protocol::{
     Crew, Message, MessageKind, Missed, Overlap, Routine, RoutineRun, RunSignal, RunStatus,
-    SenderKind, SkipReason,
+    Schedule, SenderKind, SkipReason, WaitEnd,
 };
 use botloft_store::{BotRecord, Store};
 use tracing::{debug, warn};
@@ -71,6 +71,15 @@ pub(super) fn due(daemon: &Daemon, mut routine: Routine, now: i64) {
         warn!(routine = %routine.id, "a routine could not run: {err}");
     }
     routine.next_run_at = plan.next_after(latest, now);
+    // A one-time routine ran (spec 20.2): the owner's stays as a
+    // shortcut, a bot's own reminder goes.
+    if let Schedule::Once { reminder, .. } = &routine.schedule {
+        if *reminder == Some(true) {
+            routine.archived_at = Some(now);
+        } else {
+            routine.schedule = Schedule::Manual;
+        }
+    }
     drop(store);
     save(daemon, &routine);
 }
@@ -108,6 +117,8 @@ pub(super) enum Trigger {
     Now,
     /// A bot of the crew sent the signal it waits for (spec 20.13).
     Signal(RunSignal),
+    /// What a wait waited for happened, or its time ran out (spec 20.14).
+    Wait(WaitEnd),
 }
 
 /// Sends the routine's message, unless the bot is paused (for a scheduled
@@ -122,14 +133,17 @@ pub(super) fn attempt(
     trigger: Trigger,
 ) -> ApiResult<RoutineRun> {
     let now = daemon.clock.now_ms();
-    let (waits, signal) = match trigger {
-        Trigger::Schedule => (true, None),
-        Trigger::Now => (false, None),
-        Trigger::Signal(signal) => (true, Some(signal)),
+    let (waits, signal, waited) = match trigger {
+        Trigger::Schedule => (true, None, None),
+        Trigger::Now => (false, None, None),
+        Trigger::Signal(signal) => (true, Some(signal), None),
+        // A pause only delays it: what happened would be lost.
+        Trigger::Wait(ended) => (false, None, Some(ended)),
     };
     let skip = |reason| {
         let mut run = skipped(routine, at, reason, 1, now);
         run.signal.clone_from(&signal);
+        run.waited = waited;
         record(daemon, store, run.clone());
         Ok(run)
     };
@@ -159,7 +173,11 @@ pub(super) fn attempt(
         attachments: Vec::new(),
         created_at: now,
     };
-    let delivery = messages::pending_delivery(&message);
+    let to = crate::service::replies::or_main(
+        store.routine_conversation(&routine.id),
+        &message.to_bot_id,
+    );
+    let delivery = messages::pending_delivery(&message, to);
     let run = RoutineRun {
         id: RoutineRunId::generate(),
         routine_id: routine.id.clone(),
@@ -171,6 +189,8 @@ pub(super) fn attempt(
         created_at: now,
         finished_at: None,
         signal,
+        nothing_new: false,
+        waited,
     };
     let item = store.fire_run(&run, &message, &delivery)?;
     debug!(routine = %routine.id, run = %run.id, "routine fired");
@@ -197,6 +217,8 @@ pub(super) fn skipped(
         created_at: now,
         finished_at: Some(now),
         signal: None,
+        nothing_new: false,
+        waited: None,
     }
 }
 
@@ -207,7 +229,7 @@ pub(super) fn record(daemon: &Daemon, store: &Store, run: RoutineRun) {
     }
 }
 
-fn save(daemon: &Daemon, routine: &Routine) {
+pub(super) fn save(daemon: &Daemon, routine: &Routine) {
     if let Err(err) = daemon.store().update_routine(routine) {
         warn!(routine = %routine.id, "could not save a routine: {err}");
         return;
@@ -253,6 +275,7 @@ fn end(daemon: &Daemon, run: &RoutineRunId, now: i64) {
     match ended {
         Ok(Some(run)) => {
             daemon.emit(Event::RoutineRun(run.clone()));
+            super::backoff::after_failure(daemon, &run.routine_id, now);
             announce_routine(daemon, &run.routine_id);
         }
         Ok(None) => {}

@@ -5,32 +5,51 @@
 //! fires what is due: a message on the bot's usual path (spec 9.1). A run
 //! ends with the turn that began with its message.
 
+mod backoff;
 mod cron;
 mod fire;
 pub mod schedule;
 pub mod signal;
+mod wait_page;
+pub mod waits;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
-use botloft_core::ids::{BotId, MessageId, RoutineRunId};
+use botloft_core::ids::{BotId, MessageId, RoutineId, RoutineRunId};
 use botloft_core::protocol::RunStatus;
 use tokio::sync::Notify;
 use tracing::warn;
 
 pub use self::fire::{fire_now, next_run_at};
+use self::waits::{PageTimes, SystemProbe, WaitProbe};
+use crate::seat::Seat;
 use crate::state::{Daemon, Event};
 
 /// The longest the scheduler sleeps, to follow clock changes and sleep.
 const MAX_SLEEP: Duration = Duration::from_secs(60);
 
-#[derive(Default)]
 pub struct Routines {
     wake: Notify,
-    /// The runs whose messages each bot's current turn took up. Messages
-    /// that arrive during a turn may join it (spec 9.1).
-    turns: Mutex<HashMap<BotId, Vec<RoutineRunId>>>,
+    /// The runs whose messages each conversation's current turn took up.
+    /// Messages that arrive during a turn may join it (spec 9.1, 40.4).
+    turns: Mutex<HashMap<Seat, Vec<RoutineRunId>>>,
+    /// What the waits look at (spec 20.14).
+    probe: Mutex<Arc<dyn WaitProbe>>,
+    /// When each wait on a page last read it.
+    pages: Mutex<PageTimes>,
+}
+
+impl Default for Routines {
+    fn default() -> Self {
+        Self {
+            wake: Notify::new(),
+            turns: Mutex::default(),
+            probe: Mutex::new(Arc::new(SystemProbe)),
+            pages: Mutex::default(),
+        }
+    }
 }
 
 impl Routines {
@@ -40,16 +59,48 @@ impl Routines {
         self.wake.notify_one();
     }
 
-    fn turns(&self) -> MutexGuard<'_, HashMap<BotId, Vec<RoutineRunId>>> {
+    fn turns(&self) -> MutexGuard<'_, HashMap<Seat, Vec<RoutineRunId>>> {
         self.turns
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
+    /// The run the seat's open turn carries, the first if it carries more
+    /// (spec 8.7: its cost goes to that routine).
+    pub fn run_of_turn(&self, seat: &Seat) -> Option<RoutineRunId> {
+        self.turns()
+            .get(seat)
+            .and_then(|runs| runs.first().cloned())
+    }
+
+    /// What the waits look at now.
+    pub fn probe(&self) -> Arc<dyn WaitProbe> {
+        Arc::clone(&lock(&self.probe))
+    }
+
+    /// Waits look at `probe` from now on; tests give their own.
+    pub fn set_probe(&self, probe: Arc<dyn WaitProbe>) {
+        *lock(&self.probe) = probe;
+    }
+
+    fn page_due(&self, id: &RoutineId, now: i64, every: i64) -> bool {
+        lock(&self.pages).due(id, now, every)
+    }
+
+    fn forget_page(&self, id: &RoutineId) {
+        lock(&self.pages).forget(id);
+    }
+
     /// The bot was deleted, and its runs with it.
     pub(crate) fn forget(&self, bot: &BotId) {
-        self.turns().remove(bot);
+        self.turns().retain(|seat, _| seat.bot != *bot);
     }
+}
+
+fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 /// Runs the scheduler until the daemon stops. The first pass also ends the
@@ -92,8 +143,8 @@ fn until_next(daemon: &Daemon) -> Duration {
     Duration::from_millis(left).min(MAX_SLEEP)
 }
 
-/// The bot took up `message`: remember the run it belongs to.
-pub fn turn_began(daemon: &Daemon, bot: &BotId, message: &MessageId) {
+/// The conversation took up `message`: remember the run it belongs to.
+pub fn turn_began(daemon: &Daemon, bot: &Seat, message: &MessageId) {
     let run = daemon.store().run_of_message(message).ok().flatten();
     if let Some(run) = run
         && run.status == RunStatus::Queued
@@ -107,9 +158,9 @@ pub fn turn_began(daemon: &Daemon, bot: &BotId, message: &MessageId) {
     }
 }
 
-/// The bot's turn ended (`result`): its runs are done, or failed on an
-/// error.
-pub fn turn_ended(daemon: &Daemon, bot: &BotId, failed: bool) {
+/// The conversation's turn ended (`result`): its runs are done, or failed
+/// on an error.
+pub fn turn_ended(daemon: &Daemon, bot: &Seat, failed: bool) {
     let status = if failed {
         RunStatus::Failed
     } else {
@@ -121,8 +172,27 @@ pub fn turn_ended(daemon: &Daemon, bot: &BotId, failed: bool) {
     }
 }
 
-/// The bot's process ended mid-turn: those runs will not finish.
-pub fn process_ended(daemon: &Daemon, bot: &BotId) {
+/// The bot said the routine runs of its turn had nothing new to report
+/// (`nothing_new`, spec 20.5). `false` when the turn carries no open run.
+pub fn mark_nothing_new(daemon: &Daemon, bot: &Seat) -> bool {
+    let runs = daemon
+        .routines
+        .turns()
+        .get(bot)
+        .cloned()
+        .unwrap_or_default();
+    let mut marked = false;
+    for run in runs {
+        match daemon.store().mark_nothing_new(&run) {
+            Ok(changed) => marked |= changed,
+            Err(err) => warn!(run = %run, "could not mark a run as having nothing new: {err}"),
+        }
+    }
+    marked
+}
+
+/// The conversation's process ended mid-turn: those runs will not finish.
+pub fn process_ended(daemon: &Daemon, bot: &Seat) {
     let runs = daemon.routines.turns().remove(bot).unwrap_or_default();
     for run in runs {
         finish(daemon, &run, RunStatus::Failed);
@@ -135,6 +205,9 @@ fn finish(daemon: &Daemon, run: &RoutineRunId, status: RunStatus) {
     match finished {
         Ok(Some(run)) => {
             daemon.emit(Event::RoutineRun(run.clone()));
+            if run.status == RunStatus::Failed {
+                backoff::after_failure(daemon, &run.routine_id, now);
+            }
             fire::announce_routine(daemon, &run.routine_id);
         }
         Ok(None) => {}

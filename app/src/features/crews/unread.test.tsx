@@ -40,6 +40,12 @@ describe("unread replies in the conversation list", () => {
       fake.chat.tool(scout.id, "Read");
     });
     expect(row("Scout").getAttribute("aria-label")).toBe("Scout, Idle, unread");
+    // The dot is the one mark in the accent: the time and the crew's count stay quiet.
+    expect(row("Scout").querySelectorAll(".bg-accent")).toHaveLength(1);
+    expect(row("Scout").querySelector("time")?.className).toContain("text-muted");
+    expect(
+      screen.getByText("1", { selector: "span[aria-hidden]" }).parentElement?.className,
+    ).toContain("bg-quiet");
 
     // The open chat's replies are seen as they come, even ones stamped
     // after the owner opened it.

@@ -91,3 +91,30 @@ async fn requests_are_answered_in_the_order_they_came() {
     }
     assert_eq!(ids, (1000..1010).collect::<Vec<_>>());
 }
+
+/// The app's ping (spec 11) is answered at once, even while something else
+/// holds the store and every other request would wait for it.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_ping_is_answered_while_the_store_is_held() {
+    let mut c = two_bots().await;
+    let (locked, is_locked) = mpsc::channel();
+    let (release, released) = mpsc::channel::<()>();
+    let holder = std::thread::spawn({
+        let daemon = Arc::clone(&c.t.daemon);
+        move || {
+            let _store = daemon.store();
+            locked.send(()).expect("locked");
+            let _ = released.recv_timeout(Duration::from_secs(5));
+        }
+    });
+    is_locked.recv().expect("store held");
+    let answered = tokio::time::timeout(
+        Duration::from_secs(2),
+        c.app.call("session.ping", Value::Null),
+    )
+    .await;
+    release.send(()).expect("release");
+    holder.join().expect("holder");
+    let answer = answered.expect("answered while the store was held");
+    assert_eq!(answer.expect("ping"), Value::Null);
+}

@@ -24,8 +24,12 @@ export function useDaemonSettings(): {
         startWithWindows: update.startWithWindows ?? before.startWithWindows,
         keepAwake: update.keepAwake ?? before.keepAwake,
         approvalWaitMinutes: update.approvalWaitMinutes ?? before.approvalWaitMinutes,
+        sleepAfterMinutes: update.sleepAfterMinutes ?? before.sleepAfterMinutes,
         defaultAgent: update.defaultAgent ?? before.defaultAgent,
         showExperimentalAgents: update.showExperimentalAgents ?? before.showExperimentalAgents,
+        makerBuildsWithoutAsking:
+          update.makerBuildsWithoutAsking ?? before.makerBuildsWithoutAsking,
+        historyDays: update.historyDays ?? before.historyDays,
       });
     }
     attempt(failed, async () => {

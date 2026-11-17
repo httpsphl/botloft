@@ -1,4 +1,5 @@
 import type { Messages } from "../en";
+import { toolAbout, toolKinds } from "./toolAbout";
 
 export const connections: Messages["connections"] = {
   title: "Herramientas conectadas",
@@ -34,6 +35,27 @@ export const connections: Messages["connections"] = {
     connecting: "Conectando…",
     failed: "No se pudo conectar la herramienta",
   },
+  fromClaude: {
+    title: "Traer herramientas de Claude Code",
+    intro:
+      "Estas son las herramientas configuradas en tu Claude Code. Elige las que tus agentes pueden usar: Botloft hace una copia, con las claves, y se quedan solo en este equipo.",
+    looking: "Mirando tu Claude Code…",
+    noFile: "No se encontró la configuración de Claude Code en este equipo.",
+    none: "Tu Claude Code no tiene herramientas propias.",
+    list: "Herramientas de Claude Code",
+    everyFolder: "Para todas las carpetas",
+    oneFolder: (folder: string) => `Solo en ${folder}`,
+    saved: "Ya está conectada aquí.",
+    kind: (kind: string) => `Se conecta por "${kind}", que Botloft todavía no admite.`,
+    field: (field: string) =>
+      `Tiene un ajuste que Botloft no conoce ("${field}"), como un inicio de sesión propio. Conéctala en claude.ai.`,
+    secrets: (names: string) => `Sus claves (${names}) vienen también.`,
+    after: "Después abre cada una y elige qué agentes la usan.",
+    bring: (count: number) =>
+      count === 1 ? "Traer 1 herramienta" : count ? `Traer ${count} herramientas` : "Traer",
+    bringing: "Trayendo…",
+    failed: "No se pudieron traer las herramientas",
+  },
   problems: {
     empty: "Pega primero la configuración de la herramienta.",
     notJson: "Eso no es un JSON válido. Pega el texto tal como está en el archivo.",
@@ -58,9 +80,6 @@ export const connections: Messages["connections"] = {
     failed: "No se pudo quitar la herramienta",
   },
   bot: {
-    title: "Herramientas conectadas",
-    none: "Aún no hay herramientas conectadas. Puedes conectarlas en Ajustes, en Herramientas conectadas.",
-    toggle: (tool, bot) => `${bot} puede usar ${tool}`,
     failed: "No se pudieron cambiar las herramientas de este agente",
     reason: "Por qué",
   },
@@ -69,5 +88,53 @@ export const connections: Messages["connections"] = {
     pending: "Conectando…",
     needs_auth: "Necesita que inicies sesión",
     failed: "No conectó",
+  },
+  claudeAi: {
+    looking: "Buscando las herramientas de tu cuenta de claude.ai…",
+    none: "No se encontraron herramientas. Aparecen cuando Claude Code usa tu cuenta de claude.ai y conectaste alguna allí.",
+    refresh: "Buscar de nuevo",
+    toggle: (tool, bot) => `${bot} puede usar ${tool}`,
+    manage: "Administrar en claude.ai",
+    failed: "No se pudieron cambiar las herramientas",
+    openFailed: "No se pudo abrir claude.ai",
+  },
+  page: {
+    yours: "Tuyas",
+    discover: "Descubrir",
+    search: "Buscar herramientas",
+    add: "Agregar",
+    addClaudeAi: "De claude.ai",
+    addPaste: "Pegar una configuración",
+    addClaudeCode: "Desde Claude Code",
+    fromClaudeAi: "claude.ai",
+    yourOwn: "Tuya",
+    connected: "Conectada",
+    agents: (count) => (count === 1 ? "1 agente" : `${count} agentes`),
+    noAgent: "Ningún agente todavía",
+    checked: (time) => `Tu cuenta de claude.ai, revisada a las ${time}`,
+    discoverIntro:
+      "Conéctalas en claude.ai una vez, con tu inicio de sesión. Luego vuelve y busca de nuevo: aparecen aquí para tus agentes.",
+    connect: (tool) => `Conectar ${tool} en claude.ai`,
+    more: "Más de 8 mil herramientas en claude.ai",
+    nothingFound: (query) => `Ninguna herramienta con “${query}”.`,
+    noneYet: "Todavía no hay herramientas. Descubre qué puedes conectar, o pega una configuración.",
+    who: "Quién puede usarla",
+    onlyClaude: "Solo los agentes de Claude Code usan las herramientas de claude.ai.",
+    noAgents: "Todavía no hay agentes.",
+    canUse: (bot) => `${bot} puede usarla`,
+    manage: "Administrar en claude.ai",
+    close: "Cerrar",
+  },
+  about: toolAbout,
+  toolKinds,
+  request: {
+    asks: (bot, tool) => `${bot} pide ${tool}`,
+    wants: (bot, tool) => `${bot} quiere usar tu ${tool}`,
+    how: (bot) =>
+      `De tu cuenta de claude.ai, sin iniciar sesión en el navegador. ${bot} se reinicia con ella y sigue.`,
+    give: "Permitir",
+    given: (tool, bot) => `Le diste ${tool} a ${bot}`,
+    declined: (tool) => `No diste ${tool}`,
+    expired: (tool) => `${tool} no se respondió a tiempo`,
   },
 };

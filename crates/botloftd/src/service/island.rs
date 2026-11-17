@@ -2,17 +2,19 @@
 
 use botloft_core::protocol::{ActivityTodayParams, Cards, DayActivity};
 
-use super::{ApiError, ApiResult};
+use super::{ApiError, ApiResult, key_requests};
 use crate::mobile::cards;
 use crate::state::Daemon;
 
 /// The requests and questions waiting, as the phone's cards, with no
-/// account or phone needed.
+/// account or phone needed; and the requests for a key, which only the app
+/// lists (spec 32.5).
 pub fn cards(daemon: &Daemon) -> Cards {
     let (approvals, questions) = cards::waiting(daemon);
     Cards {
         approvals,
         questions,
+        keys: key_requests::waiting(daemon),
     }
 }
 

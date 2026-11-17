@@ -16,5 +16,11 @@ export const alerts = {
   signIn: (bot: string) => `${bot} needs you to sign in to Claude`,
   signInBody: "Open Botloft to sign in.",
   done: (bot: string) => `${bot} finished`,
+  routineFailed: (bot: string) => `${bot}'s routine failed`,
+  /** It works again after failing (spec 20.9). */
+  routineRecovered: (bot: string) => `${bot}'s routine works again`,
+  /** A question or a note the agent left (spec 23.10). */
+  asks: (bot: string) => `${bot} has a question for you`,
+  tells: (bot: string) => `${bot} left you a note`,
   crew: (crew: string) => `Crew ${crew}`,
 };

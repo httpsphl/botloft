@@ -3,8 +3,11 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::ids::{ApprovalId, BotId, ChatItemId, QuestionId};
-use crate::protocol::{Activity, ApprovalStatus, BotState, NoticeLevel, QuestionStatus};
+use crate::ids::{ApprovalId, BotId, ChatItemId, QuestionId, RoutineId};
+use crate::protocol::{
+    Activity, ApprovalStatus, BotState, DayActivity, NoticeLevel, PhoneFile, PhoneShortcut,
+    QuestionKind, QuestionStatus,
+};
 
 /// Whether the computer's connection to the relay is up.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -116,17 +119,19 @@ pub struct MobilePairRequest {
     pub code: String,
 }
 
-/// The bot that asks, as the phone shows it.
+/// The bot that asks, as the phone shows it. The id lets the app's home
+/// open the bot's chat (spec 15.1); the phone's chat list has it already.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct CardBot {
+    pub id: BotId,
     pub name: String,
     pub color: String,
 }
 
 /// A request waiting for the owner, as the phone shows it (spec 28.5). It
-/// carries what the owner needs to decide, and nothing else of the bot.
+/// carries what the owner needs to decide, and of the bot only who it is.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
@@ -151,7 +156,7 @@ pub struct ApprovalCard {
     pub at_computer: bool,
 }
 
-/// A question waiting for the owner, as the phone shows it.
+/// A question or a note waiting for the owner, as the phone shows it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
@@ -160,6 +165,9 @@ pub struct QuestionCard {
     pub bot: CardBot,
     pub crew: String,
     pub created_at: i64,
+    /// A note asks nothing: the phone offers Seen instead of Dismiss.
+    #[serde(default)]
+    pub kind: QuestionKind,
     pub text: String,
     pub options: Vec<String>,
 }
@@ -187,6 +195,21 @@ pub struct ChatLine {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(test, ts(optional))]
     pub read_at: Option<i64>,
+    /// The bot's routine that failed last (spec 20.9, 28.12): the phone
+    /// shows it until the owner reads the chat, here or there.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, ts(optional))]
+    pub failed: Option<RunFailure>,
+}
+
+/// A routine run that failed, as the phone tells it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct RunFailure {
+    pub routine: String,
+    /// Unix time in milliseconds.
+    pub at: i64,
 }
 
 /// One thing in a conversation, as the phone shows it (spec 28.12): the
@@ -199,12 +222,15 @@ pub struct ChatLine {
 )]
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub enum PhoneItem {
-    /// The owner wrote it.
+    /// The owner wrote it, with the names of the files that went with it.
     You {
         id: ChatItemId,
         at: i64,
         text: String,
         cut: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(test, ts(optional))]
+        files: Option<Vec<String>>,
     },
     /// Another bot, a routine or the daemon wrote it to this bot; `from` is
     /// the name.
@@ -238,6 +264,9 @@ pub enum PhoneItem {
         id: ChatItemId,
         at: i64,
         question_id: QuestionId,
+        /// A note the bot left (spec 23.10), not a question.
+        #[serde(default)]
+        note: bool,
         text: String,
         status: QuestionStatus,
     },
@@ -320,6 +349,23 @@ pub enum ToPhone {
     /// The owner read the bot's chat on the computer, up to this reply.
     #[serde(rename = "read")]
     Read { bot_id: BotId, upto: i64 },
+    /// The Home's shortcuts and the day so far: the answer to `home` (28.15).
+    #[serde(rename = "home")]
+    Home {
+        shortcuts: Vec<PhoneShortcut>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(test, ts(optional))]
+        today: Option<DayActivity>,
+    },
+    /// What came of a `routine.run`.
+    #[serde(rename = "ran")]
+    Ran {
+        client_id: String,
+        ok: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(test, ts(optional))]
+        reason: Option<String>,
+    },
 }
 
 /// What the phone sends the computer, sealed (spec 28.3).
@@ -357,12 +403,15 @@ pub enum FromPhone {
         #[cfg_attr(test, ts(optional))]
         before: Option<ChatItemId>,
     },
-    /// The owner writes to a bot.
+    /// The owner writes to a bot, maybe with files (spec 28.14).
     #[serde(rename = "send")]
     Send {
         client_id: String,
         bot_id: BotId,
         text: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(test, ts(optional))]
+        files: Option<Vec<PhoneFile>>,
     },
     /// Which conversation is open, if any.
     #[serde(rename = "watch")]
@@ -370,6 +419,16 @@ pub enum FromPhone {
         #[serde(default)]
         #[cfg_attr(test, ts(optional))]
         bot_id: Option<BotId>,
+    },
+    /// Asks for the Home (28.15); the day starts at `since`, the phone's
+    /// midnight.
+    #[serde(rename = "home")]
+    Home { since: i64 },
+    /// Runs one of the owner's shortcuts.
+    #[serde(rename = "routine.run")]
+    RoutineRun {
+        client_id: String,
+        routine_id: RoutineId,
     },
 }
 
@@ -441,12 +500,23 @@ mod tests {
             client_id: "c1".into(),
             bot_id: bot.clone(),
             text: "oi".into(),
+            files: None,
         })
         .expect("json");
         assert_eq!(
             send,
             serde_json::json!({ "t": "send", "clientId": "c1", "botId": bot, "text": "oi" })
         );
+        // A phone of before the files still says the same thing.
+        let with_file: FromPhone = serde_json::from_value(serde_json::json!({
+            "t": "send", "clientId": "c2", "botId": bot, "text": "",
+            "files": [{ "id": "fil_a", "key": "k", "name": "a.jpg", "mediaType": "image/jpeg", "size": 3 }],
+        }))
+        .expect("with a file");
+        assert!(matches!(
+            with_file,
+            FromPhone::Send { files: Some(files), .. } if files[0].media_type == "image/jpeg"
+        ));
         // What it gets: an item is told by its `kind`, in camelCase.
         let item = PhoneItem::Approval {
             id: ChatItemId::generate(),

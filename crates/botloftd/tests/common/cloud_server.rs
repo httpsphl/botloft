@@ -3,7 +3,9 @@
 
 use std::sync::Arc;
 
-use botloft_cloud::{AppState, Clock, Config, CopyStore, Db, Hub, Mailer, Outbox, Pusher, router};
+use botloft_cloud::{
+    AppState, Clock, Config, CopyStore, Db, Hub, Mailer, Outbox, Pusher, Releases, router,
+};
 use serde_json::json;
 use tokio::net::TcpListener;
 
@@ -55,6 +57,7 @@ async fn launch(
         store: CopyStore::memory(),
         hub: hub.clone(),
         push,
+        releases: Releases::new().expect("releases"),
     };
     tokio::spawn(async move {
         axum::serve(listener, router(state)).await.expect("serve");

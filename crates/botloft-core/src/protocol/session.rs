@@ -68,6 +68,56 @@ pub struct ContextUsage {
     pub compacting: bool,
     /// Unix time in milliseconds.
     pub updated_at: i64,
+    /// What the conversation holds, part by part, as of Claude Code's last
+    /// answer (spec 33.3); empty when the agent does not say.
+    #[serde(default)]
+    pub parts: Vec<ContextPart>,
+    /// The memory files the agent loaded.
+    #[serde(default)]
+    pub memory_files: Vec<ContextFile>,
+}
+
+text_enum!(
+    /// What a part of a bot's conversation is (spec 33.3), from the
+    /// categories Claude Code counts.
+    ContextPartKind, "context part" {
+        Messages => "messages",
+        /// Claude Code's own instructions.
+        Instructions => "instructions",
+        /// Claude Code's own tools.
+        Tools => "tools",
+        /// The tools of the MCP servers, with their instructions.
+        ConnectedTools => "connected_tools",
+        Memory => "memory",
+        Skills => "skills",
+        /// Custom subagents.
+        Agents => "agents",
+        /// What Claude Code keeps free to compact in.
+        Buffer => "buffer",
+        Other => "other",
+    }
+);
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct ContextPart {
+    pub kind: ContextPartKind,
+    pub tokens: u64,
+}
+
+/// A memory file in a bot's conversation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct ContextFile {
+    /// As Claude Code gives it: absolute.
+    pub path: String,
+    pub tokens: u64,
+    /// How many lines it has, as the daemon read it (spec 8.12); none
+    /// when it could not be read.
+    #[serde(default)]
+    pub lines: Option<u32>,
 }
 
 /// Params of the `bot.context` notification.
@@ -79,6 +129,55 @@ pub struct BotContextChanged {
     /// `null` when the bot began a new conversation and its size is not
     /// known yet.
     pub context: Option<ContextUsage>,
+}
+
+text_enum!(
+    /// What a bot left running in the background (spec 33.4), from
+    /// Claude Code's `task_type`.
+    BackgroundKind, "background kind" {
+        /// A shell command, or a monitor watching one (`local_bash`).
+        Command => "command",
+        /// A subagent (`local_agent`).
+        Agent => "agent",
+        /// An agent running elsewhere (`remote_agent`).
+        Remote => "remote",
+        Other => "other",
+    }
+);
+
+/// A task a bot left running in the background (spec 33.4).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BackgroundTask {
+    /// Claude Code's id, which `bots.stopTask` takes.
+    pub task_id: String,
+    pub kind: BackgroundKind,
+    /// What the bot said it is.
+    pub description: String,
+    /// When the daemon first saw it running, in Unix milliseconds.
+    pub seen_at: i64,
+}
+
+/// Params of the `bot.background` notification: the whole live list.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BotBackgroundChanged {
+    pub bot_id: BotId,
+    pub tasks: Vec<BackgroundTask>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct BotsStopTaskParams {
+    pub bot_id: BotId,
+    pub task_id: String,
+    /// The conversation that runs it; the main one when absent (spec 40.5).
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub conversation_id: Option<crate::ids::ConversationId>,
 }
 
 #[cfg(test)]

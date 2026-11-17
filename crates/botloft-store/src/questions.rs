@@ -1,6 +1,7 @@
-//! `questions` table: what bots asked the owner without waiting (spec 23).
-//! Each question has a chat item in its bot's chat that mirrors it, and an
-//! answer is a message to the bot, saved in the same transaction.
+//! `questions` table: what bots asked the owner without waiting (spec 23),
+//! and the notes they left them (spec 23.10). Each question has a chat item
+//! in its bot's chat that mirrors it, and an answer is a message to the
+//! bot, saved in the same transaction.
 
 use botloft_core::ids::{BotId, ChatItemId, QuestionId};
 use botloft_core::protocol::{
@@ -12,7 +13,7 @@ use rusqlite::{Connection, OptionalExtension, Row, params};
 use crate::{Result, Store, parse_column};
 
 const COLUMNS: &str = "q.id, q.crew_id, q.bot_id, q.text, q.options, q.status, q.answer, q.created_at, \
-     q.answered_at, q.chat_item_id";
+     q.answered_at, q.chat_item_id, q.kind";
 
 /// A question and the chat item that shows it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,6 +40,7 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<QuestionRecord> {
             id: parse_column(row, 0)?,
             crew_id: parse_column(row, 1)?,
             bot_id: parse_column(row, 2)?,
+            kind: parse_column(row, 10)?,
             text: row.get(3)?,
             options,
             status: parse_column(row, 5)?,
@@ -98,8 +100,8 @@ impl Store {
         Self::insert_chat_item_in(&tx, item)?;
         tx.execute(
             "INSERT INTO questions (id, crew_id, bot_id, chat_item_id, text, options, status, \
-             answer, created_at, answered_at) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+             answer, created_at, answered_at, kind) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             params![
                 question.id.as_str(),
                 question.crew_id.as_str(),
@@ -111,6 +113,7 @@ impl Store {
                 question.answer,
                 question.created_at,
                 question.answered_at,
+                question.kind.as_str(),
             ],
         )?;
         tx.commit()?;
@@ -121,14 +124,49 @@ impl Store {
         find(&self.conn, id)
     }
 
-    /// How many questions `bot` has open.
+    /// How many questions `bot` has open; its notes do not count.
     pub fn open_questions(&self, bot: &BotId) -> Result<usize> {
         let count: i64 = self.conn.query_row(
-            "SELECT count(*) FROM questions WHERE bot_id = ?1 AND status = 'open'",
+            "SELECT count(*) FROM questions WHERE bot_id = ?1 AND status = 'open' \
+             AND kind = 'question'",
             [bot.as_str()],
             |row| row.get(0),
         )?;
         Ok(usize::try_from(count).unwrap_or(0))
+    }
+
+    /// How many notes `bot` left the owner from `since` on, open or not.
+    pub fn notes_since(&self, bot: &BotId, since: i64) -> Result<usize> {
+        let count: i64 = self.conn.query_row(
+            "SELECT count(*) FROM questions WHERE bot_id = ?1 AND kind = 'note' \
+             AND created_at >= ?2",
+            params![bot.as_str(), since],
+            |row| row.get(0),
+        )?;
+        Ok(usize::try_from(count).unwrap_or(0))
+    }
+
+    /// The owner wrote to `bot`: its open notes close as seen (spec
+    /// 23.10). Each, with its chat item, as it is now.
+    pub fn close_notes(&self, bot: &BotId, now: i64) -> Result<Vec<(Question, ChatItem)>> {
+        let tx = self.conn.unchecked_transaction()?;
+        let ids: Vec<QuestionId> = {
+            let mut stmt = tx.prepare_cached(
+                "SELECT id FROM questions WHERE bot_id = ?1 AND kind = 'note' \
+                 AND status = 'open' ORDER BY rowid",
+            )?;
+            let rows = stmt.query_map([bot.as_str()], |row| parse_column(row, 0))?;
+            rows.collect::<rusqlite::Result<_>>()?
+        };
+        let mut closed = Vec::with_capacity(ids.len());
+        for id in &ids {
+            if let Some(record) = settle(&tx, id, QuestionStatus::Dismissed, None, now)? {
+                let item = mirror(&tx, &record, now)?;
+                closed.push((record.question, item));
+            }
+        }
+        tx.commit()?;
+        Ok(closed)
     }
 
     /// Questions of active bots in active crews with `status`, newest first.

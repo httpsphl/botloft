@@ -7,32 +7,48 @@ pub mod attachments;
 pub mod autobackup;
 pub mod backup;
 pub mod bots;
+pub mod builds;
+pub mod cards;
 pub mod catalog;
 pub mod chat;
 pub mod cloud;
+pub mod conversations;
+pub mod costs;
 pub mod crew_access;
 pub mod crews;
 pub mod delete;
 pub mod deliveries;
 pub mod desktop;
 pub mod files;
+pub(crate) mod import_sources;
+pub mod imports;
+pub mod instructions;
+pub mod interrupt;
 pub mod island;
+pub mod key_requests;
+pub mod key_scan;
+pub mod keys;
 pub mod lead;
+pub mod maker;
 pub mod mcp;
+pub mod mcp_claude;
 pub mod mcp_state;
 pub mod messages;
 pub mod mobile;
 pub mod models;
 pub mod modes;
-pub mod plan;
+pub mod permissions;
 pub mod questions;
 pub mod reactions;
+pub(crate) mod replies;
+pub mod resume;
 pub mod routines;
 pub mod rules;
 pub mod screens;
 pub mod settings;
 pub mod tasks;
 pub mod usage;
+pub mod versions;
 
 use botloft_core::protocol::{AgentKind, OwnerAccount, PROTOCOL_VERSION, SystemStatus, error_code};
 use botloft_core::slug;
@@ -119,7 +135,11 @@ pub fn status(daemon: &Daemon) -> ApiResult<SystemStatus> {
             claude: daemon.supervisor.claude_account(),
         },
         deliveries,
-        usage: daemon.usage(),
+        usage: {
+            // Someone looks: the plan is read again when it is time (spec 8.13).
+            daemon.plan_reader.wanted();
+            daemon.usage()
+        },
         enabled_agents: [AgentKind::Claude, AgentKind::Agy, AgentKind::Codex]
             .into_iter()
             .filter(|kind| daemon.supervisor.agent_enabled(*kind))

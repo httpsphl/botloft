@@ -96,3 +96,69 @@ async fn an_answer_without_sizes_or_with_auto_compact_off_is_read_carefully() {
     settle().await;
     assert_eq!(shown(&s).used_tokens, 1000);
 }
+
+#[tokio::test(start_paused = true)]
+async fn the_answer_tells_what_fills_the_conversation_part_by_part() {
+    let s = setup().await;
+    let process = s.runtime.process(1).await;
+    s.until(BotState::Idle).await;
+    // As Claude Code 2.1.309 answers after a short turn (spec 33.3).
+    process
+        .answer_control(
+            "get_context_usage",
+            json!({
+                "totalTokens": 24_200, "maxTokens": 1_000_000, "rawMaxTokens": 1_000_000,
+                "autoCompactThreshold": 967_000, "isAutoCompactEnabled": true,
+                "categories": [
+                    { "id": "system_prompt", "kind": "used", "tokens": 3341 },
+                    { "id": "system_tools", "kind": "used", "tokens": 13_908 },
+                    { "id": "system_tools_deferred", "kind": "deferred",
+                      "isDeferred": true, "tokens": 13_427 },
+                    { "id": "memory_files", "kind": "used", "tokens": 299 },
+                    { "id": "skills", "kind": "used", "tokens": 2210 },
+                    { "id": "messages", "kind": "used", "tokens": 4442 },
+                    { "id": "autocompact_buffer", "kind": "buffer", "tokens": 33_000 },
+                    { "id": "free_space", "kind": "free", "tokens": 942_800 }
+                ],
+                "memoryFiles": [{ "path": "C:/bots/scout/CLAUDE.md", "type": "Project",
+                                  "tokens": 299 }]
+            }),
+        )
+        .await;
+    settle().await;
+    let context = shown(&s);
+    let parts: Vec<_> = context
+        .parts
+        .iter()
+        .map(|part| (part.kind.as_str(), part.tokens))
+        .collect();
+    assert_eq!(
+        parts,
+        [
+            ("messages", 4442),
+            ("instructions", 3341),
+            ("tools", 13_908),
+            ("memory", 299),
+            ("skills", 2210),
+            ("buffer", 33_000),
+        ]
+    );
+    assert_eq!(context.memory_files.len(), 1);
+
+    // The size moves with each model request; the parts wait for the next
+    // answer, and the app makes up the difference in the conversation.
+    s.message("go on");
+    process.emit(stream::began("session-1")).await;
+    process
+        .emit(json!({
+            "type": "assistant", "parent_tool_use_id": null,
+            "message": { "role": "assistant", "model": "claude-haiku-4-5-20251001", "content": [],
+                "usage": { "input_tokens": 10, "cache_creation_input_tokens": 0,
+                           "cache_read_input_tokens": 30_000, "output_tokens": 4 } },
+        }))
+        .await;
+    settle().await;
+    let context = shown(&s);
+    assert_eq!(context.used_tokens, 30_010);
+    assert_eq!(context.parts.len(), 6, "the parts stay as last told");
+}

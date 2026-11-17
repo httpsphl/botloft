@@ -1,6 +1,8 @@
 // Connected tools (spec 25): tools of the owner's own that bots can use, in
 // Settings and in each bot's details. Plain words: no "MCP", no "server".
 
+import { toolAbout, toolKinds } from "./toolAbout";
+
 export const connections = {
   title: "Connected tools",
   intro:
@@ -35,6 +37,27 @@ export const connections = {
     connecting: "Connecting…",
     failed: "Could not connect the tool",
   },
+  fromClaude: {
+    title: "Bring tools from Claude Code",
+    intro:
+      "These are the tools set up in your own Claude Code. Pick the ones your agents may use: Botloft copies them, keys included, and they stay on this computer.",
+    looking: "Looking at your Claude Code…",
+    noFile: "Claude Code's settings were not found on this computer.",
+    none: "Your Claude Code has no tools of its own.",
+    list: "Tools in Claude Code",
+    everyFolder: "For every folder",
+    oneFolder: (folder: string) => `Only in ${folder}`,
+    saved: "Already connected here.",
+    kind: (kind: string) => `It connects by "${kind}", which Botloft does not support yet.`,
+    field: (field: string) =>
+      `It has a setting Botloft does not know ("${field}"), like a sign-in of its own. Connect it on claude.ai instead.`,
+    secrets: (names: string) => `Its keys (${names}) come along.`,
+    after: "Then open each one and choose which agents use it.",
+    bring: (count: number) =>
+      count === 1 ? "Bring 1 tool" : count ? `Bring ${count} tools` : "Bring",
+    bringing: "Bringing…",
+    failed: "Could not bring the tools",
+  },
   problems: {
     empty: "Paste the tool's settings first.",
     notJson: "That is not valid JSON. Paste the text exactly as it is in the file.",
@@ -60,9 +83,6 @@ export const connections = {
     failed: "Could not remove the tool",
   },
   bot: {
-    title: "Connected tools",
-    none: "No tools connected yet. You can connect them in Settings, under Connected tools.",
-    toggle: (tool: string, bot: string) => `${bot} can use ${tool}`,
     failed: "Could not change the tools of this agent",
     reason: "Why",
   },
@@ -72,4 +92,52 @@ export const connections = {
     needs_auth: "Needs you to sign in",
     failed: "Did not connect",
   } as Record<string, string>,
+  claudeAi: {
+    looking: "Looking for the tools of your claude.ai account…",
+    none: "No tools found. They show up when Claude Code uses your claude.ai account and you connected some on claude.ai.",
+    refresh: "Look again",
+    toggle: (tool: string, bot: string) => `${bot} can use ${tool}`,
+    manage: "Manage on claude.ai",
+    failed: "Could not change the tools",
+    openFailed: "Could not open claude.ai",
+  },
+  page: {
+    yours: "Yours",
+    discover: "Discover",
+    search: "Search tools",
+    add: "Add",
+    addClaudeAi: "From claude.ai",
+    addPaste: "Paste a configuration",
+    addClaudeCode: "From Claude Code",
+    fromClaudeAi: "claude.ai",
+    yourOwn: "Yours",
+    connected: "Connected",
+    agents: (count: number) => (count === 1 ? "1 agent" : `${count} agents`),
+    noAgent: "No agent yet",
+    checked: (time: string) => `Your claude.ai account, checked at ${time}`,
+    discoverIntro:
+      "Connect these on claude.ai once, with your own sign-in. Then come back and look again: they show up here for your agents.",
+    connect: (tool: string) => `Connect ${tool} on claude.ai`,
+    more: "More than 8,000 tools on claude.ai",
+    nothingFound: (query: string) => `No tool matches “${query}”.`,
+    noneYet: "No tools yet. Discover what you can connect, or paste a configuration.",
+    who: "Who can use it",
+    onlyClaude: "Only agents on Claude Code use the tools of claude.ai.",
+    noAgents: "No agents yet.",
+    canUse: (bot: string) => `${bot} can use it`,
+    manage: "Manage on claude.ai",
+    close: "Close",
+  },
+  about: toolAbout,
+  toolKinds,
+  request: {
+    asks: (bot: string, tool: string) => `${bot} asks for ${tool}`,
+    wants: (bot: string, tool: string) => `${bot} wants to use your ${tool}`,
+    how: (bot: string) =>
+      `From your claude.ai account, with no sign-in in the browser. ${bot} starts again with it and goes on.`,
+    give: "Allow",
+    given: (tool: string, bot: string) => `You gave ${tool} to ${bot}`,
+    declined: (tool: string) => `You did not give ${tool}`,
+    expired: (tool: string) => `${tool} was not answered in time`,
+  },
 };

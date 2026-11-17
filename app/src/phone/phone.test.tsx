@@ -11,7 +11,7 @@ afterEach(cleanup);
 
 const approval = (change: Partial<ApprovalCard> = {}): ApprovalCard => ({
   approvalId: "apr_1",
-  bot: { name: "Scout", color: "#aabbcc" },
+  bot: { id: "bot_scout", name: "Scout", color: "#aabbcc" },
   crew: "Ops",
   createdAt: Date.now(),
   toolName: "Bash",
@@ -25,9 +25,10 @@ const approval = (change: Partial<ApprovalCard> = {}): ApprovalCard => ({
 
 const question = (change: Partial<QuestionCard> = {}): QuestionCard => ({
   questionId: "qst_1",
-  bot: { name: "Writer", color: "#ccbbaa" },
+  bot: { id: "bot_writer", name: "Writer", color: "#ccbbaa" },
   crew: "Ops",
   createdAt: Date.now(),
+  kind: "question",
   text: "Which **client** first?",
   options: ["Acme", "Globex"],
   ...change,
