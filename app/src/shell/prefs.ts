@@ -36,6 +36,17 @@ function pref<T extends Value>(key: string, fallback: T, allowed: readonly T[]):
       listener();
     }
   };
+  // Another window of the app (the island, spec 31.3) changed it.
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", (event) => {
+      if (event.key === key) {
+        current = read();
+        for (const listener of listeners) {
+          listener();
+        }
+      }
+    });
+  }
   return {
     get: () => current,
     set,
@@ -56,6 +67,8 @@ export const prefs = {
   enterSends: pref<boolean>("botloft.enterSends", true, ON_OFF),
   /** The browser and the screens open by themselves when a bot starts on them. */
   followBot: pref<boolean>("botloft.followBot", true, ON_OFF),
+  /** The Maker sits at the top of the list on the left (spec 36.2). */
+  showMaker: pref<boolean>("botloft.showMaker", true, ON_OFF),
   /** The crews and bots show on the left; off, only the selection does. */
   sidebar: pref<boolean>("botloft.sidebar", true, ON_OFF),
   /** No motion in the window, whatever Windows says. */
@@ -68,6 +81,20 @@ export const prefs = {
   notifyNeeds: pref<boolean>("botloft.notifyNeeds", true, ON_OFF),
   /** A Windows notification when a bot finishes what it was doing. */
   notifyDone: pref<boolean>("botloft.notifyDone", false, ON_OFF),
+  /** A Windows notification when a routine fails (spec 20.9). */
+  notifyRoutineFailed: pref<boolean>("botloft.notifyRoutineFailed", true, ON_OFF),
+  /** The island at the top of the screen (spec 31). */
+  island: pref<boolean>("botloft.island", true, ON_OFF),
+  /** Which screen the island sits on: the main one, or where the mouse is. */
+  islandScreen: pref<"primary" | "mouse">("botloft.islandScreen", "primary", ["primary", "mouse"]),
+  /** The island cheers when an agent finishes (spec 31.4). */
+  islandCheer: pref<boolean>("botloft.islandCheer", true, ON_OFF),
+  /** The island hides while Botloft's window is in front (spec 31.6). */
+  islandHideWithApp: pref<boolean>("botloft.islandHideWithApp", true, ON_OFF),
+  /** Holding the right Ctrl alone calls the island (spec 31.6). */
+  islandSummon: pref<boolean>("botloft.islandSummon", true, ON_OFF),
+  /** How long the right Ctrl is held, in milliseconds. */
+  islandHold: pref<"500" | "1000" | "2000">("botloft.islandHold", "1000", ["500", "1000", "2000"]),
   /** The mark on the app's icon also shows while a bot is unread. */
   markReplies: pref<boolean>("botloft.markReplies", true, ON_OFF),
   /** A short sound with each of those. */
@@ -80,8 +107,68 @@ export function usePref<T extends Value>(choice: Pref<T>): T {
   return useSyncExternalStore(choice.subscribe, choice.get);
 }
 
+/**
+ * The owner's own choice for each agent, over the switch for all: true or
+ * false for the agents they set from the agent's menu, absent for the rest.
+ */
+function agentChoices(key: string) {
+  const listeners = new Set<() => void>();
+  const read = (): Record<string, boolean> => {
+    try {
+      const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? "{}");
+      return parsed && typeof parsed === "object" ? (parsed as Record<string, boolean>) : {};
+    } catch {
+      return {};
+    }
+  };
+  let current = read();
+  const save = (next: Record<string, boolean>) => {
+    current = next;
+    try {
+      localStorage.setItem(key, JSON.stringify(next));
+    } catch {
+      // Private storage off: the choice lasts for this window.
+    }
+    for (const listener of listeners) {
+      listener();
+    }
+  };
+  return {
+    get: (agent: string): boolean | undefined =>
+      typeof current[agent] === "boolean" ? current[agent] : undefined,
+    set: (agent: string, on: boolean) => save({ ...current, [agent]: on }),
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    reset: () => save({}),
+  };
+}
+
+/** Whether to tell when each agent finishes, from its menu (spec 15.1). */
+export const doneAlerts = agentChoices("botloft.doneAlerts");
+
+/** Whether the owner hears when `agent` finishes: its own choice, or the switch for all. */
+export function wantsDone(agent: string): boolean {
+  return doneAlerts.get(agent) ?? prefs.notifyDone.get();
+}
+
+function followDone(listener: () => void): () => void {
+  const offAgents = doneAlerts.subscribe(listener);
+  const offAll = prefs.notifyDone.subscribe(listener);
+  return () => {
+    offAgents();
+    offAll();
+  };
+}
+
+export function useWantsDone(agent: string): boolean {
+  return useSyncExternalStore(followDone, () => wantsDone(agent));
+}
+
 export function resetPrefs(): void {
   for (const choice of Object.values(prefs)) {
     choice.reset();
   }
+  doneAlerts.reset();
 }

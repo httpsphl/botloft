@@ -8,6 +8,7 @@ import { Dialog } from "../../ui/Dialog";
 import { SelectField, TextArea, TextField } from "../../ui/Field";
 import { notifyError } from "../../ui/toast";
 import { useCatalog } from "../catalog/useCatalog";
+import { AutoModeSwitch } from "./AutoModeSwitch";
 import { addTemplateBots } from "./addTemplateBots";
 import { CrewColorField } from "./CrewColorField";
 import type { CrewTemplate } from "./crewTemplates";
@@ -39,6 +40,7 @@ export function CrewDialog({
   );
   const [color, setColor] = useState<string | null>(crew?.color ?? null);
   const [folder, setFolder] = useState<string | null>(null);
+  const [autoMode, setAutoMode] = useState(false);
   const [goal, setGoal] = useState(start ? t.crewTemplates.items[start.id].goal : "");
   const [chiefModel, setChiefModel] = useState<BotModel>("default");
   const selectBot = useApp((state) => state.selectBot);
@@ -70,6 +72,7 @@ export function CrewDialog({
         : await api.call("crews.create", {
             name,
             ...(folder && { workFolder: folder }),
+            ...(autoMode && { autoMode: true }),
             // Every new crew starts with its chief (spec 10.2).
             lead: {
               name: d.chiefName,
@@ -165,6 +168,7 @@ export function CrewDialog({
               placeholder={t.crews.dialog.goalPlaceholder}
               hint={t.crews.dialog.goalHint}
             />
+            <AutoModeSwitch card checked={autoMode} onChange={setAutoMode} />
             <WorkFolderField value={folder} onChange={setFolder} />
             <SelectField
               label={t.crews.dialog.chiefModel}

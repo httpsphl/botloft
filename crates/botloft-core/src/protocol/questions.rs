@@ -1,5 +1,6 @@
-//! Questions a bot asks the owner without waiting (spec 23), with the
-//! params of the `questions.*` methods.
+//! Questions a bot asks the owner without waiting (spec 23), and the notes
+//! it leaves them (`tell_owner`, spec 23.10), with the params of the
+//! `questions.*` methods.
 
 use serde::{Deserialize, Serialize};
 
@@ -14,13 +15,32 @@ pub const QUESTION_OPTIONS_MIN: usize = 2;
 pub const QUESTION_OPTIONS_MAX: usize = 5;
 /// Most questions one bot may have open at once.
 pub const OPEN_QUESTIONS_MAX: usize = 5;
+/// Most notes one bot may leave the owner in an hour (spec 23.10).
+pub const NOTES_PER_HOUR: usize = 10;
+
+text_enum!(
+    QuestionKind, "question kind" {
+        /// Waits for the owner's answer (`ask_owner`).
+        Question => "question",
+        /// Tells the owner something and asks nothing (`tell_owner`).
+        Note => "note",
+    }
+);
+
+/// Rows and chat items saved before notes existed are questions.
+impl Default for QuestionKind {
+    fn default() -> Self {
+        Self::Question
+    }
+}
 
 text_enum!(
     QuestionStatus, "question status" {
         /// Waiting for the owner.
         Open => "open",
         Answered => "answered",
-        /// Closed by the owner without an answer; the bot is not told.
+        /// Closed by the owner without an answer; the bot is not told. A
+        /// note seen, or whose bot the owner wrote to since, is this too.
         Dismissed => "dismissed",
     }
 );
@@ -32,9 +52,13 @@ pub struct Question {
     pub id: QuestionId,
     pub crew_id: CrewId,
     pub bot_id: BotId,
-    /// What the bot asks, markdown.
+    /// A question or a note.
+    #[serde(default)]
+    pub kind: QuestionKind,
+    /// What the bot asks, or tells, markdown.
     pub text: String,
-    /// Ready answers the owner may pick; empty for a free answer only.
+    /// Ready answers the owner may pick; empty for a free answer only, and
+    /// for a note.
     pub options: Vec<String>,
     pub status: QuestionStatus,
     /// What the owner answered; `null` unless `answered`.

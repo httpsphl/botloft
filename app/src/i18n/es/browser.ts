@@ -65,8 +65,9 @@ export const browser: Messages["browser"] = {
   site: {
     wants: (bot) => `${bot} quiere usar el navegador en`,
     asks: (bot, site) => `${bot} pide usar ${site}`,
-    why: "Cuando permites un sitio, no vuelve a preguntar por él.",
+    why: "Cuando permites un sitio, no vuelve a preguntar por él. Solo esta vez dura hasta que el agente termine lo que está haciendo ahora.",
     allowed: (site) => `Permitiste ${site}`,
+    allowedOnce: (site) => `Permitiste ${site}, solo esta vez`,
     denied: (site) => `Rechazaste ${site}`,
     expired: (site) => `Sin respuesta sobre ${site}`,
   },

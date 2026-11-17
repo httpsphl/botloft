@@ -14,6 +14,7 @@ use serde_json::{Value, json};
 
 use super::calls::{explain, parse, tool_result};
 use crate::approvals::{self, Answer};
+use crate::seat::Seat;
 use crate::service::{ApiError, ApiResult, bots, routines};
 use crate::state::Daemon;
 
@@ -22,6 +23,9 @@ use crate::state::Daemon;
 pub(super) const PROMPT_MAX: usize = 8_000;
 /// Used when the system's zone has no IANA name.
 const FALLBACK_ZONE: &str = "UTC";
+/// How far ahead a bot may set a return to its own work without the
+/// owner (spec 20.12).
+const REMINDER_WITHIN_MS: i64 = 24 * 60 * 60 * 1000;
 
 /// The tool's input, and what the owner sends back when they change it.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,6 +59,14 @@ impl Proposal {
     }
 }
 
+/// Creates the routine, kept in the conversation that asked when it is the
+/// agent's own.
+fn create(daemon: &Daemon, seat: &Seat, params: RoutinesCreateParams) -> ApiResult<Routine> {
+    let routine = routines::create(daemon, params)?;
+    crate::service::replies::keep_routine(daemon, seat, &routine);
+    Ok(routine)
+}
+
 pub(super) async fn schedule(
     daemon: &Daemon,
     bot: &BotId,
@@ -71,6 +83,15 @@ async fn run(
     arguments: Value,
 ) -> Result<Value, String> {
     let mut proposal: Proposal = parse(arguments)?;
+    // What it makes for itself fires in this conversation (spec 40.2).
+    let seat = Seat::new(
+        bot.clone(),
+        daemon.supervisor.conversation_of(bot, generation),
+    );
+    // Only the daemon marks a reminder (spec 20.12).
+    if let Schedule::Once { reminder, .. } = &mut proposal.schedule {
+        *reminder = None;
+    }
     if proposal.prompt.chars().count() > PROMPT_MAX {
         return Err(format!("prompt must be at most {PROMPT_MAX} characters"));
     }
@@ -81,11 +102,27 @@ async fn run(
     let params = proposal.params(target.clone());
     routines::check(daemon, &params).map_err(explain)?;
 
+    // A return to its own work within a day needs nobody: it runs once
+    // and goes (spec 20.12).
+    if target == *bot && reminder_soon(daemon, &params) {
+        let mut params = params;
+        if let Schedule::Once { reminder, .. } = &mut params.schedule {
+            *reminder = Some(true);
+        }
+        let routine = create(daemon, &seat, params).map_err(explain)?;
+        return Ok(created_note(
+            &routine,
+            "It is a one-time return to your own work within a day, so it was set without \
+             asking the owner, who sees it in your chat and may cancel it. It goes once it \
+             has run.",
+        ));
+    }
+
     let mode = bots::find(&daemon.store(), bot)
         .map_err(explain)?
         .permission_mode;
     if mode == PermissionMode::BypassPermissions {
-        let routine = routines::create(daemon, params).map_err(explain)?;
+        let routine = create(daemon, &seat, params).map_err(explain)?;
         return Ok(created_note(
             &routine,
             "You bypass permissions, so it was created without asking the owner.",
@@ -94,16 +131,17 @@ async fn run(
 
     let input = serde_json::to_value(&proposal).map_err(|err| err.to_string())?;
     match approvals::ask(daemon, bot, generation, ROUTINE_TOOL, &input, "").await {
-        Some(Answer::Allowed { input: None }) => {
-            let routine = routines::create(daemon, params).map_err(explain)?;
+        Some(Answer::Allowed { input: None, .. }) => {
+            let routine = create(daemon, &seat, params).map_err(explain)?;
             Ok(created_note(&routine, "The owner approved it."))
         }
         Some(Answer::Allowed {
             input: Some(changed),
+            ..
         }) => {
             let changed: Proposal = serde_json::from_str(&changed)
                 .map_err(|err| format!("the owner's changes could not be read: {err}"))?;
-            let routine = routines::create(daemon, changed.params(target)).map_err(explain)?;
+            let routine = create(daemon, &seat, changed.params(target)).map_err(explain)?;
             Ok(created_note(
                 &routine,
                 "The owner changed it before approving it: read the name, prompt and schedule \
@@ -126,6 +164,18 @@ async fn run(
         })),
         None => Err("Botloft could not ask the owner.".to_owned()),
     }
+}
+
+/// A one-time routine for the bot itself, due within a day.
+fn reminder_soon(daemon: &Daemon, params: &RoutinesCreateParams) -> bool {
+    if !matches!(params.schedule, Schedule::Once { .. }) {
+        return false;
+    }
+    let now = daemon.clock.now_ms();
+    crate::routines::schedule::Plan::new(&params.schedule, &params.timezone)
+        .ok()
+        .and_then(|plan| plan.next_after(now, now))
+        .is_some_and(|at| at - now <= REMINDER_WITHIN_MS)
 }
 
 /// The owner's changes to a request (`approvals.answer`), checked before
@@ -169,7 +219,7 @@ fn target(
 
 /// The computer's time zone, as the app sends it when the owner creates a
 /// routine (spec 20.2).
-fn system_zone() -> String {
+pub(super) fn system_zone() -> String {
     jiff::tz::TimeZone::system()
         .iana_name()
         .map_or_else(|| FALLBACK_ZONE.to_owned(), str::to_owned)

@@ -7,15 +7,17 @@ export const desktop = {
     asks: (bot: string, app: string) => `${bot} asks to see ${app}`,
     because: (bot: string) => `${bot} says:`,
     means: (bot: string) =>
-      `${bot} will read this app's windows and take pictures of them while you are at your computer. Never your passwords. You can take it back in ${bot}'s details.`,
+      `${bot} will read this app's windows and take pictures of them while you are at your computer. Never your passwords. You can take it back in Settings, under Permissions.`,
     allowed: (bot: string, app: string) => `${bot} can see ${app}`,
+    allowedOnce: (bot: string, app: string) => `${bot} can see ${app}, only this time`,
     denied: (bot: string, app: string) => `${bot} may not see ${app}`,
     expired: (app: string) => `No answer about ${app}`,
     wantsUse: (bot: string) => `${bot} wants to use`,
     asksUse: (bot: string, app: string) => `${bot} asks to use ${app}`,
     meansUse: (bot: string) =>
-      `${bot} will click, type and choose in this app's windows as you would, without moving your mouse, while you are at your computer. Every action shows in this chat. Never in password fields. You can take it back in ${bot}'s details.`,
+      `${bot} will click, type and choose in this app's windows as you would, without moving your mouse, while you are at your computer. Every action shows in this chat. Never in password fields. You can take it back in Settings, under Permissions.`,
     allowedUse: (bot: string, app: string) => `${bot} can use ${app}`,
+    allowedUseOnce: (bot: string, app: string) => `${bot} can use ${app}, only this time`,
     deniedUse: (bot: string, app: string) => `${bot} may not use ${app}`,
   },
   panel: {
@@ -48,9 +50,6 @@ export const desktop = {
     close: "Close",
   },
   grants: {
-    title: "Your desktop",
-    none: (bot: string) =>
-      `${bot} cannot see any app on your computer. It asks in the chat the first time it needs one.`,
     see: "Can see",
     act: "Can see and use",
     whole: "The whole desktop",
@@ -79,10 +78,6 @@ export const desktop = {
     ],
     awayUnderstood: "I understand the risks",
     awayConfirm: "Turn on",
-    giveWhole: "Give the whole desktop",
-    wholeFailed: "Could not give the whole desktop",
-    wholeTitle: (bot: string) => `Give ${bot} your whole desktop?`,
-    wholeLevel: "What it may do",
     wholeRisks: (bot: string) => [
       `${bot} sees every window open on your computer, personal data, emails, chats and client data included, and pictures of the whole screen.`,
       `It reads any app without asking you first. If you choose "Can see and use", it also clicks and types in any of them.`,
@@ -90,7 +85,6 @@ export const desktop = {
       `Text in an app or a message can try to trick ${bot} into doing something else.`,
       "Never, not even then: Botloft itself, apps running as administrator, terminals and command boxes, the Task Manager, password managers and password fields. They are covered in black in its pictures.",
     ],
-    wholeConfirm: "Give it",
   },
   away: {
     label: "While you were away",

@@ -34,6 +34,7 @@ async fn codex_bot() -> Codex {
     let crew = crews::create(
         &parts.daemon,
         CrewsCreateParams {
+            auto_mode: None,
             name: "Ops".into(),
             work_folder: None,
             lead: None,
@@ -175,6 +176,13 @@ async fn a_codex_bot_starts_its_server_with_the_owners_things_off_and_its_own_mc
     let workspace = process.spec.cwd.clone();
     let rules = std::fs::read_to_string(workspace.join("AGENTS.md")).expect("AGENTS.md");
     assert!(rules.contains("Scout") && rules.contains("Keep notes."));
+}
+
+#[tokio::test(start_paused = true)]
+async fn a_codex_bot_cannot_ask_for_the_claude_ai_tools() {
+    let codex = codex_bot().await;
+    // ask_connector refuses it before the owner is asked (spec 34.6).
+    assert!(!botloftd::connectors::on_claude(&codex.daemon, &codex.bot));
 }
 
 #[tokio::test(start_paused = true)]
@@ -383,6 +391,7 @@ fn owner(codex: &Codex, approval: &botloft_core::protocol::ApprovalItem, allow: 
             note: None,
             input: None,
             always: None,
+            once: None,
         },
     )
     .expect("answered");
@@ -471,6 +480,7 @@ async fn a_folder_botloft_fences_is_refused_without_asking() {
     let other = crews::create(
         &codex.daemon,
         CrewsCreateParams {
+            auto_mode: None,
             name: "Other".into(),
             work_folder: None,
             lead: None,
@@ -629,6 +639,15 @@ async fn a_usage_limit_pauses_the_bot_until_the_account_resets() {
         |body| matches!(body, ChatBody::Notice(notice) if notice.text.contains("usage limit")),
     );
     assert!(said);
+    // The cut turn goes on once the limit resets (spec 7.3).
+    let note = botloftd::service::resume::NOTE;
+    assert!(
+        codex
+            .daemon
+            .store()
+            .unread_note(&codex.bot, note)
+            .expect("query")
+    );
 }
 
 #[tokio::test(start_paused = true)]
@@ -640,8 +659,9 @@ async fn the_owner_can_compact_a_codex_conversation() {
 
     botloftd::context::compact(
         &codex.daemon,
-        botloft_core::protocol::BotIdParams {
+        botloft_core::protocol::BotConversationParams {
             bot_id: codex.bot.clone(),
+            conversation_id: None,
         },
     )
     .expect("compact");

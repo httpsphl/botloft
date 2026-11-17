@@ -134,6 +134,22 @@ impl ApiError {
         )
     }
 
+    pub fn file_too_big() -> Self {
+        Self::new(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "too_big",
+            "A file from a phone may be 20 MB at most.",
+        )
+    }
+
+    pub fn files_waiting() -> Self {
+        Self::new(
+            StatusCode::TOO_MANY_REQUESTS,
+            "queue_full",
+            "Too many files wait for the computer. Send more once it takes them.",
+        )
+    }
+
     pub fn quota() -> Self {
         Self::new(
             StatusCode::PAYLOAD_TOO_LARGE,

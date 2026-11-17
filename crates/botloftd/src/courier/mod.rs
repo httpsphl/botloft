@@ -4,6 +4,7 @@
 
 mod context;
 mod render;
+mod requeue;
 mod settings;
 mod sleep;
 
@@ -11,15 +12,15 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use botloft_core::ids::BotId;
-use botloft_core::protocol::{AgentKind, BotState, Delivery, Message, SenderKind, Task};
+use botloft_core::protocol::{AgentKind, BotState, Delivery, Message, Question, SenderKind, Task};
 use botloft_store::{DeliveryOutcome, Store, StoreError};
 use tokio::sync::Notify;
 use tracing::{debug, warn};
 
 use self::render::{Context, Rendered, render};
+pub use self::requeue::{requeue_left_behind, requeue_unread};
 pub use self::settings::CourierSettings;
-use self::sleep::{became_ready, hasten, next_wait};
+use self::sleep::{became_ready, hasten, next_wait, rehome};
 use crate::agent::{self, ClaudeAgent};
 use crate::clock;
 use crate::service::tasks;
@@ -27,8 +28,6 @@ use crate::state::{Daemon, Event};
 
 /// How long to wait for a bot that cannot take messages yet (spec 9.1).
 const WAIT_FOR_BOT: Duration = Duration::from_secs(5);
-/// Why a delivery goes back in the queue after its process ended.
-const PROCESS_ENDED: &str = "the bot's process ended before it began this message";
 
 pub struct Courier {
     settings: CourierSettings,
@@ -96,7 +95,7 @@ fn cycle(daemon: &Arc<Daemon>) {
         }
         tasks::expire_overdue(daemon, &store, now);
         match store.due_deliveries(now) {
-            Ok(due) => due,
+            Ok(due) => rehome(&store, due),
             Err(err) => {
                 warn!("courier could not read the queue: {err}");
                 return;
@@ -163,8 +162,9 @@ fn send(
             return None;
         }
     }
-    let outcome = match daemon.supervisor.write_message(
+    let outcome = match daemon.supervisor.write_message_to(
         &delivery.bot_id,
+        &delivery.conversation_id,
         &rendered.uuid,
         rendered.line.clone(),
     ) {
@@ -198,9 +198,20 @@ fn prepare(daemon: &Daemon, store: &Store, delivery: &Delivery) -> Result<Step, 
     if bot.archived_at.is_some() || crew.archived_at.is_some() {
         return Ok(Step::Drop("the bot was archived"));
     }
+    // Each conversation has its own process (spec 40).
+    let conversation = &delivery.conversation_id;
+    let state = daemon
+        .supervisor
+        .status_of(conversation)
+        .map(|(state, _)| state);
+    if state == Some(BotState::Sleeping) {
+        // It wakes, and the delivery goes once it is ready (spec 7.7).
+        daemon.supervisor.wake_conversation(conversation);
+        return Ok(Step::Wait);
+    }
     let ready = matches!(
-        daemon.supervisor.status(&bot.id),
-        Some((BotState::Idle | BotState::Busy | BotState::NeedsApproval, _))
+        state,
+        Some(BotState::Idle | BotState::Busy | BotState::NeedsApproval)
     );
     if !ready {
         return Ok(Step::Wait);
@@ -223,6 +234,7 @@ fn prepare(daemon: &Daemon, store: &Store, delivery: &Delivery) -> Result<Step, 
     let sender = sender.map(|sender| sender.handle);
     let routine = context::routine(store, &message)?;
     let question = context::question(store, &message)?;
+    let card = context::card(store, &message)?;
     let reactions = store
         .reactions_sent_in(&message.id)?
         .into_iter()
@@ -238,6 +250,7 @@ fn prepare(daemon: &Daemon, store: &Store, delivery: &Delivery) -> Result<Step, 
         task,
         routine,
         question,
+        card,
         reactions,
     })))
 }
@@ -252,8 +265,10 @@ struct Draft {
     task: Option<Task>,
     workspace: PathBuf,
     routine: Option<context::RoutineContext>,
-    /// The question an answer is for: its id and text.
-    question: Option<(String, String)>,
+    /// The question an answer is for, or the note a reply is for.
+    question: Option<Question>,
+    /// The card the owner's answer is on: its id and title.
+    card: Option<(String, String)>,
     /// The owner's reactions it takes to the bot: emoji and quote.
     reactions: Vec<(String, String)>,
 }
@@ -268,46 +283,15 @@ impl Draft {
             task: self.task.as_ref(),
             workspace: &self.workspace,
             routine: self.routine.as_ref(),
-            question: self
-                .question
+            question: self.question.as_ref(),
+            card: self
+                .card
                 .as_ref()
-                .map(|(id, text)| (id.as_str(), text.as_str())),
+                .map(|(id, title)| (id.as_str(), title.as_str())),
             reactions: &self.reactions,
         };
         // Only agents the daemon runs get this far; the bot was checked at launch.
         let agent = agent::of(self.agent).unwrap_or(&ClaudeAgent);
         render(&self.message, &context, now, agent)
     }
-}
-
-/// The process of `generation` ended: what it never began goes back in
-/// the queue, counting an attempt (spec 9.1).
-pub fn requeue_unread(daemon: &Daemon, bot: &BotId, generation: u64) {
-    let now = daemon.clock.now_ms();
-    let store = daemon.store();
-    let unread = match store.unread_deliveries(bot, generation) {
-        Ok(unread) => unread,
-        Err(err) => {
-            warn!(bot = %bot, "could not read unread deliveries: {err}");
-            return;
-        }
-    };
-    let settings = &daemon.courier.settings;
-    for delivery in unread {
-        let attempts = delivery.attempts + 1;
-        let retry_at = (attempts < settings.max_attempts)
-            .then(|| clock::after(now, settings.retry_delay(attempts)));
-        match store.reopen_unread(&delivery.id, PROCESS_ENDED, retry_at, now) {
-            Ok(Some(changed)) => {
-                if retry_at.is_none() {
-                    warn!(delivery = %changed.id, bot = %bot, "gave up on a delivery");
-                }
-                daemon.emit(Event::DeliveryChanged(changed));
-            }
-            Ok(None) => {}
-            Err(err) => warn!(delivery = %delivery.id, "could not requeue: {err}"),
-        }
-    }
-    drop(store);
-    daemon.courier.wake();
 }

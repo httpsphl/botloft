@@ -4,6 +4,13 @@ export const crews: Messages["crews"] = {
   newCrew: "Nuevo equipo",
   newBot: "Nuevo agente",
   rename: "Renombrar",
+  /** The crew's automatic mode (spec 7.4): a switch in the new-crew form and in the crew's header. */
+  autoMode: {
+    label: "Modo automático",
+    short: "Automático",
+    hint: "Todos los agentes de este equipo trabajan sin preguntar en cada paso, incluidos los que añadas después. Lo que sea arriesgado sigue llegando a ti.",
+    failed: "No se pudo cambiar el modo automático",
+  },
   paused: "En pausa",
   sidebar: {
     menuOf: (crew) => `Acciones de ${crew}`,
@@ -11,6 +18,7 @@ export const crews: Messages["crews"] = {
     noMessages: "Aún no hay mensajes",
     fromOwner: (text: string) => `Tú: ${text}`,
     awaitingApproval: (text: string) => `Esperando aprobación: ${text}`,
+    showedPlan: (text: string) => `Plan: ${text}`,
     unread: "sin leer",
     unreadCount: (count: number) => `${count} sin leer`,
     moveUp: "Mover arriba",
@@ -115,6 +123,8 @@ export const crews: Messages["crews"] = {
     emptyHint:
       "Un agente es una sesión de Claude Code que sigue en marcha, con su propia carpeta y su rol.",
     noRole: "Aún sin rol.",
+    lastActive: (when: string) => `Última actividad: ${when}`,
+    nothingYet: "Nada hecho aún",
   },
   tasks: {
     show: "Mostrar",

@@ -25,6 +25,10 @@ pub(super) fn describe(err: &DesktopError) -> String {
         DesktopError::Minimized => "That window is minimized, so there is nothing to see in it. \
             Ask the owner to bring it back if you need it."
             .to_owned(),
+        DesktopError::NotResponding => "That app is not responding right now (busy or frozen), \
+            so its window cannot be pictured. Try again in a moment; if it stays like this, tell \
+            the owner."
+            .to_owned(),
         DesktopError::System(why) => format!("Windows could not do it: {why}"),
         DesktopError::NotThere => "That control is not in the window anymore. Call desktop_look \
             to read the window again."
@@ -148,6 +152,14 @@ pub(super) async fn granted(
         "why": why,
     });
     match approvals::ask(daemon, bot, generation, DESKTOP_TOOL, &input, "").await {
+        Some(Answer::Allowed { once: true, .. }) => {
+            let now = daemon.clock.now_ms();
+            daemon
+                .approvals
+                .this_turn
+                .allow_app(bot, &path, &app.name, level, now);
+            Ok(window)
+        }
         Some(Answer::Allowed { .. }) => {
             daemon
                 .store()

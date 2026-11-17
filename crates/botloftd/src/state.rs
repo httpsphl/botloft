@@ -6,11 +6,12 @@ use std::sync::{Arc, Mutex, MutexGuard, TryLockError};
 use std::time::Instant;
 
 use botloft_core::protocol::{
-    AccountUsage, AgentUsage, AutoBackupStatus, Bot, BotContextChanged, BotDeleted, BotDesktop,
-    BotMcp, BotRules, BotStateChanged, BrowserAction, BrowserState, ChatDelta, ChatItemChanged,
-    CloudProgress, CloudSignedIn, Crew, CrewDeleted, Delivery, DesktopAwayUse, DesktopState,
-    FolderRecycled, McpOverview, Message, MobilePairRequest, MobileStatus, Question,
-    ReactionChanged, Routine, RoutineRun, ScreenDraft, Task,
+    AccountUsage, AgentUsage, AutoBackupStatus, Bot, BotBackgroundChanged, BotContextChanged,
+    BotDeleted, BotDesktop, BotMcp, BotRules, BotSites, BotStateChanged, BrowserAction,
+    BrowserState, ChatDelta, ChatItemChanged, CloudProgress, CloudSignedIn, Crew, CrewDeleted,
+    Delivery, DesktopAwayUse, DesktopState, FolderRecycled, McpOverview, Message,
+    MobilePairRequest, MobileStatus, Question, ReactionChanged, Routine, RoutineRun, ScreenDraft,
+    Task, TextVersion,
 };
 use botloft_store::Store;
 use tokio::runtime::{Handle, RuntimeFlavor};
@@ -43,10 +44,15 @@ pub enum Event {
     FolderRecycled(FolderRecycled),
     BotState(BotStateChanged),
     BotContext(BotContextChanged),
+    BotBackground(BotBackgroundChanged),
     BotRules(BotRules),
     BotDesktop(BotDesktop),
+    BotSites(BotSites),
+    BotChrome(botloft_core::protocol::BotChrome),
+    ChromeTurn(botloft_core::protocol::ChromeTurn),
     McpServers(McpOverview),
     BotMcp(BotMcp),
+    LoginsChanged(botloft_core::protocol::LoginsChanged),
     DesktopChanged(DesktopState),
     DesktopAway(Vec<DesktopAwayUse>),
     ChatItem(ChatItemChanged),
@@ -56,6 +62,8 @@ pub enum Event {
     TaskChanged(Task),
     RoutineChanged(Routine),
     RoutineRun(RoutineRun),
+    /// A new version of a bot's memory or instructions (spec 8.10).
+    VersionCreated(TextVersion),
     BrowserChanged(BrowserState),
     BrowserAction(BrowserAction),
     ScreenDraft(ScreenDraft),
@@ -67,6 +75,13 @@ pub enum Event {
     AutoBackupChanged(AutoBackupStatus),
     MobileChanged(MobileStatus),
     MobilePairRequest(MobilePairRequest),
+    /// A conversation's process changed state (spec 40.4); the bot's own
+    /// `BotState` is the summary of these.
+    SeatState(crate::seat::SeatState),
+    /// A conversation's context or background changed: the daemon tells
+    /// the apps once it has read the rest (spec 40.5).
+    ConversationTouched(crate::seat::Seat),
+    ConversationChanged(botloft_core::protocol::Conversation),
 }
 
 /// Events buffered per connection before a slow client is dropped.
@@ -126,8 +141,12 @@ pub struct Daemon {
     pub settings: LiveSettings,
     pub approvals: Approvals,
     pub routines: Routines,
+    /// Each bot's last failed turn, for its crew's chief (spec 10.6).
+    pub failures: crate::failures::Failures,
     pub browsers: Browsers,
     pub screens: Screens,
+    /// The links the app plays sounds and videos from (spec 8.4).
+    pub media: crate::media::Media,
     pub desktop: Desktop,
     /// The account and the copies in the cloud (spec 27).
     pub cloud: crate::cloud::Cloud,
@@ -138,11 +157,27 @@ pub struct Daemon {
     /// Other crews a bot may reach for its current turn (spec 10.4).
     pub crew_access: crate::service::crew_access::TurnAccess,
     /// What each bot's process had cost by its last turn (spec 8.7).
-    pub costs: crate::service::plan::CostMeter,
+    pub costs: crate::service::costs::CostMeter,
+    /// Reads the plan from the owner's Claude account (spec 8.13).
+    pub plan_reader: crate::plan_usage::PlanReader,
     pub trash: Arc<dyn Trash>,
     pub contexts: Contexts,
+    pub background: crate::background::Backgrounds,
+    pub connectors: crate::connectors::Connectors,
+    /// Titles made by AI for conversations (spec 40.6).
+    pub titles: crate::titles::Titles,
+    /// The owner's own Chrome: tabs and turn (spec 37).
+    pub chrome: crate::chrome::Chrome,
+    /// Where the owner's plugins are looked for, and their copies (spec 41).
+    pub plugins: crate::plugins::Plugins,
+    /// Where the owner's skills are looked for (spec 38).
+    pub skills: crate::skills::Skills,
+    /// The shared site logins' window and profile (spec 35).
+    pub logins: crate::logins::Logins,
     /// How each bot's connected tools stand since it started (spec 25.5).
     pub mcp_states: crate::service::mcp_state::McpStates,
+    /// The values of the agents' keys, read from their files (spec 32).
+    pub keys: crate::agent_keys::KeyVault,
     /// Time for everything stored or compared with stored times.
     pub clock: Arc<dyn Clock>,
     store: Mutex<Store>,
@@ -173,6 +208,7 @@ impl Daemon {
             settings: options.settings,
             approvals: Approvals::default(),
             routines: Routines::default(),
+            failures: Default::default(),
             browsers: Browsers::new(
                 options.browser,
                 &options.paths.home,
@@ -180,6 +216,7 @@ impl Daemon {
                 Arc::clone(&options.clock),
             ),
             screens: Screens::default(),
+            media: crate::media::Media::default(),
             desktop: Desktop::new(options.owner_idle),
             autobackup: crate::autobackup::AutoBackup::new(
                 &options.paths.home,
@@ -190,9 +227,18 @@ impl Daemon {
             cloud: crate::cloud::Cloud::new(options.cloud),
             crew_access: Default::default(),
             costs: Default::default(),
+            plan_reader: Default::default(),
             trash: options.trash,
             contexts: Contexts::default(),
+            background: Default::default(),
+            connectors: Default::default(),
+            titles: Default::default(),
+            chrome: Default::default(),
+            plugins: Default::default(),
+            skills: Default::default(),
+            logins: Default::default(),
             mcp_states: Default::default(),
+            keys: Default::default(),
             clock: options.clock,
             paths: options.paths,
             port: options.port,
@@ -253,11 +299,21 @@ impl Daemon {
             .clone()
     }
 
+    /// What the agents' Claude Code saw (spec 8.1), over the account's
+    /// reading when there is one.
     pub(crate) fn set_usage(&self, usage: AccountUsage) {
-        *self
-            .usage
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(usage);
+        let mut current = self.usage.lock().unwrap_or_else(|p| p.into_inner());
+        crate::plan_usage::merge(&mut current, usage);
+    }
+
+    /// The windows read from the owner's Claude account (spec 8.13).
+    pub(crate) fn set_account_windows(
+        &self,
+        windows: Vec<botloft_core::protocol::UsageWindow>,
+        now: i64,
+    ) {
+        let mut current = self.usage.lock().unwrap_or_else(|p| p.into_inner());
+        crate::plan_usage::from_account(&mut current, windows, now);
     }
 
     /// The account usage the agents other than Claude Code last reported.

@@ -8,6 +8,7 @@ use botloft_store::BotRecord;
 use serde_json::{Value, json};
 
 use super::memory;
+use super::sections::{LEAD_MD, MAKER_MD, MEMORY_MD, PLAN_FIRST_MD};
 use crate::paths::permission_rule_path;
 
 /// Longer than the approval timeout, so Claude Code never gives up on a
@@ -17,7 +18,9 @@ const MCP_TIMEOUT_MARGIN: Duration = Duration::from_secs(120);
 /// `.claude/settings.json` (spec 7.5): keeps the bot out of the daemon's
 /// secrets, out of `fenced` (Botloft's data and the other crews' folders,
 /// see `fences`) and the owner's own Claude Code memory out of the bot.
-/// Deny rules apply even in a folder nobody trusted, and in every mode.
+/// Deny rules apply even in a folder nobody trusted, and in every mode. The
+/// ask rule sends every tool of the owner's Chrome to `permission_prompt`,
+/// in every mode too (spec 37.3).
 pub fn settings_json(botloft_home: &Path, crew_dir: &Path, fenced: &[PathBuf]) -> Value {
     let secrets = permission_rule_path(&botloft_home.join("secrets"));
     let mut deny = vec![format!("Read({secrets}/**)")];
@@ -27,7 +30,7 @@ pub fn settings_json(botloft_home: &Path, crew_dir: &Path, fenced: &[PathBuf]) -
         deny.push(format!("Edit({folder}/**)"));
     }
     json!({
-        "permissions": { "deny": deny },
+        "permissions": { "deny": deny, "ask": [crate::chrome::RULE_TOOL] },
         // Instruction files above the crew's folder are the owner's.
         "claudeMdExcludes": memory::excludes_above(crew_dir),
         // The bot's memory is the `CLAUDE.md` in its folder. Claude Code's
@@ -57,44 +60,10 @@ pub fn mcp_json(port: u16, approval_timeout: Duration) -> Value {
 pub const CLAUDE_MD: &str = "\
 # Memory
 
-This file is your long-term memory. It is loaded at the start of every
-session, including after restarts. Keep decisions, context about ongoing
-work and lessons learned here, and remove what is no longer true.
-";
-
-/// Added to the rules of the crew's chief (spec 10.2).
-const LEAD_MD: &str = "
-## You lead this crew
-
-The owner made you the chief of this crew: its goal is in your instructions.
-
-- Plan the work, split it into pieces that can run at the same time, and hand
-  them out with `send_message` and `kind: \"task\"`. Each bot works in
-  parallel; results come back as messages. Check them before you report.
-- When a piece needs a specialist the crew lacks, look at the bot catalog first:
-  `list_bot_templates` shows ready-made roles and `get_bot_template` reads one.
-  If a role fits, call `suggest_bot` with its id in `template`, a name and why
-  the crew needs it; add `instructions` only for what is specific to this
-  crew, and do not invent a role the catalog already has. If none fits, call
-  `suggest_bot` with a name, a one-line role, instructions written to that
-  bot, a model and why it helps. The owner approves each new bot in your chat
-  and may change it (unless you bypass permissions). Then give it work with a
-  task.
-- Pick the model by the work: `haiku` for simple, repetitive tasks, `sonnet`
-  for most work, `opus` or `fable` only for the hardest reasoning. Leave it out
-  to use the owner's plan default. Stronger models use up the owner's plan
-  faster.
-- Keep the crew small: do small jobs yourself and prefer a bot that already
-  exists (`crew_roster`).
-- When the owner asks you to rename or change another bot of the crew, call
-  `change_bot` with its handle in `bot`; the owner approves that too.
-- Keep an eye on the cost: `crew_roster` shows each bot's model, effort and
-  `week_plan_percent`, about how much of the owner's weekly plan it used.
-  When a bot's work turns out simpler than its model or effort (or harder),
-  propose a change with `change_bot` (`model`, `effort`) and say why; the
-  owner approves it. Simple, repetitive work: `haiku` and `low`.
-- Tell the owner what each bot is doing, so they can follow and talk to each
-  one in its own chat.
+This file is your long-term memory, loaded at the start of every
+conversation. Keep decisions, context about ongoing work and lessons
+learned here: one note per line, with the date and where it came from,
+and under 200 lines. Remove what is no longer true.
 ";
 
 /// `.claude/rules/botloft.md`: who the bot is and how to work with its crew.
@@ -110,11 +79,23 @@ pub fn rules_md(crew: &Crew, bot: &BotRecord, work_folder: &Path) -> String {
     } else {
         bot.instructions.as_str()
     };
-    let lead = if crew.lead_bot_id.as_ref() == Some(&bot.id) {
+    let lead = if crew.system.as_deref() == Some(botloft_core::protocol::MAKER_CREW) {
+        MAKER_MD
+    } else if crew.lead_bot_id.as_ref() == Some(&bot.id) {
         LEAD_MD
     } else {
         ""
     };
+    let plan = if bot.plan_first { PLAN_FIRST_MD } else { "" };
+    // Only Claude Code loads `CLAUDE.md` by itself (spec 30).
+    let memory = MEMORY_MD.replace(
+        "{loaded}",
+        if bot.agent == botloft_core::protocol::AgentKind::Claude {
+            "it is loaded whole at the start of every conversation"
+        } else {
+            "read it at the start of every conversation"
+        },
+    );
     format!(
         "<!-- Generated by Botloft. Edits are overwritten; change the bot in the Botloft app. -->
 
@@ -138,10 +119,13 @@ app; the other bots of your crew send you messages too.
   their chat as markdown: keep them short and clear, and say what you did.
 - Files the owner sends are saved in `attachments/` in this folder; the
   message lists them. Images also come inline.
-- When you finish a file for the owner (a report, a spreadsheet, an image),
-  call `share_file` with its path: they get a card in the chat to preview,
-  open and save it. Do the same when they ask again for a file you made.
-  Don't write the path in your reply instead.
+- When you finish a file for the owner (a report, a spreadsheet, an image,
+  a recording, a video), call `share_file` with its path: they get a card in
+  the chat to preview, open and save it, and sounds and videos play right
+  there. Do it also when a command or script made the file, and when they
+  ask again for a file you made. Save such files in the work folder or your
+  own folder, so they can be shared. Don't write the path in your reply
+  instead.
 - When you need a permission, the owner gets a request in the chat with
   Allow and Deny. If they deny it, find another way or ask them.
 - The owner may not be technical. Every time you run a command, fill in its
@@ -157,6 +141,9 @@ app; the other bots of your crew send you messages too.
   your crew. To change, pause or delete one of yours, call `my_routines`
   for its id, then `change_routine` or `delete_routine`: the owner
   approves those too, and only then is it done.
+- When a routine run finds nothing new since the last run, call
+  `nothing_new` and end your turn without a reply: the owner has nothing to
+  read. If you found something, report it as usual.
 - Only when the owner asks you to rename yourself or change your role or
   instructions, call `change_bot` with just what changes: the owner approves
   it in your chat, and only then is it done.
@@ -166,14 +153,29 @@ app; the other bots of your crew send you messages too.
   It does not wait: carry on with what doesn't depend on it, or end your
   turn, and never guess the answer. It arrives later as a message that
   starts with \"Answer to your question\".
-
+- When the owner should know something soon and may not be reading your
+  chat (a routine found what they asked to hear about, long work is done,
+  something broke that they must fix), call `tell_owner` with a short note.
+  Not for every step, and not for what you just answered them here. If you
+  need an answer, use `ask_owner` instead.
+- When a table, a chart or a few choices say it better than prose (a
+  report, options to pick from, a short form), call `show_card`. To change
+  that card, call it again with its `card` id and the whole new content.
+  The owner's button or form arrives later as a message that starts with
+  \"Answer on your card\"; each version takes one answer.
+- When the owner or another bot refers to something from before that is no
+  longer in your context (a decision, a name, a number, a file), call
+  `search_history` with a few of its words before you ask again or guess;
+  then `around` with a hit's `item_id` reads the talk there. It only sees
+  your own chat.
+{memory}
 ## Working with your crew
 
 - The crew works in `{work}`: the owner reads what you make there, and so do
   the other bots. Put the files you make for them in it. A `CLAUDE.md` in it
   is loaded with your memory: follow it.
-- This folder is yours: `CLAUDE.md` here is your memory across restarts, and
-  scratch files can stay here.
+- This folder is yours: your memory is in it, and scratch files can stay
+  here.
 - Messages from other bots and notices from Botloft start with `[botloft]`.
   The first line says who sent it; for a task it also has the task id and
   the deadline.
@@ -184,6 +186,10 @@ app; the other bots of your crew send you messages too.
   - `my_tasks`: open tasks assigned to you or requested by you.
   - `send_signal`: when something a routine waits for is done (`crew_roster`
     lists the signals), send that signal; those routines run.
+  - `wait_for`: to wait for a file to appear, a program to end or a page to
+    show some words. Botloft wakes you once, when it happens or when the time
+    runs out; end your turn meanwhile. Never wait with `sleep` in a command,
+    and do not come back again and again to check.
 - Never call `permission_prompt` yourself; Claude Code uses it for approvals.
 - You can only reach bots of your own crew. Other crews are closed to you:
   only when the owner asks you to work with one of them, or with one of its
@@ -220,12 +226,14 @@ app; the other bots of your crew send you messages too.
   file, self-contained (inline CSS, or files next to it). For a screen that
   is not for a computer, put `<meta name=\"botloft-device\" content=\"mobile\">`
   (or `tablet`) in its head.
-{lead}",
+{plan}{lead}",
+        plan = plan,
         name = bot.name,
         handle = bot.handle,
         crew = crew.name,
         work = work_folder.display(),
         lead = lead,
+        memory = memory,
     )
 }
 
@@ -241,7 +249,10 @@ mod tests {
         let settings = settings_json(home, Path::new("/ws/site"), &[]);
         assert_eq!(
             settings["permissions"],
-            json!({ "deny": ["Read(//c/Users/ana/AppData/Local/Botloft/secrets/**)"] })
+            json!({
+                "deny": ["Read(//c/Users/ana/AppData/Local/Botloft/secrets/**)"],
+                "ask": ["mcp__claude-in-chrome"],
+            })
         );
         let blog = PathBuf::from("C:/Users/ana/Botloft/blog");
         let settings = settings_json(home, Path::new("/ws/site"), &[blog]);
@@ -296,6 +307,8 @@ mod tests {
             lead_bot_id: None,
             paused: false,
             color: None,
+            auto_mode: false,
+            system: None,
             created_at: 0,
             archived_at: None,
         };
@@ -313,6 +326,7 @@ mod tests {
             agent: botloft_core::protocol::AgentKind::Claude,
             agent_model: None,
             allowed_commands: Vec::new(),
+            plan_first: false,
             model: botloft_core::protocol::BotModel::Default,
             model_in_use: None,
             effort: botloft_core::protocol::BotEffort::Default,
@@ -331,9 +345,14 @@ mod tests {
         assert!(rules.contains("`browser_*` tools"));
         assert!(rules.contains("`schedule_routine`"));
         assert!(rules.contains("`change_routine` or `delete_routine`"));
+        assert!(rules.contains("call\n  `nothing_new` and end your turn without a reply"));
         assert!(rules.contains("call `change_bot` with just what changes"));
         assert!(rules.contains("call `ask_crew_access` with its name"));
         assert!(rules.contains(r#"<meta name="botloft-device" content="mobile">"#));
+        assert!(rules.contains("\n## Your memory\n"));
+        assert!(rules.contains("Keep it under 200 lines"));
+        assert!(rules.contains("go in a file in `memory/`"));
+        assert!(rules.contains("your memory: it is loaded whole"));
         assert!(!rules.contains("You lead this crew"));
 
         let chief = Crew {
@@ -343,6 +362,7 @@ mod tests {
         let rules = rules_md(&chief, &bot, Path::new("/ws/site/shared"));
         assert!(rules.contains("## You lead this crew"));
         assert!(rules.contains("`suggest_bot`"));
+        assert!(rules.contains("try again with `retry_agent`"));
         assert!(rules.contains("handle in `bot`"));
         assert!(rules.contains("propose a change with `change_bot` (`model`, `effort`)"));
     }

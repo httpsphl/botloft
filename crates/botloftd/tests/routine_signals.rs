@@ -121,6 +121,7 @@ async fn only_enabled_routines_of_the_crew_hear_a_signal() {
     let elsewhere = crews::create(
         &s.daemon,
         CrewsCreateParams {
+            auto_mode: None,
             name: "Home".into(),
             work_folder: None,
             lead: None,

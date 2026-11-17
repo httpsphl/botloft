@@ -34,6 +34,7 @@ async fn agy_bot() -> Agy {
     let crew = crews::create(
         &parts.daemon,
         CrewsCreateParams {
+            auto_mode: None,
             name: "Ops".into(),
             work_folder: None,
             lead: None,
@@ -421,6 +422,7 @@ async fn an_agy_bot_starts_without_claude_code_and_a_claude_bot_stays_offline() 
     let crew = crews::create(
         &parts.daemon,
         CrewsCreateParams {
+            auto_mode: None,
             name: "Ops".into(),
             work_folder: None,
             lead: None,
@@ -494,6 +496,7 @@ async fn the_commands_the_owner_allows_reach_the_rules_of_the_next_process() {
                 "npm test".into(),
                 "git status".into(),
             ]),
+            plan_first: None,
         },
     )
     .expect("update");
@@ -517,6 +520,7 @@ async fn the_commands_the_owner_allows_reach_the_rules_of_the_next_process() {
             instructions: None,
             color: None,
             allowed_commands: Some(vec!["a) b".into()]),
+            plan_first: None,
         },
     );
     assert!(refused.is_err());
@@ -559,6 +563,7 @@ async fn new_bots_and_the_chief_follow_the_default_agent() {
     let crew = crews::create(
         &agy.daemon,
         CrewsCreateParams {
+            auto_mode: None,
             name: "Docs".into(),
             work_folder: None,
             lead: Some(botloft_core::protocol::NewLead {
@@ -577,4 +582,28 @@ async fn new_bots_and_the_chief_follow_the_default_agent() {
         .expect("read")
         .expect("bot");
     assert_eq!(chief.agent, AgentKind::Agy);
+}
+
+#[tokio::test(start_paused = true)]
+async fn an_agy_bot_cannot_be_stopped_mid_turn() {
+    let agy = agy_bot().await;
+    let process = agy.runtime.process(1).await;
+    agy.until(BotState::Idle).await;
+    agy.daemon
+        .supervisor
+        .write_message(&agy.bot, "u-1", "{}\n".into())
+        .expect("running");
+    agy.until(BotState::Busy).await;
+    let refused = botloftd::service::interrupt::interrupt(
+        &agy.daemon,
+        botloft_core::protocol::BotConversationParams {
+            bot_id: agy.bot.clone(),
+            conversation_id: None,
+        },
+    );
+    assert!(
+        matches!(refused, Err(botloftd::service::ApiError::Validation(_))),
+        "agy has no way to stop a turn"
+    );
+    assert_eq!(process.input_lines().len(), 1, "nothing else was written");
 }

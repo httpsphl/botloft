@@ -3,15 +3,17 @@
 //! MCP call waits here until the owner answers, the request times out, or
 //! the bot's process ends.
 
-mod always;
+pub(crate) mod always;
 mod prompt;
+mod turn;
 
 use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard};
+use std::time::Duration;
 
 use botloft_core::chat::{
-    CHANGE_ROUTINE_TOOL, CREW_ACCESS_TOOL, ROUTINE_TOOL, SUGGEST_TOOL, clip, tool_input_max,
-    tool_summary,
+    BROWSER_SITE_TOOL, BUILD_TOOL, CHANGE_ROUTINE_TOOL, CREW_ACCESS_TOOL, DESKTOP_TOOL,
+    ROUTINE_TOOL, SHOW_PLAN_TOOL, SUGGEST_TOOL, clip, tool_input_max, tool_summary,
 };
 use botloft_core::command::tool_explanation;
 use botloft_core::ids::{ApprovalId, BotId, ChatItemId};
@@ -24,7 +26,9 @@ use tokio::sync::oneshot;
 use tracing::{debug, warn};
 
 pub use self::prompt::{PromptArgs, prompt};
+pub use self::turn::{ThisTurn, forget_turns};
 use crate::chat::items;
+use crate::seat::Seat;
 use crate::service::{ApiError, ApiResult};
 use crate::state::Daemon;
 
@@ -33,6 +37,8 @@ use crate::state::Daemon;
 #[derive(Default)]
 pub struct Approvals {
     waiting: Mutex<HashMap<ApprovalId, oneshot::Sender<Decision>>>,
+    /// What the owner allowed only for a bot's turn (spec 24.2, 21.5).
+    pub this_turn: ThisTurn,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -40,6 +46,7 @@ struct Decision {
     allow: bool,
     note: Option<String>,
     input: Option<String>,
+    once: bool,
 }
 
 /// How the owner answered a request.
@@ -48,6 +55,9 @@ pub(crate) enum Answer {
     /// `input` is the request as the owner changed it, if they did.
     Allowed {
         input: Option<String>,
+        /// Only until the bot's turn ends, for an app on the desktop or a
+        /// site (spec 24.2, 21.5): the tool saves nothing.
+        once: bool,
     },
     Denied {
         note: Option<String>,
@@ -131,28 +141,83 @@ pub(crate) async fn ask_with(
     tool_use_id: &str,
     opened: impl FnOnce(&ApprovalId),
 ) -> Option<Answer> {
-    let (pending, waiting) = open(daemon, bot, tool_name, input, tool_use_id)?;
+    let (pending, waiting) = open(daemon, bot, generation, tool_name, input, tool_use_id)?;
     opened(&pending.record.approval.id);
-    daemon.supervisor.approval_opened(bot, generation);
+    let wait = Wait {
+        within: daemon.settings.approval_wait(),
+        needs_owner: true,
+    };
+    settle_after(daemon, bot, generation, &pending, waiting, wait).await
+}
+
+/// Puts a request in the bot's chat that settles by itself after `within`:
+/// the bot keeps working meanwhile, so it does not wait for the owner in
+/// the app's eyes (spec 10.5).
+pub(crate) async fn ask_briefly(
+    daemon: &Daemon,
+    bot: &BotId,
+    generation: u64,
+    tool_name: &str,
+    input: &Value,
+    within: Duration,
+) -> Option<Answer> {
+    let (pending, waiting) = open(daemon, bot, generation, tool_name, input, "")?;
+    let wait = Wait {
+        within,
+        needs_owner: false,
+    };
+    settle_after(daemon, bot, generation, &pending, waiting, wait).await
+}
+
+/// How long a request waits, and whether its bot waits for the owner then.
+struct Wait {
+    within: Duration,
+    needs_owner: bool,
+}
+
+async fn settle_after(
+    daemon: &Daemon,
+    bot: &BotId,
+    generation: u64,
+    pending: &Pending,
+    waiting: oneshot::Receiver<Decision>,
+    wait: Wait,
+) -> Option<Answer> {
+    if wait.needs_owner {
+        daemon.supervisor.approval_opened(bot, generation);
+    }
     let mut guard = Guard {
         daemon,
         bot,
         generation,
         record: &pending.record,
+        needs_owner: wait.needs_owner,
         settled: false,
     };
-    let decision = tokio::time::timeout(daemon.settings.approval_wait(), waiting).await;
+    let decision = tokio::time::timeout(wait.within, waiting).await;
     guard.settled = true;
     daemon.approvals.lock().remove(&pending.record.approval.id);
-    daemon.supervisor.approval_closed(bot, generation);
+    if wait.needs_owner {
+        daemon.supervisor.approval_closed(bot, generation);
+    }
     Some(match decision {
         Ok(Ok(Decision {
-            allow: true, input, ..
-        })) => Answer::Allowed { input },
+            allow: true,
+            input,
+            once,
+            ..
+        })) => Answer::Allowed { input, once },
         Ok(Ok(Decision { note, .. })) => Answer::Denied { note },
         // Timed out, or the answer was dropped (the process ended).
         Ok(Err(_)) | Err(_) => {
-            settle(daemon, &pending.record, ApprovalStatus::Expired, None, None);
+            settle(
+                daemon,
+                &pending.record,
+                ApprovalStatus::Expired,
+                None,
+                None,
+                false,
+            );
             Answer::Expired
         }
     })
@@ -182,6 +247,9 @@ pub fn answer(daemon: &Daemon, params: ApprovalsAnswerParams) -> ApiResult<Appro
                 .map_err(|_| ApiError::validation("the changed suggestion is not valid JSON"))?;
             Some(value.to_string())
         }
+        Some(input) if params.allow && existing.approval.tool_name == BUILD_TOOL => {
+            Some(crate::tools::check_changed_build(daemon, &input)?)
+        }
         Some(input) if params.allow && existing.approval.tool_name == ROUTINE_TOOL => Some(
             crate::tools::check_changed_routine(daemon, &existing.approval.input, &input)?,
         ),
@@ -191,9 +259,34 @@ pub fn answer(daemon: &Daemon, params: ApprovalsAnswerParams) -> ApiResult<Appro
         Some(input) if params.allow && existing.approval.tool_name == CREW_ACCESS_TOOL => Some(
             crate::tools::check_crew_access_answer(&existing.approval.input, &input)?,
         ),
+        Some(input) if params.allow && existing.approval.tool_name == SHOW_PLAN_TOOL => Some(
+            crate::tools::check_plan_answer(&existing.approval.input, &input)?,
+        ),
         _ => None,
     };
-    let Some(record) = settle(daemon, &existing, status, note.as_deref(), input.as_deref()) else {
+    // Only an app on the desktop or a site may be allowed for the turn
+    // alone (spec 24.2, 21.5).
+    let once = params.allow
+        && params.once == Some(true)
+        && [DESKTOP_TOOL, BROWSER_SITE_TOOL].contains(&existing.approval.tool_name.as_str());
+    let settled = settle(
+        daemon,
+        &existing,
+        status,
+        note.as_deref(),
+        input.as_deref(),
+        once,
+    );
+    let Some(record) = settled else {
+        // The chat may still show it open, as a card left from before a
+        // restart did: it shows how it ended now.
+        // Read first: `show` takes the store again.
+        let ended = daemon.store().approval(&params.approval_id);
+        if let Ok(Some(ended)) = ended
+            && ended.approval.status == ApprovalStatus::Expired
+        {
+            show(daemon, &ended, false);
+        }
         return Err(ApiError::Conflict(format!(
             "approval {} was already answered or expired",
             params.approval_id
@@ -207,15 +300,29 @@ pub fn answer(daemon: &Daemon, params: ApprovalsAnswerParams) -> ApiResult<Appro
             allow: params.allow,
             note,
             input,
+            once,
         });
     }
     Ok(record.approval)
 }
 
-/// Expires the bot's open requests: its process is gone (spec 10.1).
+/// Expires the open requests of one conversation: its process is gone
+/// (spec 10.1, 40.4).
+pub fn expire_for(daemon: &Daemon, seat: &Seat) {
+    let now = daemon.clock.now_ms();
+    let expired = daemon.store().expire_approvals_in(&seat.conversation, now);
+    closed(daemon, seat, expired);
+}
+
+/// Expires the bot's open requests, in all its conversations.
 pub fn expire_for_bot(daemon: &Daemon, bot: &BotId) {
     let now = daemon.clock.now_ms();
-    let expired = match daemon.store().expire_approvals(Some(bot), now) {
+    let expired = daemon.store().expire_approvals(Some(bot), now);
+    closed(daemon, bot, expired);
+}
+
+fn closed(daemon: &Daemon, bot: &BotId, expired: botloft_store::Result<Vec<ApprovalRecord>>) {
+    let expired = match expired {
         Ok(expired) => expired,
         Err(err) => {
             warn!(bot = %bot, "could not expire approvals: {err}");
@@ -224,19 +331,25 @@ pub fn expire_for_bot(daemon: &Daemon, bot: &BotId) {
     };
     for record in expired {
         daemon.approvals.lock().remove(&record.approval.id);
-        show(daemon, &record);
+        show(daemon, &record, false);
     }
 }
 
 /// Expires every open request, at daemon start: no process survived.
 pub fn expire_all(daemon: &Daemon) {
     let now = daemon.clock.now_ms();
-    match daemon.store().expire_approvals(None, now) {
+    // Read first: `show` takes the store again.
+    let expired = daemon.store().expire_approvals(None, now);
+    match expired {
         Ok(expired) if !expired.is_empty() => {
             debug!(
                 count = expired.len(),
                 "expired approvals left by the last run"
             );
+            // Their cards in the chat stop offering an answer.
+            for record in expired {
+                show(daemon, &record, false);
+            }
         }
         Ok(_) => {}
         Err(err) => warn!("could not expire old approvals: {err}"),
@@ -252,6 +365,7 @@ struct Pending {
 fn open(
     daemon: &Daemon,
     bot: &BotId,
+    generation: u64,
     tool_name: &str,
     input: &Value,
     tool_use_id: &str,
@@ -272,11 +386,16 @@ fn open(
         &approval,
         tool_explanation(tool_name, input),
         always::scope_of(tool_name, input),
+        None,
     );
+    let mut body = ChatBody::Approval(shown);
+    crate::agent_keys::redact_body(daemon, bot, &mut body);
     let item = ChatItem {
         id: ChatItemId::generate(),
         bot_id: bot.clone(),
-        body: ChatBody::Approval(shown),
+        // In the conversation whose process asks (spec 40.2).
+        conversation_id: daemon.supervisor.conversation_of(bot, generation),
+        body,
         created_at: now,
         updated_at: now,
     };
@@ -308,6 +427,7 @@ fn item_of(
     approval: &Approval,
     explanation: Option<String>,
     always: Option<AllowScope>,
+    once: Option<bool>,
 ) -> ApprovalItem {
     ApprovalItem {
         approval_id: approval.id.clone(),
@@ -318,6 +438,7 @@ fn item_of(
         status: approval.status,
         note: approval.note.clone(),
         always,
+        once,
     }
 }
 
@@ -329,6 +450,7 @@ fn settle(
     status: ApprovalStatus,
     note: Option<&str>,
     input: Option<&str>,
+    once: bool,
 ) -> Option<ApprovalRecord> {
     let now = daemon.clock.now_ms();
     let settled = daemon
@@ -336,7 +458,7 @@ fn settle(
         .settle_approval(&record.approval.id, status, note, input, now);
     match settled {
         Ok(Some(settled)) => {
-            show(daemon, &settled);
+            show(daemon, &settled, once);
             Some(settled)
         }
         Ok(None) => None,
@@ -347,7 +469,9 @@ fn settle(
     }
 }
 
-fn show(daemon: &Daemon, record: &ApprovalRecord) {
+/// Puts the settled request in its chat item; `once` when it was allowed
+/// for the bot's turn only.
+fn show(daemon: &Daemon, record: &ApprovalRecord, once: bool) {
     let item: &ChatItemId = &record.chat_item_id;
     // The bot's explanation and what "Allow always" covers are kept only
     // in the chat item.
@@ -356,8 +480,13 @@ fn show(daemon: &Daemon, record: &ApprovalRecord) {
         Some(ChatBody::Approval(shown)) => (shown.explanation, shown.always),
         _ => (None, None),
     };
-    let shown = item_of(&record.approval, explanation, always);
-    items::update(daemon, item, ChatBody::Approval(shown));
+    let shown = item_of(&record.approval, explanation, always, once.then_some(true));
+    items::update(
+        daemon,
+        &record.approval.bot_id,
+        item,
+        ChatBody::Approval(shown),
+    );
 }
 
 /// Expires the request if the MCP call goes away before it is settled,
@@ -367,6 +496,7 @@ struct Guard<'a> {
     bot: &'a BotId,
     generation: u64,
     record: &'a ApprovalRecord,
+    needs_owner: bool,
     settled: bool,
 }
 
@@ -385,9 +515,12 @@ impl Drop for Guard<'_> {
             ApprovalStatus::Expired,
             None,
             None,
+            false,
         );
-        self.daemon
-            .supervisor
-            .approval_closed(self.bot, self.generation);
+        if self.needs_owner {
+            self.daemon
+                .supervisor
+                .approval_closed(self.bot, self.generation);
+        }
     }
 }

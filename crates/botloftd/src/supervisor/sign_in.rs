@@ -90,11 +90,12 @@ impl Supervisor {
     }
 
     fn start_signed_out_bots(&self, inner: &mut Inner) {
-        for (bot, slot) in &mut inner.slots {
+        for slot in inner.slots.values_mut() {
             if slot.state == BotState::AuthError && slot.running.is_none() {
                 slot.backoff.reset();
                 slot.restart_at = None;
-                self.set_state(bot, slot, BotState::Offline);
+                let bot = slot.bot.clone();
+                self.set_state(&bot, slot, BotState::Offline);
             }
         }
     }

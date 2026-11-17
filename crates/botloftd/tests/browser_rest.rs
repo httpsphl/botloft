@@ -102,3 +102,48 @@ async fn the_browser_rests_when_the_turn_ends_and_wakes_when_it_is_used() {
     assert!(page.contains("The owner reloaded the page."), "{page}");
     assert!(page.contains("Hidden 0 times"), "{page}");
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_site_allowed_only_this_time_is_asked_for_again_in_the_next_turn() {
+    let Some(mut b) = setup().await else { return };
+    let bot: BotId = b.bot["id"].as_str().expect("id").parse().expect("bot id");
+    let process = b.t.process_of(&b.bot).await;
+    let url = format!("{}/sight", b.site);
+
+    // A turn: the owner allows the site only this time, and it holds.
+    let ask = json!({ "botId": b.bot["id"], "body": "Open the page" });
+    b.app.call("messages.send", ask).await.expect("send");
+    let line = process.wait_lines(1).await.pop().expect("line");
+    b.t.until_state(&b.bot, BotState::Busy).await;
+    let opening = call(&b.mcp, "browser_open", json!({ "url": url }));
+    let asked = common::browsing::pending_approval(&mut b.app).await;
+    let once = json!({ "approvalId": asked["approvalId"], "allow": true, "once": true });
+    b.app.call("approvals.answer", once).await.expect("answer");
+    opening.await.expect("task").expect("page");
+    let page = look(&mut b).await;
+    assert!(page.contains("Hidden"), "{page}");
+    let all = b
+        .app
+        .call("permissions.list", Value::Null)
+        .await
+        .expect("list");
+    assert_eq!(all["sites"], json!([]));
+
+    // The turn ends, and so does the site; the next turn asks again.
+    stream::answer(&process, &line, "It is open.").await;
+    b.t.until_state(&b.bot, BotState::Idle).await;
+    let site = asked["summary"].as_str().expect("site").to_owned();
+    for _ in 0..100 {
+        if !b.t.daemon.approvals.this_turn.site(&bot, &site) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    let again = json!({ "botId": b.bot["id"], "body": "Look again" });
+    b.app.call("messages.send", again).await.expect("send");
+    process.wait_lines(2).await;
+    b.t.until_state(&b.bot, BotState::Busy).await;
+    let looking = call(&b.mcp, "browser_look", json!({}));
+    answer_site(&mut b.app, false, None).await;
+    assert!(looking.await.expect("task").is_err());
+}

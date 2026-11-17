@@ -1,10 +1,10 @@
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import moodRules from "../../mascot.css?raw";
-import cheerFrames from "../../mascot-cheer.css?raw";
 import flameFrames from "../../mascot-flame.css?raw";
 import { BOTLOFT_COLOR, BotAvatar, CHEER_MS } from "./BotAvatar";
 import { BotStateBadge } from "./BotStateBadge";
+import { WORKING_FRAMES } from "./flameFrames";
 import { ListAvatar } from "./ListAvatar";
 import { BODY, DRAWN_IN, OUTLINE, SHADES } from "./mascotArt";
 import { retint, toHex, toHsl } from "./retint";
@@ -54,24 +54,20 @@ describe("mascot", () => {
   });
 
   test("every flame shape keeps the commands of the outline, so it morphs", () => {
-    const frames = [...flameFrames.matchAll(/d: path\(\s*"([^"]+)"/g)].map(
-      (match) => match[1] ?? "",
-    );
+    const frames = [
+      ...[...flameFrames.matchAll(/d: path\(\s*"([^"]+)"/g)].map((match) => match[1] ?? ""),
+      ...WORKING_FRAMES,
+    ];
     expect(frames.length).toBeGreaterThan(15);
     for (const frame of frames) {
       expect(commands(frame)).toBe(commands(OUTLINE));
     }
   });
 
-  test("only a working agent's mascot moves on and on", () => {
-    const forever = [...moodRules.matchAll(/([^{}]+)\{[^{}]*infinite[^{}]*\}/g)].map((rule) =>
-      (rule[1] ?? "").trim(),
-    );
-    expect(forever).toEqual([
-      '[data-mood="working"] .avatar-fire',
-      '[data-mood="working"] .avatar-spark',
-    ]);
-    expect(flameFrames).not.toContain("infinite");
+  test("no animation runs on and on: the working flame steps from a timer", () => {
+    for (const rules of [moodRules, flameFrames]) {
+      expect(rules).not.toContain("infinite");
+    }
   });
 
   test("the eyes glance together, and the shading keeps its holes", () => {
@@ -143,17 +139,6 @@ describe("mascot", () => {
       const turn = arc.parentElement?.getAttribute("transform")?.match(/^rotate\((-?[\d.]+) /);
       expect(Number(turn?.[1])).toBeCloseTo(-14.3, 0);
     }
-  });
-
-  test("the cheer ends at rest, so less motion shows none of it", () => {
-    const end = (name: string) =>
-      cheerFrames
-        .match(new RegExp(`@keyframes ${name} \\{([\\s\\S]*?)\\n\\}`))?.[1]
-        ?.split(/100% \{/)
-        .at(-1);
-    expect(end("cheer-hop")).toContain("transform: translateY(0) scale(1, 1);");
-    expect(end("cheer-open")).toMatch(/opacity: 1;\s*clip-path: inset\(0\);/);
-    expect(end("cheer-smile")).toContain("opacity: 0;");
   });
 
   test("framed sits on the icon square without the thin edge", () => {

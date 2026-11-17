@@ -56,7 +56,7 @@ printf '%s' 'a-senha-do-smtp' > config/smtp-password
 chmod 600 config/smtp-password
 ```
 
-As chaves (todas explicadas no exemplo): `public_url` (https, vai nos links dos e-mails), `quota_bytes` (200 MiB por conta), `max_copy_bytes` (50 MiB), `keep` (5 cópias por conta), `behind_proxy`, `phone_dir` (a página do celular, em `/m`; a imagem do Docker já traz os arquivos em `/srv/phone`), `storage`, `[bucket]`, `[smtp]`. O servidor recusa um `public_url` que não seja https.
+As chaves (todas explicadas no exemplo): `public_url` (https, vai nos links dos e-mails), `quota_bytes` (200 MiB por conta), `max_copy_bytes` (50 MiB), `keep` (5 cópias por conta), `behind_proxy`, `phone_dir` (a página do celular, em `/m`; a imagem do Docker já traz os arquivos em `/srv/phone`), `[site]` (o site público em `/` e os links `/download/<sistema>`, spec 39; a imagem traz os arquivos em `/srv/site`, e sem a seção não há site), `storage`, `[bucket]`, `[smtp]`. O servidor recusa um `public_url` que não seja https.
 
 ## 5. Subir com Docker
 
@@ -93,6 +93,8 @@ curl -si  https://cloud.seudominio.com/v1/me | head -1   # HTTP/2 401
 ```
 
 O `401` é o certo: sem entrar, nada abre.
+
+O bucket só é usado na primeira cópia ou no primeiro arquivo do celular. Se ele recusar, o log diz por quê, com o status e o código que o R2 devolveu: `storage put failed (permission denied, 403, InvalidAccessKeyId)`. `InvalidAccessKeyId` e `SignatureDoesNotMatch` apontam o `access_key_id` ou o segredo; `AccessDenied`, um token sem escrita nesse bucket. No Coolify, confira também que o compose não ficou com um texto de exemplo no lugar do `access_key_id`.
 
 ## 8. Apontar o app
 
@@ -145,6 +147,10 @@ docker compose run --rm cloud vapid-key --to /config/vapid-key   # imprime a cha
 ```
 
 Depois descomente `[push]` no `cloud.toml` (ou no `BOTLOFT_CLOUD_CONFIG`): `subject` (um `mailto:` ou `https:` seu), `vapid_key_file` (ou a variável `BOTLOFT_CLOUD_VAPID_KEY`, para o Coolify) e, se quiser, `allow_hosts`. O servidor só chama os serviços de push dos navegadores (Chrome, Firefox, Edge, Safari) e manda uma chamada **vazia** e assinada: o texto do aviso é o da própria página, e nada de bot, comando ou pergunta passa por Google, Apple ou Mozilla. Guarde a chave privada como guarda a senha do SMTP: quem a tem pode mandar avisos em nome do seu servidor. Trocá-la obriga cada celular a ligar os avisos de novo.
+
+## Fotos e arquivos do celular
+
+O celular manda fotos e arquivos aos agentes (spec 28.14) por este servidor. Cada arquivo chega selado com uma chave que só o celular e o computador têm, fica no mesmo lugar das cópias (`<conta>/files/<id>`, fora da cota delas) até o computador pegá-lo, e some depois disso ou em 2 horas. Não há nada a configurar; só confira que o proxy na frente (Caddy, Cloudflare) deixa passar envios de 20 MB.
 
 ## Limites conhecidos
 

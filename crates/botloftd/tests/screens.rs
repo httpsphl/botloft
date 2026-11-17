@@ -153,7 +153,14 @@ async fn a_screen_is_built_live_and_then_read_from_disk() {
             false,
         ))
         .await;
-    let done = draft(&mut app).await;
+    // A draft of the text still being written may come in late (seen on
+    // macOS): the one that matters says the file is done.
+    let done = loop {
+        let next = draft(&mut app).await;
+        if next["done"] == true {
+            break next;
+        }
+    };
     assert_eq!(done["done"], true);
     let page = get(t.addr, &url, None).await;
     assert!(

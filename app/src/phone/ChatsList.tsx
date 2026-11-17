@@ -5,6 +5,7 @@
 
 import { useT } from "../i18n";
 import type { ChatLine } from "../lib/protocol.gen";
+import { failureOf } from "./FailedRuns";
 import { BotDot } from "./parts";
 
 export function isUnread(line: ChatLine, seen: Record<string, number>): boolean {
@@ -47,7 +48,7 @@ export function CrewChips({
         type="button"
         aria-pressed={on}
         onClick={() => pick(name)}
-        className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-full border px-4 font-medium text-sm ${on ? "border-ink bg-ink text-canvas" : "border-line-strong bg-panel text-ink"}`}
+        className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-full border px-4 font-medium text-sm ${on ? "border-ink bg-ink text-canvas" : "border-transparent bg-bubble text-ink"}`}
       >
         {label}
         {news && <Dot label={t.tabs.newReply} />}
@@ -104,19 +105,20 @@ export function ChatsList({
       {groups.map((group) => (
         <section key={group.name} aria-label={group.name} className="flex flex-col gap-2">
           {headings && (
-            <h2 className="flex items-baseline gap-2 px-1 font-semibold text-muted text-xs uppercase tracking-[0.12em]">
+            <h2 className="flex items-baseline gap-2 px-1 font-semibold text-base">
               {group.name}
-              <span className="font-normal normal-case tracking-normal">
+              <span className="font-normal text-muted text-sm">
                 {t.chats.bots(group.lines.length)}
               </span>
             </h2>
           )}
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-0.5 rounded-2xl bg-bubble p-1.5">
             {group.lines.map((line) => (
               <li key={line.botId}>
                 <ChatRow
                   line={line}
                   unread={isUnread(line, seen)}
+                  failed={failureOf(line, seen)?.routine ?? null}
                   open={() => open(line.botId)}
                   showCrew={!headings && crew === null}
                 />
@@ -132,11 +134,14 @@ export function ChatsList({
 function ChatRow({
   line,
   unread,
+  failed,
   open,
   showCrew,
 }: {
   line: ChatLine;
   unread: boolean;
+  /** The routine that failed since the owner read the chat. */
+  failed: string | null;
   open(): void;
   showCrew: boolean;
 }) {
@@ -148,7 +153,7 @@ function ChatRow({
     <button
       type="button"
       onClick={open}
-      className="flex min-h-[4.5rem] w-full items-center gap-3 rounded-2xl border border-line bg-panel p-3 text-left active:scale-[0.99]"
+      className="flex min-h-[4.5rem] w-full items-center gap-3 rounded-xl p-2.5 text-left active:bg-line/60"
     >
       <BotDot name={line.name} color={line.color} state={line.state} size={34} />
       <span className="flex min-w-0 flex-1 flex-col">
@@ -158,7 +163,11 @@ function ChatRow({
             <span className="truncate text-muted text-xs">{t.chats.inCrew(line.crew)}</span>
           )}
         </span>
-        <span className="truncate text-ink-soft text-sm">{busy ? t.chats.working : last}</span>
+        {failed && !busy ? (
+          <span className="truncate text-danger text-sm">{t.failed.row(failed)}</span>
+        ) : (
+          <span className="truncate text-ink-soft text-sm">{busy ? t.chats.working : last}</span>
+        )}
       </span>
       {unread && <Dot label={t.tabs.newReply} />}
     </button>

@@ -1,25 +1,42 @@
 // How a chat reads on screen (spec 15.3): what others say stands alone,
-// what the bot does in a turn runs together under its avatar, and a date
-// line starts every day.
+// what the bot does in a turn runs together, a date line starts every day
+// and a clock line marks a pause in the talk.
 
 import type { ChatItem, Message, NoticeItem } from "../../lib/protocol.gen";
 import { isSharedFiles } from "./shared";
 
 export type Row =
   | { kind: "day"; key: string; at: number }
+  /** The time the talk picked up again after a pause, on the same day. */
+  | { kind: "time"; key: string; at: number }
   /** A message to the bot: from the owner, another bot or Botloft. */
   | { kind: "inbound"; key: string; item: ChatItem; message: Message }
   /** Replies, tool calls and approvals of one turn, and its end. */
   | { kind: "run"; key: string; items: ChatItem[] }
   | { kind: "notice"; key: string; item: ChatItem; notice: NoticeItem };
 
-/** The bot asking the owner (spec 23.2): its question card says it all. */
-const ASK_TOOL = "mcp__botloft__ask_owner";
+/**
+ * Tools whose card says it all: the bot asking the owner (spec 23.2),
+ * leaving them a note (23.10) or asking for a key (spec 32.5), and the plan
+ * it shows before long work (spec 10.5).
+ */
+const CARD_TOOLS = new Set([
+  "mcp__botloft__ask_owner",
+  "mcp__botloft__tell_owner",
+  "mcp__botloft__show_card",
+  "mcp__botloft__ask_key",
+  "mcp__botloft__show_plan",
+]);
 
-/** A call to ask the owner that worked; the card stands for it. */
+/** A call that worked and has its own card, which stands for it. */
 function isAskLine(item: ChatItem): boolean {
-  return item.body.kind === "tool" && item.body.name === ASK_TOOL && item.body.status !== "failed";
+  return (
+    item.body.kind === "tool" && CARD_TOOLS.has(item.body.name) && item.body.status !== "failed"
+  );
 }
+
+/** A pause this long before something new gets a clock line. */
+export const PAUSE_MS = 30 * 60 * 1000;
 
 function dayOf(ms: number): string {
   return new Date(ms).toDateString();
@@ -29,17 +46,24 @@ export function chatRows(items: ChatItem[]): Row[] {
   const rows: Row[] = [];
   let day: string | null = null;
   let run: ChatItem[] | null = null;
+  let last = 0;
   for (const item of items) {
     if (isAskLine(item)) {
       continue;
     }
     const today = dayOf(item.createdAt);
+    const body = item.body;
+    // What the bot does inside one turn never gets cut by a clock line.
+    const opens = !run || body.kind === "inbound" || body.kind === "notice";
     if (today !== day) {
       day = today;
       run = null;
       rows.push({ kind: "day", key: `day-${item.id}`, at: item.createdAt });
+    } else if (opens && item.createdAt - last >= PAUSE_MS) {
+      run = null;
+      rows.push({ kind: "time", key: `time-${item.id}`, at: item.createdAt });
     }
-    const body = item.body;
+    last = item.createdAt;
     if (body.kind === "inbound") {
       run = null;
       rows.push({ kind: "inbound", key: item.id, item, message: body.message });
@@ -64,11 +88,26 @@ export function chatRows(items: ChatItem[]): Row[] {
 export function rowHas(row: Row, id: string): boolean {
   switch (row.kind) {
     case "day":
+    case "time":
       return false;
     case "run":
       return row.items.some((item) => item.id === id);
     default:
       return row.item.id === id;
+  }
+}
+
+/** A card still waiting for the owner: a request, a question, a key. */
+export function isWaiting(item: ChatItem): boolean {
+  switch (item.body.kind) {
+    case "approval":
+      return item.body.status === "pending";
+    case "question":
+      return item.body.question.status === "open";
+    case "key_request":
+      return item.body.status === "open";
+    default:
+      return false;
   }
 }
 

@@ -3,8 +3,8 @@
 use botloft_core::avatar::normalize_color;
 use botloft_core::ids::CrewId;
 use botloft_core::protocol::{
-    Crew, CrewIdParams, CrewsCreateParams, CrewsRenameParams, CrewsSetColorParams,
-    CrewsSetPausedParams, CrewsSetWorkFolderParams,
+    Crew, CrewIdParams, CrewsCreateParams, CrewsRenameParams, CrewsSetAutoModeParams,
+    CrewsSetColorParams, CrewsSetPausedParams, CrewsSetWorkFolderParams, PermissionMode,
 };
 use botloft_core::{now_ms, slug, validate};
 use botloft_store::Store;
@@ -58,7 +58,9 @@ pub fn create(daemon: &Daemon, params: CrewsCreateParams) -> ApiResult<Crew> {
         work_folder: chosen.unwrap_or_default(),
         lead_bot_id: None,
         paused: false,
+        auto_mode: params.auto_mode.unwrap_or(false),
         color: None,
+        system: None,
         created_at: now_ms(),
         archived_at: None,
     };
@@ -161,20 +163,56 @@ pub fn set_paused(daemon: &Daemon, params: CrewsSetPausedParams) -> ApiResult<Cr
     Ok(present(daemon, crew))
 }
 
+/// Turns the crew's automatic mode on or off. On, every bot of the crew moves
+/// to `auto` (each restarts into it once nothing is in progress) and so does
+/// every bot that joins later. Off, the bots keep the mode they have and the
+/// new ones start in Manual again.
+pub fn set_auto_mode(daemon: &Daemon, params: CrewsSetAutoModeParams) -> ApiResult<Crew> {
+    let store = daemon.store();
+    let mut crew = active(&store, &params.crew_id)?;
+    super::maker::refuse(&crew, "always asks before it builds")?;
+    if crew.auto_mode == params.enabled && !params.enabled {
+        return Ok(present(daemon, crew));
+    }
+    crew.auto_mode = params.enabled;
+    store.update_crew(&crew)?;
+    let mut moved = Vec::new();
+    if params.enabled {
+        for mut record in store.bots(Some(&crew.id), false)? {
+            if record.permission_mode == PermissionMode::Auto {
+                continue;
+            }
+            record.permission_mode = PermissionMode::Auto;
+            store.update_bot(&record)?;
+            moved.push(bots::changed(daemon, &store, &crew, record).id);
+        }
+    }
+    let crew = changed(daemon, crew);
+    drop(store);
+    for id in &moved {
+        daemon.supervisor.launch_settings_changed(id);
+    }
+    tracing::info!(crew = %crew.id, enabled = params.enabled, "automatic mode changed");
+    Ok(crew)
+}
+
 /// Archives the crew and its bots. Archiving twice is not an error.
 pub fn archive(daemon: &Daemon, params: CrewIdParams) -> ApiResult<Crew> {
     let store = daemon.store();
     let crew = find(&store, &params.crew_id)?;
+    super::maker::refuse(&crew, "keeps its crew")?;
     if crew.archived_at.is_some() {
         return Ok(present(daemon, crew));
     }
     let bots = store.bots(Some(&crew.id), false)?;
-    store.archive_crew(&crew.id, now_ms())?;
+    let at = super::archive::crew_time(&store, &crew.id)?;
+    store.archive_crew(&crew.id, at)?;
 
     let crew = find(&store, &crew.id)?;
     for bot in &bots {
-        super::routines::archive_of(daemon, &store, &bot.id);
+        super::routines::archive_of(daemon, &store, &bot.id, at);
         daemon.browsers.forget(&bot.id);
+        crate::logins::forget_bot(daemon, &store, &bot.id);
     }
     for bot in bots {
         if let Some(bot) = store.bot(&bot.id)? {

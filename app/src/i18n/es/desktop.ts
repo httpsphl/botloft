@@ -6,15 +6,17 @@ export const desktop: Messages["desktop"] = {
     asks: (bot, app) => `${bot} pide ver ${app}`,
     because: (bot) => `${bot} dice:`,
     means: (bot) =>
-      `${bot} va a leer las ventanas de esa app y sacarles fotos mientras estés en la computadora. Nunca tus contraseñas. Puedes quitárselo en los detalles de ${bot}.`,
+      `${bot} va a leer las ventanas de esa app y sacarles fotos mientras estés en la computadora. Nunca tus contraseñas. Puedes quitárselo en Configuración, en Permisos.`,
     allowed: (bot, app) => `${bot} puede ver ${app}`,
+    allowedOnce: (bot, app) => `${bot} puede ver ${app}, solo esta vez`,
     denied: (bot, app) => `${bot} no puede ver ${app}`,
     expired: (app) => `Sin respuesta sobre ${app}`,
     wantsUse: (bot) => `${bot} quiere usar`,
     asksUse: (bot, app) => `${bot} pide usar ${app}`,
     meansUse: (bot) =>
-      `${bot} va a hacer clic, escribir y elegir en las ventanas de esa app como lo harías tú, sin mover tu mouse, mientras estés en la computadora. Cada acción aparece en este chat. Nunca en campos de contraseña. Puedes quitárselo en los detalles de ${bot}.`,
+      `${bot} va a hacer clic, escribir y elegir en las ventanas de esa app como lo harías tú, sin mover tu mouse, mientras estés en la computadora. Cada acción aparece en este chat. Nunca en campos de contraseña. Puedes quitárselo en Configuración, en Permisos.`,
     allowedUse: (bot, app) => `${bot} puede usar ${app}`,
+    allowedUseOnce: (bot, app) => `${bot} puede usar ${app}, solo esta vez`,
     deniedUse: (bot, app) => `${bot} no puede usar ${app}`,
   },
   panel: {
@@ -49,9 +51,6 @@ export const desktop: Messages["desktop"] = {
     close: "Cerrar",
   },
   grants: {
-    title: "Tu escritorio",
-    none: (bot) =>
-      `${bot} no ve ninguna app de tu computadora. La pide en el chat la primera vez que la necesita.`,
     see: "Puede ver",
     act: "Puede ver y usar",
     whole: "Todo el escritorio",
@@ -79,10 +78,6 @@ export const desktop: Messages["desktop"] = {
     ],
     awayUnderstood: "Entiendo los riesgos",
     awayConfirm: "Activar",
-    giveWhole: "Dar todo el escritorio",
-    wholeFailed: "No se pudo dar todo el escritorio",
-    wholeTitle: (bot) => `¿Dar a ${bot} todo tu escritorio?`,
-    wholeLevel: "Lo que puede hacer",
     wholeRisks: (bot) => [
       `${bot} ve toda ventana abierta en tu computadora, incluidos datos personales, correos, conversaciones y datos de clientes, y fotos de toda la pantalla.`,
       `Lee cualquier app sin preguntarte antes. Si eliges "Puede ver y usar", también hace clic y escribe en cualquiera.`,
@@ -90,7 +85,6 @@ export const desktop: Messages["desktop"] = {
       `Un texto en una app o en un mensaje puede intentar engañar a ${bot} para que haga otra cosa.`,
       "Nunca, ni así: el propio Botloft, apps que se ejecutan como administrador, terminales y ventanas de comandos, el Administrador de tareas, gestores de contraseñas y campos de contraseña. En sus fotos quedan cubiertos de negro.",
     ],
-    wholeConfirm: "Dar",
   },
   away: {
     label: "Mientras no estabas",

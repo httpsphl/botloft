@@ -62,7 +62,7 @@ export function DailySummary({ crew }: { crew: Crew }) {
   return (
     <section
       aria-label={s.title}
-      className="mb-3 flex max-w-3xl flex-col gap-2 rounded-xl border border-line bg-panel p-4"
+      className="mb-3 flex max-w-3xl flex-col gap-2 rounded-2xl bg-bubble p-4"
     >
       <div className="flex items-start gap-3">
         <Newspaper aria-hidden size={20} className="mt-0.5 shrink-0 text-muted" />
@@ -91,7 +91,7 @@ export function DailySummary({ crew }: { crew: Crew }) {
               type="time"
               value={time}
               onChange={(event) => setTime(event.target.value)}
-              className="h-8 rounded-lg border border-line-strong bg-canvas px-2 text-ink outline-none focus:border-accent"
+              className="h-8 rounded-lg border border-line-strong bg-panel px-2 text-ink outline-none focus:border-accent"
             />
           </label>
           <Button size="sm" variant="primary" disabled={busy || !time} onClick={create}>

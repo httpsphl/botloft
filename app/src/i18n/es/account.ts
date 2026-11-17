@@ -14,8 +14,7 @@ export const account: Messages["account"] = {
   },
   usage: {
     title: "Uso",
-    intro:
-      "Cuánto de tu plan de Claude han usado tus agentes. Se actualiza cada vez que un agente trabaja.",
+    intro: "Cuánto de tu plan de Claude ya se usó: todo en tu cuenta, Botloft y lo demás.",
     empty: "El uso aparece después de la primera respuesta de un agente.",
     windows: {
       five_hour: "Ventana de 5 horas",
@@ -29,12 +28,17 @@ export const account: Messages["account"] = {
     limited: "Límite alcanzado. Tus agentes esperan hasta que se renueve.",
     limitedAgent: (agent: string) =>
       `Límite alcanzado. Los agentes en ${agent} esperan hasta que se renueve.`,
+    extraUsage:
+      "Se pasó el límite del plan. Tus agentes siguen trabajando con el uso extra de la cuenta.",
     plan: (plan: string) => `Plan: ${plan}`,
     updated: (relative: string) => `Actualizado ${relative}`,
-    tokens: {
-      title: "Uso por agente",
+    fromAccount: (relative: string) => `De tu cuenta de Claude, ${relative}`,
+    fromAgents: (relative: string) => `Actualizado ${relative}, cuando trabajó un agente`,
+    modelWeek: (model: string) => `Esta semana, ${model}`,
+    costs: {
+      title: "Gasto de los agentes",
       intro:
-        "Cuánto de tu plan semanal usó cada agente, y los tokens detrás: los trozos de texto que un agente lee y escribe.",
+        "Cuánto costaría el trabajo de cada agente a precio de API. Tu plan no cobra ese valor: muestra qué agentes, modelos y rutinas pesan más.",
       period: "Período",
       periods: {
         hour: "Última hora",
@@ -43,19 +47,26 @@ export const account: Messages["account"] = {
         month: "30 días",
         all: "Todo",
       },
+      view: "Ver por",
+      views: {
+        agents: "Agentes",
+        models: "Modelos",
+        days: "Días",
+        routines: "Rutinas",
+      },
       empty: "Ningún agente trabajó en este período.",
-      failed: "No se pudieron cargar los tokens",
+      failed: "No se pudo cargar el gasto",
       archived: "archivado",
-      /** `crew` is null on the total of all bots. */
+      /** `crew` is null on the total of all agents. */
       detail: (crew: string | null, times: number) =>
         `${crew === null ? "" : `${crew} · `}Trabajó ${times === 1 ? "1 vez" : `${times} veces`}`,
-      total: "Todos los agentes",
-      share: (percent) => `≈ ${percent} de la semana`,
-      tokensUsed: (count) => `${count} tokens`,
-      estimate:
-        "≈ Estimado: Botloft aprende cuánto de tu plan consume el trabajo de los agentes según cuánto sube el plan semanal mientras trabajan. Lo que usas fuera de Botloft también lo sube, así que los agentes pueden aparecer con un poco más de lo que usaron.",
-      learning:
-        "La parte de cada agente en tu plan semanal aparece cuando el plan haya subido unos puntos con los agentes trabajando. Hasta entonces, los tokens.",
+      total: "Total",
+      share: (percent) => `${percent} del total`,
+      noPrice: (count) => `${count} tokens · sin precio`,
+      noModel: "Modelo no registrado (trabajo anterior)",
+      notRoutine: "Conversaciones y pedidos",
+      deletedRoutine: "Una rutina eliminada",
+      note: "Precio de API de lo que usaron los agentes. Tu plan no cobra ese valor: sirve para comparar.",
     },
   },
   backup: {
@@ -239,7 +250,28 @@ export const account: Messages["account"] = {
     notifyNeedsHint: (system: string) =>
       `Un aviso de ${system} cuando un agente pide permiso o necesita que inicies sesión, si Botloft no está al frente.`,
     notifyDone: "Cuando un agente termine",
-    notifyDoneHint: "Un aviso cuando un agente termina lo que estaba haciendo.",
+    notifyDoneHint:
+      "Un aviso cuando un agente termina lo que estaba haciendo, después de que vuelva el trabajo que pasó a otros agentes. El menú de cada agente lo cambia solo para él.",
+    notifyRoutineFailed: "Cuando una rutina falle",
+    notifyRoutineFailedHint:
+      "Un aviso con el agente y la rutina. Un teléfono conectado también recibe un aviso, sin decir de qué se trata.",
+    island: "Mostrar Botloft en la parte de arriba de la pantalla",
+    islandHint:
+      "Una isla pequeña arriba de la pantalla mientras los agentes trabajan o te esperan. Baja cuando uno te pide algo, para que respondas sin abrir Botloft, y ocupa el lugar de los avisos.",
+    islandScreen: "En qué pantalla",
+    islandScreens: { primary: "La pantalla principal", mouse: "Donde está el ratón" },
+    islandCheer: "Celebrar cuando un agente termina",
+    islandCheerHint:
+      "La isla muestra un momento que un agente terminó, con la primera línea de su respuesta.",
+    islandPart: "Isla",
+    islandHideWithApp: "Ocultarla con Botloft al frente",
+    islandHideWithAppHint:
+      "Con la ventana de Botloft al frente, todo ya está ahí, así que la isla se aparta.",
+    islandSummon: "Mantener el Ctrl derecho para abrirla",
+    islandSummonHint:
+      "Mantén solo el Ctrl derecho y la isla se abre, en cualquier momento, aunque no pase nada. Mantenlo otra vez para ocultarla. Botloft solo mira esa tecla.",
+    islandHold: "Cuánto tiempo mantenerlo",
+    islandHolds: { "500": "Medio segundo", "1000": "1 segundo", "2000": "2 segundos" },
     markReplies: "Marcar el icono cuando un agente responda",
     markRepliesHint:
       "Un punto en el icono de Botloft en la barra de tareas mientras haya una conversación sin leer.",
@@ -252,6 +284,20 @@ export const account: Messages["account"] = {
       "Con la ventana cerrada, los avisos solo llegan con Botloft junto al reloj (en General).",
     keepAwake: "Mantener el equipo despierto mientras los agentes trabajan",
     keepAwakeHint: "Igual se suspende si cierras la tapa o eliges Suspender.",
+    sleepAfter: "Los agentes inactivos duermen después de",
+    sleepAfterHint:
+      "Un agente dormido no usa memoria y se despierta solo cuando llega un mensaje, una rutina o un aviso. Su primera respuesta tarda unos segundos más.",
+    sleepAfterChoices: { 15: "15 minutos", 30: "30 minutos", 60: "1 hora", 0: "Nunca" },
+    history: "Historial",
+    historyKeep: "Guardar las conversaciones durante",
+    historyHint:
+      "Las conversaciones, los mensajes y las ejecuciones de rutinas más antiguas se borran de Botloft para siempre. Lo que aún te espera se queda, y también la memoria de los agentes y los archivos de sus carpetas.",
+    historyChoices: { 0: "Siempre", 30: "30 días", 90: "90 días", 365: "1 año" },
+    historyDaysCustom: (days: number) => `${days} días`,
+    historyConfirmTitle: "¿Borrar ahora las conversaciones más antiguas?",
+    historyConfirmBody: (kept: string) =>
+      `Las conversaciones, los mensajes y las ejecuciones de rutinas de más de ${kept} se borran de Botloft para siempre, ahora y en adelante. Los agentes conservan su memoria y los archivos de sus carpetas se quedan.`,
+    historyConfirm: "Borrar las más antiguas",
     saveFailed: "No se pudo cambiar el ajuste",
     pages: "Partes de la configuración",
     general: "General",
@@ -299,8 +345,9 @@ export const account: Messages["account"] = {
     sizeHint: "Ctrl+= y Ctrl+- también cambian el tamaño, y Ctrl+0 vuelve al predeterminado.",
     language: "Idioma",
     archived: "Archivados",
+    security: "Seguridad",
     archivedIntro:
-      "Los agentes y los equipos que archivaste están detenidos y fuera de la vista, y Botloft todavía guarda sus conversaciones. Elimina uno para quitarlo para siempre.",
+      "Los agentes y los equipos que archivaste están detenidos y fuera de la vista, y Botloft todavía guarda sus conversaciones. Restaura uno para traerlo de vuelta y encenderlo otra vez, o elimínalo para quitarlo para siempre.",
     archivedEmpty: "No hay nada archivado.",
     archivedLoadFailed: "No se pudo cargar lo archivado",
     archivedCrew: (bots: number, when: string) =>
@@ -308,9 +355,17 @@ export const account: Messages["account"] = {
     archivedBot: (crew: string, when: string) => `Agente de ${crew} · archivado ${when}`,
     deleteArchived: "Eliminar",
     deleteArchivedOne: (name: string) => `Eliminar ${name}`,
+    restoreArchived: "Restaurar",
+    restoreArchivedOne: (name: string) => `Restaurar ${name}`,
+    restoreFailed: (name: string) => `No se pudo restaurar ${name}`,
     about: "Acerca de",
     backup: "Copia de seguridad",
-    tools: "Herramientas conectadas",
+    tools: "Herramientas",
+    logins: "Inicios de sesión",
+    skills: "Skills",
+    plugins: "Plugins",
+    keys: "Claves de los agentes",
+    permissions: "Permisos",
     account: "Cuenta y móvil",
     groupDaily: "Cada día",
     groupConnect: "Cuenta y conexiones",

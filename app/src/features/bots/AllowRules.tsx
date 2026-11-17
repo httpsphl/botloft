@@ -1,14 +1,11 @@
 // What the bot may do without asking (spec 10.1), in its details: each
 // "Allow always" the owner gave, with a button that makes the bot ask again.
 
-import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useT } from "../../i18n";
 import type { AllowRule, Bot } from "../../lib/protocol.gen";
 import { useApi } from "../../store/context";
-import { Button } from "../../ui/Button";
-import { attempt } from "../../ui/toast";
-import { toolTitle } from "../chat/toolNames";
+import { RuleRow } from "../permissions/rows";
 
 /** The bot's rules, read when shown and kept current by `bot.rules`. */
 function useAllowRules(botId: Bot["id"]): AllowRule[] | null {
@@ -36,9 +33,7 @@ function useAllowRules(botId: Bot["id"]): AllowRule[] | null {
 }
 
 export function AllowRules({ bot }: { bot: Bot }) {
-  const t = useT();
-  const words = t.bots.details;
-  const api = useApi();
+  const words = useT().bots.details;
   const rules = useAllowRules(bot.id);
   return (
     <div>
@@ -49,36 +44,9 @@ export function AllowRules({ bot }: { bot: Bot }) {
         )}
         {rules !== null && rules.length > 0 && (
           <ul className="flex flex-col gap-1.5">
-            {rules.map((rule) => {
-              const title = toolTitle(rule.scope.toolName, t.tools);
-              const what = rule.scope.value ? `${title}: ${rule.scope.value}` : title;
-              return (
-                <li
-                  key={rule.id}
-                  className="flex items-start gap-2 rounded-lg border border-line bg-sunken py-1.5 pr-1 pl-2.5"
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-ink-soft text-xs">{title}</span>
-                    {rule.scope.value && (
-                      <span className="block break-all font-mono text-xs" data-selectable>
-                        {rule.scope.value}
-                      </span>
-                    )}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={X}
-                    label={words.alwaysRemove(what)}
-                    onClick={() =>
-                      attempt(words.alwaysRemoveFailed, () =>
-                        api.call("rules.delete", { ruleId: rule.id }),
-                      )
-                    }
-                  />
-                </li>
-              );
-            })}
+            {rules.map((rule) => (
+              <RuleRow key={rule.id} rule={rule} />
+            ))}
           </ul>
         )}
       </dd>

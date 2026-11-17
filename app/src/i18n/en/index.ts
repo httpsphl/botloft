@@ -1,29 +1,43 @@
 // English, the reference: every other language has exactly this shape.
 
 import { account } from "./account";
+import { agentCards } from "./agentCards";
 import { alerts } from "./alerts";
 import { bots } from "./bots";
 import { browser } from "./browser";
 import { catalog } from "./catalog";
 import { chat } from "./chat";
+import { chrome } from "./chrome";
 import { common } from "./common";
 import { connections } from "./connections";
+import { conversations } from "./conversations";
 import { crews } from "./crews";
 import { crewTemplates } from "./crewTemplates";
 import { desktop } from "./desktop";
 import { files } from "./files";
+import { home } from "./home";
+import { instructions } from "./instructions";
+import { island } from "./island";
+import { keys } from "./keys";
+import { logins } from "./logins";
+import { maker } from "./maker";
 import { messages } from "./messages";
 import { onboarding } from "./onboarding";
+import { overview } from "./overview";
+import { permissions } from "./permissions";
 import { phone } from "./phone";
+import { plugins } from "./plugins";
 import { questions } from "./questions";
 import { routines } from "./routines";
 import { screens } from "./screens";
 import { search } from "./search";
 import { setup } from "./setup";
 import { shell } from "./shell";
+import { skills } from "./skills";
 import { terminal } from "./terminal";
 import { tools } from "./tools";
 import { updates } from "./updates";
+import { versions } from "./versions";
 
 export const en = {
   common,
@@ -34,20 +48,34 @@ export const en = {
   alerts,
   bots,
   browser,
+  chrome,
   catalog,
   chat,
   connections,
+  conversations,
+  logins,
+  maker,
   crews,
   crewTemplates,
   desktop,
   files,
+  home,
+  instructions,
+  versions,
+  agentCards,
+  island,
+  keys,
   messages,
+  overview,
+  permissions,
   phone,
+  plugins,
   questions,
   routines,
   screens,
   search,
   setup,
+  skills,
   terminal,
   tools,
 };

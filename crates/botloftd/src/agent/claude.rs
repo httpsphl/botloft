@@ -6,13 +6,13 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use botloft_core::ids::BotId;
 use botloft_core::protocol::AgentKind;
 use bytes::Bytes;
 use serde_json::{Value, json};
 
 use super::{Agent, LaunchFiles, LaunchPlan, OutputDecoder, Turn};
 use crate::chat::claude;
+use crate::seat::Seat;
 use crate::state::Daemon;
 
 /// Tools the bot uses without asking: its crew tools (spec 7.4).
@@ -62,10 +62,31 @@ impl Agent for ClaudeAgent {
             .into(),
         );
         args.push(plan.session.into());
+        args.push("--setting-sources".into());
+        args.push("project,local".into());
+        // The owner's own Chrome, with their accounts signed in, comes only
+        // to an agent the owner gave it to, never with the owner's
+        // environment or their "enabled by default": the flag beats both
+        // (spec 7.4, 37.2).
+        args.push(
+            if plan.chrome {
+                "--chrome"
+            } else {
+                "--no-chrome"
+            }
+            .into(),
+        );
+        // Claude Code fetches the claude.ai connectors only without it: an
+        // agent given some runs without, with every other server blocked by
+        // name (spec 34.5).
+        if plan.connectors.is_empty() {
+            args.push("--strict-mcp-config".into());
+        }
+        let mut disallowed = String::from(DISALLOWED_TOOLS);
+        for server in plan.blocked_servers {
+            disallowed.push_str(&format!(",mcp__{server}"));
+        }
         for arg in [
-            "--setting-sources",
-            "project,local",
-            "--strict-mcp-config",
             "--permission-mode",
             plan.permission_mode.cli_value(),
             "--permission-prompt-tool",
@@ -73,7 +94,7 @@ impl Agent for ClaudeAgent {
             "--allowedTools",
             ALLOWED_TOOLS,
             "--disallowedTools",
-            DISALLOWED_TOOLS,
+            disallowed.as_str(),
             "--mcp-config",
         ] {
             args.push(arg.into());
@@ -81,6 +102,12 @@ impl Agent for ClaudeAgent {
         args.push(plan.mcp_config.as_os_str().to_owned());
         args.push("--add-dir".into());
         args.push(plan.work_folder.as_os_str().to_owned());
+        // The owner's plugins it was given, each a copy in its folder (spec
+        // 41.3).
+        for dir in plan.plugin_dirs {
+            args.push("--plugin-dir".into());
+            args.push(dir.as_os_str().to_owned());
+        }
         // Without the flag, Claude Code uses the default of the owner's plan.
         if let Some(model) = plan.model.cli_value() {
             args.push("--model".into());
@@ -144,7 +171,7 @@ impl OutputDecoder for ClaudeDecoder {
         claude::live_text(event)
     }
 
-    fn handle(&mut self, daemon: &Arc<Daemon>, bot: &BotId, generation: u64, event: &Value) {
+    fn handle(&mut self, daemon: &Arc<Daemon>, bot: &Seat, generation: u64, event: &Value) {
         claude::apply(daemon, bot, generation, event);
     }
 }
@@ -168,6 +195,10 @@ mod tests {
             model,
             effort,
             agent_model: None,
+            connectors: &[],
+            blocked_servers: &[],
+            chrome: false,
+            plugin_dirs: &[],
         }
     }
 
@@ -186,6 +217,31 @@ mod tests {
         assert!(!args.contains(&"--model".to_owned()));
         assert!(!args.contains(&"--effort".to_owned()));
         assert!(args.contains(&"--permission-prompt-tool".to_owned()));
+        assert!(args.contains(&"--no-chrome".to_owned()));
+        assert!(!args.contains(&"--chrome".to_owned()));
+        assert!(!args.contains(&"--plugin-dir".to_owned()));
+    }
+
+    #[test]
+    fn each_plugin_given_is_one_plugin_dir() {
+        let dirs = [
+            PathBuf::from("w/.claude/plugins/data"),
+            PathBuf::from("w/.claude/plugins/vercel"),
+        ];
+        let args = strings(ClaudeAgent.args(&LaunchPlan {
+            plugin_dirs: &dirs,
+            ..plan(false, BotModel::Default, BotEffort::Default)
+        }));
+        let given: Vec<_> = args
+            .iter()
+            .enumerate()
+            .filter(|(_, arg)| *arg == "--plugin-dir")
+            .map(|(at, _)| args[at + 1].replace('\\', "/"))
+            .collect();
+        assert_eq!(
+            given,
+            ["w/.claude/plugins/data", "w/.claude/plugins/vercel"]
+        );
     }
 
     #[test]

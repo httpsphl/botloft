@@ -1,19 +1,19 @@
 // The phone's page once it is connected (spec 28.7): what waits for the
 // owner, oldest first, and a small screen about this phone.
 
-import { Settings, Smartphone } from "lucide-react";
+import { Settings } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useT } from "../i18n";
 import { Callout } from "../ui/Callout";
 import { Confirm } from "../ui/Confirm";
-import { ApprovalView } from "./ApprovalView";
 import { ChatsList, CrewChips, isUnread } from "./ChatsList";
 import { ChatView } from "./ChatView";
-import type { PhoneApi } from "./client";
+import type { PhoneApi, PhoneState } from "./client";
+import { failureOf } from "./FailedRuns";
+import { HomeTab } from "./HomeTab";
 import { Notices } from "./NoticesControl";
 import { type LockApi, PinNudge, PinSettings } from "./PinSettings";
 import { PhoneButton } from "./parts";
-import { QuestionView } from "./QuestionView";
 
 export function usePhone(api: PhoneApi) {
   return useSyncExternalStore(api.subscribe, api.getState);
@@ -72,10 +72,11 @@ export function PhoneApp({
   const t = useT().phone;
   const state = usePhone(api);
   const [view, setView] = useState<"inbox" | "phone">("inbox");
-  const [tab, setTab] = useState<"requests" | "chats">("requests");
+  const [tab, setTab] = useState<"home" | "chats">("home");
   const [crew, setCrew] = useState<string | null>(null);
   useBackGesture(state.convo !== null, () => void api.closeChat());
   useBackGesture(view === "phone", () => setView("inbox"));
+  useFreshHome(api, state, tab === "home" && view === "inbox" && state.convo === null);
 
   if (state.session !== "ok") {
     return (
@@ -108,15 +109,14 @@ export function PhoneApp({
     );
   }
 
-  const waiting = state.approvals.length + state.questions.length;
+  const failures = state.chats.filter((line) => failureOf(line, state.seen) !== null).length;
+  const waiting = state.approvals.length + state.questions.length + failures;
   const news = state.chats.some((line) => isUnread(line, state.seen));
   return (
     <Shell>
-      <div className="sticky top-0 z-10 -mx-4 flex flex-col gap-3 bg-canvas px-4 pt-1 pb-2">
+      <div className="sticky top-0 z-10 -mx-4 flex flex-col gap-3 bg-panel px-4 pt-1 pb-2">
         <header className="flex items-center justify-between gap-3 py-1">
-          <h1 className="font-semibold text-xl">
-            {tab === "chats" ? t.tabs.chats : t.inbox.title}
-          </h1>
+          <h1 className="font-semibold text-xl">{tab === "chats" ? t.tabs.chats : t.tabs.home}</h1>
           <button
             type="button"
             aria-label={t.inbox.thisPhone}
@@ -127,9 +127,9 @@ export function PhoneApp({
           </button>
         </header>
 
-        <div role="tablist" className="flex gap-2">
-          <Tab on={tab === "requests"} pick={() => setTab("requests")}>
-            {t.tabs.requests}
+        <div role="tablist" className="flex gap-1 rounded-full bg-bubble p-1">
+          <Tab on={tab === "home"} pick={() => setTab("home")}>
+            {t.tabs.home}
             {waiting > 0 && ` (${waiting})`}
           </Tab>
           <Tab on={tab === "chats"} pick={() => setTab("chats")}>
@@ -164,40 +164,52 @@ export function PhoneApp({
         />
       )}
 
-      <div className={tab === "requests" ? "flex flex-col gap-4" : "hidden"}>
-        {state.approvals.map((card) => (
-          <ApprovalView
-            key={card.approvalId}
-            card={card}
-            sending={state.sending.includes(card.approvalId)}
-            answer={(allow, note) => api.answerApproval(card.approvalId, allow, note)}
-          />
-        ))}
-        {state.questions.map((card) => (
-          <QuestionView
-            key={card.questionId}
-            card={card}
-            sending={state.sending.includes(card.questionId)}
-            answer={(text) => api.answerQuestion(card.questionId, text)}
-            dismiss={() => api.dismissQuestion(card.questionId)}
-          />
-        ))}
-        {waiting === 0 && (
-          <div className="flex flex-col items-center gap-2 py-16 text-center">
-            <Smartphone aria-hidden size={28} className="text-muted" />
-            {state.loaded || state.computer === "offline" ? (
-              <>
-                <p className="font-medium text-base">{t.inbox.empty}</p>
-                <p className="text-muted text-sm">{t.inbox.emptyBody}</p>
-              </>
-            ) : (
-              <p className="text-muted text-sm">{t.inbox.loading}</p>
-            )}
-          </div>
-        )}
+      {/* Kept while hidden, so a note half written on a card is still there. */}
+      <div className={tab === "home" ? "contents" : undefined} hidden={tab !== "home"}>
+        <HomeTab
+          api={api}
+          state={state}
+          waiting={waiting}
+          open={(botId) => {
+            setTab("chats");
+            void api.openChat(botId);
+          }}
+        />
       </div>
     </Shell>
   );
+}
+
+/** How long the Home waits after an agent starts or stops before asking again. */
+const SETTLE_MS = 1500;
+
+/**
+ * The Home's numbers are asked for again when it shows, when the page comes
+ * back to the front, and a moment after an agent starts or stops working.
+ */
+function useFreshHome(api: PhoneApi, state: PhoneState, showing: boolean) {
+  const working = state.chats.filter((line) => line.state === "busy").length;
+  const online = state.link === "online";
+  // biome-ignore lint/correctness/useExhaustiveDependencies: an agent that starts or stops asks again
+  useEffect(() => {
+    if (!showing || !online) {
+      return;
+    }
+    const timer = setTimeout(() => void api.askHome(), SETTLE_MS);
+    return () => clearTimeout(timer);
+  }, [api, showing, online, working]);
+  useEffect(() => {
+    if (!showing) {
+      return;
+    }
+    const onShow = () => {
+      if (document.visibilityState === "visible") {
+        void api.askHome();
+      }
+    };
+    document.addEventListener("visibilitychange", onShow);
+    return () => document.removeEventListener("visibilitychange", onShow);
+  }, [api, showing]);
 }
 
 function Tab({ on, pick, children }: { on: boolean; pick(): void; children: React.ReactNode }) {
@@ -207,7 +219,7 @@ function Tab({ on, pick, children }: { on: boolean; pick(): void; children: Reac
       role="tab"
       aria-selected={on}
       onClick={pick}
-      className={`inline-flex h-11 flex-1 items-center justify-center rounded-xl border font-medium text-base ${on ? "border-ink bg-ink text-canvas" : "border-line-strong bg-panel text-ink"}`}
+      className={`inline-flex h-11 flex-1 items-center justify-center rounded-full font-medium text-base transition-colors ${on ? "bg-ink text-canvas" : "text-ink-soft"}`}
     >
       {children}
     </button>

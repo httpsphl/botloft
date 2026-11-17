@@ -2,9 +2,9 @@
 //! 7.3): when it is on disk and can be resumed, and when the one a process
 //! was told to resume is not there.
 
-use botloft_core::ids::BotId;
 use serde_json::Value;
 
+use crate::seat::Seat;
 use crate::state::Daemon;
 
 /// How the error of a missing conversation begins (seen with 2.1.284,
@@ -14,7 +14,7 @@ const NO_CONVERSATION: &str = "No conversation found";
 /// A turn's message came back, with the session id like every event. Claude
 /// Code has the conversation on disk from here on, not from `system/init`,
 /// so this is what the next start resumes.
-pub(super) fn began(daemon: &Daemon, bot: &BotId, event: &Value) {
+pub(super) fn began(daemon: &Daemon, bot: &Seat, event: &Value) {
     let Some(session) = event["session_id"].as_str() else {
         return;
     };

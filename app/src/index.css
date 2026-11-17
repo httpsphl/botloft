@@ -7,17 +7,19 @@
 @import "./motion.css";
 @import "./mascot.css";
 @import "./mascot-flame.css";
-@import "./mascot-cheer.css";
-@import "./mascot-wake.css";
-@import "./mascot-sleep.css";
 @import "./mascot-glance.css";
+@import "./mascot-look.css";
+@import "./mascot-maker.css";
 @import "./panels.css";
 @import "./sidebar.css";
 @import "./dialog.css";
 @import "./effort.css";
 @import "./color.css";
 @import "./files.css";
+@import "./media.css";
 @import "./search.css";
+@import "./chat-md.css";
+@import "./card-chart.css";
 @import "./activity.css";
 @import "./calls.css";
 @import "./browser-stage.css";
@@ -53,6 +55,14 @@
   /* A bot named in what bots write ("@writer"): a light blue that still
      reads at 4.5:1, since it colors words. */
   --mention: #0e6aa0;
+  /* The chat's balloons (spec 15.3): the bot's in a soft gray, the
+     owner's dark with light words, as in messaging apps. */
+  --bubble: #efefec;
+  --bubble-own: #1c1c1a;
+  --bubble-own-ink: #f7f7f4;
+  /* A link in the owner's balloon: the dark theme's blue on this dark
+     balloon (7:1), as --work is on the other theme's light one. */
+  --bubble-own-link: #6ea6ff;
   /* The thin edge around a bot's avatar, so light colors hold their shape. */
   --avatar-edge: rgb(0 0 0 / 0.2);
   /* Under menus, pickers and dialogs. */
@@ -90,6 +100,10 @@
   --idle-state: #8c8c86;
   --read: #5cc4f2;
   --mention: #5cc4f2;
+  --bubble: #1f1f1f;
+  --bubble-own: #e9e9e4;
+  --bubble-own-ink: #141414;
+  --bubble-own-link: #1f5fc4;
   --avatar-edge: rgb(255 255 255 / 0.14);
   --lift: rgb(0 0 0 / 0.5);
   --scrim: rgb(0 0 0 / 0.6);
@@ -114,6 +128,12 @@
   --color-danger: var(--danger);
   --color-quiet: var(--idle-state);
   --color-read: var(--read);
+  --color-bubble: var(--bubble);
+  --color-bubble-own: var(--bubble-own);
+  --color-bubble-own-ink: var(--bubble-own-ink);
+  --color-bubble-own-link: var(--bubble-own-link);
+  /* The composer resting over the chat: softer than a menu's lift. */
+  --shadow-rest: 0 1px 2px var(--lift), 0 6px 20px -8px var(--lift);
   --shadow-lift: 0 12px 32px -8px var(--lift), 0 2px 8px -2px var(--lift);
 }
 
@@ -124,6 +144,8 @@
   --text-sm--line-height: 1.25rem;
   --text-base: 0.875rem;
   --text-base--line-height: 1.375rem;
+  /* The chat's balloons: rounder than a card, a pill when one line long. */
+  --radius-bubble: 1.25rem;
 }
 
 @layer base {
@@ -177,126 +199,5 @@
       transparent 0
     );
     background-size: 18px 18px;
-  }
-}
-
-/* A bot's reply (features/chat/Markdown.tsx). */
-@layer components {
-  .chat-md {
-    overflow-wrap: anywhere;
-    line-height: 1.6;
-  }
-
-  .chat-md > * + * {
-    margin-top: 0.6em;
-  }
-
-  .chat-md > :first-child {
-    margin-top: 0;
-  }
-
-  .chat-md :is(h1, h2, h3, h4) {
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    margin-top: 1em;
-  }
-
-  .chat-md h1 {
-    font-size: 1.2em;
-  }
-
-  .chat-md h2 {
-    font-size: 1.1em;
-  }
-
-  .chat-md :is(ul, ol) {
-    padding-left: 1.4em;
-  }
-
-  .chat-md ul {
-    list-style: disc;
-  }
-
-  .chat-md ol {
-    list-style: decimal;
-  }
-
-  .chat-md li + li {
-    margin-top: 0.2em;
-  }
-
-  .chat-md li > :is(ul, ol) {
-    margin-top: 0.2em;
-  }
-
-  .chat-md :not(pre) > code {
-    font-family: var(--font-mono);
-    font-size: 0.9em;
-    background: var(--sunken);
-    padding: 0.1em 0.35em;
-    border-radius: 5px;
-  }
-
-  .chat-md pre {
-    font-family: var(--font-mono);
-    font-size: 0.8125rem;
-    line-height: 1.5;
-    background: var(--sunken);
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 0.75em 1em;
-    overflow-x: auto;
-    overflow-wrap: normal;
-  }
-
-  .chat-md blockquote {
-    border-left: 3px solid var(--line-strong);
-    padding-left: 0.8em;
-    color: var(--ink-soft);
-  }
-
-  .chat-md hr {
-    border: 0;
-    border-top: 1px solid var(--line);
-  }
-
-  .chat-md table {
-    border-collapse: separate;
-    border-spacing: 0;
-    display: block;
-    width: fit-content;
-    max-width: 100%;
-    overflow-x: auto;
-    font-size: 0.8125rem;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-  }
-
-  .chat-md :is(th, td) {
-    border-bottom: 1px solid var(--line);
-    padding: 0.4em 0.75em;
-    text-align: left;
-  }
-
-  .chat-md :is(th, td) + :is(th, td) {
-    border-left: 1px solid var(--line);
-  }
-
-  .chat-md tbody tr:last-child > td {
-    border-bottom: 0;
-  }
-
-  .chat-md th {
-    background: var(--sunken);
-    font-weight: 600;
-  }
-
-  .chat-mention {
-    color: var(--mention);
-    font-weight: 500;
-  }
-
-  .chat-md input[type="checkbox"] {
-    margin-right: 0.4em;
   }
 }

@@ -87,4 +87,37 @@ describe("a group of tool calls", () => {
     const line = within(chat).getByRole("button", { name: /Run a command/ });
     expect(within(line).getByLabelText("Done")).toBeDefined();
   });
+
+  test("a call made again and again gets a mark from the fifth time on", async () => {
+    const fake = new FakeBotloft();
+    const ops = fake.addCrew("Ops");
+    const scout = fake.addBot(ops.id, "Scout", "Finds sources");
+    fake.setBotState(scout.id, "idle");
+    const npmTest = {
+      summary: "npm test",
+      input: '{"command":"npm test"}',
+      status: "done",
+    } as const;
+    for (let n = 0; n < 4; n++) {
+      fake.chat.tool(scout.id, "Bash", npmTest);
+    }
+    fake.chat.reply(scout.id, "Still red. Once more.");
+    fake.chat.tool(scout.id, "Bash", npmTest);
+    fake.chat.turn(scout.id);
+    renderApp(fake);
+    await crewOpened("Ops");
+    openBot("Scout");
+    const chat = await screen.findByRole("list", { name: "Messages" });
+
+    // Four in the first group: no mark yet.
+    const first = within(chat).getByRole("button", { name: "Ran 4 commands" });
+    expect(first.parentElement?.textContent).not.toContain("Same call");
+    // The fifth stands alone after the reply and still gets it, with the
+    // agent's name and the call on hover.
+    const mark = within(chat).getByText("Same call 5×");
+    expect(mark.getAttribute("title")).toBe(
+      "Scout made the same call 5 times in this turn (Run a command: npm test). It may be going in circles.",
+    );
+    expect(within(chat).getByRole("button", { name: "Ran 1 command" })).toBeDefined();
+  });
 });

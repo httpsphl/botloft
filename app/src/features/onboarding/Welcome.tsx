@@ -4,6 +4,7 @@ import { useT } from "../../i18n";
 import type { AgentCheck } from "../../lib/protocol.gen";
 import { SYSTEM } from "../../lib/system";
 import { prefs, usePref } from "../../shell/prefs";
+import { makerBot } from "../../store/app";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { useDaemonSettings } from "../account/useDaemonSettings";
@@ -27,6 +28,8 @@ export function Welcome() {
   const [creating, setCreating] = useState(false);
   const [idea, setIdea] = useState<CrewTemplate | undefined>(undefined);
   const checks = useApp((state) => state.system?.agentChecks ?? NO_CHECKS);
+  const maker = useApp(makerBot);
+  const selectBot = useApp((state) => state.selectBot);
   const otherReady = checks.some((check) => check.path !== null);
   const whenClosed = usePref(prefs.whenClosed);
   const { settings } = useDaemonSettings();
@@ -96,26 +99,39 @@ export function Welcome() {
   }
 
   return (
-    <main className="min-h-0 flex-1 overflow-y-auto p-8">
+    <main className="min-h-0 flex-1 overflow-y-auto bg-panel p-8">
       <div className="mx-auto max-w-xl">
         <span className="mb-3 inline-block animate-float">
           <BotAvatar color="#ff7a59" size={56} mood="awake" />
         </span>
         <h1 className="font-semibold text-2xl tracking-tight">{w.title}</h1>
         <p className="mt-1 text-ink-soft leading-relaxed">{w.intro}</p>
-        <ul className="mt-6 flex flex-col overflow-hidden rounded-xl border border-line bg-panel">
+        <ul className="mt-6 flex flex-col gap-0.5 rounded-2xl bg-bubble p-1.5">
           <Check state="ok" title={w.botloft} detail={running} />
           {claude}
           {account}
           {agents}
         </ul>
-        <div className="mt-4 rounded-xl border border-line bg-panel p-4 text-sm leading-relaxed">
+        <div className="mt-4 rounded-2xl bg-bubble p-4 text-sm leading-relaxed">
           <p className="font-semibold">{w.askFirstTitle}</p>
           <p className="mt-1 text-ink-soft">{w.askFirstBody}</p>
         </div>
+        {maker && (
+          <button
+            type="button"
+            onClick={() => selectBot(maker.id)}
+            className="mt-6 flex w-full items-center gap-3 rounded-2xl bg-bubble p-4 text-left transition-[background-color,transform] duration-150 hover:-translate-y-0.5 hover:bg-line/60"
+          >
+            <BotAvatar color={maker.color} size={40} mood="awake" maker />
+            <span className="flex min-w-0 flex-col gap-0.5">
+              <span className="font-semibold text-sm">{t.maker.startHere}</span>
+              <span className="text-ink-soft text-sm">{t.maker.startHereHint}</span>
+            </span>
+          </button>
+        )}
         <section aria-label={w.ideasTitle} className="mt-6">
-          <h2 className="font-semibold text-sm">{w.ideasTitle}</h2>
-          <ul className="m-0 mt-2 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2">
+          <h2 className="font-semibold text-base">{w.ideasTitle}</h2>
+          <ul className="m-0 mt-3 grid list-none grid-cols-1 gap-2 p-0 sm:grid-cols-2">
             {CREW_TEMPLATES.slice(0, IDEAS).map((template) => {
               const item = ideas[template.id];
               return (
@@ -126,7 +142,7 @@ export function Welcome() {
                       setIdea(template);
                       setCreating(true);
                     }}
-                    className="flex w-full flex-col gap-0.5 rounded-xl border border-line bg-panel p-3 text-left transition-colors hover:border-line-strong hover:bg-sunken"
+                    className="flex w-full flex-col gap-0.5 rounded-2xl bg-bubble p-4 text-left transition-[background-color,transform] duration-150 hover:-translate-y-0.5 hover:bg-line/60"
                   >
                     <span className="font-semibold text-sm">{item.name}</span>
                     <span className="line-clamp-2 text-ink-soft text-sm">{item.summary}</span>
@@ -173,7 +189,7 @@ function Check({
           : LoaderCircle;
   const tone = state === "ok" ? "text-ok" : state === "bad" ? "text-danger" : "text-muted";
   return (
-    <li className="flex items-start gap-3 border-line border-b px-4 py-3 last:border-b-0">
+    <li className="flex items-start gap-3 rounded-xl px-3 py-2.5">
       <Icon
         aria-hidden
         size={18}

@@ -1,8 +1,10 @@
 // A question a bot asked the owner (spec 23.6): the question, ready answers
-// as buttons and a field for any other answer. The same card is in the
-// bot's chat and in the question box. Once closed it shrinks to one line.
+// as buttons and a field for any other answer. A note it left them (23.10)
+// asks nothing: a field to reply, if they want, and Seen. The same card is
+// in the bot's chat, the inbox and the home. Once closed it shrinks to one
+// line.
 
-import { Check, MessageCircleQuestion, Reply, X } from "lucide-react";
+import { Check, Eye, MessageCircleQuestion, Reply, StickyNote, X } from "lucide-react";
 import { useState } from "react";
 import { useT } from "../../i18n";
 import { when } from "../../lib/format";
@@ -13,19 +15,37 @@ import { NoteArea, SectionCard, SettledLine } from "../../ui/ChatCard";
 import { attempt } from "../../ui/toast";
 import { Markdown } from "../chat/Markdown";
 
-export function QuestionCard({ question, bot }: { question: Question; bot: string }) {
+/** `title` replaces "<bot> asks" at the card's head where the bot's name is already above it. */
+export function QuestionCard({
+  question,
+  bot,
+  title,
+}: {
+  question: Question;
+  bot: string;
+  title?: string;
+}) {
   if (question.status !== "open") {
     return <Closed question={question} />;
   }
-  return <OpenQuestion question={question} bot={bot} />;
+  return <OpenQuestion question={question} bot={bot} title={title} />;
 }
 
-function OpenQuestion({ question, bot }: { question: Question; bot: string }) {
+function OpenQuestion({
+  question,
+  bot,
+  title,
+}: {
+  question: Question;
+  bot: string;
+  title: string | undefined;
+}) {
   const t = useT();
   const q = t.questions.card;
   const api = useApi();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const note = question.kind === "note";
 
   const answer = async (value: string) => {
     setBusy(true);
@@ -44,7 +64,7 @@ function OpenQuestion({ question, bot }: { question: Question; bot: string }) {
   };
   const dismiss = async () => {
     setBusy(true);
-    await attempt(q.dismissFailed, () =>
+    await attempt(note ? q.seenFailed : q.dismissFailed, () =>
       api.call("questions.dismiss", { questionId: question.id }),
     );
     setBusy(false);
@@ -52,9 +72,10 @@ function OpenQuestion({ question, bot }: { question: Question; bot: string }) {
 
   return (
     <SectionCard
-      label={q.asks(bot)}
-      icon={MessageCircleQuestion}
-      tone="warn"
+      label={note ? q.tells(bot) : q.asks(bot)}
+      title={title}
+      icon={note ? StickyNote : MessageCircleQuestion}
+      tone={note ? "accent" : "warn"}
       footer={
         <form
           onSubmit={(event) => {
@@ -63,25 +84,25 @@ function OpenQuestion({ question, bot }: { question: Question; bot: string }) {
           }}
         >
           <NoteArea
-            label={q.answerLabel(bot)}
+            label={note ? q.replyLabel(bot) : q.answerLabel(bot)}
             value={text}
             onChange={setText}
             onEnter={answerText}
-            placeholder={q.placeholder}
+            placeholder={note ? q.replyPlaceholder : q.placeholder}
           />
           <div className="mt-2.5 flex flex-wrap gap-2">
             <Button type="submit" variant="primary" icon={Reply} disabled={busy || !text.trim()}>
-              {q.send}
+              {note ? q.reply : q.send}
             </Button>
             <Button
               type="button"
               variant="ghost"
-              icon={X}
+              icon={note ? Check : X}
               disabled={busy}
-              title={q.dismissHint(bot)}
+              title={note ? q.seenHint(bot) : q.dismissHint(bot)}
               onClick={dismiss}
             >
-              {q.dismiss}
+              {note ? q.seen : q.dismiss}
             </Button>
           </div>
         </form>
@@ -103,15 +124,17 @@ function OpenQuestion({ question, bot }: { question: Question; bot: string }) {
   );
 }
 
-/** One line: what the owner answered, or that they dismissed it. */
+/** One line: what the owner answered, or that they dismissed it (a note: saw it). */
 function Closed({ question }: { question: Question }) {
   const q = useT().questions.card;
   const answered = question.status === "answered";
+  const note = question.kind === "note";
+  const said = note ? (answered ? q.replied : q.wasSeen) : answered ? q.answered : q.dismissed;
   return (
     <SettledLine
-      icon={answered ? Check : X}
+      icon={answered ? Check : note ? Eye : X}
       tone={answered ? "ok" : "quiet"}
-      text={answered ? q.answered : q.dismissed}
+      text={said}
       note={answered ? question.answer : null}
       aside={
         question.answeredAt !== null && (

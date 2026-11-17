@@ -1,33 +1,20 @@
 //! The copies (spec 27.4): send one, list them, download (with `Range`),
 //! delete. The server never opens a copy; it keeps what the owner sealed.
 
-use std::path::PathBuf;
-
 use axum::Json;
 use axum::body::Body;
 use axum::extract::{Path, State};
 use axum::http::header::{ACCEPT_RANGES, CONTENT_LENGTH, CONTENT_RANGE, CONTENT_TYPE, RANGE};
 use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::response::Response;
-use futures_util::StreamExt;
 use serde_json::{Value, json};
-use sha2::{Digest, Sha256};
-use tokio::io::AsyncWriteExt;
 
 use crate::app::AppState;
 use crate::copy_rows::{self, Copy, blob_key};
 use crate::error::ApiError;
 use crate::session::Computer;
 use crate::tokens;
-
-/// The upload's temp file goes away however the request ends.
-struct Temp(PathBuf);
-
-impl Drop for Temp {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_file(&self.0);
-    }
-}
+use crate::upload::{self, header_text};
 
 /// `PUT /v1/copies`
 pub async fn put(
@@ -36,16 +23,7 @@ pub async fn put(
     headers: HeaderMap,
     body: Body,
 ) -> Result<(StatusCode, Json<Value>), ApiError> {
-    let declared = header_text(&headers, CONTENT_LENGTH.as_str())
-        .and_then(|text| text.parse::<u64>().ok())
-        .ok_or_else(ApiError::length_required)?;
-    let wanted = header_text(&headers, "x-botloft-sha256")
-        .map(str::to_ascii_lowercase)
-        .filter(|hash| hash.len() == 64 && hash.bytes().all(|b| b.is_ascii_hexdigit()))
-        .ok_or_else(ApiError::bad_hash)?;
-    if declared == 0 {
-        return Err(ApiError::bad_length());
-    }
+    let (declared, wanted) = upload::declared(&headers)?;
     if declared > state.config.max_copy_bytes {
         return Err(ApiError::too_big());
     }
@@ -57,35 +35,10 @@ pub async fn put(
         return Err(ApiError::quota());
     }
 
-    // To a temp file first, checking size and hash as it comes: a cut or a
-    // wrong upload never reaches the store.
-    let folder = state.config.data_dir.join("uploads");
-    tokio::fs::create_dir_all(&folder).await.map_err(io)?;
-    let temp = Temp(folder.join(format!("{}.part", &tokens::random()?[..20])));
-    let mut file = tokio::fs::File::create(&temp.0).await.map_err(io)?;
-    let (mut hasher, mut total) = (Sha256::new(), 0u64);
-    let mut stream = body.into_data_stream();
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|_| ApiError::bad_length())?;
-        total += chunk.len() as u64;
-        if total > declared {
-            return Err(ApiError::bad_length());
-        }
-        hasher.update(&chunk);
-        file.write_all(&chunk).await.map_err(io)?;
-    }
-    file.flush().await.map_err(io)?;
-    drop(file);
-    if total != declared {
-        return Err(ApiError::bad_length());
-    }
-    if hex::encode(hasher.finalize()) != wanted {
-        return Err(ApiError::bad_hash());
-    }
-
+    let temp = upload::receive(&state, body, declared, &wanted).await?;
     let id = format!("cpy_{}", &tokens::random()?[..16]);
     let key = blob_key(who.account_id, &id);
-    state.store.put_file(&key, &temp.0, declared).await?;
+    state.store.put_file(&key, temp.path(), declared).await?;
     let copy = Copy {
         id,
         size: declared as i64,
@@ -182,15 +135,6 @@ pub async fn remove(
     }
     state.store.delete(&blob_key(who.account_id, &id)).await;
     Ok(StatusCode::NO_CONTENT)
-}
-
-fn header_text<'a>(headers: &'a HeaderMap, name: &str) -> Option<&'a str> {
-    headers.get(name).and_then(|value| value.to_str().ok())
-}
-
-fn io(err: std::io::Error) -> ApiError {
-    tracing::error!("upload file failed: {}", err.kind());
-    ApiError::internal()
 }
 
 /// One range of `bytes=a-b`, `a-` or `-n`, as inclusive `(first, last)` inside

@@ -18,6 +18,7 @@ fn crew(parts: &Parts, work_folder: Option<&Path>) -> Result<Crew, ApiError> {
     crews::create(
         &parts.daemon,
         CrewsCreateParams {
+            auto_mode: None,
             name: "Site".into(),
             work_folder: work_folder.map(|path| path.display().to_string()),
             lead: None,

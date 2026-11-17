@@ -7,6 +7,7 @@ fn item(bot: &BotId, body: ChatBody, at: i64) -> ChatItem {
     ChatItem {
         id: ChatItemId::generate(),
         bot_id: bot.clone(),
+        conversation_id: botloft_core::ids::ConversationId::main_of(bot),
         body,
         created_at: at,
         updated_at: at,
@@ -58,6 +59,7 @@ fn a_tool_item_is_found_and_updated() {
         status: ToolStatus::Running,
         output: None,
         file: None,
+        lines: None,
     };
     let entry = item(bot, ChatBody::Tool(running.clone()), 5);
     fx.store.insert_chat_item(&entry).expect("insert");
@@ -99,6 +101,7 @@ fn written_files_come_newest_first_without_repeats_or_failures() {
             status,
             output: None,
             file: file.map(str::to_owned),
+            lines: None,
         })
     };
     for (n, (file, status)) in [
@@ -134,7 +137,10 @@ fn the_last_activity_skips_turn_ends() {
     let turn = ChatBody::Turn(TurnItem {
         duration_ms: 1000,
         tokens: None,
+        cost_micros: None,
         error: None,
+        stopped: false,
+        quiet: false,
     });
     fx.store
         .insert_chat_item(&item(bot, turn, 8))
@@ -164,7 +170,10 @@ fn the_last_reply_is_found_behind_newer_items() {
     let turn = ChatBody::Turn(TurnItem {
         duration_ms: 1000,
         tokens: None,
+        cost_micros: None,
         error: None,
+        stopped: false,
+        quiet: false,
     });
     fx.store
         .insert_chat_item(&item(bot, turn, 12))

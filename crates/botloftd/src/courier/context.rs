@@ -2,7 +2,7 @@
 //! routine that sent it (spec 20.5) or the question it answers (spec 23.4).
 
 use botloft_core::envelope::{RoutineEnvelope, RoutineWhen};
-use botloft_core::protocol::Message;
+use botloft_core::protocol::{ChatBody, Message, Question, Schedule, WaitEnd, WaitOn};
 use botloft_store::{Store, StoreError};
 
 use crate::routines;
@@ -22,6 +22,13 @@ enum Trigger {
         from: Option<String>,
         note: Option<String>,
     },
+    /// What a wait waited for, how it ended and when it ran out, local.
+    Wait {
+        on: WaitOn,
+        ended: WaitEnd,
+        until: String,
+        timezone: String,
+    },
 }
 
 impl RoutineContext {
@@ -32,6 +39,17 @@ impl RoutineContext {
                 name,
                 from: from.as_deref(),
                 note: note.as_deref(),
+            },
+            Trigger::Wait {
+                on,
+                ended,
+                until,
+                timezone,
+            } => RoutineWhen::Wait {
+                on,
+                ended: *ended,
+                until,
+                timezone,
             },
         };
         RoutineEnvelope {
@@ -54,8 +72,18 @@ pub(super) fn routine(
     else {
         return Ok(None);
     };
-    let trigger = match run.signal {
-        Some(signal) => Trigger::Signal {
+    let plan = routines::schedule::Plan::new(&routine.schedule, &routine.timezone);
+    let trigger = match (run.signal, run.waited, &routine.schedule) {
+        (_, Some(ended), Schedule::Wait { on, until }) => Trigger::Wait {
+            on: on.clone(),
+            ended,
+            until: plan
+                .as_ref()
+                .map(|plan| plan.local_time(*until))
+                .unwrap_or_default(),
+            timezone: routine.timezone.clone(),
+        },
+        (Some(signal), _, _) => Trigger::Signal {
             from: match &signal.from_bot_id {
                 Some(bot) => store.bot(bot)?.map(|sender| sender.handle),
                 None => None,
@@ -63,8 +91,8 @@ pub(super) fn routine(
             name: signal.name,
             note: signal.note,
         },
-        None => Trigger::Scheduled {
-            at: routines::schedule::Plan::new(&routine.schedule, &routine.timezone)
+        _ => Trigger::Scheduled {
+            at: plan
                 .map(|plan| plan.local_time(run.scheduled_for))
                 .unwrap_or_default(),
             timezone: routine.timezone,
@@ -76,15 +104,26 @@ pub(super) fn routine(
     }))
 }
 
-/// The id and text of the question a message answers.
-pub(super) fn question(
+/// The id and title of the card the owner's message answers (spec 8.11).
+pub(super) fn card(
     store: &Store,
     message: &Message,
 ) -> Result<Option<(String, String)>, StoreError> {
-    let Some(id) = &message.question_id else {
+    let Some(reply) = &message.reply_to else {
         return Ok(None);
     };
     Ok(store
-        .question(id)?
-        .map(|record| (record.question.id.to_string(), record.question.text)))
+        .chat_item(&reply.item_id)?
+        .and_then(|item| match item.body {
+            ChatBody::Card(card) => Some((item.id.to_string(), card.title)),
+            _ => None,
+        }))
+}
+
+/// The question a message answers, or the note it replies to.
+pub(super) fn question(store: &Store, message: &Message) -> Result<Option<Question>, StoreError> {
+    let Some(id) = &message.question_id else {
+        return Ok(None);
+    };
+    Ok(store.question(id)?.map(|record| record.question))
 }

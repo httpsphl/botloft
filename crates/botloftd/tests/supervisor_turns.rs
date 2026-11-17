@@ -168,6 +168,7 @@ async fn sign_in_errors_stop_the_bot_until_the_owner_restarts_it() {
     let restart = BotsRestartParams {
         bot_id: s.bot.clone(),
         fresh: None,
+        conversation_id: None,
     };
     bots::restart(&s.daemon, restart).expect("restart");
     s.runtime.process(2).await;
@@ -202,5 +203,53 @@ async fn a_rate_limit_holds_the_bot_until_it_resets() {
     assert_eq!(usage.windows[0].name, "five_hour");
 
     s.clock.advance(Duration::from_secs(31));
+    s.until(BotState::Idle).await;
+}
+
+/// Past a window of the plan, an account with paid extra usage keeps going
+/// (spec 7.2): the bot ends its turn instead of waiting for the reset.
+#[tokio::test(start_paused = true)]
+async fn extra_usage_past_the_limit_keeps_the_bot_working() {
+    let s = setup().await;
+    let process = s.runtime.process(1).await;
+    s.until(BotState::Idle).await;
+    s.message("hi");
+    let resets = s.clock.now_ms() / 1000 + 30;
+    process
+        .emit(json!({
+            "type": "rate_limit_event",
+            "rate_limit_info": { "status": "rejected", "resetsAt": resets, "rateLimitType": "five_hour",
+                "overageStatus": "allowed", "isUsingOverage": true },
+        }))
+        .await;
+    process.emit(stream::began("session-1")).await;
+    process.emit(stream::result(true)).await;
+    tokio::time::sleep(Duration::from_secs(10)).await;
+    assert_eq!(s.state(), BotState::Idle);
+    let usage = s.daemon.usage().expect("usage");
+    assert_eq!(
+        (usage.status.as_str(), usage.extra_usage),
+        ("rejected", true)
+    );
+}
+
+/// A message with big images comes back in a line too long to read (spec
+/// 8.1): the turn still ends with it taken up, so the bot does not stay busy
+/// waiting for a replay it will never see.
+#[tokio::test(start_paused = true)]
+async fn a_replay_too_long_to_read_still_ends_the_wait() {
+    let s = setup().await;
+    let process = s.runtime.process(1).await;
+    s.until(BotState::Idle).await;
+
+    s.message("a message with big images");
+    assert_eq!(s.state(), BotState::Busy);
+    process.emit(stream::init("session-1")).await;
+    // A pipe hands a long line over in pieces; past 8 MiB it is dropped.
+    let mut head = br#"{"type":"user","isReplay":true,"uuid":"u","message":""#.to_vec();
+    head.resize(head.len() + (9 << 20), b'x');
+    process.output(&head).await;
+    process.output(b"\"}\n").await;
+    process.emit(stream::result(false)).await;
     s.until(BotState::Idle).await;
 }

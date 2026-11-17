@@ -6,8 +6,7 @@ use rusqlite::{OptionalExtension, Row, params};
 
 use crate::{Result, Store, parse_column, unique_as_duplicate};
 
-const COLUMNS: &str =
-    "id, name, slug, paused, created_at, archived_at, work_dir, lead_bot_id, color";
+const COLUMNS: &str = "id, name, slug, paused, created_at, archived_at, work_dir, lead_bot_id, color, auto_mode, system";
 
 /// A crew without a chosen folder comes back with an empty `work_folder`;
 /// the daemon fills in the `shared` folder, which depends on its paths.
@@ -24,6 +23,8 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<Crew> {
             .and_then(|id| id.parse().ok()),
         paused: row.get(3)?,
         color: row.get(8)?,
+        auto_mode: row.get(9)?,
+        system: row.get(10)?,
         created_at: row.get(4)?,
         archived_at: row.get(5)?,
     })
@@ -38,7 +39,7 @@ impl Store {
         self.conn
             .execute(
                 &format!(
-                    "INSERT INTO crews ({COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
+                    "INSERT INTO crews ({COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)"
                 ),
                 params![
                     crew.id.as_str(),
@@ -49,7 +50,9 @@ impl Store {
                     crew.archived_at,
                     work_dir(crew),
                     crew.lead_bot_id.as_ref().map(|id| id.as_str()),
-                    crew.color
+                    crew.color,
+                    crew.auto_mode,
+                    crew.system
                 ],
             )
             .map_err(|err| unique_as_duplicate(err, "crew slug"))?;
@@ -86,11 +89,11 @@ impl Store {
     }
 
     /// Saves the mutable fields: name, paused, archived_at, the chosen work
-    /// folder, the chief and the color.
+    /// folder, the chief, the color and the automatic mode.
     pub fn update_crew(&self, crew: &Crew) -> Result<()> {
         self.conn.execute(
             "UPDATE crews SET name = ?2, paused = ?3, archived_at = ?4, work_dir = ?5, \
-             lead_bot_id = ?6, color = ?7 WHERE id = ?1",
+             lead_bot_id = ?6, color = ?7, auto_mode = ?8 WHERE id = ?1",
             params![
                 crew.id.as_str(),
                 crew.name,
@@ -98,7 +101,8 @@ impl Store {
                 crew.archived_at,
                 work_dir(crew),
                 crew.lead_bot_id.as_ref().map(|id| id.as_str()),
-                crew.color
+                crew.color,
+                crew.auto_mode
             ],
         )?;
         Ok(())
@@ -113,6 +117,22 @@ impl Store {
         )?;
         tx.execute(
             "UPDATE bots SET archived_at = ?2 WHERE crew_id = ?1 AND archived_at IS NULL",
+            params![id.as_str(), at],
+        )?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// Brings back the crew archived at `at` and the bots archived with it,
+    /// atomically. A bot archived on its own before stays archived.
+    pub fn unarchive_crew(&self, id: &CrewId, at: i64) -> Result<()> {
+        let tx = self.conn.unchecked_transaction()?;
+        tx.execute(
+            "UPDATE crews SET archived_at = NULL WHERE id = ?1",
+            params![id.as_str()],
+        )?;
+        tx.execute(
+            "UPDATE bots SET archived_at = NULL WHERE crew_id = ?1 AND archived_at = ?2",
             params![id.as_str(), at],
         )?;
         tx.commit()?;
@@ -135,6 +155,8 @@ mod tests {
             lead_bot_id: None,
             paused: false,
             color: None,
+            auto_mode: false,
+            system: None,
             created_at,
             archived_at: None,
         }
@@ -181,5 +203,8 @@ mod tests {
         let all = store.crews(true).expect("list all");
         assert_eq!(all.len(), 1);
         assert_eq!(all[0].archived_at, Some(5));
+
+        store.unarchive_crew(&docs.id, 5).expect("unarchive");
+        assert_eq!(store.crews(false).expect("list"), [docs]);
     }
 }

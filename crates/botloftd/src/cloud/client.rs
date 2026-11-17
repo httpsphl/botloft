@@ -4,6 +4,7 @@
 use std::time::Duration;
 
 use botloft_core::protocol::CloudCopy;
+use futures_util::StreamExt;
 use reqwest::{Client, RequestBuilder, Response, StatusCode};
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -172,6 +173,51 @@ impl Server {
         self.send(
             self.http
                 .delete(self.url(&format!("/v1/copies/{id}")))
+                .bearer_auth(token)
+                .timeout(CALL),
+        )
+        .await
+        .map(|_| ())
+    }
+
+    /// The sealed bytes of a file a phone left for this computer (spec
+    /// 28.14), `most` bytes at most.
+    pub async fn phone_file(
+        &self,
+        token: &str,
+        id: &str,
+        most: u64,
+    ) -> Result<Vec<u8>, CloudError> {
+        let response = self
+            .send(
+                self.http
+                    .get(self.url(&format!("/v1/files/{id}")))
+                    .bearer_auth(token),
+            )
+            .await?;
+        let too_big = || CloudError::other("the file is bigger than the phone said".to_owned());
+        if response
+            .content_length()
+            .is_some_and(|length| length > most)
+        {
+            return Err(too_big());
+        }
+        let mut body = response.bytes_stream();
+        let mut bytes = Vec::new();
+        while let Some(chunk) = body.next().await {
+            bytes.extend_from_slice(&chunk.map_err(|_| CloudError::offline())?);
+            if bytes.len() as u64 > most {
+                return Err(too_big());
+            }
+        }
+        Ok(bytes)
+    }
+
+    /// The computer took the file: the server forgets it.
+    pub async fn delete_phone_file(&self, token: &str, id: &str) -> Result<(), CloudError> {
+        self.send(
+            self.http
+                .delete(self.url(&format!("/v1/files/{id}")))
                 .bearer_auth(token)
                 .timeout(CALL),
         )

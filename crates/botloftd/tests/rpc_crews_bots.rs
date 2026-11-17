@@ -319,3 +319,75 @@ async fn invalid_input_is_reported_with_the_validation_code() {
         NOT_FOUND
     );
 }
+
+#[tokio::test]
+async fn automatic_mode_is_a_rule_of_the_crew() {
+    let daemon = TestDaemon::start().await;
+    let mut app = daemon.session().await;
+    let create = |name: &'static str, crew: Value| json!({ "crewId": crew, "name": name, "role": "Helps", "instructions": "Be useful." });
+
+    // A crew that starts in automatic mode: its bots start in it too.
+    let auto = app
+        .call("crews.create", json!({ "name": "Auto", "autoMode": true }))
+        .await
+        .expect("crew");
+    assert_eq!(auto["autoMode"], true);
+    let bot = app
+        .call("bots.create", create("Scout", auto["id"].clone()))
+        .await
+        .expect("bot");
+    assert_eq!(bot["permissionMode"], "auto");
+
+    // An ordinary crew starts in Manual; turning the rule on moves the bots
+    // it has and the ones that join later.
+    let manual = app
+        .call("crews.create", json!({ "name": "Manual" }))
+        .await
+        .expect("crew");
+    assert_eq!(manual["autoMode"], false);
+    let first = app
+        .call("bots.create", create("Writer", manual["id"].clone()))
+        .await
+        .expect("bot");
+    assert_eq!(first["permissionMode"], "default");
+
+    let on = app
+        .call(
+            "crews.setAutoMode",
+            json!({ "crewId": manual["id"], "enabled": true }),
+        )
+        .await
+        .expect("on");
+    assert_eq!(on["autoMode"], true);
+    let bots = app
+        .call("bots.list", json!({ "crewId": manual["id"] }))
+        .await
+        .expect("list");
+    assert_eq!(bots[0]["permissionMode"], "auto");
+    let later = app
+        .call("bots.create", create("Editor", manual["id"].clone()))
+        .await
+        .expect("bot");
+    assert_eq!(later["permissionMode"], "auto");
+
+    // Off: bots keep their mode, new ones go back to Manual.
+    let off = app
+        .call(
+            "crews.setAutoMode",
+            json!({ "crewId": manual["id"], "enabled": false }),
+        )
+        .await
+        .expect("off");
+    assert_eq!(off["autoMode"], false);
+    let newest = app
+        .call("bots.create", create("Tester", manual["id"].clone()))
+        .await
+        .expect("bot");
+    assert_eq!(newest["permissionMode"], "default");
+    let all = app
+        .call("bots.list", json!({ "crewId": manual["id"] }))
+        .await
+        .expect("list");
+    assert_eq!(all[0]["permissionMode"], "auto");
+    assert_eq!(all[0]["id"], first["id"]);
+}

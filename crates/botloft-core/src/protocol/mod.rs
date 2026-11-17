@@ -52,20 +52,35 @@ macro_rules! text_enum {
 mod backup;
 mod browser;
 mod browser_input;
+mod builds;
+mod cards;
 mod catalog;
+mod changes;
 mod chat;
+mod chrome;
 mod cloud;
+mod connectors;
+mod conversations;
 mod crew_access;
 mod desktop;
 #[cfg(test)]
 mod export;
 mod files;
+mod imports;
+mod island;
+mod keys;
 mod lesson;
+mod logins;
 mod mcp;
+mod mcp_claude;
 mod messaging;
 mod methods;
 mod mobile;
 mod model;
+mod permissions;
+mod phone_files;
+mod phone_home;
+mod plugins;
 mod questions;
 mod reactions;
 mod routines;
@@ -74,23 +89,40 @@ mod screens;
 mod search;
 mod session;
 mod settings;
+mod skills;
 mod usage;
+mod versions;
 
 pub use backup::*;
 pub use browser::*;
 pub use browser_input::*;
+pub use builds::*;
+pub use cards::*;
 pub use catalog::*;
+pub use changes::*;
 pub use chat::*;
+pub use chrome::*;
 pub use cloud::*;
+pub use connectors::*;
+pub use conversations::*;
 pub use crew_access::*;
 pub use desktop::*;
 pub use files::*;
+pub use imports::*;
+pub use island::*;
+pub use keys::*;
 pub use lesson::*;
+pub use logins::*;
 pub use mcp::*;
+pub use mcp_claude::*;
 pub use messaging::*;
 pub use methods::*;
 pub use mobile::*;
 pub use model::*;
+pub use permissions::*;
+pub use phone_files::*;
+pub use phone_home::*;
+pub use plugins::*;
 pub use questions::*;
 pub use reactions::*;
 pub use routines::*;
@@ -99,7 +131,9 @@ pub use screens::*;
 pub use search::*;
 pub use session::*;
 pub use settings::*;
+pub use skills::*;
 pub use usage::*;
+pub use versions::*;
 
 /// Version negotiated in `session.hello`. 2 replaced the terminal with the
 /// chat (ADR 0001).
@@ -109,6 +143,9 @@ pub const PROTOCOL_VERSION: u32 = 2;
 pub mod method {
     pub const SESSION_HELLO: &str = "session.hello";
     pub const SESSION_SET_LOCALE: &str = "session.setLocale";
+    /// Answers `null` at once: the app's sign that the connection lives
+    /// (spec 11).
+    pub const SESSION_PING: &str = "session.ping";
     pub const SYSTEM_STATUS: &str = "system.status";
     pub const SYSTEM_REFRESH: &str = "system.refresh";
     pub const CREWS_LIST: &str = "crews.list";
@@ -116,9 +153,11 @@ pub mod method {
     pub const CREWS_RENAME: &str = "crews.rename";
     pub const CREWS_SET_COLOR: &str = "crews.setColor";
     pub const CREWS_SET_PAUSED: &str = "crews.setPaused";
+    pub const CREWS_SET_AUTO_MODE: &str = "crews.setAutoMode";
     pub const CREWS_SET_WORK_FOLDER: &str = "crews.setWorkFolder";
     pub const CREWS_SET_LEAD: &str = "crews.setLead";
     pub const CREWS_ARCHIVE: &str = "crews.archive";
+    pub const CREWS_UNARCHIVE: &str = "crews.unarchive";
     pub const CREWS_DELETE: &str = "crews.delete";
     pub const ARCHIVE_LIST: &str = "archive.list";
     pub const BOTS_LIST: &str = "bots.list";
@@ -126,6 +165,13 @@ pub mod method {
     pub const CATALOG_LIST: &str = "catalog.list";
     pub const CATALOG_GET: &str = "catalog.get";
     pub const CATALOG_ADD: &str = "catalog.add";
+    pub const BUILDS_LIST: &str = "builds.list";
+    pub const BUILDS_UNDO: &str = "builds.undo";
+    pub const IMPORTS_SCAN: &str = "imports.scan";
+    pub const IMPORTS_CREATE: &str = "imports.create";
+    pub const IMPORTS_SEND: &str = "imports.send";
+    pub const IMPORTS_FORGET: &str = "imports.forget";
+    pub const IMPORTS_LIST: &str = "imports.list";
     pub const BOTS_UPDATE: &str = "bots.update";
     pub const BOTS_SET_PAUSED: &str = "bots.setPaused";
     pub const BOTS_SET_PERMISSION_MODE: &str = "bots.setPermissionMode";
@@ -134,13 +180,43 @@ pub mod method {
     pub const AGENTS_MODELS: &str = "agents.models";
     pub const BOTS_SET_EFFORT: &str = "bots.setEffort";
     pub const BOTS_COMPACT: &str = "bots.compact";
+    pub const BOTS_STOP_TASK: &str = "bots.stopTask";
+    /// Stops what the bot is doing now (spec 9.2).
+    pub const BOTS_INTERRUPT: &str = "bots.interrupt";
+    pub const OVERVIEW_CHANGES: &str = "overview.changes";
+    pub const CONNECTORS_LIST: &str = "connectors.list";
+    pub const BOTS_SET_CONNECTORS: &str = "bots.setConnectors";
+    pub const CHROME_SET: &str = "chrome.set";
+    pub const CHROME_STATUS: &str = "chrome.status";
+    pub const CHROME_STOP: &str = "chrome.stop";
+    pub const SKILLS_LIST: &str = "skills.list";
+    pub const SKILLS_SHARE: &str = "skills.share";
+    pub const SKILLS_EVERYONE: &str = "skills.everyone";
+    pub const BOTS_COMMANDS: &str = "bots.commands";
+    pub const PLUGINS_LIST: &str = "plugins.list";
+    pub const PLUGINS_SHARE: &str = "plugins.share";
+    pub const PLUGINS_EVERYONE: &str = "plugins.everyone";
+    pub const LOGINS_LIST: &str = "logins.list";
+    pub const LOGINS_OPEN: &str = "logins.open";
+    pub const LOGINS_SHARE: &str = "logins.share";
+    pub const LOGINS_REMOVE: &str = "logins.remove";
     pub const BOTS_ARCHIVE: &str = "bots.archive";
+    pub const BOTS_UNARCHIVE: &str = "bots.unarchive";
     pub const BOTS_DELETE: &str = "bots.delete";
     pub const BOTS_RESTART: &str = "bots.restart";
     pub const CHAT_HISTORY: &str = "chat.history";
+    /// The conversations of an agent (spec 40.5).
+    pub const CONVERSATIONS_LIST: &str = "conversations.list";
+    pub const CONVERSATIONS_CREATE: &str = "conversations.create";
+    pub const CONVERSATIONS_RENAME: &str = "conversations.rename";
+    pub const CONVERSATIONS_ARCHIVE: &str = "conversations.archive";
+    pub const CONVERSATIONS_UNARCHIVE: &str = "conversations.unarchive";
+    pub const CONVERSATIONS_ARCHIVED: &str = "conversations.archived";
     /// The owner read a bot's chat on the computer (spec 28.12).
     pub const CHAT_READ: &str = "chat.read";
     pub const CHAT_SEARCH: &str = "chat.search";
+    /// The owner presses a button of a card, or sends its form (spec 8.11).
+    pub const CHAT_ACT: &str = "chat.act";
     pub const APPROVALS_ANSWER: &str = "approvals.answer";
     pub const RULES_LIST: &str = "rules.list";
     pub const RULES_DELETE: &str = "rules.delete";
@@ -168,9 +244,13 @@ pub mod method {
     pub const MOBILE_REVOKE: &str = "mobile.revoke";
     pub const CREW_ACCESS_LIST: &str = "crewAccess.list";
     pub const CREW_ACCESS_REVOKE: &str = "crewAccess.revoke";
+    pub const PERMISSIONS_LIST: &str = "permissions.list";
+    pub const SITES_REVOKE: &str = "sites.revoke";
     pub const MCP_SERVERS: &str = "mcp.servers";
     pub const MCP_SAVE: &str = "mcp.save";
     pub const MCP_DELETE: &str = "mcp.delete";
+    pub const MCP_FROM_CLAUDE: &str = "mcp.fromClaude";
+    pub const MCP_IMPORT_CLAUDE: &str = "mcp.importClaude";
     pub const BOT_MCP_SET: &str = "bot.mcp.set";
     pub const DESKTOP_GRANTS: &str = "desktop.grants";
     pub const DESKTOP_REVOKE: &str = "desktop.revoke";
@@ -182,11 +262,15 @@ pub mod method {
     pub const DESKTOP_RESUME: &str = "desktop.resume";
     pub const DESKTOP_AWAY_USES: &str = "desktop.awayUses";
     pub const DESKTOP_DISMISS_AWAY: &str = "desktop.dismissAway";
+    pub const DESKTOP_APPS: &str = "desktop.apps";
+    pub const DESKTOP_GRANT_APP: &str = "desktop.grantApp";
+    pub const DESKTOP_STOP_ALL: &str = "desktop.stopAll";
     pub const MESSAGES_SEND: &str = "messages.send";
     pub const MESSAGES_LIST: &str = "messages.list";
     pub const ATTACHMENTS_READ: &str = "attachments.read";
     pub const FILES_LIST: &str = "files.list";
     pub const FILES_READ: &str = "files.read";
+    pub const FILES_MEDIA: &str = "files.media";
     pub const DELIVERIES_LIST: &str = "deliveries.list";
     pub const DELIVERIES_RETRY: &str = "deliveries.retry";
     pub const TASKS_LIST: &str = "tasks.list";
@@ -213,15 +297,29 @@ pub mod method {
     /// The owner opens the bot's closed browser for themselves.
     pub const BROWSER_START: &str = "browser.start";
     pub const SCREENS_LIST: &str = "screens.list";
+    pub const CARDS_LIST: &str = "cards.list";
+    pub const ACTIVITY_TODAY: &str = "activity.today";
+    pub const KEYS_LIST: &str = "keys.list";
+    pub const KEYS_SET: &str = "keys.set";
+    pub const KEYS_DELETE: &str = "keys.delete";
+    pub const KEYS_DISMISS: &str = "keys.dismiss";
+    pub const KEYS_SCAN: &str = "keys.scan";
+    pub const KEYS_SCRUB: &str = "keys.scrub";
     pub const QUESTIONS_LIST: &str = "questions.list";
     pub const QUESTIONS_ANSWER: &str = "questions.answer";
     pub const QUESTIONS_DISMISS: &str = "questions.dismiss";
     pub const REACTIONS_LIST: &str = "reactions.list";
     pub const REACTIONS_SET: &str = "reactions.set";
+    /// The history of a bot's memory or instructions (spec 8.10).
+    pub const VERSIONS_LIST: &str = "versions.list";
+    pub const VERSIONS_RESTORE: &str = "versions.restore";
     pub const SETTINGS_GET: &str = "settings.get";
     pub const SETTINGS_UPDATE: &str = "settings.update";
+    pub const INSTRUCTIONS_GET: &str = "instructions.get";
+    pub const INSTRUCTIONS_SET: &str = "instructions.set";
     pub const AGENTS_SET_PATH: &str = "agents.setPath";
     pub const USAGE_TOKENS: &str = "usage.tokens";
+    pub const USAGE_COSTS: &str = "usage.costs";
 }
 
 /// Server notification method names.
@@ -232,11 +330,21 @@ pub mod notification {
     pub const BOT_DELETED: &str = "bot.deleted";
     pub const FOLDER_RECYCLED: &str = "folder.recycled";
     pub const BOT_STATE: &str = "bot.state";
+    /// A conversation's state, title, context or background changed (spec 40.5).
+    pub const CONVERSATION_CHANGED: &str = "conversation.changed";
     pub const BOT_CONTEXT: &str = "bot.context";
+    pub const BOT_BACKGROUND: &str = "bot.background";
     pub const BOT_RULES: &str = "bot.rules";
     pub const BOT_DESKTOP: &str = "bot.desktop";
+    pub const BOT_SITES: &str = "bot.sites";
+    /// The owner gave their Chrome to an agent or took it back (spec 37).
+    pub const BOT_CHROME: &str = "bot.chrome";
+    /// Another agent, or none, acts in the owner's Chrome (spec 37.4).
+    pub const CHROME_TURN: &str = "chrome.turn";
     pub const MCP_SERVERS: &str = "mcp.servers";
     pub const BOT_MCP: &str = "bot.mcp";
+    /// The shared site logins changed (spec 35).
+    pub const LOGINS_CHANGED: &str = "logins.changed";
     pub const DESKTOP_CHANGED: &str = "desktop.changed";
     /// What bots did while the owner was away, whenever it changes.
     pub const DESKTOP_AWAY: &str = "desktop.away";
@@ -256,6 +364,8 @@ pub mod notification {
     pub const SCREEN_DRAFT: &str = "screen.draft";
     pub const QUESTION_CHANGED: &str = "question.changed";
     pub const REACTION_CHANGED: &str = "reaction.changed";
+    /// A new version of a bot's memory or instructions (spec 8.10).
+    pub const VERSION_CREATED: &str = "version.created";
     pub const CLOUD_SIGNED_IN: &str = "cloud.signed_in";
     pub const CLOUD_PROGRESS: &str = "cloud.progress";
     pub const CLOUD_SIGNIN_EXPIRED: &str = "cloud.signin_expired";

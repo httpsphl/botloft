@@ -1,17 +1,20 @@
 //! What each bot may see and do on the owner's desktop (spec 24.2,
 //! 24.10): `desktop.grants` and `desktop.revoke`. Grants come from the
-//! owner answering a bot's request (`tools/desktop.rs`). And stopping a
-//! bot there, or every bot at once (spec 24.9): `desktop.stop` and
-//! `desktop.resume`.
+//! owner answering a bot's request (`tools/desktop.rs`), or from Settings
+//! for an app open now (`desktop.apps`, `desktop.grantApp`). And stopping
+//! a bot there, or every bot at once (spec 24.9): `desktop.stop`,
+//! `desktop.resume` and `desktop.stopAll`.
 
 use botloft_core::ids::BotId;
 use botloft_core::protocol::{
-    BotDesktop, DesktopAwayUse, DesktopBotParams, DesktopGrant, DesktopGrantIdParams,
-    DesktopGrantsParams, DesktopOptionsParams, DesktopState, DesktopWholeParams,
+    BotDesktop, DesktopApp, DesktopAwayUse, DesktopBotParams, DesktopGrant, DesktopGrantAppParams,
+    DesktopGrantIdParams, DesktopGrantsParams, DesktopOptionsParams, DesktopState,
+    DesktopWholeParams,
 };
 use tracing::{info, warn};
 
 use super::{ApiError, ApiResult};
+use crate::platform::desktop::{self as platform, DesktopError, Window, never};
 use crate::state::{Daemon, Event};
 
 pub fn grants(daemon: &Daemon, params: DesktopGrantsParams) -> ApiResult<Vec<DesktopGrant>> {
@@ -61,6 +64,81 @@ pub fn grant_whole(daemon: &Daemon, params: DesktopWholeParams) -> ApiResult<Bot
     info!(
         level = params.level.as_str(),
         "the owner gave a bot the whole desktop"
+    );
+    changed(daemon, &params.bot_id)
+}
+
+/// The apps open now that a bot may be given (spec 24.10): one per
+/// executable, by name, never one of those never granted (24.3). Empty
+/// where there is no desktop to use.
+pub fn apps() -> ApiResult<Vec<DesktopApp>> {
+    Ok(grantable(&open_windows()))
+}
+
+fn open_windows() -> Vec<Window> {
+    match platform::windows() {
+        Ok(windows) => windows,
+        Err(DesktopError::Unavailable) => Vec::new(),
+        Err(err) => {
+            warn!("could not list the open windows: {err}");
+            Vec::new()
+        }
+    }
+}
+
+fn grantable(windows: &[Window]) -> Vec<DesktopApp> {
+    let mut apps: Vec<DesktopApp> = Vec::new();
+    for window in windows {
+        let path = window.app.path.to_string_lossy();
+        let known = apps.iter().any(|app| app.path.eq_ignore_ascii_case(&path));
+        if path.is_empty() || known || never(window).is_some() {
+            continue;
+        }
+        apps.push(DesktopApp {
+            path: path.into_owned(),
+            name: window.app.name.clone(),
+        });
+    }
+    apps.sort_by_key(|app| app.name.to_lowercase());
+    apps
+}
+
+/// Gives the bot an app that is open now, before it asks (spec 24.10):
+/// the daemon names it from its windows and refuses one never granted.
+pub fn grant_app(daemon: &Daemon, params: DesktopGrantAppParams) -> ApiResult<BotDesktop> {
+    super::bots::find(&daemon.store(), &params.bot_id)?;
+    let windows = open_windows();
+    let open: Vec<&Window> = windows
+        .iter()
+        .filter(|window| {
+            window
+                .app
+                .path
+                .to_string_lossy()
+                .eq_ignore_ascii_case(&params.path)
+        })
+        .collect();
+    if open.is_empty() {
+        return Err(ApiError::NotFound(
+            "that app is not open on the desktop".to_owned(),
+        ));
+    }
+    let Some(window) = open.into_iter().find(|window| never(window).is_none()) else {
+        return Err(ApiError::Conflict(
+            "that app is never given to a bot".to_owned(),
+        ));
+    };
+    let path = window.app.path.to_string_lossy().into_owned();
+    daemon.store().grant_desktop_app(
+        &params.bot_id,
+        &path,
+        &window.app.name,
+        params.level,
+        daemon.clock.now_ms(),
+    )?;
+    info!(
+        level = params.level.as_str(),
+        "the owner gave a bot an app on the desktop"
     );
     changed(daemon, &params.bot_id)
 }
@@ -130,4 +208,43 @@ pub fn stop_all(daemon: &Daemon) {
         bots = bots.len(),
         "the owner stopped every bot on the desktop"
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use super::*;
+    use crate::platform::desktop::App;
+
+    fn window(id: u64, path: &str, name: &str, elevated: bool) -> Window {
+        Window {
+            id,
+            title: format!("Window {id}"),
+            class: "Test".to_owned(),
+            app: App {
+                path: PathBuf::from(path),
+                name: name.to_owned(),
+            },
+            minimized: false,
+            elevated,
+        }
+    }
+
+    #[test]
+    fn the_apps_to_give_are_one_per_program_and_never_the_ones_never_granted() {
+        let windows = [
+            window(1, r"C:\Office\EXCEL.EXE", "Microsoft Excel", false),
+            window(2, r"C:\office\excel.exe", "Microsoft Excel", false),
+            window(3, r"C:\Windows\System32\cmd.exe", "Command Prompt", false),
+            window(4, r"C:\Tools\admin.exe", "Admin tool", true),
+            window(5, r"C:\Botloft\Botloft.exe", "Botloft", false),
+            window(6, "", "Nameless", false),
+            window(7, r"C:\Apps\notepad.exe", "Bloco de Notas", false),
+        ];
+        let apps = grantable(&windows);
+        let names: Vec<&str> = apps.iter().map(|app| app.name.as_str()).collect();
+        assert_eq!(names, ["Bloco de Notas", "Microsoft Excel"]);
+        assert_eq!(apps[1].path, r"C:\Office\EXCEL.EXE");
+    }
 }

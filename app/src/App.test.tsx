@@ -4,6 +4,7 @@ import { App } from "./App";
 import type { Client } from "./lib/client";
 import { FakeBotloft } from "./lib/fake";
 import { FakeHost } from "./lib/fakeHost";
+import { crewOpened } from "./test/app";
 
 afterEach(cleanup);
 
@@ -45,6 +46,7 @@ describe("app", () => {
     const fake = new FakeBotloft();
     fake.addCrew("Ops");
     renderApp(fake);
+    await crewOpened("Ops");
     await newBot("Scout");
     expect(await screen.findByRole("heading", { level: 1, name: "Scout" })).toBeDefined();
     expect(screen.getByText("@scout")).toBeDefined();
@@ -63,7 +65,7 @@ describe("app", () => {
     const crew = fake.addCrew("Ops");
     fake.addBot(crew.id, "Scout");
     renderApp(fake);
-    await screen.findByRole("heading", { level: 1, name: "Ops" });
+    await crewOpened("Ops");
     await newBot("Scout");
     expect((await screen.findByRole("alert")).textContent).toBe(
       "@scout is already used in this crew",
@@ -98,7 +100,7 @@ describe("app", () => {
     const crew = fake.addCrew("Ops");
     fake.addBot(crew.id, "Scout");
     renderApp(fake);
-    await screen.findByRole("heading", { level: 1, name: "Ops" });
+    await crewOpened("Ops");
     fireEvent.click(within(sidebar()).getByRole("button", { name: /Scout/ }));
     fireEvent.click(screen.getByRole("button", { name: "More agent actions" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Archive agent" }));
@@ -117,6 +119,7 @@ describe("app", () => {
     const scout = fake.addBot(crew.id, "Scout");
     fake.setBotState(scout.id, "offline");
     renderApp(fake);
+    await crewOpened("Ops");
     fireEvent.click(await screen.findByRole("button", { name: "Pause crew" }));
     expect(await screen.findByRole("button", { name: "Resume crew" })).toBeDefined();
     expect(within(sidebar()).getAllByText("Paused")).toHaveLength(2);
@@ -143,7 +146,7 @@ describe("app", () => {
     const fake = new FakeBotloft();
     fake.addCrew("Ops");
     renderApp(fake);
-    await screen.findByRole("heading", { level: 1, name: "Ops" });
+    await crewOpened("Ops");
     act(() => fake.setConnection({ kind: "waiting", retryAt: 0 }));
     expect(screen.getByText("Reconnecting…")).toBeDefined();
   });
@@ -152,7 +155,7 @@ describe("app", () => {
     const crew = fake.addCrew("Ops");
     const scout = fake.addBot(crew.id, "Scout", "Finds sources");
     renderApp(fake);
-    await screen.findByRole("heading", { level: 1, name: "Ops" });
+    await crewOpened("Ops");
     fireEvent.click(within(sidebar()).getByRole("button", { name: /Scout/ }));
     expect(await screen.findByText("Start a conversation with Scout")).toBeDefined();
     expect(screen.queryByText(scout.workspace)).toBeNull();
@@ -169,7 +172,7 @@ describe("app", () => {
     await fake.call("crews.setPaused", { crewId: crew.id, paused: true });
     fake.addBot(crew.id, "Scout");
     renderApp(fake);
-    await screen.findByRole("heading", { level: 1, name: "Ops" });
+    await crewOpened("Ops");
     fireEvent.click(within(sidebar()).getByRole("button", { name: /Scout/ }));
     expect(await screen.findByText(/What you send waits until it runs again/)).toBeDefined();
     expect(screen.getByLabelText("Message to Scout")).toBeDefined();

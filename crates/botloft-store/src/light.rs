@@ -9,8 +9,8 @@ use rusqlite::Connection;
 use crate::{Result, Store};
 
 /// Emptied in the light copy, children before parents. The chats, what the
-/// bots were asked and answered, the runs of the routines, the usage of the
-/// plan and what this computer let a bot use on the desktop.
+/// bots were asked and answered, the runs of the routines, what the bots
+/// cost and what this computer let a bot use on the desktop.
 const EMPTIED: &[&str] = &[
     "reactions",
     "questions",
@@ -22,27 +22,40 @@ const EMPTIED: &[&str] = &[
     "chat_items",
     "routine_runs",
     "turn_costs",
-    "plan_readings",
     "desktop_grants",
 ];
 
 impl Store {
+    /// A consistent copy of the whole database at `path`, which must not
+    /// exist yet (spec 14.2). The daemon makes it with a [`crate::Copier`].
+    pub fn snapshot_to(&self, path: &Path) -> Result<()> {
+        crate::copier::vacuum_into(&self.conn, path)
+    }
+
     /// A copy of the database at `path` (which must not exist yet) without
     /// the conversations and the rest of [`EMPTIED`]. The sessions the bots
     /// had with Claude Code stay behind: another computer does not have them.
+    /// The daemon makes it with a [`crate::Copier`].
     pub fn snapshot_light_to(&self, path: &Path) -> Result<()> {
-        self.snapshot_to(path)?;
-        let copy = Connection::open(path)?;
-        copy.pragma_update(None, "foreign_keys", "OFF")?;
-        let tx = copy.unchecked_transaction()?;
-        for table in EMPTIED {
-            tx.execute(&format!("DELETE FROM {table}"), [])?;
-        }
-        tx.execute("UPDATE bots SET session_id = NULL, token_hash = NULL", [])?;
-        tx.commit()?;
-        copy.execute_batch("VACUUM")?;
-        Ok(())
+        light_copy(&self.conn, path)
     }
+}
+
+/// The light copy of what `conn` reads, at `path`. Only the copy is
+/// emptied and vacuumed, on a connection of its own.
+pub(crate) fn light_copy(conn: &Connection, path: &Path) -> Result<()> {
+    crate::copier::vacuum_into(conn, path)?;
+    let copy = Connection::open(path)?;
+    copy.pragma_update(None, "foreign_keys", "OFF")?;
+    let tx = copy.unchecked_transaction()?;
+    for table in EMPTIED {
+        tx.execute(&format!("DELETE FROM {table}"), [])?;
+    }
+    tx.execute("UPDATE bots SET session_id = NULL, token_hash = NULL", [])?;
+    tx.execute("UPDATE conversations SET session_id = NULL", [])?;
+    tx.commit()?;
+    copy.execute_batch("VACUUM")?;
+    Ok(())
 }
 
 #[cfg(test)]

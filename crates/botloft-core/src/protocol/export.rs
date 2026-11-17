@@ -10,26 +10,49 @@ use ts_rs::{Config, TS};
 use super::*;
 use crate::avatar::PALETTE;
 use crate::ids::{
-    ApprovalId, AttachmentId, BotId, ChatItemId, CrewAccessId, CrewId, DeliveryId, DesktopGrantId,
-    McpServerId, MessageId, QuestionId, RoutineId, RoutineRunId, RuleId, TaskId,
+    ApprovalId, AttachmentId, BotId, BuildId, ChatItemId, ConversationId, CrewAccessId, CrewId,
+    DeliveryId, DesktopGrantId, ImportId, McpServerId, MessageId, QuestionId, RoutineId,
+    RoutineRunId, RuleId, TaskId, VersionId,
 };
 
 #[path = "export_backup.rs"]
 mod backup;
 #[path = "export_browser.rs"]
 mod browser;
+#[path = "export_cards.rs"]
+mod cards;
 #[path = "export_catalog.rs"]
 mod catalog;
+#[path = "export_changes.rs"]
+mod changes;
+#[path = "export_chrome.rs"]
+mod chrome;
 #[path = "export_cloud.rs"]
 mod cloud;
+#[path = "export_connectors.rs"]
+mod connectors;
+#[path = "export_conversations.rs"]
+mod conversations;
 #[path = "export_crew_access.rs"]
 mod crew_access;
 #[path = "export_desktop.rs"]
 mod desktop;
+#[path = "export_imports.rs"]
+mod imports;
+#[path = "export_island.rs"]
+mod island;
+#[path = "export_keys.rs"]
+mod keys;
+#[path = "export_logins.rs"]
+mod logins;
 #[path = "export_mcp.rs"]
 mod mcp;
 #[path = "export_mobile.rs"]
 mod mobile;
+#[path = "export_permissions.rs"]
+mod permissions;
+#[path = "export_plugins.rs"]
+mod plugins;
 #[path = "export_questions.rs"]
 mod questions;
 #[path = "export_reactions.rs"]
@@ -42,8 +65,12 @@ mod rules;
 mod search;
 #[path = "export_session.rs"]
 mod session;
+#[path = "export_skills.rs"]
+mod skills;
 #[path = "export_usage.rs"]
 mod usage;
+#[path = "export_versions.rs"]
+mod versions;
 use crate::validate;
 
 const HEADER: &str = "\
@@ -124,7 +151,13 @@ fn export_bindings() {
     out.decl::<DesktopGrantId>();
     out.decl::<McpServerId>();
     out.decl::<CrewAccessId>();
+    out.decl::<BuildId>();
+    out.decl::<VersionId>();
+    out.decl::<ImportId>();
+    out.decl::<ConversationId>();
     out.decl::<Crew>();
+    out.decl::<Build>();
+    out.decl::<BuildIdParams>();
     out.decl::<BotState>();
     out.decl::<PermissionMode>();
     out.decl::<AgentKind>();
@@ -133,6 +166,7 @@ fn export_bindings() {
     out.decl::<Activity>();
     session::decls(&mut out);
     out.decl::<Bot>();
+    conversations::decls(&mut out);
     out.decl::<ClientInfo>();
     out.decl::<HelloParams>();
     out.decl::<LocaleParams>();
@@ -147,6 +181,7 @@ fn export_bindings() {
     out.decl::<CrewsRenameParams>();
     out.decl::<CrewsSetColorParams>();
     out.decl::<CrewsSetPausedParams>();
+    out.decl::<CrewsSetAutoModeParams>();
     out.decl::<CrewsSetWorkFolderParams>();
     out.decl::<NewLead>();
     out.decl::<CrewsSetLeadParams>();
@@ -184,6 +219,7 @@ fn export_bindings() {
     out.decl::<FilesListParams>();
     out.decl::<FilesReadParams>();
     out.decl::<FileData>();
+    out.decl::<MediaLink>();
     out.decl::<Message>();
     out.decl::<MessageReply>();
     out.decl::<Delivery>();
@@ -200,20 +236,35 @@ fn export_bindings() {
     out.decl::<InboundItem>();
     out.decl::<ReplyItem>();
     out.decl::<ToolItem>();
+    out.decl::<EditLines>();
     rules::decls(&mut out);
     desktop::decls(&mut out);
     mcp::decls(&mut out);
     crew_access::decls(&mut out);
+    chrome::decls(&mut out);
+    plugins::decls(&mut out);
+    skills::decls(&mut out);
+    permissions::decls(&mut out);
     catalog::decls(&mut out);
+    imports::decls(&mut out);
     backup::decls(&mut out);
     cloud::decls(&mut out);
     mobile::decls(&mut out);
+    island::decls(&mut out);
+    keys::decls(&mut out);
+    changes::decls(&mut out);
+    connectors::decls(&mut out);
+    logins::decls(&mut out);
     out.decl::<ApprovalItem>();
     usage::decls(&mut out);
+    versions::decls(&mut out);
     questions::decls(&mut out);
     reactions::decls(&mut out);
     out.decl::<TurnItem>();
     out.decl::<NoticeItem>();
+    out.decl::<KeyRequestStatus>();
+    out.decl::<KeyRequestItem>();
+    cards::decls(&mut out);
     out.decl::<ChatBody>();
     out.decl::<ChatItem>();
     out.decl::<ChatItemChanged>();
@@ -224,6 +275,7 @@ fn export_bindings() {
     out.decl::<ApprovalsAnswerParams>();
     out.decl::<Settings>();
     out.decl::<SettingsUpdateParams>();
+    out.decl::<OwnerInstructions>();
     routines::decls(&mut out);
     browser::decls(&mut out);
 
@@ -245,6 +297,7 @@ fn export_bindings() {
         &out.name::<LocaleParams>(),
         "null",
     );
+    out.method(method::SESSION_PING, "undefined", "null");
     out.method(
         method::SYSTEM_STATUS,
         "undefined",
@@ -260,6 +313,16 @@ fn export_bindings() {
         method::SETTINGS_UPDATE,
         &out.name::<SettingsUpdateParams>(),
         &out.name::<Settings>(),
+    );
+    out.method(
+        method::INSTRUCTIONS_GET,
+        "undefined",
+        &out.name::<OwnerInstructions>(),
+    );
+    out.method(
+        method::INSTRUCTIONS_SET,
+        &out.name::<OwnerInstructions>(),
+        &out.name::<OwnerInstructions>(),
     );
     out.method(
         method::AGENTS_SET_PATH,
@@ -288,6 +351,11 @@ fn export_bindings() {
         &crew,
     );
     out.method(
+        method::CREWS_SET_AUTO_MODE,
+        &out.name::<CrewsSetAutoModeParams>(),
+        &crew,
+    );
+    out.method(
         method::CREWS_SET_WORK_FOLDER,
         &out.name::<CrewsSetWorkFolderParams>(),
         &crew,
@@ -298,6 +366,7 @@ fn export_bindings() {
         &crew,
     );
     out.method(method::CREWS_ARCHIVE, &out.name::<CrewIdParams>(), &crew);
+    out.method(method::CREWS_UNARCHIVE, &out.name::<CrewIdParams>(), &crew);
     let crew_deleted = out.name::<CrewDeleted>();
     let bot_deleted = out.name::<BotDeleted>();
     out.method(
@@ -335,6 +404,7 @@ fn export_bindings() {
         &format!("{}[]", out.name::<AgentModel>()),
     );
     out.method(method::BOTS_ARCHIVE, &out.name::<BotIdParams>(), &bot);
+    out.method(method::BOTS_UNARCHIVE, &out.name::<BotIdParams>(), &bot);
     out.method(
         method::BOTS_DELETE,
         &out.name::<BotsDeleteParams>(),
@@ -346,7 +416,11 @@ fn export_bindings() {
         &out.name::<ChatHistoryParams>(),
         &out.name::<Vec<ChatItem>>(),
     );
-    out.method(method::CHAT_READ, &out.name::<BotIdParams>(), "null");
+    out.method(
+        method::CHAT_READ,
+        &out.name::<BotConversationParams>(),
+        "null",
+    );
     out.method(
         method::APPROVALS_ANSWER,
         &out.name::<ApprovalsAnswerParams>(),
@@ -380,6 +454,11 @@ fn export_bindings() {
         &out.name::<FileData>(),
     );
     out.method(
+        method::FILES_MEDIA,
+        &out.name::<FilesReadParams>(),
+        &out.name::<MediaLink>(),
+    );
+    out.method(
         method::DELIVERIES_LIST,
         &out.name::<DeliveriesListParams>(),
         &out.name::<Vec<Delivery>>(),
@@ -395,15 +474,28 @@ fn export_bindings() {
         &out.name::<Vec<Task>>(),
     );
     session::methods(&mut out);
+    conversations::methods(&mut out);
     usage::methods(&mut out);
+    versions::methods(&mut out);
+    cards::methods(&mut out);
     rules::methods(&mut out);
     desktop::methods(&mut out);
     mcp::methods(&mut out);
     crew_access::methods(&mut out);
+    permissions::methods(&mut out);
+    chrome::methods(&mut out);
+    plugins::methods(&mut out);
+    skills::methods(&mut out);
     catalog::methods(&mut out);
+    imports::methods(&mut out);
     backup::methods(&mut out);
     cloud::methods(&mut out);
     mobile::methods(&mut out);
+    island::methods(&mut out);
+    keys::methods(&mut out);
+    changes::methods(&mut out);
+    connectors::methods(&mut out);
+    logins::methods(&mut out);
     routines::methods(&mut out);
     questions::methods(&mut out);
     reactions::methods(&mut out);
@@ -451,12 +543,17 @@ fn export_bindings() {
     );
     let _ = writeln!(out.text, "  \"{}\": {task};", notification::TASK_CHANGED);
     session::notifications(&mut out);
+    conversations::notifications(&mut out);
     routines::notifications(&mut out);
     questions::notifications(&mut out);
     reactions::notifications(&mut out);
+    versions::notifications(&mut out);
     rules::notifications(&mut out);
     desktop::notifications(&mut out);
+    permissions::notifications(&mut out);
+    chrome::notifications(&mut out);
     mcp::notifications(&mut out);
+    logins::notifications(&mut out);
     cloud::notifications(&mut out);
     mobile::notifications(&mut out);
     browser::notifications(&mut out);

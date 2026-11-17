@@ -12,6 +12,10 @@ interface Formats {
   dayOfYear: Intl.DateTimeFormat;
   /** By number of decimals. */
   decimals: [Intl.NumberFormat, Intl.NumberFormat];
+  /** US dollars, the language's way ("$12.40", "US$ 12,40"). */
+  dollars: Intl.NumberFormat;
+  /** "Sat, Nov 14". */
+  shortDay: Intl.DateTimeFormat;
 }
 
 const cache = new Map<Locale, Formats>();
@@ -44,6 +48,12 @@ function formats(): Formats {
             maximumFractionDigits: digits,
           }),
       ) as Formats["decimals"],
+      dollars: new Intl.NumberFormat(locale, { style: "currency", currency: "USD" }),
+      shortDay: new Intl.DateTimeFormat(locale, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      }),
     };
     cache.set(locale, found);
   }
@@ -90,6 +100,24 @@ export function fileSize(bytes: number): string {
   }
   const mb = kb / 1024;
   return `${mb < 10 ? decimal(mb, 1) : Math.round(mb)} MB`;
+}
+
+/**
+ * A cost at API prices in US dollars (spec 8.7): "$12.40" ("US$ 12,40" in
+ * Portuguese); under a cent, "< $0.01".
+ */
+export function dollars(amount: number): string {
+  const { dollars } = formats();
+  return amount > 0 && amount < 0.005 ? `< ${dollars.format(0.01)}` : dollars.format(amount);
+}
+
+/** A day the daemon wrote as `2026-11-14`, as "Sat, Nov 14". */
+export function shortDay(key: string): string {
+  const [year, month, day] = key.split("-").map(Number);
+  if (!year || !month || !day) {
+    return key;
+  }
+  return formats().shortDay.format(new Date(year, month - 1, day));
 }
 
 /** Tokens as the owner reads them: "850", "24.3k", "556k", "1M", "1.2M". */
@@ -141,6 +169,11 @@ export function duration(ms: number): string {
   const minutes = Math.floor(seconds / 60);
   const rest = Math.round(seconds % 60);
   return rest === 0 ? `${minutes} min` : `${minutes} min ${rest} s`;
+}
+
+/** Clock time only, whatever the day. */
+export function clock(ms: number): string {
+  return formats().clock.format(ms);
 }
 
 /** "Monday, September 28" for today's year, with the year otherwise. */

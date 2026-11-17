@@ -48,6 +48,31 @@ describe("reacting to a reply", () => {
     expect(await screen.findByText("Scout saw it")).toBeDefined();
   });
 
+  test("a thumb on a reply that asks answers it at once", async () => {
+    const fake = new FakeBotloft();
+    const ops = fake.addCrew("Ops");
+    const scout = fake.addBot(ops.id, "Scout", "Finds sources");
+    fake.setBotState(scout.id, "idle");
+    fake.chat.reply(scout.id, "The report is ready.\n\n**Should I send it to Acme?**");
+    fake.chat.turn(scout.id);
+    renderApp(fake);
+    await crewOpened("Ops");
+    openBot("Scout");
+    await screen.findByRole("list", { name: "Messages" });
+
+    fireEvent.click(screen.getByRole("button", { name: "React to what Scout wrote" }));
+    expect(screen.getByText("👍 or 👎 answers the question now")).toBeDefined();
+    const menu = screen.getByRole("menu", { name: "React to what Scout wrote" });
+    // The other emoji keep their own names.
+    expect(within(menu).getByRole("menuitemradio", { name: "❤️" })).toBeDefined();
+    fireEvent.click(within(menu).getByRole("menuitemradio", { name: "👎 Answer no now" }));
+
+    expect(await screen.findByText("Sent to Scout as your answer")).toBeDefined();
+    const sent = fake.conversation.messages.at(-1);
+    expect(sent).toMatchObject({ fromKind: "owner", toBotId: scout.id, body: "👎" });
+    expect(fake.reactions.reactions.values().next().value?.sentIn).toBe(sent?.id);
+  });
+
   test("another emoji replaces it, the same one or a click on it takes it off", async () => {
     await setup();
     react("👍");

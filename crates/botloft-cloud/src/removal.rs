@@ -10,13 +10,13 @@ use serde::Deserialize;
 
 use crate::accounts::LOGIN_TTL_MS;
 use crate::app::AppState;
-use crate::copy_rows;
 use crate::devices;
 use crate::error::ApiError;
 use crate::limits::{self, GAP, PER_EMAIL};
 use crate::mail_text::{Locale, delete_mail};
 use crate::mailer::Mail;
 use crate::session::Computer;
+use crate::{copy_rows, file_rows};
 use crate::{pages, tokens};
 
 #[derive(Deserialize, Default)]
@@ -126,7 +126,8 @@ pub async fn confirm(
         let Some((account_id, locale, _)) = waiting(conn, &code_hash, now)? else {
             return Ok(None);
         };
-        let keys = copy_rows::keys(conn, account_id)?;
+        let mut keys = copy_rows::keys(conn, account_id)?;
+        keys.extend(file_rows::keys_of_account(conn, account_id)?);
         let devices = devices::device_ids(conn, account_id)?;
         conn.execute("DELETE FROM accounts WHERE id = ?1", [account_id])?;
         Ok(Some((Locale::parse(&locale), keys, devices)))

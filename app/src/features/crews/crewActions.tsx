@@ -34,6 +34,8 @@ export interface CrewActions {
   pause: MenuItem & { icon: LucideIcon };
   /** Opens the work folder in the system's file manager. */
   openFolder(): void;
+  /** Turns the crew's automatic mode on or off (spec 7.4). */
+  setAutoMode(enabled: boolean): void;
   /** Rename, the folder, archive and delete. */
   items: MenuItem[];
   /** The dialog an action opened, `null` while none is. */
@@ -66,6 +68,11 @@ export function useCrewActions(crew: Crew): CrewActions {
   const setPaused = (paused: boolean) =>
     attempt(paused ? words.failed.pause : words.failed.resume, async () =>
       putCrew(await api.call("crews.setPaused", { crewId: crew.id, paused })),
+    );
+
+  const setAutoMode = (enabled: boolean) =>
+    attempt(t.crews.autoMode.failed, async () =>
+      putCrew(await api.call("crews.setAutoMode", { crewId: crew.id, enabled })),
     );
 
   let dialogs: ReactNode | null = null;
@@ -114,6 +121,7 @@ export function useCrewActions(crew: Crew): CrewActions {
     newBot: { label: t.crews.newBot, icon: Plus, onSelect: () => setOpen("bot") },
     agency: { label: t.catalog.open, onSelect: () => setOpen("agency") },
     openFolder,
+    setAutoMode,
     pause: crew.paused
       ? { label: words.resume, icon: Play, onSelect: () => setPaused(false) }
       : { label: words.pause, icon: Pause, onSelect: () => setPaused(true) },

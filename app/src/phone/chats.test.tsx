@@ -202,7 +202,7 @@ describe("a conversation", () => {
     const phone = withList(line());
     const card: ApprovalCard = {
       approvalId: "apr_1",
-      bot: { name: "Scout", color: "#aabbcc" },
+      bot: { id: "bot_scout", name: "Scout", color: "#aabbcc" },
       crew: "Ops",
       createdAt: 1,
       toolName: "Bash",
@@ -431,5 +431,27 @@ describe("following the end of a conversation", () => {
     act(() => grew());
     expect(scrollTo).toHaveBeenCalledWith({ top: 3000 });
     vi.unstubAllGlobals();
+  });
+});
+
+describe("a routine that failed", () => {
+  test("waits among the requests until the owner opens its conversation", async () => {
+    const phone = new FakePhone();
+    phone.receive({
+      t: "chats",
+      first: true,
+      bots: [line({ readAt: 50, failed: { routine: "Morning summary", at: 120 } })],
+    });
+    render(<PhoneApp api={phone} />);
+    const card = screen.getByRole("region", { name: "Scout's routine “Morning summary” failed" });
+    fireEvent.click(within(card).getByRole("button", { name: "Open the conversation" }));
+    await waitFor(() => expect(phone.asked.some((ask) => ask.t === "history")).toBe(true));
+  });
+
+  test("is red in the list, and gone once read on the computer", () => {
+    const phone = withList(line({ failed: { routine: "Morning summary", at: 120 } }));
+    expect(screen.getByText("“Morning summary” failed")).toBeDefined();
+    act(() => phone.receive({ t: "read", botId: "bot_1", upto: 130 }));
+    expect(screen.queryByText("“Morning summary” failed")).toBeNull();
   });
 });

@@ -6,6 +6,8 @@ pub mod connected;
 mod files;
 pub mod folder;
 mod memory;
+mod owner;
+mod sections;
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -17,6 +19,7 @@ use botloft_store::BotRecord;
 use crate::paths::Paths;
 
 pub use connected::connected_var;
+pub use owner::write_owner_rules;
 
 /// What generated files need to know about the running daemon.
 #[derive(Debug, Clone, Copy)]
@@ -146,6 +149,8 @@ mod tests {
             lead_bot_id: None,
             paused: false,
             color: None,
+            auto_mode: false,
+            system: None,
             created_at: 0,
             archived_at: None,
         };
@@ -163,6 +168,7 @@ mod tests {
             agent: botloft_core::protocol::AgentKind::Claude,
             agent_model: None,
             allowed_commands: Vec::new(),
+            plan_first: false,
             model: botloft_core::protocol::BotModel::Default,
             model_in_use: None,
             effort: botloft_core::protocol::BotEffort::Default,
@@ -248,6 +254,8 @@ mod tests {
             lead_bot_id: None,
             paused: false,
             color: None,
+            auto_mode: false,
+            system: None,
             created_at: 0,
             archived_at: None,
         };

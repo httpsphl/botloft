@@ -3,14 +3,18 @@
 //! or being connected, and nothing of what passes goes in the log.
 
 mod bridge;
-mod cards;
+pub(crate) mod cards;
 mod chats;
+pub mod files;
+mod home;
 mod kdf;
 mod pair;
 mod phones;
 mod relay;
 pub mod seal;
 mod talk;
+#[cfg(test)]
+mod vectors;
 
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::Path;

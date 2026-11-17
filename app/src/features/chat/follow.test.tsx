@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { FakeBotloft } from "../../lib/fake";
 import { crewOpened, openBot, renderApp } from "../../test/app";
+import { followTop } from "./follow";
 
 afterEach(() => {
   cleanup();
@@ -51,5 +52,37 @@ describe("following the end of the chat", () => {
     height = 7000;
     act(() => grew());
     expect(scroller.scrollTop).toBe(7000);
+  });
+});
+
+describe("a reply taller than the chat", () => {
+  /** A chat 600 px tall, scrolled to 1000, whose newest row is the bot's. */
+  function chat(reply: { top: number; height: number }, newest = "bot") {
+    const scroller = document.createElement("div");
+    const list = document.createElement("ol");
+    const row = document.createElement("li");
+    const text = document.createElement("div");
+    if (newest === "bot") {
+      text.dataset.reply = "";
+    }
+    row.append(text);
+    list.append(row);
+    scroller.append(list);
+    Object.defineProperty(scroller, "clientHeight", { value: 600 });
+    Object.defineProperty(scroller, "scrollHeight", { value: 5000 });
+    scroller.scrollTop = 1000;
+    scroller.getBoundingClientRect = () => new DOMRect(0, 0, 800, 600);
+    text.getBoundingClientRect = () => new DOMRect(0, reply.top, 600, reply.height);
+    return followTop(scroller, list);
+  }
+
+  test("is followed from its start, with the bot's name above it", () => {
+    expect(chat({ top: 200, height: 900 })).toBe(1000 + 200 - 80);
+  });
+
+  test("one that fits, one read past its start, or the owner's message: the end", () => {
+    expect(chat({ top: 200, height: 300 })).toBe(5000);
+    expect(chat({ top: -40, height: 900 })).toBe(5000);
+    expect(chat({ top: 200, height: 900 }, "owner")).toBe(5000);
   });
 });

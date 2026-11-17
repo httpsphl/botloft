@@ -43,3 +43,11 @@ export function Button({
     </button>
   );
 }
+
+/**
+ * A button's words, read aloud always but shown only where they fit: in a
+ * `@container` 48rem wide or more. Narrower, the icon and its tooltip stay.
+ */
+export function FitLabel({ children }: { children: string }) {
+  return <span className="sr-only @3xl:not-sr-only">{children}</span>;
+}

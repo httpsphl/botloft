@@ -3,7 +3,7 @@
 // foot. It stays while the list of crews and bots is hidden, with the
 // counts that call the owner.
 
-import { AlarmClock, House, type LucideIcon, MessageCircleQuestion, Search } from "lucide-react";
+import { AlarmClock, House, Inbox, type LucideIcon, Search } from "lucide-react";
 import { AccountArea } from "../features/account/AccountArea";
 import { useT } from "../i18n";
 import type { Page } from "../store/app";
@@ -83,7 +83,7 @@ export function Rail() {
         onClick={go("search")}
       />
       <RailButton
-        icon={MessageCircleQuestion}
+        icon={Inbox}
         label={t.questions.box.label}
         hint={t.questions.box.open(questions)}
         active={page === "questions"}

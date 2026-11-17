@@ -29,6 +29,7 @@ pub async fn setup() -> Setup {
     let crew = crews::create(
         &daemon,
         CrewsCreateParams {
+            auto_mode: None,
             name: "Ops".into(),
             work_folder: None,
             lead: None,

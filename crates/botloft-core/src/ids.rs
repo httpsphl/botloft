@@ -70,65 +70,135 @@ macro_rules! prefixed_id {
 
 prefixed_id!(
     /// Identifies a crew.
-    CrewId, "crew", "crw_"
+    CrewId,
+    "crew",
+    "crw_"
 );
 prefixed_id!(
     /// Identifies a bot.
-    BotId, "bot", "bot_"
+    BotId,
+    "bot",
+    "bot_"
 );
 prefixed_id!(
     /// Identifies a message.
-    MessageId, "message", "msg_"
+    MessageId,
+    "message",
+    "msg_"
 );
 prefixed_id!(
     /// Identifies a delivery attempt record.
-    DeliveryId, "delivery", "dlv_"
+    DeliveryId,
+    "delivery",
+    "dlv_"
 );
 prefixed_id!(
     /// Identifies a task between bots.
-    TaskId, "task", "tsk_"
+    TaskId,
+    "task",
+    "tsk_"
 );
 prefixed_id!(
     /// Identifies an item of a bot's chat.
-    ChatItemId, "chat item", "cht_"
+    ChatItemId,
+    "chat item",
+    "cht_"
 );
 prefixed_id!(
     /// Identifies a permission request waiting for the owner.
-    ApprovalId, "approval", "apr_"
+    ApprovalId,
+    "approval",
+    "apr_"
 );
 prefixed_id!(
     /// Identifies a file the owner attached to a message.
-    AttachmentId, "attachment", "att_"
+    AttachmentId,
+    "attachment",
+    "att_"
 );
 prefixed_id!(
     /// Identifies a routine (spec 20).
-    RoutineId, "routine", "rtn_"
+    RoutineId,
+    "routine",
+    "rtn_"
 );
 prefixed_id!(
     /// Identifies one run of a routine.
-    RoutineRunId, "routine run", "rrn_"
+    RoutineRunId,
+    "routine run",
+    "rrn_"
+);
+prefixed_id!(
+    /// Identifies one version of a bot's memory or instructions (spec 8.10).
+    VersionId,
+    "version",
+    "ver_"
 );
 prefixed_id!(
     /// Identifies a request a bot may make without asking (spec 10.1).
-    RuleId, "rule", "rul_"
+    RuleId,
+    "rule",
+    "rul_"
 );
 prefixed_id!(
     /// Identifies a question a bot asked the owner (spec 23).
-    QuestionId, "question", "qst_"
+    QuestionId,
+    "question",
+    "qst_"
 );
 prefixed_id!(
     /// Identifies what the owner let a bot see or do on their desktop
     /// (spec 24.2).
-    DesktopGrantId, "desktop grant", "dsk_"
+    DesktopGrantId,
+    "desktop grant",
+    "dsk_"
 );
 prefixed_id!(
     /// Identifies a connected tool, an MCP server of the owner (spec 25).
-    McpServerId, "MCP server", "msv_"
+    McpServerId,
+    "MCP server",
+    "msv_"
 );
 prefixed_id!(
     /// Identifies what the owner let a bot reach in another crew (spec 10.4).
-    CrewAccessId, "crew access", "cxa_"
+    CrewAccessId,
+    "crew access",
+    "cxa_"
 );
+prefixed_id!(
+    /// Identifies what the Maker built in one go, so it can be undone
+    /// (spec 36.4).
+    BuildId,
+    "build",
+    "bld_"
+);
+prefixed_id!(
+    /// Identifies a summary of the owner's history made for the Maker
+    /// (spec 36.7).
+    ImportId,
+    "import",
+    "imp_"
+);
+prefixed_id!(
+    /// Identifies one conversation of a bot (spec 40).
+    ConversationId,
+    "conversation",
+    "cnv_"
+);
+
+impl ConversationId {
+    /// The main conversation of `bot`: `cnv_` with the bot's own ULID, so
+    /// anything that knows the bot knows it without the database.
+    pub fn main_of(bot: &BotId) -> Self {
+        let ulid = &bot.as_str()[BotId::PREFIX.len()..];
+        Self(format!("{}{ulid}", Self::PREFIX))
+    }
+
+    /// Whether this is the main conversation of `bot`.
+    pub fn is_main_of(&self, bot: &BotId) -> bool {
+        *self == Self::main_of(bot)
+    }
+}
 
 /// A random version 4 UUID, for Claude Code session ids and the uuid of
 /// each message written to a bot (spec 7.3, 9.2).
