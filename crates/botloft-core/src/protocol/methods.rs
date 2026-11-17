@@ -158,6 +158,14 @@ pub struct AccountUsage {
     pub windows: Vec<UsageWindow>,
     /// Unix time in milliseconds.
     pub observed_at: i64,
+    /// The account went past the plan's limit and runs on its paid extra
+    /// usage: a `rejected` status then does not stop the agents.
+    #[serde(default)]
+    pub extra_usage: bool,
+    /// The windows were read from the owner's Claude account (spec 8.13),
+    /// not from what the agents' Claude Code reported.
+    #[serde(default)]
+    pub from_account: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -170,6 +178,11 @@ pub struct UsageWindow {
     pub utilization: f64,
     /// Unix time in milliseconds.
     pub resets_at: Option<i64>,
+    /// The model a window of its own is for, as the account names it
+    /// ("Fable"); absent for the window of every model (spec 8.13).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, ts(optional))]
+    pub model: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -318,6 +331,10 @@ pub struct BotsUpdateParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub allowed_commands: Option<Vec<String>>,
+    /// Show the plan before a long task (spec 10.5).
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub plan_first: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -388,4 +405,9 @@ pub struct BotsRestartParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub fresh: Option<bool>,
+    /// Restarts only this conversation, and `fresh` forgets only it; the
+    /// main one when absent (spec 40.5).
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub conversation_id: Option<crate::ids::ConversationId>,
 }

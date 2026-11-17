@@ -40,6 +40,36 @@ const MIGRATIONS: &[(u32, &str)] = &[
     ),
     (29, include_str!("../migrations/0029_read_through.sql")),
     (30, include_str!("../migrations/0030_crew_auto_mode.sql")),
+    (31, include_str!("../migrations/0031_bot_plan_first.sql")),
+    (32, include_str!("../migrations/0032_agent_keys.sql")),
+    (
+        33,
+        include_str!("../migrations/0033_key_requests_index.sql"),
+    ),
+    (34, include_str!("../migrations/0034_agent_git_events.sql")),
+    (35, include_str!("../migrations/0035_bot_connectors.sql")),
+    (36, include_str!("../migrations/0036_site_logins.sql")),
+    (37, include_str!("../migrations/0037_maker.sql")),
+    (38, include_str!("../migrations/0038_imports.sql")),
+    (39, include_str!("../migrations/0039_bot_chrome.sql")),
+    (40, include_str!("../migrations/0040_bot_skills.sql")),
+    (41, include_str!("../migrations/0041_build_undo.sql")),
+    (
+        42,
+        include_str!("../migrations/0042_routine_nothing_new.sql"),
+    ),
+    (43, include_str!("../migrations/0043_bot_versions.sql")),
+    (44, include_str!("../migrations/0044_question_kind.sql")),
+    (45, include_str!("../migrations/0045_routine_waited.sql")),
+    (46, include_str!("../migrations/0046_conversations.sql")),
+    (
+        47,
+        include_str!("../migrations/0047_conversation_replies.sql"),
+    ),
+    (48, include_str!("../migrations/0048_conversation_read.sql")),
+    (49, include_str!("../migrations/0049_skills_everyone.sql")),
+    (50, include_str!("../migrations/0050_bot_plugins.sql")),
+    (51, include_str!("../migrations/0051_turn_cost_parts.sql")),
 ];
 
 /// Schema version after every migration has run.

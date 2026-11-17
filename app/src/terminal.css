@@ -40,6 +40,5 @@
 
 /* The dock at the foot of the panel, the same in the three places. */
 .computer-dock {
-  background: var(--sunken);
-  box-shadow: inset 0 0 0 1px var(--line);
+  background: var(--bubble);
 }

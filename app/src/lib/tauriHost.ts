@@ -1,7 +1,7 @@
 // `Host` over the Tauri commands in `src-tauri/src/lib.rs`.
 
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { emitTo, listen } from "@tauri-apps/api/event";
 import { Image } from "@tauri-apps/api/image";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -12,6 +12,7 @@ import {
   sendNotification,
 } from "@tauri-apps/plugin-notification";
 import { check, type Update } from "@tauri-apps/plugin-updater";
+import { LOCALE_ASK_EVENT, LOCALE_EVENT, OPEN_BOT_EVENT } from "../island/event";
 import type { AppUpdate, DaemonStatus, Host } from "./host";
 import { hideTray, rebuildTray, showTray } from "./tauriTray";
 
@@ -129,6 +130,7 @@ export function tauriHost(): Host {
     setZoom: (factor) => getCurrentWebview().setZoom(factor),
     checkForUpdate,
     readOwnerToken: () => invoke<string>("read_owner_token"),
+    quiet: () => invoke<boolean>("quiet_now"),
     openPath: (path) => invoke<void>("open_path", { path }),
     openFile: (path) => invoke<void>("open_file", { path }),
     revealFile: (path) => invoke<void>("reveal_file", { path }),
@@ -171,6 +173,10 @@ export function tauriHost(): Host {
           }
         }),
       onReopened: (listener) => listen("botloft://reopened", () => listener()),
+      onOpenBot: (listener) =>
+        listen<string>(OPEN_BOT_EVENT, (event) => listener(event.payload || null)),
+      tellIsland: (locale) => emitTo("island", LOCALE_EVENT, locale),
+      onIslandAsks: (listener) => listen(LOCALE_ASK_EVENT, () => listener()),
       isMaximized: () => window.isMaximized(),
       onResized: (listener) => window.onResized(() => listener()),
       setAttention: async (on) => {

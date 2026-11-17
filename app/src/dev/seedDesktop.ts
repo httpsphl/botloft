@@ -34,6 +34,13 @@ function drawNotepad(): string {
 
 export function seedDesktop(fake: FakeBotloft, bots: { scout: BotId; analyst: BotId }) {
   fake.desktop.grant(bots.scout, "C:\\Windows\\notepad.exe", "Notepad");
+  // What Settings, Permissions shows and offers (spec 15.1, 24.10).
+  fake.desktop.apps = [
+    { path: EXCEL, name: "Microsoft Excel" },
+    { path: "C:\\Windows\\notepad.exe", name: "Notepad" },
+  ];
+  fake.sites.allow(bots.scout, "developer.mozilla.org");
+  fake.sites.allow(bots.analyst, "data.worldbank.org");
   fake.desktop.use(bots.scout, NOTES, {
     kind: "click",
     target: "Save",

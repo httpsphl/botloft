@@ -4,22 +4,35 @@
 //! One [`Store`] wraps one connection. The daemon keeps a single store behind
 //! a mutex; queries are short, so there is no connection pool.
 
+mod agent_keys;
 mod allow_rules;
 mod approvals;
+mod bot_chrome;
+mod bot_connectors;
+mod bot_plugins;
+mod bot_skills;
 mod bots;
 mod browser_sites;
+mod builds;
+mod cards;
 mod chat;
+mod conversations;
+mod copier;
+mod costs;
 mod crew_access;
 mod crews;
 mod delete;
 mod deliveries;
 mod desktop_grants;
 mod fingerprint;
+mod git_events;
+mod history;
+mod imports;
+mod key_scan;
 mod light;
 mod mcp_servers;
 mod messages;
 mod migrate;
-mod plan;
 #[cfg(test)]
 mod plans;
 mod questions;
@@ -27,9 +40,13 @@ mod reactions;
 mod routine_runs;
 mod routines;
 mod search;
+mod settings;
 mod signals;
+mod site_logins;
 mod tasks;
+mod today;
 mod usage;
+mod versions;
 
 use std::path::Path;
 use std::str::FromStr;
@@ -40,11 +57,15 @@ use rusqlite::{Connection, Row, ffi};
 
 pub use approvals::ApprovalRecord;
 pub use bots::BotRecord;
+pub use conversations::ConversationRecord;
+pub use copier::Copier;
+pub use costs::TurnCost;
 pub use crew_access::{AccessKinds, CrewAccessRecord};
 pub use deliveries::DeliveryOutcome;
+pub use history::Pruned;
+pub use key_scan::{Pasted, pasted_id};
 pub use messages::MessageFilter;
 pub use migrate::LATEST_VERSION;
-pub use plan::PlanReading;
 pub use questions::{Answered, QuestionRecord};
 pub use search::{Found, SearchFilter, fts_query};
 pub use tasks::TaskFilter;
@@ -178,6 +199,7 @@ pub(crate) mod tests {
                 paused: false,
                 color: None,
                 auto_mode: false,
+                system: None,
                 created_at: 0,
                 archived_at: None,
             };
@@ -199,6 +221,7 @@ pub(crate) mod tests {
                         agent: botloft_core::protocol::AgentKind::Claude,
                         agent_model: None,
                         allowed_commands: Vec::new(),
+                        plan_first: false,
                         model: botloft_core::protocol::BotModel::Default,
                         model_in_use: None,
                         effort: botloft_core::protocol::BotEffort::Default,
@@ -235,6 +258,7 @@ pub(crate) mod tests {
             id: DeliveryId::generate(),
             message_id: message.id.clone(),
             bot_id: bot.clone(),
+            conversation_id: botloft_core::ids::ConversationId::main_of(bot),
             state: DeliveryState::Pending,
             attempts: 0,
             next_attempt_at: 0,

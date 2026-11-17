@@ -6,6 +6,7 @@ import { useT } from "../i18n";
 import type { PhoneItem } from "../lib/protocol.gen";
 import { Callout } from "../ui/Callout";
 import { ApprovalView } from "./ApprovalView";
+import { Attached } from "./Attach";
 import type { PhoneApi, PhoneState } from "./client";
 import { PhoneMarkdown } from "./parts";
 import { QuestionView } from "./QuestionView";
@@ -15,12 +16,25 @@ function Cut() {
   return <p className="text-muted text-xs">{useT().phone.chats.cut}</p>;
 }
 
-function Mine({ text, cut, note }: { text: string; cut?: boolean; note?: string }) {
+function Mine({
+  text,
+  cut,
+  note,
+  files,
+}: {
+  text: string;
+  cut?: boolean;
+  note?: string;
+  files?: string[] | undefined;
+}) {
   return (
     <div className="flex max-w-[85%] flex-col items-end gap-1 self-end">
-      <p className="whitespace-pre-wrap break-words rounded-2xl bg-ink px-3 py-2 text-base text-canvas">
-        {text}
-      </p>
+      {text !== "" && (
+        <p className="whitespace-pre-wrap break-words rounded-bubble bg-bubble-own px-4 py-2.5 text-base text-bubble-own-ink">
+          {text}
+        </p>
+      )}
+      {files && files.length > 0 && <Attached names={files} />}
       {cut && <Cut />}
       {note && <span className="text-muted text-xs">{note}</span>}
     </div>
@@ -39,10 +53,10 @@ export function ChatItem({
   const t = useT().phone;
   switch (item.kind) {
     case "you":
-      return <Mine text={item.text} cut={item.cut} />;
+      return <Mine text={item.text} cut={item.cut} files={item.files} />;
     case "bot_message":
       return (
-        <div className="flex max-w-[85%] flex-col gap-1 self-start rounded-2xl border border-line bg-sunken px-3 py-2">
+        <div className="flex max-w-[85%] flex-col gap-1 self-start rounded-bubble border border-line bg-panel px-4 py-2.5">
           <span className="text-muted text-xs">{t.chats.from(item.from)}</span>
           <p className="whitespace-pre-wrap break-words text-base">{item.text}</p>
           {item.cut && <Cut />}
@@ -50,7 +64,7 @@ export function ChatItem({
       );
     case "reply":
       return (
-        <div className="flex max-w-full flex-col gap-1 self-start rounded-2xl border border-line bg-panel px-3 py-2">
+        <div className="chat-bubble flex max-w-full flex-col gap-1 self-start rounded-bubble bg-bubble px-4 py-2.5">
           <PhoneMarkdown>{item.text}</PhoneMarkdown>
           {item.cut && <Cut />}
         </div>
@@ -87,10 +101,12 @@ export function ChatItem({
           />
         );
       }
-      const ended = (t.question.ended as Record<string, string>)[item.status];
+      const ended = (
+        (item.note ? t.question.noteEnded : t.question.ended) as Record<string, string>
+      )[item.status];
       return (
         <p className="break-words text-muted text-sm">
-          {t.chats.questionLine(item.text)}
+          {item.note ? t.chats.noteLine(item.text) : t.chats.questionLine(item.text)}
           {ended && ` — ${ended}`}
         </p>
       );
@@ -121,7 +137,7 @@ export function PendingItem({ pending }: { pending: Pending }) {
         : `${c.pending.notSent} ${reason}`;
   return (
     <div className={pending.status === "failed" ? "self-end text-danger" : "self-end"}>
-      <Mine text={pending.text} note={note} />
+      <Mine text={pending.text} note={note} files={pending.files?.map((file) => file.name)} />
     </div>
   );
 }

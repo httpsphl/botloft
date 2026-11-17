@@ -4,7 +4,7 @@ use botloft_core::ids::{BotId, CrewId};
 use botloft_core::protocol::{AgentKind, BotEffort, BotModel, ModelEffort, PermissionMode};
 use rusqlite::{OptionalExtension, Row, params};
 
-use crate::{Result, Store, cached_execute, cached_row, parse_column, unique_as_duplicate};
+use crate::{Result, Store, parse_column, unique_as_duplicate};
 
 /// A bot as stored. The protocol `Bot` adds runtime state and the workspace
 /// path, which the daemon derives.
@@ -25,6 +25,8 @@ pub struct BotRecord {
     pub agent_model: Option<String>,
     /// Command prefixes the bot may run without asking (spec 30).
     pub allowed_commands: Vec<String>,
+    /// Shows its plan before a long task (spec 10.5).
+    pub plan_first: bool,
     pub model: BotModel,
     /// What Claude Code last reported; written by [`Store::set_model_in_use`]
     /// and left alone by [`Store::update_bot`].
@@ -38,7 +40,7 @@ pub struct BotRecord {
 }
 
 const COLUMNS: &str = "id, crew_id, name, handle, slug, role, instructions, color, paused, created_at, archived_at, \
-     permission_mode, model, model_in_use, effort, effort_default, agent, agent_model, allowed_commands";
+     permission_mode, model, model_in_use, effort, effort_default, agent, agent_model, allowed_commands, plan_first";
 
 fn from_row(row: &Row<'_>) -> rusqlite::Result<BotRecord> {
     Ok(BotRecord {
@@ -64,6 +66,7 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<BotRecord> {
         agent: parse_column(row, 16)?,
         agent_model: row.get(17)?,
         allowed_commands: serde_json::from_str(&row.get::<_, String>(18)?).unwrap_or_default(),
+        plan_first: row.get(19)?,
     })
 }
 
@@ -77,7 +80,7 @@ impl Store {
             .execute(
                 &format!(
                     "INSERT INTO bots ({COLUMNS}) \
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)"
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20)"
                 ),
                 params![
                     bot.id.as_str(),
@@ -98,10 +101,13 @@ impl Store {
                     bot.effort_default.map(ModelEffort::as_str),
                     bot.agent.as_str(),
                     bot.agent_model,
-                    commands_json(&bot.allowed_commands)
+                    commands_json(&bot.allowed_commands),
+                    bot.plan_first
                 ],
             )
             .map_err(|err| unique_as_duplicate(err, "bot handle or slug"))?;
+        // Every bot has a main conversation (spec 40).
+        Self::ensure_main_in(&self.conn, &bot.id, bot.created_at)?;
         Ok(())
     }
 
@@ -167,7 +173,7 @@ impl Store {
             .execute(
                 "UPDATE bots SET name = ?2, handle = ?3, role = ?4, instructions = ?5, \
                  color = ?6, paused = ?7, archived_at = ?8, permission_mode = ?9, model = ?10, \
-                 effort = ?11, agent_model = ?12, allowed_commands = ?13 WHERE id = ?1",
+                 effort = ?11, agent_model = ?12, allowed_commands = ?13, \n                 plan_first = ?14 WHERE id = ?1",
                 params![
                     bot.id.as_str(),
                     bot.name,
@@ -181,7 +187,8 @@ impl Store {
                     bot.model.as_str(),
                     bot.effort.as_str(),
                     bot.agent_model,
-                    commands_json(&bot.allowed_commands)
+                    commands_json(&bot.allowed_commands),
+                    bot.plan_first
                 ],
             )
             .map_err(|err| unique_as_duplicate(err, "bot handle"))?;
@@ -203,28 +210,6 @@ impl Store {
         self.conn.execute(
             "UPDATE bots SET effort_default = ?2 WHERE id = ?1",
             params![id.as_str(), effort.map(ModelEffort::as_str)],
-        )?;
-        Ok(())
-    }
-
-    /// The Claude Code conversation the bot resumes (spec 7.3).
-    pub fn session_id(&self, id: &BotId) -> Result<Option<String>> {
-        Ok(cached_row(
-            &self.conn,
-            "SELECT session_id FROM bots WHERE id = ?1",
-            [id.as_str()],
-            |row| row.get(0),
-        )
-        .optional()?
-        .flatten())
-    }
-
-    /// `None` makes the next start a new conversation.
-    pub fn set_session_id(&self, id: &BotId, session: Option<&str>) -> Result<()> {
-        cached_execute(
-            &self.conn,
-            "UPDATE bots SET session_id = ?2 WHERE id = ?1",
-            params![id.as_str(), session],
         )?;
         Ok(())
     }

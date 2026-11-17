@@ -216,6 +216,14 @@ impl FakeProcess {
             .collect()
     }
 
+    /// Every control request written to stdin, whole.
+    pub fn control_lines(&self) -> Vec<Value> {
+        self.stdin_lines()
+            .into_iter()
+            .filter(|line| line["type"] == "control_request")
+            .collect()
+    }
+
     /// Answers the last control request of `subtype`, as Claude Code would.
     pub async fn answer_control(&self, subtype: &str, response: Value) {
         let id = self

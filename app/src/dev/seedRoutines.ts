@@ -28,6 +28,8 @@ export function seedRoutines(fake: FakeBotloft, bots: { scout: BotId; analyst: B
       createdAt: fake.now - 2 * HOUR,
       finishedAt: fake.now - HOUR,
       signal: null,
+      nothingNew: false,
+      waited: null,
       ...run,
     };
   };
@@ -38,7 +40,40 @@ export function seedRoutines(fake: FakeBotloft, bots: { scout: BotId; analyst: B
     schedule: { kind: "weekly", days: [1, 2, 3, 4, 5], time: "09:00" },
   });
   lastRun(morning, {});
+  // Shortcuts on the home and by the message field (spec 20.9).
+  create(bots.scout, {
+    name: "Check the inbox",
+    prompt: "Read what arrived in shared/inbox and tell me what needs me.",
+    schedule: { kind: "manual" },
+  });
+  create(bots.analyst, {
+    name: "Sales report",
+    prompt: "Write this week's sales report in shared/reports.",
+    schedule: { kind: "manual" },
+  });
+  // Scout's own return to its work, over its message field (spec 20.12).
+  const back = new Date(fake.now + 2 * HOUR);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  create(bots.scout, {
+    name: "Look at the deploy again",
+    prompt: "Check whether the deploy finished and tell me.",
+    schedule: {
+      kind: "once",
+      at: `${back.getUTCFullYear()}-${pad(back.getUTCMonth() + 1)}-${pad(back.getUTCDate())}T${pad(back.getUTCHours())}:${pad(back.getUTCMinutes())}`,
+      reminder: true,
+    },
+  });
   morning.nextRunAt = fake.now + 14 * HOUR;
+  // Scout waits for a file without its model (spec 20.14).
+  create(bots.scout, {
+    name: "Wait for the sales report",
+    prompt: "Read the sales report and add its numbers to the summary.",
+    schedule: {
+      kind: "wait",
+      on: { what: "file", path: "C:\\Botloft\\ops\\shared\\sales-report.pdf" },
+      until: fake.now + 20 * HOUR,
+    },
+  });
 
   const links = create(bots.scout, {
     name: "Check the links",
@@ -54,6 +89,8 @@ export function seedRoutines(fake: FakeBotloft, bots: { scout: BotId; analyst: B
     schedule: { kind: "weekly", days: [1, 4], time: "14:30" },
   });
   lastRun(numbers, { status: "failed" });
+  // Two failures in a row: the next try waits longer (spec 20.3).
+  numbers.failStreak = 2;
   numbers.nextRunAt = fake.now + 3 * 24 * HOUR;
 
   const backup = create(bots.analyst, {
@@ -70,7 +107,9 @@ export function seedRoutines(fake: FakeBotloft, bots: { scout: BotId; analyst: B
     prompt: "The numbers changed: check that every claim in the report still has a source.",
     schedule: { kind: "signal", name: "numbers-updated" },
   });
+  // Every claim still had its source: nothing new to report (spec 20.5).
   lastRun(recheck, {
     signal: { name: "numbers-updated", fromBotId: bots.analyst, note: null },
+    nothingNew: true,
   });
 }

@@ -8,6 +8,10 @@ export const bots = {
     offline: { label: "Offline", hint: "Not running." },
     launching: { label: "Starting", hint: "Claude Code is starting." },
     idle: { label: "Idle", hint: "Ready for work." },
+    sleeping: {
+      label: "Sleeping",
+      hint: "Uses no memory and wakes by itself when a message, a routine or a signal comes. The first reply takes a few seconds more.",
+    },
     busy: { label: "Working", hint: "Working on something." },
     needs_approval: {
       label: "Needs approval",
@@ -40,6 +44,7 @@ export const bots = {
     restart: "Restart",
     showDetails: "Show details",
     hideDetails: "Hide details",
+    panels: "Panels",
     more: "More agent actions",
     menuOf: (name: string) => `Actions for ${name}`,
     edit: "Edit",
@@ -48,6 +53,9 @@ export const bots = {
     makeChief: "Make crew chief",
     stopChief: "Stop being chief",
     markUnread: "Mark as unread",
+    /** Over the switch for all in Settings > Notifications (spec 15.1). */
+    doneOn: (bot: string) => `Tell me when ${bot} finishes`,
+    doneOff: (bot: string) => `Don't tell me when ${bot} finishes`,
     markRead: "Mark as read",
     archive: "Archive agent",
     delete: "Delete agent",
@@ -98,6 +106,11 @@ export const bots = {
     instructionsPlaceholder: "How this agent works, what it may do on its own and when to ask.",
     instructionsHint:
       "Saved to the agent's rules now; the agent reads them the next time it starts.",
+    planFirst: {
+      title: "Show the plan before long tasks",
+      hint: (bot: string) =>
+        `${bot} says what it will do before long work and waits 20 seconds, so you can change or cancel it.`,
+    },
     fullAccess: {
       title: "Run any command without asking",
       off: "Off: it may run only the commands listed below.",
@@ -141,8 +154,29 @@ export const bots = {
   },
   details: {
     title: (name: string) => `About ${name}`,
+    heading: "Details",
+    edit: (name: string) => `Edit ${name}`,
+    about: "About",
+    engine: "Runs on",
+    model: "Model",
+    showAll: "Show all",
+    showLess: "Show less",
+    write: "Write instructions",
+    shortcuts: {
+      title: "Set in Settings",
+      desktop: "Your desktop",
+      desktopCount: (count: number) =>
+        count === 0 ? "No apps yet" : count === 1 ? "1 app" : `${count} apps`,
+      chromeOn: "Can use it",
+      chromeOff: "Not given",
+      keys: "Keys",
+      keysCount: (count: number) =>
+        count === 0 ? "None yet" : count === 1 ? "1 key" : `${count} keys`,
+      tools: "Tools",
+      skills: "Skills",
+      none: "None yet",
+    },
     close: "Close details",
-    role: "Role",
     noRole: "No role yet.",
     folder: "Folder",
     process: "Process",

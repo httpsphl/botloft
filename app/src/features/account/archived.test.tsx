@@ -37,8 +37,8 @@ describe("settings, archived", () => {
     const list = await within(dialog).findByRole("list", { name: "Archived" });
     const rows = within(list).getAllByRole("listitem");
     expect(rows.map((row) => row.textContent)).toEqual([
-      "DocsCrew · 1 agent · archived nowDelete",
-      "ScoutAgent in Ops · archived nowDelete",
+      "DocsCrew · 1 agent · archived nowRestoreDelete",
+      "ScoutAgent in Ops · archived nowRestoreDelete",
     ]);
     // A bot of an archived crew goes with its crew, not on its own.
     expect(within(list).queryByText("Editor")).toBeNull();
@@ -71,6 +71,29 @@ describe("settings, archived", () => {
     expect(await within(dialog).findByText("Nothing is archived.")).toBeDefined();
     expect(fake.crews.has(docs.id)).toBe(false);
     expect(fake.bots.has(editor.id)).toBe(false);
+  });
+
+  test("restores an archived crew with its agents, and the crew is back", async () => {
+    const { fake, docs, editor } = await someArchived();
+    const dialog = await openArchived();
+    fireEvent.click(await within(dialog).findByRole("button", { name: "Restore Docs" }));
+    await waitFor(() => expect(within(dialog).queryByText("Docs")).toBeNull());
+    expect(fake.crews.get(docs.id)?.archivedAt).toBeNull();
+    expect(fake.bots.get(editor.id)?.archivedAt).toBeNull();
+    // Scout, archived on its own, is still there.
+    expect(within(dialog).getByText("Scout")).toBeDefined();
+    expect(await screen.findByRole("button", { name: /^Docs/ })).toBeDefined();
+  });
+
+  test("says why an agent cannot be restored", async () => {
+    const { fake, ops, scout } = await someArchived();
+    fake.addBot(ops.id, "Scout");
+    const dialog = await openArchived();
+    fireEvent.click(await within(dialog).findByRole("button", { name: "Restore Scout" }));
+    const alert = await within(dialog).findByRole("alert");
+    expect(alert.textContent).toContain("Could not restore Scout");
+    expect(alert.textContent).toContain("@scout");
+    expect(fake.bots.get(scout.id)?.archivedAt).not.toBeNull();
   });
 
   test("says so when nothing is archived, or when the list cannot be read", async () => {

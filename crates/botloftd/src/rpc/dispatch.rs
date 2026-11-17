@@ -9,8 +9,9 @@ use super::jsonrpc::{RpcError, empty_params};
 use crate::approvals;
 use crate::service::{
     self, ApiError, ApiResult, agents, archive, attachments, autobackup, backup, bots, catalog,
-    chat, cloud, crew_access, crews, delete, deliveries, desktop, files, lead, mcp, messages,
-    mobile, models, modes, questions, reactions, routines, rules, screens, settings, tasks, usage,
+    chat, cloud, conversations, crew_access, crews, delete, deliveries, desktop, files, island,
+    keys, lead, mcp, mcp_claude, messages, mobile, models, modes, permissions, questions,
+    reactions, routines, rules, screens, settings, tasks, usage, versions,
 };
 use crate::state::Daemon;
 
@@ -20,6 +21,7 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::SESSION_SET_LOCALE => {
             let params: botloft_core::protocol::LocaleParams = parse(params)?;
             daemon.desktop.set_locale(&params.locale);
+            crate::service::maker::localize(daemon, &params.locale);
             Ok(Value::Null)
         }
         // Asks for a new check and answers at once; the app polls the result.
@@ -38,11 +40,20 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::CREWS_ARCHIVE => reply(crews::archive(daemon, parse(params)?)),
         method::CREWS_DELETE => reply(delete::crew(daemon, parse(params)?)),
         method::ARCHIVE_LIST => reply(archive::list(daemon)),
+        method::CREWS_UNARCHIVE => reply(archive::unarchive_crew(daemon, parse(params)?)),
+        method::BOTS_UNARCHIVE => reply(archive::unarchive_bot(daemon, parse(params)?)),
         method::BOTS_LIST => reply(bots::list(daemon, parse(params)?)),
         method::BOTS_CREATE => reply(bots::create(daemon, parse(params)?)),
         method::CATALOG_LIST => reply(catalog::list(parse(params)?)),
         method::CATALOG_GET => reply(catalog::get(parse(params)?)),
         method::CATALOG_ADD => reply(catalog::add(daemon, parse(params)?)),
+        method::BUILDS_LIST => reply(crate::service::builds::list(daemon)),
+        method::BUILDS_UNDO => reply(crate::service::builds::undo(daemon, parse(params)?)),
+        method::IMPORTS_SCAN => reply(crate::service::imports::scan(daemon, parse(params)?)),
+        method::IMPORTS_CREATE => reply(crate::service::imports::create(daemon, parse(params)?)),
+        method::IMPORTS_SEND => reply(crate::service::imports::send(daemon, parse(params)?)),
+        method::IMPORTS_FORGET => reply(crate::service::imports::forget(daemon, parse(params)?)),
+        method::IMPORTS_LIST => reply(crate::service::imports::list(daemon)),
         method::BOTS_UPDATE => reply(bots::update(daemon, parse(params)?)),
         method::BOTS_SET_PAUSED => reply(bots::set_paused(daemon, parse(params)?)),
         method::BOTS_SET_PERMISSION_MODE => {
@@ -53,16 +64,39 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::AGENTS_MODELS => reply(models::agent_models(daemon, parse(params)?)),
         method::BOTS_SET_EFFORT => reply(models::set_effort(daemon, parse(params)?)),
         method::BOTS_COMPACT => reply(crate::context::compact(daemon, parse(params)?)),
+        method::BOTS_INTERRUPT => reply(service::interrupt::interrupt(daemon, parse(params)?)),
+        method::BOTS_STOP_TASK => reply(crate::background::stop(daemon, parse(params)?)),
+        method::OVERVIEW_CHANGES => reply(crate::changes::changes(daemon, parse(params)?)),
+        method::CONNECTORS_LIST => reply(crate::connectors::list(daemon, parse(params)?)),
+        method::BOTS_SET_CONNECTORS => reply(crate::connectors::set_bot(daemon, parse(params)?)),
+        method::CHROME_SET => reply(crate::chrome::set(daemon, parse(params)?)),
+        method::CHROME_STATUS => reply(Ok(crate::chrome::status(daemon))),
+        method::CHROME_STOP => reply(Ok(crate::chrome::stop(daemon))),
+        method::SKILLS_LIST => reply(crate::skills::list(daemon)),
+        method::SKILLS_SHARE => reply(crate::skills::share(daemon, parse(params)?)),
+        method::SKILLS_EVERYONE => reply(crate::skills::everyone(daemon, parse(params)?)),
+        method::BOTS_COMMANDS => reply(crate::skills::commands(daemon, parse(params)?)),
+        method::PLUGINS_LIST => reply(crate::plugins::list(daemon)),
+        method::PLUGINS_SHARE => reply(crate::plugins::share(daemon, parse(params)?)),
+        method::PLUGINS_EVERYONE => reply(crate::plugins::everyone(daemon, parse(params)?)),
+        method::LOGINS_LIST => reply(crate::logins::list(daemon)),
+        method::LOGINS_SHARE => reply(crate::logins::share(daemon, parse(params)?)),
+        method::LOGINS_REMOVE => reply(crate::logins::remove(daemon, parse(params)?)),
         method::BOTS_ARCHIVE => reply(bots::archive(daemon, parse(params)?)),
         method::BOTS_DELETE => reply(delete::bot(daemon, parse(params)?)),
         method::BOTS_RESTART => reply(bots::restart(daemon, parse(params)?)),
         method::CHAT_HISTORY => reply(chat::history(daemon, parse(params)?)),
+        method::CONVERSATIONS_LIST => reply(conversations::list(daemon, parse(params)?)),
+        method::CONVERSATIONS_CREATE => reply(conversations::create(daemon, parse(params)?)),
+        method::CONVERSATIONS_RENAME => reply(conversations::rename(daemon, parse(params)?)),
+        method::CONVERSATIONS_ARCHIVE => reply(conversations::archive(daemon, parse(params)?)),
+        method::CONVERSATIONS_UNARCHIVE => reply(conversations::unarchive(daemon, parse(params)?)),
+        method::CONVERSATIONS_ARCHIVED => reply(conversations::archived(daemon, parse(params)?)),
         method::CHAT_READ => {
-            let params: botloft_core::protocol::BotIdParams = parse(params)?;
-            daemon.mobile.owner_read(daemon, &params.bot_id);
-            Ok(Value::Null)
+            reply(conversations::read(daemon, parse(params)?).map(|()| Value::Null))
         }
         method::CHAT_SEARCH => reply(chat::search(daemon, parse(params)?)),
+        method::CHAT_ACT => reply(crate::service::cards::act(daemon, parse(params)?)),
         method::APPROVALS_ANSWER => reply(approvals::answer(daemon, parse(params)?)),
         method::RULES_LIST => reply(rules::list(daemon, parse(params)?)),
         method::RULES_DELETE => reply(rules::delete(daemon, parse(params)?)),
@@ -99,10 +133,14 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         }
         method::MOBILE_REVOKE => reply(mobile::revoke(daemon, parse(params)?)),
         method::CREW_ACCESS_LIST => reply(crew_access::list(daemon, parse(params)?)),
+        method::PERMISSIONS_LIST => reply(permissions::list(daemon)),
+        method::SITES_REVOKE => reply(permissions::revoke_site(daemon, parse(params)?)),
         method::CREW_ACCESS_REVOKE => reply(crew_access::revoke(daemon, parse(params)?)),
         method::MCP_SERVERS => reply(mcp::overview(daemon)),
         method::MCP_SAVE => reply(mcp::save(daemon, parse(params)?)),
         method::MCP_DELETE => reply(mcp::delete(daemon, parse(params)?)),
+        method::MCP_FROM_CLAUDE => reply(mcp_claude::servers(daemon)),
+        method::MCP_IMPORT_CLAUDE => reply(mcp_claude::import(daemon, parse(params)?)),
         method::BOT_MCP_SET => reply(mcp::set_bot(daemon, parse(params)?)),
         method::DESKTOP_GRANTS => reply(desktop::grants(daemon, parse(params)?)),
         method::DESKTOP_REVOKE => reply(desktop::revoke(daemon, parse(params)?)),
@@ -112,11 +150,18 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::DESKTOP_AWAY_USES => reply(desktop::away_uses(daemon)),
         method::DESKTOP_DISMISS_AWAY => reply(desktop::dismiss_away(daemon)),
         method::DESKTOP_RESUME => reply(desktop::resume(daemon, parse(params)?)),
+        method::DESKTOP_APPS => reply(desktop::apps()),
+        method::DESKTOP_GRANT_APP => reply(desktop::grant_app(daemon, parse(params)?)),
+        method::DESKTOP_STOP_ALL => {
+            desktop::stop_all(daemon);
+            reply(Ok(()))
+        }
         method::MESSAGES_SEND => reply(messages::send(daemon, parse(params)?)),
         method::MESSAGES_LIST => reply(messages::list(daemon, parse(params)?)),
         method::ATTACHMENTS_READ => reply(attachments::read(daemon, parse(params)?)),
         method::FILES_LIST => reply(files::list(daemon, parse(params)?)),
         method::FILES_READ => reply(files::read(daemon, parse(params)?)),
+        method::FILES_MEDIA => reply(files::media(daemon, parse(params)?)),
         method::DELIVERIES_LIST => reply(deliveries::list(daemon, parse(params)?)),
         method::DELIVERIES_RETRY => reply(deliveries::retry(daemon, parse(params)?)),
         method::ROUTINES_LIST => reply(routines::list(daemon, parse(params)?)),
@@ -128,16 +173,31 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::ROUTINES_RUNS => reply(routines::runs(daemon, parse(params)?)),
         method::TASKS_LIST => reply(tasks::list(daemon, parse(params)?)),
         method::BROWSER_LIST => reply(Ok(daemon.browsers.list())),
+        method::CARDS_LIST => reply(Ok::<_, ApiError>(island::cards(daemon))),
+        method::ACTIVITY_TODAY => reply(island::today(daemon, parse(params)?)),
+        method::KEYS_LIST => reply(keys::list(daemon, parse(params)?)),
+        method::KEYS_SET => reply(keys::set(daemon, parse(params)?)),
+        method::KEYS_DELETE => reply(keys::delete(daemon, parse(params)?)),
+        method::KEYS_DISMISS => {
+            reply(service::key_requests::dismiss(daemon, parse(params)?).map(|()| Value::Null))
+        }
+        method::KEYS_SCAN => reply(service::key_scan::scan(daemon)),
+        method::KEYS_SCRUB => reply(service::key_scan::scrub(daemon, parse(params)?)),
         method::QUESTIONS_LIST => reply(questions::list(daemon, parse(params)?)),
         method::QUESTIONS_ANSWER => reply(questions::answer(daemon, parse(params)?)),
         method::QUESTIONS_DISMISS => reply(questions::dismiss(daemon, parse(params)?)),
         method::REACTIONS_LIST => reply(reactions::list(daemon, parse(params)?)),
         method::REACTIONS_SET => reply(reactions::set(daemon, parse(params)?)),
+        method::VERSIONS_LIST => reply(versions::list(daemon, parse(params)?)),
+        method::VERSIONS_RESTORE => reply(versions::restore(daemon, parse(params)?)),
         method::SCREENS_LIST => reply(screens::list(daemon, parse(params)?)),
         method::SETTINGS_GET => reply(settings::get(daemon)),
         method::SETTINGS_UPDATE => reply(settings::update(daemon, parse(params)?)),
+        method::INSTRUCTIONS_GET => reply(service::instructions::get(daemon)),
+        method::INSTRUCTIONS_SET => reply(service::instructions::set(daemon, parse(params)?)),
         method::AGENTS_SET_PATH => reply(agents::set_path(daemon, parse(params)?)),
         method::USAGE_TOKENS => reply(usage::tokens(daemon, parse(params)?)),
+        method::USAGE_COSTS => reply(usage::costs(daemon, parse(params)?)),
         method::SESSION_HELLO => Err(RpcError::new(
             error_code::CONFLICT,
             "this connection is already authenticated",

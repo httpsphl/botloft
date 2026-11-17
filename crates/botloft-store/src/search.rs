@@ -18,6 +18,8 @@ pub struct SearchFilter<'a> {
     /// Only items stored before this one.
     pub before: Option<&'a ChatItemId>,
     pub limit: u32,
+    /// Words of context around the match; 18 when `None`, at most 64.
+    pub snippet_words: Option<u32>,
 }
 
 /// A chat item that matched, with its crew and a snippet.
@@ -48,7 +50,7 @@ impl Store {
     /// FTS5 query, see [`fts_query`]), newest first.
     pub fn search_chat(&self, query: &str, filter: SearchFilter<'_>) -> Result<Vec<Found>> {
         let mut stmt = self.conn.prepare_cached(
-            "SELECT c.id, c.bot_id, c.data, c.created_at, c.updated_at, b.crew_id, \
+            "SELECT c.id, c.bot_id, c.data, c.created_at, c.updated_at, c.conversation_id, b.crew_id, \
                     snippet(chat_search, 0, ?6, ?7, '…', ?8) \
              FROM chat_search \
              JOIN chat_items c ON c.rowid = chat_search.rowid \
@@ -70,13 +72,13 @@ impl Store {
                 filter.limit,
                 SNIPPET_OPEN.to_string(),
                 SNIPPET_CLOSE.to_string(),
-                SNIPPET_TOKENS,
+                filter.snippet_words.unwrap_or(SNIPPET_TOKENS).min(64),
             ],
             |row| {
                 Ok(Found {
                     item: chat::from_row(row)?,
-                    crew: parse_column(row, 5)?,
-                    snippet: row.get(6)?,
+                    crew: parse_column(row, 6)?,
+                    snippet: row.get(7)?,
                 })
             },
         )?;

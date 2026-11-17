@@ -2,14 +2,14 @@
 //! one conditional UPDATE, so a delivery never changes state twice by
 //! accident.
 
-use botloft_core::ids::{BotId, DeliveryId};
+use botloft_core::ids::{BotId, DeliveryId, MessageId};
 use botloft_core::protocol::{Delivery, DeliveryBacklog, DeliveryState};
 use rusqlite::{Connection, OptionalExtension, Row, params};
 
 use crate::{Result, Store, cached_execute, cached_row, parse_column, to_sql_int};
 
-const COLUMNS: &str =
-    "id, message_id, bot_id, state, attempts, next_attempt_at, last_error, read_at, updated_at";
+const COLUMNS: &str = "id, message_id, bot_id, state, attempts, next_attempt_at, last_error, read_at, updated_at, \
+     conversation_id";
 
 /// Longest list `deliveries` returns.
 const LIST_LIMIT: u32 = 500;
@@ -25,6 +25,7 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<Delivery> {
         last_error: row.get(6)?,
         read_at: row.get(7)?,
         updated_at: row.get(8)?,
+        conversation_id: parse_column(row, 9)?,
     })
 }
 
@@ -49,7 +50,7 @@ impl Store {
         cached_execute(
             conn,
             &format!(
-                "INSERT INTO deliveries ({COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"
+                "INSERT INTO deliveries ({COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)"
             ),
             params![
                 delivery.id.as_str(),
@@ -61,6 +62,7 @@ impl Store {
                 delivery.last_error,
                 delivery.read_at,
                 delivery.updated_at,
+                delivery.conversation_id.as_str(),
             ],
         )?;
         Ok(())
@@ -210,6 +212,20 @@ impl Store {
         .optional()?)
     }
 
+    /// The message the bot took up last: what its current or latest turn
+    /// was working on (spec 10.6). Ties go by the order they were saved.
+    pub fn last_read_message(&self, bot: &BotId) -> Result<Option<MessageId>> {
+        Ok(self
+            .conn
+            .query_row(
+                "SELECT message_id FROM deliveries WHERE bot_id = ?1 AND read_at IS NOT NULL \
+                 ORDER BY read_at DESC, rowid DESC LIMIT 1",
+                [bot.as_str()],
+                |row| parse_column(row, 0),
+            )
+            .optional()?)
+    }
+
     /// Deliveries written to the process of `generation` that it never
     /// began, oldest first.
     pub fn unread_deliveries(&self, bot: &BotId, generation: u64) -> Result<Vec<Delivery>> {
@@ -250,16 +266,6 @@ impl Store {
             .optional()?)
     }
 
-    /// Returns deliveries whose sender died mid-send to `pending`.
-    pub fn recover_leases(&self, now: i64) -> Result<Vec<Delivery>> {
-        let mut stmt = self.conn.prepare_cached(&format!(
-            "UPDATE deliveries SET state = 'pending', lease_until = NULL, updated_at = ?1 \
-             WHERE state = 'sending' AND lease_until <= ?1 RETURNING {COLUMNS}"
-        ))?;
-        let rows = stmt.query_map([now], from_row)?;
-        Ok(rows.collect::<rusqlite::Result<_>>()?)
-    }
-
     /// Puts a dead delivery back in the queue with its attempts reset.
     /// `None` if it is not dead.
     pub fn retry_delivery(&self, id: &DeliveryId, now: i64) -> Result<Option<Delivery>> {
@@ -294,5 +300,6 @@ impl Store {
 }
 
 mod courier;
+mod recover;
 #[cfg(test)]
 mod tests;

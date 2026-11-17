@@ -2,11 +2,11 @@
 // window it read or acted in last, live, what it did, and Stop. Stopped,
 // the panel says so and offers to let it go on.
 
-import { Monitor, Play, Square, X } from "lucide-react";
+import { LockKeyhole, Monitor, Play, Square, X } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useT } from "../../i18n";
 import type { Bot, DesktopAction, DesktopFrame, DesktopState } from "../../lib/protocol.gen";
-import { useApi } from "../../store/context";
+import { useApi, useApp } from "../../store/context";
 import { Badge } from "../../ui/Badge";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
@@ -56,7 +56,10 @@ function pointed(state: DesktopState | null, frame: DesktopFrame): StageAction |
 }
 
 export function DesktopPanel({ bot, onClose }: { bot: Bot; onClose(): void }) {
-  const t = useT().desktop.panel;
+  const texts = useT();
+  const t = texts.desktop.panel;
+  const words = texts.permissions;
+  const openPermissions = useApp((state) => state.openPermissions);
   const api = useApi();
   const { state, frame } = useDesktopView(bot.id);
   const stopped = state?.stopped === true;
@@ -66,8 +69,8 @@ export function DesktopPanel({ bot, onClose }: { bot: Bot; onClose(): void }) {
 
   return (
     <SidePanel label={t.label(bot.name)} name="computer" defaultWidth={600}>
-      <header className="flex h-11 shrink-0 items-center justify-between border-line border-b pr-1.5 pl-4">
-        <h2 className="flex items-center gap-2 font-semibold text-sm">
+      <header className="flex h-11 shrink-0 items-center justify-between pr-1.5 pl-4">
+        <h2 className="flex items-center gap-2 font-semibold text-base">
           {t.heading}
           {stopped ? (
             <Badge tone="warn">{t.stoppedBadge}</Badge>
@@ -148,7 +151,18 @@ export function DesktopPanel({ bot, onClose }: { bot: Bot; onClose(): void }) {
             <AppOptions bot={bot} app={window.app} />
           </>
         )}
-        <p className="mt-auto text-muted text-xs">{t.shortcut}</p>
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
+          <p className="text-muted text-xs">{t.shortcut}</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={LockKeyhole}
+            title={words.manageHint}
+            onClick={() => openPermissions({ tab: "desktop", botId: bot.id })}
+          >
+            {words.manage}
+          </Button>
+        </div>
       </div>
       <ComputerFooter />
     </SidePanel>

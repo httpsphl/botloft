@@ -130,7 +130,8 @@ describe("the Agent agency", () => {
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Back to all agents" }));
     expect(within(dialog).getAllByRole("listitem")).toHaveLength(129);
-  });
+    // The whole agency renders twice: over 5 s with the full suite running.
+  }, 20_000);
 
   test("the same role twice gets another name", async () => {
     const fake = await openCrewWithChief();

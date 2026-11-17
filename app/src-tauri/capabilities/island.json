@@ -1,0 +1,26 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "island",
+  "description": "The island at the top of the screen (spec 31.3): its own window's size and place, the daemon's port and token, asking the main window to open a chat, and hearing the app: the right Ctrl held and the main window in front. Nothing that opens files, links or folders.",
+  "windows": [
+    "island"
+  ],
+  "permissions": [
+    "core:event:allow-emit-to",
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-is-visible",
+    "core:window:allow-set-size",
+    "core:window:allow-set-position",
+    "core:window:allow-primary-monitor",
+    "allow-daemon-status",
+    "allow-read-owner-token",
+    "allow-quiet-now",
+    "allow-main-in-front",
+    "allow-set-summon",
+    "core:window:allow-cursor-position",
+    "core:window:allow-monitor-from-point"
+  ]
+}

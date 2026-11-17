@@ -4,6 +4,7 @@ import {
   Hourglass,
   KeyRound,
   LoaderCircle,
+  Moon,
   Pause,
   Power,
   RotateCw,
@@ -33,6 +34,8 @@ const looks: Record<BotState, Look> = {
   offline: { tone: "quiet", icon: Power },
   launching: { tone: "work", icon: LoaderCircle, spin: true },
   idle: { tone: "ok", icon: null },
+  // Asleep reads as free in the lists; the chat's header says it (spec 7.7).
+  sleeping: { tone: "quiet", icon: null },
   busy: { tone: "work", icon: WorkingIcon },
   needs_approval: { tone: "warn", icon: Hand },
   rate_limited: { tone: "warn", icon: Hourglass },
@@ -64,14 +67,17 @@ export function BotStateBadge({
   bot,
   crewPaused,
   compact = false,
+  sleep = false,
 }: {
   bot: Pick<Bot, "state" | "paused">;
   crewPaused?: boolean;
   compact?: boolean;
+  /** Says a sleeping bot sleeps, where the lists leave it quiet. */
+  sleep?: boolean;
 }) {
   const messages = useT();
   const view = stateView(bot, crewPaused, messages);
-  const Icon = view.icon;
+  const Icon = view.icon ?? (sleep && bot.state === "sleeping" ? Moon : null);
   // The badge fades in when a bot leaves idle in front of the owner; one
   // that was already there when the list opened shows still.
   const [wasShown, setWasShown] = useState(Icon !== null);

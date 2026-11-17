@@ -8,6 +8,7 @@ export const crews = {
   /** The crew's automatic mode (spec 7.4): a switch in the new-crew form and in the crew's header. */
   autoMode: {
     label: "Automatic mode",
+    short: "Automatic",
     hint: "Every agent in this crew works without asking at each step, including the ones you add later. Anything risky still comes to you.",
     failed: "Could not change the automatic mode",
   },
@@ -21,6 +22,7 @@ export const crews = {
     fromOwner: (text: string) => `You: ${text}`,
     /** The conversation-list line for an approval the bot is waiting on. */
     awaitingApproval: (text: string) => `Waiting for approval: ${text}`,
+    showedPlan: (text: string) => `Plan: ${text}`,
     unread: "unread",
     /** Beside a crew's name: how many of its bots are unread. */
     unreadCount: (count: number) => `${count} unread`,
@@ -130,6 +132,9 @@ export const crews = {
     emptyHint:
       "An agent is a Claude Code session that keeps running, with its own folder and role.",
     noRole: "No role yet.",
+    /** Under a free agent's card, where a busy one shows its state. */
+    lastActive: (when: string) => `Last active: ${when}`,
+    nothingYet: "Nothing done yet",
   },
   tasks: {
     show: "Show",

@@ -4,10 +4,11 @@
 import { useT } from "../../i18n";
 import { fromNow } from "../../lib/format";
 import type { AgentUsage, UsageWindow } from "../../lib/protocol.gen";
+import { windowKey, windowName } from "../../lib/usageWindows";
 import { useApp } from "../../store/context";
 import { Callout } from "../../ui/Callout";
 import { Dialog } from "../../ui/Dialog";
-import { TokensByBot } from "./TokensByBot";
+import { AgentCosts } from "./AgentCosts";
 
 export function UsageDialog({ onClose }: { onClose(): void }) {
   const t = useT();
@@ -29,8 +30,12 @@ export function UsageDialog({ onClose }: { onClose(): void }) {
           <p className="text-muted">{u.empty}</p>
         ) : (
           shown.map((entry) => {
+            // Past the plan's limit with paid extra usage, the agents keep working.
+            const extra = entry.usage.extraUsage;
             const limited =
-              entry.usage.status !== "allowed" && entry.usage.status !== "allowed_warning";
+              !extra &&
+              entry.usage.status !== "allowed" &&
+              entry.usage.status !== "allowed_warning";
             return (
               <section key={entry.agent} className="flex flex-col gap-4">
                 {named && (
@@ -43,6 +48,7 @@ export function UsageDialog({ onClose }: { onClose(): void }) {
                     )}
                   </h3>
                 )}
+                {extra && <Callout title={u.extraUsage} />}
                 {limited && (
                   <Callout
                     tone="warn"
@@ -53,15 +59,21 @@ export function UsageDialog({ onClose }: { onClose(): void }) {
                 )}
                 <ul className="flex flex-col gap-4">
                   {entry.usage.windows.map((window) => (
-                    <Window key={window.name} window={window} />
+                    <Window key={windowKey(window)} window={window} />
                   ))}
                 </ul>
-                <p className="text-muted text-xs">{u.updated(fromNow(entry.usage.observedAt))}</p>
+                <p className="text-muted text-xs">
+                  {entry.agent !== "claude"
+                    ? u.updated(fromNow(entry.usage.observedAt))
+                    : entry.usage.fromAccount
+                      ? u.fromAccount(fromNow(entry.usage.observedAt))
+                      : u.fromAgents(fromNow(entry.usage.observedAt))}
+                </p>
               </section>
             );
           })
         )}
-        <TokensByBot />
+        <AgentCosts />
       </div>
     </Dialog>
   );
@@ -72,7 +84,7 @@ const NO_USAGE: AgentUsage[] = [];
 function Window({ window }: { window: UsageWindow }) {
   const u = useT().account.usage;
   const percent = Math.round(Math.min(1, Math.max(0, window.utilization)) * 100);
-  const name = u.windows[window.name] ?? window.name.replaceAll("_", " ");
+  const name = windowName(window, u);
   const tone = percent >= 90 ? "bg-danger" : percent >= 70 ? "bg-warn" : "bg-work";
   return (
     <li className="flex flex-col gap-1.5">

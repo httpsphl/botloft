@@ -66,7 +66,7 @@ describe("folding a crew in the sidebar", () => {
   });
 });
 
-describe("the page of all crews", () => {
+describe("the home", () => {
   test("opens from Crews on the left and leads to each crew", async () => {
     const { fake, editor } = twoCrews();
     fake.setBotState(editor.id, "busy");
@@ -74,9 +74,9 @@ describe("the page of all crews", () => {
     await crewOpened("Ops");
 
     fireEvent.click(within(sidebar()).getByRole("button", { name: "Crews" }));
-    await crewOpened("Crews");
-    const page = screen.getByRole("region", { name: "Crews" });
-    expect(page.textContent).toContain("2 crews · 3 agents");
+    expect(await screen.findByRole("heading", { level: 1, name: "Home" })).toBeDefined();
+    const page = screen.getByRole("region", { name: "Home" });
+    expect(page.textContent).toContain("1 working");
     const docs = within(page).getByRole("button", { name: /^Docs/ });
     expect(docs.textContent).toContain("1 working");
     expect(within(page).getByRole("button", { name: /^Ops/ }).textContent).toContain("All quiet");

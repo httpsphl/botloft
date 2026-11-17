@@ -1,10 +1,12 @@
 // The fake daemon's questions to the owner (spec 23): `ask` plays a bot
-// calling `ask_owner`, and `questions.*` answer and dismiss them like the
-// daemon does, the answer going to the bot as the owner's message.
+// calling `ask_owner`, `tell` one calling `tell_owner` (23.10), and
+// `questions.*` answer and dismiss them like the daemon does, the answer
+// going to the bot as the owner's message. The owner writing to a bot
+// closes its notes.
 
 import type { FakeBotloft, Handlers } from "./fake";
 import { conflict, invalid, notFound } from "./fakeRules";
-import type { BotId, ChatItem, Question } from "./protocol.gen";
+import type { BotId, ChatItem, Question, QuestionKind } from "./protocol.gen";
 
 type QuestionMethods = Extract<keyof Handlers, `questions.${string}`>;
 
@@ -16,11 +18,31 @@ export class FakeQuestions {
 
   /** The bot asks the owner something; the app hears of it. */
   ask(botId: BotId, text: string, options: string[] = []): Question {
+    return this.keep(botId, "question", text, options);
+  }
+
+  /** The bot leaves the owner a note; the app hears of it. */
+  tell(botId: BotId, text: string): Question {
+    return this.keep(botId, "note", text, []);
+  }
+
+  /** The owner wrote to the bot: its open notes close as seen. */
+  closeNotes(botId: BotId): void {
+    for (const entry of this.asked) {
+      const { question } = entry;
+      if (question.botId === botId && question.kind === "note" && question.status === "open") {
+        this.close(entry, { status: "dismissed" });
+      }
+    }
+  }
+
+  private keep(botId: BotId, kind: QuestionKind, text: string, options: string[]): Question {
     const bot = this.fake.bot(botId);
     const question: Question = {
       id: this.fake.id("qst"),
       crewId: bot.crewId,
       botId,
+      kind,
       text,
       options,
       status: "open",
@@ -91,6 +113,7 @@ export class FakeQuestions {
           replyTo: null,
           createdAt: this.fake.now,
         });
+        this.closeNotes(question.botId);
         return question;
       },
       "questions.dismiss": ({ questionId }) =>

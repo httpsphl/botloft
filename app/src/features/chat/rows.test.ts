@@ -1,6 +1,12 @@
 import { describe, expect, test } from "vitest";
-import type { ChatBody, ChatItem } from "../../lib/protocol.gen";
-import { chatRows, runParts, splitDraft } from "./rows";
+import type {
+  ChatBody,
+  ChatItem,
+  KeyRequestStatus,
+  Question,
+  QuestionStatus,
+} from "../../lib/protocol.gen";
+import { chatRows, isWaiting, runParts, splitDraft } from "./rows";
 
 const DAY = 24 * 60 * 60 * 1000;
 const start = new Date(2026, 8, 28, 9, 0).getTime();
@@ -8,7 +14,14 @@ let n = 0;
 
 function item(body: ChatBody, at = start): ChatItem {
   n += 1;
-  return { id: `cht_${n}`, botId: "bot_1", body, createdAt: at, updatedAt: at };
+  return {
+    id: `cht_${n}`,
+    botId: "bot_1",
+    conversationId: "cnv_1",
+    body,
+    createdAt: at,
+    updatedAt: at,
+  };
 }
 
 const reply = (text: string, at?: number) => item({ kind: "reply", text }, at);
@@ -23,8 +36,18 @@ const tool = (name: string) =>
     status: "done",
     output: null,
     file: null,
+    lines: null,
   });
-const turn = () => item({ kind: "turn", durationMs: 1000, tokens: null, error: null });
+const turn = () =>
+  item({
+    kind: "turn",
+    durationMs: 1000,
+    tokens: null,
+    costMicros: null,
+    error: null,
+    stopped: false,
+    quiet: false,
+  });
 const inbound = (body: string, at?: number) =>
   item(
     {
@@ -64,6 +87,19 @@ describe("chat rows", () => {
     const rows = chatRows([reply("late", start), reply("early", start + DAY)]);
     expect(rows.map((row) => row.kind)).toEqual(["day", "run", "day", "run"]);
   });
+
+  test("a pause in the talk gets a clock line, a long turn does not", () => {
+    const later = start + 40 * 60 * 1000;
+    const paused = chatRows([
+      inbound("hi", start),
+      reply("one", start + 1000),
+      turn(),
+      inbound("back", later),
+    ]);
+    expect(paused.map((row) => row.kind)).toEqual(["day", "inbound", "run", "time", "inbound"]);
+    const working = chatRows([inbound("go", start), tool("Bash"), reply("done", later)]);
+    expect(working.map((row) => row.kind)).toEqual(["day", "inbound", "run"]);
+  });
 });
 
 describe("splitDraft", () => {
@@ -86,5 +122,20 @@ describe("splitDraft", () => {
 
   test("does not cut before an indented line, which may belong to a list item", () => {
     expect(splitDraft("- item\n\n  more of it")).toEqual(["", "- item\n\n  more of it"]);
+  });
+});
+
+describe("isWaiting", () => {
+  const question = (status: QuestionStatus) =>
+    item({ kind: "question", question: { status } as Question });
+  const key = (status: KeyRequestStatus) =>
+    item({ kind: "key_request", name: "OPENAI_API_KEY", why: "", status });
+
+  test("open questions and keys wait for the owner, answered ones do not", () => {
+    expect(isWaiting(question("open"))).toBe(true);
+    expect(isWaiting(question("answered"))).toBe(false);
+    expect(isWaiting(key("open"))).toBe(true);
+    expect(isWaiting(key("saved"))).toBe(false);
+    expect(isWaiting(reply("Done."))).toBe(false);
   });
 });

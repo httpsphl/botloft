@@ -84,6 +84,7 @@ fn fill(fx: &Fixture) -> Owned {
     let item = ChatItem {
         id: ChatItemId::generate(),
         bot_id: scout.clone(),
+        conversation_id: botloft_core::ids::ConversationId::main_of(scout),
         body: ChatBody::Approval(ApprovalItem {
             approval_id: approval.id.clone(),
             tool_name: approval.tool_name.clone(),
@@ -93,6 +94,7 @@ fn fill(fx: &Fixture) -> Owned {
             status: ApprovalStatus::Pending,
             note: None,
             always: None,
+            once: None,
         }),
         created_at: 10,
         updated_at: 10,
@@ -135,6 +137,7 @@ fn fill(fx: &Fixture) -> Owned {
         enabled: true,
         next_run_at: Some(100),
         last_run: None,
+        fail_streak: 0,
         created_at: 0,
         updated_at: 0,
         archived_at: None,
@@ -154,6 +157,8 @@ fn fill(fx: &Fixture) -> Owned {
         created_at: 100,
         finished_at: None,
         signal: None,
+        nothing_new: false,
+        waited: None,
     };
     fx.store.fire_run(&run, &fired, &delivery).expect("run");
 

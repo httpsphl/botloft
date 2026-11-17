@@ -35,7 +35,7 @@ export function ApprovalView({
   const canAllow = !card.cut && !card.atComputer;
 
   return (
-    <article className="flex flex-col gap-3 rounded-2xl border border-line bg-panel p-4">
+    <article className="flex flex-col gap-3 rounded-bubble bg-bubble p-4">
       <header className="flex items-center gap-3">
         <BotDot name={card.bot.name} color={card.bot.color} />
         <div className="min-w-0">
@@ -52,7 +52,7 @@ export function ApprovalView({
       </div>
 
       {card.explanation ? (
-        <div className="rounded-xl bg-sunken px-3 py-2.5">
+        <div className="rounded-xl bg-panel px-3 py-2.5">
           <p className="whitespace-pre-wrap break-words text-base">{card.explanation}</p>
           <p className="mt-1 text-muted text-xs">{a.explanationBy(card.bot.name)}</p>
         </div>
@@ -72,7 +72,7 @@ export function ApprovalView({
         {all && (
           <pre
             data-selectable
-            className="mt-1 max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-sunken p-3 font-mono text-sm"
+            className="mt-1 max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-panel p-3 font-mono text-sm"
           >
             {card.text}
           </pre>
@@ -88,7 +88,7 @@ export function ApprovalView({
           value={note}
           maxLength={500}
           onChange={(event) => setNote(event.target.value)}
-          className="h-12 rounded-xl border border-line-strong bg-canvas px-3 text-base text-ink"
+          className="h-12 rounded-xl border border-line-strong bg-panel px-3 text-base text-ink"
         />
       </label>
 

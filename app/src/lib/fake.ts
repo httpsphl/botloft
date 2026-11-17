@@ -8,25 +8,40 @@ import { autoBackupHandlers } from "./fakeAutoBackup";
 import { backupHandlers } from "./fakeBackup";
 import { botHandlers } from "./fakeBots";
 import { FakeBrowser } from "./fakeBrowser";
+import { FakeCards } from "./fakeCards";
 import { catalogHandlers } from "./fakeCatalog";
+import { FakeChanges } from "./fakeChanges";
 import { FakeChat } from "./fakeChat";
+import { FakeChrome } from "./fakeChrome";
 import { cloudHandlers } from "./fakeCloud";
 import { FakeConversation } from "./fakeConversation";
+import { FakeConversations } from "./fakeConversations";
 import { FakeCrewAccess } from "./fakeCrewAccess";
 import { crewHandlers } from "./fakeCrews";
 import { FakeDesktop } from "./fakeDesktop";
 import { FakeFiles } from "./fakeFiles";
+import { FakeImports } from "./fakeImports";
+import { instructionsHandlers } from "./fakeInstructions";
+import { islandHandlers } from "./fakeIsland";
+import { FakeKeys } from "./fakeKeys";
 import { FakeLesson } from "./fakeLesson";
+import { FakeLogins } from "./fakeLogins";
+import { FakeMaker } from "./fakeMaker";
 import { FakeMcp } from "./fakeMcp";
 import { mobileHandlers } from "./fakeMobile";
+import { FakeSites } from "./fakePermissions";
+import { FakePlugins } from "./fakePlugins";
 import { FakeQuestions } from "./fakeQuestions";
 import { FakeReactions } from "./fakeReactions";
 import { FakeRoutines } from "./fakeRoutines";
 import { conflict, invalid, notFound, slugify } from "./fakeRules";
 import { FakeScreens } from "./fakeScreens";
 import { searchHandlers } from "./fakeSearch";
-import { usageHandlers } from "./fakeUsage";
+import { FakeSkills } from "./fakeSkills";
+import { type FakeCostPart, usageHandlers } from "./fakeUsage";
+import { FakeVersions } from "./fakeVersions";
 import {
+  type BackgroundTask,
   type Bot,
   type BotId,
   type BotState,
@@ -79,9 +94,14 @@ export class FakeBotloft implements BotloftApi {
     startWithWindows: true,
     keepAwake: true,
     approvalWaitMinutes: 60,
+    sleepAfterMinutes: 30,
     defaultAgent: "claude",
     showExperimentalAgents: false,
+    makerBuildsWithoutAsking: false,
+    historyDays: 0,
   };
+  /** What the owner wrote for every agent (spec 7.10). */
+  ownerInstructions = "";
   /** Folders the owner sent to the Recycle Bin with a delete, in order. */
   readonly recycled: string[] = [];
   /** Why the next folder cannot go to the bin, if it cannot. */
@@ -92,21 +112,35 @@ export class FakeBotloft implements BotloftApi {
   readonly allow = new FakeAllow(this);
   readonly crewAccess = new FakeCrewAccess(this);
   readonly desktop = new FakeDesktop(this);
+  readonly sites = new FakeSites(this);
+  readonly chrome = new FakeChrome(this);
+  readonly skills = new FakeSkills(this);
+  readonly plugins = new FakePlugins(this);
   readonly mcp = new FakeMcp(this);
+  readonly logins = new FakeLogins(this);
+  readonly conversations = new FakeConversations(this);
   /** The language the app last told, as the daemon keeps it (spec 24.7). */
   locale: string | null = null;
   readonly conversation = new FakeConversation(this);
   readonly routines = new FakeRoutines(this);
+  /** The history of each bot's memory and instructions (spec 8.10). */
+  readonly versions = new FakeVersions(this);
   readonly files = new FakeFiles(this);
   readonly browser = new FakeBrowser(this);
   readonly screens = new FakeScreens(this);
   readonly questions = new FakeQuestions(this);
+  /** The cards bots show in their chats (spec 8.11). */
+  readonly cards = new FakeCards(this);
+  readonly keys = new FakeKeys(this);
+  readonly changes = new FakeChanges();
   readonly reactions = new FakeReactions(this);
   readonly lesson = new FakeLesson(this);
+  readonly maker = new FakeMaker(this);
+  readonly imports = new FakeImports(this);
   /** Clock for created and updated times. */
   now = Date.now();
-  /** Plan share per token for `usage.tokens`; `null`, not learned yet. */
-  planSharePerToken: number | null = null;
+  /** What the bots' turns cost, as the daemon's `turn_costs` (spec 8.7). */
+  costParts: FakeCostPart[] = [];
   closed = false;
   private state: ConnectionState = { kind: "open", daemonVersion: "0.1.0" };
   private readonly listeners = new Set<(event: ServerEvent) => void>();
@@ -184,12 +218,21 @@ export class FakeBotloft implements BotloftApi {
     bot.state = state;
     bot.generation = generation ?? bot.generation ?? 1;
     this.emit({ name: "bot.state", params: { botId, state, generation: bot.generation } });
+    this.conversations.mainChanged(botId);
   }
 
   /** What Claude Code tells about the bot's conversation (spec 8.6). */
   setContext(botId: BotId, context: ContextUsage | null): void {
     this.bot(botId).context = context;
     this.emit({ name: "bot.context", params: { botId, context } });
+    this.conversations.mainChanged(botId);
+  }
+
+  /** What the bot left running in the background (spec 33.4). */
+  setBackground(botId: BotId, tasks: BackgroundTask[]): void {
+    this.bot(botId).background = tasks;
+    this.emit({ name: "bot.background", params: { botId, tasks } });
+    this.conversations.mainChanged(botId);
   }
 
   /** A new id with `prefix`, like the daemon's. */
@@ -277,6 +320,7 @@ export class FakeBotloft implements BotloftApi {
       { id: "gemini-3.8-flash-low", name: "Gemini 3.8 Flash (Low)" },
       { id: "gemini-3.8-flash-high", name: "Gemini 3.8 Flash (High)" },
     ],
+    "session.ping": () => null,
     "session.setLocale": ({ locale }) => {
       this.locale = locale;
       return null;
@@ -292,9 +336,13 @@ export class FakeBotloft implements BotloftApi {
         startWithWindows: change.startWithWindows ?? this.settings.startWithWindows,
         keepAwake: change.keepAwake ?? this.settings.keepAwake,
         approvalWaitMinutes: change.approvalWaitMinutes ?? this.settings.approvalWaitMinutes,
+        sleepAfterMinutes: change.sleepAfterMinutes ?? this.settings.sleepAfterMinutes,
         defaultAgent: change.defaultAgent ?? this.settings.defaultAgent,
         showExperimentalAgents:
           change.showExperimentalAgents ?? this.settings.showExperimentalAgents,
+        makerBuildsWithoutAsking:
+          change.makerBuildsWithoutAsking ?? this.settings.makerBuildsWithoutAsking,
+        historyDays: change.historyDays ?? this.settings.historyDays,
       };
       if (change.showExperimentalAgents !== undefined) {
         this.system = {
@@ -315,16 +363,30 @@ export class FakeBotloft implements BotloftApi {
     ...this.allow.handlers(),
     ...this.crewAccess.handlers(),
     ...this.desktop.handlers(),
+    ...this.sites.handlers(),
+    ...this.chrome.handlers(),
+    ...this.skills.handlers(),
+    ...this.plugins.handlers(),
     ...this.mcp.handlers(),
+    ...this.logins.handlers(),
     ...this.conversation.handlers(),
+    ...this.conversations.handlers(),
     ...this.files.handlers(),
     ...this.browser.handlers(),
     ...this.screens.handlers(),
     ...this.routines.handlers(),
     ...this.questions.handlers(),
+    ...this.cards.handlers(),
+    ...this.keys.handlers(),
+    ...this.changes.handlers(),
     ...this.reactions.handlers(),
     ...this.lesson.handlers(),
+    ...this.maker.handlers(),
+    ...this.imports.handlers(),
     ...usageHandlers(this),
+    ...instructionsHandlers(this),
+    ...this.versions.handlers(),
+    ...islandHandlers(this),
     ...backupHandlers(this),
     ...cloudHandlers(this),
     ...autoBackupHandlers(this),

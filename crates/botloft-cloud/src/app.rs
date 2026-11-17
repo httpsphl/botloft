@@ -3,16 +3,19 @@
 use std::sync::Arc;
 
 use axum::Router;
-use axum::routing::{delete, get, post};
+use axum::routing::{delete, get, post, put};
 
 use crate::clock::Clock;
 use crate::config::Config;
 use crate::db::Db;
+use crate::download::Releases;
 use crate::hub::Hub;
 use crate::mailer::Mailer;
 use crate::push::Pusher;
 use crate::store::CopyStore;
-use crate::{copies, login, pairing, phone, push_api, relay, removal, session};
+use crate::{
+    copies, download, files, login, pairing, phone, push_api, relay, removal, session, site,
+};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -23,10 +26,13 @@ pub struct AppState {
     pub store: CopyStore,
     pub hub: Hub,
     pub push: Pusher,
+    pub releases: Releases,
 }
 
 pub fn router(state: AppState) -> Router {
     Router::new()
+        .route("/", get(site::index))
+        .route("/download/{system}", get(download::installer))
         .route("/health", get(|| async { "ok" }))
         .route("/brand/flame.png", get(crate::html::flame))
         .route("/v1/login", post(login::ask))
@@ -57,10 +63,13 @@ pub fn router(state: AppState) -> Router {
         .route("/v1/pairings/{id}/result", get(pairing::result))
         .route("/v1/copies", get(copies::list).put(copies::put))
         .route("/v1/copies/{id}", get(copies::get).delete(copies::remove))
+        .route("/v1/files", put(files::put))
+        .route("/v1/files/{id}", get(files::get).delete(files::remove))
         .route("/v1/account/delete", post(removal::ask))
         .route(
             "/v1/account/delete/confirm",
             get(removal::confirm_page).post(removal::confirm),
         )
+        .fallback(site::other)
         .with_state(state)
 }

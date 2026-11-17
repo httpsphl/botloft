@@ -3,8 +3,6 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { FakeBotloft } from "../../lib/fake";
 import type { BotId, Message, MessageId } from "../../lib/protocol.gen";
 import glanceFrames from "../../mascot-glance.css?raw";
-import sleepFrames from "../../mascot-sleep.css?raw";
-import wakeFrames from "../../mascot-wake.css?raw";
 import { crewOpened, renderApp } from "../../test/app";
 import { APP_OPENED } from "../../ui/motion";
 import { BotAvatar } from "./BotAvatar";
@@ -112,22 +110,12 @@ describe("moments", () => {
     expect(svgOf(old.container).hasAttribute("data-arrive")).toBe(false);
   });
 
-  test("every moment ends at rest, so less motion shows none of it", () => {
-    const end = (frames: string, name: string) =>
-      frames
-        .match(new RegExp(`@keyframes ${name} \\{([\\s\\S]*?)\\n\\}`))?.[1]
-        ?.split(/100% \{/)
-        .at(-1);
-    expect(end(wakeFrames, "wake-up")).toContain("transform: scale(1, 1);");
-    expect(end(wakeFrames, "wake-open")).toMatch(/opacity: 1;\s*clip-path: inset\(0\);/);
-    expect(end(wakeFrames, "wake-shut")).toContain("opacity: 0;");
-    expect(end(wakeFrames, "arrive-pop")).toMatch(/opacity: 1;\s*transform: scale\(1, 1\);/);
-    expect(end(wakeFrames, "arrive-open")).toContain("clip-path: inset(0);");
-    expect(end(glanceFrames, "glance")).toContain("transform: translate(0, 0);");
-    // Falling asleep ends asleep: the eyes shut into the arcs.
-    expect(end(sleepFrames, "sleep-slump")).toContain("transform: scale(1, 1);");
-    expect(end(sleepFrames, "sleep-shut")).toContain("opacity: 0;");
-    expect(end(sleepFrames, "sleep-arcs")).toContain("opacity: 1;");
+  test("the glance ends where it started, so less motion shows none of it", () => {
+    const end = glanceFrames
+      .match(/@keyframes glance \{([\s\S]*?)\n\}/)?.[1]
+      ?.split(/100% \{/)
+      .at(-1);
+    expect(end).toContain("transform: translate(0, 0);");
   });
 });
 

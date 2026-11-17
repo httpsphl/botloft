@@ -13,6 +13,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use axum::Form;
 use axum::Router;
 use axum::extract::Query;
+use axum::http::HeaderMap;
 use axum::response::Html;
 use axum::routing::{get, post};
 use tokio::net::TcpListener;
@@ -114,6 +115,16 @@ async fn done(Query(query): Query<HashMap<String, String>>) -> Html<String> {
     ))
 }
 
+async fn whoami(headers: HeaderMap) -> Html<String> {
+    let cookie = headers
+        .get("cookie")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("none");
+    Html(format!(
+        "<!doctype html><title>Who</title><p>Cookies: {cookie}</p>"
+    ))
+}
+
 /// Serves the site until the test ends.
 pub async fn serve() -> SocketAddr {
     // `/visits` counts how many times it was loaded.
@@ -144,6 +155,8 @@ pub async fn serve() -> SocketAddr {
         .route("/cover", get(|| async { Html(COVER) }))
         .route("/scrolled", get(|| async { Html(SCROLLED) }))
         .route("/ping", get(|| async { "ok" }))
+        // What the browser sent as its cookies (spec 35).
+        .route("/whoami", get(whoami))
         .route("/account", post(account));
     let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
     let addr = listener.local_addr().expect("addr");

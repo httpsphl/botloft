@@ -50,7 +50,8 @@ fn expire(daemon: &Daemon, store: &Store, task: &Task, now: i64) -> ApiResult<()
         attachments: Vec::new(),
         created_at: now,
     };
-    let delivery = pending_delivery(&notice);
+    let to = crate::service::replies::or_main(store.task_conversation(&task.id), &notice.to_bot_id);
+    let delivery = pending_delivery(&notice, to);
     let open = [TaskStatus::Open];
     let expired = store.settle_task(
         &task.id,

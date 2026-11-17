@@ -2,11 +2,12 @@
 // 24.2): the app, why the bot wants it, what that means, and Allow or
 // Deny. Once answered it shrinks to one line.
 
-import { Ban, Check, Monitor, TimerOff } from "lucide-react";
+import { Ban, Check, Clock, Monitor, TimerOff } from "lucide-react";
 import { useT } from "../../i18n";
 import type { ApprovalItem, Bot } from "../../lib/protocol.gen";
 import { Button } from "../../ui/Button";
-import { NoteInput, RequestCard, SettledLine } from "../../ui/ChatCard";
+import { RequestCard, SettledLine } from "../../ui/ChatCard";
+import { RequestAnswers } from "../chat/RequestAnswers";
 import { useAnswer } from "../chat/useAnswer";
 
 /** The request the daemon opens from the desktop tools. */
@@ -42,14 +43,17 @@ function Answered({
 }) {
   const words = useT().desktop.card;
   switch (approval.status) {
-    case "allowed":
-      return (
-        <SettledLine
-          icon={Check}
-          tone="ok"
-          text={(use ? words.allowedUse : words.allowed)(bot.name, app)}
-        />
-      );
+    case "allowed": {
+      const once = approval.once === true;
+      const text = use
+        ? once
+          ? words.allowedUseOnce
+          : words.allowedUse
+        : once
+          ? words.allowedOnce
+          : words.allowed;
+      return <SettledLine icon={Check} tone="ok" text={text(bot.name, app)} />;
+    }
     case "denied":
       return (
         <SettledLine
@@ -100,20 +104,26 @@ export function DesktopCard({ approval, bot }: { approval: ApprovalItem; bot: Bo
         </p>
       )}
       <p className="mt-1.5 text-muted text-xs">{(use ? words.meansUse : words.means)(bot.name)}</p>
-      <NoteInput
-        label={t.chat.approval.noteLabel(bot.name)}
-        value={note}
-        onChange={setNote}
-        placeholder={t.chat.approval.notePlaceholder}
-      />
-      <div className="mt-2.5 flex gap-2">
+      <RequestAnswers
+        bot={bot.name}
+        deny={t.chat.approval.deny}
+        busy={busy}
+        note={note}
+        onNote={setNote}
+        onDeny={() => answer(false)}
+      >
         <Button variant="primary" icon={Check} disabled={busy} onClick={() => answer(true)}>
           {t.chat.approval.allow}
         </Button>
-        <Button variant="danger" icon={Ban} disabled={busy} onClick={() => answer(false)}>
-          {t.chat.approval.deny}
+        <Button
+          variant="secondary"
+          icon={Clock}
+          disabled={busy}
+          onClick={() => answer(true, undefined, false, true)}
+        >
+          {t.chat.approval.once}
         </Button>
-      </div>
+      </RequestAnswers>
     </RequestCard>
   );
 }

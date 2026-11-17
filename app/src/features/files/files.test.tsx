@@ -142,3 +142,64 @@ describe("files panel", () => {
     expect(await within(panel()).findByText("This file is no longer there.")).toBeDefined();
   });
 });
+
+/** A 1×1 PNG. */
+const PNG =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
+describe("files panel: what each file is", () => {
+  test("names the kind, shows a picture's own thumbnail, and keeps one kind", async () => {
+    const { fake, scout } = crew();
+    fake.files.add(scout.id, "notes.md", { text: "# Notes", at: fake.now - 3000 });
+    fake.files.add(scout.id, "chart.png", { data: PNG, at: fake.now - 2000 });
+    fake.files.add(scout.id, "plan.csv", { text: "a,b", at: fake.now - 1000 });
+    await openScout(fake);
+    fireEvent.click(toggle());
+    const list = await within(panel()).findByRole("list", { name: "Files" });
+    const chart = within(list).getByRole("button", { name: /chart\.png/ });
+    expect(chart.textContent).toContain("Picture · PNG");
+    expect(within(list).getByRole("button", { name: /plan\.csv/ }).textContent).toContain(
+      "Spreadsheet · CSV",
+    );
+    expect(within(list).getByRole("button", { name: /notes\.md/ }).textContent).toContain(
+      "Text · MD",
+    );
+    // The picture itself, read from the agent's folder; the rest keep their tile.
+    await waitFor(() =>
+      expect(chart.querySelector("img")?.getAttribute("src")).toBe(`data:image/png;base64,${PNG}`),
+    );
+    expect(
+      within(list)
+        .getByRole("button", { name: /plan\.csv/ })
+        .querySelector("img"),
+    ).toBeNull();
+
+    const kinds = within(panel()).getByRole("group", { name: "Show" });
+    fireEvent.click(within(kinds).getByRole("button", { name: /^Pictures/ }));
+    const pictures = within(panel()).getByRole("list", { name: "Files" });
+    expect(within(pictures).getAllByRole("button")).toHaveLength(1);
+    expect(within(pictures).getByRole("button", { name: /chart\.png/ })).toBeDefined();
+    fireEvent.click(within(kinds).getByRole("button", { name: /^All/ }));
+    expect(
+      within(within(panel()).getByRole("list", { name: "Files" })).getAllByRole("button"),
+    ).toHaveLength(3);
+  });
+
+  test("one kind has no chips, and a file shown can take the room the chat spares", async () => {
+    const { fake, scout } = crew();
+    fake.files.add(scout.id, "chart.png", { data: PNG });
+    await openScout(fake);
+    fireEvent.click(toggle());
+    fireEvent.click(await within(panel()).findByRole("button", { name: /chart\.png/ }));
+    expect(within(panel()).queryByRole("group", { name: "Show" })).toBeNull();
+    expect(panel().style.width).not.toContain("calc");
+    fireEvent.click(await within(panel()).findByRole("button", { name: "Show bigger" }));
+    expect(panel().style.width).toContain("calc");
+    fireEvent.click(within(panel()).getByRole("button", { name: "Show smaller" }));
+    expect(panel().style.width).not.toContain("calc");
+    // Back to the list, the panel is its own width again.
+    fireEvent.click(within(panel()).getByRole("button", { name: "Show bigger" }));
+    fireEvent.click(within(panel()).getByRole("button", { name: "All files" }));
+    expect(panel().style.width).not.toContain("calc");
+  });
+});

@@ -2,17 +2,33 @@
 // messages the owner writes. All of it in memory; the only thing kept on the
 // device is one number per bot (the last reply seen), never a text.
 
-import type { BotState, ChatLine, FromPhone, PhoneItem, ToPhone } from "../lib/protocol.gen";
+import type {
+  BotState,
+  ChatLine,
+  FromPhone,
+  PhoneFile,
+  PhoneItem,
+  ToPhone,
+} from "../lib/protocol.gen";
 import type { PhoneState } from "./client";
+import { FILES_MAX, type Outgoing, UploadError } from "./outgoing";
 
 /** A message the owner wrote that the computer has not shown back yet. */
 export interface Pending {
   clientId: string;
   text: string;
+  /** The files that go with it, kept here to try again. */
+  files?: Outgoing[];
   /** `sent`: the computer took it; it shows when the bot gets it. */
   status: "sending" | "sent" | "failed";
   reason?: string;
 }
+
+/** Leaves a file on the server for the computer (spec 28.14). */
+export type Upload = (file: Outgoing) => Promise<PhoneFile>;
+
+/** How much longer the computer may take for each MB it brings down. */
+const WAIT_PER_MB = 5000;
 
 /** The open conversation. */
 export interface Convo {
@@ -92,6 +108,7 @@ export class Talk {
     private readonly send: (message: FromPhone) => Promise<boolean>,
     private readonly store?: SeenStore,
     private readonly sentWait = 20000,
+    private readonly upload?: Upload,
   ) {
     this.set({ seen: store?.load() ?? {} });
   }
@@ -170,11 +187,19 @@ export class Talk {
     }
   };
 
-  /** Writes to the open bot; the message shows at once as sending. */
-  write = async (text: string): Promise<boolean> => {
+  /**
+   * Writes to the open bot, with files if any; the message shows at once as
+   * sending. The files go to the server first, and their keys with the text.
+   */
+  write = async (text: string, files: Outgoing[] = []): Promise<boolean> => {
     const convo = this.convo();
     const body = text.trim();
-    if (!convo || body === "" || new TextEncoder().encode(body).length > SEND_MAX) {
+    if (
+      !convo ||
+      (body === "" && files.length === 0) ||
+      files.length > FILES_MAX ||
+      new TextEncoder().encode(body).length > SEND_MAX
+    ) {
       return false;
     }
     this.counter += 1;
@@ -182,19 +207,41 @@ export class Talk {
     this.change({
       pending: [
         ...convo.pending.filter((pending) => pending.status !== "failed"),
-        { clientId, text: body, status: "sending" },
+        { clientId, text: body, status: "sending", ...(files.length > 0 ? { files } : {}) },
       ],
     });
-    const sent = await this.send({ t: "send", clientId, botId: convo.botId, text: body }).catch(
-      () => false,
-    );
+    const left: PhoneFile[] = [];
+    for (const file of files) {
+      try {
+        if (!this.upload) {
+          throw new UploadError("failed");
+        }
+        left.push(await this.upload(file));
+      } catch (failure) {
+        this.settle(clientId, "failed", failure instanceof UploadError ? failure.reason : "failed");
+        return false;
+      }
+    }
+    const message: FromPhone = {
+      t: "send",
+      clientId,
+      botId: convo.botId,
+      text: body,
+      ...(left.length > 0 ? { files: left } : {}),
+    };
+    const sent = await this.send(message).catch(() => false);
     if (!sent) {
       this.settle(clientId, "failed", "offline");
       return false;
     }
+    // The computer brings the files down before it answers.
+    const megabytes = Math.ceil(left.reduce((sum, file) => sum + file.size, 0) / (1 << 20));
     this.timers.set(
       clientId,
-      setTimeout(() => this.settle(clientId, "failed", "timeout", "sending"), this.sentWait),
+      setTimeout(
+        () => this.settle(clientId, "failed", "timeout", "sending"),
+        this.sentWait + megabytes * WAIT_PER_MB,
+      ),
     );
     return true;
   };
@@ -352,8 +399,12 @@ export class Talk {
         : [...convo.items, item];
     let pending = convo.pending;
     if (item.kind === "you") {
+      // The computer may rename a file it already has, so only the count matters.
       const mine = pending.findIndex(
-        (one) => one.status !== "failed" && one.text.trim() === item.text.trim(),
+        (one) =>
+          one.status !== "failed" &&
+          one.text.trim() === item.text.trim() &&
+          (one.files?.length ?? 0) === (item.files?.length ?? 0),
       );
       if (mine >= 0) {
         const gone = pending[mine];

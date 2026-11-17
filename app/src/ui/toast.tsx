@@ -1,4 +1,5 @@
-// Short notices for actions that failed away from a form.
+// Short notices for actions away from a form: one that failed, or one
+// that went as asked (`notify`), which reads calmer.
 
 import { X } from "lucide-react";
 import { useStore } from "zustand";
@@ -9,6 +10,8 @@ import { errorText } from "../lib/api";
 interface Toast {
   id: number;
   text: string;
+  /** Something went as asked, not wrong. */
+  done?: boolean;
 }
 
 const toasts = createStore<{ items: Toast[] }>(() => ({ items: [] }));
@@ -23,6 +26,13 @@ export function notifyError(what: string, error: unknown): void {
   const id = nextId++;
   const text = `${what}: ${errorText(error)}`;
   toasts.setState((state) => ({ items: [...state.items.slice(-3), { id, text }] }));
+  setTimeout(() => dismiss(id), LIFETIME_MS);
+}
+
+/** A short notice of something that went as asked. */
+export function notify(text: string): void {
+  const id = nextId++;
+  toasts.setState((state) => ({ items: [...state.items.slice(-3), { id, text, done: true }] }));
   setTimeout(() => dismiss(id), LIFETIME_MS);
 }
 
@@ -45,8 +55,10 @@ export function Toaster() {
       {items.map((toast) => (
         <div
           key={toast.id}
-          role="alert"
-          className="pointer-events-auto flex animate-toast items-start gap-2 rounded-xl border border-danger/45 bg-panel py-2.5 pr-2 pl-3.5 text-sm shadow-lift"
+          role={toast.done ? "status" : "alert"}
+          className={`pointer-events-auto flex animate-toast items-start gap-2 rounded-xl border bg-panel py-2.5 pr-2 pl-3.5 text-sm shadow-lift ${
+            toast.done ? "border-line-strong" : "border-danger/45"
+          }`}
         >
           <p className="min-w-0 flex-1 break-words" data-selectable>
             {toast.text}

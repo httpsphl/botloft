@@ -1,6 +1,7 @@
 use botloft_core::protocol::{MessageKind, SenderKind};
 
 use super::*;
+use crate::DeliveryOutcome;
 use crate::tests::{Fixture, message_to};
 
 #[test]
@@ -68,6 +69,55 @@ fn attachments_and_the_chat_item_come_with_the_message() {
     );
     let missing = botloft_core::ids::AttachmentId::generate();
     assert_eq!(fx.store.attachment(&missing).expect("read"), None);
+}
+
+#[test]
+fn a_note_from_botloft_counts_until_the_bot_begins_it() {
+    let fx = Fixture::new();
+    let bot = &fx.bots[0].id;
+    let note = |body: &str| {
+        let (mut message, delivery) = message_to(&fx.crew.id, bot, body);
+        message.from_kind = SenderKind::System;
+        message.kind = MessageKind::System;
+        fx.store
+            .insert_message(&message, &delivery, None)
+            .expect("insert");
+        delivery
+    };
+    assert!(!fx.store.unread_note(bot, "go on").expect("query"));
+    // The owner's words are not Botloft's note.
+    let (owner, delivery) = message_to(&fx.crew.id, bot, "go on");
+    fx.store
+        .insert_message(&owner, &delivery, None)
+        .expect("insert");
+    assert!(!fx.store.unread_note(bot, "go on").expect("query"));
+
+    let waiting = note("go on");
+    assert!(fx.store.unread_note(bot, "go on").expect("query"));
+    assert!(!fx.store.unread_note(bot, "other").expect("query"));
+    assert!(
+        !fx.store
+            .unread_note(&fx.bots[1].id, "go on")
+            .expect("query")
+    );
+    // Written to the bot, it still counts until the bot begins it.
+    let sent = DeliveryOutcome::Sent {
+        generation: 1,
+        turn_uuid: "t-1",
+    };
+    fx.store
+        .finish_delivery(&waiting.id, sent, 1)
+        .expect("sent");
+    assert!(fx.store.unread_note(bot, "go on").expect("query"));
+    fx.store.mark_read("t-1", 2).expect("read");
+    assert!(!fx.store.unread_note(bot, "go on").expect("query"));
+
+    let given_up = note("go on");
+    let dead = DeliveryOutcome::Dead { error: "gone" };
+    fx.store
+        .finish_delivery(&given_up.id, dead, 3)
+        .expect("dead");
+    assert!(!fx.store.unread_note(bot, "go on").expect("query"));
 }
 
 #[test]

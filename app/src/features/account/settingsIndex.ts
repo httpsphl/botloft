@@ -8,10 +8,18 @@ export type Page =
   | "general"
   | "appearance"
   | "chat"
+  | "instructions"
   | "alerts"
+  | "island"
   | "account"
   | "tools"
+  | "logins"
+  | "skills"
+  | "plugins"
+  | "keys"
+  | "permissions"
   | "backup"
+  | "security"
   | "archived"
   | "about";
 
@@ -39,13 +47,43 @@ export function settingsIndex(t: ReturnType<typeof useT>): Entry[] {
       s.startWithSystem(SYSTEM),
       s.openAtSignIn(SYSTEM),
       s.keepAwake,
+      s.sleepAfter,
     ),
     ...entry("appearance", s.theme, s.size, s.lessMotion),
     ...entry("chat", s.enterSends, s.followBot, s.approvalWait),
-    ...entry("alerts", s.notifyNeeds, s.notifyDone, s.markReplies, s.sound, s.appSounds),
+    ...entry("instructions", t.instructions.label),
+    ...entry(
+      "alerts",
+      s.notifyNeeds,
+      s.notifyDone,
+      s.notifyRoutineFailed,
+      s.markReplies,
+      s.sound,
+      s.appSounds,
+    ),
+    ...(SYSTEM === "Windows"
+      ? entry("island", s.islandPart, s.island, s.islandSummon, s.islandHideWithApp)
+      : []),
     ...entry("account", t.account.cloud.title, t.account.mobile.title, t.account.mobile.connect),
     ...entry("tools", s.tools),
+    ...entry("logins", s.logins, t.logins.title, t.logins.signIn),
+    ...entry("skills", s.skills, t.skills.title, t.skills.everyone.all),
+    ...entry("plugins", s.plugins, t.plugins.title, t.plugins.everyone.all),
+    ...entry("keys", s.keys, t.keys.details.title, t.keys.details.add),
+    ...entry(
+      "permissions",
+      s.permissions,
+      t.permissions.tabs.desktop,
+      t.permissions.tabs.sites,
+      t.permissions.tabs.rules,
+      t.permissions.tabs.crews,
+      t.chrome.tab,
+      t.desktop.grants.real,
+      t.desktop.grants.away,
+      t.permissions.stopAll,
+    ),
     ...entry("backup", t.account.backup.exportTitle, t.account.backup.importTitle, s.copiesTitle),
+    ...entry("security", t.keys.scan.title, t.keys.scan.run),
     ...entry("archived", s.archived),
     ...entry("about", s.about, s.checkUpdates),
   ];

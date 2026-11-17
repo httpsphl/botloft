@@ -131,6 +131,31 @@ pub struct DesktopWholeParams {
     pub accepted_risks: bool,
 }
 
+/// An app open on the owner's desktop that a bot may be given, by its
+/// executable (spec 24.2): the result of `desktop.apps`, without the ones
+/// never granted (24.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct DesktopApp {
+    pub path: String,
+    /// The app's name for people ("Microsoft Excel").
+    pub name: String,
+}
+
+/// `desktop.grantApp`: the owner gives a bot an app that is open now
+/// before the bot asks (spec 24.10). Like a request allowed in the chat,
+/// it only raises the level of a grant already there.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct DesktopGrantAppParams {
+    pub bot_id: BotId,
+    /// The executable, as `desktop.apps` gave it.
+    pub path: String,
+    pub level: DesktopLevel,
+}
+
 /// A bot used an app while the owner was away (spec 24.8): what the app
 /// tells them when they are back, until they dismiss it. The result of
 /// `desktop.awayUses` and the params of `desktop.away` are a list of these.

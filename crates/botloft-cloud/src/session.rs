@@ -9,10 +9,9 @@ use axum::http::request::Parts;
 use serde_json::{Value, json};
 
 use crate::app::AppState;
-use crate::copy_rows;
 use crate::devices::{self, Kind, Removed, Who};
 use crate::error::ApiError;
-use crate::tokens;
+use crate::{copy_rows, file_rows, tokens};
 
 /// The device behind a request, whatever it is.
 pub struct Authed(pub Who);
@@ -48,6 +47,25 @@ impl FromRequestParts<AppState> for Computer {
     ) -> Result<Self, Self::Rejection> {
         let Authed(who) = Authed::from_request_parts(parts, state).await?;
         if who.kind == Kind::Computer {
+            Ok(Self(who))
+        } else {
+            Err(ApiError::wrong_device())
+        }
+    }
+}
+
+/// A phone: it sends files to the computer it serves (spec 28.14).
+pub struct Phone(pub Who);
+
+impl FromRequestParts<AppState> for Phone {
+    type Rejection = ApiError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
+        let Authed(who) = Authed::from_request_parts(parts, state).await?;
+        if who.kind == Kind::Phone && who.peer.is_some() {
             Ok(Self(who))
         } else {
             Err(ApiError::wrong_device())
@@ -112,16 +130,30 @@ pub fn farewell(state: &AppState, gone: &[Removed]) {
     }
 }
 
+/// Removes a device with its phones, and the files they had waiting (spec
+/// 28.14): the rows go with the devices, and then the bytes.
+async fn drop_device(state: &AppState, account_id: i64, id: &str) -> Result<bool, ApiError> {
+    let (gone, files) = state.db.run(|conn| {
+        let files = file_rows::keys_of_device(conn, account_id, id)?;
+        Ok((devices::delete_device(conn, account_id, id)?, files))
+    })?;
+    if gone.is_empty() {
+        return Ok(false);
+    }
+    farewell(state, &gone);
+    for key in files {
+        state.store.delete(&key).await;
+    }
+    Ok(true)
+}
+
 /// `POST /v1/logout`: this device's token stops working (a phone's too, which
 /// is how it disconnects from its side).
 pub async fn logout(
     State(state): State<AppState>,
     Authed(who): Authed,
 ) -> Result<StatusCode, ApiError> {
-    let gone = state
-        .db
-        .run(|conn| devices::delete_device(conn, who.account_id, &who.device_id))?;
-    farewell(&state, &gone);
+    drop_device(&state, who.account_id, &who.device_id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -132,12 +164,8 @@ pub async fn remove_device(
     Computer(who): Computer,
     Path(id): Path<String>,
 ) -> Result<StatusCode, ApiError> {
-    let gone = state
-        .db
-        .run(|conn| devices::delete_device(conn, who.account_id, &id))?;
-    if gone.is_empty() {
+    if !drop_device(&state, who.account_id, &id).await? {
         return Err(ApiError::not_found());
     }
-    farewell(&state, &gone);
     Ok(StatusCode::NO_CONTENT)
 }

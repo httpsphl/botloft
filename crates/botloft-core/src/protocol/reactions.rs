@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::ids::{BotId, ChatItemId, MessageId};
 
 /// The emoji the owner can react with.
-pub const REACTIONS: &[&str] = &["👍", "❤️", "😂", "🎉", "🙏", "👀"];
+pub const REACTIONS: &[&str] = &["👍", "👎", "❤️", "😂", "🎉", "🙏", "👀"];
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

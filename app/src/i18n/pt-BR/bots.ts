@@ -5,6 +5,10 @@ export const bots: Messages["bots"] = {
     offline: { label: "Desligado", hint: "Não está rodando." },
     launching: { label: "Iniciando", hint: "O Claude Code está iniciando." },
     idle: { label: "Disponível", hint: "Pronto para trabalhar." },
+    sleeping: {
+      label: "Dormindo",
+      hint: "Não usa memória e acorda sozinho quando chega mensagem, rotina ou aviso. A primeira resposta leva alguns segundos a mais.",
+    },
     busy: { label: "Trabalhando", hint: "Trabalhando em algo." },
     needs_approval: {
       label: "Precisa de aprovação",
@@ -36,6 +40,7 @@ export const bots: Messages["bots"] = {
     restart: "Reiniciar",
     showDetails: "Mostrar detalhes",
     hideDetails: "Ocultar detalhes",
+    panels: "Painéis",
     more: "Mais ações do agente",
     menuOf: (name: string) => `Ações de ${name}`,
     edit: "Editar",
@@ -44,6 +49,8 @@ export const bots: Messages["bots"] = {
     makeChief: "Tornar chefe da equipe",
     stopChief: "Deixar de ser chefe",
     markUnread: "Marcar como não lida",
+    doneOn: (bot) => `Avisar quando ${bot} terminar`,
+    doneOff: (bot) => `Não avisar quando ${bot} terminar`,
     markRead: "Marcar como lida",
     archive: "Arquivar agente",
     delete: "Excluir agente",
@@ -94,6 +101,11 @@ export const bots: Messages["bots"] = {
     instructionsPlaceholder:
       "Como este agente trabalha, o que ele pode fazer sozinho e quando deve perguntar.",
     instructionsHint: "Salvas agora nas regras do agente; ele as lê na próxima vez que iniciar.",
+    planFirst: {
+      title: "Mostrar o plano antes de tarefas longas",
+      hint: (bot: string) =>
+        `${bot} diz o que vai fazer antes de um trabalho longo e espera 20 segundos, para você mudar ou cancelar.`,
+    },
     fullAccess: {
       title: "Rodar qualquer comando sem perguntar",
       off: "Desligado: ele só roda os comandos da lista abaixo.",
@@ -137,8 +149,29 @@ export const bots: Messages["bots"] = {
   },
   details: {
     title: (name: string) => `Sobre ${name}`,
+    heading: "Detalhes",
+    edit: (name) => `Editar ${name}`,
+    about: "Sobre",
+    engine: "Motor",
+    model: "Modelo",
+    showAll: "Ver tudo",
+    showLess: "Ver menos",
+    write: "Escrever instruções",
+    shortcuts: {
+      title: "Nas Configurações",
+      desktop: "Seu desktop",
+      desktopCount: (count) =>
+        count === 0 ? "Nenhum app ainda" : count === 1 ? "1 app" : `${count} apps`,
+      chromeOn: "Pode usar",
+      chromeOff: "Não liberado",
+      keys: "Chaves",
+      keysCount: (count) =>
+        count === 0 ? "Nenhuma ainda" : count === 1 ? "1 chave" : `${count} chaves`,
+      tools: "Ferramentas",
+      skills: "Skills",
+      none: "Nenhuma ainda",
+    },
     close: "Fechar detalhes",
-    role: "Função",
     noRole: "Nenhuma função definida ainda.",
     folder: "Pasta",
     process: "Processo",
