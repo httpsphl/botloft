@@ -38,6 +38,7 @@ async fn a_new_bot_runs_headless_in_a_new_session_with_a_clean_environment() {
         "--include-partial-messages",
         "--replay-user-messages",
         "--strict-mcp-config",
+        "--no-chrome",
     ] {
         assert!(
             args.iter().any(|arg| arg == flag),
@@ -182,6 +183,7 @@ async fn a_fresh_restart_starts_a_new_session() {
     let restart = BotsRestartParams {
         bot_id: s.bot.clone(),
         fresh: Some(true),
+        conversation_id: None,
     };
     bots::restart(&s.daemon, restart).expect("restart");
     let second = s.runtime.process(2).await;

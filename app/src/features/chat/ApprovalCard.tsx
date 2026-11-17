@@ -9,7 +9,11 @@ import { RequestCard, SettledLine } from "../../ui/ChatCard";
 import { Details } from "../../ui/Details";
 import { HELP_TOOL, HelpCard } from "../browser/HelpCard";
 import { SITE_TOOL, SiteCard } from "../browser/SiteCard";
+import { CHROME_TOOL, ChromeRequestCard } from "../chrome/ChromeRequestCard";
+import { CONNECTOR_TOOL, ConnectorRequestCard } from "../connections/ConnectorRequestCard";
 import { DESKTOP_TOOL, DesktopCard } from "../desktop/DesktopCard";
+import { BuildCard } from "../maker/BuildCard";
+import { BUILD_TOOL } from "../maker/plan";
 import {
   CHANGE_ROUTINE_TOOL,
   DELETE_ROUTINE_TOOL,
@@ -17,6 +21,7 @@ import {
   RoutineDeleteCard,
 } from "../routines/RoutineChangeCard";
 import { ROUTINE_TOOL, RoutineRequestCard } from "../routines/RoutineRequestCard";
+import { SKILL_TOOL, SkillRequestCard } from "../skills/SkillRequestCard";
 import { BotChangeCard, CHANGE_BOT_TOOL } from "./BotChangeCard";
 import { CREW_ACCESS_TOOL, CrewAccessCard } from "./CrewAccessCard";
 import { commandOf, isCommand } from "./command";
@@ -89,6 +94,14 @@ export function ApprovalCard({ approval, bot }: { approval: ApprovalItem; bot: B
       return <DesktopCard approval={approval} bot={bot} />;
     case HELP_TOOL:
       return <HelpCard approval={approval} bot={bot} />;
+    case CONNECTOR_TOOL:
+      return <ConnectorRequestCard approval={approval} bot={bot} />;
+    case CHROME_TOOL:
+      return <ChromeRequestCard approval={approval} bot={bot} />;
+    case SKILL_TOOL:
+      return <SkillRequestCard approval={approval} bot={bot} />;
+    case BUILD_TOOL:
+      return <BuildCard approval={approval} bot={bot} />;
     default:
       return <ToolApproval approval={approval} bot={bot} />;
   }
@@ -111,8 +124,7 @@ function alwaysLabel(
   }
 }
 
-const BOX =
-  "max-h-56 overflow-auto break-all rounded-lg border border-line bg-sunken px-2.5 py-1.5";
+const BOX = "max-h-56 overflow-auto break-all rounded-xl bg-panel px-3 py-2";
 
 /**
  * A command the bot wants to run: first what the bot says it is for, in

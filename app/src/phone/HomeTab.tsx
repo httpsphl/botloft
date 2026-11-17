@@ -40,7 +40,7 @@ export function HomeTab({
       <section aria-labelledby="phone-needs-you" className="flex flex-col gap-4">
         <h2
           id="phone-needs-you"
-          className="flex items-center gap-1.5 font-semibold text-sm text-warn"
+          className="flex items-center gap-1.5 font-semibold text-base text-warn"
         >
           <Hand aria-hidden size={14} />
           {t.home.needsYou}
@@ -67,13 +67,13 @@ export function HomeTab({
       </section>
       {working.length > 0 && (
         <Part id="phone-working" title={t.home.working}>
-          <ul className="flex flex-col overflow-hidden rounded-2xl border border-line bg-panel">
+          <ul className="flex flex-col gap-0.5 rounded-2xl bg-bubble p-1.5">
             {working.map((line) => (
-              <li key={line.botId} className="border-line border-b last:border-b-0">
+              <li key={line.botId}>
                 <button
                   type="button"
                   onClick={() => open(line.botId)}
-                  className="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-left"
+                  className="flex min-h-14 w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left active:bg-line/60"
                 >
                   <BotDot name={line.name} color={line.color} state={line.state} size={30} />
                   <span className="flex min-w-0 flex-col">
@@ -100,7 +100,7 @@ export function HomeTab({
 function Part({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
     <section aria-labelledby={id} className="flex flex-col gap-3">
-      <h2 id={id} className="font-semibold text-muted text-sm">
+      <h2 id={id} className="font-semibold text-base">
         {title}
       </h2>
       {children}
@@ -153,7 +153,7 @@ function Shortcuts({ api, state }: { api: PhoneApi; state: PhoneState }) {
                 aria-label={words.run(shortcut.name, bot?.name ?? "")}
                 disabled={state.runs[shortcut.routineId] === "running"}
                 onClick={() => void api.runShortcut(shortcut.routineId)}
-                className="inline-flex h-12 max-w-full items-center gap-2 rounded-xl border border-line-strong bg-panel px-3 font-medium text-base active:scale-[0.99] disabled:opacity-60"
+                className="inline-flex h-12 max-w-full items-center gap-2 rounded-full bg-bubble pr-4 pl-3 font-medium text-base active:scale-[0.99] active:bg-line/60 disabled:opacity-60"
               >
                 {bot && <BotDot name={bot.name} color={bot.color} state={bot.state} size={24} />}
                 <span className="truncate">{shortcut.name}</span>
@@ -205,9 +205,7 @@ function Today({ day }: { day: DayActivity }) {
 
 function Tile({ label, wide, children }: { label: string; wide?: boolean; children: ReactNode }) {
   return (
-    <div
-      className={`min-w-0 rounded-xl border border-line bg-panel px-3.5 py-2.5 ${wide ? "col-span-2" : ""}`}
-    >
+    <div className={`min-w-0 rounded-2xl bg-bubble px-4 py-3 ${wide ? "col-span-2" : ""}`}>
       <dt className="text-muted text-xs">{label}</dt>
       <dd className="mt-0.5 flex items-baseline font-semibold text-lg tabular-nums">{children}</dd>
     </div>

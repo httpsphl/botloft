@@ -14,25 +14,27 @@ import {
   useState,
 } from "react";
 import { useT } from "../../i18n";
-import { day } from "../../lib/format";
+import { clock, day } from "../../lib/format";
 import type { Bot } from "../../lib/protocol.gen";
 import { useApp } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { SeenSince } from "../../ui/motion";
-import { BotAvatar, moodOf } from "../bots/BotAvatar";
 import { CallPills, useLiveCalls } from "../messages/CallPills";
 import { Reminders } from "../routines/Reminders";
 import { BotRun, type Live } from "./BotRun";
 import { ChatComposer } from "./ChatComposer";
+import { ChatEmpty } from "./ChatEmpty";
 import { followTop } from "./follow";
 import { InboundRow } from "./InboundRow";
 import { NoticeRow } from "./NoticeRow";
 import { ReactionsOf, useReactions } from "./Reactions";
 import { type ReplyTarget, StartReply } from "./Replying";
 import { chatRows, rowHas } from "./rows";
+import { SeatContext } from "./seat";
 import { useChat } from "./useChat";
 import { useFiles } from "./useFiles";
+import { useSeat } from "./useSeat";
 import { useSharedSound } from "./useSharedSound";
 import { WaitingPill } from "./WaitingPill";
 
@@ -45,12 +47,20 @@ const STICKY_PX = 80;
 const hasFiles = (event: DragEvent) => event.dataTransfer.types.includes("Files");
 
 /** Skips the renders of the view around it; the text being written re-renders only the last run. */
-export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; stopped: boolean }) {
+export const ChatView = memo(function ChatView({
+  bot: agent,
+  stopped,
+}: {
+  bot: Bot;
+  stopped: boolean;
+}) {
+  // The open conversation's chat, with its state, context and background.
+  const { bot, seat } = useSeat(agent);
   // The bots this one is calling, over the end of its chat (spec 15.3).
   const calls = useLiveCalls((call) => call.fromBotId === bot.id, bot.id);
   const t = useT();
   const focus = useApp((state) => (state.focus?.botId === bot.id ? state.focus.itemId : null));
-  const chat = useChat(bot.id, focus);
+  const chat = useChat(bot.id, focus, seat);
   const files = useFiles();
   const scroller = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLOListElement>(null);
@@ -67,8 +77,8 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
   const reactions = useReactions(bot.id);
   // What was there when the owner opened this chat stays still; what
   // arrives while they look animates in.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: a new bot is a new chat
-  const openedAt = useMemo(() => Date.now(), [bot.id]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new conversation is a new chat
+  const openedAt = useMemo(() => Date.now(), [bot.id, seat.conversationId]);
   useSharedSound(chat.items, openedAt);
   const last = chat.items.at(-1);
   const working = bot.state === "busy";
@@ -126,18 +136,32 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
   const tail = rows.at(-1);
   const openRun = tail?.kind === "run" && tail.items.at(-1)?.body.kind !== "turn";
 
+  // The owner's newest message always says where it is; older ones only
+  // while they are still on their way (InboundRow).
+  const lastOwn = rows
+    .filter((row) => row.kind === "inbound" && row.message.fromKind === "owner")
+    .at(-1)?.key;
+
   const list: ReactNode[] = rows.map((row, index) => {
-    if (row.kind === "day") {
+    if (row.kind === "day" || row.kind === "time") {
       return (
-        <li key={row.key} className="flex animate-fade justify-center">
-          <span className="rounded-full bg-sunken px-3 py-1 font-medium text-muted text-xs">
-            {day(row.at)}
+        <li key={row.key} className="flex animate-fade justify-center pt-2">
+          <span className="font-medium text-muted text-xs">
+            {row.kind === "day" ? `${day(row.at)} · ${clock(row.at)}` : clock(row.at)}
           </span>
         </li>
       );
     }
     if (row.kind === "inbound") {
-      return <InboundRow key={row.key} message={row.message} bot={bot} itemId={row.item.id} />;
+      return (
+        <InboundRow
+          key={row.key}
+          message={row.message}
+          bot={bot}
+          itemId={row.item.id}
+          last={row.key === lastOwn}
+        />
+      );
     }
     if (row.kind === "notice") {
       return <NoticeRow key={row.key} notice={row.notice} at={row.item.createdAt} />;
@@ -174,113 +198,102 @@ export const ChatView = memo(function ChatView({ bot, stopped }: { bot: Bot; sto
   }
 
   return (
-    <section
-      aria-label={t.chat.view.label(bot.name)}
-      className="relative flex min-h-0 min-w-0 flex-1 flex-col"
-      onDragOver={(event) => {
-        if (hasFiles(event)) {
-          event.preventDefault();
-          setDragging(true);
-        }
-      }}
-      onDragLeave={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          setDragging(false);
-        }
-      }}
-      onDrop={(event) => {
-        if (hasFiles(event)) {
-          event.preventDefault();
-          setDragging(false);
-          void files.add([...event.dataTransfer.files]);
-        }
-      }}
-    >
-      <div
-        ref={scroller}
-        className="min-h-0 flex-1 overflow-y-auto"
-        onScroll={(event) => {
-          const element = event.currentTarget;
-          atEnd.current =
-            element.scrollHeight - element.scrollTop - element.clientHeight < STICKY_PX;
+    <SeatContext.Provider value={seat}>
+      <section
+        aria-label={t.chat.view.label(bot.name)}
+        className="relative flex min-h-0 min-w-0 flex-1 flex-col"
+        onDragOver={(event) => {
+          if (hasFiles(event)) {
+            event.preventDefault();
+            setDragging(true);
+          }
+        }}
+        onDragLeave={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+            setDragging(false);
+          }
+        }}
+        onDrop={(event) => {
+          if (hasFiles(event)) {
+            event.preventDefault();
+            setDragging(false);
+            void files.add([...event.dataTransfer.files]);
+          }
         }}
       >
-        <div ref={content} className="flex flex-col px-5 pt-5 pb-3">
-          {chat.error && (
-            <Callout tone="danger" title={t.chat.view.loadFailed}>
-              {chat.error}
-            </Callout>
-          )}
-          {chat.items.length > 0 && !chat.complete && (
-            <div className="flex justify-center pb-3">
-              <Button size="sm" disabled={chat.loading} onClick={loadOlder}>
-                {t.chat.view.loadEarlier}
-              </Button>
-            </div>
-          )}
-          {chat.items.length === 0 && chat.loading && (
-            <p role="status" className="flex items-center gap-2 py-6 text-muted text-sm">
-              <LoaderCircle aria-hidden size={14} className="animate-spin" />
-              {t.chat.view.loading}
+        <div
+          ref={scroller}
+          className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
+          onScroll={(event) => {
+            const element = event.currentTarget;
+            atEnd.current =
+              element.scrollHeight - element.scrollTop - element.clientHeight < STICKY_PX;
+          }}
+        >
+          <div ref={content} className="flex flex-col px-5 pt-5 pb-3">
+            {chat.error && (
+              <Callout tone="danger" title={t.chat.view.loadFailed}>
+                {chat.error}
+              </Callout>
+            )}
+            {chat.items.length > 0 && !chat.complete && (
+              <div className="flex justify-center pb-3">
+                <Button size="sm" disabled={chat.loading} onClick={loadOlder}>
+                  {t.chat.view.loadEarlier}
+                </Button>
+              </div>
+            )}
+            {chat.items.length === 0 && chat.loading && (
+              <p role="status" className="flex items-center gap-2 py-6 text-muted text-sm">
+                <LoaderCircle aria-hidden size={14} className="animate-spin" />
+                {t.chat.view.loading}
+              </p>
+            )}
+            {chat.items.length === 0 && !chat.loading && !chat.error && !live && (
+              <ChatEmpty bot={bot} stopped={stopped} />
+            )}
+            <StartReply.Provider value={setReplying}>
+              <ReactionsOf.Provider value={reactions}>
+                <SeenSince.Provider value={openedAt}>
+                  <ol
+                    ref={listRef}
+                    aria-label={t.chat.view.messages}
+                    className="offscreen-rows flex flex-col gap-4"
+                  >
+                    {list}
+                  </ol>
+                </SeenSince.Provider>
+              </ReactionsOf.Provider>
+            </StartReply.Provider>
+          </div>
+        </div>
+        <div className="relative w-full">
+          {/* Floats over the chat's end, so nothing moves when it comes. */}
+          <div className="absolute bottom-full left-1/2 z-10 mb-2 flex -translate-x-1/2 flex-col items-center gap-2">
+            <CallPills calls={calls} className="justify-center" />
+            <WaitingPill items={chat.items} scroller={scroller} />
+            <Reminders bot={bot} />
+          </div>
+          {/* Keyed by conversation: each one has its own draft (spec 15.1). */}
+          <ChatComposer
+            key={seat.conversationId}
+            bot={bot}
+            files={files}
+            stopped={stopped}
+            onSent={onSent}
+            replying={replying}
+            onCancelReply={cancelReply}
+          />
+        </div>
+        {dragging && (
+          <div className="pointer-events-none absolute inset-3 grid place-items-center rounded-2xl border-2 border-accent border-dashed bg-canvas/85">
+            <p className="flex items-center gap-2 font-medium">
+              <Paperclip aria-hidden size={16} />
+              {t.chat.view.dropToAttach}
             </p>
-          )}
-          {chat.items.length === 0 && !chat.loading && !chat.error && !live && (
-            <div className="flex flex-col items-center gap-3 py-16 text-center">
-              <span className="animate-float">
-                <BotAvatar
-                  color={bot.color}
-                  size={56}
-                  mood={moodOf(bot, stopped)}
-                  botId={bot.id}
-                  starting={bot.state === "launching"}
-                />
-              </span>
-              <p className="font-semibold text-base">{t.chat.view.emptyTitle(bot.name)}</p>
-              {bot.role && <p className="max-w-md text-ink-soft text-sm">{bot.role}</p>}
-              <p className="max-w-md text-muted text-sm">{t.chat.view.emptyBody}</p>
-            </div>
-          )}
-          <StartReply.Provider value={setReplying}>
-            <ReactionsOf.Provider value={reactions}>
-              <SeenSince.Provider value={openedAt}>
-                <ol
-                  ref={listRef}
-                  aria-label={t.chat.view.messages}
-                  className="offscreen-rows flex flex-col gap-6"
-                >
-                  {list}
-                </ol>
-              </SeenSince.Provider>
-            </ReactionsOf.Provider>
-          </StartReply.Provider>
-        </div>
-      </div>
-      <div className="relative w-full">
-        {/* Floats over the chat's end, so nothing moves when it comes. */}
-        <div className="absolute bottom-full left-1/2 z-10 mb-2 flex -translate-x-1/2 flex-col items-center gap-2">
-          <CallPills calls={calls} className="justify-center" />
-          <WaitingPill items={chat.items} scroller={scroller} />
-          <Reminders bot={bot} />
-        </div>
-        {/* Keyed by bot: each one has its own draft (spec 15.1). */}
-        <ChatComposer
-          key={bot.id}
-          bot={bot}
-          files={files}
-          stopped={stopped}
-          onSent={onSent}
-          replying={replying}
-          onCancelReply={cancelReply}
-        />
-      </div>
-      {dragging && (
-        <div className="pointer-events-none absolute inset-3 grid place-items-center rounded-2xl border-2 border-accent border-dashed bg-canvas/85">
-          <p className="flex items-center gap-2 font-medium">
-            <Paperclip aria-hidden size={16} />
-            {t.chat.view.dropToAttach}
-          </p>
-        </div>
-      )}
-    </section>
+          </div>
+        )}
+      </section>
+    </SeatContext.Provider>
   );
 });

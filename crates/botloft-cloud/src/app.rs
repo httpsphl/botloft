@@ -8,11 +8,14 @@ use axum::routing::{delete, get, post, put};
 use crate::clock::Clock;
 use crate::config::Config;
 use crate::db::Db;
+use crate::download::Releases;
 use crate::hub::Hub;
 use crate::mailer::Mailer;
 use crate::push::Pusher;
 use crate::store::CopyStore;
-use crate::{copies, files, login, pairing, phone, push_api, relay, removal, session};
+use crate::{
+    copies, download, files, login, pairing, phone, push_api, relay, removal, session, site,
+};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -23,10 +26,13 @@ pub struct AppState {
     pub store: CopyStore,
     pub hub: Hub,
     pub push: Pusher,
+    pub releases: Releases,
 }
 
 pub fn router(state: AppState) -> Router {
     Router::new()
+        .route("/", get(site::index))
+        .route("/download/{system}", get(download::installer))
         .route("/health", get(|| async { "ok" }))
         .route("/brand/flame.png", get(crate::html::flame))
         .route("/v1/login", post(login::ask))
@@ -64,5 +70,6 @@ pub fn router(state: AppState) -> Router {
             "/v1/account/delete/confirm",
             get(removal::confirm_page).post(removal::confirm),
         )
+        .fallback(site::other)
         .with_state(state)
 }

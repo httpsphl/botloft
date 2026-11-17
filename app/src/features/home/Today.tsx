@@ -54,7 +54,7 @@ export function Today() {
 
 function Tile({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="min-w-0 rounded-xl border border-line bg-panel px-3.5 py-2.5">
+    <div className="min-w-0 rounded-2xl bg-bubble px-4 py-3">
       <dt className="text-muted text-xs">{label}</dt>
       <dd className="mt-0.5 flex items-baseline font-semibold text-lg tabular-nums">{children}</dd>
     </div>

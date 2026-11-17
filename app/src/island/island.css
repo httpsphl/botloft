@@ -33,14 +33,52 @@ body {
   border-radius: 0 0 22px 22px;
   overflow: hidden;
   font-family: var(--font-sans);
+  /* Shrinking settles without a bounce. */
   transition:
-    width 320ms cubic-bezier(0.32, 1.25, 0.5, 1),
-    height 320ms cubic-bezier(0.32, 1.25, 0.5, 1),
-    border-radius 320ms ease;
+    width 300ms cubic-bezier(0.3, 0, 0.2, 1),
+    height 300ms cubic-bezier(0.3, 0, 0.2, 1),
+    border-radius 300ms ease;
 }
 
+/* Growing into the panel springs a little past and back (usePresence.ts
+   waits MORPH_MS before it makes the window smaller). */
 .island[data-open="true"] {
   border-radius: 0 0 28px 28px;
+  transition:
+    width 400ms cubic-bezier(0.32, 1.2, 0.5, 1),
+    height 400ms cubic-bezier(0.32, 1.2, 0.5, 1),
+    border-radius 400ms ease;
+}
+
+/* Coming out of the top edge: the first frame is a sliver there, drawn
+   without a transition, and it grows from it. */
+.island[data-phase="enter"] {
+  transition: none;
+}
+
+/* Going back into the edge: the content fades first, then the shape
+   follows it in (GONE_MS). */
+.island[data-phase="leave"] {
+  transition:
+    width 280ms cubic-bezier(0.55, 0, 0.8, 0.3) 80ms,
+    height 280ms cubic-bezier(0.55, 0, 0.8, 0.3) 80ms,
+    border-radius 280ms ease 80ms;
+}
+
+.island[data-phase="leave"] > * {
+  animation: island-out 140ms both ease-in;
+}
+
+@keyframes island-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+/* The pill's content, once the panel has shrunk back to it. */
+.island[data-open="false"][data-phase="shown"] > * {
+  animation: island-in 200ms 100ms both ease-out;
 }
 
 /* In the preview, a desktop behind it and a light shadow to see the edge. */
@@ -57,7 +95,7 @@ body {
 }
 
 .island-content {
-  animation: island-in 220ms 80ms both ease-out;
+  animation: island-in 240ms 120ms both ease-out;
 }
 
 @keyframes island-in {
@@ -229,6 +267,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .island,
+  .island > *,
   .island-content,
   .island-breathe,
   .island-hop {
@@ -238,6 +277,7 @@ body {
 }
 
 :root[data-motion="less"] .island,
+:root[data-motion="less"] .island > *,
 :root[data-motion="less"] .island-content,
 :root[data-motion="less"] .island-breathe,
 :root[data-motion="less"] .island-hop {

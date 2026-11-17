@@ -6,6 +6,8 @@
 //! (service calls read states), never the other way around.
 
 mod forget;
+mod limit;
+mod quiet;
 mod reconcile;
 mod relaunch;
 mod session;
@@ -15,6 +17,7 @@ mod sleep;
 mod slot;
 mod spawn;
 mod start;
+mod summary;
 mod turns;
 
 use std::collections::{HashMap, HashSet};
@@ -22,9 +25,9 @@ use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex, MutexGuard, Weak};
 use std::time::Duration;
 
-use botloft_core::ids::BotId;
+use botloft_core::ids::{BotId, ConversationId};
 use botloft_core::now_ms;
-use botloft_core::protocol::{BotState, BotStateChanged};
+use botloft_core::protocol::BotState;
 use bytes::Bytes;
 use tokio::sync::{Notify, broadcast, watch};
 use tokio::time::Instant;
@@ -35,6 +38,7 @@ pub use self::settings::{ClaudeSource, SupervisorSettings};
 use self::slot::{Slot, StopIntent};
 use crate::runtime::Runtime;
 use crate::runtime::claude::Claude;
+use crate::seat::{Seat, SeatState};
 use crate::secrets::TokenHash;
 use crate::state::{Daemon, Event};
 
@@ -44,6 +48,11 @@ const RECONCILE_EVERY: Duration = Duration::from_secs(5);
 const STABLE_AFTER: Duration = Duration::from_secs(10 * 60);
 /// How long a failed Claude Code probe is trusted before trying again.
 const REPROBE_AFTER: Duration = Duration::from_secs(30);
+/// Conversations of one bot that run at once (spec 40.4).
+const CONVERSATIONS_AWAKE: usize = 3;
+/// How long another conversation stays idle before it sleeps, when the
+/// owner turned sleep off (spec 40.4).
+const OTHER_CONVERSATIONS_NAP: Duration = Duration::from_secs(30 * 60);
 
 pub struct Supervisor {
     daemon: Weak<Daemon>,
@@ -64,22 +73,27 @@ pub struct Supervisor {
     wake: Notify,
     /// How many bots are `busy`, for keeping the computer awake (spec 14).
     busy: watch::Sender<usize>,
+    /// What each bot's conversations announced (spec 40.4).
+    summaries: summary::Summaries,
 }
 
 #[derive(Default)]
 struct Inner {
-    slots: HashMap<BotId, Slot>,
-    /// Token hash of each running generation -> its bot.
-    tokens: HashMap<String, (BotId, u64)>,
-    /// The conversation each bot resumes: one Claude Code has on disk. The
-    /// database has it too (spec 7.3).
-    sessions: HashMap<BotId, String>,
+    /// One per conversation of a bot (spec 40).
+    slots: HashMap<ConversationId, Slot>,
+    /// Token hash of each running generation -> its bot and conversation.
+    tokens: HashMap<String, (Seat, u64)>,
+    /// The session each conversation resumes: one Claude Code has on disk.
+    /// The database has it too (spec 7.3).
+    sessions: HashMap<ConversationId, String>,
     /// Bots that were deleted while this daemon ran (spec 7.6).
     gone: HashSet<BotId>,
     claude: ClaudeStatus,
     sign_in: sign_in::SignIn,
-    /// Conversations a new one took the place of, still in the database.
-    replaced: Vec<(BotId, String)>,
+    /// Sessions a new one took the place of, still in the database.
+    replaced: Vec<(BotId, ConversationId, String)>,
+    /// When the last pass looked for quiet turns (spec 7.9).
+    watched_at: Option<Instant>,
 }
 
 #[derive(Default)]
@@ -112,6 +126,7 @@ impl Supervisor {
             reconcile_lock: tokio::sync::Mutex::new(()),
             wake: Notify::new(),
             busy: watch::Sender::new(0),
+            summaries: summary::Summaries::default(),
         }
     }
 
@@ -126,13 +141,36 @@ impl Supervisor {
         self.wake.notify_one();
     }
 
-    /// State and generation of a bot the supervisor has seen.
+    /// What the app shows for a bot the supervisor has seen: the summary
+    /// of its conversations, with the main one's generation (spec 40.4).
     pub fn status(&self, bot: &BotId) -> Option<(BotState, Option<u64>)> {
+        let inner = self.lock();
+        summary::summarize(
+            inner
+                .slots
+                .values()
+                .filter(|slot| slot.bot == *bot)
+                .map(Slot::seen),
+        )
+    }
+
+    /// State and generation of a conversation the supervisor has seen.
+    pub fn status_of(&self, conversation: &ConversationId) -> Option<(BotState, Option<u64>)> {
         let inner = self.lock();
         inner
             .slots
-            .get(bot)
+            .get(conversation)
             .map(|slot| (slot.state, slot.generation))
+    }
+
+    /// The conversation the process of `generation` holds; the main one
+    /// when it is gone.
+    pub fn conversation_of(&self, bot: &BotId, generation: u64) -> ConversationId {
+        self.lock()
+            .slots
+            .iter()
+            .find(|(_, slot)| slot.bot == *bot && slot.generation == Some(generation))
+            .map_or_else(|| ConversationId::main_of(bot), |(id, _)| id.clone())
     }
 
     /// Follows how many bots are `busy`.
@@ -218,16 +256,24 @@ impl Supervisor {
         }
     }
 
-    fn slot<'a>(&self, inner: &'a mut Inner, bot: &BotId) -> &'a mut Slot {
-        slot_entry(&mut inner.slots, bot, &self.settings)
+    /// Writes one stream-json line, the message with `uuid`, to the stdin
+    /// of the bot's main conversation (spec 9.2).
+    pub fn write_message(&self, bot: &BotId, uuid: &str, line: Bytes) -> Result<u64, NotRunning> {
+        self.write_message_to(bot, &ConversationId::main_of(bot), uuid, line)
     }
 
-    /// Writes one stream-json line, the message with `uuid`, to the bot's
-    /// stdin (spec 9.2). The bot has work until Claude Code takes the
-    /// message up and ends that turn. Returns the generation it went to.
-    pub fn write_message(&self, bot: &BotId, uuid: &str, line: Bytes) -> Result<u64, NotRunning> {
+    /// Writes the message with `uuid` to the process of `conversation`.
+    /// It has work until Claude Code takes the message up and ends that
+    /// turn. Returns the generation it went to.
+    pub fn write_message_to(
+        &self,
+        bot: &BotId,
+        conversation: &ConversationId,
+        uuid: &str,
+        line: Bytes,
+    ) -> Result<u64, NotRunning> {
         let mut inner = self.lock();
-        let slot = self.slot(&mut inner, bot);
+        let slot = slot_entry(&mut inner.slots, bot, conversation, &self.settings);
         let (Some(running), Some(generation)) = (&slot.running, slot.generation) else {
             return Err(NotRunning);
         };
@@ -247,10 +293,19 @@ impl Supervisor {
     /// Writes a control request to the bot's stdin (spec 9.2): a question
     /// to Claude Code itself, which starts no turn.
     pub fn write_control(&self, bot: &BotId, line: Bytes) -> Result<(), NotRunning> {
+        self.write_control_to(&ConversationId::main_of(bot), line)
+    }
+
+    /// Writes a control request to the process of `conversation`.
+    pub fn write_control_to(
+        &self,
+        conversation: &ConversationId,
+        line: Bytes,
+    ) -> Result<(), NotRunning> {
         let inner = self.lock();
         let running = inner
             .slots
-            .get(bot)
+            .get(conversation)
             .filter(|slot| slot.stop.is_none())
             .and_then(|slot| slot.running.as_ref())
             .ok_or(NotRunning)?;
@@ -259,17 +314,21 @@ impl Supervisor {
 
     /// Whether `generation` is the bot's running process.
     pub fn is_current(&self, bot: &BotId, generation: u64) -> bool {
-        self.lock()
-            .slots
-            .get(bot)
-            .is_some_and(|slot| slot.generation == Some(generation) && slot.running.is_some())
+        self.lock().slots.values().any(|slot| {
+            slot.bot == *bot && slot.generation == Some(generation) && slot.running.is_some()
+        })
     }
 
     /// Restarts the bot, also out of `auth_error`. The caller checked that
     /// the bot should run.
     pub fn restart(&self, bot: &BotId, fresh: bool) {
+        self.restart_in(bot, &ConversationId::main_of(bot), fresh);
+    }
+
+    /// Restarts one conversation of `bot`.
+    pub fn restart_in(&self, bot: &BotId, conversation: &ConversationId, fresh: bool) {
         let mut inner = self.lock();
-        let slot = self.slot(&mut inner, bot);
+        let slot = slot_entry(&mut inner.slots, bot, conversation, &self.settings);
         slot.backoff.reset();
         // A sleeping bot the owner restarts wakes up (spec 7.7).
         slot.wake_asked = true;
@@ -292,8 +351,9 @@ impl Supervisor {
         self.wake();
     }
 
-    /// The bot and generation an MCP token belongs to.
-    pub fn token_owner(&self, token: &str) -> Option<(BotId, u64)> {
+    /// The bot, conversation and generation an MCP token belongs to: each
+    /// process has its own (spec 40.2).
+    pub fn token_owner(&self, token: &str) -> Option<(Seat, u64)> {
         self.lock()
             .tokens
             .get(&TokenHash::of(token).to_hex())
@@ -304,6 +364,10 @@ impl Supervisor {
         if slot.state != state {
             self.count_busy(slot.state, state);
             slot.idle_since = (state == BotState::Idle).then(Instant::now);
+            // Time spent idle or waiting for the owner is not quiet work.
+            if state == BotState::Busy {
+                slot.quiet_since = Some(Instant::now());
+            }
             slot.state = state;
             self.announce(bot, slot);
         }
@@ -324,14 +388,27 @@ impl Supervisor {
         }
     }
 
-    /// Emits `bot.state`. A new process always announces itself, even when
-    /// the state name did not change, because its generation did.
+    /// Tells what the conversation of `slot` is doing, and `bot.state`
+    /// when the bot's summary changed (spec 40.4). A new process always
+    /// announces itself, even when the state name did not change,
+    /// because its generation did.
     fn announce(&self, bot: &BotId, slot: &Slot) {
-        let _ = self.events.send(Event::BotState(BotStateChanged {
-            bot_id: bot.clone(),
+        let _ = self.events.send(Event::SeatState(SeatState {
+            seat: Seat::new(bot.clone(), slot.conversation.clone()),
             state: slot.state,
             generation: slot.generation,
         }));
+        if let Some(change) = self.summaries.note(bot, &slot.conversation, slot.seen()) {
+            let _ = self.events.send(Event::BotState(change));
+        }
+    }
+
+    /// A conversation left the supervisor: the bot's summary goes on
+    /// without it.
+    fn announce_gone(&self, bot: &BotId, conversation: &ConversationId) {
+        if let Some(change) = self.summaries.forget(bot, conversation) {
+            let _ = self.events.send(Event::BotState(change));
+        }
     }
 
     /// Kills every bot, for daemon shutdown.

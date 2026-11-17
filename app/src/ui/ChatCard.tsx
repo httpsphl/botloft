@@ -1,8 +1,8 @@
 // The cards a bot puts in front of the owner in its chat (spec 15.1):
 // permission requests, plans, bot and routine suggestions, questions.
-// Two shapes share one look: a compact request with a tinted border, and
-// a card in sections (head, body, a footer with the owner's note). Once
-// answered, a card shrinks to one settled line.
+// Two shapes share one look, a gray block like the bot's balloons: a
+// compact request, and a card in sections (head, body, a footer with the
+// owner's note). Once answered, a card shrinks to one settled line.
 
 import { ChevronRight, type LucideIcon } from "lucide-react";
 import { type ReactNode, useId } from "react";
@@ -26,7 +26,7 @@ interface CardHead {
   title?: ReactNode;
 }
 
-/** A short request, its border in the card's tone: a command, a site. */
+/** A short request, its icon in the card's tone: a command, a site. */
 export function RequestCard({
   label,
   icon,
@@ -37,7 +37,7 @@ export function RequestCard({
   return (
     <section
       aria-label={label}
-      className={`my-1 max-w-2xl rounded-2xl border bg-panel px-4 py-3.5 shadow-sm animate-attention ${TONES[tone].border}`}
+      className="my-1 max-w-2xl rounded-bubble bg-bubble px-4 py-3.5 animate-attention"
     >
       <p className="flex items-center gap-2.5 font-semibold text-sm">
         <IconBadge icon={icon} tone={tone} />
@@ -63,14 +63,14 @@ export function SectionCard({
   return (
     <section
       aria-label={label}
-      className="my-1 overflow-hidden rounded-2xl border border-line bg-panel shadow-sm animate-attention"
+      className="my-1 overflow-hidden rounded-bubble bg-bubble animate-attention"
     >
-      <p className="flex items-center gap-2.5 border-line border-b px-4 py-3 font-semibold text-sm">
+      <p className="flex items-center gap-2.5 px-4 pt-3.5 font-semibold text-sm">
         <IconBadge icon={icon} tone={tone} />
         {title ?? label}
       </p>
       {children}
-      {footer && <div className="border-line border-t bg-canvas/40 px-4 py-3">{footer}</div>}
+      {footer && <div className="px-4 pt-1 pb-3.5">{footer}</div>}
     </section>
   );
 }
@@ -84,7 +84,7 @@ interface NoteProps {
 }
 
 const NOTE =
-  "rounded-xl border border-line-strong px-3 text-sm outline-none placeholder:text-muted focus:border-muted";
+  "rounded-xl border border-line-strong bg-panel px-3 text-sm outline-none transition-colors placeholder:text-muted focus:border-muted";
 
 /**
  * One line for the owner's note, in a request card. It opens when the owner
@@ -120,7 +120,7 @@ export function NoteInput({
         placeholder={placeholder}
         // biome-ignore lint/a11y/noAutofocus: it opens on the owner's click
         autoFocus
-        className={`mt-3 h-9 w-full bg-canvas ${NOTE}`}
+        className={`mt-3 h-9 w-full ${NOTE}`}
       />
     </>
   );
@@ -155,7 +155,7 @@ export function NoteArea({
           }
         }}
         placeholder={placeholder}
-        className={`block w-full resize-none bg-panel py-2 ${NOTE}`}
+        className={`block w-full resize-none py-2 ${NOTE}`}
       />
     </>
   );
@@ -204,7 +204,7 @@ export function SettledLine({
         />
       </summary>
       <div
-        className="mt-1.5 ml-6 flex flex-col gap-2 rounded-xl border border-line bg-panel px-4 py-3 text-sm"
+        className="mt-1.5 ml-6 flex flex-col gap-2 rounded-2xl bg-bubble px-4 py-3 text-sm"
         data-selectable
       >
         {details}

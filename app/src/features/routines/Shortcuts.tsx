@@ -18,10 +18,7 @@ export function Shortcuts() {
   }
   return (
     <section aria-labelledby="home-shortcuts">
-      <h2
-        id="home-shortcuts"
-        className="mb-3 flex items-center gap-1.5 font-semibold text-ink-soft text-sm"
-      >
+      <h2 id="home-shortcuts" className="mb-3 flex items-center gap-1.5 font-semibold text-base">
         <Play aria-hidden size={14} />
         {words.title}
       </h2>
@@ -34,7 +31,7 @@ export function Shortcuts() {
                 type="button"
                 aria-label={words.run(routine.name, bot?.name ?? "")}
                 onClick={() => void run(routine, bot)}
-                className="flex h-9 max-w-xs items-center gap-2 rounded-xl border border-line bg-panel px-3 text-sm transition-colors hover:border-line-strong hover:bg-sunken"
+                className="flex h-9 max-w-xs items-center gap-2 rounded-full bg-bubble px-3.5 text-sm transition-colors hover:bg-line/60"
               >
                 <Play aria-hidden size={13} className="shrink-0 text-accent" />
                 <span className="truncate font-medium">{routine.name}</span>

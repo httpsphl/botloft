@@ -27,14 +27,27 @@ pub fn tools() -> Value {
         let more = [
             super::share::tool(),
             super::question::tool(),
+            super::question::note_tool(),
+            super::card::tool(),
+            super::history::tool(),
             super::key::tool(),
             super::plan::tool(),
             super::signal::tool(),
+            super::wait::tool(),
         ]
         .into_iter()
         .chain(super::routine_catalog::tools())
-        .chain([super::bot_change::tool(), super::crew_access::tool()])
+        .chain([super::nothing_new::tool()])
+        .chain([
+            super::bot_change::tool(),
+            super::crew_access::tool(),
+            super::connector::tool(),
+            super::chrome::tool(),
+            super::skill::tool(),
+        ])
         .chain(super::templates::tools())
+        .chain([super::retry::tool()])
+        .chain([super::build::tool(), super::overview::tool()])
         .chain(super::activity::tools())
         .chain(super::crew_reach::tools())
         .chain(super::browser_catalog::tools())
@@ -45,7 +58,7 @@ pub fn tools() -> Value {
 }
 
 /// The ids of the bot catalog, for `suggest_bot`'s `template`.
-fn template_ids() -> Vec<String> {
+pub(super) fn template_ids() -> Vec<String> {
     crate::catalog::list(None)
         .into_iter()
         .map(|template| template.id)
@@ -70,9 +83,10 @@ fn crew_tools() -> Value {
             "description": "Lists the other bots of your crew with their handle, name, role and \
                 current state (idle, busy, offline...). Use it to find who can help and the \
                 handle to send a message to. Each bot also shows its model, effort and \
-                `week_plan_percent`: about how much of the owner's weekly plan it used in the \
-                last 7 days (null until Botloft has learned it). With `crew`, the bots of another \
-                crew you were let in to (ask_crew_access).",
+                `week_cost_usd`: what its work of the last 7 days would cost at API prices, in \
+                US dollars, to compare the bots (the owner's plan does not charge it; null for a \
+                bot whose engine gives no price). With `crew`, the bots of another crew you were \
+                let in to (ask_crew_access).",
             "inputSchema": {
                 "type": "object",
                 "properties": {

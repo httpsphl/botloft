@@ -82,7 +82,7 @@ export function Chosen({ files, remove }: { files: Outgoing[]; remove(index: num
         <li
           // biome-ignore lint/suspicious/noArrayIndexKey: picked files have no id of their own
           key={`${index}-${file.name}`}
-          className="flex max-w-56 flex-none items-center gap-2 rounded-xl border border-line bg-panel py-1 pr-1 pl-1.5"
+          className="flex max-w-56 flex-none items-center gap-2 rounded-xl bg-bubble py-1 pr-1 pl-1.5"
         >
           {file.thumb ? (
             <img src={file.thumb} alt="" className="h-10 w-10 flex-none rounded-lg object-cover" />

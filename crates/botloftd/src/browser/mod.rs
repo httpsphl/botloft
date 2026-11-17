@@ -6,6 +6,7 @@
 mod agent;
 mod call;
 mod cdp;
+mod cookies;
 mod events;
 mod hands;
 mod input;
@@ -41,6 +42,7 @@ use tokio::sync::broadcast;
 use tracing::{debug, warn};
 
 pub use self::call::Call;
+pub use self::cookies::{CookieChange, of_site as cookies_of_site};
 pub use self::hands::{Asking, Hands, InputError, OWNER_WAIT, TakeError};
 pub use self::keys::{Key, find as find_key, names as key_names};
 pub use self::page::{Aim, Done, Scroll};

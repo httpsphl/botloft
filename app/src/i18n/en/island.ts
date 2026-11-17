@@ -34,6 +34,19 @@ export const island = {
     runNow: "Run now",
     started: "Started",
   },
+  quick: {
+    label: (bot: string) => `Ask ${bot} for something`,
+    placeholder: (bot: string) => `Ask ${bot} for something`,
+    send: "Send",
+    sent: (bot: string) => `Sent to ${bot}`,
+    follow: "See the chat",
+    failed: "Could not send. Try again.",
+  },
+  shortcuts: {
+    title: "Shortcuts",
+    run: (routine: string, bot: string) => `Run ${routine}, by ${bot}`,
+    started: "Started",
+  },
   pauseAll: "Pause every crew",
   resumeAll: "Resume every crew",
   soundOff: "Turn the sound off",
@@ -69,5 +82,11 @@ export const island = {
     placeholder: "Write your answer",
     send: "Answer",
     failed: "Could not send. Try again, or open it in Botloft.",
+    /** A note the agent left (spec 23.10). */
+    tells: (bot: string) => `${bot} left you a note`,
+    replyLabel: (bot: string) => `Your reply to ${bot}`,
+    replyPlaceholder: "Reply, if you want",
+    reply: "Reply",
+    seen: "Seen",
   },
 };

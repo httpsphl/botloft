@@ -11,7 +11,7 @@ import { ChiefBadge, isChief } from "../bots/ChiefBadge";
 import { ListAvatar } from "../bots/ListAvatar";
 import { AgencyInvite } from "../catalog/AgencyInvite";
 
-/** The crew's bots as cards; a card opens the bot. */
+/** The crew's bots as soft gray cards, like the chat's balloons; a card opens the bot. */
 export function CrewBots({ crew, bots, onNewBot }: { crew: Crew; bots: Bot[]; onNewBot(): void }) {
   const t = useT();
   // The Bot agency is on the page for a crew with only its chief, or nobody
@@ -46,29 +46,32 @@ function BotCards({ crew, bots }: { crew: Crew; bots: Bot[] }) {
   const t = useT();
   const selectBot = useApp((state) => state.selectBot);
   return (
-    <ul className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
+    <ul className="grid grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-3">
       {bots.map((bot) => (
         <li key={bot.id}>
           <button
             type="button"
             onClick={() => selectBot(bot.id)}
-            className="flex h-full w-full flex-col gap-2 rounded-xl border border-line bg-panel p-3.5 text-left transition-[border-color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-sm"
+            className="flex h-full w-full flex-col gap-3 rounded-2xl bg-bubble p-4 text-left transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-line/60"
           >
-            <div className="flex w-full items-center gap-2.5">
-              <ListAvatar bot={bot} crewPaused={crew.paused} size={32} />
+            <div className="flex w-full items-center gap-3">
+              <ListAvatar bot={bot} crewPaused={crew.paused} size={44} />
               <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-1.5">
-                  <span className="truncate font-semibold">{bot.name}</span>
+                  <span className="break-words font-semibold text-base">{bot.name}</span>
                   {isChief(bot, crew) && <ChiefBadge crew={crew} compact />}
                 </p>
-                <p className="truncate font-mono text-muted text-xs">@{bot.handle}</p>
+                <p className="truncate text-muted text-xs">@{bot.handle}</p>
               </div>
             </div>
             <p className="line-clamp-2 min-h-10 text-ink-soft text-sm">
               {bot.role || t.crews.bots.noRole}
             </p>
-            <BotStateBadge bot={bot} crewPaused={crew.paused} />
-            {!stateView(bot, crew.paused, t).icon && <LastActive bot={bot} />}
+            {/* At the foot of the card, however long the role above. */}
+            <div className="mt-auto">
+              <BotStateBadge bot={bot} crewPaused={crew.paused} />
+              {!stateView(bot, crew.paused, t).icon && <LastActive bot={bot} />}
+            </div>
           </button>
         </li>
       ))}

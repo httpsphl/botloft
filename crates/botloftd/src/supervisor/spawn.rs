@@ -18,6 +18,7 @@ use crate::chat::{LIVE_TEXT_EVERY, StreamReader};
 use crate::platform;
 use crate::runtime::claude::Claude;
 use crate::runtime::{ProcessEvent, SpawnSpec};
+use crate::seat::Seat;
 use crate::secrets::{self, TokenHash};
 use crate::state::Daemon;
 use crate::{approvals, context, courier, mcp_secrets, routines, workspace};
@@ -35,12 +36,15 @@ impl Supervisor {
     ) {
         let mut inner = self.lock();
         let Inner { slots, tokens, .. } = &mut *inner;
-        let Some(slot) = slots.get_mut(bot) else {
+        // Generations are unique: one names the conversation too.
+        let Some(slot) = slots
+            .values_mut()
+            .find(|slot| slot.bot == *bot && slot.generation == Some(generation))
+        else {
             return;
         };
-        if slot.generation != Some(generation) {
-            return;
-        }
+        let main = slot.main;
+        let seat = Seat::new(bot.clone(), slot.conversation.clone());
         let Some(running) = slot.running.take() else {
             return;
         };
@@ -74,12 +78,17 @@ impl Supervisor {
             }
         }
         drop(inner);
-        approvals::expire_for_bot(daemon, bot);
         courier::requeue_unread(daemon, bot, generation);
-        routines::process_ended(daemon, bot);
-        context::process_ended(daemon, bot);
-        crate::screens::turn_ended(daemon, bot);
-        daemon.crew_access.end_turn(bot);
+        context::process_ended(daemon, &seat);
+        crate::background::process_ended(daemon, &seat);
+        approvals::expire_for(daemon, &seat);
+        routines::process_ended(daemon, &seat);
+        // Screens being drawn and access only for this turn are the
+        // agent's, which goes on in its main conversation (spec 40.4).
+        if main {
+            crate::screens::turn_ended(daemon, bot);
+            daemon.crew_access.end_turn(bot);
+        }
         self.wake();
     }
 }
@@ -109,9 +118,17 @@ pub(super) fn launch_spec(
         .bot_mcp_servers(&bot.id)
         .map_err(io::Error::other)?;
     let workspace = workspace::prepare_bot(daemon.workspace_env(), crew, &crews, bot, &servers)?;
+    // What the owner wrote for every agent (spec 7.10).
+    let owner = daemon
+        .store()
+        .owner_instructions()
+        .map_err(io::Error::other)?;
+    workspace::write_owner_rules(&workspace, &owner)?;
     // The names of its keys, for its rules (spec 32.4).
     let keys = crate::service::keys::listed(daemon, &bot.id).map_err(io::Error::other)?;
     crate::agent_keys::write_rules(&workspace, &keys)?;
+    // The sites its browser is signed in to (spec 35.3).
+    crate::logins::write_rules(daemon, &bot.id, &workspace)?;
     let token = secrets::random_token()?;
     let (session, resumed) = match session {
         Some(session) => (session.to_owned(), true),
@@ -127,6 +144,14 @@ pub(super) fn launch_spec(
     )?;
     let mcp = workspace.join(".botloft").join("mcp.json");
     let work_folder = daemon.paths.work_folder(crew);
+    // The claude.ai connectors it may use (spec 34.5).
+    let connectors = crate::connectors::launch(daemon, &bot.id, &workspace)?;
+    // The owner's own Chrome, when they gave it (spec 37.2).
+    let chrome = crate::chrome::launch(daemon, &bot.id, &workspace)?;
+    // The owner's skills it was given, copied into its folder (spec 38.3).
+    crate::skills::launch(daemon, &bot.id, &workspace)?;
+    // And the owner's plugins, each loaded from its copy there (spec 41.3).
+    let plugins = crate::plugins::launch(daemon, &bot.id, &workspace)?;
     let args = agent.args(&LaunchPlan {
         session: &session,
         resumed,
@@ -136,6 +161,10 @@ pub(super) fn launch_spec(
         model: bot.model,
         effort: bot.effort,
         agent_model: bot.agent_model.as_deref(),
+        connectors: &connectors.chosen,
+        blocked_servers: &connectors.blocked,
+        chrome,
+        plugin_dirs: &plugins,
     });
 
     let mut env = platform::user_environment()?;
@@ -217,6 +246,8 @@ pub(super) async fn settle(
     tokio::time::sleep(after).await;
     if let Some(daemon) = daemon.upgrade() {
         daemon.supervisor.ready(&bot, generation);
+        let conversation = daemon.supervisor.conversation_of(&bot, generation);
+        crate::context::woke(&daemon, &Seat::new(bot, conversation));
     }
 }
 
@@ -246,6 +277,8 @@ pub(super) async fn pump(
                 let Some(daemon) = daemon.upgrade() else {
                     return;
                 };
+                // Anything it prints shows the turn is not stuck (7.9).
+                daemon.supervisor.heard(reader.bot(), reader.generation());
                 reader.feed(&daemon, &data);
                 if !reader.holds_live_text() {
                     flush_at = None;

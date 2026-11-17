@@ -26,6 +26,11 @@ export const keys: Messages["keys"] = {
     saveFailed: "Não foi possível salvar a chave",
     restarts: (bot: string) => `${bot} reinicia para recebê-la, sem perder a conversa.`,
   },
+  page: {
+    intro:
+      "Senhas e tokens que cada agente usa em outros serviços. O agente pede no chat quando precisa; você também pode adicionar aqui.",
+    noAgents: "Nenhum agente ainda.",
+  },
   details: {
     title: "Chaves",
     none: (bot: string) =>

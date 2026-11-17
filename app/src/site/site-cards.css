@@ -1,0 +1,318 @@
+/* The small scenes of the site's cards (spec 39.4), part one: the live
+   browser, a request to approve and a task passed between agents. */
+
+@layer components {
+  .demo-scene {
+    width: 100%;
+  }
+
+  /* The live browser: the page is light, as most websites are. */
+  .demo-browser {
+    max-width: 34rem;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 0.9rem;
+    background: #141414;
+    text-align: left;
+    font-size: 12.5px;
+  }
+
+  .demo-browser-top {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0.7rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .demo-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--danger) 18%, transparent);
+    font-weight: 600;
+    color: #ff8a7e;
+  }
+
+  .demo-live::before {
+    content: "";
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 999px;
+    background: #ff5b4d;
+  }
+
+  .demo-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 0.5rem;
+    background: #1f1f1f;
+    color: var(--ink);
+  }
+
+  .demo-url {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0.5rem 0.7rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    background: #1c1c1c;
+    font-family: var(--font-mono);
+    color: var(--ink-soft);
+  }
+
+  .demo-page {
+    position: relative;
+    height: 12rem;
+    margin: 0 0.7rem 0.7rem;
+    overflow: hidden;
+    padding: 1rem 1.2rem;
+    border-radius: 0.6rem;
+    background: #fafaf7;
+    color: #1f2937;
+  }
+
+  .demo-page-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+
+  .demo-search {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.7rem;
+  }
+
+  .demo-field {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    height: 2rem;
+    padding: 0 0.8rem;
+    border: 1.5px solid #9ca3af;
+    border-radius: 999px;
+    color: #111827;
+  }
+
+  .demo-go {
+    display: grid;
+    place-items: center;
+    padding: 0 0.9rem;
+    border-radius: 999px;
+    background: #2563eb;
+    font-weight: 600;
+    color: #ffffff;
+  }
+
+  .demo-results {
+    display: grid;
+    gap: 0.55rem;
+    margin-top: 0.8rem;
+  }
+
+  .demo-results b {
+    display: block;
+    font-weight: 600;
+    color: #1d4ed8;
+  }
+
+  .demo-results span {
+    display: block;
+    width: 70%;
+    height: 0.4rem;
+    margin-top: 0.25rem;
+    border-radius: 999px;
+    background: #e5e7eb;
+  }
+
+  /* The agent's cursor, with its name, goes where it works. */
+  .demo-cursor {
+    position: absolute;
+    top: 78%;
+    left: 72%;
+    display: flex;
+    align-items: flex-start;
+    gap: 2px;
+    color: var(--accent);
+    transition:
+      top 700ms var(--ease-out),
+      left 700ms var(--ease-out),
+      scale 150ms ease;
+  }
+
+  .demo-cursor svg {
+    fill: var(--accent);
+    stroke: #ffffff;
+  }
+
+  .demo-cursor span {
+    margin-top: 1rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    background: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+    color: #ffffff;
+  }
+
+  :is([data-step="1"], [data-step="2"]) > .demo-page .demo-cursor {
+    top: 30%;
+    left: 38%;
+  }
+
+  [data-step="2"] > .demo-page .demo-cursor {
+    top: 34%;
+    left: 80%;
+  }
+
+  [data-step="3"] > .demo-page .demo-cursor {
+    top: 34%;
+    left: 80%;
+    scale: 0.85;
+  }
+
+  :is([data-step="4"], [data-step="5"]) > .demo-page .demo-cursor {
+    top: 58%;
+    left: 34%;
+  }
+
+  .demo-control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0 0.7rem 0.7rem;
+    font-weight: 500;
+    color: var(--ink-soft);
+  }
+
+  .demo-control .demo-btn {
+    height: 1.7rem;
+    font-size: 12px;
+  }
+
+  /* A request, its press and what came after. */
+  .demo-ask {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    max-width: 22rem;
+    text-align: left;
+    font-size: 13.5px;
+  }
+
+  .demo-command {
+    display: block;
+    margin-top: 0.6rem;
+    padding: 0.45rem 0.7rem;
+    border-radius: 0.5rem;
+    background: #0d0d0d;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+
+  [data-step="1"] .demo-press {
+    scale: 0.94;
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  /* A task flying from one agent to the other. */
+  .demo-handoff-scene {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.1rem;
+  }
+
+  .demo-pair,
+  .demo-trio {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 0.6rem;
+  }
+
+  .demo-trio {
+    gap: 1.6rem;
+  }
+
+  .demo-agent {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+
+  .demo-agent small {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .demo-agent .demo-awake {
+    color: var(--work);
+  }
+
+  .demo-path {
+    position: relative;
+    flex: 0 0 clamp(4.5rem, 18vw, 8rem);
+    align-self: center;
+    border-top: 2px dashed #3a3a3a;
+  }
+
+  .demo-letter {
+    position: absolute;
+    top: -0.95rem;
+    left: 0;
+    display: grid;
+    place-items: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #ffffff;
+    box-shadow: 0 0 18px var(--accent);
+    opacity: 0;
+  }
+
+  [data-step="1"] .demo-letter {
+    animation: demo-fly 1100ms ease-in-out both;
+  }
+
+  @keyframes demo-fly {
+    15%,
+    85% {
+      opacity: 1;
+    }
+    50% {
+      translate: 0 -1.1rem;
+    }
+    to {
+      left: calc(100% - 1.8rem);
+      opacity: 0;
+    }
+  }
+
+  .demo-task {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.8rem;
+    border: 1px solid color-mix(in srgb, var(--work) 35%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--work) 12%, transparent);
+    font-size: 13px;
+    color: var(--ink);
+  }
+
+  .demo-task svg {
+    color: var(--work);
+  }
+}

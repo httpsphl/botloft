@@ -3,16 +3,16 @@
 //! (spec 8.1). Fields are read defensively: the format is not documented
 //! and grows between Claude Code versions.
 
-use botloft_core::ids::BotId;
 use botloft_core::protocol::TokenUsage;
 use serde_json::Value;
 use tracing::debug;
 
 use super::{account, control, sink};
+use crate::seat::Seat;
 use crate::state::Daemon;
 use crate::{context, service};
 
-pub(crate) fn apply(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
+pub(crate) fn apply(daemon: &Daemon, bot: &Seat, generation: u64, event: &Value) {
     // Lines from a process that was replaced say nothing about the new one.
     if !daemon.supervisor.is_current(bot, generation) {
         return;
@@ -31,6 +31,7 @@ pub(crate) fn apply(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value
             daemon
                 .supervisor
                 .agents_running(bot, generation, agents, tasks);
+            crate::background::changed(daemon, bot, event);
         }
         "system" if subtype == Some("status") => context::status(daemon, bot, event),
         "system" if subtype == Some("compact_boundary") => context::compacted(daemon, bot, event),
@@ -42,7 +43,10 @@ pub(crate) fn apply(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value
             daemon.supervisor.message_began(bot, generation, uuid);
             replay(daemon, bot, event);
         }
-        "user" if !from_subagent => tool_results(daemon, bot, event),
+        "user" if !from_subagent => {
+            crate::changes::operation(daemon, bot, &event["tool_use_result"]);
+            tool_results(daemon, bot, event);
+        }
         "rate_limit_event" => account::rate_limit(daemon, bot, generation, event),
         "result" => result(daemon, bot, generation, event),
         _ => debug!(bot = %bot, kind, subtype, "stream event not used"),
@@ -63,14 +67,18 @@ fn task_counts(event: &Value) -> (u32, u32) {
     (count(agents), count(tasks.len()))
 }
 
-/// Every turn starts with the mode and the model in use (spec 7.4).
-fn init(daemon: &Daemon, bot: &BotId, event: &Value) {
+/// Every turn starts with the mode and the model in use (spec 7.4), and,
+/// in an agent given claude.ai connectors, how each stands (spec 34.3).
+fn init(daemon: &Daemon, bot: &Seat, event: &Value) {
     if let Some(mode) = event["permissionMode"].as_str() {
         service::modes::reported(daemon, bot, mode);
     }
     if let Some(model) = event["model"].as_str() {
         service::models::reported(daemon, bot, model);
     }
+    crate::connectors::seen(daemon, &event["mcp_servers"]);
+    crate::plugins::not_loaded(bot, event);
+    crate::skills::seen(daemon, &bot.bot, event);
 }
 
 /// The piece of reply text a `stream_event` carries, if that is what it is
@@ -94,7 +102,7 @@ pub(super) fn blocks(event: &Value) -> &[Value] {
         .map_or(&[], Vec::as_slice)
 }
 
-fn assistant(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
+fn assistant(daemon: &Daemon, bot: &Seat, generation: u64, event: &Value) {
     if let Some(error) = event["error"].as_str() {
         account::failed_turn(daemon, bot, generation, error, event);
         return;
@@ -120,7 +128,7 @@ fn assistant(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
 }
 
 /// The bot began the turn for a message the courier wrote (spec 9.1).
-fn replay(daemon: &Daemon, bot: &BotId, event: &Value) {
+fn replay(daemon: &Daemon, bot: &Seat, event: &Value) {
     super::session::began(daemon, bot, event);
     let Some(uuid) = event["uuid"].as_str() else {
         return;
@@ -128,7 +136,7 @@ fn replay(daemon: &Daemon, bot: &BotId, event: &Value) {
     sink::message_read(daemon, bot, uuid);
 }
 
-fn tool_results(daemon: &Daemon, bot: &BotId, event: &Value) {
+fn tool_results(daemon: &Daemon, bot: &Seat, event: &Value) {
     for block in blocks(event) {
         if block["type"] != "tool_result" {
             continue;
@@ -155,31 +163,55 @@ fn result_text(content: &Value) -> String {
     }
 }
 
-fn result(daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
+fn result(daemon: &Daemon, bot: &Seat, generation: u64, event: &Value) {
     // No turn began, so none ended: nothing of this is for the chat.
     if super::session::missing(event) {
         debug!(bot = %bot, "Claude Code does not have the conversation to resume");
         daemon.supervisor.session_missing(bot, generation);
         return;
     }
-    crate::service::plan::turn_ended(daemon, bot, generation, event);
+    // A turn ran, so the conversation is on disk even when the replay that
+    // says so was too long to read (spec 7.3).
+    super::session::began(daemon, bot, event);
+    let cost = crate::service::costs::turn_ended(daemon, bot, generation, event);
     let reloaded = context::reloaded(daemon, bot);
     let failed = event["is_error"].as_bool() == Some(true);
-    let error = failed.then(|| {
+    // The owner stopped it (`bots.interrupt`, spec 9.2): Claude Code says the
+    // turn was cut, `aborted_streaming` or `aborted_tools`. Not an error.
+    let stopped = failed
+        && event["terminal_reason"]
+            .as_str()
+            .is_some_and(|reason| reason.starts_with("aborted"));
+    let error = (failed && !stopped).then(|| {
         event["terminal_reason"]
             .as_str()
             .or_else(|| event["subtype"].as_str())
             .unwrap_or("error")
             .to_owned()
     });
+    // A request cut while it streamed is not counted: Claude Code reports
+    // nothing for it (spec 19), and "0 tokens" would not be true.
+    let used = tokens(&event["usage"], reloaded).filter(|used| {
+        !stopped || used.input + used.cache_write + used.cache_read + used.output > 0
+    });
+    // Botloft asks the same way when a turn went quiet (spec 7.9). Any end
+    // of the turn answers that request.
+    let by_botloft = daemon.supervisor.took_quiet_stop(bot, generation);
+    let stopped = match (stopped, by_botloft) {
+        (false, _) => sink::Stopped::No,
+        (true, true) => sink::Stopped::ByBotloft,
+        (true, false) => sink::Stopped::ByOwner,
+    };
     // A compaction ends like a turn; its notice already says what happened.
     if !context::turn_ended(daemon, bot, event) {
         sink::turn_finished(
             daemon,
             bot,
             event["duration_ms"].as_u64().unwrap_or_default(),
-            tokens(&event["usage"], reloaded),
+            used,
+            cost,
             error,
+            stopped,
         );
     }
     sink::finish_turn(daemon, bot, generation, failed);

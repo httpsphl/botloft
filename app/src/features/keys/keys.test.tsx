@@ -57,11 +57,19 @@ describe("an agent asking for a key", () => {
   });
 });
 
-describe("the Keys part of an agent's details", () => {
+/** Settings > Agents' keys, reached from Scout's details, as the owner would. */
+async function keysOfScout() {
+  fireEvent.click(screen.getByRole("button", { name: /^Show details/ }));
+  const details = screen.getByRole("complementary", { name: "About Scout" });
+  fireEvent.click(await within(details).findByRole("button", { name: /^Keys/ }));
+  await screen.findByRole("heading", { level: 2, name: "Agents' keys" });
+  return screen.getByRole("region", { name: "Scout" });
+}
+
+describe("an agent's keys in Settings, from its details", () => {
   test("adds, marks a missing value, replaces and deletes a key", async () => {
     const { fake, scout } = await openScout();
-    fireEvent.click(screen.getByRole("button", { name: /^Show details/ }));
-    const details = screen.getByRole("complementary", { name: "About Scout" });
+    const details = await keysOfScout();
     expect(await within(details).findByText(/^No keys yet/)).toBeDefined();
 
     fireEvent.click(within(details).getByRole("button", { name: "Add a key" }));
@@ -105,8 +113,7 @@ describe("the Keys part of an agent's details", () => {
     if (kept) {
       kept.missing = true;
     }
-    fireEvent.click(screen.getByRole("button", { name: /^Show details/ }));
-    const details = screen.getByRole("complementary", { name: "About Scout" });
+    const details = await keysOfScout();
     expect(await within(details).findByText("Value missing")).toBeDefined();
   });
 });

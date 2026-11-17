@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::ids::{ApprovalId, BotId, ChatItemId, QuestionId, RoutineId};
 use crate::protocol::{
     Activity, ApprovalStatus, BotState, DayActivity, NoticeLevel, PhoneFile, PhoneShortcut,
-    QuestionStatus,
+    QuestionKind, QuestionStatus,
 };
 
 /// Whether the computer's connection to the relay is up.
@@ -156,7 +156,7 @@ pub struct ApprovalCard {
     pub at_computer: bool,
 }
 
-/// A question waiting for the owner, as the phone shows it.
+/// A question or a note waiting for the owner, as the phone shows it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
@@ -165,6 +165,9 @@ pub struct QuestionCard {
     pub bot: CardBot,
     pub crew: String,
     pub created_at: i64,
+    /// A note asks nothing: the phone offers Seen instead of Dismiss.
+    #[serde(default)]
+    pub kind: QuestionKind,
     pub text: String,
     pub options: Vec<String>,
 }
@@ -261,6 +264,9 @@ pub enum PhoneItem {
         id: ChatItemId,
         at: i64,
         question_id: QuestionId,
+        /// A note the bot left (spec 23.10), not a question.
+        #[serde(default)]
+        note: bool,
         text: String,
         status: QuestionStatus,
     },

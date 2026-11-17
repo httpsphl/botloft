@@ -189,13 +189,13 @@ pub(crate) fn may_talk(
 }
 
 /// Another active crew, by its name or folder name, case aside. The
-/// caller's own crew is not "another".
+/// caller's own crew is not "another", and the Maker's is no one's to reach
+/// (spec 36.8).
 pub(crate) fn other_crew(store: &Store, own: &CrewId, name: &str) -> ApiResult<Crew> {
     let wanted = name.trim().to_lowercase();
-    let found = store
-        .crews(false)?
-        .into_iter()
-        .find(|crew| crew.name.to_lowercase() == wanted || crew.slug == wanted);
+    let found = store.crews(false)?.into_iter().find(|crew| {
+        crew.system.is_none() && (crew.name.to_lowercase() == wanted || crew.slug == wanted)
+    });
     match found {
         Some(crew) if crew.id == *own => Err(ApiError::validation(
             "that is your own crew: leave out `crew` to reach its bots",

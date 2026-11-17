@@ -1,5 +1,6 @@
-// The question box (spec 23.6): every question the bots asked and the owner
-// has not answered, newest first, each with its card to answer right here.
+// The inbox (spec 23.6): every question the bots asked and note they left
+// that the owner has not answered or seen, newest first, each with its card
+// to answer right here.
 
 import { MessageCircleQuestion, MessageSquare } from "lucide-react";
 import { useT } from "../../i18n";
@@ -70,7 +71,11 @@ export function QuestionEntry({ question }: { question: Question }) {
           />
         </div>
         {/* The name is on the line above: the card does not say it again. */}
-        <QuestionCard question={question} bot={bot.name} title={t.questions.card.question} />
+        <QuestionCard
+          question={question}
+          bot={bot.name}
+          title={question.kind === "note" ? t.questions.card.note : t.questions.card.question}
+        />
       </div>
     </li>
   );

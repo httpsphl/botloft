@@ -4,8 +4,8 @@
 
 use botloft_core::ids::{BotId, ChatItemId};
 use botloft_core::protocol::{
-    ChatBody, ChatItem, ChatLine, ITEM_TEXT_MAX, PhoneItem, RunFailure, SEALED_MAX, SenderKind,
-    ToPhone,
+    ChatBody, ChatItem, ChatLine, ITEM_TEXT_MAX, PhoneItem, QuestionKind, RunFailure, SEALED_MAX,
+    SenderKind, ToPhone,
 };
 use botloft_store::Store;
 use serde::Serialize;
@@ -156,11 +156,17 @@ pub fn item(daemon: &Daemon, item: &ChatItem) -> Option<PhoneItem> {
             id,
             at,
             question_id: shown.question.id.clone(),
+            note: shown.question.kind == QuestionKind::Note,
             text: cut(&shown.question.text).0,
             status: shown.question.status,
         },
         // Pasting a key is for the computer (spec 32.5).
         ChatBody::KeyRequest(_) => return None,
+        // Read-only on the phone: its buttons and form are at the computer.
+        ChatBody::Card(card) => {
+            let (text, cut) = cut(&botloft_core::cards::as_markdown(card));
+            PhoneItem::Reply { id, at, text, cut }
+        }
         ChatBody::Turn(turn) => {
             let error = turn.error.as_deref()?;
             PhoneItem::Failed {
@@ -178,16 +184,18 @@ pub fn item(daemon: &Daemon, item: &ChatItem) -> Option<PhoneItem> {
     })
 }
 
-/// A page of the chat, oldest first, and whether there are older ones.
+/// A page of the main conversation's chat, oldest first, and whether
+/// there are older ones: the phone shows only that one (spec 40.7).
 pub fn page(
     daemon: &Daemon,
     bot: &BotId,
     before: Option<&ChatItemId>,
 ) -> Option<(Vec<PhoneItem>, bool)> {
     bots::active(&daemon.store(), bot).ok()?;
+    let main = botloft_core::ids::ConversationId::main_of(bot);
     let mut found = daemon
         .store()
-        .chat_history(bot, before, PAGE + 1)
+        .chat_history_in(&main, before, PAGE + 1)
         .unwrap_or_default();
     let more = found.len() > PAGE as usize;
     found.truncate(PAGE as usize);

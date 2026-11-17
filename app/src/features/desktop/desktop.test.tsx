@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 import { FakeBotloft } from "../../lib/fake";
-import { crewOpened, openBot, renderApp } from "../../test/app";
+import { crewOpened, openBot, renderApp, settingsFromDetails } from "../../test/app";
 
 afterEach(cleanup);
 
@@ -19,7 +19,10 @@ async function openScout() {
   return { fake, scout };
 }
 
-const details = () => screen.getByRole("complementary", { name: "About Scout" });
+/** Settings > Permissions, on Scout's desktop, reached from its details. */
+const details = () => screen.getByRole("region", { name: "Settings" });
+const NONE =
+  "No agent can see apps on your computer. They ask in the chat the first time they need one.";
 
 describe("the desktop", () => {
   test("a request names the app, says why and what seeing means, and allowing answers it", async () => {
@@ -73,25 +76,17 @@ describe("the desktop", () => {
     expect(await screen.findByText("Scout may not use Notepad")).toBeDefined();
   });
 
-  test("the agent's details list what it may see on the desktop, and it can be taken back", async () => {
+  test("the agent's details lead to what it may see on the desktop, and it can be taken back", async () => {
     const { fake, scout } = await openScout();
-    fireEvent.click(screen.getByRole("button", { name: /^Show details/ }));
-    expect(
-      await within(details()).findByText(
-        "Scout cannot see any app on your computer. It asks in the chat the first time it needs one.",
-      ),
-    ).toBeDefined();
+    await settingsFromDetails("Scout", /^Your desktop/);
+    expect(await within(details()).findByText(NONE)).toBeDefined();
     act(() => {
       fake.desktop.grant(scout.id, NOTEPAD, "Notepad");
     });
     expect(await within(details()).findByText("Notepad")).toBeDefined();
     expect(within(details()).getByText("Can see")).toBeDefined();
     fireEvent.click(within(details()).getByRole("button", { name: "Take back Notepad" }));
-    expect(
-      await within(details()).findByText(
-        "Scout cannot see any app on your computer. It asks in the chat the first time it needs one.",
-      ),
-    ).toBeDefined();
+    expect(await within(details()).findByText(NONE)).toBeDefined();
     expect(fake.desktop.grants).toHaveLength(0);
   });
 });

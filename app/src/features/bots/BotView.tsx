@@ -1,21 +1,25 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useT } from "../../i18n";
 import type { Bot, BotFile, Crew } from "../../lib/protocol.gen";
 import { useWindowVisible } from "../../shell/visibility";
 import { routinesOf } from "../../store/app";
 import { useApp } from "../../store/context";
+import { openConversationOf } from "../../store/conversations";
+import { seenKey } from "../../store/seen";
 import { PanelClosing, PanelRestored } from "../../ui/panelMotion";
 import { type Tab, Tabs, tabId } from "../../ui/Tabs";
 import { useStable } from "../../ui/useStable";
 import { BrowserPanel } from "../browser/BrowserPanel";
 import { ShowBrowser } from "../browser/showBrowser";
 import { ChatView } from "../chat/ChatView";
+import { TurnFiles } from "../chat/turnFiles";
 import { DesktopPanel } from "../desktop/DesktopPanel";
 import { ShowDesktop } from "../desktop/showDesktop";
 import { FilesPanel } from "../files/FilesPanel";
 import { ShowFile } from "../files/showFile";
 import { useBotFiles } from "../files/useBotFiles";
+import { OverviewPanel } from "../overview/OverviewPanel";
 import { BotRoutines } from "../routines/RoutineList";
 import { ScreensPanel } from "../screens/ScreensPanel";
 import { ShowScreen } from "../screens/showScreen";
@@ -23,8 +27,9 @@ import { useScreens } from "../screens/useScreens";
 import { Dock } from "../terminal/ComputerDock";
 import { ShowTerminal } from "../terminal/showTerminal";
 import { TerminalPanel } from "../terminal/TerminalPanel";
+import { Details } from "./BotDetails";
 import { BotHeader } from "./BotHeader";
-import { Details, Notices } from "./BotPanels";
+import { Notices } from "./BotPanels";
 import { stateView } from "./BotStateBadge";
 import { useFollowBot } from "./useFollowBot";
 import { usePanel } from "./usePanel";
@@ -80,16 +85,30 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
     setShown(path);
   });
   const fresh = filesOpen ? 0 : files.files.filter((file) => file.modifiedAt > seenAt).length;
+  // What each turn made without sharing it shows under the turn (spec 15.1).
+  const openFiles = useStable(() => {
+    if (!filesOpen) {
+      seen();
+    }
+    setShown(null);
+    setSide("files");
+  });
+  const turnFiles = useMemo(
+    () => ({ files: files.files, open: openFiles }),
+    [files.files, openFiles],
+  );
   const routines = useApp(useShallow((state) => routinesOf(state, bot.id)));
-  // While the owner can see the chat, each new reply is seen (spec 15.1).
+  // While the owner can see the chat, each new reply of the open
+  // conversation is seen (spec 15.1, 40.7).
   const visible = useWindowVisible();
-  const replyAt = useApp((state) => state.replyAt[bot.id]);
-  const markSeen = useApp((state) => state.markSeen);
+  const openId = useApp((state) => openConversationOf(state, bot.id));
+  const replyAt = useApp((state) => state.replyAt[seenKey(bot.id, openId)]);
+  const markSeenIn = useApp((state) => state.markSeenIn);
   useEffect(() => {
     if (visible && replyAt !== undefined) {
-      markSeen(bot.id);
+      markSeenIn(bot.id, openId);
     }
-  }, [bot.id, visible, replyAt, markSeen]);
+  }, [bot.id, openId, visible, replyAt, markSeenIn]);
   // A browser at rest is open, but the bot is not using it (spec 21.2).
   const browsing = useApp((state) => {
     const browser = state.browsers[bot.id];
@@ -179,6 +198,8 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
       <BotHeader
         bot={bot}
         crew={crew}
+        overviewOpen={side === "overview"}
+        onToggleOverview={() => setSide(side === "overview" ? null : "overview")}
         detailsOpen={side === "details"}
         onToggleDetails={() => setSide(side === "details" ? null : "details")}
         filesOpen={filesOpen}
@@ -203,7 +224,9 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
                 <ShowScreen.Provider value={showScreen}>
                   <ShowTerminal.Provider value={showTerminal}>
                     <ShowDesktop.Provider value={showDesktop}>
-                      <ChatView bot={bot} stopped={bot.paused || crew.paused} />
+                      <TurnFiles.Provider value={turnFiles}>
+                        <ChatView bot={bot} stopped={bot.paused || crew.paused} />
+                      </TurnFiles.Provider>
                     </ShowDesktop.Provider>
                   </ShowTerminal.Provider>
                 </ShowScreen.Provider>
@@ -216,6 +239,7 @@ export function BotView({ bot, crew }: { bot: Bot; crew: Crew }) {
         <Dock.Provider value={dock}>
           <PanelRestored.Provider value={restored}>
             <PanelClosing.Provider value={closing}>
+              {beside === "overview" && <OverviewPanel bot={bot} onClose={() => setSide(null)} />}
               {beside === "details" && <Details bot={bot} onClose={() => setSide(null)} />}
               {beside === "browser" && (
                 <BrowserPanel bot={bot} take={takeBrowser} onClose={() => setSide(null)} />

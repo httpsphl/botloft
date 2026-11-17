@@ -37,7 +37,8 @@ async fn the_app_sets_the_effort_and_compacts_the_conversation() {
     assert_eq!(
         told["context"],
         json!({ "usedTokens": 556_000, "windowTokens": 1_000_000, "autoCompactTokens": 967_000,
-                "compacting": false, "updatedAt": told["context"]["updatedAt"] })
+                "compacting": false, "updatedAt": told["context"]["updatedAt"],
+                "parts": [], "memoryFiles": [] })
     );
     let listed = app.call("bots.list", json!({})).await.expect("bots");
     assert_eq!(listed[0]["context"]["usedTokens"], 556_000);

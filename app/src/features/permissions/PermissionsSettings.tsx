@@ -9,6 +9,7 @@ import type { PermissionsTab } from "../../store/app";
 import { useApp } from "../../store/context";
 import { Select } from "../../ui/Select";
 import { Tabs, tabId } from "../../ui/Tabs";
+import { ChromeTab } from "../chrome/ChromeTab";
 import { AgentGroups, counted, groupByAgent } from "./AgentGroups";
 import { DesktopTab } from "./DesktopTab";
 import { CrewAccessRow, RuleRow, SiteRow } from "./rows";
@@ -43,6 +44,7 @@ export function PermissionsSettings() {
   const sites = groupByAgent(all?.sites ?? [], bots, crews, only);
   const rules = groupByAgent(all?.rules ?? [], bots, crews, only);
   const access = groupByAgent(all?.crewAccess ?? [], bots, crews, only);
+  const chrome = groupByAgent(all?.chrome ?? [], bots, crews, only);
   const label = (name: string, count: number) => (count > 0 ? `${name} (${count})` : name);
 
   return (
@@ -69,6 +71,7 @@ export function PermissionsSettings() {
           { id: "sites", label: label(words.tabs.sites, counted(sites)) },
           { id: "rules", label: label(words.tabs.rules, counted(rules)) },
           { id: "crews", label: label(words.tabs.crews, counted(access)) },
+          { id: "chrome", label: label(t.chrome.short, counted(chrome)) },
         ]}
         value={tab}
         onChange={setTab}
@@ -95,6 +98,9 @@ export function PermissionsSettings() {
             keyOf={(rule) => rule.id}
             row={(_, rule) => <RuleRow rule={rule} />}
           />
+        )}
+        {all !== null && tab === "chrome" && (
+          <ChromeTab groups={chrome} grants={all.chrome} agents={agents} only={only} />
         )}
         {all !== null && tab === "crews" && (
           <AgentGroups

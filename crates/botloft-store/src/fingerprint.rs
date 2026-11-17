@@ -26,13 +26,19 @@ fn skipped(table: &str) -> bool {
 impl Store {
     /// A hash of the light copy of the database (14.2), hex. `scratch` is a
     /// file name that may not exist: the copy is made there and removed.
+    /// The daemon makes it with a [`crate::Copier`].
     pub fn light_fingerprint(&self, scratch: &Path) -> Result<String> {
-        let _ = std::fs::remove_file(scratch);
-        self.snapshot_light_to(scratch)?;
-        let hash = hash_tables(scratch);
-        let _ = std::fs::remove_file(scratch);
-        hash
+        fingerprint_of(&self.conn, scratch)
     }
+}
+
+/// [`Store::light_fingerprint`] of what `conn` reads.
+pub(crate) fn fingerprint_of(conn: &Connection, scratch: &Path) -> Result<String> {
+    let _ = std::fs::remove_file(scratch);
+    crate::light::light_copy(conn, scratch)?;
+    let hash = hash_tables(scratch);
+    let _ = std::fs::remove_file(scratch);
+    hash
 }
 
 fn hash_tables(path: &Path) -> Result<String> {

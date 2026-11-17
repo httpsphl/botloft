@@ -3,7 +3,8 @@
 use botloft_core::ids::{BotId, CrewId};
 use botloft_core::protocol::{
     AgentKind, Bot, BotEffort, BotIdParams, BotModel, BotState, BotsCreateParams, BotsListParams,
-    BotsRestartParams, BotsSetPausedParams, BotsUpdateParams, Crew, PermissionMode,
+    BotsRestartParams, BotsSetPausedParams, BotsUpdateParams, ChatBody, Crew, NoticeCode,
+    NoticeItem, NoticeLevel, PermissionMode, VersionAuthor,
 };
 use botloft_core::{avatar, now_ms, slug, validate};
 use botloft_store::{BotRecord, Store};
@@ -11,6 +12,7 @@ use botloft_store::{BotRecord, Store};
 use super::{ApiError, ApiResult, crews, pick_slug};
 use crate::paths::SHARED_DIR;
 use crate::state::{Daemon, Event};
+use crate::versions::Origin;
 use crate::workspace;
 
 pub fn list(daemon: &Daemon, params: BotsListParams) -> ApiResult<Vec<Bot>> {
@@ -51,6 +53,7 @@ pub fn create(daemon: &Daemon, params: BotsCreateParams) -> ApiResult<Bot> {
         params.model,
         Some(params.agent.unwrap_or_else(|| default_agent(daemon))),
     )?;
+    not_white(new.color.as_deref())?;
     if !daemon.supervisor.agent_enabled(new.agent) {
         return Err(ApiError::validation(format!(
             "bots that run on {} are not available yet",
@@ -59,6 +62,7 @@ pub fn create(daemon: &Daemon, params: BotsCreateParams) -> ApiResult<Bot> {
     }
     let store = daemon.store();
     let crew = crews::active(&store, &params.crew_id)?;
+    super::maker::refuse(&crew, "works alone in its crew")?;
     let record = insert(daemon, &store, &crew, BotId::generate(), new)?;
     let bot = changed(daemon, &store, &crew, record);
     daemon.supervisor.wake();
@@ -152,9 +156,20 @@ pub(crate) fn insert(
     Ok(record)
 }
 
+/// The owner changes a bot from the app.
 pub fn update(daemon: &Daemon, params: BotsUpdateParams) -> ApiResult<Bot> {
+    update_by(daemon, params, Origin::by(VersionAuthor::Owner))
+}
+
+/// Changes a bot; a change to its instructions goes into its history as
+/// `origin` made it (spec 8.10).
+pub fn update_by(daemon: &Daemon, params: BotsUpdateParams, origin: Origin) -> ApiResult<Bot> {
     let store = daemon.store();
     let (crew, mut record) = active(&store, &params.bot_id)?;
+    let instructions_before = record.instructions.clone();
+    if params.name.is_some() {
+        super::maker::refuse(&crew, "keeps its name in every language")?;
+    }
     if let Some(name) = params.name {
         record.name = validate::name("name", &name)?;
         record.handle = slug::slugify(&record.name, "bot");
@@ -167,7 +182,9 @@ pub fn update(daemon: &Daemon, params: BotsUpdateParams) -> ApiResult<Bot> {
         record.instructions = validate::instructions(&instructions)?;
     }
     if let Some(color) = params.color {
+        super::maker::refuse(&crew, "stays white")?;
         record.color = parse_color(&color)?;
+        not_white(Some(&record.color))?;
     }
     let mut relaunch = false;
     if let Some(commands) = params.allowed_commands {
@@ -190,8 +207,16 @@ pub fn update(daemon: &Daemon, params: BotsUpdateParams) -> ApiResult<Bot> {
     super::mcp::write_rules(daemon, &store, &crew, &record).map_err(ApiError::Workspace)?;
     store.update_bot(&record)?;
     let id = record.id.clone();
+    let instructions_after = record.instructions.clone();
     let bot = changed(daemon, &store, &crew, record);
     drop(store);
+    crate::versions::instructions_changed(
+        daemon,
+        &id,
+        &instructions_before,
+        &instructions_after,
+        origin,
+    );
     if relaunch {
         // The agent reads its rules when it starts.
         daemon.supervisor.launch_settings_changed(&id);
@@ -238,8 +263,9 @@ pub fn set_paused(daemon: &Daemon, params: BotsSetPausedParams) -> ApiResult<Bot
     Ok(bot)
 }
 
-/// Restarts the process; `fresh` drops the conversation. Also the way out
-/// of `auth_error` (spec 7.3).
+/// Restarts the process of one conversation, the main one by default;
+/// `fresh` drops what it held (spec 40.5). Also the way out of
+/// `auth_error` (spec 7.3).
 pub fn restart(daemon: &Daemon, params: BotsRestartParams) -> ApiResult<Bot> {
     let store = daemon.store();
     let (crew, record) = active(&store, &params.bot_id)?;
@@ -249,10 +275,32 @@ pub fn restart(daemon: &Daemon, params: BotsRestartParams) -> ApiResult<Bot> {
             record.id
         )));
     }
-    daemon
-        .supervisor
-        .restart(&record.id, params.fresh.unwrap_or(false));
-    Ok(to_protocol(daemon, &store, &crew, record))
+    let fresh = params.fresh.unwrap_or(false);
+    let seat = super::conversations::seat_of(&store, &record, params.conversation_id, true)?;
+    // A sleeping bot forgets its conversation and keeps sleeping (spec 7.7):
+    // nothing to start until something comes for it.
+    if !(fresh && crate::context::forget_while_asleep(daemon, &store, &seat)) {
+        daemon
+            .supervisor
+            .restart_in(&record.id, &seat.conversation, fresh);
+    }
+    let bot = to_protocol(daemon, &store, &crew, record);
+    // The chat takes the store itself.
+    drop(store);
+    if fresh {
+        // The chat keeps what came before; this line says it is forgotten.
+        crate::chat::items::add_to(
+            daemon,
+            &seat,
+            ChatBody::Notice(NoticeItem {
+                level: NoticeLevel::Info,
+                code: Some(NoticeCode::FreshStart),
+                text: "A new conversation started here: what came before is not remembered."
+                    .to_owned(),
+            }),
+        );
+    }
+    Ok(bot)
 }
 
 /// Archives the bot and stops its process. Archiving twice is not an error.
@@ -261,6 +309,7 @@ pub fn archive(daemon: &Daemon, params: BotIdParams) -> ApiResult<Bot> {
     let store = daemon.store();
     let mut record = find(&store, &params.bot_id)?;
     let crew = crews::find(&store, &record.crew_id)?;
+    super::maker::refuse(&crew, "is always there: hide it in Settings instead")?;
     if record.archived_at.is_some() {
         return Ok(to_protocol(daemon, &store, &crew, record));
     }
@@ -272,6 +321,7 @@ pub fn archive(daemon: &Daemon, params: BotIdParams) -> ApiResult<Bot> {
     let bot = changed(daemon, &store, &crew, record);
     daemon.supervisor.wake();
     daemon.browsers.forget(&bot.id);
+    crate::logins::forget_bot(daemon, &store, &bot.id);
     Ok(bot)
 }
 
@@ -300,6 +350,8 @@ pub(crate) fn to_protocol(daemon: &Daemon, store: &Store, crew: &Crew, record: B
         None
     });
     let context = daemon.contexts.get(&record.id);
+    let background = daemon.background.get(&record.id);
+    let connectors = store.bot_connectors(&record.id).unwrap_or_default();
     Bot {
         id: record.id,
         crew_id: record.crew_id,
@@ -320,6 +372,8 @@ pub(crate) fn to_protocol(daemon: &Daemon, store: &Store, crew: &Crew, record: B
         effort: record.effort,
         effort_default: record.effort_default,
         context,
+        background,
+        connectors,
         state,
         generation,
         workspace: workspace.to_string_lossy().into_owned(),
@@ -365,6 +419,14 @@ pub(crate) fn ensure_handle_free(
         ))),
         _ => Ok(()),
     }
+}
+
+/// White is the Maker's (spec 36.3): the app draws it as the Maker.
+fn not_white(color: Option<&str>) -> ApiResult<()> {
+    if color == Some(super::maker::COLOR) {
+        return Err(ApiError::validation("white is the Maker's color"));
+    }
+    Ok(())
 }
 
 fn parse_color(input: &str) -> ApiResult<String> {

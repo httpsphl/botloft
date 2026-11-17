@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import { afterEach, describe, expect, test } from "vitest";
 import { setLocaleChoice } from "../../i18n";
 import { FakeBotloft } from "../../lib/fake";
-import { crewOpened, openBot, renderApp } from "../../test/app";
+import { crewOpened, openBot, renderApp, settingsFromDetails } from "../../test/app";
 
 afterEach(() => {
   act(() => setLocaleChoice("en"));
@@ -29,8 +29,7 @@ describe("use while the owner is away", () => {
     act(() => {
       fake.desktop.grant(scout.id, NOTEPAD, "Notepad");
     });
-    fireEvent.click(screen.getByRole("button", { name: /^Show details/ }));
-    const details = screen.getByRole("complementary", { name: "About Scout" });
+    const details = await settingsFromDetails("Scout", /^Your desktop/);
     const toggle = await within(details).findByRole("switch", {
       name: "While you are away: Notepad",
     });
@@ -58,7 +57,8 @@ describe("use while the owner is away", () => {
     fireEvent.click(within(again).getByRole("button", { name: "Turn on" }));
     await waitFor(() => expect(fake.desktop.grants[0]?.unattended).toBe(true));
     expect(fake.desktop.grants[0]?.acceptedRisksAt).not.toBeNull();
-    expect(toggle.getAttribute("aria-checked")).toBe("true");
+    // The Permissions page reads the list again a moment later.
+    await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("true"));
 
     // Off at once, without asking.
     fireEvent.click(toggle);

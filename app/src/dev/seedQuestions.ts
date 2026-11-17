@@ -1,4 +1,5 @@
-// Dev only: questions the bots left for the owner overnight (spec 23).
+// Dev only: questions the bots asked the owner overnight (spec 23), and a
+// note one left them (23.10).
 
 import type { FakeBotloft } from "../lib/fake";
 import type { BotId } from "../lib/protocol.gen";
@@ -19,6 +20,12 @@ export function seedQuestions(fake: FakeBotloft, crew: { scout: BotId; analyst: 
     crew.scout,
     "Should next week's summary cover only papers, or blog posts too?",
     ["Only papers", "Papers and blog posts", "Skip next week"],
+  );
+  fake.now = now - 5 * 60 * 1000;
+  fake.chat.tool(crew.analyst, "mcp__botloft__tell_owner", { status: "done" });
+  fake.questions.tell(
+    crew.analyst,
+    "The **monthly sales report** is ready in `work/reports/october.md`. Sales went up 8%, mostly from the new bakery line.",
   );
   fake.now = now;
 }

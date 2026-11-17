@@ -6,12 +6,16 @@ import {
   AlarmClock,
   Check,
   ChevronRight,
+  CircleCheck,
   FilePen,
   FileSearch,
   Files,
   FileText,
   Globe,
   Hand,
+  History,
+  Hourglass,
+  LayoutDashboard,
   LayoutTemplate,
   ListChecks,
   ListTodo,
@@ -19,8 +23,10 @@ import {
   type LucideIcon,
   Monitor,
   Network,
+  RotateCw,
   Send,
   SquareTerminal,
+  StickyNote,
   UserPen,
   UserPlus,
   Users,
@@ -61,13 +67,19 @@ const ICONS: Record<string, LucideIcon> = {
   Agent: Users,
   send_message: Send,
   suggest_bot: UserPlus,
+  retry_agent: RotateCw,
   change_bot: UserPen,
   ask_crew_access: Network,
   schedule_routine: AlarmClock,
   my_routines: AlarmClock,
   change_routine: AlarmClock,
   delete_routine: AlarmClock,
+  nothing_new: CircleCheck,
   browser_ask_owner: Hand,
+  tell_owner: StickyNote,
+  show_card: LayoutDashboard,
+  search_history: History,
+  wait_for: Hourglass,
 };
 
 /** The browser tools share the globe (spec 21.4), the desktop's the screen (24.6). */
@@ -139,7 +151,7 @@ function ToolLine({
   );
   const Icon = iconOf(toolKey(tool.name));
   const block =
-    "max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-lg border border-line bg-sunken px-2.5 py-1.5 font-mono text-xs leading-relaxed";
+    "max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-bubble px-3 py-2 font-mono text-xs leading-relaxed";
   return (
     <li className={arrival}>
       <div className="flex items-center gap-1">

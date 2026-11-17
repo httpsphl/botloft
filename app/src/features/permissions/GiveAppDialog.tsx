@@ -14,7 +14,7 @@ import { Dialog } from "../../ui/Dialog";
 import { Select } from "../../ui/Select";
 import { attempt } from "../../ui/toast";
 import { Field } from "../account/settingsParts";
-import { WholeRisks } from "../desktop/WholeDesktop";
+import { WholeRisks } from "../desktop/WholeRisks";
 
 /** The choice that stands for the whole desktop instead of one app. */
 const WHOLE = "";

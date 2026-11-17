@@ -30,6 +30,18 @@ export const chat: Messages["chat"] = {
     keys: "Enter para enviar, Shift+Enter para una nueva línea",
     keysWithCtrl: "Ctrl+Enter para enviar, Enter para una nueva línea",
     send: "Enviar",
+    stop: (bot: string) => `Detener a ${bot}`,
+    stopHint: (bot: string) =>
+      `Detiene lo que ${bot} está haciendo ahora. Un mensaje que todavía espera en la fila viene después.`,
+    stopFailed: "No se pudo detener",
+  },
+  slash: {
+    label: "Skills y comandos",
+    looking: "Buscando las skills…",
+    none: (bot) =>
+      `${bot} todavía no tiene skills para llamar por su nombre. Dale skills en Configuración > Skills.`,
+    noMatch: (query) => `Ninguna skill tiene "${query}" en el nombre.`,
+    from: { owner: "Tuya", plugin: "Plugin", agent: "Del agente", claude_code: "Claude Code" },
   },
   files: {
     tooMany: (max: number) => `Un mensaje puede llevar hasta ${max} archivos.`,
@@ -54,12 +66,17 @@ export const chat: Messages["chat"] = {
   },
   run: {
     working: "Trabajando",
-    done: (time: string, tokens: string | null) =>
-      `Terminado en ${time}${tokens === null ? "" : ` · ${tokens} tokens`}`,
-    took: (time: string, tokens: TurnTokens | null) =>
-      `Tardó ${time}${
-        tokens === null ? "" : `. Leyó ${tokens.read} tokens y escribió ${tokens.wrote}.`
-      }`,
+    done: (time: string, spent: string | null) =>
+      `Terminado en ${time}${spent === null ? "" : ` · ${spent}`}`,
+    tokens: (count: string) => `${count} tokens`,
+    took: (time: string, tokens: TurnTokens | null, cost: string | null) =>
+      `Tardó ${time}.${
+        tokens === null ? "" : ` Leyó ${tokens.read} tokens y escribió ${tokens.wrote}.`
+      }${cost === null ? "" : ` A precio de API: ${cost}, incluido en tu plan.`}`,
+    stoppedByOwner: (time: string, spent: string | null) =>
+      `Detenido por ti a los ${time}${spent === null ? "" : ` · ${spent}`}`,
+    stoppedByBotloft: (time: string, spent: string | null) =>
+      `Detenido por Botloft a los ${time}${spent === null ? "" : ` · ${spent}`}`,
     stopped: (reason: string) => `El agente dejó de trabajar en esto: ${reason}`,
   },
   tools: {
@@ -88,6 +105,9 @@ export const chat: Messages["chat"] = {
       other: (n: number) => (n === 1 ? "1 herramienta usada" : `${n} herramientas usadas`),
       failed: (n: number) => (n === 1 ? "1 fallo" : `${n} fallos`),
     },
+    repeat: (n: number) => `Misma llamada ${n}×`,
+    repeatHint: (bot: string, n: number, what: string) =>
+      `${bot} hizo la misma llamada ${n} veces en este turno (${what}). Puede estar dando vueltas.`,
   },
   memory: {
     bot: "Actualizó la memoria de",
@@ -109,6 +129,10 @@ export const chat: Messages["chat"] = {
     remove: "Quitar la reacción",
     waiting: (bot) => `${bot} lo verá con tu próximo mensaje`,
     seen: (bot) => `${bot} lo vio`,
+    answerHint: "👍 o 👎 responde la pregunta ahora",
+    answerYes: "Responder sí ahora",
+    answerNo: "Responder no ahora",
+    answered: (bot) => `Enviado a ${bot} como tu respuesta`,
     failed: "No se pudo guardar la reacción",
   },
   approval: {
@@ -263,6 +287,13 @@ export const chat: Messages["chat"] = {
     compacting: "Compactando…",
     later: (bot: string) => `${bot} compacta la conversación cuando termine lo que está haciendo.`,
     notRunning: (bot: string) => `${bot} no está en marcha, así que no se puede compactar ahora.`,
+    asleep: (bot: string) => `${bot} está dormido: primero despierta y luego compacta.`,
+    waking: (bot: string) => `${bot} despierta y compacta la conversación.`,
+    fresh: "Empezar de cero",
+    freshHint: (bot: string) =>
+      `Olvida esta conversación sin gastar tu plan. La memoria de ${bot} (CLAUDE.md) se queda.`,
+    freshConfirm: "Empezar de cero",
+    freshFailed: "No se pudo empezar una conversación nueva",
     failed: "No se pudo compactar la conversación",
   },
   suggestion: {
@@ -391,13 +422,16 @@ export const chat: Messages["chat"] = {
     signedOut:
       "Claude Code no tiene una sesión iniciada, o la cuenta no se puede usar ahora. Inicia sesión en Claude o revisa tu plan de Claude.",
     usageLimit:
-      "Tu plan de Claude alcanzó su límite de uso. Los mensajes esperarán hasta que se restablezca.",
+      "Tu plan de Claude alcanzó su límite de uso. Los mensajes esperarán hasta que se restablezca, y entonces el agente seguirá donde se quedó.",
     modelUnavailable:
       "El modelo de este agente no está disponible: quizá no esté en tu plan de Claude. Elige otro modelo debajo del chat.",
     turnFailed: (detail: string) => `El agente no pudo terminar esto: ${detail}`,
     compacted:
       "La conversación se compactó: lo anterior ahora es un resumen, y vuelve a haber espacio.",
     autoCompacted: "La conversación estaba llena y se compactó: lo anterior ahora es un resumen.",
+    freshStart: "Aquí empezó una conversación nueva: lo anterior ya no se recuerda.",
+    stuckTurn:
+      "No pasó nada en este turno durante 30 minutos, así que Botloft lo detuvo. Escribe al agente para intentarlo de nuevo.",
     compactFailed: (detail: string) => `No se pudo compactar la conversación: ${detail}`,
   },
 };

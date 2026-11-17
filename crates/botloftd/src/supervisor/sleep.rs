@@ -5,7 +5,7 @@
 
 use std::time::Duration;
 
-use botloft_core::ids::BotId;
+use botloft_core::ids::{BotId, ConversationId};
 use botloft_core::protocol::BotState;
 use tokio::time::Instant;
 use tracing::{debug, warn};
@@ -25,17 +25,38 @@ impl Supervisor {
     /// Something waits for `bot`: a sleeping bot starts again, resuming its
     /// conversation. Any other bot is left as it is.
     pub fn wake_up(&self, bot: &BotId) {
+        self.wake_conversation(&ConversationId::main_of(bot));
+    }
+
+    /// Something waits for `conversation`: it starts again if it sleeps.
+    pub fn wake_conversation(&self, conversation: &ConversationId) {
         let mut inner = self.lock();
-        let Some(slot) = inner.slots.get_mut(bot) else {
+        let Some(slot) = inner.slots.get_mut(conversation) else {
             return;
         };
         if slot.state != BotState::Sleeping || slot.wake_asked {
             return;
         }
         slot.wake_asked = true;
+        let bot = slot.bot.clone();
         drop(inner);
-        debug!(bot = %bot, "waking a sleeping bot");
+        debug!(bot = %bot, "waking a sleeping conversation");
         self.wake();
+    }
+
+    /// A sleeping conversation's next process starts a new session, and
+    /// it keeps sleeping. `false` when it does not sleep now.
+    pub(crate) fn start_fresh_asleep(&self, conversation: &ConversationId) -> bool {
+        let mut inner = self.lock();
+        let Some(slot) = inner.slots.get_mut(conversation) else {
+            return false;
+        };
+        if slot.state != BotState::Sleeping || slot.running.is_some() || slot.launching {
+            return false;
+        }
+        slot.fresh_next = true;
+        inner.sessions.remove(conversation);
+        true
     }
 
     /// Puts a bot to sleep, or keeps it asleep, when the owner's time says

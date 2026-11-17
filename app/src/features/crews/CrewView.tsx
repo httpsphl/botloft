@@ -36,8 +36,9 @@ export function CrewView({ crew }: { crew: Crew }) {
   return (
     <section aria-label={crew.name} className="flex min-h-0 flex-1 flex-col">
       {/* The name keeps its room: when the buttons do not fit beside it, they
-          go to a line of their own under it instead of covering it. */}
-      <header className="@container flex flex-wrap items-center gap-x-3 gap-y-2.5 border-line border-b px-5 py-3.5">
+          go to a line of their own under it instead of covering it. The tabs
+          under it draw the line that closes it, as in a bot's header. */}
+      <header className="@container flex flex-wrap items-center gap-x-3 gap-y-2.5 px-5 pt-3.5 pb-2">
         <div className="min-w-48 flex-1">
           <h1 className="truncate font-semibold text-xl tracking-tight">{crew.name}</h1>
           <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-muted text-sm">
@@ -60,7 +61,7 @@ ${words.openFolderHint}`}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <AutoModeSwitch checked={crew.autoMode} onChange={actions.setAutoMode} />
-          <Button title={t.catalog.openHint} onClick={actions.agency.onSelect}>
+          <Button variant="ghost" title={t.catalog.openHint} onClick={actions.agency.onSelect}>
             <span className="sr-only @2xl:not-sr-only">{actions.agency.label}</span>
             <span aria-hidden className="@2xl:hidden">
               {t.catalog.short}
@@ -70,6 +71,7 @@ ${words.openFolderHint}`}
             {actions.newBot.label}
           </Button>
           <Button
+            variant="ghost"
             icon={actions.pause.icon}
             title={actions.pause.label}
             onClick={actions.pause.onSelect}

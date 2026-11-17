@@ -48,6 +48,7 @@ export const catalog: Messages["catalog"] = {
   none: "Ningún agente coincide con eso.",
   loading: "Cargando los agentes…",
   add: "Añadir al equipo",
+  addShort: "Añadir",
   learnMore: "Saber más",
   back: "Volver a todos los agentes",
   seeAll: "Ver todos los agentes",

@@ -14,7 +14,9 @@ import { SYSTEM } from "../../lib/system";
 import { prefs, usePref } from "../../shell/prefs";
 import { useApp } from "../../store/context";
 import { Select } from "../../ui/Select";
+import { MakerSettings } from "../maker/MakerSettings";
 import { AgentPrograms } from "./AgentPrograms";
+import { HistorySettings } from "./HistorySettings";
 import { Field, Section, Toggle } from "./settingsParts";
 import { useDaemonSettings } from "./useDaemonSettings";
 
@@ -44,6 +46,7 @@ export function GeneralSettings() {
       <Section title={s.language}>
         <Select label={s.language} value={locale} options={languages} onChange={setLocaleChoice} />
       </Section>
+      <MakerSettings />
       <Section title={s.experimentalAgents}>
         <Toggle
           label={s.showExperimental}
@@ -125,6 +128,7 @@ export function GeneralSettings() {
           </div>
         </Field>
       </Section>
+      <HistorySettings />
     </>
   );
 }

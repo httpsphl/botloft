@@ -4,6 +4,7 @@ import { type BotloftApi, type ConnectionState, errorText } from "../lib/api";
 import type { Delivery } from "../lib/protocol.gen";
 import { onVisibility, windowHidden } from "../shell/visibility";
 import { type AppStore, applyEvent } from "./app";
+import { withConversations } from "./conversations";
 import { questionsById } from "./questions";
 import { withReply } from "./seen";
 
@@ -50,6 +51,15 @@ export function syncStore(store: AppStore, api: BotloftApi): () => void {
         }));
       }
     });
+    // Every agent's conversations, for the sidebar and its unread marks (spec 40.7).
+    api.call("conversations.list", {}).then(
+      (list) => {
+        if (alive) {
+          store.setState((state) => withConversations(state, list));
+        }
+      },
+      () => {},
+    );
     // Recent deliveries plus every dead one: the dead need the owner.
     Promise.all([api.call("deliveries.list", {}), api.call("deliveries.list", { state: "dead" })])
       .then(([recent, dead]) => {

@@ -22,9 +22,16 @@ const DELETE_BOT: &[&str] = &[
     "DELETE FROM desktop_grants WHERE bot_id = ?1",
     "DELETE FROM bot_mcp_servers WHERE bot_id = ?1",
     "DELETE FROM agent_keys WHERE bot_id = ?1",
+    "DELETE FROM agent_git_events WHERE bot_id = ?1",
+    "DELETE FROM bot_connectors WHERE bot_id = ?1",
+    "DELETE FROM bot_chrome WHERE bot_id = ?1",
+    "DELETE FROM bot_skills WHERE bot_id = ?1",
+    "DELETE FROM bot_plugins WHERE bot_id = ?1",
+    "DELETE FROM bot_site_logins WHERE bot_id = ?1",
     "DELETE FROM turn_costs WHERE bot_id = ?1",
     "DELETE FROM crew_access WHERE bot_id = ?1 OR target_bot_id = ?1",
     "DELETE FROM allow_rules WHERE bot_id = ?1",
+    "DELETE FROM bot_versions WHERE bot_id = ?1",
     "DELETE FROM routine_runs WHERE routine_id IN (SELECT id FROM routines WHERE bot_id = ?1)",
     // What the bot received goes with it.
     "UPDATE routine_runs SET message_id = NULL \
@@ -43,6 +50,7 @@ const DELETE_BOT: &[&str] = &[
     "UPDATE tasks SET origin_task_id = NULL WHERE origin_task_id IN \
      (SELECT id FROM tasks WHERE requester_bot_id = ?1 OR assignee_bot_id = ?1)",
     "DELETE FROM tasks WHERE requester_bot_id = ?1 OR assignee_bot_id = ?1",
+    "DELETE FROM conversations WHERE bot_id = ?1",
     "UPDATE crews SET lead_bot_id = NULL WHERE lead_bot_id = ?1",
 ];
 

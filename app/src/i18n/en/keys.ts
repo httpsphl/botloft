@@ -25,6 +25,11 @@ export const keys = {
     saveFailed: "Could not save the key",
     restarts: (bot: string) => `${bot} restarts to get it, without losing the conversation.`,
   },
+  page: {
+    intro:
+      "Passwords and tokens each agent uses at other services. An agent asks for one in the chat when it needs it; you can also add one here.",
+    noAgents: "No agents yet.",
+  },
   details: {
     title: "Keys",
     none: (bot: string) =>

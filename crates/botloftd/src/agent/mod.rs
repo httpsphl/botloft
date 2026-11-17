@@ -16,7 +16,6 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use botloft_core::ids::BotId;
 use botloft_core::protocol::{AgentKind, BotEffort, BotModel, PermissionMode};
 use bytes::Bytes;
 use serde_json::Value;
@@ -26,6 +25,7 @@ pub use claude::ClaudeAgent;
 pub use codex::{CodexAgent, models as codex_models};
 
 use crate::runtime::ProcessControl;
+use crate::seat::Seat;
 use crate::state::Daemon;
 
 /// One image that goes in the turn, already read and encoded.
@@ -58,6 +58,14 @@ pub struct LaunchPlan<'a> {
     pub effort: BotEffort,
     /// The model of a bot not on Claude Code, as its agent names it.
     pub agent_model: Option<&'a str>,
+    /// The claude.ai connectors it may use, and the tool-name servers it
+    /// must not get (spec 34.5); both empty for most bots.
+    pub connectors: &'a [String],
+    pub blocked_servers: &'a [String],
+    /// Whether the owner gave it their own Chrome (spec 37.2).
+    pub chrome: bool,
+    /// The copies of the owner's plugins it loads (spec 41.3).
+    pub plugin_dirs: &'a [PathBuf],
 }
 
 /// What an agent needs to write the files it reads at start, once the bot
@@ -106,7 +114,7 @@ pub trait OutputDecoder: Send {
     /// and tells the supervisor, through `chat::sink` for what every agent has
     /// and its own code for the rest. Lines from a process that was replaced
     /// say nothing about the new one.
-    fn handle(&mut self, daemon: &Arc<Daemon>, bot: &BotId, generation: u64, event: &Value);
+    fn handle(&mut self, daemon: &Arc<Daemon>, bot: &Seat, generation: u64, event: &Value);
 }
 
 pub trait Agent: Send + Sync + 'static {
@@ -129,6 +137,12 @@ pub trait Agent: Send + Sync + 'static {
     /// Whether the conversation can be compacted on the owner's request
     /// (spec 8.6): Claude Code answers `/compact`, and Codex has its own.
     fn can_compact(&self) -> bool {
+        self.speaks_control()
+    }
+
+    /// Whether the owner can stop what the bot is doing (spec 9.2): Claude
+    /// Code answers an `interrupt` request.
+    fn can_interrupt(&self) -> bool {
         self.speaks_control()
     }
 
@@ -182,10 +196,13 @@ pub(crate) fn neutral_turn_with_images(turn: &Turn) -> Bytes {
 pub(crate) fn copy_rules_to_agents_md(workspace: &Path) -> io::Result<()> {
     let rules = workspace.join(".claude").join("rules");
     if let Ok(mut text) = std::fs::read_to_string(rules.join("botloft.md")) {
-        // The agent's keys, when it has any (spec 32.4).
-        if let Ok(keys) = std::fs::read_to_string(rules.join("keys.md")) {
-            text.push('\n');
-            text.push_str(&keys);
+        // The owner's instructions for every agent, and the agent's keys and
+        // logins, when there are any (spec 7.10, 32.4, 35.3).
+        for more in ["owner.md", "keys.md", "logins.md"] {
+            if let Ok(extra) = std::fs::read_to_string(rules.join(more)) {
+                text.push('\n');
+                text.push_str(&extra);
+            }
         }
         std::fs::write(workspace.join("AGENTS.md"), text)?;
     }
@@ -218,5 +235,29 @@ pub fn of(kind: AgentKind) -> Option<&'static dyn Agent> {
         AgentKind::Claude => Some(&CLAUDE),
         AgentKind::Agy => Some(&AGY),
         AgentKind::Codex => Some(&CODEX),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn agents_md_has_the_bots_rules_then_the_owners_and_its_keys() {
+        let dir = tempfile::tempdir().expect("dir");
+        let rules = dir.path().join(".claude").join("rules");
+        std::fs::create_dir_all(&rules).expect("rules");
+        std::fs::write(rules.join("botloft.md"), "# You are Scout\n").expect("bot");
+        std::fs::write(rules.join("keys.md"), "# Your keys\n").expect("keys");
+        crate::workspace::write_owner_rules(dir.path(), "Answer in Portuguese.").expect("owner");
+
+        copy_rules_to_agents_md(dir.path()).expect("copy");
+        let text = std::fs::read_to_string(dir.path().join("AGENTS.md")).expect("AGENTS.md");
+        let at = |part: &str| {
+            text.find(part)
+                .unwrap_or_else(|| panic!("{part} in {text}"))
+        };
+        assert!(at("# You are Scout") < at("Answer in Portuguese."));
+        assert!(at("Answer in Portuguese.") < at("# Your keys"));
     }
 }

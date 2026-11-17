@@ -12,18 +12,23 @@ import type { Host } from "../lib/host";
 import { PROTOCOL_VERSION } from "../lib/protocol.gen";
 import { seedBrowser } from "./seedBrowser";
 import { seedCalls } from "./seedCalls";
+import { seedCards } from "./seedCards";
 import { seedChats } from "./seedChats";
 import { seedChief } from "./seedChief";
 import { seedContext } from "./seedContext";
+import { seedCosts } from "./seedCosts";
 import { seedDesktop } from "./seedDesktop";
 import { seedHands } from "./seedHands";
 import { seedKeys } from "./seedKeys";
 import { seedLongReply } from "./seedLongReply";
+import { seedMaker } from "./seedMaker";
+import { seedMedia } from "./seedMedia";
 import { activeTab, drawPage } from "./seedPage";
 import { seedPlan } from "./seedPlan";
 import { seedQuestions } from "./seedQuestions";
 import { seedRoutines } from "./seedRoutines";
 import { seedScreens } from "./seedScreens";
+import { seedVersions } from "./seedVersions";
 
 export function previewProps(search: string): { host: Host; connect: Connect } {
   const params = new URLSearchParams(search);
@@ -42,6 +47,10 @@ export function previewProps(search: string): { host: Host; connect: Connect } {
   }
   if (!params.has("empty")) {
     seed(fake);
+    seedMaker(fake);
+  } else {
+    // The daemon always keeps the Maker (spec 36.2).
+    fake.maker.ensure();
   }
   return { host, connect: () => fake as Client };
 }
@@ -86,9 +95,12 @@ function seed(fake: FakeBotloft): void {
       status: "allowed",
       resetsAt: now + 2 * 3600_000,
       observedAt: now - 5 * 60_000,
+      extraUsage: false,
+      fromAccount: true,
       windows: [
         { name: "five_hour", utilization: 0.34, resetsAt: now + 2 * 3600_000 },
         { name: "seven_day", utilization: 0.62, resetsAt: now + 3 * 86_400_000 },
+        { name: "seven_day", utilization: 0.3, resetsAt: now + 3 * 86_400_000, model: "Fable" },
       ],
     },
   };
@@ -129,7 +141,15 @@ function seed(fake: FakeBotloft): void {
     planner: planner.id,
   });
   seedRoutines(fake, { scout: scout.id, analyst: analyst.id });
+  seedCosts(fake, {
+    scout: scout.id,
+    writer: writer.id,
+    reviewer: reviewer.id,
+    analyst: analyst.id,
+  });
+  seedVersions(fake, scout.id);
   seedQuestions(fake, { scout: scout.id, analyst: analyst.id });
+  seedCards(fake, analyst.id);
   seedKeys(fake, analyst.id, scout.id);
   seedPlan(fake, writer.id);
   seedBrowser(fake, scout.id);
@@ -141,6 +161,14 @@ function seed(fake: FakeBotloft): void {
   seedDesktop(fake, { scout: scout.id, analyst: analyst.id });
   seedHands(fake, research.id);
   seedCalls(fake, { writer: writer.id, reviewer: reviewer.id });
+  seedMedia(fake, scout.id);
+  // A second conversation of Scout's, beside its main one (spec 40.7).
+  const sources = fake.conversations.add(scout.id, "Sources for the Q4 report");
+  fake.chat.reply(
+    scout.id,
+    "I found four solid sources; the list is in shared/q4-sources.md.",
+    sources.id,
+  );
   const ops = fake.addCrew("Ops");
   const deploy = fake.addBot(ops.id, "Deploy", "Ships the site on Fridays");
   const watcher = fake.addBot(ops.id, "Watcher", "Keeps an eye on the error log");

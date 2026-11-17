@@ -74,6 +74,10 @@ export interface AppWindow {
   onReopened(listener: () => void): Promise<() => void>;
   /** The island asks to open an agent's chat, or just the window (`null`, spec 31.3). */
   onOpenBot(listener: (botId: string | null) => void): Promise<() => void>;
+  /** Tells the island the language the app shows (spec 31.3). */
+  tellIsland(locale: string): Promise<void>;
+  /** The island asks for the language when it starts. */
+  onIslandAsks(listener: () => void): Promise<() => void>;
   isMaximized(): Promise<boolean>;
   /** Called when the window is resized; returns the unsubscribe function. */
   onResized(listener: () => void): Promise<() => void>;

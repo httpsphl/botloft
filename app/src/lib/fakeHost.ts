@@ -54,6 +54,8 @@ export class FakeHost implements Host {
   tray: { view: TrayView; actions: TrayActions } | null = null;
   private readonly reopenListeners = new Set<() => void>();
   private readonly openBotListeners = new Set<(botId: string | null) => void>();
+  /** The language the app last told the island. */
+  islandLocale: string | null = null;
   /** Paths `signInToClaude` ran, and what it answers. */
   readonly signIns: string[] = [];
   signInResult: boolean | Error = true;
@@ -243,6 +245,11 @@ export class FakeHost implements Host {
         this.openBotListeners.delete(listener);
       });
     },
+    tellIsland: (locale: string) => {
+      this.islandLocale = locale;
+      return Promise.resolve();
+    },
+    onIslandAsks: () => Promise.resolve(() => {}),
     onCloseRequested: (before: () => Promise<"close" | "stay">) => {
       this.beforeClose = before;
       return Promise.resolve(() => {

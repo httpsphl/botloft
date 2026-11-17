@@ -19,10 +19,11 @@ pub(super) fn tool() -> Value {
         "name": SHARE_FILE,
         "title": "Share a file",
         "description": "Shows the owner files you made, or that they ask you for, as cards in \
-            your chat: they can preview each one, open it and save a copy anywhere. Use it \
-            whenever you finish a file for the owner, and when they ask for one again, instead of \
-            writing its path in your reply. Only files in the crew's work folder or your own \
-            folder, or files you wrote, can be shared.",
+            your chat: they can preview each one, open it and save a copy anywhere, and sounds \
+            and videos play right there. Use it whenever you finish a file for the owner, also \
+            one a command or script made, and when they ask for one again, instead of writing \
+            its path in your reply. Only files in the crew's work folder or your own folder, or \
+            files you wrote, can be shared.",
         "inputSchema": {
             "type": "object",
             "properties": {

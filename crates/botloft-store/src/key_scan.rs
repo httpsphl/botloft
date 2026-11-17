@@ -159,6 +159,7 @@ mod tests {
         let item = ChatItem {
             id: ChatItemId::generate(),
             bot_id: fx.bots[bot].id.clone(),
+            conversation_id: botloft_core::ids::ConversationId::main_of(&fx.bots[bot].id),
             body: ChatBody::Reply(ReplyItem {
                 text: text.to_owned(),
             }),
@@ -201,6 +202,7 @@ mod tests {
                 crew: None,
                 before: None,
                 limit: 50,
+                snippet_words: None,
             };
             fx.store.search_chat(&query, filter).expect("search").len()
         };

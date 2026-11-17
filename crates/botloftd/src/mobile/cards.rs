@@ -140,6 +140,7 @@ pub fn question_card(daemon: &Daemon, question: &Question) -> Option<QuestionCar
         bot,
         crew,
         created_at: question.created_at,
+        kind: question.kind,
         text: question.text.clone(),
         options: question.options.clone(),
     })

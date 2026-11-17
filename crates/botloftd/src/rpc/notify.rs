@@ -5,9 +5,10 @@ use botloft_core::protocol::notification;
 use super::jsonrpc;
 use crate::state::Event;
 
-pub(super) fn to_notification(event: &Event) -> String {
+/// `None` for what only the daemon hears.
+pub(super) fn to_notification(event: &Event) -> Option<String> {
     use jsonrpc::notification as note;
-    match event {
+    Some(match event {
         Event::CrewChanged(crew) => note(notification::CREW_CHANGED, crew),
         Event::CrewDeleted(crew) => note(notification::CREW_DELETED, crew),
         Event::BotChanged(bot) => note(notification::BOT_CHANGED, bot),
@@ -15,11 +16,15 @@ pub(super) fn to_notification(event: &Event) -> String {
         Event::FolderRecycled(folder) => note(notification::FOLDER_RECYCLED, folder),
         Event::BotState(state) => note(notification::BOT_STATE, state),
         Event::BotContext(context) => note(notification::BOT_CONTEXT, context),
+        Event::BotBackground(tasks) => note(notification::BOT_BACKGROUND, tasks),
         Event::BotRules(rules) => note(notification::BOT_RULES, rules),
         Event::BotDesktop(desktop) => note(notification::BOT_DESKTOP, desktop),
         Event::BotSites(sites) => note(notification::BOT_SITES, sites),
+        Event::BotChrome(chrome) => note(notification::BOT_CHROME, chrome),
+        Event::ChromeTurn(turn) => note(notification::CHROME_TURN, turn),
         Event::McpServers(overview) => note(notification::MCP_SERVERS, overview),
         Event::BotMcp(bot) => note(notification::BOT_MCP, bot),
+        Event::LoginsChanged(changed) => note(notification::LOGINS_CHANGED, changed),
         Event::DesktopChanged(state) => note(notification::DESKTOP_CHANGED, state),
         Event::DesktopAway(uses) => note(notification::DESKTOP_AWAY, uses),
         Event::ChatItem(item) => note(notification::CHAT_ITEM, item),
@@ -29,6 +34,7 @@ pub(super) fn to_notification(event: &Event) -> String {
         Event::TaskChanged(task) => note(notification::TASK_CHANGED, task),
         Event::RoutineChanged(routine) => note(notification::ROUTINE_CHANGED, routine),
         Event::RoutineRun(run) => note(notification::ROUTINE_RUN, run),
+        Event::VersionCreated(version) => note(notification::VERSION_CREATED, version),
         Event::BrowserChanged(state) => note(notification::BROWSER_CHANGED, state),
         Event::BrowserAction(action) => note(notification::BROWSER_ACTION, action),
         Event::ScreenDraft(draft) => note(notification::SCREEN_DRAFT, draft),
@@ -40,5 +46,9 @@ pub(super) fn to_notification(event: &Event) -> String {
         Event::AutoBackupChanged(status) => note(notification::AUTOBACKUP_CHANGED, status),
         Event::MobileChanged(status) => note(notification::MOBILE_CHANGED, status),
         Event::MobilePairRequest(request) => note(notification::MOBILE_PAIR_REQUEST, request),
-    }
+        Event::ConversationChanged(conversation) => {
+            note(notification::CONVERSATION_CHANGED, conversation)
+        }
+        Event::SeatState(_) | Event::ConversationTouched(_) => return None,
+    })
 }

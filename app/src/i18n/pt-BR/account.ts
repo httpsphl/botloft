@@ -14,8 +14,7 @@ export const account: Messages["account"] = {
   },
   usage: {
     title: "Uso",
-    intro:
-      "Quanto do seu plano do Claude os seus agentes já usaram. Atualiza sempre que um agente trabalha.",
+    intro: "Quanto do seu plano do Claude já foi usado: tudo na sua conta, o Botloft e o resto.",
     empty: "O uso aparece depois da primeira resposta de um agente.",
     windows: {
       five_hour: "Janela de 5 horas",
@@ -29,12 +28,16 @@ export const account: Messages["account"] = {
     limited: "Limite atingido. Seus agentes esperam até ele renovar.",
     limitedAgent: (agent: string) =>
       `Limite atingido. Os agentes no ${agent} esperam até ele renovar.`,
+    extraUsage: "O limite do plano passou. Seus agentes seguem trabalhando no uso extra da conta.",
     plan: (plan: string) => `Plano: ${plan}`,
     updated: (relative: string) => `Atualizado ${relative}`,
-    tokens: {
-      title: "Uso por agente",
+    fromAccount: (relative: string) => `Da sua conta Claude, ${relative}`,
+    fromAgents: (relative: string) => `Atualizado ${relative}, quando um agente trabalhou`,
+    modelWeek: (model: string) => `Esta semana, ${model}`,
+    costs: {
+      title: "Gasto dos agentes",
       intro:
-        "Quanto do seu plano semanal cada agente usou, e os tokens por trás disso: os pedaços de texto que um agente lê e escreve.",
+        "Quanto o trabalho de cada agente custaria a preço de API. O seu plano não cobra esse valor: ele mostra quais agentes, modelos e rotinas pesam mais.",
       period: "Período",
       periods: {
         hour: "Última hora",
@@ -43,19 +46,26 @@ export const account: Messages["account"] = {
         month: "30 dias",
         all: "Tudo",
       },
+      view: "Ver por",
+      views: {
+        agents: "Agentes",
+        models: "Modelos",
+        days: "Dias",
+        routines: "Rotinas",
+      },
       empty: "Nenhum agente trabalhou nesse período.",
-      failed: "Não deu para carregar os tokens",
+      failed: "Não deu para carregar o gasto",
       archived: "arquivado",
-      /** `crew` is null on the total of all bots. */
+      /** `crew` is null on the total of all agents. */
       detail: (crew: string | null, times: number) =>
         `${crew === null ? "" : `${crew} · `}Trabalhou ${times === 1 ? "1 vez" : `${times} vezes`}`,
-      total: "Todos os agentes",
-      share: (percent) => `≈ ${percent} da semana`,
-      tokensUsed: (count) => `${count} tokens`,
-      estimate:
-        "≈ Estimativa: o Botloft aprende quanto do seu plano o trabalho dos agentes consome pelo quanto o plano semanal sobe enquanto eles trabalham. O que você usa fora do Botloft também faz o plano subir, então os agentes podem aparecer com um pouco mais do que usaram.",
-      learning:
-        "A parte de cada agente no seu plano semanal aparece depois que o plano subir alguns pontos com os agentes trabalhando. Até lá, os tokens.",
+      total: "Total",
+      share: (percent) => `${percent} do total`,
+      noPrice: (count) => `${count} tokens · sem preço`,
+      noModel: "Modelo não registrado (trabalho antigo)",
+      notRoutine: "Conversas e pedidos",
+      deletedRoutine: "Uma rotina apagada",
+      note: "Preço de API do que os agentes usaram. O seu plano não cobra esse valor: ele serve para comparar.",
     },
   },
   backup: {
@@ -237,7 +247,8 @@ export const account: Messages["account"] = {
     notifyNeedsHint: (system: string) =>
       `Um aviso do ${system} quando um agente pede permissão ou precisa que você entre na conta, se o Botloft não estiver na frente.`,
     notifyDone: "Quando um agente terminar",
-    notifyDoneHint: "Um aviso quando um agente termina o que estava fazendo.",
+    notifyDoneHint:
+      "Um aviso quando um agente termina o que estava fazendo, depois que o trabalho que ele passou a outros agentes volta. O menu de cada agente muda isso só para ele.",
     notifyRoutineFailed: "Quando uma rotina falhar",
     notifyRoutineFailedHint:
       "Um aviso com o agente e a rotina. Um celular conectado também é avisado, sem dizer do que se trata.",
@@ -249,6 +260,15 @@ export const account: Messages["account"] = {
     islandCheer: "Comemorar quando um agente terminar",
     islandCheerHint:
       "A ilha mostra por um instante que um agente terminou, com a primeira linha da resposta.",
+    islandPart: "Ilha",
+    islandHideWithApp: "Esconder com o Botloft na frente",
+    islandHideWithAppHint:
+      "Com a janela do Botloft na frente, tudo já está nela, então a ilha sai do caminho.",
+    islandSummon: "Segurar o Ctrl da direita para abrir",
+    islandSummonHint:
+      "Segure só o Ctrl da direita e a ilha abre, a qualquer hora, mesmo sem nada acontecendo. Segure de novo para esconder. O Botloft só olha essa tecla.",
+    islandHold: "Por quanto tempo segurar",
+    islandHolds: { "500": "Meio segundo", "1000": "1 segundo", "2000": "2 segundos" },
     markReplies: "Marcar o ícone quando um agente responder",
     markRepliesHint:
       "Um ponto no ícone do Botloft na barra de tarefas enquanto houver conversa que você não leu.",
@@ -265,6 +285,16 @@ export const account: Messages["account"] = {
     sleepAfterHint:
       "Um agente dormindo não usa memória e acorda sozinho quando chega mensagem, rotina ou aviso. A primeira resposta dele leva alguns segundos a mais.",
     sleepAfterChoices: { 15: "15 minutos", 30: "30 minutos", 60: "1 hora", 0: "Nunca" },
+    history: "Histórico",
+    historyKeep: "Guardar as conversas por",
+    historyHint:
+      "Conversas, mensagens e execuções de rotina mais antigas saem do Botloft de vez. O que ainda espera por você fica, e a memória dos agentes e os arquivos nas pastas deles também.",
+    historyChoices: { 0: "Sempre", 30: "30 dias", 90: "90 dias", 365: "1 ano" },
+    historyDaysCustom: (days: number) => `${days} dias`,
+    historyConfirmTitle: "Apagar agora as conversas mais antigas?",
+    historyConfirmBody: (kept: string) =>
+      `Conversas, mensagens e execuções de rotina com mais de ${kept} saem do Botloft de vez, agora e daqui em diante. Os agentes continuam com a memória deles, e os arquivos nas pastas ficam.`,
+    historyConfirm: "Apagar as mais antigas",
     saveFailed: "Não foi possível mudar a configuração",
     pages: "Partes das configurações",
     general: "Geral",
@@ -326,7 +356,11 @@ export const account: Messages["account"] = {
     restoreFailed: (name: string) => `Não foi possível restaurar ${name}`,
     about: "Sobre",
     backup: "Cópia de segurança",
-    tools: "Ferramentas conectadas",
+    tools: "Ferramentas",
+    logins: "Logins",
+    skills: "Skills",
+    plugins: "Plugins",
+    keys: "Chaves dos agentes",
     permissions: "Permissões",
     account: "Conta e celular",
     groupDaily: "No dia a dia",

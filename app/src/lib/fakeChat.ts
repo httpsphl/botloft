@@ -1,6 +1,7 @@
 // The fake daemon's chats and approvals, with helpers for tests to play
 // the bot: live text, replies, tool calls and permission requests.
 
+import { mainConversationOf } from "./conversations";
 import type { FakeBotloft, Handlers } from "./fake";
 import { scopeOf } from "./fakeAllow";
 import { conflict, notFound } from "./fakeRules";
@@ -64,8 +65,12 @@ export function activityLine(
       tool = body.toolName;
       break;
     case "question":
-      kind = "question";
+      kind = body.question.kind === "note" ? "note" : "question";
       text = body.question.text;
+      break;
+    case "card":
+      kind = "card";
+      text = body.title;
       break;
     case "notice":
       // A compaction is housekeeping, not news about the conversation.
@@ -96,27 +101,29 @@ export class FakeChat {
 
   constructor(private readonly fake: FakeBotloft) {}
 
-  /** Adds an item to the bot's chat and tells the app. */
-  add(botId: BotId, body: ChatBody): ChatItem {
+  /** Adds an item to one conversation of the bot, its main one by default, and tells the app. */
+  add(botId: BotId, body: ChatBody, conversationId = mainConversationOf(botId)): ChatItem {
     const item: ChatItem = {
       id: this.fake.id("cht"),
       botId,
+      conversationId,
       body,
       createdAt: this.fake.now,
       updatedAt: this.fake.now,
     };
     this.items.push(item);
+    this.fake.conversations.touched(conversationId, item.updatedAt, body.kind === "reply");
     this.announce(item, true);
     return item;
   }
 
-  /** Text the bot is writing right now. */
-  delta(botId: BotId, text: string): void {
-    this.fake.emit({ name: "chat.delta", params: { botId, text } });
+  /** Text the bot is writing right now, in one of its conversations. */
+  delta(botId: BotId, text: string, conversationId = mainConversationOf(botId)): void {
+    this.fake.emit({ name: "chat.delta", params: { botId, conversationId, text } });
   }
 
-  reply(botId: BotId, text: string): ChatItem {
-    return this.add(botId, { kind: "reply", text });
+  reply(botId: BotId, text: string, conversationId = mainConversationOf(botId)): ChatItem {
+    return this.add(botId, { kind: "reply", text }, conversationId);
   }
 
   /** A tool call in `running`, or with `changes` applied. */
@@ -144,12 +151,37 @@ export class FakeChat {
     return this.update(item.id, { ...item.body, status: failed ? "failed" : "done", output });
   }
 
-  turn(botId: BotId, error: string | null = null, tokens: TokenUsage = TURN_TOKENS): ChatItem {
+  /** A turn's end; `costMicros` is its API price in millionths of a dollar (spec 8.7). */
+  turn(
+    botId: BotId,
+    error: string | null = null,
+    tokens: TokenUsage = TURN_TOKENS,
+    costMicros: number | null = null,
+  ): ChatItem {
     return this.add(botId, {
       kind: "turn",
       durationMs: 4200,
       tokens,
+      costMicros,
       error,
+      stopped: false,
+      quiet: false,
+    });
+  }
+
+  /**
+   * A turn the owner stopped (`bots.interrupt`), or Botloft when it went quiet
+   * (spec 7.9): no error, and what it spent until then.
+   */
+  stopped(botId: BotId, quiet = false): ChatItem {
+    return this.add(botId, {
+      kind: "turn",
+      durationMs: 3100,
+      tokens: { ...TURN_TOKENS, output: 90 },
+      costMicros: null,
+      error: null,
+      stopped: true,
+      quiet,
     });
   }
 
@@ -188,10 +220,18 @@ export class FakeChat {
 
   handlers(): Pick<Handlers, "chat.history" | "chat.read" | "approvals.answer"> {
     return {
-      "chat.read": () => null,
-      "chat.history": ({ botId, before, limit, until }) => {
+      "chat.read": ({ botId, conversationId }) => {
+        if (conversationId && conversationId !== mainConversationOf(botId)) {
+          this.fake.conversations.read(conversationId);
+        }
+        return null;
+      },
+      "chat.history": ({ botId, before, limit, until, conversationId }) => {
         this.fake.bot(botId, false);
-        const mine = this.items.filter((item) => item.botId === botId);
+        const of = conversationId ?? mainConversationOf(botId);
+        const mine = this.items.filter(
+          (item) => item.botId === botId && item.conversationId === of,
+        );
         if (until) {
           const at = mine.findIndex((item) => item.id === until);
           if (at < 0) {
@@ -202,7 +242,7 @@ export class FakeChat {
         const end = before ? this.items.findIndex((item) => item.id === before) : this.items.length;
         const older = this.items.slice(0, end < 0 ? this.items.length : end);
         return older
-          .filter((item) => item.botId === botId)
+          .filter((item) => item.botId === botId && item.conversationId === of)
           .reverse()
           .slice(0, limit ?? 50);
       },
@@ -244,6 +284,11 @@ export class FakeChat {
             instructions,
             ...(model && { model }),
           });
+        }
+        // An allowed plan of the Maker is built, as the owner left it (spec 36.4).
+        if (allow && approval.toolName === "mcp__botloft__build") {
+          approval.input = input ?? approval.input;
+          this.fake.maker.build(approval.input, approval.id);
         }
         // An allowed routine request becomes a routine, as the owner left it,
         // for the bot it names or the one that asked.

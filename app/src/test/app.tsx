@@ -38,6 +38,17 @@ export function openBot(name: string) {
   fireEvent.click(within(sidebar()).getByRole("button", { name: new RegExp(name) }));
 }
 
+/**
+ * From the open agent's details, one of its rows that lead to Settings
+ * ("Your desktop", "Keys"...); returns the Settings page it opens.
+ */
+export async function settingsFromDetails(bot: string, row: RegExp) {
+  fireEvent.click(screen.getByRole("button", { name: /^Show details/ }));
+  const details = screen.getByRole("complementary", { name: `About ${bot}` });
+  fireEvent.click(await within(details).findByRole("button", { name: row }));
+  return screen.findByRole("region", { name: "Settings" });
+}
+
 export function openTab(name: string | RegExp) {
   fireEvent.click(screen.getByRole("tab", { name }));
 }

@@ -6,8 +6,7 @@ use rusqlite::{OptionalExtension, Row, params};
 
 use crate::{Result, Store, parse_column, unique_as_duplicate};
 
-const COLUMNS: &str =
-    "id, name, slug, paused, created_at, archived_at, work_dir, lead_bot_id, color, auto_mode";
+const COLUMNS: &str = "id, name, slug, paused, created_at, archived_at, work_dir, lead_bot_id, color, auto_mode, system";
 
 /// A crew without a chosen folder comes back with an empty `work_folder`;
 /// the daemon fills in the `shared` folder, which depends on its paths.
@@ -25,6 +24,7 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<Crew> {
         paused: row.get(3)?,
         color: row.get(8)?,
         auto_mode: row.get(9)?,
+        system: row.get(10)?,
         created_at: row.get(4)?,
         archived_at: row.get(5)?,
     })
@@ -39,7 +39,7 @@ impl Store {
         self.conn
             .execute(
                 &format!(
-                    "INSERT INTO crews ({COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)"
+                    "INSERT INTO crews ({COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)"
                 ),
                 params![
                     crew.id.as_str(),
@@ -51,7 +51,8 @@ impl Store {
                     work_dir(crew),
                     crew.lead_bot_id.as_ref().map(|id| id.as_str()),
                     crew.color,
-                    crew.auto_mode
+                    crew.auto_mode,
+                    crew.system
                 ],
             )
             .map_err(|err| unique_as_duplicate(err, "crew slug"))?;
@@ -155,6 +156,7 @@ mod tests {
             paused: false,
             color: None,
             auto_mode: false,
+            system: None,
             created_at,
             archived_at: None,
         }

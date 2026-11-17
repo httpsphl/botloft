@@ -22,7 +22,15 @@ export function shortcutsOf(state: AppState, bot?: BotId): Routine[] {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/** The agent's own returns to its work still to come, soonest first. */
+/** When a return comes back, or when a wait runs out. */
+function soonest(routine: Routine): number {
+  return routine.schedule.kind === "wait" ? routine.schedule.until : (routine.nextRunAt ?? 0);
+}
+
+/**
+ * The agent's own returns to its work still to come (spec 20.12) and the
+ * waits it set (20.14), soonest first.
+ */
 export function useReminders(bot: BotId): Routine[] {
   return useApp(
     useShallow((state) =>
@@ -30,12 +38,13 @@ export function useReminders(bot: BotId): Routine[] {
         .filter(
           (routine) =>
             routine.botId === bot &&
-            routine.schedule.kind === "once" &&
-            routine.schedule.reminder === true &&
             routine.archivedAt === null &&
-            routine.nextRunAt !== null,
+            ((routine.schedule.kind === "once" &&
+              routine.schedule.reminder === true &&
+              routine.nextRunAt !== null) ||
+              (routine.schedule.kind === "wait" && routine.enabled)),
         )
-        .sort((a, b) => (a.nextRunAt ?? 0) - (b.nextRunAt ?? 0)),
+        .sort((a, b) => soonest(a) - soonest(b)),
     ),
   );
 }

@@ -115,7 +115,7 @@ export function ChatView({ api, state, back }: { api: PhoneApi; state: PhoneStat
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <header className="sticky top-0 z-10 -mx-4 flex items-center gap-3 border-line border-b bg-canvas px-4 py-2">
+      <header className="sticky top-0 z-10 -mx-4 flex items-center gap-3 bg-panel px-4 py-2">
         <PhoneButton onClick={back} className="flex-none">
           {c.back}
         </PhoneButton>
@@ -150,7 +150,7 @@ export function ChatView({ api, state, back }: { api: PhoneApi; state: PhoneStat
           <PendingItem key={pending.clientId} pending={pending} />
         ))}
         {convo.live !== "" && (
-          <div className="self-start rounded-2xl border border-line bg-panel px-3 py-2">
+          <div className="chat-bubble self-start rounded-bubble bg-bubble px-4 py-2.5">
             <PhoneMarkdown>{convo.live}</PhoneMarkdown>
           </div>
         )}
@@ -162,7 +162,7 @@ export function ChatView({ api, state, back }: { api: PhoneApi; state: PhoneStat
       </div>
 
       <form
-        className="sticky bottom-0 flex flex-col gap-2 bg-canvas pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+        className="sticky bottom-0 flex flex-col gap-2 bg-panel pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
         onSubmit={(event) => {
           event.preventDefault();
           void submit();
@@ -195,7 +195,7 @@ export function ChatView({ api, state, back }: { api: PhoneApi; state: PhoneStat
               setText(event.target.value);
               setTooLong(false);
             }}
-            className="max-h-40 min-h-12 min-w-0 flex-1 resize-none rounded-xl border border-line-strong bg-panel px-3 py-2 text-base text-ink"
+            className="max-h-40 min-h-12 min-w-0 flex-1 resize-none rounded-bubble border border-line bg-panel px-4 py-2.5 text-base text-ink shadow-rest"
           />
           <PhoneButton
             look="primary"

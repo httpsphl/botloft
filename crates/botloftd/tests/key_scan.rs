@@ -25,6 +25,7 @@ async fn pasted_keys_are_kept_by_name_or_deleted() {
             body: format!("the token is {GITHUB} and slack is {SLACK}"),
             attachments: None,
             reply_to: None,
+            conversation_id: None,
         },
     )
     .expect("send");

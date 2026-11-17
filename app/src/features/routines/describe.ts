@@ -3,7 +3,7 @@
 // zones by city. Day and time words come from Intl, in the app's language.
 
 import { currentLocale, type Messages } from "../../i18n";
-import type { Schedule } from "../../lib/protocol.gen";
+import type { Schedule, WaitOn } from "../../lib/protocol.gen";
 
 type Words = Messages["routines"];
 
@@ -65,6 +65,43 @@ export function describeSchedule(schedule: Schedule, words: Words["when"]): stri
       }).format(Date.UTC(year ?? 1970, (month ?? 1) - 1, day ?? 1));
       return words.once(label, clockText(time));
     }
+    case "wait": {
+      const on = schedule.on;
+      switch (on.what) {
+        case "file":
+          return words.waitFile(fileName(on.path));
+        case "program":
+          return words.waitProgram(on.name);
+        case "page":
+          return words.waitPage(on.text, siteOf(on.url));
+      }
+    }
+  }
+}
+
+/** What an agent waits for (spec 20.14), as the chat's line says it. */
+export function waitWhat(on: WaitOn, words: Words["reminder"]["wait"]): string {
+  switch (on.what) {
+    case "file":
+      return words.file(fileName(on.path));
+    case "program":
+      return words.program(on.name);
+    case "page":
+      return words.page(on.text, siteOf(on.url));
+  }
+}
+
+/** The last part of a path, on Windows or elsewhere. */
+function fileName(path: string): string {
+  return path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
+}
+
+/** "shop.test" for "https://shop.test/order/1". */
+function siteOf(url: string): string {
+  try {
+    return new URL(url).host || url;
+  } catch {
+    return url;
   }
 }
 

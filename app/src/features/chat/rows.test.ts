@@ -14,7 +14,14 @@ let n = 0;
 
 function item(body: ChatBody, at = start): ChatItem {
   n += 1;
-  return { id: `cht_${n}`, botId: "bot_1", body, createdAt: at, updatedAt: at };
+  return {
+    id: `cht_${n}`,
+    botId: "bot_1",
+    conversationId: "cnv_1",
+    body,
+    createdAt: at,
+    updatedAt: at,
+  };
 }
 
 const reply = (text: string, at?: number) => item({ kind: "reply", text }, at);
@@ -31,7 +38,16 @@ const tool = (name: string) =>
     file: null,
     lines: null,
   });
-const turn = () => item({ kind: "turn", durationMs: 1000, tokens: null, error: null });
+const turn = () =>
+  item({
+    kind: "turn",
+    durationMs: 1000,
+    tokens: null,
+    costMicros: null,
+    error: null,
+    stopped: false,
+    quiet: false,
+  });
 const inbound = (body: string, at?: number) =>
   item(
     {
@@ -70,6 +86,19 @@ describe("chat rows", () => {
   test("a new day starts a new run under its date", () => {
     const rows = chatRows([reply("late", start), reply("early", start + DAY)]);
     expect(rows.map((row) => row.kind)).toEqual(["day", "run", "day", "run"]);
+  });
+
+  test("a pause in the talk gets a clock line, a long turn does not", () => {
+    const later = start + 40 * 60 * 1000;
+    const paused = chatRows([
+      inbound("hi", start),
+      reply("one", start + 1000),
+      turn(),
+      inbound("back", later),
+    ]);
+    expect(paused.map((row) => row.kind)).toEqual(["day", "inbound", "run", "time", "inbound"]);
+    const working = chatRows([inbound("go", start), tool("Bash"), reply("done", later)]);
+    expect(working.map((row) => row.kind)).toEqual(["day", "inbound", "run"]);
   });
 });
 

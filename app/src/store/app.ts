@@ -10,6 +10,8 @@ import type {
   BotId,
   BrowserState,
   ChatItemId,
+  Conversation,
+  ConversationId,
   Crew,
   CrewId,
   Delivery,
@@ -24,11 +26,28 @@ import type {
   TaskId,
 } from "../lib/protocol.gen";
 import { type Call, withCall } from "./calls";
+import {
+  conversationActions,
+  loadOpen,
+  openConversationOf,
+  rememberConversation,
+  withConversation,
+} from "./conversations";
 import { withQuestion } from "./questions";
-import { loadMarked, loadSeen, loadSeenSince, seenActions, withReply } from "./seen";
+import { loadMarked, loadSeen, loadSeenSince, seenActions, seenKey, withReply } from "./seen";
+
+/** Parts of Settings the rest of the app opens them on. */
+export type SettingsPart = "tools" | "skills" | "keys";
 
 /** A panel beside a bot's chat (spec 15.1). */
-export type BotPanel = "details" | "files" | "browser" | "screens" | "terminal" | "desktop";
+export type BotPanel =
+  | "overview"
+  | "details"
+  | "files"
+  | "browser"
+  | "screens"
+  | "terminal"
+  | "desktop";
 
 export interface AppState {
   connection: ConnectionState;
@@ -66,6 +85,10 @@ export interface AppState {
   focus: { botId: BotId; itemId: ChatItemId } | null;
   /** Where Settings opens the Permissions page, until it is shown (spec 15.1). */
   permissionsAt: PermissionsAt | null;
+  /** A part of the settings to open them on, from elsewhere in the app. */
+  settingsPart: SettingsPart | null;
+  /** The agent that part opens on (Keys), until the part takes it. */
+  settingsBotId: BotId | null;
   /**
    * When the owner last looked at each bot's chat (`seen.ts`), for unread
    * replies and failed routine runs.
@@ -80,8 +103,13 @@ export interface AppState {
   /**
    * The panel the owner left beside each bot's chat (null: closed), so it is
    * back when they come back to the bot. Kept until the app closes (spec 15.1).
+   * A bot not in here opens with its overview (spec 33.2).
    */
   panels: Record<BotId, BotPanel | null>;
+  /** The conversations of each agent whose chat opened (spec 40.7), main first. */
+  conversations: Record<BotId, Conversation[]>;
+  /** The conversation each agent's chat is on (`conversations.ts`). */
+  openConversations: Record<BotId, ConversationId>;
   selectedCrewId: CrewId | null;
   selectedBotId: BotId | null;
   selectCrew(crewId: CrewId | null): void;
@@ -89,13 +117,26 @@ export interface AppState {
   openPage(page: Exclude<Page, null>): void;
   /** Opens Settings on the Permissions page, at a tab and an agent. */
   openPermissions(at: PermissionsAt): void;
+  /** Opens Settings on a part, on one agent where the part has a choice. */
+  openSettingsPart(part: SettingsPart, botId?: BotId): void;
+  /** The part took its agent. */
+  clearSettingsBotId(): void;
+  clearSettingsPart(): void;
   /** The Permissions page took where to open. */
   clearPermissionsAt(): void;
-  /** Opens the bot's chat at one of its items. */
-  openAt(botId: BotId, itemId: ChatItemId): void;
+  /** Opens the bot's chat at one of its items, in its conversation when given (spec 40.7). */
+  openAt(botId: BotId, itemId: ChatItemId, conversationId?: ConversationId): void;
   setPanel(botId: BotId, panel: BotPanel | null): void;
+  /** Reads the agent's conversations. */
+  loadConversations(botId: BotId): Promise<void>;
+  /** Opens the agent's chat on one of its conversations. */
+  openConversation(botId: BotId, conversationId: ConversationId): void;
+  /** Opens a new conversation of the agent, and its chat on it. */
+  newConversation(botId: BotId): Promise<Conversation>;
   /** The owner is looking at the bot's chat: what it said so far is seen. */
   markSeen(botId: BotId): void;
+  /** The same for one conversation of the bot (spec 40.7). */
+  markSeenIn(botId: BotId, conversationId: ConversationId): void;
   /** Marks the bot unread until its chat is opened; leaves it if it is open. */
   markUnread(botId: BotId): void;
   /** Applies a record a call returned, before its notification arrives. */
@@ -117,7 +158,7 @@ export type AppStore = StoreApi<AppState>;
 export type Page = "questions" | "search" | "routines" | "settings" | null;
 
 /** A tab of the Permissions page in Settings (spec 15.1). */
-export type PermissionsTab = "desktop" | "sites" | "rules" | "crews";
+export type PermissionsTab = "desktop" | "sites" | "rules" | "crews" | "chrome";
 
 export interface PermissionsAt {
   tab: PermissionsTab;
@@ -128,8 +169,20 @@ export interface PermissionsAt {
 const byCreation = <T extends { createdAt: number; id: string }>(a: T, b: T) =>
   a.createdAt - b.createdAt || a.id.localeCompare(b.id);
 
+/** The owner's crews: the Maker's own is not one of them (spec 36.2). */
 export function crewList(state: AppState): Crew[] {
-  return Object.values(state.crews).sort(byCreation);
+  return Object.values(state.crews)
+    .filter((crew) => !crew.system)
+    .sort(byCreation);
+}
+
+/** The Maker (spec 36.2), alone in a crew Botloft keeps for it. */
+export function makerBot(state: AppState): Bot | null {
+  const crew = Object.values(state.crews).find((each) => each.system === "maker");
+  if (!crew) {
+    return null;
+  }
+  return Object.values(state.bots).find((bot) => bot.crewId === crew.id) ?? null;
 }
 
 /** The bot's conversation-list line; see [`AppState.activity`]. */
@@ -166,7 +219,8 @@ export function createAppStore(api: BotloftApi): AppStore {
       }
       const change = { selectedCrewId: bot.crewId, selectedBotId: botId, page: null, focus };
       if (get().selectedBotId !== botId || get().page) {
-        get().markSeen(botId);
+        // What the chat opens on is seen, not the agent's other conversations.
+        get().markSeenIn(botId, openConversationOf(get(), botId));
         set(change);
       } else if (focus) {
         set({ focus });
@@ -190,11 +244,15 @@ export function createAppStore(api: BotloftApi): AppStore {
       page: null,
       focus: null,
       permissionsAt: null,
+      settingsPart: null,
+      settingsBotId: null,
       seenAt: loadSeen(),
       seenSince: loadSeenSince(),
       replyAt: {},
       markedUnread: loadMarked(),
       panels: {},
+      conversations: {},
+      openConversations: loadOpen(),
       selectedCrewId: null,
       selectedBotId: null,
       selectCrew: (crewId) => {
@@ -204,7 +262,12 @@ export function createAppStore(api: BotloftApi): AppStore {
         }
       },
       selectBot: (botId) => openBot(botId, null),
-      openAt: (botId, itemId) => openBot(botId, { botId, itemId }),
+      openAt: (botId, itemId, conversationId) => {
+        if (conversationId) {
+          rememberConversation(get, set, botId, conversationId);
+        }
+        openBot(botId, { botId, itemId });
+      },
       openPage: (page) => {
         if (get().page !== page) {
           set({ page, selectedCrewId: null, selectedBotId: null });
@@ -213,7 +276,18 @@ export function createAppStore(api: BotloftApi): AppStore {
       openPermissions: (at) =>
         set({ page: "settings", selectedCrewId: null, selectedBotId: null, permissionsAt: at }),
       clearPermissionsAt: () => set({ permissionsAt: null }),
+      openSettingsPart: (part, botId) =>
+        set({
+          page: "settings",
+          selectedCrewId: null,
+          selectedBotId: null,
+          settingsPart: part,
+          settingsBotId: botId ?? null,
+        }),
+      clearSettingsBotId: () => set({ settingsBotId: null }),
+      clearSettingsPart: () => set({ settingsPart: null }),
       ...seenActions(get, set, api),
+      ...conversationActions(get, set, api),
       setPanel: (botId, panel) => set((state) => ({ panels: { ...state.panels, [botId]: panel } })),
       putCrew: (crew) => set((state) => withCrew(state, crew)),
       putBot: (bot) => set((state) => withBot(state, bot)),
@@ -326,6 +400,13 @@ export function applyEvent(state: AppState, event: ServerEvent): Partial<AppStat
       }
       return { bots: { ...state.bots, [bot.id]: { ...bot, context: event.params.context } } };
     }
+    case "bot.background": {
+      const bot = state.bots[event.params.botId];
+      if (!bot) {
+        return null;
+      }
+      return { bots: { ...state.bots, [bot.id]: { ...bot, background: event.params.tasks } } };
+    }
     case "chat.item": {
       const { item, activity } = event.params;
       if (!state.bots[item.botId] || !activity) {
@@ -334,9 +415,11 @@ export function applyEvent(state: AppState, event: ServerEvent): Partial<AppStat
       const reply = item.body.kind === "reply" ? item.updatedAt : null;
       return {
         activity: { ...state.activity, [item.botId]: activity },
-        replyAt: withReply(state.replyAt, item.botId, reply),
+        replyAt: withReply(state.replyAt, seenKey(item.botId, item.conversationId), reply),
       };
     }
+    case "conversation.changed":
+      return withConversation(state, event.params);
     case "message.created":
       return withCall(state, event.params);
     case "delivery.changed":

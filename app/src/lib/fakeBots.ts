@@ -2,12 +2,14 @@
 // handles, colors, archiving, unarchiving, deleting and the notifications each change
 // sends.
 
+import { mainConversationOf } from "./conversations";
 import type { FakeBotloft, Handlers } from "./fake";
 import { purgeBot } from "./fakeDelete";
-import { checkName, conflict } from "./fakeRules";
+import { checkName, conflict, invalid, notFound } from "./fakeRules";
 import { AVATAR_PALETTE, type Bot } from "./protocol.gen";
 
-type BotMethods = Extract<keyof Handlers, `bots.${string}`>;
+// The menu of "/" (`bots.commands`) is the skills' fake's.
+type BotMethods = Exclude<Extract<keyof Handlers, `bots.${string}`>, "bots.commands">;
 
 export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
   return {
@@ -42,6 +44,8 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
         effort: "default",
         effortDefault: null,
         context: null,
+        background: [],
+        connectors: [],
         state: crew.paused ? "offline" : "launching",
         generation: crew.paused ? null : 1,
         workspace: `C:\\Users\\owner\\Botloft\\${crew.slug}\\${handle}`,
@@ -102,7 +106,14 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
     },
     "bots.compact": ({ botId }) => {
       const bot = fake.bot(botId);
-      if (bot.state !== "idle" && bot.state !== "busy" && bot.state !== "needs_approval") {
+      // A sleeping bot wakes up first (spec 7.7).
+      const asleep = bot.state === "sleeping" && !bot.paused;
+      if (
+        !asleep &&
+        bot.state !== "idle" &&
+        bot.state !== "busy" &&
+        bot.state !== "needs_approval"
+      ) {
         throw conflict(`bot ${botId} is not running`);
       }
       // It waits behind the turn in progress; a test ends it with `setContext`.
@@ -111,8 +122,67 @@ export function botHandlers(fake: FakeBotloft): Pick<Handlers, BotMethods> {
       }
       return bot;
     },
-    "bots.restart": ({ botId }) => {
+    "bots.interrupt": ({ botId }) => {
       const bot = fake.bot(botId);
+      if (bot.agent !== "claude") {
+        throw invalid(`bots that run on ${bot.agent} cannot be stopped in the middle of a turn`);
+      }
+      if (bot.state === "busy" || bot.state === "needs_approval") {
+        // A tool that waits for the owner is refused, and Claude Code ends
+        // the turn as stopped.
+        for (const approval of fake.chat.approvals.values()) {
+          if (approval.botId === botId && approval.status === "pending") {
+            void fake.call("approvals.answer", { approvalId: approval.id, allow: false });
+          }
+        }
+        fake.chat.stopped(botId);
+        fake.setBotState(botId, "idle");
+      }
+      return bot;
+    },
+    "bots.stopTask": ({ botId, taskId }) => {
+      const bot = fake.bot(botId);
+      if (!bot.background.some((task) => task.taskId === taskId)) {
+        throw notFound(`task ${taskId} of bot ${botId}`);
+      }
+      // Claude Code ends it and sends the list without it.
+      fake.setBackground(
+        botId,
+        bot.background.filter((task) => task.taskId !== taskId),
+      );
+      return null;
+    },
+    "bots.setConnectors": ({ botId, names }) => {
+      const bot = fake.bot(botId);
+      bot.connectors = [...new Set(names)];
+      return fake.changedBot(bot);
+    },
+    "bots.restart": ({ botId, fresh, conversationId }) => {
+      const bot = fake.bot(botId);
+      const notice = {
+        kind: "notice",
+        level: "info",
+        code: "fresh_start",
+        text: "A new conversation started here: what came before is not remembered.",
+      } as const;
+      // Another conversation restarts on its own (spec 40.5).
+      if (conversationId && conversationId !== mainConversationOf(botId)) {
+        if (fresh) {
+          fake.conversations.set(conversationId, { context: null });
+          fake.chat.add(botId, notice, conversationId);
+        }
+        return bot;
+      }
+      if (fresh) {
+        // The conversation is forgotten: nothing to count until it tells.
+        bot.context = null;
+        fake.conversations.mainChanged(botId);
+        fake.chat.add(botId, notice);
+        // A sleeping bot keeps sleeping (spec 7.7).
+        if (bot.state === "sleeping") {
+          return fake.changedBot(bot);
+        }
+      }
       fake.setBotState(botId, "launching", (bot.generation ?? 0) + 1);
       return bot;
     },

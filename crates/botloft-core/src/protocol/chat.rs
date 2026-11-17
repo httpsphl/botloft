@@ -2,8 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::{AllowScope, Message, Question, TokenUsage};
-use crate::ids::{ApprovalId, BotId, ChatItemId};
+use super::{AllowScope, CardItem, Message, Question, TokenUsage};
+use crate::ids::{ApprovalId, BotId, ChatItemId, ConversationId};
 
 text_enum!(
     /// Where a tool call the bot made stands.
@@ -50,6 +50,12 @@ text_enum!(
         AutoCompacted => "auto_compacted",
         /// The conversation could not be compacted; `text` holds the detail.
         CompactFailed => "compact_failed",
+        /// The owner started a new conversation: what came before is not
+        /// remembered.
+        FreshStart => "fresh_start",
+        /// The turn printed nothing for half an hour and Botloft stopped
+        /// it (spec 7.9).
+        StuckTurn => "stuck_turn",
     }
 );
 
@@ -67,6 +73,10 @@ text_enum!(
         Approval => "approval",
         /// A question for the owner (spec 23); `text` is the question.
         Question => "question",
+        /// A note for the owner (spec 23.10); `text` is the note.
+        Note => "note",
+        /// A card the bot shows (spec 8.11); `text` is its title.
+        Card => "card",
         Notice => "notice",
     }
 );
@@ -78,6 +88,8 @@ text_enum!(
 pub struct ChatItem {
     pub id: ChatItemId,
     pub bot_id: BotId,
+    /// The conversation of the bot it belongs to (spec 40).
+    pub conversation_id: ConversationId,
     pub body: ChatBody,
     /// Unix time in milliseconds.
     pub created_at: i64,
@@ -105,6 +117,8 @@ pub enum ChatBody {
     /// The bot asks the owner for a key (spec 32.5); the item's id is the
     /// request's.
     KeyRequest(KeyRequestItem),
+    /// A card the bot shows (spec 8.11); the item's id is the card's.
+    Card(CardItem),
 }
 
 text_enum!(
@@ -222,8 +236,22 @@ pub struct TurnItem {
     /// and on turns stored before it was kept.
     #[serde(default)]
     pub tokens: Option<TokenUsage>,
-    /// Why the turn failed, e.g. `rate_limit`; `null` when it worked.
+    /// What the turn would cost at API list prices, in millionths of a US
+    /// dollar (spec 8.7); `null` when the engine does not say and on turns
+    /// stored before it was kept.
+    #[serde(default)]
+    pub cost_micros: Option<u64>,
+    /// Why the turn failed, e.g. `rate_limit`; `null` when it worked and
+    /// when the owner stopped it.
     pub error: Option<String>,
+    /// The owner stopped the turn (`bots.interrupt`, spec 8.2); `false` on
+    /// turns stored before it was kept.
+    #[serde(default)]
+    pub stopped: bool,
+    /// Botloft stopped it, not the owner: it printed nothing for half an
+    /// hour (spec 7.9). `stopped` is true too.
+    #[serde(default)]
+    pub quiet: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -273,6 +301,7 @@ pub struct ChatItemChanged {
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct ChatDelta {
     pub bot_id: BotId,
+    pub conversation_id: ConversationId,
     pub text: String,
 }
 
@@ -295,6 +324,10 @@ pub struct ChatHistoryParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub until: Option<ChatItemId>,
+    /// The conversation to read; the main one when absent (spec 40.5).
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub conversation_id: Option<ConversationId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

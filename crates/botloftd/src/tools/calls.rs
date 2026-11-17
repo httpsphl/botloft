@@ -8,19 +8,23 @@ use std::collections::HashMap;
 use axum::http::StatusCode;
 use botloft_core::envelope::due;
 use botloft_core::ids::{BotId, TaskId};
-use botloft_core::protocol::{BotsListParams, Task, TaskStatus, error_code};
+use botloft_core::protocol::{AgentKind, BotsListParams, Task, TaskStatus, error_code};
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 use tracing::warn;
 
 use super::Failure;
+use super::card::{self, SHOW_CARD};
 use super::catalog::{COMPLETE_TASK, CREW_ROSTER, MY_TASKS, SEND_MESSAGE};
 use super::key::{self, ASK_KEY};
-use super::question::{self, ASK_OWNER};
+use super::question::{self, ASK_OWNER, TELL_OWNER};
 use super::share::{self, SHARE_FILE};
 use super::signal::{self, SEND_SIGNAL};
-use super::{activity, crew_reach, routine_change, templates};
+use super::{
+    activity, crew_reach, history, nothing_new, overview, retry, routine_change, templates, wait,
+};
+use crate::seat::Seat;
 use crate::service::tasks::{self, BotMessage};
 use crate::service::{ApiError, bots, lead};
 use crate::state::Daemon;
@@ -28,7 +32,7 @@ use crate::state::Daemon;
 /// What the bot reads when a tool fails.
 type Outcome = Result<Value, String>;
 
-pub(super) fn call(daemon: &Daemon, bot: &BotId, params: &Value) -> Result<Value, Failure> {
+pub(super) fn call(daemon: &Daemon, bot: &Seat, params: &Value) -> Result<Value, Failure> {
     let Some(name) = params.get("name").and_then(Value::as_str) else {
         return Err(invalid("tools/call needs the name of a tool"));
     };
@@ -47,11 +51,22 @@ pub(super) fn call(daemon: &Daemon, bot: &BotId, params: &Value) -> Result<Value
             MY_TASKS => parse(arguments).and_then(|args| my_tasks(daemon, bot, args)),
             SHARE_FILE => parse(arguments).and_then(|args| share::share(daemon, bot, args)),
             ASK_OWNER => parse(arguments).and_then(|args| question::ask(daemon, bot, args)),
+            TELL_OWNER => parse(arguments).and_then(|args| question::tell(daemon, bot, args)),
+            SHOW_CARD => parse(arguments).and_then(|args| card::show(daemon, bot, args)),
+            history::SEARCH_HISTORY => {
+                parse(arguments).and_then(|args| history::call(daemon, bot, args))
+            }
             ASK_KEY => parse(arguments).and_then(|args| key::ask(daemon, bot, args)),
             SEND_SIGNAL => parse(arguments).and_then(|args| signal::send(daemon, bot, args)),
+            wait::WAIT_FOR => parse(arguments).and_then(|args| wait::call(daemon, bot, args)),
             routine_change::MY_ROUTINES => routine_change::mine(daemon, bot),
+            nothing_new::NOTHING_NEW => nothing_new::call(daemon, bot),
+            retry::RETRY_AGENT => parse(arguments).and_then(|args| retry::call(daemon, bot, args)),
             activity::CREW_ACTIVITY => {
                 parse(arguments).and_then(|args| activity::call(daemon, bot, args))
+            }
+            overview::CREWS_OVERVIEW => {
+                parse(arguments).and_then(|args| overview::call(daemon, bot, args))
             }
             templates::LIST_BOT_TEMPLATES => {
                 parse(arguments).and_then(|args| templates::list(daemon, bot, args))
@@ -119,7 +134,11 @@ fn roster(daemon: &Daemon, bot: &BotId) -> Outcome {
     };
     let crew_bots = bots::list(daemon, list).map_err(explain)?;
     let now = daemon.clock.now_ms();
-    let week = crate::service::plan::shares(&daemon.store(), now - 7 * 86_400_000, now);
+    // What each one cost in the last 7 days at API prices (spec 8.7).
+    let week = daemon
+        .store()
+        .bot_costs(now - 7 * 86_400_000)
+        .unwrap_or_default();
     let others: Vec<_> = crew_bots
         .iter()
         .filter(|other| other.id != me.id)
@@ -131,9 +150,9 @@ fn roster(daemon: &Daemon, bot: &BotId) -> Outcome {
                 "state": other.state,
                 "model": other.model,
                 "effort": other.effort,
-                "week_plan_percent": week.as_ref().map(|shares| {
-                    let share = shares.get(&other.id).copied().unwrap_or_default();
-                    (share * 10_000.0).round() / 100.0
+                "week_cost_usd": (other.agent == AgentKind::Claude).then(|| {
+                    let cost = week.get(&other.id).copied().unwrap_or_default();
+                    (cost * 100.0).round() / 100.0
                 }),
                 "chief": lead::is_lead(&crew, &other.id),
             })
@@ -161,7 +180,7 @@ struct SendArgs {
     deadline_minutes: Option<u32>,
 }
 
-fn send(daemon: &Daemon, bot: &BotId, args: SendArgs) -> Outcome {
+fn send(daemon: &Daemon, bot: &Seat, args: SendArgs) -> Outcome {
     let task = match args.kind.as_deref() {
         None | Some("note") => false,
         Some("task") => true,
@@ -178,6 +197,9 @@ fn send(daemon: &Daemon, bot: &BotId, args: SendArgs) -> Outcome {
         deadline_minutes: args.deadline_minutes,
     };
     let (message, task) = tasks::send(daemon, bot, request).map_err(explain)?;
+    if let Some(task) = &task {
+        crate::service::replies::keep_task(daemon, bot, task);
+    }
     let to = bots::find(&daemon.store(), &message.to_bot_id).map_err(explain)?;
     let mut out = json!({
         "message_id": message.id,

@@ -28,6 +28,8 @@ pub(super) const FRAME_GAP: Duration = Duration::from_millis(66);
 /// up with them as they scroll and point (spec 21.8).
 pub(super) const QUICK_GAP: Duration = Duration::from_millis(33);
 /// How long the first tab may take to show up.
+/// How long a browser has to close by itself before it is killed.
+const SHUT_WAIT: Duration = Duration::from_secs(5);
 const FIRST_TAB_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// What the app shows about the active tab, and the tabs there are.
@@ -218,6 +220,25 @@ impl Session {
 
     pub fn is_closed(&self) -> bool {
         self.cdp.is_closed() || self.lock().closed
+    }
+
+    /// Closes the browser as a person would, so what it has not written to
+    /// disk yet is kept: a cookie just set is lost when it is killed (19).
+    /// Kills it after `SHUT_WAIT` all the same.
+    pub async fn shut(&self) {
+        let process = self
+            .process
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .take();
+        if let Some(mut process) = process {
+            // It closes before it answers, so the answer may never come.
+            let _ =
+                tokio::time::timeout(SHUT_WAIT, self.cdp.call(None, "Browser.close", json!({})))
+                    .await;
+            process.ended(SHUT_WAIT).await;
+        }
+        self.close();
     }
 
     /// Kills the browser. Its events end, and the hub hears it closed.

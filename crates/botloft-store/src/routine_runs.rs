@@ -9,7 +9,7 @@ use rusqlite::{OptionalExtension, Row, params};
 use crate::messages::optional_column;
 use crate::{Result, Store, parse_column};
 
-pub(crate) const RUN_COLUMNS: &str = "id, routine_id, scheduled_for, status, reason, skipped_count, message_id, created_at, finished_at, signal_name, signal_from, signal_note";
+pub(crate) const RUN_COLUMNS: &str = "id, routine_id, scheduled_for, status, reason, skipped_count, message_id, created_at, finished_at, signal_name, signal_from, signal_note, nothing_new, waited";
 
 pub(crate) fn run_from_row(row: &Row<'_>) -> rusqlite::Result<RoutineRun> {
     Ok(RoutineRun {
@@ -30,6 +30,8 @@ pub(crate) fn run_from_row(row: &Row<'_>) -> rusqlite::Result<RoutineRun> {
             }),
             None => None,
         },
+        nothing_new: row.get(12)?,
+        waited: optional_column(row, 13)?,
     })
 }
 
@@ -57,7 +59,7 @@ impl Store {
     fn insert_run_in(conn: &rusqlite::Connection, run: &RoutineRun) -> Result<()> {
         conn.execute(
             &format!(
-                "INSERT INTO routine_runs ({RUN_COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)"
+                "INSERT INTO routine_runs ({RUN_COLUMNS}) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)"
             ),
             params![
                 run.id.as_str(),
@@ -75,6 +77,8 @@ impl Store {
                     .and_then(|signal| signal.from_bot_id.as_ref())
                     .map(BotId::as_str),
                 run.signal.as_ref().and_then(|signal| signal.note.as_deref()),
+                run.nothing_new,
+                run.waited.map(|end| end.as_str()),
             ],
         )?;
         Ok(())
@@ -104,6 +108,21 @@ impl Store {
         Ok(u32::try_from(count).unwrap_or(0))
     }
 
+    /// How many runs of the routine failed in a row since the last one that
+    /// went well (spec 20.3). Skipped and open runs neither count nor break
+    /// the row. Runs go by `rowid`, the order they were saved in: two ids made
+    /// in the same millisecond do not always sort in that order.
+    pub fn fail_streak(&self, routine: &RoutineId) -> Result<u32> {
+        let count: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM routine_runs WHERE routine_id = ?1 AND status = 'failed' \
+             AND rowid > coalesce((SELECT max(rowid) FROM routine_runs \
+               WHERE routine_id = ?1 AND status = 'done'), 0)",
+            [routine.as_str()],
+            |row| row.get(0),
+        )?;
+        Ok(u32::try_from(count).unwrap_or(0))
+    }
+
     /// The run that sent `message`, if a routine sent it.
     pub fn run_of_message(&self, message: &MessageId) -> Result<Option<RoutineRun>> {
         Ok(self
@@ -114,6 +133,16 @@ impl Store {
                 run_from_row,
             )
             .optional()?)
+    }
+
+    /// The bot said its open run `id` had nothing new to report (spec 20.5).
+    /// `false` if the run was no longer open.
+    pub fn mark_nothing_new(&self, id: &RoutineRunId) -> Result<bool> {
+        let changed = self.conn.execute(
+            "UPDATE routine_runs SET nothing_new = 1 WHERE id = ?1 AND status = 'queued'",
+            [id.as_str()],
+        )?;
+        Ok(changed > 0)
     }
 
     /// Ends an open run. `None` if it was no longer open.

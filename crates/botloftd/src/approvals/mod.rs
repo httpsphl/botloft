@@ -3,7 +3,7 @@
 //! MCP call waits here until the owner answers, the request times out, or
 //! the bot's process ends.
 
-mod always;
+pub(crate) mod always;
 mod prompt;
 mod turn;
 
@@ -12,8 +12,8 @@ use std::sync::{Mutex, MutexGuard};
 use std::time::Duration;
 
 use botloft_core::chat::{
-    BROWSER_SITE_TOOL, CHANGE_ROUTINE_TOOL, CREW_ACCESS_TOOL, DESKTOP_TOOL, ROUTINE_TOOL,
-    SHOW_PLAN_TOOL, SUGGEST_TOOL, clip, tool_input_max, tool_summary,
+    BROWSER_SITE_TOOL, BUILD_TOOL, CHANGE_ROUTINE_TOOL, CREW_ACCESS_TOOL, DESKTOP_TOOL,
+    ROUTINE_TOOL, SHOW_PLAN_TOOL, SUGGEST_TOOL, clip, tool_input_max, tool_summary,
 };
 use botloft_core::command::tool_explanation;
 use botloft_core::ids::{ApprovalId, BotId, ChatItemId};
@@ -28,6 +28,7 @@ use tracing::{debug, warn};
 pub use self::prompt::{PromptArgs, prompt};
 pub use self::turn::{ThisTurn, forget_turns};
 use crate::chat::items;
+use crate::seat::Seat;
 use crate::service::{ApiError, ApiResult};
 use crate::state::Daemon;
 
@@ -140,7 +141,7 @@ pub(crate) async fn ask_with(
     tool_use_id: &str,
     opened: impl FnOnce(&ApprovalId),
 ) -> Option<Answer> {
-    let (pending, waiting) = open(daemon, bot, tool_name, input, tool_use_id)?;
+    let (pending, waiting) = open(daemon, bot, generation, tool_name, input, tool_use_id)?;
     opened(&pending.record.approval.id);
     let wait = Wait {
         within: daemon.settings.approval_wait(),
@@ -160,7 +161,7 @@ pub(crate) async fn ask_briefly(
     input: &Value,
     within: Duration,
 ) -> Option<Answer> {
-    let (pending, waiting) = open(daemon, bot, tool_name, input, "")?;
+    let (pending, waiting) = open(daemon, bot, generation, tool_name, input, "")?;
     let wait = Wait {
         within,
         needs_owner: false,
@@ -246,6 +247,9 @@ pub fn answer(daemon: &Daemon, params: ApprovalsAnswerParams) -> ApiResult<Appro
                 .map_err(|_| ApiError::validation("the changed suggestion is not valid JSON"))?;
             Some(value.to_string())
         }
+        Some(input) if params.allow && existing.approval.tool_name == BUILD_TOOL => {
+            Some(crate::tools::check_changed_build(daemon, &input)?)
+        }
         Some(input) if params.allow && existing.approval.tool_name == ROUTINE_TOOL => Some(
             crate::tools::check_changed_routine(daemon, &existing.approval.input, &input)?,
         ),
@@ -274,6 +278,15 @@ pub fn answer(daemon: &Daemon, params: ApprovalsAnswerParams) -> ApiResult<Appro
         once,
     );
     let Some(record) = settled else {
+        // The chat may still show it open, as a card left from before a
+        // restart did: it shows how it ended now.
+        // Read first: `show` takes the store again.
+        let ended = daemon.store().approval(&params.approval_id);
+        if let Ok(Some(ended)) = ended
+            && ended.approval.status == ApprovalStatus::Expired
+        {
+            show(daemon, &ended, false);
+        }
         return Err(ApiError::Conflict(format!(
             "approval {} was already answered or expired",
             params.approval_id
@@ -293,10 +306,23 @@ pub fn answer(daemon: &Daemon, params: ApprovalsAnswerParams) -> ApiResult<Appro
     Ok(record.approval)
 }
 
-/// Expires the bot's open requests: its process is gone (spec 10.1).
+/// Expires the open requests of one conversation: its process is gone
+/// (spec 10.1, 40.4).
+pub fn expire_for(daemon: &Daemon, seat: &Seat) {
+    let now = daemon.clock.now_ms();
+    let expired = daemon.store().expire_approvals_in(&seat.conversation, now);
+    closed(daemon, seat, expired);
+}
+
+/// Expires the bot's open requests, in all its conversations.
 pub fn expire_for_bot(daemon: &Daemon, bot: &BotId) {
     let now = daemon.clock.now_ms();
-    let expired = match daemon.store().expire_approvals(Some(bot), now) {
+    let expired = daemon.store().expire_approvals(Some(bot), now);
+    closed(daemon, bot, expired);
+}
+
+fn closed(daemon: &Daemon, bot: &BotId, expired: botloft_store::Result<Vec<ApprovalRecord>>) {
+    let expired = match expired {
         Ok(expired) => expired,
         Err(err) => {
             warn!(bot = %bot, "could not expire approvals: {err}");
@@ -312,12 +338,18 @@ pub fn expire_for_bot(daemon: &Daemon, bot: &BotId) {
 /// Expires every open request, at daemon start: no process survived.
 pub fn expire_all(daemon: &Daemon) {
     let now = daemon.clock.now_ms();
-    match daemon.store().expire_approvals(None, now) {
+    // Read first: `show` takes the store again.
+    let expired = daemon.store().expire_approvals(None, now);
+    match expired {
         Ok(expired) if !expired.is_empty() => {
             debug!(
                 count = expired.len(),
                 "expired approvals left by the last run"
             );
+            // Their cards in the chat stop offering an answer.
+            for record in expired {
+                show(daemon, &record, false);
+            }
         }
         Ok(_) => {}
         Err(err) => warn!("could not expire old approvals: {err}"),
@@ -333,6 +365,7 @@ struct Pending {
 fn open(
     daemon: &Daemon,
     bot: &BotId,
+    generation: u64,
     tool_name: &str,
     input: &Value,
     tool_use_id: &str,
@@ -360,6 +393,8 @@ fn open(
     let item = ChatItem {
         id: ChatItemId::generate(),
         bot_id: bot.clone(),
+        // In the conversation whose process asks (spec 40.2).
+        conversation_id: daemon.supervisor.conversation_of(bot, generation),
         body,
         created_at: now,
         updated_at: now,

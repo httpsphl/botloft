@@ -114,7 +114,7 @@ export function PhoneApp({
   const news = state.chats.some((line) => isUnread(line, state.seen));
   return (
     <Shell>
-      <div className="sticky top-0 z-10 -mx-4 flex flex-col gap-3 bg-canvas px-4 pt-1 pb-2">
+      <div className="sticky top-0 z-10 -mx-4 flex flex-col gap-3 bg-panel px-4 pt-1 pb-2">
         <header className="flex items-center justify-between gap-3 py-1">
           <h1 className="font-semibold text-xl">{tab === "chats" ? t.tabs.chats : t.tabs.home}</h1>
           <button
@@ -127,7 +127,7 @@ export function PhoneApp({
           </button>
         </header>
 
-        <div role="tablist" className="flex gap-2">
+        <div role="tablist" className="flex gap-1 rounded-full bg-bubble p-1">
           <Tab on={tab === "home"} pick={() => setTab("home")}>
             {t.tabs.home}
             {waiting > 0 && ` (${waiting})`}
@@ -219,7 +219,7 @@ function Tab({ on, pick, children }: { on: boolean; pick(): void; children: Reac
       role="tab"
       aria-selected={on}
       onClick={pick}
-      className={`inline-flex h-11 flex-1 items-center justify-center rounded-xl border font-medium text-base ${on ? "border-ink bg-ink text-canvas" : "border-line-strong bg-panel text-ink"}`}
+      className={`inline-flex h-11 flex-1 items-center justify-center rounded-full font-medium text-base transition-colors ${on ? "bg-ink text-canvas" : "text-ink-soft"}`}
     >
       {children}
     </button>

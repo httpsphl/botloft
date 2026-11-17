@@ -80,7 +80,25 @@ fn the_island_may_call_only_its_own_few() {
         "read_owner_token",
         "quiet_now",
         "main_in_front",
+        "set_summon",
     ]
     .map(allow);
     assert_eq!(island, own);
+}
+
+/// The island hears the app's events: the right Ctrl held and the main
+/// window in front (spec 31.6). Without `listen`, both are lost silently.
+#[test]
+fn the_island_hears_the_app() {
+    let json: Value =
+        serde_json::from_str(include_str!("../capabilities/island.json")).expect("capability JSON");
+    let permissions: Vec<&str> = json["permissions"]
+        .as_array()
+        .expect("permissions")
+        .iter()
+        .filter_map(Value::as_str)
+        .collect();
+    for needed in ["core:event:allow-listen", "core:event:allow-unlisten"] {
+        assert!(permissions.contains(&needed), "{needed} in {permissions:?}");
+    }
 }

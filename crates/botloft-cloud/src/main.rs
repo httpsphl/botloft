@@ -8,7 +8,8 @@ use std::time::Duration;
 
 use anyhow::Context;
 use botloft_cloud::{
-    AppState, Clock, Config, CopyStore, Db, Hub, Mailer, Pusher, SmtpMailer, Storage, router, sweep,
+    AppState, Clock, Config, CopyStore, Db, Hub, Mailer, Pusher, Releases, SmtpMailer, Storage,
+    router, sweep,
 };
 
 /// How often what ran out (files from phones nobody took, old links) goes.
@@ -116,6 +117,7 @@ async fn serve(config: Config) -> anyhow::Result<()> {
         config: Arc::new(config.clone()),
         hub: Hub::default(),
         push: Pusher::from_config(&config)?,
+        releases: Releases::new()?,
     };
     let sweeping = state.clone();
     tokio::spawn(async move {

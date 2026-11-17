@@ -1,4 +1,4 @@
-// Perguntas dos bots ao dono (spec 23).
+// Perguntas dos bots ao dono (spec 23) e recados deles (23.10).
 
 import type { Messages } from "../en";
 
@@ -16,23 +16,34 @@ export const questions: Messages["questions"] = {
     dismissed: "Descartada sem resposta",
     answerFailed: "Não foi possível enviar a resposta",
     dismissFailed: "Não foi possível descartar a pergunta",
+    tells: (bot: string) => `${bot} deixou um recado`,
+    note: "Recado",
+    replyLabel: (bot: string) => `Sua resposta para ${bot}`,
+    replyPlaceholder: "Responda, se quiser",
+    reply: "Responder",
+    seen: "Visto",
+    seenHint: (bot: string) => `Fecha o recado. Escrever para ${bot} na conversa também fecha.`,
+    replied: "Você respondeu",
+    wasSeen: "Visto",
+    seenFailed: "Não foi possível fechar o recado",
   },
   box: {
-    label: "Perguntas",
+    label: "Caixa de entrada",
     open: (count: number) =>
       count === 0
-        ? "Perguntas dos seus agentes"
+        ? "Perguntas e recados dos seus agentes"
         : count === 1
-          ? "1 pergunta espera você"
-          : `${count} perguntas esperam você`,
-    title: "Perguntas dos seus agentes",
+          ? "1 pergunta ou recado espera você"
+          : `${count} perguntas e recados esperam você`,
+    title: "Caixa de entrada",
     intro:
-      "Quando um agente precisa de uma decisão sua para continuar, ele pergunta aqui e segue o trabalho. Sua resposta chega a ele como mensagem.",
-    emptyTitle: "Nenhuma pergunta esperando você",
+      "Quando um agente precisa de uma decisão sua, ou tem algo que você deve saber, ele deixa aqui e segue o trabalho. Sua resposta chega a ele como mensagem.",
+    emptyTitle: "Nada esperando você",
     emptyBody:
-      "Os agentes perguntam aqui quando precisam de você, até de madrugada, numa rotina. Responda quando puder.",
+      "Os agentes perguntam e avisam aqui, até de madrugada, numa rotina. Responda quando puder.",
     openChat: (bot: string) => `Abrir a conversa com ${bot}`,
     inCrew: (crew: string) => `em ${crew}`,
   },
   activity: (text: string) => `Pergunta: ${text}`,
+  noteActivity: (text: string) => `Recado: ${text}`,
 };

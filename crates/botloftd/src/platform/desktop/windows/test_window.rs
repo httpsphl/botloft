@@ -4,9 +4,10 @@
 //! its middle stays red; and, when asked, an empty window where Chromium
 //! would show a page.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, MutexGuard, Once, PoisonError, mpsc};
 use std::thread::JoinHandle;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use windows::Win32::Foundation::{COLORREF, HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::Graphics::Gdi::{CreateSolidBrush, HBRUSH};
@@ -15,7 +16,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     BM_SETCHECK, BS_AUTOCHECKBOX, BS_PUSHBUTTON, CB_ADDSTRING, CBS_DROPDOWNLIST, CW_USEDEFAULT,
     CreateWindowExW, DefWindowProcW, DispatchMessageW, ES_PASSWORD, GetMessageW, HMENU,
     LB_ADDSTRING, LBS_NOTIFY, MSG, PostMessageW, PostQuitMessage, RegisterClassW, SendMessageW,
-    SetWindowTextW, TranslateMessage, WINDOW_EX_STYLE, WINDOW_STYLE, WM_CLOSE, WM_COMMAND,
+    SetWindowTextW, TranslateMessage, WINDOW_EX_STYLE, WINDOW_STYLE, WM_APP, WM_CLOSE, WM_COMMAND,
     WM_DESTROY, WNDCLASSW, WS_BORDER, WS_CHILD, WS_OVERLAPPEDWINDOW, WS_VISIBLE, WS_VSCROLL,
 };
 use windows::core::{PCWSTR, w};
@@ -25,8 +26,14 @@ use super::chromium::PAGE_HOST;
 const CLASS: PCWSTR = w!("BotloftDesktopTest");
 /// The Save button's id: its click renames the window "Saved".
 const SAVE: usize = 1;
+/// Keeps the window's thread busy for `wparam` milliseconds, taking no
+/// messages, as a hung app.
+const FREEZE: u32 = WM_APP + 1;
 /// How many items the long list has: more than show at once.
 pub const ITEMS: usize = 50;
+
+/// Whether the test window's thread is kept busy by `FREEZE` now.
+static FROZEN: AtomicBool = AtomicBool::new(false);
 
 unsafe extern "system" fn procedure(
     hwnd: HWND,
@@ -43,6 +50,12 @@ unsafe extern "system" fn procedure(
     if message == WM_COMMAND && wparam.0 & 0xFFFF == SAVE && wparam.0 >> 16 == 0 {
         // SAFETY: renames our own window, on its thread.
         let _ = unsafe { SetWindowTextW(hwnd, w!("Saved")) };
+        return LRESULT(0);
+    }
+    if message == FREEZE {
+        FROZEN.store(true, Ordering::SeqCst);
+        std::thread::sleep(Duration::from_millis(wparam.0 as u64));
+        FROZEN.store(false, Ordering::SeqCst);
         return LRESULT(0);
     }
     // SAFETY: everything else as Windows does by default.
@@ -257,6 +270,19 @@ impl TestWindow {
             id,
             thread: Some(thread),
             _one: one,
+        }
+    }
+
+    /// Makes the window stop answering for `time`, as a hung app does.
+    pub fn freeze(&self, time: Duration) {
+        let wparam = WPARAM(time.as_millis() as usize);
+        // SAFETY: a message our own window's procedure handles.
+        let _ = unsafe { PostMessageW(Some(super::handle(self.id)), FREEZE, wparam, LPARAM(0)) };
+        // Until its thread took it, even on a slow machine.
+        let until = Instant::now() + Duration::from_secs(5);
+        while !FROZEN.load(Ordering::SeqCst) {
+            assert!(Instant::now() < until, "the window did not freeze");
+            std::thread::sleep(Duration::from_millis(10));
         }
     }
 

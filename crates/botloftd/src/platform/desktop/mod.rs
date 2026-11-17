@@ -67,6 +67,10 @@ pub enum DesktopError {
     Gone,
     #[error("that window is minimized, so there is nothing to see in it")]
     Minimized,
+    /// The window's app does not take messages now, busy or hung: a
+    /// picture would wait for it (spec 24.4).
+    #[error("that window's app is not responding")]
+    NotResponding,
     #[error("Windows could not do it: {0}")]
     System(String),
     /// The control a reading named is not in the window anymore.

@@ -2,9 +2,10 @@ import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { FakeBotloft } from "../lib/fake";
 import { FakeHost } from "../lib/fakeHost";
+import type { RoutineRun } from "../lib/protocol.gen";
 import { SYSTEM } from "../lib/system";
 import { crewOpened, renderApp } from "../test/app";
-import { prefs, resetPrefs } from "./prefs";
+import { doneAlerts, prefs, resetPrefs } from "./prefs";
 
 // These are the Windows notifications without the island, which takes
 // their place when it is on (spec 31.6); its own tests are below.
@@ -59,6 +60,88 @@ describe("notifications", () => {
     act(() => fake.setBotState(scout.id, "busy"));
     act(() => fake.setBotState(scout.id, "idle"));
     expect(host.notices).toEqual([{ title: "Scout finished", body: "Crew Ops", sound: false }]);
+  });
+
+  test("stay quiet when the turn was a routine run with nothing new", async () => {
+    const { fake, host, scout } = await scoutBehind();
+    prefs.notifyDone.set(true);
+    const routine = fake.routines.handlers()["routines.create"]({
+      botId: scout.id,
+      name: "Inbox check",
+      prompt: "Tell me what arrived.",
+      schedule: { kind: "interval", minutes: 60 },
+      timezone: "UTC",
+    });
+    const run = (nothingNew: boolean): RoutineRun => ({
+      id: fake.id("rrn"),
+      routineId: routine.id,
+      scheduledFor: Date.now(),
+      status: "done",
+      reason: null,
+      skippedCount: 0,
+      nothingNew,
+      waited: null,
+      messageId: null,
+      createdAt: Date.now(),
+      finishedAt: Date.now(),
+      signal: null,
+    });
+    // The daemon closes the run, then the bot goes idle (spec 20.5).
+    act(() => fake.setBotState(scout.id, "busy"));
+    act(() => fake.emit({ name: "routine.run", params: run(true) }));
+    act(() => fake.setBotState(scout.id, "idle"));
+    expect(host.notices).toEqual([]);
+    // A run that found something still says so.
+    act(() => fake.setBotState(scout.id, "busy"));
+    act(() => fake.emit({ name: "routine.run", params: run(false) }));
+    act(() => fake.setBotState(scout.id, "idle"));
+    expect(host.notices).toEqual([{ title: "Scout finished", body: "Crew Ops", sound: true }]);
+  });
+
+  test("wait for the work an agent handed out before saying it finished", async () => {
+    const { fake, host, scout, writer } = await scoutBehind();
+    prefs.notifyDone.set(true);
+    const finishes = () => {
+      act(() => fake.setBotState(scout.id, "busy"));
+      act(() => fake.setBotState(scout.id, "idle"));
+    };
+    // Scout asked Writer for a draft and stopped: not the end yet.
+    let draft = fake.conversation.task(scout.id, writer.id);
+    finishes();
+    expect(host.notices).toEqual([]);
+    // Nor with a command left running in the background.
+    act(() => {
+      draft = fake.conversation.task(scout.id, writer.id, { id: draft.id, status: "done" });
+      fake.setBackground(scout.id, [
+        { taskId: "b1", kind: "command", description: "Build the site", seenAt: Date.now() },
+      ]);
+    });
+    finishes();
+    expect(host.notices).toEqual([]);
+    // Both back: the turn that reads them is the end.
+    act(() => fake.setBackground(scout.id, []));
+    finishes();
+    expect(host.notices).toEqual([{ title: "Scout finished", body: "Crew Ops", sound: true }]);
+  });
+
+  test("each agent's own choice wins over the switch for all", async () => {
+    const { fake, host, scout, writer } = await scoutBehind();
+    const finishes = (botId: string) => {
+      act(() => fake.setBotState(botId, "busy"));
+      act(() => fake.setBotState(botId, "idle"));
+    };
+    doneAlerts.set(scout.id, true);
+    finishes(scout.id);
+    finishes(writer.id);
+    expect(host.notices.map((notice) => notice.title)).toEqual(["Scout finished"]);
+    prefs.notifyDone.set(true);
+    doneAlerts.set(scout.id, false);
+    finishes(scout.id);
+    finishes(writer.id);
+    expect(host.notices.map((notice) => notice.title)).toEqual([
+      "Scout finished",
+      "Writer finished",
+    ]);
   });
 
   test("do not show while Botloft is in front, nor for what was there on opening", async () => {

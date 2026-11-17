@@ -1,7 +1,7 @@
 //! The text a bot reads when a message arrives (spec 9.3). The first line
 //! always says who sent it; bots are told so in their rules.
 
-use crate::protocol::{MessageKind, Task};
+use crate::protocol::{MessageKind, Task, WaitEnd, WaitOn};
 
 /// Who the first line names.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -109,11 +109,19 @@ pub enum RoutineWhen<'a> {
         /// What the sender wrote with it.
         note: Option<&'a str>,
     },
+    /// What a wait waited for happened, or its time ran out (spec 20.14).
+    Wait {
+        on: &'a WaitOn,
+        ended: WaitEnd,
+        /// When it runs out, in local time like `2026-10-01 09:00`.
+        until: &'a str,
+        timezone: &'a str,
+    },
 }
 
 impl RoutineEnvelope<'_> {
     pub fn render(&self) -> String {
-        let watch = "Nobody is watching live: do the work, then report it in your reply.";
+        let watch = "Nobody is watching live: do the work, then report it in your reply. If nothing is new since the last run, call nothing_new and end without a reply.";
         match self.when {
             RoutineWhen::Scheduled { at, timezone } => format!(
                 "[botloft] routine \"{}\" · scheduled {at} ({timezone})\n{watch}\n\n{}",
@@ -133,6 +141,47 @@ impl RoutineEnvelope<'_> {
                 }
                 text
             }
+            RoutineWhen::Wait {
+                on,
+                ended: WaitEnd::Happened,
+                ..
+            } => format!(
+                "[botloft] wait \"{}\" · {}
+{watch}
+
+{}",
+                self.name,
+                wait_text(on, true),
+                self.body
+            ),
+            RoutineWhen::Wait {
+                on,
+                ended: WaitEnd::TimedOut,
+                until,
+                timezone,
+            } => format!(
+                "[botloft] wait \"{}\" · ran out at {until} ({timezone}): {}
+{watch}
+
+{}",
+                self.name,
+                wait_text(on, false),
+                self.body
+            ),
+        }
+    }
+}
+
+/// What happened, or did not, for a wait (spec 20.14).
+fn wait_text(on: &WaitOn, happened: bool) -> String {
+    match (on, happened) {
+        (WaitOn::File { path }, true) => format!("the file {path} appeared"),
+        (WaitOn::File { path }, false) => format!("the file {path} did not appear"),
+        (WaitOn::Program { name }, true) => format!("no program called {name} is running any more"),
+        (WaitOn::Program { name }, false) => format!("{name} is still running"),
+        (WaitOn::Page { url, text }, true) => format!("the page {url} shows \"{text}\""),
+        (WaitOn::Page { url, text }, false) => {
+            format!("the page {url} does not show \"{text}\"")
         }
     }
 }
@@ -147,6 +196,28 @@ pub fn answer(question_id: &str, question: &str, body: &str) -> String {
     let quoted = crate::chat::one_line(question, QUOTED_QUESTION_MAX_CHARS);
     format!(
         "Answer to your question {question_id}: \"{quoted}\"
+
+{body}"
+    )
+}
+
+/// The owner's reply to a note the bot left them (spec 23.10), as
+/// [`answer`] for a question.
+pub fn note_reply(note_id: &str, note: &str, body: &str) -> String {
+    let quoted = crate::chat::one_line(note, QUOTED_QUESTION_MAX_CHARS);
+    format!(
+        "Reply to your note {note_id}: \"{quoted}\"
+
+{body}"
+    )
+}
+
+/// The owner's answer on a card the bot showed (spec 8.11): the button's
+/// label or the form's lines, after a line that names the card.
+pub fn card_answer(card_id: &str, title: &str, body: &str) -> String {
+    let title = crate::chat::one_line(title, QUOTED_QUESTION_MAX_CHARS);
+    format!(
+        "Answer on your card {card_id} \"{title}\":
 
 {body}"
     )
@@ -172,14 +243,20 @@ pub const QUOTED_REACTION_MAX_CHARS: usize = 120;
 
 /// The owner's reactions since their last message (spec 8.9), one line
 /// each, above what that message says. Each is an emoji and the reply it
-/// is on, already quoted on one line.
+/// is on, already quoted on one line. A 👍 or 👎 on a reply that asked
+/// something says so: its quote is that question (`asks::asked`).
 pub fn with_reactions(reactions: &[(String, String)], text: &str) -> String {
     if reactions.is_empty() {
         return text.to_owned();
     }
     let lines: Vec<String> = reactions
         .iter()
-        .map(|(emoji, quote)| format!("Reacted {emoji} to: \"{quote}\""))
+        .map(
+            |(emoji, quote)| match crate::asks::answer_word(emoji, quote) {
+                Some(word) => format!("Answered {emoji} ({word}) to your question: \"{quote}\""),
+                None => format!("Reacted {emoji} to: \"{quote}\""),
+            },
+        )
         .collect();
     format!(
         "{}
@@ -312,6 +389,21 @@ Next?"
     }
 
     #[test]
+    fn a_thumb_on_a_question_reads_as_the_answer() {
+        let reactions = [
+            ("👎".to_owned(), "Should I deploy now?".to_owned()),
+            ("❤️".to_owned(), "Is the draft good?".to_owned()),
+        ];
+        assert_eq!(
+            with_reactions(&reactions, "👎"),
+            "Answered 👎 (no) to your question: \"Should I deploy now?\"
+Reacted ❤️ to: \"Is the draft good?\"
+
+👎"
+        );
+    }
+
+    #[test]
     fn a_deleted_sender_cannot_be_answered() {
         let text = envelope(Sender::DeletedBot, MessageKind::Note, None).render(0);
         assert_eq!(
@@ -365,9 +457,57 @@ Next?"
         assert_eq!(
             text,
             "[botloft] routine \"Resumo da manhã\" · scheduled 2026-10-01 09:00 (America/Sao_Paulo)\n\
-             Nobody is watching live: do the work, then report it in your reply.\n\n\
+             Nobody is watching live: do the work, then report it in your reply. If nothing is new since the last run, call nothing_new and end without a reply.\n\n\
              Summarize shared/inbox."
         );
+    }
+
+    #[test]
+    fn a_wait_says_what_happened_or_that_it_ran_out() {
+        let file = WaitOn::File {
+            path: r"C:\work\report.pdf".into(),
+        };
+        let wait = |ended| {
+            RoutineEnvelope {
+                name: "Wait for the report",
+                when: RoutineWhen::Wait {
+                    on: &file,
+                    ended,
+                    until: "2026-11-12 09:00",
+                    timezone: "America/Sao_Paulo",
+                },
+                body: "Review it.",
+            }
+            .render()
+        };
+        assert!(
+            wait(WaitEnd::Happened).starts_with(
+                "[botloft] wait \"Wait for the report\" · the file C:\\work\\report.pdf appeared\n"
+            ),
+            "{}",
+            wait(WaitEnd::Happened)
+        );
+        let late = wait(WaitEnd::TimedOut);
+        assert!(
+            late.starts_with(
+                "[botloft] wait \"Wait for the report\" · ran out at 2026-11-12 09:00 \
+                 (America/Sao_Paulo): the file C:\\work\\report.pdf did not appear\n"
+            ),
+            "{late}"
+        );
+        assert!(late.ends_with("\n\nReview it."), "{late}");
+        let page = WaitOn::Page {
+            url: "https://shop.test/order".into(),
+            text: "Shipped".into(),
+        };
+        assert_eq!(
+            super::wait_text(&page, true),
+            "the page https://shop.test/order shows \"Shipped\""
+        );
+        let program = WaitOn::Program {
+            name: "ffmpeg".into(),
+        };
+        assert_eq!(super::wait_text(&program, false), "ffmpeg is still running");
     }
 
     #[test]
@@ -385,7 +525,7 @@ Next?"
         assert_eq!(
             text,
             "[botloft] routine \"Review\" · signal \"report-ready\" from @writer\n\
-             Nobody is watching live: do the work, then report it in your reply.\n\n\
+             Nobody is watching live: do the work, then report it in your reply. If nothing is new since the last run, call nothing_new and end without a reply.\n\n\
              Review the report.\n\n\
              Note @writer sent with the signal (from a bot, not the owner):\n\
              It is in shared/report.md"

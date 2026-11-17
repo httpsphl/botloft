@@ -14,8 +14,12 @@ mod browser_catalog;
 mod browser_help;
 mod browser_reply;
 mod browser_sites;
+mod build;
 mod calls;
+mod card;
 mod catalog;
+mod chrome;
+mod connector;
 mod crew_access;
 mod crew_reach;
 mod desktop;
@@ -26,16 +30,24 @@ mod desktop_list;
 mod desktop_real;
 mod desktop_screen;
 mod era;
+mod history;
+mod history_text;
 mod key;
+mod nothing_new;
+mod overview;
 mod plan;
 mod question;
+mod retry;
 mod routine;
 mod routine_catalog;
 mod routine_change;
 mod share;
 mod signal;
+mod skill;
 mod suggest;
 mod templates;
+mod wait;
+mod wait_on;
 
 use std::sync::Arc;
 
@@ -48,6 +60,8 @@ use botloft_core::protocol::error_code;
 use serde_json::{Value, json};
 use tracing::debug;
 
+pub(crate) use self::build::check_changed as check_changed_build;
+pub(crate) use self::build::undo_changes as undo_build_changes;
 pub(crate) use self::crew_access::check_answer as check_crew_access_answer;
 use self::era::{Era, LEGACY, era, supported};
 pub(crate) use self::plan::check_answer as check_plan_answer;
@@ -55,6 +69,7 @@ pub(crate) use self::routine::check_changed as check_changed_routine;
 pub(crate) use self::routine_change::check_changed as check_changed_routine_change;
 use crate::approvals;
 use crate::rpc::jsonrpc::{self, Request};
+use crate::seat::Seat;
 use crate::state::Daemon;
 
 /// How long clients may reuse `server/discover` and `tools/list`.
@@ -62,7 +77,7 @@ const CACHE_TTL_MS: u64 = 60 * 60 * 1000;
 
 const INSTRUCTIONS: &str = "Tools to work with your Botloft crew: see who is in it, send notes \
     or tasks to other bots, report the result of tasks assigned to you and, for the crew's chief, \
-    suggest new bots (list_bot_templates and get_bot_template show the catalog of ready-made roles) and, to write the owner a summary, read what the crew's bots did with crew_activity. schedule_routine asks the owner for work at set times. ask_owner asks the owner a question without waiting; the answer arrives later as a message. ask_key asks the owner for a key, such as an API token, without it going through the chat. show_plan shows the owner your plan before long work, when your rules ask for it. send_signal tells the crew something happened, and the routines waiting for it run. share_file shows the \
+    suggest new bots (list_bot_templates and get_bot_template show the catalog of ready-made roles) and, to write the owner a summary, read what the crew's bots did with crew_activity; for the Maker, see the owner's crews with crews_overview and build or change crews with build. schedule_routine asks the owner for work at set times. ask_owner asks the owner a question without waiting; the answer arrives later as a message. tell_owner leaves the owner a note they should see soon, and asks nothing. show_card shows the owner a card with tables, charts, buttons or a form, and their answer arrives later as a message. search_history finds words in your own past conversations, for what is no longer in your context. ask_key asks the owner for a key, such as an API token, without it going through the chat. show_plan shows the owner your plan before long work, when your rules ask for it. send_signal tells the crew something happened, and the routines waiting for it run. wait_for wakes you once when a file appears, a program ends or a page shows some words, without using the owner's plan; use it instead of sleeping or checking again and again. share_file shows the \
     owner files you made, as cards in the chat they can open and save. The browser_ tools drive your own web browser, which the owner can watch \
     live and take over when you ask with browser_ask_owner. The desktop_ tools read the apps open on \
     the owner's own computer, app by app as the owner allows. The owner writes to you directly; messages from other bots and from Botloft start with \
@@ -152,6 +167,10 @@ pub async fn handle(
             let result = suggest::suggest(&daemon, &bot, generation, arguments(&request)).await;
             Ok(decorate(era, &request, result))
         }
+        Ok(era) if called(&request) == Some(build::BUILD) => {
+            let result = build::build(&daemon, &bot, generation, arguments(&request)).await;
+            Ok(decorate(era, &request, result))
+        }
         Ok(era) if called(&request) == Some(catalog::SCHEDULE_ROUTINE) => {
             let result = routine::schedule(&daemon, &bot, generation, arguments(&request)).await;
             Ok(decorate(era, &request, result))
@@ -169,6 +188,21 @@ pub async fn handle(
         Ok(era) if called(&request) == Some(crew_access::ASK_CREW_ACCESS) => {
             let args = arguments(&request);
             let result = crew_access::ask(&daemon, &bot, generation, args).await;
+            Ok(decorate(era, &request, result))
+        }
+        Ok(era) if called(&request) == Some(connector::ASK_CONNECTOR) => {
+            let args = arguments(&request);
+            let result = connector::ask(&daemon, &bot, generation, args).await;
+            Ok(decorate(era, &request, result))
+        }
+        Ok(era) if called(&request) == Some(chrome::ASK_CHROME) => {
+            let args = arguments(&request);
+            let result = chrome::ask(&daemon, &bot, generation, args).await;
+            Ok(decorate(era, &request, result))
+        }
+        Ok(era) if called(&request) == Some(skill::ASK_SKILL) => {
+            let args = arguments(&request);
+            let result = skill::ask(&daemon, &bot, generation, args).await;
             Ok(decorate(era, &request, result))
         }
         Ok(era) if called(&request) == Some(plan::SHOW_PLAN) => {
@@ -261,7 +295,7 @@ fn server_info() -> Value {
     json!({ "name": "botloft", "version": env!("CARGO_PKG_VERSION") })
 }
 
-fn answer(daemon: &Daemon, bot: &BotId, era: Era, request: &Request) -> Result<Value, Failure> {
+fn answer(daemon: &Daemon, bot: &Seat, era: Era, request: &Request) -> Result<Value, Failure> {
     let params = request.params.clone().unwrap_or_else(|| json!({}));
     let result = match (era, request.method.as_str()) {
         (_, "ping") => json!({}),

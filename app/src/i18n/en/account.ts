@@ -16,7 +16,7 @@ export const account = {
   usage: {
     title: "Usage",
     intro:
-      "How much of your Claude plan your agents have used. It updates whenever an agent works.",
+      "How much of your Claude plan is used: everything on your account, Botloft and the rest.",
     empty: "Usage shows up after an agent's first reply.",
     windows: {
       five_hour: "5-hour window",
@@ -29,12 +29,18 @@ export const account = {
     resets: (relative: string) => `Resets ${relative}`,
     limited: "Limit reached. Your agents wait until it resets.",
     limitedAgent: (agent: string) => `Limit reached. Agents on ${agent} wait until it resets.`,
+    extraUsage: "Past your plan's limit. Your agents keep working on the account's extra usage.",
     plan: (plan: string) => `Plan: ${plan}`,
     updated: (relative: string) => `Updated ${relative}`,
-    tokens: {
-      title: "Use by agent",
+    /** The windows were read from the account (spec 8.13). */
+    fromAccount: (relative: string) => `From your Claude account, ${relative}`,
+    /** The windows came from what an agent saw. */
+    fromAgents: (relative: string) => `Updated ${relative}, when an agent worked`,
+    modelWeek: (model: string) => `This week, ${model}`,
+    costs: {
+      title: "What the agents cost",
       intro:
-        "How much of your weekly plan each agent used, and the tokens behind it: the pieces of text an agent reads and writes.",
+        "What each agent's work would cost at API prices. Your plan does not charge it: it shows which agents, models and routines weigh the most.",
       period: "Period",
       periods: {
         hour: "Last hour",
@@ -43,19 +49,26 @@ export const account = {
         month: "30 days",
         all: "All time",
       },
+      view: "Show by",
+      views: {
+        agents: "Agents",
+        models: "Models",
+        days: "Days",
+        routines: "Routines",
+      },
       empty: "No agent worked in this period.",
-      failed: "Could not load the tokens",
+      failed: "Could not load the costs",
       archived: "archived",
-      /** `crew` is null on the total of all bots. */
+      /** `crew` is null on the total of all agents. */
       detail: (crew: string | null, times: number) =>
         `${crew === null ? "" : `${crew} · `}Worked ${times === 1 ? "once" : `${times} times`}`,
-      total: "All agents",
-      share: (percent: string) => `≈ ${percent} of the week`,
-      tokensUsed: (count: string) => `${count} tokens`,
-      estimate:
-        "≈ Estimated: Botloft learns how much of your plan the agents' work takes from how the weekly plan rises while they work. What you use outside Botloft also raises it, so the agents may show a little more than they used.",
-      learning:
-        "Each agent's share of your weekly plan shows up once the plan has gone up a few points while the agents work. Until then, the tokens.",
+      total: "Total",
+      share: (percent: string) => `${percent} of the total`,
+      noPrice: (count: string) => `${count} tokens · no price`,
+      noModel: "Model not recorded (older work)",
+      notRoutine: "Chats and requests",
+      deletedRoutine: "A deleted routine",
+      note: "API prices for what the agents used. Your plan does not charge this amount: it is there to compare.",
     },
   },
   backup: {
@@ -233,7 +246,8 @@ export const account = {
     notifyNeedsHint: (system: string) =>
       `A ${system} notification when an agent asks for permission or needs you to sign in, if Botloft is not in front.`,
     notifyDone: "When an agent finishes",
-    notifyDoneHint: "A notification when an agent finishes what it was doing.",
+    notifyDoneHint:
+      "A notification when an agent finishes what it was doing, once the work it gave other agents is back. Each agent's menu can change this for that agent.",
     notifyRoutineFailed: "When a routine fails",
     notifyRoutineFailedHint:
       "A notification with the agent and the routine. A connected phone is told too, without what it is about.",
@@ -245,6 +259,15 @@ export const account = {
     islandCheer: "Celebrate when an agent finishes",
     islandCheerHint:
       "The island shows for a moment that an agent finished, with the first line of its answer.",
+    islandPart: "Island",
+    islandHideWithApp: "Hide it while Botloft is in front",
+    islandHideWithAppHint:
+      "With Botloft's own window in front, everything is already there, so the island steps aside.",
+    islandSummon: "Hold the right Ctrl to open it",
+    islandSummonHint:
+      "Hold the right Ctrl alone and the island opens, any time, even with nothing going on. Hold it again to hide it. Botloft only checks that one key.",
+    islandHold: "How long to hold it",
+    islandHolds: { "500": "Half a second", "1000": "1 second", "2000": "2 seconds" },
     markReplies: "Mark the icon when an agent replies",
     markRepliesHint: "A dot on the Botloft icon in the taskbar while a conversation is unread.",
     sound: "Play a sound",
@@ -260,6 +283,16 @@ export const account = {
     sleepAfterHint:
       "A sleeping agent uses no memory and wakes by itself when a message, a routine or a signal comes. Its first reply then takes a few seconds more.",
     sleepAfterChoices: { 15: "15 minutes", 30: "30 minutes", 60: "1 hour", 0: "Never" },
+    history: "History",
+    historyKeep: "Keep the chats for",
+    historyHint:
+      "Older chats, messages and routine runs are deleted from Botloft for good. What still waits for you stays, and so do the agents' memory and the files in their folders.",
+    historyChoices: { 0: "Always", 30: "30 days", 90: "90 days", 365: "1 year" },
+    historyDaysCustom: (days: number) => `${days} days`,
+    historyConfirmTitle: "Delete the older chats now?",
+    historyConfirmBody: (kept: string) =>
+      `Chats, messages and routine runs older than ${kept} are deleted from Botloft for good, now and from then on. The agents keep their memory, and the files in their folders stay.`,
+    historyConfirm: "Delete older chats",
     saveFailed: "Could not change the setting",
     pages: "Parts of Settings",
     general: "General",
@@ -323,7 +356,11 @@ export const account = {
     restoreFailed: (name: string) => `Could not restore ${name}`,
     about: "About",
     backup: "Backup",
-    tools: "Connected tools",
+    tools: "Tools",
+    logins: "Logins",
+    skills: "Skills",
+    plugins: "Plugins",
+    keys: "Agents' keys",
     permissions: "Permissions",
     account: "Account and phone",
     groupDaily: "Every day",

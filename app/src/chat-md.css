@@ -167,3 +167,19 @@
     margin-right: 0.4em;
   }
 }
+
+/* The chat's balloons (features/chat): code and tables sit on the panel
+   color, so they still stand out on the bot's gray. In the owner's
+   dark balloon a named bot keeps the balloon's color, underlined. */
+@layer components {
+  .chat-bubble .chat-md :not(pre) > code,
+  .chat-bubble .chat-md :is(pre, table) {
+    background: var(--panel);
+  }
+
+  .chat-own .chat-mention {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+}

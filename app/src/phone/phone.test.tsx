@@ -28,6 +28,7 @@ const question = (change: Partial<QuestionCard> = {}): QuestionCard => ({
   bot: { id: "bot_writer", name: "Writer", color: "#ccbbaa" },
   crew: "Ops",
   createdAt: Date.now(),
+  kind: "question",
   text: "Which **client** first?",
   options: ["Acme", "Globex"],
   ...change,

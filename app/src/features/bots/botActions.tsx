@@ -1,6 +1,10 @@
 import {
   Archive,
+  Bell,
+  BellOff,
   Crown,
+  FileArchive,
+  FileClock,
   FolderOpen,
   Mail,
   MailOpen,
@@ -12,16 +16,20 @@ import {
 import { type ReactNode, useState } from "react";
 import { useT } from "../../i18n";
 import type { Bot, Crew } from "../../lib/protocol.gen";
+import { doneAlerts, useWantsDone } from "../../shell/prefs";
 import { useApi, useApp, useHost } from "../../store/context";
 import { isUnread } from "../../store/seen";
 import { Confirm } from "../../ui/Confirm";
 import type { MenuItem } from "../../ui/Menu";
 import { attempt } from "../../ui/toast";
+import { ClaudeAiImport } from "../maker/ClaudeAiImport";
+import { HistoryImport } from "../maker/HistoryImport";
 import { BotDialog } from "./BotDialog";
 import { isChief } from "./ChiefBadge";
 import { DeleteBot } from "./DeleteBot";
+import { useIsMaker } from "./useIsMaker";
 
-type Open = "edit" | "archive" | "delete" | "fresh" | null;
+type Open = "edit" | "archive" | "delete" | "fresh" | "code" | "ai" | null;
 
 /**
  * What the owner can do with a bot from a menu, and the dialogs those
@@ -41,13 +49,21 @@ export function useBotActions(
   const unread = useApp((state) => isUnread(state, bot.id));
   const markSeen = useApp((state) => state.markSeen);
   const markUnread = useApp((state) => state.markUnread);
+  const tellsDone = useWantsDone(bot.id);
   const chief = isChief(bot, crew);
+  // The Maker is always there and works alone (spec 36.2): no chief, no
+  // archive, no delete, so the menu does not offer them.
+  const maker = useIsMaker(bot.id);
   const [open, setOpen] = useState<Open>(null);
   const close = () => setOpen(null);
 
-  const items: MenuItem[] = [
+  const offered: (MenuItem | false)[] = [
     { label: words.edit, icon: Pencil, onSelect: () => setOpen("edit") },
-    {
+    // Bringing a history to the Maker, also once its chat is no longer
+    // empty (spec 36.7).
+    maker && { label: t.maker.history.open, icon: FileClock, onSelect: () => setOpen("code") },
+    maker && { label: t.maker.claudeAi.open, icon: FileArchive, onSelect: () => setOpen("ai") },
+    !maker && {
       label: chief ? words.stopChief : words.makeChief,
       icon: Crown,
       onSelect: () =>
@@ -80,9 +96,28 @@ export function useBotActions(
     unread
       ? { label: words.markRead, icon: MailOpen, onSelect: () => markSeen(bot.id) }
       : { label: words.markUnread, icon: Mail, onSelect: () => markUnread(bot.id) },
-    { label: words.archive, icon: Archive, danger: true, onSelect: () => setOpen("archive") },
-    { label: words.delete, icon: Trash2, danger: true, onSelect: () => setOpen("delete") },
+    // Over the switch for all in Settings > Notifications (spec 15.1).
+    tellsDone
+      ? {
+          label: words.doneOff(bot.name),
+          icon: BellOff,
+          onSelect: () => doneAlerts.set(bot.id, false),
+        }
+      : { label: words.doneOn(bot.name), icon: Bell, onSelect: () => doneAlerts.set(bot.id, true) },
+    !maker && {
+      label: words.archive,
+      icon: Archive,
+      danger: true,
+      onSelect: () => setOpen("archive"),
+    },
+    !maker && {
+      label: words.delete,
+      icon: Trash2,
+      danger: true,
+      onSelect: () => setOpen("delete"),
+    },
   ];
+  const items = offered.filter((item): item is MenuItem => item !== false);
 
   const dialogs =
     open === "edit" ? (
@@ -113,6 +148,10 @@ export function useBotActions(
       >
         {words.archiveConfirm.body}
       </Confirm>
+    ) : open === "code" ? (
+      <HistoryImport onClose={close} />
+    ) : open === "ai" ? (
+      <ClaudeAiImport onClose={close} />
     ) : open === "delete" ? (
       <DeleteBot bot={bot} chiefOf={chief ? crew.name : undefined} onClose={close} />
     ) : null;

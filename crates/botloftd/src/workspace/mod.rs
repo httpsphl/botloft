@@ -6,6 +6,7 @@ pub mod connected;
 mod files;
 pub mod folder;
 mod memory;
+mod owner;
 mod sections;
 
 use std::io;
@@ -18,6 +19,7 @@ use botloft_store::BotRecord;
 use crate::paths::Paths;
 
 pub use connected::connected_var;
+pub use owner::write_owner_rules;
 
 /// What generated files need to know about the running daemon.
 #[derive(Debug, Clone, Copy)]
@@ -148,6 +150,7 @@ mod tests {
             paused: false,
             color: None,
             auto_mode: false,
+            system: None,
             created_at: 0,
             archived_at: None,
         };
@@ -252,6 +255,7 @@ mod tests {
             paused: false,
             color: None,
             auto_mode: false,
+            system: None,
             created_at: 0,
             archived_at: None,
         };

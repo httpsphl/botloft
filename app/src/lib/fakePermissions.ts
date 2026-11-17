@@ -31,6 +31,7 @@ export class FakeSites {
           sites: this.sites.filter((site) => live(site.botId)),
           rules: this.fake.allow.rules.filter((rule) => live(rule.botId)),
           crewAccess: this.fake.crewAccess.all().filter((access) => live(access.botId)),
+          chrome: this.fake.chrome.grants.filter((grant) => live(grant.botId)),
         };
       },
       "sites.revoke": ({ botId, site }) => {

@@ -34,7 +34,7 @@ export function CrewCard({ crew }: { crew: Crew }) {
       <button
         type="button"
         onClick={() => selectCrew(crew.id)}
-        className="flex h-full w-full flex-col gap-3 rounded-xl border border-line bg-panel p-3.5 text-left transition-[border-color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:shadow-sm"
+        className="flex h-full w-full flex-col gap-3 rounded-2xl bg-bubble p-4 text-left transition-[background-color,transform] duration-200 hover:-translate-y-0.5 hover:bg-line/60"
       >
         <span className="flex w-full items-center gap-2">
           <span className="min-w-0 flex-1">

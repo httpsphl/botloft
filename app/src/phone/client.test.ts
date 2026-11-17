@@ -67,6 +67,7 @@ const question = (id: string, at: number): QuestionCard => ({
   bot: { id: "bot_scout", name: "Scout", color: "#aabbcc" },
   crew: "Ops",
   createdAt: at,
+  kind: "question",
   text: "Which first?",
   options: ["A", "B"],
 });

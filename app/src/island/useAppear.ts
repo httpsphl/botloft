@@ -3,7 +3,8 @@
 // Windows keeps the screen quiet; and it peeks while the mouse rests on the
 // pill, closing a second after it leaves unless the owner clicked inside.
 // Once the owner opened it or clicked in it, it is pinned: it stays until
-// they hide it, even after the agents are done.
+// they hide it, even after the agents are done. Holding the right Ctrl
+// calls it, pinned, even with nothing going on; calling again hides it.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { IslandHost } from "./host";
@@ -17,6 +18,10 @@ export interface Appear {
   open: boolean;
   /** The owner opened it or clicked in it. */
   pinned: boolean;
+  /** The owner called it with the right Ctrl: it shows even with Botloft in front. */
+  summoned: boolean;
+  /** The owner held the right Ctrl: opens it pinned, or hides it when open. */
+  summon: () => void;
   /** Opens or closes it; `pinned` when the owner did it. */
   setOpen: (open: boolean, pinned?: boolean) => void;
   /** Mouse handlers for the island's outline. */
@@ -44,6 +49,7 @@ export function useAppear({
 }): Appear {
   const [open, setOpenState] = useState(false);
   const [pinned, setPinned] = useState(false);
+  const [summoned, setSummoned] = useState(false);
   const peeking = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const seen = useRef<Set<string> | null>(null);
@@ -55,7 +61,21 @@ export function useAppear({
     peeking.current = false;
     setOpenState(next);
     setPinned(next && pin);
+    if (!next) {
+      setSummoned(false);
+    }
   }, []);
+
+  const shown = useRef({ open, pinned });
+  shown.current = { open, pinned };
+  const summon = useCallback(() => {
+    if (shown.current.open && shown.current.pinned) {
+      setOpen(false);
+      return;
+    }
+    setOpen(true, true);
+    setSummoned(true);
+  }, [setOpen]);
 
   const key = waitingIds.join(",");
   useEffect(() => {
@@ -109,6 +129,7 @@ export function useAppear({
           peeking.current = false;
           setOpenState(false);
           setPinned(false);
+          setSummoned(false);
         }, LEAVE_MS);
       }
     },
@@ -121,5 +142,5 @@ export function useAppear({
     },
   };
 
-  return { open, pinned, setOpen, hover };
+  return { open, pinned, summoned, summon, setOpen, hover };
 }

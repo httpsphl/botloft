@@ -107,10 +107,14 @@ pub async fn forget_turns(daemon: Arc<Daemon>) {
                 if !matches!(change.state, BotState::Busy | BotState::NeedsApproval) =>
             {
                 daemon.approvals.this_turn.end(&change.bot_id);
+                crate::chrome::turn_ended(&daemon, &change.bot_id);
             }
             Ok(_) => {}
             // A turn may have ended unseen: asking again is the safe side.
-            Err(RecvError::Lagged(_)) => daemon.approvals.this_turn.end_all(),
+            Err(RecvError::Lagged(_)) => {
+                daemon.approvals.this_turn.end_all();
+                crate::chrome::turns_lost(&daemon);
+            }
             Err(RecvError::Closed) => return,
         }
     }

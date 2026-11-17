@@ -301,6 +301,7 @@ async fn a_page_that_never_goes_quiet_does_not_cost_three_seconds_a_click() {
     let page = open_page(&mut b, "/poll").await;
     let add = ref_of(&page, "button \"Add\"");
     let mut after = String::new();
+    let mut took = Vec::new();
     for _ in 0..3 {
         let started = Instant::now();
         after = b
@@ -308,16 +309,15 @@ async fn a_page_that_never_goes_quiet_does_not_cost_three_seconds_a_click() {
             .tool_text("browser_click", json!({ "ref": add }))
             .await
             .expect("click");
-        // It used to wait the whole 3 s for a network that never stops (spec
-        // 21.3), so never less than 3.15 s; a click now settles in under a
-        // second on a quiet machine (0.78 s measured) and took 2.2 s on the
-        // slow macOS runner, so the bound sits between the two.
-        assert!(
-            started.elapsed() < Duration::from_millis(2900),
-            "{:?}",
-            started.elapsed()
-        );
+        took.push(started.elapsed());
     }
+    // It used to wait the whole 3 s for a network that never stops (spec
+    // 21.3), so every click took at least 3.15 s; a click now settles in
+    // under a second on a quiet machine (0.78 s measured) and took 2.2 s on
+    // the slow macOS runner, once 2.92 s. A busy runner slows one click; the
+    // old wait slowed them all, so the fastest of the three tells.
+    let fastest = took.iter().min().copied().unwrap_or_default();
+    assert!(fastest < Duration::from_millis(2900), "{took:?}");
     assert!(after.contains("Count 3"), "{after}");
 }
 

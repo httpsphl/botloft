@@ -1,0 +1,128 @@
+//! The words of the summary, in the owner's language (spec 36.7): the
+//! summary is what the owner reads before it goes, and what the Maker reads.
+
+pub struct Words {
+    pub title: &'static str,
+    pub intro: &'static str,
+    pub period: &'static str,
+    pub global_rules: &'static str,
+    pub own_tools: &'static str,
+    pub sessions: &'static str,
+    pub prompts: &'static str,
+    pub repeated: &'static str,
+    pub titles: &'static str,
+    pub tools: &'static str,
+    pub models: &'static str,
+    pub rules: &'static str,
+    pub cut: &'static str,
+    pub cut_short: &'static str,
+    pub days: [&'static str; 7],
+    pub times: &'static str,
+    pub message: &'static str,
+    pub title_ai: &'static str,
+    pub intro_ai: &'static str,
+    pub count_ai: &'static str,
+    pub projects_ai: &'static str,
+    pub repeated_ai: &'static str,
+    pub conversations: &'static str,
+    pub messages: &'static str,
+    pub cut_ai: &'static str,
+    pub message_ai: &'static str,
+}
+
+const PT: Words = Words {
+    title: "Resumo do meu histórico do Claude Code",
+    intro: "Só os pedidos que eu digitei, os títulos das sessões, as ferramentas e os modelos usados, os CLAUDE.md e os nomes das minhas skills, comandos e subagentes. Sem as respostas do Claude, sem o que as ferramentas leram ou devolveram e sem anexos. Chaves, e-mails e números foram trocados antes.",
+    period: "Período",
+    global_rules: "Minhas instruções para todos os projetos (CLAUDE.md global)",
+    own_tools: "Minhas skills, comandos e subagentes",
+    sessions: "sessões",
+    prompts: "pedidos",
+    repeated: "Pedidos (os repetidos juntos, do mais novo ao mais antigo)",
+    titles: "Títulos das sessões",
+    tools: "Ferramentas mais usadas",
+    models: "Modelos",
+    rules: "CLAUDE.md do projeto",
+    cut: "Ficaram de fora por tamanho",
+    cut_short: "O resumo passou do limite e foi cortado aqui.",
+    days: ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"],
+    times: "vezes",
+    message: "Este é um resumo do meu histórico do Claude Code. Sugira equipes, rotinas e fluxos para mim a partir dele.",
+    title_ai: "Resumo das minhas conversas no claude.ai",
+    intro_ai: "De cada conversa, só o título, a data, quantas mensagens tem e as três primeiras mensagens que eu escrevi. Sem as respostas do Claude e sem anexos. Chaves, e-mails e números foram trocados antes.",
+    count_ai: "conversas",
+    projects_ai: "Meus projetos no claude.ai",
+    repeated_ai: "Pedidos que se repetem entre conversas",
+    conversations: "Conversas (da mais nova à mais antiga)",
+    messages: "mensagens",
+    cut_ai: "Conversas mais antigas que ficaram de fora por tamanho",
+    message_ai: "Este é um resumo das minhas conversas no claude.ai. Sugira equipes, rotinas e fluxos para mim a partir dele.",
+};
+
+const EN: Words = Words {
+    title: "Summary of my Claude Code history",
+    intro: "Only the requests I typed, the session titles, the tools and models used, the CLAUDE.md files and the names of my skills, commands and subagents. No answers from Claude, nothing tools read or returned and no attachments. Keys, e-mails and numbers were swapped out first.",
+    period: "Period",
+    global_rules: "My instructions for every project (global CLAUDE.md)",
+    own_tools: "My skills, commands and subagents",
+    sessions: "sessions",
+    prompts: "requests",
+    repeated: "Requests (repeated ones together, newest first)",
+    titles: "Session titles",
+    tools: "Most used tools",
+    models: "Models",
+    rules: "The project's CLAUDE.md",
+    cut: "Left out for size",
+    cut_short: "The summary went past the limit and was cut here.",
+    days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    times: "times",
+    message: "This is a summary of my Claude Code history. Suggest crews, routines and flows for me from it.",
+    title_ai: "Summary of my claude.ai conversations",
+    intro_ai: "Of each conversation, only the title, the date, how many messages it has and the first three messages I wrote. No answers from Claude and no attachments. Keys, e-mails and numbers were swapped out first.",
+    count_ai: "conversations",
+    projects_ai: "My claude.ai projects",
+    repeated_ai: "Requests that repeat across conversations",
+    conversations: "Conversations (newest first)",
+    messages: "messages",
+    cut_ai: "Older conversations left out for size",
+    message_ai: "This is a summary of my claude.ai conversations. Suggest crews, routines and flows for me from it.",
+};
+
+const ES: Words = Words {
+    title: "Resumen de mi historial de Claude Code",
+    intro: "Solo los pedidos que escribí, los títulos de las sesiones, las herramientas y los modelos usados, los CLAUDE.md y los nombres de mis skills, comandos y subagentes. Sin las respuestas de Claude, sin lo que las herramientas leyeron o devolvieron y sin adjuntos. Las claves, los correos y los números se cambiaron antes.",
+    period: "Período",
+    global_rules: "Mis instrucciones para todos los proyectos (CLAUDE.md global)",
+    own_tools: "Mis skills, comandos y subagentes",
+    sessions: "sesiones",
+    prompts: "pedidos",
+    repeated: "Pedidos (los repetidos juntos, del más nuevo al más viejo)",
+    titles: "Títulos de las sesiones",
+    tools: "Herramientas más usadas",
+    models: "Modelos",
+    rules: "CLAUDE.md del proyecto",
+    cut: "Quedaron fuera por tamaño",
+    cut_short: "El resumen pasó el límite y se cortó aquí.",
+    days: ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"],
+    times: "veces",
+    message: "Este es un resumen de mi historial de Claude Code. Sugiere equipos, rutinas y flujos para mí a partir de él.",
+    title_ai: "Resumen de mis conversaciones en claude.ai",
+    intro_ai: "De cada conversación, solo el título, la fecha, cuántos mensajes tiene y los tres primeros mensajes que escribí. Sin las respuestas de Claude y sin adjuntos. Las claves, los correos y los números se cambiaron antes.",
+    count_ai: "conversaciones",
+    projects_ai: "Mis proyectos en claude.ai",
+    repeated_ai: "Pedidos que se repiten entre conversaciones",
+    conversations: "Conversaciones (de la más nueva a la más vieja)",
+    messages: "mensajes",
+    cut_ai: "Conversaciones más viejas que quedaron fuera por tamaño",
+    message_ai: "Este es un resumen de mis conversaciones en claude.ai. Sugiere equipos, rutinas y flujos para mí a partir de él.",
+};
+
+pub fn words(locale: &str) -> &'static Words {
+    if locale.starts_with("pt") {
+        &PT
+    } else if locale.starts_with("es") {
+        &ES
+    } else {
+        &EN
+    }
+}

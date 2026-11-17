@@ -124,9 +124,17 @@ pub(crate) fn media_type(name: &str) -> &'static str {
         "xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
         "zip" => "application/zip",
+        "bmp" => "image/bmp",
+        // What the app's players play (spec 8.4).
         "mp3" => "audio/mpeg",
         "wav" => "audio/wav",
-        "mp4" => "video/mp4",
+        "m4a" | "aac" => "audio/mp4",
+        "ogg" | "oga" | "opus" => "audio/ogg",
+        "flac" => "audio/flac",
+        "weba" => "audio/webm",
+        "mp4" | "m4v" => "video/mp4",
+        "webm" => "video/webm",
+        "mov" => "video/quicktime",
         // Source and config files read as text.
         "rs" | "ts" | "tsx" | "js" | "jsx" | "py" | "css" | "toml" | "ini" | "sql" | "sh"
         | "ps1" | "bat" | "java" | "go" | "c" | "h" | "cpp" | "cs" | "rb" | "php" => "text/plain",
@@ -143,6 +151,9 @@ mod tests {
         assert_eq!(media_type("Report.PDF"), "application/pdf");
         assert_eq!(media_type("notes.md"), "text/markdown");
         assert_eq!(media_type("script.ps1"), "text/plain");
+        assert_eq!(media_type("voice.M4A"), "audio/mp4");
+        assert_eq!(media_type("clip.webm"), "video/webm");
+        assert_eq!(media_type("take.mov"), "video/quicktime");
         assert_eq!(media_type("noextension"), "application/octet-stream");
     }
 

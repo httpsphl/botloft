@@ -21,12 +21,13 @@ import { SearchPage } from "../features/search/SearchPage";
 import { useSearchKey } from "../features/search/searchKey";
 import { UpdateButton } from "../features/updates/UpdateButton";
 import { useT } from "../i18n";
+import { crewList, makerBot } from "../store/app";
 import { useApp } from "../store/context";
 import { Callout } from "../ui/Callout";
 import { useBotAlerts } from "./alerts";
 import { useAttentionMark } from "./attention";
 import { useFolderNotices } from "./folders";
-import { useIslandOpen } from "./islandOpen";
+import { useIslandLocale, useIslandOpen } from "./islandOpen";
 import { Rail } from "./Rail";
 import { useRoutineAlerts } from "./routineAlerts";
 import { SidebarSlot, SidebarToggle } from "./sidebarToggle";
@@ -40,7 +41,11 @@ export function Workspace() {
   useLocaleToDaemon();
   const loaded = useApp((state) => state.loaded);
   const loadError = useApp((state) => state.loadError);
-  const hasCrews = useApp((state) => Object.keys(state.crews).length > 0);
+  const hasCrews = useApp((state) => crewList(state).length > 0);
+  // Before the first crew, the Maker's chat opens in place of the welcome.
+  const makerOpen = useApp(
+    (state) => state.selectedBotId !== null && makerBot(state)?.id === state.selectedBotId,
+  );
   const page = useApp((state) => state.page);
   // Claude Code missing or signed out only matters to bots that run on it.
   const needsClaude = useApp((state) => {
@@ -56,6 +61,7 @@ export function Workspace() {
   useBotAlerts();
   useRoutineAlerts();
   useIslandOpen();
+  useIslandLocale();
   useAppSounds();
   useFolderNotices();
   useOpenAtSignIn();
@@ -72,14 +78,14 @@ export function Workspace() {
     );
   } else if (!loaded) {
     main = null;
-  } else if (!hasCrews) {
+  } else if (!hasCrews && !makerOpen) {
     // The sidebar stays, with the account area, before the first crew too.
     main = (
       <div className="flex min-h-0 flex-1">
         <Rail />
         <Sidebar />
         {page === "settings" ? (
-          <main className="flex min-w-0 flex-1 flex-col">
+          <main className="flex min-w-0 flex-1 flex-col bg-panel">
             <SettingsPage />
           </main>
         ) : (
@@ -94,7 +100,7 @@ export function Workspace() {
         <SidebarSlot>
           <Sidebar />
         </SidebarSlot>
-        <main className="flex min-w-0 flex-1 flex-col">
+        <main className="flex min-w-0 flex-1 flex-col bg-panel">
           {runtimeError ? (
             <div className="border-line border-b p-3">
               <Callout tone="danger" title={t.shell.botsCantStart}>
@@ -201,14 +207,19 @@ function Breadcrumb() {
   }
   return (
     <>
-      <ChevronRight aria-hidden size={14} className="text-muted" />
-      <button
-        type="button"
-        onClick={() => selectCrew(crew.id)}
-        className="truncate text-ink-soft hover:text-ink"
-      >
-        {crew.name}
-      </button>
+      {/* The Maker's crew is no place of the owner's (spec 36.2). */}
+      {!crew.system && (
+        <>
+          <ChevronRight aria-hidden size={14} className="text-muted" />
+          <button
+            type="button"
+            onClick={() => selectCrew(crew.id)}
+            className="truncate text-ink-soft hover:text-ink"
+          >
+            {crew.name}
+          </button>
+        </>
+      )}
       {bot && (
         <>
           <ChevronRight aria-hidden size={14} className="text-muted" />

@@ -1,7 +1,9 @@
 //! Domain types, IDs, message envelope rendering and protocol types shared by
 //! the daemon and the app.
 
+pub mod asks;
 pub mod avatar;
+pub mod cards;
 pub mod chat;
 pub mod command;
 pub mod edits;

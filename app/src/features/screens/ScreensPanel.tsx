@@ -58,8 +58,8 @@ export function ScreensPanel({
 
   return (
     <SidePanel label={t.panel(bot.name)} name="screens" defaultWidth={640} expanded={expanded}>
-      <header className="flex h-11 shrink-0 items-center justify-between gap-2 border-line border-b pr-1.5 pl-4">
-        <h2 className="font-semibold text-sm">{t.heading}</h2>
+      <header className="flex h-11 shrink-0 items-center justify-between gap-2 pr-1.5 pl-4">
+        <h2 className="font-semibold text-base">{t.heading}</h2>
         <div className="flex items-center gap-0.5">
           {!path && data.screens.length > 0 && (
             <>

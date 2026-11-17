@@ -1,5 +1,5 @@
-// A request or a question in the island (spec 31.5): the agent's mascot,
-// what it wants and the buttons. The phone's rules hold: a request cut to
+// A request, a question or a note in the island (spec 31.5): the agent's
+// mascot, what it wants and the buttons. The phone's rules hold: a request cut to
 // size or one that belongs to the computer is only denied here. A request
 // for a key only opens Botloft, where the key is pasted in the chat (32.5).
 
@@ -181,10 +181,24 @@ export function AskCard({
   onDone: () => void;
 }) {
   const t = useT();
+  const words = t.island.card;
+  const note = card.kind === "note";
   const guard = useGuard();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const seen = () =>
+    guard(() => {
+      setBusy(true);
+      setFailed(false);
+      api
+        .call("questions.dismiss", { questionId: card.questionId })
+        .then(onDone, () => {
+          setFailed(true);
+          onDone();
+        })
+        .finally(() => setBusy(false));
+    });
   const send = (answer: string) =>
     guard(() => {
       if (answer.trim() === "") {
@@ -205,7 +219,12 @@ export function AskCard({
     send(text);
   };
   return (
-    <Frame bot={card.bot} crew={card.crew} title={t.island.card.asks(card.bot.name)} pager={pager}>
+    <Frame
+      bot={card.bot}
+      crew={card.crew}
+      title={note ? words.tells(card.bot.name) : words.asks(card.bot.name)}
+      pager={pager}
+    >
       <p className="whitespace-pre-wrap text-[13px] text-[var(--island-ink)]">{card.text}</p>
       {card.options.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -227,8 +246,8 @@ export function AskCard({
         <input
           value={text}
           onChange={(event) => setText(event.target.value)}
-          aria-label={t.island.card.answerLabel(card.bot.name)}
-          placeholder={t.island.card.placeholder}
+          aria-label={note ? words.replyLabel(card.bot.name) : words.answerLabel(card.bot.name)}
+          placeholder={note ? words.replyPlaceholder : words.placeholder}
           className="min-w-0 flex-1 bg-transparent text-[13px] outline-none"
         />
         <button
@@ -237,13 +256,24 @@ export function AskCard({
           data-kind="allow"
           disabled={busy || text.trim() === ""}
         >
-          {t.island.card.send}
+          {note ? words.reply : words.send}
         </button>
       </form>
-      {failed && <p className="text-[12px] text-[var(--island-danger)]">{t.island.card.failed}</p>}
-      <div className="flex">
+      {failed && <p className="text-[12px] text-[var(--island-danger)]">{words.failed}</p>}
+      <div className="flex gap-2">
+        {note && (
+          <button
+            type="button"
+            className="island-button"
+            data-kind="quiet"
+            disabled={busy}
+            onClick={seen}
+          >
+            {words.seen}
+          </button>
+        )}
         <button type="button" className="island-button ml-auto" data-kind="quiet" onClick={onOpen}>
-          {t.island.card.openInApp}
+          {words.openInApp}
         </button>
       </div>
     </Frame>

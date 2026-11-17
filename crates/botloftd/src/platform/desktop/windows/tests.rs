@@ -53,6 +53,22 @@ fn a_picture_is_only_the_window_in_its_own_pixels() {
 }
 
 #[test]
+fn a_window_that_does_not_answer_is_not_waited_for() {
+    let window = TestWindow::open("Botloft desktop test: frozen");
+    window.freeze(Duration::from_secs(4));
+    let started = Instant::now();
+    match capture(window.id) {
+        Err(DesktopError::NotResponding) => {}
+        Ok((_, width, height, _)) => {
+            panic!("pictured {width} × {height} after {:?}", started.elapsed())
+        }
+        Err(other) => panic!("{other}"),
+    }
+    let took = started.elapsed();
+    assert!(took < Duration::from_secs(3), "{took:?}");
+}
+
+#[test]
 fn a_minimized_window_is_listed_but_has_nothing_to_see_and_a_closed_one_is_gone() {
     let mut window = TestWindow::open("Botloft desktop test: minimized");
     // SAFETY: a plain request on our own window.

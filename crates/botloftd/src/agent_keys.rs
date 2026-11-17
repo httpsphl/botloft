@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use botloft_core::ids::BotId;
 use botloft_core::keys::redact;
-use botloft_core::protocol::ChatBody;
+use botloft_core::protocol::{CardBlock, ChatBody};
 use tracing::warn;
 
 use crate::platform;
@@ -163,6 +163,16 @@ fn redact_with(pairs: &Pairs, body: &mut ChatBody) {
         ChatBody::Inbound(inbound) => clean(&mut inbound.message.body),
         ChatBody::Notice(notice) => clean(&mut notice.text),
         ChatBody::KeyRequest(request) => clean(&mut request.why),
+        ChatBody::Card(card) => {
+            clean(&mut card.title);
+            for block in &mut card.blocks {
+                match block {
+                    CardBlock::Text { text } => clean(text),
+                    CardBlock::Table { rows, .. } => rows.iter_mut().flatten().for_each(clean),
+                    _ => {}
+                }
+            }
+        }
         ChatBody::Question(_) | ChatBody::Turn(_) => {}
     }
 }

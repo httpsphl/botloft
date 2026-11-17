@@ -87,6 +87,7 @@ export function islandHandlers(fake: FakeBotloft): Pick<Handlers, "cards.list" |
           questionId: question.id,
           ...who(question.botId),
           createdAt: question.createdAt,
+          kind: question.kind,
           text: question.text,
           options: question.options,
         }));

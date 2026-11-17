@@ -100,9 +100,10 @@ pub(super) fn get(daemon: &Daemon, bot: &BotId, args: GetArgs) -> Result<Value, 
     serde_json::to_value(template).map_err(|err| err.to_string())
 }
 
+/// The chief's, and the Maker's, which builds crews from it (spec 36.9).
 fn chief_only(daemon: &Daemon, bot: &BotId) -> Result<(), String> {
     let (crew, _) = bots::active(&daemon.store(), bot).map_err(explain)?;
-    if lead::is_lead(&crew, bot) {
+    if lead::is_lead(&crew, bot) || crate::service::maker::is_maker_crew(&crew) {
         Ok(())
     } else {
         Err(

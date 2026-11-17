@@ -22,15 +22,8 @@ export function useCheer(api: BotloftApi, bots: Bot[], host: IslandHost): Cheer 
   const [cheer, setCheer] = useState<Cheer | null>(null);
   const known = useRef(bots);
   known.current = bots;
+  /** The state each event left, for the bots that had one. */
   const states = useRef(new Map<BotId, BotState>());
-
-  useEffect(() => {
-    for (const bot of bots) {
-      if (!states.current.has(bot.id)) {
-        states.current.set(bot.id, bot.state);
-      }
-    }
-  }, [bots]);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -40,9 +33,12 @@ export function useCheer(api: BotloftApi, bots: Bot[], host: IslandHost): Cheer 
         return;
       }
       const { botId, state } = event.params;
-      const before = states.current.get(botId);
-      states.current.set(botId, state);
       const bot = known.current.find((have) => have.id === botId);
+      // Before its first event, a bot is as the list on screen shows it,
+      // read now: an effect copying the list could still be waiting to run
+      // when the bot finishes, and its cheer would be lost.
+      const before = states.current.get(botId) ?? bot?.state;
+      states.current.set(botId, state);
       if (before !== "busy" || state !== "idle" || !bot || !prefs.islandCheer.get()) {
         return;
       }

@@ -67,6 +67,7 @@ async fn send(
                 body: text,
                 attachments: (!attachments.is_empty()).then_some(attachments),
                 reply_to: None,
+                conversation_id: None,
             },
         )
         .map(|_| ())

@@ -154,6 +154,7 @@ impl Store {
         let item = ChatItem {
             id: ChatItemId::generate(),
             bot_id: message.to_bot_id.clone(),
+            conversation_id: delivery.conversation_id.clone(),
             body: ChatBody::Inbound(InboundItem {
                 message: message.clone(),
             }),
@@ -184,6 +185,19 @@ impl Store {
             "SELECT EXISTS (SELECT 1 FROM messages \
              WHERE from_bot_id = ?1 AND to_bot_id = ?2 AND created_at >= ?3)",
             params![from.as_str(), to.as_str(), since],
+            |row| row.get(0),
+        )?)
+    }
+
+    /// Whether `to` has a note from Botloft saying `body` that it has not
+    /// begun yet: one in its queue, or written to it and not picked up.
+    pub fn unread_note(&self, to: &BotId, body: &str) -> Result<bool> {
+        Ok(self.conn.query_row(
+            "SELECT EXISTS (SELECT 1 FROM messages AS m \
+             JOIN deliveries AS d ON d.message_id = m.id \
+             WHERE m.to_bot_id = ?1 AND m.from_kind = 'system' AND m.body = ?2 \
+               AND d.read_at IS NULL AND d.state != 'dead')",
+            params![to.as_str(), body],
             |row| row.get(0),
         )?)
     }

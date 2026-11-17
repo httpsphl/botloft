@@ -8,7 +8,6 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use botloft_core::ids::BotId;
 use botloft_core::protocol::{
     ChatBody, NoticeCode, NoticeItem, NoticeLevel, PermissionMode, TokenUsage,
 };
@@ -18,6 +17,7 @@ use super::OutputDecoder;
 use super::codex_wire::{Answer, Shared};
 use crate::approvals::{self, Verdict};
 use crate::chat::{items, sink};
+use crate::seat::Seat;
 use crate::state::Daemon;
 
 /// Reads what the server prints and tells the daemon.
@@ -68,7 +68,7 @@ impl OutputDecoder for CodexDecoder {
             .filter(|text| !text.is_empty())
     }
 
-    fn handle(&mut self, daemon: &Arc<Daemon>, bot: &BotId, generation: u64, event: &Value) {
+    fn handle(&mut self, daemon: &Arc<Daemon>, bot: &Seat, generation: u64, event: &Value) {
         if !daemon.supervisor.is_current(bot, generation) {
             return;
         }
@@ -107,7 +107,7 @@ fn touches(fenced: &[PathBuf], text: &str) -> bool {
 }
 
 impl CodexDecoder {
-    fn response(&mut self, daemon: &Daemon, bot: &BotId, generation: u64, event: &Value) {
+    fn response(&mut self, daemon: &Daemon, bot: &Seat, generation: u64, event: &Value) {
         match self.shared.answered(event) {
             Answer::Thread { thread, model } => {
                 self.thread = Some(thread);
@@ -121,7 +121,7 @@ impl CodexDecoder {
                     sink::message_read(daemon, bot, &uuid);
                 }
                 let error = message.unwrap_or_else(|| "the turn was refused".to_owned());
-                sink::turn_finished(daemon, bot, 0, None, Some(error));
+                sink::turn_finished(daemon, bot, 0, None, None, Some(error), sink::Stopped::No);
                 sink::finish_turn(daemon, bot, generation, true);
             }
             Answer::Failed(message) => {
@@ -142,7 +142,7 @@ impl CodexDecoder {
     fn server_request(
         &self,
         daemon: &Arc<Daemon>,
-        bot: &BotId,
+        bot: &Seat,
         generation: u64,
         method: &str,
         id: &Value,
@@ -217,7 +217,7 @@ impl CodexDecoder {
     fn notification(
         &mut self,
         daemon: &Daemon,
-        bot: &BotId,
+        bot: &Seat,
         generation: u64,
         method: &str,
         params: &Value,
@@ -244,7 +244,7 @@ impl CodexDecoder {
         }
     }
 
-    fn item_started(&mut self, daemon: &Daemon, bot: &BotId, generation: u64, params: &Value) {
+    fn item_started(&mut self, daemon: &Daemon, bot: &Seat, generation: u64, params: &Value) {
         let item = &params["item"];
         let id = item["id"].as_str().unwrap_or_default();
         match item["type"].as_str() {
@@ -309,7 +309,7 @@ impl CodexDecoder {
         }
     }
 
-    fn item_completed(&mut self, daemon: &Daemon, bot: &BotId, item: &Value) {
+    fn item_completed(&mut self, daemon: &Daemon, bot: &Seat, item: &Value) {
         let id = item["id"].as_str().unwrap_or_default();
         let ok = item["status"].as_str() == Some("completed");
         match item["type"].as_str() {
@@ -354,7 +354,7 @@ impl CodexDecoder {
         }
     }
 
-    fn token_usage(&mut self, daemon: &Daemon, bot: &BotId, usage: &Value) {
+    fn token_usage(&mut self, daemon: &Daemon, bot: &Seat, usage: &Value) {
         let count = |value: &Value, key: &str| value[key].as_u64().unwrap_or_default();
         self.window = count(usage, "modelContextWindow");
         self.usage = (
@@ -371,7 +371,7 @@ impl CodexDecoder {
         }
     }
 
-    fn turn_completed(&mut self, daemon: &Daemon, bot: &BotId, generation: u64, turn: &Value) {
+    fn turn_completed(&mut self, daemon: &Daemon, bot: &Seat, generation: u64, turn: &Value) {
         let failed = turn["status"].as_str() != Some("completed");
         // A compaction ends like a turn; its notice says what happened.
         if std::mem::take(&mut self.compacting) && !failed {
@@ -414,7 +414,15 @@ impl CodexDecoder {
             output,
         });
         let duration = turn["durationMs"].as_u64().unwrap_or_default();
-        sink::turn_finished(daemon, bot, duration, tokens, error);
+        sink::turn_finished(
+            daemon,
+            bot,
+            duration,
+            tokens,
+            None,
+            error,
+            sink::Stopped::No,
+        );
         self.shared.turn_done();
         sink::finish_turn(daemon, bot, generation, failed);
     }
@@ -426,7 +434,7 @@ impl CodexDecoder {
         self.base = self.usage;
     }
 
-    fn notice(&self, daemon: &Daemon, bot: &BotId, text: &str) {
+    fn notice(&self, daemon: &Daemon, bot: &Seat, text: &str) {
         items::add(
             daemon,
             bot,
@@ -440,7 +448,7 @@ impl CodexDecoder {
 
     /// Nobody is signed in to Codex: only the owner can fix that, so the bot
     /// stops until they restart it (spec 7.3).
-    fn signed_out(&self, daemon: &Daemon, bot: &BotId, generation: u64) {
+    fn signed_out(&self, daemon: &Daemon, bot: &Seat, generation: u64) {
         self.notice(
             daemon,
             bot,
@@ -449,17 +457,16 @@ impl CodexDecoder {
         daemon.supervisor.signed_out(bot, generation);
     }
 
-    /// The account reached its usage limit: messages wait until it resets.
-    fn limit_reached(&self, daemon: &Daemon, bot: &BotId, generation: u64) {
+    /// The account reached its usage limit: messages wait until it resets,
+    /// and the bot carries on then (spec 7.3).
+    fn limit_reached(&self, daemon: &Daemon, bot: &Seat, generation: u64) {
         self.notice(
             daemon,
             bot,
-            "Codex reached its usage limit. Messages wait until it resets.",
+            "Codex reached its usage limit. Messages wait until it resets, and then the agent \
+             carries on where it stopped.",
         );
-        let until = self
-            .limit_resets_at
-            .unwrap_or_else(|| daemon.clock.now_ms() + 5 * 60 * 1000);
-        daemon.supervisor.rate_limited(bot, generation, until);
+        crate::service::resume::cut_turn(daemon, bot, generation, self.limit_resets_at);
     }
 }
 
@@ -476,7 +483,7 @@ fn tool_in(message: &str) -> &str {
 /// owner (spec 10.1).
 async fn decide(
     daemon: &Daemon,
-    bot: &BotId,
+    bot: &Seat,
     generation: u64,
     tool: &str,
     input: &Value,
