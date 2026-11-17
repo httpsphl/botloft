@@ -22,7 +22,7 @@ async fn the_catalog_lists_every_role_without_its_instructions() {
 
     let all = app.call("catalog.list", json!({})).await.expect("list");
     let all = all.as_array().expect("array");
-    assert_eq!(all.len(), 129);
+    assert_eq!(all.len(), 134);
     let ids: Vec<_> = all
         .iter()
         .filter_map(|entry| entry["id"].as_str())
@@ -80,7 +80,7 @@ async fn the_catalog_lists_every_role_without_its_instructions() {
         .call("catalog.list", json!({ "category": "marketing" }))
         .await
         .expect("list marketing");
-    assert_eq!(marketing.as_array().expect("array").len(), 24);
+    assert_eq!(marketing.as_array().expect("array").len(), 27);
 
     let design = app
         .call("catalog.list", json!({ "category": "design" }))
@@ -110,7 +110,7 @@ async fn the_catalog_lists_every_role_without_its_instructions() {
         .call("catalog.list", json!({ "category": "business" }))
         .await
         .expect("list business");
-    assert_eq!(business.as_array().expect("array").len(), 10);
+    assert_eq!(business.as_array().expect("array").len(), 12);
 
     let legal_list = app
         .call("catalog.list", json!({ "category": "legal" }))
