@@ -25,6 +25,7 @@ import { useCrewActions } from "./crewActions";
 import { moveBy, orderedCrews, setCrewOrder, useCrewOrder } from "./crewOrder";
 import { Conversation } from "./SidebarConversation";
 import { row } from "./SidebarPages";
+import { SidebarResizer } from "./SidebarResizer";
 import { StateFilters } from "./StateFilters";
 import { filteredBots, useStateFilter } from "./stateFilter";
 import { useCrewDrag } from "./useCrewDrag";
@@ -44,7 +45,8 @@ export function Sidebar() {
   const allFolded = crews.length > 0 && crews.every((crew) => collapsed.has(crew.id));
   const [creating, setCreating] = useState(false);
   return (
-    <div className="flex w-72 shrink-0 flex-col border-line border-r bg-canvas">
+    <div className="relative flex w-[var(--sidebar-width)] shrink-0 flex-col border-line border-r bg-canvas">
+      <SidebarResizer />
       <nav aria-label={words.label} className="flex min-h-0 flex-1 flex-col">
         <div className="flex h-10 shrink-0 items-center gap-0.5 pr-1.5 pl-2">
           <h2 className="min-w-0 flex-1">
