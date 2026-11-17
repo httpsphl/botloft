@@ -40,8 +40,8 @@ export function Notices({
       </Callout>,
     );
   }
-  // Signing in does not help while a key in the environment is used (spec 7.4).
-  if (bot.state === "auth_error" && apiKeyInEnv) {
+  // Signing in does not help Claude Code while a key in the environment is used (spec 7.4).
+  if (bot.state === "auth_error" && apiKeyInEnv && bot.agent === "claude") {
     notices.push(
       <Callout key="state" tone="danger" title={t.bots.notices.apiKey}>
         {t.bots.notices.apiKeyBody}

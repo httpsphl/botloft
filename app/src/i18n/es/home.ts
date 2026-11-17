@@ -47,6 +47,7 @@ export const home: Messages["home"] = {
   },
   signedOut: {
     line: (bot: string) => `${bot} se detuvo: su motor no tiene la sesión iniciada`,
+    keyLine: (bot: string) => `${bot} se detuvo: una clave guardada en Windows está estorbando`,
     open: "Abrir",
   },
 };

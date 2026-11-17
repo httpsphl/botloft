@@ -45,6 +45,8 @@ export function NeedsYou({
   const t = useT().home;
   const [failedOpen, setFailedOpen] = useState(false);
   const selectBot = useApp((state) => state.selectBot);
+  // Signing in does not help a Claude agent while a key in the environment is used (spec 7.4).
+  const keyInEnv = useApp((state) => state.system?.apiKeyInEnv === true);
   const entries: Entry[] = [
     ...requests.map((card) => ({ kind: "request" as const, at: card.createdAt, card })),
     ...questions.map((question) => ({
@@ -93,7 +95,11 @@ export function NeedsYou({
             <Line
               key={bot.id}
               icon={<KeyRound aria-hidden size={15} className="text-danger" />}
-              text={t.signedOut.line(bot.name)}
+              text={
+                keyInEnv && bot.agent === "claude"
+                  ? t.signedOut.keyLine(bot.name)
+                  : t.signedOut.line(bot.name)
+              }
             >
               <Button size="sm" onClick={() => selectBot(bot.id)}>
                 {t.signedOut.open}

@@ -81,7 +81,7 @@ describe("a key saved in Windows", () => {
     const crew = fake.addCrew("Ops");
     const bot = fake.addBot(crew.id, "Scout");
     renderApp(fake);
-    await screen.findByRole("heading", { level: 1, name: "Ops" });
+    await crewOpened("Ops");
     const sidebar = screen.getByRole("navigation", { name: "Crews" });
     fireEvent.click(within(sidebar).getByRole("button", { name: /Scout/ }));
     act(() => {

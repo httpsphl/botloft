@@ -56,6 +56,8 @@ export const home = {
   },
   signedOut: {
     line: (bot: string) => `${bot} stopped: its engine is not signed in`,
+    /** Claude agent in `auth_error` with a key in the environment (spec 7.4). */
+    keyLine: (bot: string) => `${bot} stopped: a key saved in Windows is in the way`,
     open: "Open",
   },
 };
