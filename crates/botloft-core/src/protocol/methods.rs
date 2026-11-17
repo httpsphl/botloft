@@ -73,6 +73,11 @@ pub struct SystemStatus {
     pub claude_path: Option<String>,
     /// Whether Claude Code is signed in (`claude auth status`); `null` until checked.
     pub claude_signed_in: Option<bool>,
+    /// The bots' environment has an `ANTHROPIC_API_KEY`, which Claude Code
+    /// uses instead of the Claude account (spec 7.4). Only whether it is
+    /// there: never its value.
+    #[serde(default)]
+    pub api_key_in_env: bool,
     /// Who the owner is, for the account area of the app.
     pub account: OwnerAccount,
     pub deliveries: DeliveryBacklog,

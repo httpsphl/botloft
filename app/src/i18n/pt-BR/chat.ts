@@ -413,6 +413,8 @@ export const chat: Messages["chat"] = {
     openLinkFailed: "Não foi possível abrir o link",
   },
   notice: {
+    apiKeyFailed:
+      "Este agente usou uma chave salva no Windows, a ANTHROPIC_API_KEY, em vez da sua conta do Claude, e a chave não funcionou. Tire ela das variáveis de ambiente do Windows (ou corrija), depois reinicie o agente. Entrar no Claude de novo não resolve enquanto ela estiver lá.",
     signedOut:
       "O Claude Code não está conectado a uma conta, ou a conta não pode ser usada agora. Entre no Claude ou confira o seu plano do Claude.",
     usageLimit:

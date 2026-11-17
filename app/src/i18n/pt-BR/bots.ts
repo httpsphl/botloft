@@ -146,6 +146,9 @@ export const bots: Messages["bots"] = {
     crewPausedBody: "Os agentes dela ficam parados até você retomar a equipe.",
     programMissing: (name: string) => `${name} não foi encontrado`,
     programMissingBody: "Instale ou diga ao Botloft onde ele está, em Configurações.",
+    apiKey: "Uma chave salva no Windows está atrapalhando",
+    apiKeyBody:
+      "Seus agentes usam a ANTHROPIC_API_KEY, salva nas variáveis de ambiente do Windows, em vez da sua conta do Claude, e ela não funciona. Tire ela (ou corrija), depois reinicie o agente.",
   },
   details: {
     title: (name: string) => `Sobre ${name}`,

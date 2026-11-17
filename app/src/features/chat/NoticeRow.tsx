@@ -43,6 +43,8 @@ function noticeText(notice: NoticeItem, words: Messages["chat"]["notice"]): stri
   switch (notice.code) {
     case "signed_out":
       return words.signedOut;
+    case "api_key_failed":
+      return words.apiKeyFailed;
     case "usage_limit":
       return words.usageLimit;
     case "turn_failed":

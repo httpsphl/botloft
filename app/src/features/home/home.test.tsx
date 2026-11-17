@@ -145,6 +145,18 @@ describe("the home", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Writer" })).toBeDefined();
   });
 
+  test("a signed-out agent names a key saved in Windows when one is in the way", async () => {
+    const { fake, writer } = crew();
+    fake.system = { ...fake.system, apiKeyInEnv: true };
+    renderApp(fake);
+    const page = await screen.findByRole("region", { name: "Home" });
+    act(() => fake.setBotState(writer.id, "auth_error"));
+    expect(
+      await within(page).findByText("Writer stopped: a key saved in Windows is in the way"),
+    ).toBeDefined();
+    expect(within(page).queryByText("Writer stopped: its engine is not signed in")).toBeNull();
+  });
+
   test("who works and who replied show under their own titles, and open the chat", async () => {
     const { fake, scout, writer } = crew();
     fake.setBotState(scout.id, "busy");

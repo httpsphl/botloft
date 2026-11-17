@@ -47,6 +47,7 @@ export const home: Messages["home"] = {
   },
   signedOut: {
     line: (bot: string) => `${bot} parou: o motor dele não está conectado à conta`,
+    keyLine: (bot: string) => `${bot} parou: uma chave salva no Windows está atrapalhando`,
     open: "Abrir",
   },
 };

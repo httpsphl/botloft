@@ -20,6 +20,7 @@ export function Notices({
   const t = useT();
   const notices = [];
   const checks = useApp((state) => state.system?.agentChecks);
+  const apiKeyInEnv = useApp((state) => state.system?.apiKeyInEnv === true);
   // An agent that is not on the computer is restarted over and over: say why.
   const missing =
     bot.agent !== "claude" &&
@@ -39,8 +40,18 @@ export function Notices({
       </Callout>,
     );
   }
-  // An approval shows in the chat itself; the rest needs a word up here.
-  if ((view.tone === "warn" || view.tone === "danger") && bot.state !== "needs_approval") {
+  // Signing in does not help Claude Code while a key in the environment is used (spec 7.4).
+  if (bot.state === "auth_error" && apiKeyInEnv && bot.agent === "claude") {
+    notices.push(
+      <Callout key="state" tone="danger" title={t.bots.notices.apiKey}>
+        {t.bots.notices.apiKeyBody}
+      </Callout>,
+    );
+  } else if (
+    // An approval shows in the chat itself; the rest needs a word up here.
+    (view.tone === "warn" || view.tone === "danger") &&
+    bot.state !== "needs_approval"
+  ) {
     notices.push(
       <Callout key="state" tone={view.tone} title={view.label}>
         {view.hint}

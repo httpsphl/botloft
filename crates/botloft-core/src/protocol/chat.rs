@@ -38,6 +38,9 @@ text_enum!(
     NoticeCode, "notice code" {
         /// Claude Code is not signed in or the account cannot be used.
         SignedOut => "signed_out",
+        /// Claude Code used an `ANTHROPIC_API_KEY` from the owner's
+        /// environment instead of the Claude account, and the key failed.
+        ApiKeyFailed => "api_key_failed",
         /// The account reached its usage limit.
         UsageLimit => "usage_limit",
         /// The turn failed; `text` holds Claude Code's detail or error code.

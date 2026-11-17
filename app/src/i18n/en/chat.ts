@@ -437,6 +437,9 @@ export const chat = {
     openLinkFailed: "Could not open the link",
   },
   notice: {
+    /** A key saved in Windows was used instead of the Claude account, and failed. */
+    apiKeyFailed:
+      "This agent used a key saved in Windows, ANTHROPIC_API_KEY, instead of your Claude account, and the key did not work. Remove it from the Windows environment variables (or fix it), then restart the agent. Signing in to Claude again does not help while it is there.",
     signedOut:
       "Claude Code is not signed in, or the account can't be used right now. Sign in to Claude, or check your Claude plan.",
     usageLimit:

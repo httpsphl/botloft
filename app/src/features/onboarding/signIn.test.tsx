@@ -73,3 +73,29 @@ describe("signing in to Claude", () => {
     expect(within(view).getByRole("button", { name: "Sign in to Claude" })).toBeDefined();
   });
 });
+
+describe("a key saved in Windows", () => {
+  test("is named instead of the sign-in, when it is what failed", async () => {
+    const fake = new FakeBotloft();
+    fake.system = { ...fake.system, apiKeyInEnv: true };
+    const crew = fake.addCrew("Ops");
+    const bot = fake.addBot(crew.id, "Scout");
+    renderApp(fake);
+    await crewOpened("Ops");
+    const sidebar = screen.getByRole("navigation", { name: "Crews" });
+    fireEvent.click(within(sidebar).getByRole("button", { name: /Scout/ }));
+    act(() => {
+      fake.chat.add(bot.id, {
+        kind: "notice",
+        level: "error",
+        code: "api_key_failed",
+        text: "Claude Code used the ANTHROPIC_API_KEY…",
+      });
+      fake.setBotState(bot.id, "auth_error");
+    });
+    const view = screen.getByRole("region", { name: "Scout" });
+    expect(within(view).getByText("A key saved in Windows is in the way")).toBeDefined();
+    expect(within(view).queryByRole("button", { name: "Sign in to Claude" })).toBeNull();
+    expect(await within(view).findByText(/This agent used a key saved in Windows/)).toBeDefined();
+  });
+});

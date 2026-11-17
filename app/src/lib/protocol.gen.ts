@@ -632,6 +632,12 @@ claudePath: string | null,
  */
 claudeSignedIn: boolean | null, 
 /**
+ * The bots' environment has an `ANTHROPIC_API_KEY`, which Claude Code
+ * uses instead of the Claude account (spec 7.4). Only whether it is
+ * there: never its value.
+ */
+apiKeyInEnv: boolean, 
+/**
  * Who the owner is, for the account area of the app.
  */
 account: OwnerAccount, deliveries: DeliveryBacklog, 
@@ -1139,7 +1145,7 @@ export type NoticeLevel = "info" | "warning" | "error";
 /**
  * What a notice is about, so the app can say it in the owner's language.
  */
-export type NoticeCode = "signed_out" | "usage_limit" | "turn_failed" | "model_unavailable" | "compacted" | "auto_compacted" | "compact_failed" | "fresh_start" | "stuck_turn";
+export type NoticeCode = "signed_out" | "api_key_failed" | "usage_limit" | "turn_failed" | "model_unavailable" | "compacted" | "auto_compacted" | "compact_failed" | "fresh_start" | "stuck_turn";
 
 export type InboundItem = { message: Message, };
 
