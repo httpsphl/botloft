@@ -6,6 +6,9 @@ mod act;
 #[cfg(test)]
 mod act_tests;
 mod capture;
+mod chromium;
+#[cfg(test)]
+mod chromium_tests;
 mod input;
 mod notice;
 mod outline;

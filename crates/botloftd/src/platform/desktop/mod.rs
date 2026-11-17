@@ -18,7 +18,7 @@ use std::path::PathBuf;
 
 pub use blocked::{Never, never};
 pub use overlay::{ScreenCursor, notice_hide, notice_show, outline_hide, outline_show};
-pub use read::{Control, LINES_MAX, by_reference, reference, render};
+pub use read::{Control, LINES_MAX, Reading, by_reference, reference, render};
 pub use screen::{cover, screen_picture};
 
 /// The largest picture of a window the bot gets, in logical pixels (24.4).
@@ -186,8 +186,9 @@ pub fn owner_idle() -> Option<std::time::Duration> {
 }
 
 /// The controls of window `id` through its accessibility tree, in the
-/// order they sit in it, the ones shown on screen (spec 24.5).
-pub fn read(id: u64) -> Result<Vec<Control>, DesktopError> {
+/// order they sit in it, the ones shown on screen (spec 24.5). A web page
+/// an app built on Chromium has not prepared yet is waited for a moment.
+pub fn read(id: u64) -> Result<Reading, DesktopError> {
     #[cfg(windows)]
     {
         windows::read(id)

@@ -23,7 +23,8 @@ use windows::Win32::UI::Accessibility::{
 };
 
 use super::super::DesktopError;
-use super::super::read::Control;
+use super::super::read::{Control, Reading};
+use super::chromium::{has_page, shows_page};
 use super::handle;
 use super::uia_control::{control, kind_of};
 use windows::Win32::UI::HiDpi::{
@@ -39,6 +40,11 @@ const WALK_MAX: Duration = Duration::from_secs(15);
 /// How long one call into an app may take, and connecting to it: an app
 /// busy with a dialog, or stuck, would otherwise hold the call for long.
 const CALL_MS: u32 = 5000;
+/// How long a reading waits for a page Chromium has not built for readers
+/// yet, and how often it looks again. Measured with Edge 156, a page of 170
+/// controls was there half a second after the first reading.
+pub(super) const PAGE_WAIT: Duration = Duration::from_secs(3);
+const PAGE_AGAIN: Duration = Duration::from_millis(250);
 
 const PROPERTIES: [UIA_PROPERTY_ID; 12] = [
     UIA_NamePropertyId,
@@ -190,9 +196,34 @@ struct Walk<'a> {
     until: Instant,
 }
 
-/// The controls of window `id`, in the order they sit in it.
-pub fn read(id: u64) -> Result<Vec<Control>, DesktopError> {
-    Ok(Session::start()?.walk(id, None)?.found)
+/// The controls of window `id`, in the order they sit in it. A page that
+/// Chromium has not built for readers yet is read again for a moment.
+pub fn read(id: u64) -> Result<Reading, DesktopError> {
+    let session = Session::start()?;
+    let mut controls = session.walk(id, None)?.found;
+    if has_page(&controls) || !shows_page(id) {
+        return Ok(Reading {
+            controls,
+            preparing: false,
+        });
+    }
+    // Chromium builds a page's tree once a reader asks for it: the first
+    // reading has only the window's frame.
+    let until = Instant::now() + PAGE_WAIT;
+    while Instant::now() < until {
+        std::thread::sleep(PAGE_AGAIN);
+        controls = session.walk(id, None)?.found;
+        if has_page(&controls) {
+            return Ok(Reading {
+                controls,
+                preparing: false,
+            });
+        }
+    }
+    Ok(Reading {
+        controls,
+        preparing: true,
+    })
 }
 
 impl Walk<'_> {

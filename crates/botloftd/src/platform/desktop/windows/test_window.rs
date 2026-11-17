@@ -1,7 +1,8 @@
 //! A window of the tests' own, painted red, on a thread with its message
 //! loop: a Save button that renames the window, a field, a password field,
 //! a ticked check box, a combo box and a long list, on its left side, so
-//! its middle stays red.
+//! its middle stays red; and, when asked, an empty window where Chromium
+//! would show a page.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, MutexGuard, Once, PoisonError, mpsc};
@@ -19,6 +20,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
     WM_DESTROY, WNDCLASSW, WS_BORDER, WS_CHILD, WS_OVERLAPPEDWINDOW, WS_VISIBLE, WS_VSCROLL,
 };
 use windows::core::{PCWSTR, w};
+
+use super::chromium::PAGE_HOST;
 
 const CLASS: PCWSTR = w!("BotloftDesktopTest");
 /// The Save button's id: its click renames the window "Saved".
@@ -131,9 +134,67 @@ unsafe fn controls(parent: HWND) {
     }
 }
 
+unsafe extern "system" fn page_procedure(
+    hwnd: HWND,
+    message: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+) -> LRESULT {
+    // SAFETY: as Windows does by default.
+    unsafe { DefWindowProcW(hwnd, message, wparam, lparam) }
+}
+
+/// A child of `parent` with the class of the window Chromium shows a page
+/// in, empty, as a page Chromium has not built for readers yet.
+///
+/// # Safety
+///
+/// `parent` is a window of this thread.
+unsafe fn page_host(parent: HWND) {
+    static PAGE_ONCE: Once = Once::new();
+    let class: Vec<u16> = PAGE_HOST.encode_utf16().chain(Some(0)).collect();
+    PAGE_ONCE.call_once(|| {
+        // SAFETY: a window class with a procedure of its own; the name is
+        // copied.
+        unsafe {
+            let page = WNDCLASSW {
+                lpfnWndProc: Some(page_procedure),
+                hInstance: GetModuleHandleW(None).expect("module").into(),
+                lpszClassName: PCWSTR(class.as_ptr()),
+                ..Default::default()
+            };
+            assert_ne!(RegisterClassW(&page), 0, "register the page class");
+        }
+    });
+    // SAFETY: a child of `parent`, on its thread, right of the controls.
+    unsafe {
+        CreateWindowExW(
+            WINDOW_EX_STYLE::default(),
+            PCWSTR(class.as_ptr()),
+            w!(""),
+            WS_CHILD | WS_VISIBLE,
+            300,
+            10,
+            90,
+            60,
+            Some(parent),
+            None,
+            None,
+            None,
+        )
+        .expect("a page host");
+    }
+}
+
 /// One test window at a time: a new window takes the focus, and an open
 /// combo box list closes when its window loses it.
 static ONE: Mutex<()> = Mutex::new(());
+
+/// The turn of the tests' windows, for a test with a window of another
+/// program.
+pub fn alone() -> MutexGuard<'static, ()> {
+    ONE.lock().unwrap_or_else(PoisonError::into_inner)
+}
 
 pub struct TestWindow {
     pub id: u64,
@@ -143,7 +204,16 @@ pub struct TestWindow {
 
 impl TestWindow {
     pub fn open(title: &str) -> Self {
-        let one = ONE.lock().unwrap_or_else(PoisonError::into_inner);
+        Self::opened(title, false)
+    }
+
+    /// With a window where Chromium would show a page, and no page.
+    pub fn with_page(title: &str) -> Self {
+        Self::opened(title, true)
+    }
+
+    fn opened(title: &str, page: bool) -> Self {
+        let one = alone();
         static CLASS_ONCE: Once = Once::new();
         CLASS_ONCE.call_once(|| {
             // SAFETY: a window class with a static name and procedure.
@@ -180,6 +250,9 @@ impl TestWindow {
                 )
                 .expect("create the window");
                 controls(hwnd);
+                if page {
+                    page_host(hwnd);
+                }
                 sent.send(hwnd.0 as usize as u64).expect("send");
                 let mut message = MSG::default();
                 while GetMessageW(&mut message, None, 0, 0).as_bool() {
