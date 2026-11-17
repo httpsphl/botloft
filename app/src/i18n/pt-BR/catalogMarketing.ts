@@ -179,4 +179,52 @@ export const marketing: typeof en = {
     pairs:
       "Analista de concorrência, para o mercado, e Analista de dados, para os números de venda.",
   },
+  "strategy-advisor": {
+    name: "Consultor de estratégia",
+    role: "Olha o negócio como um todo, descobre o que o trava e propõe os poucos movimentos que mais importam",
+    summary: "Olha o seu negócio inteiro e escolhe os poucos movimentos que valem o seu tempo",
+    about:
+      "Pergunta sobre a sua oferta, os seus clientes e os seus números, descobre uma ou duas coisas que travam o negócio e propõe até três movimentos, cada um com o custo, o tempo até dar para saber e o número que mostra que funcionou. Também diz o que deixar de lado.",
+    when: "Quando você sente que está travado, ou tem muitas ideias e nenhum jeito de escolher.",
+    pairs: "Analista de concorrência, para o mercado, e Analista financeiro, para os números.",
+  },
+  "go-to-market-planner": {
+    name: "Planejador de entrada no mercado",
+    role: "Planeja como levar um produto aos primeiros clientes: para quem é, a mensagem, os canais e os primeiros passos",
+    summary: "Planeja para quem vender, o que dizer e onde encontrá-los, com os primeiros passos",
+    about:
+      "Descreve o cliente com quem você deve começar, o que prometer a ele e por que você é diferente, compara duas ou três formas de chegar até ele e escreve as primeiras semanas, semana a semana, com o que medir. Não inventa números de mercado.",
+    when: "Quando um produto está pronto, ou quase, e você não sabe como conseguir os primeiros clientes.",
+    pairs:
+      "Analista de concorrência, para as alternativas, e Redator publicitário, para as palavras.",
+  },
+  "launch-planner": {
+    name: "Planejador de lançamento",
+    role: "Planeja o lançamento de um produto ou recurso: a lista, o cronograma, as mensagens e o dia em si",
+    summary: "Planeja um lançamento das semanas antes ao dia seguinte, com lista e cronograma",
+    about:
+      "Monta o plano de um lançamento: o que precisa estar pronto, um cronograma para o antes, o dia e o depois, as mensagens redigidas e os números que dizem se funcionou. Nada é publicado nem enviado por você.",
+    when: "Quando você tem uma data para lançar algo e não quer esquecer nada.",
+    pairs: "Redator publicitário, para as palavras finais, e Social media, para as postagens.",
+  },
+  "sop-writer": {
+    name: "Redator de procedimentos",
+    role: "Transforma o jeito de fazer uma tarefa num procedimento escrito e claro que qualquer pessoa da equipe consegue seguir",
+    summary: "Escreve procedimentos passo a passo para o trabalho não ficar só na sua cabeça",
+    about:
+      "Percorre uma tarefa com você e a escreve em passos curtos e numerados, com verificações e os erros comuns, para uma pessoa nova conseguir seguir no primeiro dia. Nunca escreve senhas nem dados privados num procedimento.",
+    when: "Quando algo que só você sabe fazer não para de cair na sua mesa.",
+    pairs:
+      "Analista de processos, para achar os passos fracos, e Redator técnico, para documentar software.",
+  },
+  "outreach-specialist": {
+    name: "Especialista em abordagem",
+    role: "Escreve primeiras mensagens pessoais e sequências de acompanhamento para e-mail e redes; nunca as envia",
+    summary:
+      "Escreve primeiras mensagens e acompanhamentos que as pessoas respondem, e não envia nada",
+    about:
+      "Escreve uma primeira mensagem curta, baseada num detalhe verdadeiro sobre a pessoa, e dois ou três acompanhamentos que acrescentam algo novo cada um. Nunca envia, nunca finge urgência nem intimidade e lembra você de que as leis sobre mensagens valem.",
+    when: "Quando você quer chegar a clientes, parceiros ou imprensa que ainda não conhecem você.",
+    pairs: "Pesquisador, para conhecer a pessoa, e Redator publicitário, para o tom.",
+  },
 };
