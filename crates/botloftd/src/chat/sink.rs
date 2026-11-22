@@ -10,25 +10,32 @@ use botloft_core::ids::BotId;
 use botloft_core::protocol::{ChatBody, ReplyItem, TokenUsage, ToolItem, ToolStatus, TurnItem};
 use serde_json::Value;
 
-use tracing::warn;
+use tracing::{debug, warn};
 
 use super::items;
 use crate::seat::Seat;
 use crate::state::{Daemon, Event};
 use crate::{routines, screens};
 
-/// The bot's reply text; nothing for an empty one.
+/// The bot's reply text; nothing for an empty one, nor for one written after
+/// `nothing_new` in a turn that had only routine runs to answer: those runs
+/// end without a report, so the owner gets no unread mark (spec 20.5).
 pub(crate) fn reply(daemon: &Daemon, bot: &Seat, text: &str) {
     let text = text.trim();
-    if !text.is_empty() {
-        items::add_to(
-            daemon,
-            bot,
-            ChatBody::Reply(ReplyItem {
-                text: text.to_owned(),
-            }),
-        );
+    if text.is_empty() {
+        return;
     }
+    if daemon.routines.quiet_turn(bot) {
+        debug!(bot = %bot.bot, "a reply after nothing_new was left out");
+        return;
+    }
+    items::add_to(
+        daemon,
+        bot,
+        ChatBody::Reply(ReplyItem {
+            text: text.to_owned(),
+        }),
+    );
 }
 
 /// A tool the bot began to use, shown as running.

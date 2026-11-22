@@ -30,11 +30,23 @@ use crate::state::{Daemon, Event};
 /// The longest the scheduler sleeps, to follow clock changes and sleep.
 const MAX_SLEEP: Duration = Duration::from_secs(60);
 
+/// What a conversation's current turn took up. Messages that arrive during
+/// a turn may join it (spec 9.1, 40.4).
+#[derive(Debug, Default)]
+struct Turn {
+    /// The routine runs whose messages it took up.
+    runs: Vec<RoutineRunId>,
+    /// It also took up a message that is not a run's (the owner's, another
+    /// bot's), which a reply may be for.
+    others: bool,
+    /// The bot called `nothing_new` for its runs (spec 20.5).
+    quiet: bool,
+}
+
 pub struct Routines {
     wake: Notify,
-    /// The runs whose messages each conversation's current turn took up.
-    /// Messages that arrive during a turn may join it (spec 9.1, 40.4).
-    turns: Mutex<HashMap<Seat, Vec<RoutineRunId>>>,
+    /// Each conversation's current turn.
+    turns: Mutex<HashMap<Seat, Turn>>,
     /// What the waits look at (spec 20.14).
     probe: Mutex<Arc<dyn WaitProbe>>,
     /// When each wait on a page last read it.
@@ -59,7 +71,7 @@ impl Routines {
         self.wake.notify_one();
     }
 
-    fn turns(&self) -> MutexGuard<'_, HashMap<Seat, Vec<RoutineRunId>>> {
+    fn turns(&self) -> MutexGuard<'_, HashMap<Seat, Turn>> {
         self.turns
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
@@ -70,7 +82,15 @@ impl Routines {
     pub fn run_of_turn(&self, seat: &Seat) -> Option<RoutineRunId> {
         self.turns()
             .get(seat)
-            .and_then(|runs| runs.first().cloned())
+            .and_then(|turn| turn.runs.first().cloned())
+    }
+
+    /// The seat's open turn ended its runs quietly and was for nobody else:
+    /// a reply the bot writes anyway is not shown (spec 20.5).
+    pub fn quiet_turn(&self, seat: &Seat) -> bool {
+        self.turns()
+            .get(seat)
+            .is_some_and(|turn| turn.quiet && !turn.others)
     }
 
     /// What the waits look at now.
@@ -143,18 +163,15 @@ fn until_next(daemon: &Daemon) -> Duration {
     Duration::from_millis(left).min(MAX_SLEEP)
 }
 
-/// The conversation took up `message`: remember the run it belongs to.
+/// The conversation took up `message`: remember the run it belongs to, or
+/// that the turn is also for someone else.
 pub fn turn_began(daemon: &Daemon, bot: &Seat, message: &MessageId) {
     let run = daemon.store().run_of_message(message).ok().flatten();
-    if let Some(run) = run
-        && run.status == RunStatus::Queued
-    {
-        daemon
-            .routines
-            .turns()
-            .entry(bot.clone())
-            .or_default()
-            .push(run.id);
+    let mut turns = daemon.routines.turns();
+    let turn = turns.entry(bot.clone()).or_default();
+    match run {
+        Some(run) if run.status == RunStatus::Queued => turn.runs.push(run.id),
+        _ => turn.others = true,
     }
 }
 
@@ -166,8 +183,8 @@ pub fn turn_ended(daemon: &Daemon, bot: &Seat, failed: bool) {
     } else {
         RunStatus::Done
     };
-    let runs = daemon.routines.turns().remove(bot).unwrap_or_default();
-    for run in runs {
+    let turn = daemon.routines.turns().remove(bot).unwrap_or_default();
+    for run in turn.runs {
         finish(daemon, &run, status);
     }
 }
@@ -179,7 +196,7 @@ pub fn mark_nothing_new(daemon: &Daemon, bot: &Seat) -> bool {
         .routines
         .turns()
         .get(bot)
-        .cloned()
+        .map(|turn| turn.runs.clone())
         .unwrap_or_default();
     let mut marked = false;
     for run in runs {
@@ -188,13 +205,16 @@ pub fn mark_nothing_new(daemon: &Daemon, bot: &Seat) -> bool {
             Err(err) => warn!(run = %run, "could not mark a run as having nothing new: {err}"),
         }
     }
+    if marked && let Some(turn) = daemon.routines.turns().get_mut(bot) {
+        turn.quiet = true;
+    }
     marked
 }
 
 /// The conversation's process ended mid-turn: those runs will not finish.
 pub fn process_ended(daemon: &Daemon, bot: &Seat) {
-    let runs = daemon.routines.turns().remove(bot).unwrap_or_default();
-    for run in runs {
+    let turn = daemon.routines.turns().remove(bot).unwrap_or_default();
+    for run in turn.runs {
         finish(daemon, &run, RunStatus::Failed);
     }
 }

@@ -147,6 +147,7 @@ impl RoutineEnvelope<'_> {
                 ..
             } => format!(
                 "[botloft] wait \"{}\" · {}
+{WAIT_OVER}
 {watch}
 
 {}",
@@ -161,6 +162,7 @@ impl RoutineEnvelope<'_> {
                 timezone,
             } => format!(
                 "[botloft] wait \"{}\" · ran out at {until} ({timezone}): {}
+{WAIT_OVER}
 {watch}
 
 {}",
@@ -171,6 +173,11 @@ impl RoutineEnvelope<'_> {
         }
     }
 }
+
+/// A wait wakes the bot once (spec 20.14). Seen with a real agent: without
+/// this line it told the owner the wait was still set.
+const WAIT_OVER: &str =
+    "This wait is over and will not wake you again; to wait once more, call wait_for.";
 
 /// What happened, or did not, for a wait (spec 20.14).
 fn wait_text(on: &WaitOn, happened: bool) -> String {
@@ -496,6 +503,10 @@ Reacted ❤️ to: \"Is the draft good?\"
             "{late}"
         );
         assert!(late.ends_with("\n\nReview it."), "{late}");
+        // Either way, the bot knows the wait is gone.
+        for text in [wait(WaitEnd::Happened), late.clone()] {
+            assert_eq!(text.lines().nth(1), Some(super::WAIT_OVER), "{text}");
+        }
         let page = WaitOn::Page {
             url: "https://shop.test/order".into(),
             text: "Shipped".into(),
