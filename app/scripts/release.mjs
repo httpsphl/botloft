@@ -35,7 +35,7 @@ const tag = process.env.GITHUB_REF_NAME ?? "";
 const repo = process.env.GITHUB_REPOSITORY ?? "";
 const bundle = join(process.env.CARGO_TARGET_DIR ?? join(root, "target"), "release", "bundle");
 const staged = join(bundle, "release");
-const SYSTEMS = ["windows", "linux", "macos"];
+const SYSTEMS = ["windows", "linux", "macos", "server-x86_64", "server-aarch64"];
 
 function check() {
   const version = workspaceVersion();
@@ -73,6 +73,17 @@ function outputs(system, version) {
       [`Botloft_${version}_amd64.deb`, built("deb", ".deb"), "linux-x86_64-deb"],
     ];
   }
+  // The daemon alone for a Linux server, with its SHA-256 for the installer
+  // to check, and the installer itself once (spec 42.3).
+  if (system.startsWith("server-")) {
+    const arch = system.slice("server-".length);
+    const archive = `botloftd-linux-${arch}.tar.gz`;
+    const files = [[archive, join(bundle, "server", archive), null, { sha256: true }]];
+    if (arch === "x86_64") {
+      files.push(["install.sh", join(root, "deploy", "server", "install.sh"), null]);
+    }
+    return files;
+  }
   if (system === "macos") {
     const arch = process.arch === "arm64" ? "aarch64" : "x86_64";
     return [
@@ -91,9 +102,13 @@ function stage(system) {
   const version = workspaceVersion();
   mkdirSync(staged, { recursive: true });
   const manifest = { files: [], updater: {} };
-  for (const [name, from, key] of outputs(system, version)) {
+  for (const [name, from, key, extra] of outputs(system, version)) {
     copyFileSync(from, join(staged, name));
     manifest.files.push(name);
+    if (extra?.sha256) {
+      writeFileSync(join(staged, `${name}.sha256`), `${sha256(join(staged, name))}  ${name}\n`);
+      manifest.files.push(`${name}.sha256`);
+    }
     if (key) {
       copyFileSync(`${from}.sig`, join(staged, `${name}.sig`));
       manifest.files.push(`${name}.sig`);
@@ -103,9 +118,14 @@ function stage(system) {
   }
   writeFileSync(join(staged, `${system}.json`), `${JSON.stringify(manifest, null, 2)}\n`);
   console.log(`staged ${system} in ${staged}`);
-  for (const name of manifest.files.filter((name) => !name.endsWith(".sig"))) {
+  for (const name of manifest.files.filter(isDownload)) {
     console.log(`  ${sha256(join(staged, name))}  ${name}`);
   }
+}
+
+/** A file people download, not a signature or a checksum beside one. */
+function isDownload(name) {
+  return !name.endsWith(".sig") && !name.endsWith(".sha256");
 }
 
 function sha256(path) {
@@ -122,7 +142,7 @@ function manifests() {
 
 /** The start of the release notes: how to check a download, and how to install off Windows. */
 function notes(all) {
-  const downloads = all.flatMap(({ files }) => files.filter((name) => !name.endsWith(".sig")));
+  const downloads = all.flatMap(({ files }) => files.filter(isDownload));
   const rows = downloads
     .map((name) => `| \`${name}\` | \`${sha256(join(staged, name))}\` |`)
     .join("\n");
@@ -147,6 +167,24 @@ New in this release and not tried on many computers yet: please [open an issue](
 
 - **Linux:** the \`.deb\` for Debian and Ubuntu, or the \`.AppImage\` for any other distribution (make it executable first).
 - **macOS (Apple Silicon):** Apple has not notarized the app yet. Open the \`.dmg\`, drag Botloft to Applications and open it once; then allow it in System Settings → Privacy & Security → Open Anyway.
+${serverNotes(downloads)}`;
+}
+
+/** How to put Botloft on a Linux server, when this release has it (spec 42.3). */
+function serverNotes(downloads) {
+  if (!downloads.includes("install.sh")) {
+    return "";
+  }
+  return `
+### On a Linux server (preview)
+
+Botloft can run on your own Linux server (x86_64 or arm64), with nobody at its screen. As root, or with sudo:
+
+\`\`\`
+curl -fsSL https://github.com/${repo}/releases/latest/download/install.sh | sh
+\`\`\`
+
+It installs the daemon as a service, with a user of its own, and Claude Code for the agents, then says how to sign in to Claude.
 `;
 }
 

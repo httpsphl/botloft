@@ -85,6 +85,43 @@ pub fn find_task(name: &str) -> io::Result<Option<TaskInfo>> {
     }))
 }
 
+/// A user's services stop when their last session ends, unless lingering is
+/// on for them: on a server reached by SSH, that is at logout (spec 42.3).
+/// Turns it on when the system lets this user, and says what happened, or
+/// how to do it, when it was off.
+pub fn keep_after_logout() -> Option<String> {
+    let login = super::account::current()?.login;
+    let lingers = || {
+        super::manager(
+            "loginctl",
+            &["show-user", &login, "--property=Linger", "--value"],
+        )
+        .ok()
+        .map(|output| String::from_utf8_lossy(&output.stdout).trim() == "yes")
+    };
+    let before = lingers();
+    let turned_on = before == Some(false)
+        && super::manager("loginctl", &["enable-linger", &login])
+            .is_ok_and(|output| output.status.success())
+        && lingers() == Some(true);
+    linger_note(&login, before, turned_on)
+}
+
+/// What to tell the owner about lingering; nothing when it was already on
+/// or `loginctl` could not say.
+fn linger_note(login: &str, before: Option<bool>, turned_on: bool) -> Option<String> {
+    match (before, turned_on) {
+        (Some(false), true) => Some(format!(
+            "Lingering is now on for {login}: Botloft keeps running after you log out."
+        )),
+        (Some(false), false) => Some(format!(
+            "Botloft stops when you log out, because lingering is off for {login}. To keep it \
+             running, ask an administrator to run: sudo loginctl enable-linger {login}"
+        )),
+        _ => None,
+    }
+}
+
 pub fn run_task(name: &str) -> io::Result<()> {
     run(&["start", &unit(name)])
 }
@@ -211,6 +248,20 @@ mod tests {
     #[test]
     fn quotes_and_dollars_stay_as_they_are() {
         assert_eq!(quote(r#"a "b" \c $HOME"#), r#""a \"b\" \\c $$HOME""#);
+    }
+
+    #[test]
+    fn lingering_is_only_mentioned_when_it_was_off() {
+        assert_eq!(linger_note("ana", Some(true), false), None);
+        assert_eq!(linger_note("ana", None, false), None);
+        assert!(
+            linger_note("ana", Some(false), true)
+                .is_some_and(|note| note.contains("now on for ana"))
+        );
+        assert!(
+            linger_note("ana", Some(false), false)
+                .is_some_and(|note| note.contains("sudo loginctl enable-linger ana"))
+        );
     }
 
     #[test]

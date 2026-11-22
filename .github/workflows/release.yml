@@ -102,10 +102,57 @@ jobs:
           path: target/release/bundle/release
           if-no-files-found: error
 
+  # The daemon alone for Linux servers (spec 42.3): static (musl), so it runs
+  # on any distribution, for each processor, plus the installer.
+  server:
+    name: Build (server ${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            os: ubuntu-24.04
+          - arch: aarch64
+            os: ubuntu-24.04-arm
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - if: github.ref_type == 'tag'
+        run: node app/scripts/release.mjs check
+      - name: Build the static daemon in Alpine
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src -e HOST_ID="$(id -u):$(id -g)" rust:1-alpine sh -c '
+            apk add --no-cache musl-dev gcc g++ make cmake perl linux-headers git &&
+            cargo build --release --locked -p botloftd &&
+            strip target/release/botloftd &&
+            chown -R "$HOST_ID" target'
+      - name: It starts as a server on another distribution
+        run: docker run --rm -v "$PWD:/src:ro" debian:12 sh /src/deploy/server/smoke.sh /src/target/release/botloftd
+      - name: Pack it
+        run: |
+          mkdir -p target/release/bundle/server
+          tar -czf "target/release/bundle/server/botloftd-linux-${{ matrix.arch }}.tar.gz" \
+            -C target/release botloftd
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Stage the release files
+        run: node app/scripts/release.mjs stage server-${{ matrix.arch }}
+      - name: Attest where the downloads come from
+        if: github.ref_type == 'tag'
+        uses: actions/attest@v4
+        with:
+          subject-path: target/release/bundle/release/botloftd-linux-${{ matrix.arch }}.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-server-${{ matrix.arch }}
+          path: target/release/bundle/release
+          if-no-files-found: error
+
   publish:
     name: Draft release
     if: github.ref_type == 'tag'
-    needs: build
+    needs: [build, server]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

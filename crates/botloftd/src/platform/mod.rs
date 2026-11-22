@@ -27,6 +27,19 @@ pub use windows::{
     secret_delete, secret_load, secret_save, sign_in_id, stop_task, track_groups, user_environment,
 };
 
+/// What the owner should know so the service keeps running after they log
+/// out, if anything (spec 42.3). Only a Linux user service stops then.
+pub fn keep_after_logout() -> Option<String> {
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        unix::keep_after_logout()
+    }
+    #[cfg(any(windows, target_os = "macos"))]
+    {
+        None
+    }
+}
+
 /// Whether the bots' environment has a non-empty `ANTHROPIC_API_KEY`, which
 /// Claude Code uses instead of the owner's Claude account (spec 7.4). Only
 /// whether it is there: the value is never read out.
