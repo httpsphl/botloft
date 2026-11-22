@@ -79,9 +79,26 @@ const INSTRUCTIONS: &str = "Tools to work with your Botloft crew: see who is in 
     or tasks to other bots, report the result of tasks assigned to you and, for the crew's chief, \
     suggest new bots (list_bot_templates and get_bot_template show the catalog of ready-made roles) and, to write the owner a summary, read what the crew's bots did with crew_activity; for the Maker, see the owner's crews with crews_overview and build or change crews with build. schedule_routine asks the owner for work at set times. ask_owner asks the owner a question without waiting; the answer arrives later as a message. tell_owner leaves the owner a note they should see soon, and asks nothing. show_card shows the owner a card with tables, charts, buttons or a form, and their answer arrives later as a message. search_history finds words in your own past conversations, for what is no longer in your context. ask_key asks the owner for a key, such as an API token, without it going through the chat. show_plan shows the owner your plan before long work, when your rules ask for it. send_signal tells the crew something happened, and the routines waiting for it run. wait_for wakes you once when a file appears, a program ends or a page shows some words, without using the owner's plan; use it instead of sleeping or checking again and again. share_file shows the \
     owner files you made, as cards in the chat they can open and save. The browser_ tools drive your own web browser, which the owner can watch \
-    live and take over when you ask with browser_ask_owner. The desktop_ tools read the apps open on \
-    the owner's own computer, app by app as the owner allows. The owner writes to you directly; messages from other bots and from Botloft start with \
-    [botloft].";
+    live and take over when you ask with browser_ask_owner.";
+
+/// What a bot on a server reads when it calls a tool of the owner's own
+/// computer (spec 42.2).
+const ON_A_SERVER: &str = "This Botloft runs on a server, with no screen and none of the \
+    owner's own apps or Chrome: the desktop_ tools and ask_chrome do not work here. Use your own \
+    browser (browser_ tools) or ask the owner.";
+
+/// Only where the daemon runs on the owner's own computer (spec 42.2).
+const DESKTOP_INSTRUCTIONS: &str = " The desktop_ tools read the apps open on the owner's own \
+    computer, app by app as the owner allows.";
+
+const INSTRUCTIONS_END: &str = " The owner writes to you directly; messages from other bots and \
+    from Botloft start with [botloft].";
+
+/// What `server/discover` and `initialize` tell the bot about the tools.
+fn instructions(server: bool) -> String {
+    let desktop = if server { "" } else { DESKTOP_INSTRUCTIONS };
+    format!("{INSTRUCTIONS}{desktop}{INSTRUCTIONS_END}")
+}
 
 /// A JSON-RPC error with the HTTP status it goes out with.
 struct Failure {
@@ -195,6 +212,17 @@ pub async fn handle(
             let result = connector::ask(&daemon, &bot, generation, args).await;
             Ok(decorate(era, &request, result))
         }
+        // A server lists neither (spec 42.2); a call that comes anyway says
+        // why it cannot work.
+        Ok(era)
+            if daemon.server
+                && called(&request).is_some_and(|name| {
+                    name == chrome::ASK_CHROME || name.starts_with(desktop::PREFIX)
+                }) =>
+        {
+            let result = calls::tool_result(Err(ON_A_SERVER.to_owned()));
+            Ok(decorate(era, &request, result))
+        }
         Ok(era) if called(&request) == Some(chrome::ASK_CHROME) => {
             let args = arguments(&request);
             let result = chrome::ask(&daemon, &bot, generation, args).await;
@@ -302,7 +330,7 @@ fn answer(daemon: &Daemon, bot: &Seat, era: Era, request: &Request) -> Result<Va
         (Era::Modern, "server/discover") => json!({
             "supportedVersions": supported(),
             "capabilities": { "tools": {} },
-            "instructions": INSTRUCTIONS,
+            "instructions": instructions(daemon.server),
         }),
         (Era::Legacy, "initialize") => {
             let requested = params.get("protocolVersion").and_then(Value::as_str);
@@ -313,10 +341,10 @@ fn answer(daemon: &Daemon, bot: &Seat, era: Era, request: &Request) -> Result<Va
                 "protocolVersion": version,
                 "capabilities": { "tools": {} },
                 "serverInfo": server_info(),
-                "instructions": INSTRUCTIONS,
+                "instructions": instructions(daemon.server),
             })
         }
-        (_, "tools/list") => json!({ "tools": catalog::tools() }),
+        (_, "tools/list") => json!({ "tools": catalog::tools(daemon.server) }),
         (_, "tools/call") => calls::call(daemon, bot, &params)?,
         (era, method) => {
             // 2026-07-28 answers an unknown method with 404, which tells a

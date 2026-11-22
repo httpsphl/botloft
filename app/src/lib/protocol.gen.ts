@@ -518,7 +518,12 @@ export type ClientInfo = { name: string, version: string,
  * The language the owner reads the app in ("en", "pt-BR", "es"), for
  * what the daemon itself shows them (spec 24.7).
  */
-locale?: string, };
+locale?: string, 
+/**
+ * The owner's time zone, IANA (`America/Sao_Paulo`): a routine a bot
+ * makes runs on it, also on a server in another zone (spec 20.12, 42.2).
+ */
+timeZone?: string, };
 
 /**
  * First request of every connection.
@@ -659,7 +664,13 @@ agentChecks: Array<AgentCheck>,
  * The account usage of the agents other than Claude Code, as each last
  * reported it (spec 30); `usage` above is Claude's.
  */
-agentUsage: Array<AgentUsage>, };
+agentUsage: Array<AgentUsage>, 
+/**
+ * The daemon runs on a server, with nobody at its screen (spec 42):
+ * what needs one (Desktop Use, a login window, the owner's Chrome,
+ * keeping the computer awake) is not there.
+ */
+server: boolean, };
 
 export type CrewsCreateParams = { name: string, 
 /**
@@ -3867,4 +3878,5 @@ export const RpcErrorCode = {
   conflict: -32003,
   validation: -32004,
   runtimeUnavailable: -32005,
+  onAServer: -32006,
 } as const;

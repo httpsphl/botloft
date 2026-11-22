@@ -124,6 +124,18 @@ pub fn new_daemon_waiting(settings: SupervisorSettings, approval_wait: Duration)
         approval_wait,
         botloftd::cloud::CloudSettings::default(),
         Arc::new(MemorySecrets::new()),
+        false,
+    )
+}
+
+/// A daemon that runs on a server, with nobody at its screen (spec 42.2).
+pub fn new_server_daemon(settings: SupervisorSettings) -> Parts {
+    new_daemon_with(
+        settings,
+        APPROVAL_WAIT,
+        botloftd::cloud::CloudSettings::default(),
+        Arc::new(MemorySecrets::new()),
+        true,
     )
 }
 
@@ -132,6 +144,7 @@ pub fn new_daemon_with(
     approval_wait: Duration,
     cloud: botloftd::cloud::CloudSettings,
     secrets: Arc<dyn SecretStore>,
+    server: bool,
 ) -> Parts {
     let dir = tempfile::tempdir().expect("tempdir");
     let paths = Paths::new(dir.path().join("home"), dir.path().join("workspaces"));
@@ -162,6 +175,7 @@ pub fn new_daemon_with(
         owner_idle: Arc::new(|| Some(Duration::ZERO)),
         cloud,
         secrets,
+        server,
     });
     // Tests never read the plugins of whoever runs them (spec 41.1).
     daemon.plugins.use_root(dir.path().join("claude"));
@@ -201,6 +215,18 @@ impl TestDaemon {
         Self::launch(true, PATIENT_APPROVAL_WAIT).await
     }
 
+    /// Supervised, as on a server with nobody at its screen (spec 42.2).
+    pub async fn start_on_a_server() -> Self {
+        Self::launch_with(
+            true,
+            APPROVAL_WAIT,
+            botloftd::cloud::CloudSettings::default(),
+            Arc::new(MemorySecrets::new()),
+            true,
+        )
+        .await
+    }
+
     /// Server only, with an account server to talk to (spec 27).
     pub async fn start_with_cloud(url: &str) -> Self {
         Self::start_with_secrets(url, Arc::new(MemorySecrets::new())).await
@@ -214,7 +240,7 @@ impl TestDaemon {
             relay_retry: fast_retry(),
             ..Default::default()
         };
-        Self::launch_with(false, APPROVAL_WAIT, cloud, secrets).await
+        Self::launch_with(false, APPROVAL_WAIT, cloud, secrets, false).await
     }
 
     /// Server, supervisor and courier, with an account server to talk to.
@@ -231,7 +257,7 @@ impl TestDaemon {
             relay_retry: fast_retry(),
             ..Default::default()
         };
-        Self::launch_with(true, wait, cloud, Arc::new(MemorySecrets::new())).await
+        Self::launch_with(true, wait, cloud, Arc::new(MemorySecrets::new()), false).await
     }
 
     async fn launch(supervised: bool, approval_wait: Duration) -> Self {
@@ -240,6 +266,7 @@ impl TestDaemon {
             approval_wait,
             botloftd::cloud::CloudSettings::default(),
             Arc::new(MemorySecrets::new()),
+            false,
         )
         .await
     }
@@ -249,8 +276,9 @@ impl TestDaemon {
         approval_wait: Duration,
         cloud: botloftd::cloud::CloudSettings,
         secrets: Arc<dyn SecretStore>,
+        server: bool,
     ) -> Self {
-        let parts = new_daemon_with(test_settings(), approval_wait, cloud, secrets);
+        let parts = new_daemon_with(test_settings(), approval_wait, cloud, secrets, server);
         let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
         let addr = listener.local_addr().expect("addr");
         if supervised {

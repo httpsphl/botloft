@@ -7,7 +7,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 
 use super::calls::explain;
-use super::routine::{PROMPT_MAX, system_zone};
+use super::routine::{PROMPT_MAX, owner_zone};
 use super::wait_on::{self, TEXT_MAX_CHARS, describe};
 use crate::routines::schedule::Plan;
 use crate::seat::Seat;
@@ -140,7 +140,7 @@ pub(super) fn call(daemon: &Daemon, bot: &Seat, args: Args) -> Result<Value, Str
     let until = daemon.clock.now_ms() + i64::from(args.hours) * HOUR_MS;
     let waiting_for = describe(&on);
     let schedule = Schedule::Wait { on, until };
-    let timezone = system_zone();
+    let timezone = owner_zone(daemon);
     let until_text = Plan::new(&schedule, &timezone)
         .map(|plan| plan.local_time(until))
         .unwrap_or_default();

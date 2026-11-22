@@ -42,6 +42,7 @@ pub mod screens;
 pub mod seat;
 pub mod secrets;
 pub mod server;
+pub mod server_mode;
 pub mod service;
 pub mod settings;
 pub mod skills;

@@ -78,6 +78,10 @@ pub enum ApiError {
     Settings(String),
     #[error("internal error")]
     Internal(#[source] StoreError),
+    /// Needs someone at the screen, and the daemon runs on a server (spec
+    /// 42.2).
+    #[error("{0} needs someone at this computer's screen, and Botloft runs on a server here")]
+    OnAServer(&'static str),
 }
 
 impl ApiError {
@@ -85,6 +89,7 @@ impl ApiError {
         match self {
             Self::NotFound(_) => error_code::NOT_FOUND,
             Self::Conflict(_) => error_code::CONFLICT,
+            Self::OnAServer(_) => error_code::ON_A_SERVER,
             Self::Validation(_) | Self::Rule { .. } => error_code::VALIDATION,
             Self::Workspace(_) | Self::Settings(_) | Self::Internal(_) => {
                 error_code::INTERNAL_ERROR
@@ -146,6 +151,7 @@ pub fn status(daemon: &Daemon) -> ApiResult<SystemStatus> {
             .collect(),
         agent_checks: agents::checks(daemon),
         agent_usage: daemon.agent_usage(),
+        server: daemon.server,
     })
 }
 

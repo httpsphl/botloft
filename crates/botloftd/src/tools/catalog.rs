@@ -19,12 +19,14 @@ pub const SCHEDULE_ROUTINE: &str = "schedule_routine";
 /// Claude Code's `--permission-prompt-tool` (spec 10.1).
 pub const PERMISSION_PROMPT: &str = "permission_prompt";
 
-pub fn tools() -> Value {
+/// Every tool, in order. On a server the ones that need the owner's own
+/// computer are left out: the desktop and the owner's Chrome (spec 42.2).
+pub fn tools(server: bool) -> Value {
     let mut tools = crew_tools();
     if let Value::Array(list) = &mut tools {
         // Before permission_prompt, which stays last.
         let at = list.len() - 1;
-        let more = [
+        let more: Vec<Value> = [
             super::share::tool(),
             super::question::tool(),
             super::question::note_tool(),
@@ -51,10 +53,19 @@ pub fn tools() -> Value {
         .chain(super::activity::tools())
         .chain(super::crew_reach::tools())
         .chain(super::browser_catalog::tools())
-        .chain(super::desktop_catalog::tools());
+        .chain(super::desktop_catalog::tools())
+        .filter(|tool| !server || !needs_own_computer(tool))
+        .collect();
         list.splice(at..at, more);
     }
     tools
+}
+
+/// A tool that works on the owner's own computer, not on a server.
+fn needs_own_computer(tool: &Value) -> bool {
+    tool["name"].as_str().is_some_and(|name| {
+        name.starts_with(super::desktop::PREFIX) || name == super::chrome::ASK_CHROME
+    })
 }
 
 /// The ids of the bot catalog, for `suggest_bot`'s `template`.
