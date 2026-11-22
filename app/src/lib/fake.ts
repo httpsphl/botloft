@@ -19,6 +19,7 @@ import { FakeConversations } from "./fakeConversations";
 import { FakeCrewAccess } from "./fakeCrewAccess";
 import { crewHandlers } from "./fakeCrews";
 import { FakeDesktop } from "./fakeDesktop";
+import { deviceHandlers } from "./fakeDevices";
 import { FakeFiles } from "./fakeFiles";
 import { FakeImports } from "./fakeImports";
 import { instructionsHandlers } from "./fakeInstructions";
@@ -393,6 +394,7 @@ export class FakeBotloft implements BotloftApi {
     ...cloudHandlers(this),
     ...autoBackupHandlers(this),
     ...mobileHandlers(this),
+    ...deviceHandlers(this),
     ...searchHandlers(this),
   };
 }
