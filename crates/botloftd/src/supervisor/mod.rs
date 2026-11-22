@@ -429,13 +429,23 @@ impl Supervisor {
 #[error("the bot is not running")]
 pub struct NotRunning;
 
+/// How long an idle agent stays awake: the owner's setting, shorter on a
+/// small machine (spec 7.7, 42.4).
+fn nap(daemon: &Daemon, memory: Option<crate::memory::MemoryInfo>) -> Option<std::time::Duration> {
+    crate::memory::nap(
+        daemon.settings.sleep_after(),
+        memory,
+        daemon.memory.small_machine_nap(),
+    )
+}
+
 /// Reconciles on start, every few seconds and whenever something wakes the
 /// loop. Runs until the daemon is dropped.
 pub async fn run(daemon: Arc<Daemon>) {
     let supervisor = &daemon.supervisor;
     loop {
         supervisor.reconcile().await;
-        let nap = daemon.settings.sleep_after();
+        let nap = nap(&daemon, daemon.memory.read());
         let next = supervisor.next_due(nap).map_or(RECONCILE_EVERY, |at| {
             at.saturating_duration_since(Instant::now())
                 .min(RECONCILE_EVERY)

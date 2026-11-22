@@ -156,6 +156,7 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
         cloud: botloftd::cloud::CloudSettings::from_config(&config),
         secrets: Arc::new(secrets),
         server: config.server,
+        memory: Arc::new(botloftd::memory::SystemMemory),
     });
     // No bot process survived the last run, so nobody waits for these,
     // and what they were written and never began goes back in the queue.

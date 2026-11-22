@@ -131,6 +131,8 @@ pub struct DaemonOptions {
     pub secrets: Arc<dyn crate::autobackup::SecretStore>,
     /// It runs on a server, with nobody at its screen (spec 42.2).
     pub server: bool,
+    /// Reads how much memory the machine has for agents (spec 42.4).
+    pub memory: Arc<dyn crate::memory::MemoryProbe>,
 }
 
 pub struct Daemon {
@@ -138,6 +140,8 @@ pub struct Daemon {
     pub port: u16,
     /// It runs on a server, with nobody at its screen (spec 42.2).
     pub server: bool,
+    /// Reads how much memory the machine has for agents (spec 42.4).
+    pub memory: Arc<dyn crate::memory::MemoryProbe>,
     pub supervisor: Supervisor,
     pub courier: Courier,
     pub tasks: TaskSettings,
@@ -208,6 +212,7 @@ impl Daemon {
             ),
             courier: Courier::new(options.courier),
             server: options.server,
+            memory: options.memory,
             tasks: options.tasks,
             bots: options.bots,
             settings: options.settings,

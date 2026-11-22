@@ -30,6 +30,7 @@ pub mod logins;
 pub mod loops;
 pub mod mcp_secrets;
 pub mod media;
+pub mod memory;
 pub mod mobile;
 pub mod paths;
 pub mod plan_usage;

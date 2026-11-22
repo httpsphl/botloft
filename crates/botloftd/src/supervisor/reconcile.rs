@@ -65,7 +65,8 @@ impl Supervisor {
         self.release_limits(daemon.clock.now_ms());
         self.watch_turns(&daemon);
         // Read before the supervisor lock, like the database.
-        let sleep_after = daemon.settings.sleep_after();
+        let memory = daemon.memory.read();
+        let sleep_after = super::nap(&daemon, memory);
         let max_running = daemon.settings.max_running();
         let now = Instant::now();
         let mut inner = self.lock();
@@ -92,7 +93,13 @@ impl Supervisor {
                 starts.extend(start.and_then(|start| self.awake_room(&mut inner, start, &starts)));
             }
         }
-        let starts = self.admit(&mut inner, starts, &with_work, max_running);
+        let fits = memory.map(|info| info.room());
+        let starts = self.admit(&mut inner, starts, &with_work, max_running, fits);
+        // Short of memory on a small machine or a server, one idle agent
+        // stays awake and the others sleep (spec 42.4).
+        if memory.is_some_and(|info| info.pressed() && (info.small() || daemon.server)) {
+            self.keep_one_idle(&mut inner);
+        }
         drop(inner);
         // One after another, but nothing else waits for them.
         for start in starts {
