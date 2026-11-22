@@ -609,6 +609,21 @@ extraUsage: boolean,
 fromAccount: boolean, };
 
 /**
+ * The two end dates of a claude.ai sign-in, as `claude auth status --text`
+ * gives them (spec 42.9): sign in again before `from`.
+ */
+export type SignInEnds = { 
+/**
+ * The earlier end, Unix ms (its day at midnight UTC); the time of the
+ * check when it may end any day now.
+ */
+from: number, 
+/**
+ * The later end, Unix ms.
+ */
+by: number, };
+
+/**
  * What `claude auth status` says about the account (spec 7.3).
  */
 export type ClaudeAccount = { email: string | null, 
@@ -648,6 +663,11 @@ claudePath: string | null,
  * Whether Claude Code is signed in (`claude auth status`); `null` until checked.
  */
 claudeSignedIn: boolean | null, 
+/**
+ * When the claude.ai sign-in the agents use ends (spec 42.9); absent
+ * for other credentials, before Claude Code 2.1.318 or with no date.
+ */
+claudeSignInEnds?: SignInEnds, 
 /**
  * The bots' environment has an `ANTHROPIC_API_KEY`, which Claude Code
  * uses instead of the Claude account (spec 7.4). Only whether it is

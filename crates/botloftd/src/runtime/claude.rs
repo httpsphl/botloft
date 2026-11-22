@@ -11,6 +11,7 @@ use botloft_core::protocol::ClaudeAccount;
 use super::AuthStatus;
 
 mod locate;
+mod sign_in;
 
 pub use self::locate::locate;
 
@@ -65,13 +66,22 @@ pub fn probe(path: &Path, env: &[(OsString, OsString)]) -> Result<Claude, Claude
 }
 
 /// Runs `claude auth status`, documented to print JSON with `loggedIn` and
-/// to exit with 0 when signed in and 1 when not (spec 19).
+/// to exit with 0 when signed in and 1 when not (spec 19). Signed in, also
+/// `--text`, whose "Sign-in" line says when the sign-in ends (spec 42.9).
 pub fn auth_status(path: &Path, env: &[(OsString, OsString)]) -> io::Result<AuthStatus> {
     let output = run(path, &["auth", "status", "--json"], env)?;
-    Ok(parse_auth_status(&output.stdout).unwrap_or(AuthStatus {
+    let mut status = parse_auth_status(&output.stdout).unwrap_or(AuthStatus {
         signed_in: output.status.success(),
         account: None,
-    }))
+        ends: None,
+    });
+    if status.signed_in
+        && let Ok(text) = run(path, &["auth", "status", "--text"], env)
+    {
+        let now = jiff::Timestamp::now().as_millisecond();
+        status.ends = sign_in::parse_sign_in_ends(&String::from_utf8_lossy(&text.stdout), now);
+    }
+    Ok(status)
 }
 
 /// Reads `loggedIn`, and when signed in `email`, `subscriptionType` and
@@ -93,6 +103,7 @@ fn parse_auth_status(stdout: &[u8]) -> Option<AuthStatus> {
             plan: text("subscriptionType"),
             organization: text("orgName"),
         }),
+        ends: None,
     })
 }
 
@@ -175,7 +186,8 @@ mod tests {
             signed_out,
             AuthStatus {
                 signed_in: false,
-                account: None
+                account: None,
+                ends: None,
             }
         );
         assert_eq!(parse_auth_status(b"Logged in"), None);

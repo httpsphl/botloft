@@ -1,19 +1,27 @@
 //! Whether Claude Code is signed in (spec 7.3), from `claude auth status`:
 //! checked once Claude Code is found, every 30 s while signed out or
-//! unknown, and at once when a bot hits a sign-in error or the app asks.
-//! When it turns from signed out to signed in, the bots a sign-in error
-//! stopped start again by themselves: the owner just signed in.
+//! unknown, every 6 hours while signed in (the owner may sign in again from
+//! a server's terminal, which moves the end, spec 42.9), and at once when a
+//! bot hits a sign-in error or the app asks. When it turns from signed out
+//! to signed in, the bots a sign-in error stopped start again by
+//! themselves: the owner just signed in.
 
-use botloft_core::protocol::{BotState, ClaudeAccount};
+use std::time::Duration;
+
+use botloft_core::protocol::{BotState, ClaudeAccount, SignInEnds};
 use tokio::time::Instant;
 use tracing::{debug, info};
 
 use super::{ClaudeStatus, Inner, REPROBE_AFTER, Supervisor};
 
+/// How often a signed-in Claude Code is asked again.
+const SIGNED_IN_RECHECK: Duration = Duration::from_secs(6 * 60 * 60);
+
 #[derive(Debug, Default)]
 pub(super) struct SignIn {
     known: Option<bool>,
     account: Option<ClaudeAccount>,
+    ends: Option<SignInEnds>,
     checked_at: Option<Instant>,
     recheck: bool,
 }
@@ -25,7 +33,7 @@ impl SignIn {
         }
         match (self.known, self.checked_at) {
             (_, None) => true,
-            (Some(true), Some(_)) => false,
+            (Some(true), Some(at)) => at.elapsed() >= SIGNED_IN_RECHECK,
             (_, Some(at)) => at.elapsed() >= REPROBE_AFTER,
         }
     }
@@ -40,6 +48,11 @@ impl Supervisor {
     /// The Claude account Claude Code is signed in to, once checked.
     pub fn claude_account(&self) -> Option<ClaudeAccount> {
         self.lock().sign_in.account.clone()
+    }
+
+    /// When the claude.ai sign-in ends, when Claude Code says (spec 42.9).
+    pub fn claude_sign_in_ends(&self) -> Option<SignInEnds> {
+        self.lock().sign_in.ends
     }
 
     /// Checks Claude Code again now: the sign-in, and the executable if it
@@ -78,6 +91,7 @@ impl Supervisor {
             Ok(status) => {
                 let signed_in = status.signed_in;
                 inner.sign_in.account = status.account;
+                inner.sign_in.ends = status.ends;
                 let was = inner.sign_in.known.replace(signed_in);
                 if signed_in && was == Some(false) {
                     info!("Claude Code is signed in again; starting the bots it stopped");
@@ -113,7 +127,10 @@ mod tests {
         sign_in.known = Some(false);
         assert!(!sign_in.due(), "checked a moment ago");
         sign_in.known = Some(true);
-        assert!(!sign_in.due(), "signed in: nothing to watch");
+        assert!(!sign_in.due(), "signed in a moment ago");
+        sign_in.checked_at = Instant::now().checked_sub(SIGNED_IN_RECHECK);
+        assert!(sign_in.due(), "signed in hours ago: the end may have moved");
+        sign_in.checked_at = Some(Instant::now());
         sign_in.recheck = true;
         assert!(sign_in.due());
     }

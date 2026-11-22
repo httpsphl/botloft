@@ -34,5 +34,13 @@ export const shell: Messages["shell"] = {
   signIn: {
     title: "Entre no Claude",
     body: "Seus agentes trabalham com a sua conta do Claude. Entre uma vez e eles começam sozinhos.",
+    endedElsewhere:
+      "Os agentes pararam: o login do Claude deles acabou. Entre de novo no computador onde o Botloft roda, e eles voltam sozinhos.",
+    inTerminal: "No terminal daquele computador, rode:",
+    endsTitle: "O login do Claude dos agentes acaba logo",
+    endsBody: (from, by) =>
+      `Ele acaba entre ${from} e ${by}. Entre de novo antes disso, ou os agentes param até alguém entrar.`,
+    endsNow:
+      "Ele pode acabar a qualquer momento. Entre de novo, ou os agentes param até alguém entrar.",
   },
 };

@@ -5,7 +5,7 @@ mod common;
 
 use std::time::Duration;
 
-use botloft_core::protocol::BotState;
+use botloft_core::protocol::{BotState, SignInEnds};
 use botloftd::service;
 use common::stream;
 use common::supervised::{Setup, setup};
@@ -40,6 +40,29 @@ async fn the_status_says_whether_claude_code_is_signed_in() {
     assert_eq!(s.runtime.sign_in_checks(), 1, "checked once, then trusted");
     tokio::time::sleep(Duration::from_secs(300)).await;
     assert_eq!(s.runtime.sign_in_checks(), 1);
+}
+
+#[tokio::test(start_paused = true)]
+async fn the_status_says_when_the_sign_in_ends_and_asks_again_hours_later() {
+    let s = setup().await;
+    s.until(BotState::Launching).await;
+    let ends = || {
+        service::status(&s.daemon)
+            .expect("status")
+            .claude_sign_in_ends
+    };
+    assert_eq!(ends(), None, "no date said");
+    // The owner signed in again in the server's terminal (spec 42.9).
+    let later = SignInEnds {
+        from: 1_800_000_000_000,
+        by: 1_800_200_000_000,
+    };
+    s.runtime.set_sign_in_ends(Some(later));
+    tokio::time::sleep(Duration::from_secs(5 * 60 * 60)).await;
+    assert_eq!(ends(), None, "not asked again yet");
+    tokio::time::sleep(Duration::from_secs(60 * 60 + 60)).await;
+    assert_eq!(ends(), Some(later));
+    assert_eq!(s.runtime.sign_in_checks(), 2);
 }
 
 #[tokio::test(start_paused = true)]

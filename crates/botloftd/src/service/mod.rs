@@ -138,6 +138,7 @@ pub fn status(daemon: &Daemon) -> ApiResult<SystemStatus> {
             .claude_path()
             .map(|path| path.display().to_string()),
         claude_signed_in: daemon.supervisor.claude_signed_in(),
+        claude_sign_in_ends: daemon.supervisor.claude_sign_in_ends(),
         api_key_in_env: crate::platform::api_key_in_env(),
         account: OwnerAccount {
             name: owner_name(),

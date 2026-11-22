@@ -12,7 +12,7 @@ use tokio::sync::{Notify, mpsc};
 
 use serde_json::Value;
 
-use botloft_core::protocol::ClaudeAccount;
+use botloft_core::protocol::{ClaudeAccount, SignInEnds};
 
 use super::{
     AuthCheck, AuthStatus, EVENT_BUFFER, Process, ProcessControl, ProcessEvent, Runtime, SpawnSpec,
@@ -28,6 +28,7 @@ struct State {
     processes: Vec<FakeProcess>,
     failures: usize,
     signed_in: bool,
+    sign_in_ends: Option<SignInEnds>,
     sign_in_checks: usize,
     hold: Option<SpawnHold>,
 }
@@ -44,6 +45,7 @@ impl Default for State {
             processes: Vec::new(),
             failures: 0,
             signed_in: true,
+            sign_in_ends: None,
             sign_in_checks: 0,
             hold: None,
         }
@@ -67,6 +69,12 @@ impl FakeRuntime {
     /// What `claude auth status` answers from now on (signed in by default).
     pub fn set_signed_in(&self, signed_in: bool) {
         lock(&self.state).signed_in = signed_in;
+    }
+
+    /// When the sign-in ends, as `claude auth status --text` would say
+    /// (spec 42.9); none by default.
+    pub fn set_sign_in_ends(&self, ends: Option<SignInEnds>) {
+        lock(&self.state).sign_in_ends = ends;
     }
 
     /// How many times the daemon asked whether Claude Code is signed in.
@@ -121,8 +129,10 @@ impl Runtime for FakeRuntime {
         let mut state = lock(&self.state);
         state.sign_in_checks += 1;
         let signed_in = state.signed_in;
+        let ends = state.sign_in_ends.filter(|_| signed_in);
         Box::pin(std::future::ready(Ok(AuthStatus {
             signed_in,
+            ends,
             account: signed_in.then(|| ClaudeAccount {
                 email: Some("owner@example.com".into()),
                 plan: Some("max".into()),

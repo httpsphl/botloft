@@ -13,7 +13,6 @@ import { useLocaleToDaemon } from "../features/desktop/useLocaleToDaemon";
 import { HomeView } from "../features/home/HomeView";
 import { FailedDeliveries } from "../features/messages/FailedDeliveries";
 import { ClaudeCodeHelp } from "../features/onboarding/ClaudeCodeHelp";
-import { SignInButton } from "../features/onboarding/SignIn";
 import { Welcome } from "../features/onboarding/Welcome";
 import { QuestionBox } from "../features/questions/QuestionBox";
 import { RoutinesPage } from "../features/routines/RoutinesPage";
@@ -26,6 +25,7 @@ import { useApp } from "../store/context";
 import { Callout } from "../ui/Callout";
 import { useBotAlerts } from "./alerts";
 import { useAttentionMark } from "./attention";
+import { ClaudeSignInNotice } from "./ClaudeSignInNotice";
 import { useFolderNotices } from "./folders";
 import { useIslandLocale, useIslandOpen } from "./islandOpen";
 import { Rail } from "./Rail";
@@ -108,14 +108,7 @@ export function Workspace() {
               </Callout>
             </div>
           ) : (
-            signedOut && (
-              <div className="border-line border-b p-3">
-                <Callout tone="danger" title={t.shell.signIn.title}>
-                  {t.shell.signIn.body}
-                  <SignInButton />
-                </Callout>
-              </div>
-            )
+            needsClaude && <ClaudeSignInNotice signedOut={signedOut} />
           )}
           <AwayNotice />
           <Selection />

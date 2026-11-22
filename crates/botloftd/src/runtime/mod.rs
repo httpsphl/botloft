@@ -12,7 +12,7 @@ use std::io;
 use std::path::PathBuf;
 use std::pin::Pin;
 
-use botloft_core::protocol::ClaudeAccount;
+use botloft_core::protocol::{ClaudeAccount, SignInEnds};
 use bytes::Bytes;
 use tokio::sync::mpsc;
 
@@ -50,11 +50,14 @@ pub struct Process {
     pub control: Box<dyn ProcessControl>,
 }
 
-/// What `claude auth status` says: signed in or not, and to which account.
+/// What `claude auth status` says: signed in or not, to which account, and
+/// until when.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AuthStatus {
     pub signed_in: bool,
     pub account: Option<ClaudeAccount>,
+    /// When the claude.ai sign-in ends, when Claude Code says (spec 42.9).
+    pub ends: Option<SignInEnds>,
 }
 
 /// An [`AuthStatus`], computed off the async workers.

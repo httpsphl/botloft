@@ -179,6 +179,7 @@ fn export_bindings() {
     out.decl::<DeliveryBacklog>();
     out.decl::<UsageWindow>();
     out.decl::<AccountUsage>();
+    out.decl::<SignInEnds>();
     out.decl::<ClaudeAccount>();
     out.decl::<OwnerAccount>();
     out.decl::<SystemStatus>();
