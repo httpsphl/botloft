@@ -46,6 +46,15 @@ pub fn update(daemon: &Daemon, params: SettingsUpdateParams) -> ApiResult<Settin
             "historyDays must be between 0 and {HISTORY_MAX_DAYS}"
         )));
     }
+    // A server starts with its system and never sleeps (spec 42.2).
+    if daemon.server {
+        if params.start_with_windows.is_some() {
+            return Err(ApiError::OnAServer("Starting with the computer's sign-in"));
+        }
+        if params.keep_awake.is_some() {
+            return Err(ApiError::OnAServer("Keeping the computer awake"));
+        }
+    }
     let before = daemon.settings.get();
     if let Some(start) = params.start_with_windows
         && start != before.start_with_windows

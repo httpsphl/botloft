@@ -30,6 +30,10 @@ pub struct Config {
     pub keep_awake: bool,
     /// The Maker builds without asking the owner first (spec 36.4).
     pub maker_builds_without_asking: bool,
+    /// This computer is a server, with nobody at its screen (spec 42.2):
+    /// what needs one is off, and the folders of deleted crews go to the
+    /// data folder's own trash.
+    pub server: bool,
     pub log_level: String,
     pub supervisor: SupervisorConfig,
     pub courier: CourierConfig,
@@ -52,6 +56,7 @@ impl Default for Config {
             start_with_windows: true,
             keep_awake: true,
             maker_builds_without_asking: false,
+            server: false,
             log_level: "info".to_owned(),
             supervisor: SupervisorConfig::default(),
             courier: CourierConfig::default(),
@@ -288,6 +293,12 @@ mod tests {
             "https://nuvem.exemplo.org"
         );
         assert_eq!(url("[cloud]\nurl = ''"), "");
+    }
+
+    #[test]
+    fn a_server_says_so_in_one_key() {
+        assert!(!Config::parse("").expect("parse").server);
+        assert!(Config::parse("server = true").expect("parse").server);
     }
 
     #[test]

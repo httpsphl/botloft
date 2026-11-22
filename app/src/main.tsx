@@ -19,14 +19,26 @@ if (!root) {
   throw new Error("missing #root element");
 }
 
+/** The zone this computer is set to, IANA; none when the system has no name for it. */
+function ownTimeZone(): string | undefined {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+}
+
 async function props(): Promise<{ host: Host; connect: Connect }> {
   if ("__TAURI_INTERNALS__" in window) {
     const client = { name: "botloft-app", version: packageJson.version };
     return {
       host: tauriHost(),
-      // Its language, for what the daemon shows on screen (spec 24.7).
-      connect: (port, token) =>
-        connect({ url: rpcUrl(port), token, client: { ...client, locale: currentLocale() } }),
+      // Its language, for what the daemon shows on screen (spec 24.7), and
+      // the owner's time zone, for the routines the agents make (20.12).
+      connect: (port, token) => {
+        const zone = ownTimeZone();
+        return connect({
+          url: rpcUrl(port),
+          token,
+          client: { ...client, locale: currentLocale(), ...(zone ? { timeZone: zone } : {}) },
+        });
+      },
     };
   }
   if (import.meta.env.DEV) {

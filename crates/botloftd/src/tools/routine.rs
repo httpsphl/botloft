@@ -97,7 +97,7 @@ async fn run(
     }
     let (target, handle) = target(daemon, bot, proposal.bot.as_deref()).map_err(explain)?;
     proposal.bot = handle;
-    proposal.timezone = Some(proposal.timezone.unwrap_or_else(system_zone));
+    proposal.timezone = Some(proposal.timezone.unwrap_or_else(|| owner_zone(daemon)));
     // Nothing impossible goes to the owner.
     let params = proposal.params(target.clone());
     routines::check(daemon, &params).map_err(explain)?;
@@ -223,6 +223,18 @@ pub(super) fn system_zone() -> String {
     jiff::tz::TimeZone::system()
         .iana_name()
         .map_or_else(|| FALLBACK_ZONE.to_owned(), str::to_owned)
+}
+
+/// The owner's time zone, as the app last said when it connected; the
+/// computer's before any did. On a server they differ: "at 9" means the
+/// owner's 9 (spec 20.12, 42.2).
+pub(super) fn owner_zone(daemon: &Daemon) -> String {
+    daemon
+        .store()
+        .owner_time_zone()
+        .ok()
+        .flatten()
+        .unwrap_or_else(system_zone)
 }
 
 fn created_note(routine: &Routine, how: &str) -> Value {

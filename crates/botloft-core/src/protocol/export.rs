@@ -571,6 +571,7 @@ fn export_bindings() {
         ("conflict", error_code::CONFLICT),
         ("validation", error_code::VALIDATION),
         ("runtimeUnavailable", error_code::RUNTIME_UNAVAILABLE),
+        ("onAServer", error_code::ON_A_SERVER),
     ] {
         let _ = writeln!(out.text, "  {name}: {code},");
     }

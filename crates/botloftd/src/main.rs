@@ -19,7 +19,7 @@ use botloftd::service::tasks::TaskSettings;
 use botloftd::settings::LiveSettings;
 use botloftd::state::{BotSettings, Daemon, DaemonOptions};
 use botloftd::supervisor::{self, SupervisorSettings};
-use botloftd::trash::RecycleBin;
+use botloftd::trash::{FolderTrash, RecycleBin, Trash};
 use botloftd::{approvals, autostart, keep_awake, logging, routines, secrets, server};
 use clap::{Parser, Subcommand};
 use tokio::net::TcpListener;
@@ -127,8 +127,17 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
     std::fs::create_dir_all(&paths.workspaces_root)
         .with_context(|| format!("cannot create {}", paths.workspaces_root.display()))?;
 
-    info!(home = %paths.home.display(), workspaces = %paths.workspaces_root.display(), "starting");
+    info!(home = %paths.home.display(), workspaces = %paths.workspaces_root.display(), server = config.server, "starting");
     let secrets = botloftd::autobackup::SystemSecrets::for_home(&paths.home);
+    // A server has no Recycle Bin: deleted folders wait in its own trash
+    // (spec 42.2).
+    let trash: Arc<dyn Trash> = if config.server {
+        let trash = FolderTrash::new(paths.home.join("trash"));
+        trash.prune(jiff::Timestamp::now().as_millisecond());
+        Arc::new(trash)
+    } else {
+        Arc::new(RecycleBin)
+    };
     let daemon = Daemon::new(DaemonOptions {
         paths,
         port: config.port,
@@ -142,10 +151,11 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
         bots: BotSettings::from_config(&config),
         browser: BrowserSettings::from_config(&config),
         settings: LiveSettings::new(Some(config_path), &config),
-        trash: Arc::new(RecycleBin),
+        trash,
         owner_idle: Arc::new(platform::desktop::owner_idle),
         cloud: botloftd::cloud::CloudSettings::from_config(&config),
         secrets: Arc::new(secrets),
+        server: config.server,
     });
     // No bot process survived the last run, so nobody waits for these,
     // and what they were written and never began goes back in the queue.
@@ -155,11 +165,18 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
     if let Err(err) = botloftd::service::maker::ensure(&daemon) {
         warn!("could not make the Maker: {err}");
     }
-    // Ctrl+Alt+Esc stops every bot on the desktop, app open or not (spec 24.9).
-    let stopping = Arc::clone(&daemon);
-    match platform::desktop::on_stop_key(move || botloftd::service::desktop::stop_all(&stopping)) {
-        Ok(()) | Err(platform::desktop::DesktopError::Unavailable) => {}
-        Err(err) => warn!("the shortcut that stops bots on the desktop is not available: {err}"),
+    // Ctrl+Alt+Esc stops every bot on the desktop, app open or not (spec
+    // 24.9). A server has no desktop (spec 42.2).
+    if !daemon.server {
+        let stopping = Arc::clone(&daemon);
+        match platform::desktop::on_stop_key(move || {
+            botloftd::service::desktop::stop_all(&stopping)
+        }) {
+            Ok(()) | Err(platform::desktop::DesktopError::Unavailable) => {}
+            Err(err) => {
+                warn!("the shortcut that stops bots on the desktop is not available: {err}");
+            }
+        }
     }
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -195,19 +212,24 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
         // The plan read from the owner's Claude account (spec 8.13).
         loops.spawn("plan usage", botloftd::plan_usage::run(Arc::clone(&daemon)));
         // The outline around the window a bot uses (spec 24.9).
-        loops.spawn(
-            "desktop outline",
-            botloftd::desktop::outline::run(Arc::clone(&daemon)),
-        );
+        if !daemon.server {
+            loops.spawn(
+                "desktop outline",
+                botloftd::desktop::outline::run(Arc::clone(&daemon)),
+            );
+        }
         // Forgets the history older than the owner keeps (spec 12.1).
         loops.spawn("history", botloftd::history::run(Arc::clone(&daemon)));
         // The owner's claude.ai tools, for the agents' rules (spec 34.3).
         tokio::spawn(botloftd::connectors::look_at_start(Arc::clone(&daemon)));
-        // Ends on its own where nothing keeps the computer awake.
-        tokio::spawn(keep_awake::run(
-            daemon.supervisor.busy_bots(),
-            daemon.settings.keep_awake(),
-        ));
+        // Ends on its own where nothing keeps the computer awake. A server
+        // does not sleep (spec 42.2).
+        if !daemon.server {
+            tokio::spawn(keep_awake::run(
+                daemon.supervisor.busy_bots(),
+                daemon.settings.keep_awake(),
+            ));
+        }
         let serving = server::serve(Arc::clone(&daemon), listener, platform::shutdown_signal());
         tokio::select! {
             served = serving => served?,

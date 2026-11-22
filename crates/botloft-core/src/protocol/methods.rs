@@ -19,6 +19,11 @@ pub struct ClientInfo {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(test, ts(optional))]
     pub locale: Option<String>,
+    /// The owner's time zone, IANA (`America/Sao_Paulo`): a routine a bot
+    /// makes runs on it, also on a server in another zone (spec 20.12, 42.2).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, ts(optional))]
+    pub time_zone: Option<String>,
 }
 
 /// `session.setLocale`: the owner changed the app's language.
@@ -92,6 +97,11 @@ pub struct SystemStatus {
     /// The account usage of the agents other than Claude Code, as each last
     /// reported it (spec 30); `usage` above is Claude's.
     pub agent_usage: Vec<AgentUsage>,
+    /// The daemon runs on a server, with nobody at its screen (spec 42):
+    /// what needs one (Desktop Use, a login window, the owner's Chrome,
+    /// keeping the computer awake) is not there.
+    #[serde(default)]
+    pub server: bool,
 }
 
 /// The usage of an agent's account, with the plan it is on.

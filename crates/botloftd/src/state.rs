@@ -129,11 +129,15 @@ pub struct DaemonOptions {
     pub cloud: crate::cloud::CloudSettings,
     /// Where the automatic backup keeps its passphrase (spec 27.10).
     pub secrets: Arc<dyn crate::autobackup::SecretStore>,
+    /// It runs on a server, with nobody at its screen (spec 42.2).
+    pub server: bool,
 }
 
 pub struct Daemon {
     pub paths: Paths,
     pub port: u16,
+    /// It runs on a server, with nobody at its screen (spec 42.2).
+    pub server: bool,
     pub supervisor: Supervisor,
     pub courier: Courier,
     pub tasks: TaskSettings,
@@ -203,6 +207,7 @@ impl Daemon {
                 events.clone(),
             ),
             courier: Courier::new(options.courier),
+            server: options.server,
             tasks: options.tasks,
             bots: options.bots,
             settings: options.settings,

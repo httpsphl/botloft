@@ -151,6 +151,7 @@ experimental_agents = []      # ["agy", "codex"] liga os agentes experimentais (
 default_agent = "claude"       # o agente dos bots novos; muda nas Configurações (seção 30)
 start_with_windows = true     # o daemon sobe quando o dono entra no Windows (14)
 keep_awake = true             # impede suspensão enquanto houver bot busy
+server = false                # o computador é um servidor, sem ninguém na tela (42.2)
 log_level = "info"
 
 [supervisor]
@@ -862,7 +863,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 
 ### 11.1 Sessão
 
-- Primeiro request obrigatório: `session.hello {token, client: {name, version}, protocol: 2}` -> `{daemonVersion, protocol}`.
+- Primeiro request obrigatório: `session.hello {token, client: {name, version, locale?, timeZone?}, protocol: 2}` -> `{daemonVersion, protocol}`. `locale` é o idioma do app (24.7, 36.2); `timeZone` é o fuso IANA do computador do dono, que o daemon guarda (`settings`, chave `owner_time_zone`) para as rotinas e esperas que os bots criam (20.12, 20.14, 42.2). Um fuso que o daemon não conhece fica de fora.
 - Qualquer outro método antes do hello: erro `-32001` e a conexão fecha. Token errado também dá `-32001`; `protocol` diferente dá `-32004`; nos dois casos a conexão fecha. O hello tem que chegar em até 10 s.
 - `Origin` aceito: `http://tauri.localhost`, `tauri://localhost` e `http://localhost:1420` (dev). Qualquer outro `Origin` recebe HTTP 403 antes do upgrade. Sem `Origin` (cliente nativo, testes) é aceito: navegadores sempre mandam o header, e o token continua obrigatório.
 - Um cliente lento que deixa acumular mais de 4096 notificações é desconectado e recarrega o estado ao reconectar.
@@ -874,7 +875,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 
 | Método | Params | Result |
 |---|---|---|
-| `system.status` | | versão, uptime, `enabledAgents` (os agentes para os quais um bot pode ser criado: `claude` e os experimentais ligados, seção 30), versão e caminho do claude (`claudeVersion`, `claudePath`), `runtimeError` (por que os bots não sobem), `claudeSignedIn` (7.3; `null` antes de conferir), `account` (o dono para a área da conta do app: `name`, o nome de exibição da conta do Windows, `GetUserNameExW(NameDisplay)`, ou o nome de usuário sem ele, lido uma vez; e `claude`, a conta do Claude com `email`, `plan` e `organization`, ou `null` desconectado), backlog de entrega, `usage` (uso da conta, 8.1) |
+| `system.status` | | versão, uptime, `enabledAgents` (os agentes para os quais um bot pode ser criado: `claude` e os experimentais ligados, seção 30), versão e caminho do claude (`claudeVersion`, `claudePath`), `runtimeError` (por que os bots não sobem), `claudeSignedIn` (7.3; `null` antes de conferir), `account` (o dono para a área da conta do app: `name`, o nome de exibição da conta do Windows, `GetUserNameExW(NameDisplay)`, ou o nome de usuário sem ele, lido uma vez; e `claude`, a conta do Claude com `email`, `plan` e `organization`, ou `null` desconectado), backlog de entrega, `usage` (uso da conta, 8.1), `server` (o daemon roda num servidor, 42.2) |
 | `system.refresh` | | pede uma nova conferência do Claude Code (login e, se falhou, o executável) e responde na hora com o `system.status` atual; o app relê o status até ver o resultado |
 | `crews.list` | | `Crew[]` |
 | `crews.create` | `name, workFolder?, lead?` (`{name, role, instructions, model?}`: o chefe, 10.2) | `Crew` |
@@ -964,6 +965,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | `-32003` | conflito de estado (ex.: bot arquivado, aprovação já respondida) |
 | `-32004` | validação |
 | `-32005` | runtime indisponível (claude ausente ou versão antiga) |
+| `-32006` | precisa de alguém na tela, e o daemon roda num servidor (42.2) |
 
 Além desses, os códigos padrão do JSON-RPC: `-32700` (JSON inválido), `-32600` (request inválido), `-32601` (método desconhecido), `-32602` (params inválidos) e `-32603` (erro interno; a mensagem não traz corpo de mensagem nem token). `crews.archive`, `bots.archive`, `crews.unarchive` e `bots.unarchive` são idempotentes. `crews.delete` e `bots.delete` não: o que já foi excluído não existe mais, e a segunda chamada dá `-32002`, como qualquer outro método com esse id.
 
@@ -1054,7 +1056,7 @@ Em fatias (18, item 8). O que já vale fora do Windows:
 | Iniciar com o sistema (macOS) | Um launch agent em `~/Library/LaunchAgents/io.github.httpsphl.botloft.daemon[-<8 hex>].plist`, no domínio `gui/<uid>`. `RunAtLoad` segue `start_with_windows`. O `KeepAlive` é `PathState` com o arquivo `<home>/run/keep-alive`: o launchd traz o daemon de volta enquanto o arquivo existir. Um `KeepAlive` simples, ou com `SuccessfulExit`, implica rodar no login. O arquivo é criado ao iniciar (`service install`, `restart` e o daemon iniciado pelo agente) e apagado no stop pedido e na saída limpa do daemon (logout incluído). Iniciar recarrega o agente do arquivo (`bootout`, `bootstrap`, com novas tentativas logo depois do `bootout`) e dá `kickstart`; parar apaga o arquivo e manda `SIGTERM` (`launchctl kill`); gravar a escolha só reescreve o arquivo, que o launchd lê no próximo login. Estado por `launchctl print` (`state = running`) |
 | Os dois | `service install`, `status`, `restart`, `stop` e `uninstall` iguais aos do Windows; as mensagens dizem "systemd user service" ou "launch agent" no lugar de "scheduled task". Um teste no CI (`tests/service.rs`, só com `BOTLOFT_SERVICE_TEST=1`) instala com o systemd e o launchd de verdade, mata o daemon com `SIGKILL` e o vê voltar, para e confere que não volta, reinicia e desinstala. O runner Ubuntu só tem gerenciador de usuário com `loginctl enable-linger` |
 | Não suspender | Como no Windows, enquanto houver bot `busy` e `keep_awake = true`, mas com um processo auxiliar que segura o pedido enquanto vive: `caffeinate -i -w <pid do daemon>` no macOS; no Linux, `systemd-inhibit --what=idle --mode=block` com um `sh` que espera o daemon sumir (`kill -0` a cada 5 s). Os dois impedem só a suspensão por inatividade, não a pedida pelo dono (tampa, Suspender). O auxiliar sai quando o daemon morre, então uma queda não deixa o computador acordado. Um auxiliar que sai em 200 ms (sem logind, num contêiner) vira erro no log, e o daemon segue |
-| Lixeira | Ainda não: avisa que só existe no Windows |
+| Lixeira | Ainda não no PC: avisa que só existe no Windows. Num servidor (`server = true`), a pasta vai para `<home>/trash/<ms>-<nome>` e é apagada depois de 30 dias (42.2) |
 
 ### 14.2 Cópia de segurança
 
@@ -1460,6 +1462,7 @@ Conferência na documentação oficial (code.claude.com/docs) em 2026-09-28; esf
 | `/skill` escrito no chat | 38 | **Visto com o Claude Code real** (2026-11-14, Haiku): "/humanizer <texto>" mandado pelo dono a um agente com a skill roda a skill, e a resposta segue o formato dela; o turno abre e fecha como os outros, e o seguinte responde normalmente. O texto do dono vai sem envelope (9.2), então o "/" chega no começo. A documentação (headless) diz que skills e comandos do usuário funcionam no `-p`, e que comandos só do terminal não. Uma resposta a um item ou a um cartão vai com envelope, e aí o "/" não é o começo | feito |
 | Título feito por IA | 40.6 | **Testado com 2.1.309** (2026-11-12): `claude -p --safe-mode --model haiku --tools "" --strict-mcp-config --no-session-persistence --output-format json --system-prompt ...`, com o pedido no stdin, numa pasta vazia, entra com a conta do dono (OAuth: `--bare` não serve, só lê `ANTHROPIC_API_KEY`), roda um turno só sem ferramentas e devolve o título em `result` ("Planejando viagem curta a Lisboa", para uma conversa em português), em 0,9 s e US$ 0,00018 no `claude-haiku-5-5`. `--safe-mode` desliga `CLAUDE.md`, skills, plugins, hooks e MCP do dono; `--max-turns` não aparece no `--help` | feito (C4) |
 | Recursos do 0.21.0 com o Claude Code real | 8.7, 8.8, 8.10 a 8.13, 20.5, 20.14, 23.10, 38, 40 | **Testado com 2.1.309** (2026-11-21, daemon de teste em pasta própria comandado por script pelo WebSocket, Haiku 5.5, modo Manual com as aprovações dadas pelo script; o log não guardou texto das mensagens): (1) o turno de um "oi" custou US$ 0,0057, e `usage.costs` o pôs em `claude-haiku-5-5` e no dia; (2) a segunda leitura do `system.status` trouxe as barras da conta (`fromAccount`), a da semana e a do Fable; (3) duas notas viraram uma linha cada no `CLAUDE.md`, com data, origem (`owner`) e `until` na que tinha prazo; o histórico teve `start`, `agent`, `outside` (uma linha escrita num editor, vista na mensagem seguinte) e a volta (`owner` com `restoredFrom`), o arquivo voltou igual, e as instruções também voltaram; (4) um cartão com gráfico de barras e botões: o botão chegou ao agente, a segunda resposta foi recusada, a atualização manteve o mesmo cartão na versão 2, sem resposta, e o formulário recusou o campo obrigatório vazio; (5) a resposta do dono pela caixa fechou a nota do `tell_owner` como respondida, e uma mensagem dele no chat fechou outras duas como vistas; (6) depois de "Começar do zero", o agente achou um valor com `search_history` e leu em volta com `around`; (7) o `wait_for` acordou o agente 39 s depois de um `ping` de 40 s e 5 s depois de um arquivo aparecer, e uma espera arquivada não o acordou; (8) compactar com o agente dormindo o acordou e compactou; começar do zero dormindo o deixou dormindo, e ele não lembrava da conversa; (9) duas conversas responderam ao mesmo tempo, cada uma do seu contexto; Parar e Compactar valeram só na escolhida; o título da IA foi "Viagem curta a Lisboa"; o resultado de uma tarefa voltou à conversa que a deu, e uma nota de outro agente foi à principal (40.2); (10) uma skill dada a todos chegou às pastas dos agentes, rodou por `/humanizer` e apareceu no `bots.commands` como `owner`; (11) o `context7` trazido do Claude Code respondeu ao agente depois da aprovação. **Achados, corrigidos depois:** o Haiku chamou `nothing_new` e escreveu "Nada novo na caixa de pedidos" mesmo assim, e antes tentou a tool pelo nome sem o prefixo `mcp__botloft__` (20.5); e, acordado por uma espera, disse ao dono que ela continuava marcada (20.14). **Não visto:** a espera maior depois de falhas seguidas (20.3) e a falha que vai ao chefe (10.6), porque não há como forçar um turno com erro num agente do Claude | feito |
+| Claude Code num servidor | 42 | **Documentado** (code.claude.com/docs: `legal-and-compliance`, `authentication` e `troubleshoot-install`; consumer terms da Anthropic; conferido em 2026-11-22): `claude auth login` num computador sem navegador mostra um link; aberto em outro aparelho, a página dá um código que se cola no terminal ("Paste code here"). No Linux a credencial fica em `~/.claude/.credentials.json` (`0600`). O login tem data para acabar, que o uso não adia: `claude auth status --text` (2.1.318 em diante) a mostra, e o Claude Code avisa dias antes. Processos em paralelo no mesmo computador dividem o login e combinam quem o renova (2.1.211 em diante). `claude setup-token` dá um token de um ano (`CLAUDE_CODE_OAUTH_TOKEN`) que só faz pedidos ao modelo, sem as ferramentas do claude.ai. Os termos: o login OAuth é para o uso comum de quem assina ("ordinary use"), os limites do plano supõem uso comum e individual, e quem desenvolve não pode "collect, store, or intermediate" credenciais do Claude.ai, então o login passa pelo fluxo da própria Anthropic. Nada diz se um servidor do dono ligado o tempo todo é uso comum. Não visto ainda: um agente num servidor de verdade | documentado |
 | `ANTHROPIC_API_KEY` no ambiente dos bots | 7.4 | **Visto com 2.1.309** (2026-10-25, Botloft do dono): uma chave inválida salva nas variáveis do usuário fez um agente cair em `auth_error` a cada turno, com `claude auth status` dizendo conectado ao plano Max. Rodando `claude -p` na pasta do agente com a variável, o `init` diz `apiKeySource: "ANTHROPIC_API_KEY"` e o turno termina com `authentication_failed` e "Invalid API key"; sem ela, responde com a conta. Apagar a variável resolveu, sem reiniciar o daemon | feito |
 
 Itens do runtime anterior (ConPTY, hooks em exec form, `crossSessionInbound`, linha de auth do inbox, diálogo de confiança, `ESC[6n` do ConPTY, consultas do terminal no replay) foram verificados no M2–M4 e deixaram de se aplicar com a ADR 0001; o histórico está no git e na ADR.
@@ -1615,7 +1618,7 @@ Sem jargão (15.2): o dono não vê "cron", "overlap" nem "timezone" no caminho 
 
 Pedido para fazer algo em horário marcado ("confere o e-mail todo dia às 8"), um bot usava o agendador do próprio Claude Code (`CronCreate`), que morre com o processo e não aparece no app (7.4, 19). Agora esses agendadores ficam desligados, e o bot pede uma rotina de verdade pela tool `schedule_routine`, que o dono aprova no chat, como a sugestão de bot (10.2).
 
-- **Entrada:** `name`, `prompt` (o pedido de cada vez, escrito para o bot que vai rodar, até 8 000 caracteres para caber no cartão), `schedule` (o mesmo JSON de 20.2) e, opcionais, `bot` (handle de outro bot da crew, para quem a rotina é) e `timezone`. Sem `timezone`, vale o fuso do computador, como no app: o daemon o lê do Windows pelo `jiff` (`UTC` se o Windows não der um nome IANA). O daemon grava na entrada o fuso usado e o handle normalizado.
+- **Entrada:** `name`, `prompt` (o pedido de cada vez, escrito para o bot que vai rodar, até 8 000 caracteres para caber no cartão), `schedule` (o mesmo JSON de 20.2) e, opcionais, `bot` (handle de outro bot da crew, para quem a rotina é) e `timezone`. Sem `timezone`, vale o fuso do dono, o que o app disse no `session.hello` (11.1); antes de algum app dizer, o do computador, que o daemon lê do sistema pelo `jiff` (`UTC` se o sistema não der um nome IANA). Num servidor os dois são diferentes, e "às 9h" tem que ser às 9h do dono (42.2). O daemon grava na entrada o fuso usado e o handle normalizado.
 - **Antes do dono:** o daemon confere tudo o que `routines.create` confere (20.8), mais o limite do pedido e que o `bot` existe na crew. Um pedido impossível (espaçamento menor que 5 minutos, fuso desconhecido, campo a mais) volta como erro ao bot, sem cartão.
 - **Aprovação:** `approval` com `toolName: "mcp__botloft__schedule_routine"`, entrada até 64 KB e resumo com o nome da rotina, no chat do bot que pediu, mesmo quando a rotina é de outro bot. O bot fica `needs_approval`, e a chamada espera até `approval_timeout_minutes`. Qualquer bot pode pedir, não só o chefe.
 - **Cartão:** nome, "O que <bot> deve fazer?", "Quando" e "Mais opções", os mesmos campos do editor (20.9), já preenchidos. Para outro bot, o título diz para quem é. "Criar rotina" permite; "Agora não" nega com a nota do dono. Mudado algum campo, `approvals.answer` leva `input` com a rotina como o dono deixou. O daemon confere esse `input` antes de fechar o pedido, e um problema de horário volta com o `data.reason` de 20.8: o cartão o escreve no idioma do dono e continua aberto. O bot e o fuso do pedido valem se o `input` não trouxer outros.
@@ -1651,7 +1654,7 @@ Um bot que precisa esperar algo de fora (um arquivo aparecer, um programa termin
   - `what: "program"` com `program`: quando nenhum programa com esse nome estiver rodando (`ffmpeg` ou `ffmpeg.exe`, sem pasta; maiúsculas e o `.exe` não contam). Se nenhum roda agora, é erro.
   - `what: "page"` com `url` (`http` ou `https`) e `text` (até 200 caracteres): quando o texto da página (sem as tags, com os espaços juntados, sem maiúsculas nem acentos) contiver `text`. Só páginas abertas sem login: o Botloft não manda cookies.
   - `name` (até 80 caracteres) é o nome da rotina, na língua do dono; `hours` é o prazo, de 1 a 168 (7 dias); `then` (até 8 000 caracteres) é o que o bot vai fazer quando acordar, escrito para ele mesmo.
-- **Como fica:** uma rotina do próprio bot com `schedule` `{"kind": "wait", "on": {"what": "file", "path": "..."}, "until": <ms>}` (`{"what": "program", "name"}` ou `{"what": "page", "url", "text"}`), o fuso do computador e `overlap: skip`. Sem horário: `next_run_at` fica `null`, como num aviso. Até 5 esperas abertas por bot; a sexta é erro. Só `wait_for` cria esse tipo: `routines.create`, `routines.update`, `schedule_routine` e `change_routine` o recusam com `data.reason: wait_by_agent`, e o horário de uma espera não muda.
+- **Como fica:** uma rotina do próprio bot com `schedule` `{"kind": "wait", "on": {"what": "file", "path": "..."}, "until": <ms>}` (`{"what": "program", "name"}` ou `{"what": "page", "url", "text"}`), o fuso do dono (o mesmo de 20.12) e `overlap: skip`. Sem horário: `next_run_at` fica `null`, como num aviso. Até 5 esperas abertas por bot; a sexta é erro. Só `wait_for` cria esse tipo: `routines.create`, `routines.update`, `schedule_routine` e `change_routine` o recusam com `data.reason: wait_by_agent`, e o horário de uma espera não muda.
 - **Quem confere:** um laço do daemon a cada 5 s, para as esperas ligadas de bots ativos. Arquivo: se existe. Programa: uma lista dos processos por volta, só quando algum bot espera um programa (`platform`: Toolhelp no Windows, `ps` no Linux e no macOS). Página: no máximo uma vez por minuto por espera, um GET de até 20 s, até 2 MB, até 5 redirecionamentos; uma página que falha conta como "ainda não".
 - **Acordar:** quando acontece, a rotina roda uma vez (20.3). Bot ou crew pausados só atrasam a mensagem, como "Rodar agora": a espera não pula. Depois de rodar, a espera é arquivada, como uma volta. Quando o prazo chega sem acontecer, ela roda do mesmo jeito, para o bot saber. `RoutineRun.waited` (`happened` ou `timed_out`) guarda qual dos dois (`routine_runs.waited`, migration 0045). Um daemon parado confere quando volta: o que aconteceu enquanto ele estava fora conta como `happened`, se o prazo ainda não passou.
 - **O que o bot lê** (9.3): `[botloft] wait "<nome>" · the file <caminho> appeared` (`no program called <nome> is running any more`, `the page <url> shows "<texto>"`), ou, no fim do prazo, `[botloft] wait "<nome>" · ran out at <hora local> (<fuso>): the file <caminho> did not appear` (`<nome> is still running`, `the page <url> does not show "<texto>"`); depois a linha que diz que a espera acabou e não acorda de novo (sem ela, um agente de verdade disse ao dono que a espera continuava marcada, 19), a de que ninguém está olhando, e o `then`.
@@ -4061,3 +4064,124 @@ O conteúdo dos plugins não vai ao log: só que o dono mudou quem usa um, e o n
 
 - Migration 0050: `bot_plugins (bot_id, name)`, apagada com o agente (7.6), e `plugins_everyone (name)`; a marca de todos para todos é a linha `all_plugins_everyone` da tabela `settings`.
 - `plugins.list` → `PluginList {plugins: [Plugin {name, description, version, source, skills, agents, hooks, languageServers, mcpServers, programs, needsSettings, botIds, everyone}], everyone}` (`source`: `claude_code`, `claude_ai`, `kept`; `skills` e `agents` com o nome que o agente usa; `hooks`, os eventos; `botIds`, a soma, só de agentes ativos do Claude Code). `plugins.share {name, botIds}` → `Plugin`. `plugins.everyone {name?, on}` → `PluginList`, como `skills.everyone`.
+
+## 42. Botloft num servidor
+
+Status: **em andamento**. SV1 (modo servidor) feito em 2026-11-22; o resto em fatias (42.12). Pedido do dono (2026-11-22): qualquer pessoa instala o Botloft no próprio servidor Linux, seja qual for, com um comando, e ele gasta pouca memória. Os agentes trabalham com o PC desligado, e o app e o celular chegam a eles de longe.
+
+### 42.1 Princípios
+
+- Um servidor por dono. Não é multiusuário: quem instala é o dono, e só os aparelhos dele conectam.
+- Qualquer Linux `x86_64` ou `aarch64`, sem tela, com pouca memória: 1 GB já serve para começar.
+- O daemon continua só em `127.0.0.1` (13). O app e o celular chegam pela nuvem (28) ou por um túnel que termina no loopback do servidor (`ssh -L`, `tailscale serve`). Nenhuma porta nova fica aberta.
+- O login do motor é do dono e passa pelo fluxo da própria Anthropic: `claude auth login` no terminal do servidor. O Botloft nunca pega, guarda nem repassa a credencial (19, "Claude Code num servidor").
+- Os agentes não alcançam os segredos do Botloft (42.5), e a memória acompanha o tamanho da máquina (42.4).
+
+### 42.2 Modo servidor
+
+`server = true` no `config.toml` (6), que o instalador grava (42.3). Com ele, o daemon:
+
+- diz no `system.status` que é um servidor (`server`), para o app esconder o que não vale ali;
+- recusa com `-32006` (11.4) o que precisa de alguém na tela:
+  - Desktop Use: `desktop.apps`, `desktop.grantApp`, `desktop.grantWhole`, `desktop.watch`, `desktop.resume` e `desktop.setOptions` (24);
+  - a janela de verdade do navegador, `browser.window` (21.11);
+  - a janela de login de site, `logins.open` (35);
+  - o Chrome do dono, `chrome.set` (37);
+  - `keepAwake` e `startWithWindows` em `settings.update` (14).
+
+  As leituras (`desktop.grants`, `desktop.awayUses`, `chrome.status`) e as paradas respondem como sempre;
+- tira da lista de tools dos bots (10) as `desktop_*` e o `ask_chrome`, e a frase do desktop das instruções do MCP. Uma chamada que venha assim mesmo volta com erro dizendo que o Botloft roda num servidor. Menos tools também é menos contexto em todo turno;
+- não segura o computador acordado (14.1) e não registra o atalho Ctrl+Alt+Esc nem o contorno de janela (24.9);
+- tem lixeira própria: a pasta de uma crew excluída vai para `<home>/trash/<ms>-<nome>` (um rename, porque o instalador põe os dados e as pastas de trabalho no mesmo disco) e é apagada depois de 30 dias, ao subir e a cada pasta nova;
+- usa o fuso do dono nas rotinas e esperas que os bots criam (11.1, 20.12, 20.14).
+
+O resto fica igual. O navegador dos bots roda headless com o Chrome ou o Chromium do servidor (21.2). O celular e as cópias na nuvem já só fazem conexões de saída (27, 28). Rotinas, courier, aprovações e conversas não mudam.
+
+### 42.3 Instalar
+
+SV2, a fazer.
+
+- **No release:** o `botloftd` estático (musl) para `x86_64` e `aarch64`, em `botloftd-linux-<arq>.tar.gz` com o `.sha256`, e o `install.sh`, que fica num link fixo (`https://github.com/httpsphl/botloft/releases/latest/download/install.sh`).
+- **`curl -fsSL <link> | sh`**, como root ou com sudo:
+  1. descobre a arquitetura, baixa o daemon do mesmo release e confere o SHA-256;
+  2. cria o usuário `botloft` (sem login, pasta `/var/lib/botloft`) e o `botloft-agents` (42.5), e põe o daemon em `/usr/local/bin`;
+  3. grava `/var/lib/botloft/home/config.toml` com `server = true`, a porta e `workspaces_root = "/var/lib/botloft/workspaces"`;
+  4. instala a unit de sistema `botloft.service` (`User=botloft`, `Restart=on-failure`, `MemoryMax` numa fração da RAM e as capacidades de 42.5), habilita e sobe;
+  5. instala o Claude Code para o usuário dos agentes pelo instalador oficial, quando falta;
+  6. mostra os próximos passos: o login do Claude (`sudo -u botloft-agents -i claude auth login`) e o código para o app (42.6).
+- **Sem systemd** (contêiner, Alpine com OpenRC): o instalador diz como rodar `botloftd serve` e não cria serviço. O Docker tem imagem própria (42.8).
+- **Sem root:** `botloftd service install` (14.1) grava a unit `--user`. No Linux, sem *linger*, a unit morre quando a sessão SSH fecha: o comando liga o *linger* (`loginctl enable-linger`) ou diz como ligar.
+- **Desinstalar:** `install.sh --uninstall` para o serviço e tira o binário. Os dados ficam, a menos que o dono peça.
+
+### 42.4 Memória
+
+SV3, a fazer. Medido em 2026-11-22 (Windows, Claude Code 2.1.309):
+- o daemon com todos os agentes dormindo: 35 MB;
+- um processo do Claude Code como o Botloft o roda: 212 MB na RAM (450 MB reservados) antes de qualquer mensagem, e 228 MB depois de um turno do Haiku.
+
+As ferramentas MCP e o navegador de cada agente vêm por cima. O que pesa, então, é quantos agentes estão acordados ao mesmo tempo.
+
+- O daemon lê a memória da máquina (total e disponível; `/proc/meminfo` no Linux, `GlobalMemoryStatusEx` no Windows) e conta uns 300 MB por agente acordado.
+- **Máquina pequena** (até 2 GB de RAM, ou `server = true`): um agente dorme pouco depois do turno (2 min, no lugar dos 30 de 7.7), e só um agente parado fica acordado quando a memória disponível cai abaixo da metade.
+- **Vaga pela memória:** além de `max_running` (7.8), um agente só sobe se a memória disponível comporta mais um, com folga de 256 MB. Sem folga, o agente parado há mais tempo dorme para abrir vaga (7.8), e o que esperava sobe quando ele sai. Sem nenhum parado, a mensagem espera na fila, em vez de a máquina ficar sem memória e o sistema matar processos.
+- O app mostra quando um agente espera vaga.
+
+### 42.5 Agentes num usuário separado
+
+SV4, a fazer.
+
+- No Linux, o daemon roda como `botloft` e os agentes como `botloft-agents`. A pasta de dados (`/var/lib/botloft/home`, com o token do dono, as chaves, a nuvem, o celular e o banco) é `0700` do `botloft`: um agente com shell não a lê.
+- O daemon troca de usuário ao subir cada processo de agente (`setgroups`, `setgid` e `setuid` antes do `exec`). Ele não roda como root: a unit lhe dá só `CAP_SETUID`, `CAP_SETGID` e `CAP_KILL` (`AmbientCapabilities`).
+- As pastas de trabalho são do `botloft-agents`, e o grupo `botloft` pode escrever nelas. O `.claude/` com as configurações que o daemon gera (7.5) fica do `botloft`, só leitura para os agentes.
+- O login do Claude Code é do `botloft-agents` (`~botloft-agents/.claude`), dividido entre os agentes, como no PC.
+- O que continua cooperativo: os agentes de crews diferentes são o mesmo usuário, então um ainda lê o ambiente do outro (13, 32.8).
+- Sem as capacidades (usuário comum, `service install`), tudo roda num usuário só, como no PC, e o `system.status` avisa.
+
+### 42.6 Chegar ao servidor
+
+SV5, a fazer.
+
+- **Pareamento:** `botloftd pair` no servidor (o instalador já chama) mostra um código de 6 dígitos. No app, "Conectar a um servidor" pede o código. Cada aparelho ganha um token próprio, que o dono vê e revoga, no lugar do token único do dono (13).
+- **Pela nuvem (padrão):** o app fala com o servidor pelo relay da conta (28), como um aparelho do tipo `desktop`. Os frames do JSON-RPC vão selados de ponta a ponta, em partes, com fila nos dois sentidos. Funciona atrás de NAT e sem porta aberta, e o daemon continua só em `127.0.0.1`.
+- **Direto:** um túnel que termina no loopback do servidor (`ssh -L`, `tailscale serve`), com o mesmo código.
+- O app escolhe entre "Este computador" e um servidor. Com um servidor, ele não sobe daemon local e esconde o que precisa de tela (Desktop Use, manter acordado, iniciar com o Windows, login de site em janela).
+
+### 42.7 Arquivos
+
+SV6, a fazer. Hoje o app abre, mostra e salva arquivos pelo caminho local (8.3, 9.5, 14.2). Com um servidor, ler, baixar e enviar passam pelo RPC, como os anexos já fazem, e "Mostrar na pasta" vira "Baixar". A pasta de trabalho de uma crew é uma pasta do servidor; para código, um repositório git que o servidor clona.
+
+### 42.8 Docker
+
+SV7, a fazer. Imagem `ghcr.io/httpsphl/botloft` com o daemon, o Claude Code e o Chromium, mais uma variante sem navegador. Volume `/data`, `server = true`, e daemon e agentes em usuários diferentes dentro do contêiner.
+
+### 42.9 Login do motor
+
+SV8, a fazer. O daemon lê quando o login do Claude Code acaba (`claude auth status`) e avisa o dono dias antes, com o passo a passo do SSH. Vencido, os agentes ficam `auth_error` (7.3), como hoje.
+
+### 42.10 Do PC para o servidor
+
+SV9, a fazer.
+
+- As crews vão por uma cópia (14.2, 27) que o app envia.
+- As pastas de trabalho escolhidas no Windows viram pastas do servidor.
+- O celular pareia de novo, porque o selo do relay não pode repetir nonce (28).
+- Um computador ativo por conta: a nuvem dá a vez a um daemon, e o outro para as rotinas.
+
+### 42.11 Atualizar
+
+SV10, a fazer. `botloftd update` baixa o release novo, confere a assinatura e reinicia pelo serviço. O instalador oferece ligar a atualização automática.
+
+### 42.12 Marcos
+
+| Marco | O quê | Estado |
+|---|---|---|
+| SV1 | Modo servidor (42.2) e o fuso do dono nas rotinas dos bots | feito |
+| SV2 | Binário Linux estático e instalador (42.3) | a fazer |
+| SV3 | Memória (42.4) | a fazer |
+| SV4 | Agentes num usuário separado (42.5) | a fazer |
+| SV5 | Pareamento e conexão pela nuvem e por túnel (42.6) | a fazer |
+| SV6 | Arquivos pelo RPC (42.7) | a fazer |
+| SV7 | Docker (42.8) | a fazer |
+| SV8 | Aviso de login (42.9) | a fazer |
+| SV9 | Do PC para o servidor (42.10) | a fazer |
+| SV10 | Atualizar (42.11) | a fazer |

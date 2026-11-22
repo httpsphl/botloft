@@ -386,4 +386,7 @@ pub mod error_code {
     pub const CONFLICT: i32 = -32003;
     pub const VALIDATION: i32 = -32004;
     pub const RUNTIME_UNAVAILABLE: i32 = -32005;
+    /// What needs someone at the screen, asked of a daemon on a server
+    /// (spec 42.2).
+    pub const ON_A_SERVER: i32 = -32006;
 }

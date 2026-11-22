@@ -132,6 +132,9 @@ fn hello(daemon: &Daemon, request: jsonrpc::Request) -> Result<HelloResult, RpcE
         daemon.desktop.set_locale(locale);
         crate::service::maker::localize(daemon, locale);
     }
+    if let Some(zone) = &params.client.time_zone {
+        keep_owner_zone(daemon, zone);
+    }
     Ok(HelloResult {
         daemon_version: env!("CARGO_PKG_VERSION").to_owned(),
         protocol: PROTOCOL_VERSION,
@@ -242,6 +245,13 @@ fn route(
     let Some(id) = request.id.clone() else {
         return Routed::Reply(None);
     };
+    // Nobody sits at a server's screen (spec 42.2).
+    if daemon.server
+        && let Some(what) = crate::server_mode::needs_screen(&request.method)
+    {
+        let refused = Err(crate::service::ApiError::OnAServer(what).into());
+        return Routed::Reply(Some(reply(&id, refused)));
+    }
     // Watching a browser belongs to this connection (spec 21.7).
     let result = match request.method.as_str() {
         // Answered here, ahead of nothing: the app hears that the
@@ -312,6 +322,22 @@ fn reply(id: &Value, result: Result<Value, RpcError>) -> String {
     match result {
         Ok(value) => jsonrpc::success(id, value),
         Err(err) => jsonrpc::failure(id, &err),
+    }
+}
+
+/// Keeps the zone the app says the owner is in, for the routines and waits
+/// the bots make (spec 20.12, 42.2). A name jiff does not know is left out.
+fn keep_owner_zone(daemon: &Daemon, zone: &str) {
+    if jiff::tz::TimeZone::get(zone).is_err() {
+        debug!(zone, "the app sent a time zone this daemon does not know");
+        return;
+    }
+    let store = daemon.store();
+    if store.owner_time_zone().ok().flatten().as_deref() == Some(zone) {
+        return;
+    }
+    if let Err(err) = store.set_owner_time_zone(zone) {
+        warn!("could not keep the owner's time zone: {err}");
     }
 }
 
