@@ -184,7 +184,9 @@ Botloft can run on your own Linux server (x86_64 or arm64), with nobody at its s
 curl -fsSL https://github.com/${repo}/releases/latest/download/install.sh | sh
 \`\`\`
 
-It installs the daemon as a service, with a user of its own, and Claude Code for the agents, then says how to sign in to Claude.
+It installs the daemon as a service, with a user of its own, and Claude Code for the agents, then says how to sign in to Claude and to connect the app (\`sudo botloftd pair\`).
+
+With Docker instead, the image \`ghcr.io/${repo}\` has the daemon, Claude Code and Chromium (\`:slim\` without a browser); see [deploy/docker](https://github.com/${repo}/tree/main/deploy/docker).
 `;
 }
 
