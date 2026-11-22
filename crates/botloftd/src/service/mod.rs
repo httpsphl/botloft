@@ -38,6 +38,7 @@ pub mod messages;
 pub mod mobile;
 pub mod models;
 pub mod modes;
+pub mod moved;
 pub mod permissions;
 pub mod questions;
 pub mod reactions;

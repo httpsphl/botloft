@@ -4212,12 +4212,12 @@ SV8, feito em 2026-11-22.
 
 ### 42.10 Do PC para o servidor
 
-SV9, a fazer.
+SV9 em partes: a mudança por uma cópia, feita em 2026-11-22; a vez de um computador só, pela nuvem, a fazer.
 
-- As crews vão por uma cópia (14.2, 27) que o app envia.
-- As pastas de trabalho escolhidas no Windows viram pastas do servidor.
-- O celular pareia de novo, porque o selo do relay não pode repetir nonce (28).
-- Um computador ativo por conta: a nuvem dá a vez a um daemon, e o outro para as rotinas.
+- **As crews vão por uma cópia** (14.2): no PC, Configurações > Cópia de segurança salva uma; com o app no servidor (42.6), escolher essa cópia para restaurar a manda ao servidor (42.7), e o daemon de lá reinicia com ela (`system.restart`). O formulário de conectar a um servidor diz esse caminho e lembra de pausar as crews do PC depois, para as rotinas não rodarem nos dois.
+- **Pastas de outro sistema:** ao subir, antes de qualquer agente, o daemon tira a escolha da pasta de trabalho de uma crew cujo caminho não é absoluto neste sistema, como `C:\...` num Linux, e a crew passa a trabalhar na pasta dela (com as regras dos agentes refeitas). Uma pasta que só não existe agora, como um disco desligado, continua escolhida. Os arquivos da pasta escolhida no PC não vêm na cópia; só as pastas das crews e dos agentes (14.2).
+- **O celular pareia de novo:** a cópia não leva `secrets` (14.2): nem o pareamento do celular, cujo selo não pode repetir nonce (28), nem a conta da nuvem nem as chaves dos agentes.
+- **A fazer:** um computador ativo por conta. A nuvem dá a vez a um daemon, e o outro para as rotinas, para as mesmas crews não rodarem em dois lugares.
 
 ### 42.11 Atualizar
 

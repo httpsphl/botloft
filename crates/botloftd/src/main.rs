@@ -254,6 +254,16 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
         info!(port = config.port, "listening on 127.0.0.1");
         // Each of these runs as long as the daemon does (spec 14).
         let mut loops = Loops::new();
+        // A backup from another computer may name folders that are no path
+        // here (spec 42.10); before any agent starts in one.
+        match botloftd::service::moved::forget_foreign_folders(&daemon) {
+            Ok(0) => {}
+            Ok(moved) => info!(
+                moved,
+                "crews from another computer work in their own folders"
+            ),
+            Err(err) => warn!("could not check the crews' folders: {err}"),
+        }
         loops.spawn("supervisor", supervisor::run(Arc::clone(&daemon)));
         loops.spawn("courier", courier::run(Arc::clone(&daemon)));
         loops.spawn("approvals", approvals::forget_turns(Arc::clone(&daemon)));

@@ -32,6 +32,7 @@ export const server: Messages["server"] = {
     found: (name) => `Servidor: ${name}`,
     tunnel: "Este computador chega a ele por um túnel. Abra o túnel num terminal e deixe aberto:",
     connect: "Conectar",
+    move: "Para levar as crews deste computador: em Configurações > Cópia de segurança, salve uma cópia aqui; depois de conectar, restaure a cópia lá. Então pause as crews daqui, ou elas rodam duas vezes.",
   },
   where: {
     title: "Onde os agentes rodam",
