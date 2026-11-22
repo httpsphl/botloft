@@ -1,12 +1,15 @@
-import { LoaderCircle, RefreshCw, RotateCw } from "lucide-react";
+import { LoaderCircle, Monitor, RefreshCw, RotateCw } from "lucide-react";
 import type { ReactNode } from "react";
 import { type StoreApi, useStore } from "zustand";
 import { useT } from "../../i18n";
 import { PROTOCOL_VERSION } from "../../lib/protocol.gen";
 import { SYSTEM } from "../../lib/system";
+import { server } from "../../shell/server";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { Details } from "../../ui/Details";
+import { ServerOffer } from "../server/ServerOffer";
+import { TunnelCommand } from "../server/TunnelCommand";
 import type { Link } from "./link";
 
 // Plain words on purpose: the owner never has to know that a daemon, a
@@ -21,6 +24,11 @@ export function Onboarding({ link }: { link: StoreApi<Link> }) {
   const tryAgain = (retry: () => Promise<void>) => (
     <Button variant="primary" icon={RefreshCw} onClick={retry}>
       {t.common.tryAgain}
+    </Button>
+  );
+  const thisComputer = (
+    <Button icon={Monitor} onClick={() => server.clear()}>
+      {t.server.useThisComputer}
     </Button>
   );
 
@@ -40,7 +48,12 @@ export function Onboarding({ link }: { link: StoreApi<Link> }) {
       );
       break;
     case "connecting":
-      body = (
+      body = current.server ? (
+        <div className="flex flex-col items-start gap-4">
+          <Waiting text={t.server.connecting(current.server.name)} />
+          {thisComputer}
+        </div>
+      ) : (
         <div className="flex flex-col items-start gap-4">
           <Waiting text={o.connecting} />
           <div className="flex gap-2">
@@ -54,12 +67,28 @@ export function Onboarding({ link }: { link: StoreApi<Link> }) {
         </div>
       );
       break;
+    case "unreachable":
+      body = (
+        <div className="flex flex-col items-start gap-4">
+          <div className="w-full">
+            <Callout tone="warn" title={t.server.unreachable.title(current.server.name)}>
+              {t.server.unreachable.body}
+            </Callout>
+          </div>
+          <div className="w-full">
+            <TunnelCommand server={current.server} />
+          </div>
+          <Waiting text={t.server.unreachable.retrying} />
+          {thisComputer}
+        </div>
+      );
+      break;
     case "connected":
       body = null;
       break;
     case "stopped":
       body = (
-        <Problem title={o.stopped.title} action={tryAgain(install)}>
+        <Problem title={o.stopped.title} action={tryAgain(install)} offer>
           {o.stopped.body}
           <Details>
             {current.error ?? o.stopped.notRunning}
@@ -81,7 +110,7 @@ export function Onboarding({ link }: { link: StoreApi<Link> }) {
       break;
     case "foreign":
       body = (
-        <Problem title={o.foreign.title} action={tryAgain(check)}>
+        <Problem title={o.foreign.title} action={tryAgain(check)} offer>
           {o.foreign.body(current.port)}
           <Details>{o.foreign.detail(current.port)}</Details>
         </Problem>
@@ -98,7 +127,12 @@ export function Onboarding({ link }: { link: StoreApi<Link> }) {
       );
       break;
     case "refused":
-      body = (
+      body = current.server ? (
+        <Problem title={t.server.refused.title(current.server.name)} action={thisComputer} offer>
+          {t.server.refused.body}
+          <Details>{current.reason}</Details>
+        </Problem>
+      ) : (
         <Problem title={o.cantConnect.title} action={tryAgain(check)}>
           {o.cantConnect.body}
           <Details>{current.reason}</Details>
@@ -107,7 +141,7 @@ export function Onboarding({ link }: { link: StoreApi<Link> }) {
       break;
     case "error":
       body = (
-        <Problem title={o.cantConnect.title} action={tryAgain(check)}>
+        <Problem title={o.cantConnect.title} action={tryAgain(check)} offer>
           {o.cantConnect.body}
           <Details>{current.message}</Details>
         </Problem>
@@ -126,13 +160,16 @@ export function Onboarding({ link }: { link: StoreApi<Link> }) {
   );
 }
 
+/** A problem and what to do; `offer` adds the way to a server instead (spec 42.6). */
 function Problem({
   title,
   action,
+  offer = false,
   children,
 }: {
   title: string;
   action: ReactNode;
+  offer?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -143,6 +180,7 @@ function Problem({
         </Callout>
       </div>
       {action}
+      {offer && <ServerOffer />}
     </div>
   );
 }

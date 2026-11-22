@@ -1,11 +1,13 @@
 // What closing the window does (spec 15.1): with the icon near the clock,
 // the window only hides; otherwise Botloft closes and the bots keep
 // working in the background, or, if the owner chose so in Settings
-// (`prefs.whenClosed`), stop until it opens again.
+// (`prefs.whenClosed`), stop until it opens again. With a server chosen,
+// the agents run there, and closing never stops anything (spec 42.6).
 
 import { useEffect } from "react";
 import type { Host } from "../lib/host";
 import { prefs } from "./prefs";
+import { server } from "./server";
 import { trayShown } from "./tray";
 import { markHidden } from "./visibility";
 
@@ -20,7 +22,7 @@ export function useCloseBehavior(host: Host): void {
     let alive = true;
     host.window
       .onCloseRequested(async () => {
-        if (prefs.whenClosed.get() === "stop") {
+        if (prefs.whenClosed.get() === "stop" && !server.get()) {
           await host.window.hide().catch(() => {});
           await host.stopDaemon().catch(() => {});
           return "close";

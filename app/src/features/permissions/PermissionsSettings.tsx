@@ -16,6 +16,8 @@ import { CrewAccessRow, RuleRow, SiteRow } from "./rows";
 import { usePermissions } from "./usePermissions";
 
 const EVERYONE = "";
+/** What needs someone at the screen where Botloft runs (spec 42.2). */
+const SCREEN_TABS: readonly PermissionsTab[] = ["desktop", "chrome"];
 
 export function PermissionsSettings() {
   const t = useT();
@@ -25,8 +27,11 @@ export function PermissionsSettings() {
   const crews = useApp((state) => state.crews);
   const at = useApp((state) => state.permissionsAt);
   const clearAt = useApp((state) => state.clearPermissionsAt);
-  const [tab, setTab] = useState<PermissionsTab>(at?.tab ?? "desktop");
+  const [chosenTab, setTab] = useState<PermissionsTab>(at?.tab ?? "desktop");
   const [only, setOnly] = useState<BotId | null>(at?.botId ?? null);
+  // A server has no screen and no Chrome of the owner's (spec 42.2).
+  const onServer = useApp((state) => state.system?.server ?? false);
+  const tab = onServer && SCREEN_TABS.includes(chosenTab) ? "sites" : chosenTab;
   // Opened from an agent's details or its desktop panel: there, then done.
   useEffect(() => {
     if (at) {
@@ -67,12 +72,12 @@ export function PermissionsSettings() {
       <Tabs<PermissionsTab>
         label={t.account.settings.permissions}
         tabs={[
-          { id: "desktop", label: label(words.tabs.desktop, counted(desktop)) },
-          { id: "sites", label: label(words.tabs.sites, counted(sites)) },
-          { id: "rules", label: label(words.tabs.rules, counted(rules)) },
-          { id: "crews", label: label(words.tabs.crews, counted(access)) },
-          { id: "chrome", label: label(t.chrome.short, counted(chrome)) },
-        ]}
+          { id: "desktop" as const, label: label(words.tabs.desktop, counted(desktop)) },
+          { id: "sites" as const, label: label(words.tabs.sites, counted(sites)) },
+          { id: "rules" as const, label: label(words.tabs.rules, counted(rules)) },
+          { id: "crews" as const, label: label(words.tabs.crews, counted(access)) },
+          { id: "chrome" as const, label: label(t.chrome.short, counted(chrome)) },
+        ].filter((each) => !onServer || !SCREEN_TABS.includes(each.id))}
         value={tab}
         onChange={setTab}
       />

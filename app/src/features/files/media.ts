@@ -1,11 +1,12 @@
 // Sounds and videos of a bot, played in the chat and the files panel
 // (spec 8.4, 15.1). They play from an address on the daemon's own server
 // (`files.media`), read in pieces as they play, so a long video never
-// crosses the connection whole.
+// crosses the connection whole. On a server, through the tunnel (42.6).
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { type BotFile, RpcErrorCode } from "../../lib/protocol.gen";
 import { RpcError } from "../../lib/rpc";
+import { throughTunnel } from "../../shell/server";
 import { useApi } from "../../store/context";
 
 export type MediaKind = "audio" | "video";
@@ -77,9 +78,10 @@ export function useMediaLink(botId: string, path: string) {
     setState({ kind: "loading" });
     api.call("files.media", { botId, path }).then(
       (link) => {
-        remember(key, link.url);
+        const url = throughTunnel(link.url);
+        remember(key, url);
         if (alive) {
-          setState({ kind: "ready", url: link.url });
+          setState({ kind: "ready", url });
         }
       },
       (failure: unknown) => {

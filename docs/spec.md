@@ -4157,14 +4157,20 @@ SV4, feito em 2026-11-22, só no Linux. Com `agents_user` (6), o daemon roda os 
 
 ### 42.6 Chegar ao servidor
 
-SV5 em partes: os aparelhos e o túnel no daemon, feitos em 2026-11-22; o app conectando pelo túnel e depois pela nuvem, a fazer.
+SV5 em partes: os aparelhos e o túnel no daemon e o app conectando pelo túnel, feitos em 2026-11-22; a conexão pela nuvem, a fazer.
 
 - **Aparelhos.** Cada aparelho que chega de outro computador tem um token próprio, que o dono vê e revoga: `devices.list`, `devices.revoke {deviceId}` e a notificação `devices.changed`, todos com `{devices: [{id, name, pairedAt, lastSeenAt?}]}`, o mais novo primeiro. O banco guarda só o SHA-256 do token (tabela `devices`), e a cópia leve (14.2) deixa os aparelhos de fora. O `session.hello` aceita o token do dono ou o de um aparelho e marca quando o aparelho conectou (11.1). Revogar fecha na hora as conexões do aparelho, depois da resposta, e o token para de valer. Um app aberto em outro computador não conta como o dono presente no computador do daemon (24.8).
 - **Parear** só com o token do dono, ou seja, no computador onde o Botloft roda: `devices.pair {name}` -> `{device, token}`, e vindo de um aparelho volta com `-32004` e `reason: "pair_where_botloft_runs"`. Assim um aparelho que vaza não cria outros, e revogar basta. No servidor, `sudo botloftd pair [--name <nome>]` (o instalador mostra o comando) conecta no daemon dali como dono e mostra uma **chave de conexão**: `botloft1.` seguido de um JSON em base64url com `name` (o nome do computador, `gethostname`), `port` (a porta do daemon ali), `tunnel` (a porta sugerida do outro lado) e `token`. Sem `--home` nem `BOTLOFT_HOME` e sem Botloft no lugar de sempre, o comando usa a pasta do instalador (`/var/lib/botloft/home`, 42.3). Quem não lê o token do dono recebe "run this as the user Botloft runs as, or with sudo".
   - O plano antigo era um código de 6 dígitos que o app digitaria. Ele pediria um método sem token, com limite de tentativas, ao alcance de qualquer programa do computador do app que chegasse no túnel. A chave já é a credencial, serve igual para o túnel e para a nuvem, e o dono só copia do terminal e cola no app.
 - **Direto:** um túnel que termina no loopback dos dois lados, como `ssh -N -L 45720:127.0.0.1:45710 <usuário>@<servidor>`, que o `botloftd pair` mostra. Do outro lado a porta é a 45720, porque um Botloft instalado ali já usa a 45710. `tailscale serve` ficou de fora: ele abre a porta na rede, e o app só conecta em `127.0.0.1`.
 - **Pela nuvem (padrão, a fazer):** o app fala com o servidor pelo relay da conta (28), como um aparelho do tipo `desktop`. Os frames do JSON-RPC vão selados de ponta a ponta, em partes, com fila nos dois sentidos. Funciona atrás de NAT e sem porta aberta, e o daemon continua só em `127.0.0.1`.
-- **No app (a fazer):** "Conectar a um servidor" recebe a chave. O app escolhe entre "Este computador" e um servidor. Com um servidor, ele não sobe daemon local e esconde o que precisa de tela (Desktop Use, manter acordado, iniciar com o Windows, login de site em janela).
+- **No app.** "Conectar a um servidor" recebe a chave: em Configurações > Geral, na seção "Onde os agentes rodam", e embaixo de um problema na tela de abertura. Com a chave colada, o app mostra o nome do servidor e o comando do túnel, com um botão de copiar. O app guarda o servidor escolhido (`botloft.server` no armazenamento local, com o token do aparelho) e, com ele, não sobe daemon neste computador: conecta em `127.0.0.1:<tunnel>`.
+  - Enquanto nada responde ali, a tela de abertura mostra o comando do túnel e continua tentando. Uma chave recusada pede a chave nova ou a volta para este computador.
+  - A ilha (31) usa o mesmo servidor e recomeça quando o app troca de servidor. Fechar o app nunca para os agentes de lá.
+  - Os links de som e vídeo (`files.media`, 8.4) vêm com a porta do daemon no servidor, e o app troca pela do túnel.
+  - "Usar este computador" volta para o daemon local, e os agentes do servidor continuam rodando. A lista de aparelhos, com "Remover" e a marca deste computador, fica na mesma seção.
+  - Num servidor (`system.server`), o app esconde manter acordado, iniciar com o sistema e continuar ao fechar, as abas Desktop e Chrome das Permissões e a página de logins de site, que abre janela. Num servidor, o login num site é feito tomando o navegador do agente na tela do app (21.10). Com um servidor escolhido, também ficam de fora "continuar ao fechar" e o resto que só vale para o daemon deste computador.
+  - Arquivos (abrir, mostrar na pasta, salvar) ainda usam o caminho deste computador: o SV6 (42.7) leva isso para o RPC.
 
 ### 42.7 Arquivos
 
@@ -4199,7 +4205,7 @@ SV10, a fazer. `botloftd update` baixa o release novo, confere a assinatura e re
 | SV2 | Binário Linux estático e instalador (42.3) | feito |
 | SV3 | Memória (42.4) | feito |
 | SV4 | Agentes num usuário separado (42.5) | feito |
-| SV5 | Pareamento e conexão pela nuvem e por túnel (42.6) | em andamento: aparelhos e túnel no daemon feitos |
+| SV5 | Pareamento e conexão pela nuvem e por túnel (42.6) | em andamento: aparelhos e túnel feitos, nuvem a fazer |
 | SV6 | Arquivos pelo RPC (42.7) | a fazer |
 | SV7 | Docker (42.8) | a fazer |
 | SV8 | Aviso de login (42.9) | a fazer |

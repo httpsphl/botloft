@@ -36,7 +36,8 @@ export class RpcError extends Error {
 
 export type ConnectionState =
   | { kind: "connecting" }
-  | { kind: "open"; daemonVersion: string }
+  /** `deviceId` when the app came in with a device's own token (spec 42.6). */
+  | { kind: "open"; daemonVersion: string; deviceId?: string }
   /** Lost the daemon; trying again at `retryAt` (ms). */
   | { kind: "waiting"; retryAt: number }
   /** The daemon refused this client (token or protocol); no retries. */

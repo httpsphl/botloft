@@ -1,7 +1,8 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 import type { Client } from "../../lib/client";
 import { FakeBotloft } from "../../lib/fake";
 import { FakeHost, running } from "../../lib/fakeHost";
+import { type ServerProfile, server } from "../../shell/server";
 import { type Connect, createLink } from "./link";
 
 function setup() {
@@ -129,5 +130,48 @@ describe("link to the daemon", () => {
     fake.setConnection({ kind: "failed", reason: "invalid token" });
     expect(link.getState().current).toEqual({ step: "refused", reason: "invalid token" });
     expect(fake.closed).toBe(true);
+  });
+});
+
+describe("link to a server", () => {
+  const vps: ServerProfile = { name: "vps-1", port: 45710, tunnel: 45720, token: "device-token" };
+
+  afterEach(() => server.clear());
+
+  test("goes through the tunnel with the device's token and starts nothing here", async () => {
+    const { host, link, connections } = setup();
+    host.status = { state: "stopped", port: 45710, home: "C:\\data" };
+    server.set(vps);
+    await link.getState().check();
+    expect(link.getState().current.step).toBe("connected");
+    expect(connections).toEqual([{ port: 45720, token: "device-token" }]);
+    expect(host.installs).toEqual([]);
+  });
+
+  test("says when nothing answers where the tunnel starts, and connects once it does", async () => {
+    const { fake, link } = setup();
+    fake.setConnection({ kind: "connecting" });
+    server.set(vps);
+    await link.getState().check();
+    expect(link.getState().current).toMatchObject({ step: "connecting", server: vps });
+    fake.setConnection({ kind: "waiting", retryAt: 0 });
+    expect(link.getState().current).toEqual({ step: "unreachable", server: vps });
+    fake.setConnection({ kind: "open", daemonVersion: "0.22.0" });
+    expect(link.getState().current.step).toBe("connected");
+    fake.setConnection({ kind: "waiting", retryAt: 0 });
+    expect(link.getState().current.step).toBe("connected");
+  });
+
+  test("a key the server no longer takes is said as the server's", async () => {
+    const { fake, link } = setup();
+    fake.setConnection({ kind: "connecting" });
+    server.set(vps);
+    await link.getState().check();
+    fake.setConnection({ kind: "failed", reason: "invalid token" });
+    expect(link.getState().current).toEqual({
+      step: "refused",
+      reason: "invalid token",
+      server: vps,
+    });
   });
 });

@@ -31,6 +31,7 @@ import { questions } from "./questions";
 import { routines } from "./routines";
 import { screens } from "./screens";
 import { search } from "./search";
+import { server } from "./server";
 import { setup } from "./setup";
 import { shell } from "./shell";
 import { skills } from "./skills";
@@ -74,6 +75,7 @@ export const en = {
   routines,
   screens,
   search,
+  server,
   setup,
   skills,
   terminal,
