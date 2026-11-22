@@ -30,7 +30,9 @@ impl Skills {
 
     pub(super) fn root(&self) -> Option<PathBuf> {
         let set = self.root.lock().unwrap_or_else(|p| p.into_inner()).clone();
-        set.or_else(|| std::env::home_dir().map(|home| home.join(".claude").join("skills")))
+        set.or_else(|| {
+            crate::platform::agents_home().map(|home| home.join(".claude").join("skills"))
+        })
     }
 
     /// Keeps what the agent's Claude Code listed.

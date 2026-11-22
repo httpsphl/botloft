@@ -46,6 +46,8 @@ impl Runtime for PipeRuntime {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
+        // As the agents' user, when they have one (spec 42.5).
+        platform::as_agent(&mut command);
         ProcessJob::prepare(&mut command);
 
         let job = Arc::new(ProcessJob::new()?);

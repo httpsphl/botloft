@@ -2,6 +2,7 @@
 //! started for the owner by systemd or launchd.
 
 mod account;
+mod agent_user;
 mod credentials;
 mod env;
 mod job;
@@ -23,6 +24,7 @@ use std::process::{Command, Output, Stdio};
 use std::time::{Duration, Instant};
 
 pub use self::account::owner_name;
+pub use self::agent_user::{agents_apart, agents_home, as_agent, use_agent_user};
 pub use self::credentials::{secret_available, secret_delete, secret_load, secret_save};
 pub use self::env::user_environment;
 pub use self::job::ProcessJob;

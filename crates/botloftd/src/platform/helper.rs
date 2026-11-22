@@ -27,6 +27,9 @@ pub fn run_helper(
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    // They look at the agents' folders and logins (git refuses a repository
+    // another user owns), so they run as the agents' user (spec 42.5).
+    super::as_agent(&mut command);
     ProcessJob::prepare(&mut command);
     let mut child = command.spawn()?;
     // Read as it writes: a full pipe would stop the program.

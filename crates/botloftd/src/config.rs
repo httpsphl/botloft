@@ -34,6 +34,9 @@ pub struct Config {
     /// what needs one is off, and the folders of deleted crews go to the
     /// data folder's own trash.
     pub server: bool,
+    /// The system user the agents run as, apart from the daemon's (spec
+    /// 42.5, Linux); empty runs them as the daemon's user.
+    pub agents_user: String,
     pub log_level: String,
     pub supervisor: SupervisorConfig,
     pub courier: CourierConfig,
@@ -57,6 +60,7 @@ impl Default for Config {
             keep_awake: true,
             maker_builds_without_asking: false,
             server: false,
+            agents_user: String::new(),
             log_level: "info".to_owned(),
             supervisor: SupervisorConfig::default(),
             courier: CourierConfig::default(),
@@ -299,6 +303,9 @@ mod tests {
     fn a_server_says_so_in_one_key() {
         assert!(!Config::parse("").expect("parse").server);
         assert!(Config::parse("server = true").expect("parse").server);
+        let apart = Config::parse("agents_user = 'botloft-agents'").expect("parse");
+        assert_eq!(apart.agents_user, "botloft-agents");
+        assert_eq!(Config::default().agents_user, "");
     }
 
     #[test]

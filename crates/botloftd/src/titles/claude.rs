@@ -37,7 +37,7 @@ impl TitleMaker for ClaudeTitles {
                 .to_ascii_uppercase()
                 .starts_with("BOTLOFT_")
         });
-        let dir = daemon.paths.home.join("titles");
+        let dir = daemon.paths.agents_scratch("titles");
         std::fs::create_dir_all(&dir)?;
         let mut command = Command::new(program);
         command
@@ -61,6 +61,7 @@ impl TitleMaker for ClaudeTitles {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null());
+        platform::as_agent(&mut command);
         ProcessJob::prepare(&mut command);
         let job = ProcessJob::new()?;
         let mut child = command.spawn()?;

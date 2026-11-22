@@ -202,7 +202,10 @@ fn entry(name: &str, folder: Option<String>, config: &Value) -> Found {
 
 /// What Claude Code has, read now, with Botloft's own folders left out.
 fn found(daemon: &Daemon) -> Option<Vec<Found>> {
-    let file = config_file(&import_sources::environment(), dirs::home_dir());
+    let file = config_file(
+        &import_sources::environment(),
+        crate::platform::agents_home(),
+    );
     let text = match std::fs::read_to_string(&file) {
         Ok(text) => text,
         Err(err) => {

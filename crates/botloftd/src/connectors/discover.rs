@@ -47,6 +47,7 @@ pub(super) fn discover(
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null());
+    crate::platform::as_agent(&mut command);
     ProcessJob::prepare(&mut command);
     let job = ProcessJob::new()?;
     let mut child = command.spawn()?;

@@ -85,7 +85,8 @@ fn manager_dirs() -> Vec<PathBuf> {
     if let Some(roaming) = var("APPDATA") {
         dirs.push(roaming.join("npm"));
     }
-    if let Some(home) = dirs::home_dir() {
+    // The home of whoever runs the agents (spec 42.5).
+    if let Some(home) = crate::platform::agents_home() {
         for relative in [
             ".local/share/mise/shims",
             ".local/bin",

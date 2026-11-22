@@ -51,6 +51,18 @@ impl Paths {
         self.home.join("botloftd.lock")
     }
 
+    /// Where Claude Code runs a task of the daemon's own (titles, the
+    /// claude.ai tools): in the data folder, or under the workspaces when
+    /// the agents run as a user of their own, which cannot enter the data
+    /// folder (spec 42.5).
+    pub fn agents_scratch(&self, name: &str) -> PathBuf {
+        if crate::platform::agents_apart() {
+            self.workspaces_root.join(".botloft").join(name)
+        } else {
+            self.home.join(name)
+        }
+    }
+
     pub fn crew_dir(&self, crew_slug: &str) -> PathBuf {
         self.workspaces_root.join(crew_slug)
     }

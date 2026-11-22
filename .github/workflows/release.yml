@@ -128,6 +128,8 @@ jobs:
             chown -R "$HOST_ID" target'
       - name: It starts as a server on another distribution
         run: docker run --rm -v "$PWD:/src:ro" debian:12 sh /src/deploy/server/smoke.sh /src/target/release/botloftd
+      - name: The agents run as their own user, without its capabilities
+        run: docker run --rm -v "$PWD:/src:ro" debian:12 sh /src/deploy/server/test-agents-user.sh /src/target/release/botloftd
       - name: Pack it
         run: |
           mkdir -p target/release/bundle/server

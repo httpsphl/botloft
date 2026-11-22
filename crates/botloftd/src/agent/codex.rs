@@ -132,9 +132,12 @@ impl OutputDecoder for Silent {
 
 /// The names of the MCP servers in the owner's `config.toml`, to switch off.
 fn owner_mcp_servers() -> Vec<String> {
-    codex_home(std::env::var_os("CODEX_HOME"), dirs::home_dir())
-        .map(|home| mcp_servers_in(&home))
-        .unwrap_or_default()
+    codex_home(
+        std::env::var_os("CODEX_HOME"),
+        crate::platform::agents_home(),
+    )
+    .map(|home| mcp_servers_in(&home))
+    .unwrap_or_default()
 }
 
 /// Where Codex keeps the owner's configuration: `CODEX_HOME`, or `.codex`
@@ -179,7 +182,8 @@ pub fn models(program: &Path) -> io::Result<Vec<botloft_core::protocol::AgentMod
     use std::sync::mpsc;
     use std::time::Duration;
 
-    let mut child = Command::new(program)
+    let mut command = Command::new(program);
+    command
         .args([
             "app-server",
             "-c",
@@ -189,8 +193,9 @@ pub fn models(program: &Path) -> io::Result<Vec<botloft_core::protocol::AgentMod
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()?;
+        .stderr(Stdio::null());
+    crate::platform::as_agent(&mut command);
+    let mut child = command.spawn()?;
     let mut stdin = child
         .stdin
         .take()

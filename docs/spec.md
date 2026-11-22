@@ -152,6 +152,7 @@ default_agent = "claude"       # o agente dos bots novos; muda nas Configuraçõ
 start_with_windows = true     # o daemon sobe quando o dono entra no Windows (14)
 keep_awake = true             # impede suspensão enquanto houver bot busy
 server = false                # o computador é um servidor, sem ninguém na tela (42.2)
+agents_user = ""              # Linux: o usuário do sistema em que os agentes rodam, longe dos segredos do daemon (42.5); vazio = o do daemon
 log_level = "info"
 
 [supervisor]
@@ -4099,16 +4100,16 @@ O resto fica igual. O navegador dos bots roda headless com o Chrome ou o Chromiu
 
 ### 42.3 Instalar
 
-SV2, feito em 2026-11-22: `deploy/server/install.sh`, testado em contêineres Debian 12, Ubuntu 24.04, Alpine 3.20 e Fedora 41 (`deploy/server/test-install.sh`, job "Server installer" do CI), e o `botloftd` estático do release. Os agentes ainda rodam no mesmo usuário do daemon: o usuário separado chega com o SV4 (42.5).
+SV2, feito em 2026-11-22: `deploy/server/install.sh`, testado em contêineres Debian 12, Ubuntu 24.04, Alpine 3.20 e Fedora 41 (`deploy/server/test-install.sh`, job "Server installer" do CI), e o `botloftd` estático do release. Com o SV4, o instalador cria os dois usuários de 42.5.
 
 - **No release:** o `botloftd` estático (musl) para `x86_64` e `aarch64`, em `botloftd-linux-<arq>.tar.gz` com o `.sha256`, e o `install.sh`, que fica num link fixo (`https://github.com/httpsphl/botloft/releases/latest/download/install.sh`).
 - **`curl -fsSL <link> | sh`**, como root ou com sudo:
   1. descobre a arquitetura, baixa o daemon do mesmo release e confere o SHA-256;
-  2. põe o daemon em `/usr/local/bin` e cria o usuário de sistema `botloft`, com a pasta `/var/lib/botloft` e um shell, que os comandos dos agentes usam (`useradd`, ou `adduser` do BusyBox); com o SV4, também o `botloft-agents` (42.5);
-  3. grava `/var/lib/botloft/home/config.toml` com `server = true`, a porta e `workspaces_root = "/var/lib/botloft/workspaces"`;
-  4. instala a unit de sistema `botloft.service` (`User=botloft`, `BOTLOFT_HOME`, `Restart=on-failure`, `KillMode=control-group` e `MemoryMax=90%`, para os agentes nunca levarem o resto do servidor; com o SV4, as capacidades de 42.5), habilita e sobe. Rodado de novo, troca o daemon e o reinicia, e as configurações e os dados ficam;
-  5. instala o Claude Code para o usuário dos agentes pelo instalador oficial, quando falta;
-  6. mostra o próximo passo, o login do Claude: `sudo -u botloft -i claude auth login` (com o SV4, `botloft-agents`); com o SV5, também o código para o app (42.6).
+  2. põe o daemon em `/usr/local/bin` e cria dois usuários de sistema, cada um com grupo próprio (`useradd`, ou `adduser` do BusyBox): `botloft`, do daemon, sem shell, e `botloft-agents`, dos agentes, com pasta `/var/lib/botloft-agents` (`0750`) e um shell para os comandos deles. O `botloft` entra no grupo dos agentes. No Alpine, põe o `procps`, porque o `ps` do BusyBox não mostra o comando inteiro que a limpeza de órfãos lê (14.1);
+  3. arruma as pastas: `/var/lib/botloft` (`botloft:botloft-agents`, `0750`), a pasta de dados `home` (`botloft`, `0700`) e `workspaces` (`botloft:botloft-agents`, `2770`: com o setgid, o que um ou outro cria ali fica no grupo dos agentes); e grava `home/config.toml` com `server = true`, `agents_user = "botloft-agents"`, a porta e `workspaces_root`;
+  4. instala a unit de sistema `botloft.service` (`User=botloft`, `BOTLOFT_HOME`, `UMask=0007`, `AmbientCapabilities` e `CapabilityBoundingSet` com só `CAP_SETUID`, `CAP_SETGID` e `CAP_KILL`, `NoNewPrivileges=yes`, `Restart=on-failure`, `KillMode=control-group` e `MemoryMax=90%`, para os agentes nunca levarem o resto do servidor), habilita e sobe. Rodado de novo, troca o daemon e o reinicia, e as configurações e os dados ficam;
+  5. instala o Claude Code para o `botloft-agents` pelo instalador oficial, quando falta (como esse usuário, com `runuser -l` ou `su -l`);
+  6. mostra o próximo passo, o login do Claude: `sudo -u botloft-agents -i claude auth login`; com o SV5, também o código para o app (42.6).
   Sem root, cada comando que precisa passa pelo `sudo`, para o script funcionar também quando chega por um pipe. `BOTLOFT_VERSION` fixa um release, e `BOTLOFT_FROM`, `BOTLOFT_NO_SERVICE` e `BOTLOFT_NO_CLAUDE` servem aos testes e a quem instala sem rede.
 - **Sem systemd** (contêiner, Alpine com OpenRC): o instalador diz como rodar `botloftd serve` e não cria serviço. O Docker tem imagem própria (42.8).
 - **Sem root:** `botloftd service install` (14.1) grava a unit `--user`. No Linux, sem *linger*, a unit morre quando a sessão SSH fecha: o comando liga o *linger* (`loginctl enable-linger`), quando o sistema deixa o próprio usuário fazer isso, ou diz o comando para um administrador rodar.
@@ -4133,14 +4134,25 @@ Com a leitura:
 
 ### 42.5 Agentes num usuário separado
 
-SV4, a fazer.
+SV4, feito em 2026-11-22, só no Linux. Com `agents_user` (6), o daemon roda os agentes como outro usuário do sistema, e a pasta de dados (o token do dono, as chaves dos agentes, a nuvem, o celular, o banco) fica fora do alcance de um agente com shell.
 
-- No Linux, o daemon roda como `botloft` e os agentes como `botloft-agents`. A pasta de dados (`/var/lib/botloft/home`, com o token do dono, as chaves, a nuvem, o celular e o banco) é `0700` do `botloft`: um agente com shell não a lê.
-- O daemon troca de usuário ao subir cada processo de agente (`setgroups`, `setgid` e `setuid` antes do `exec`). Ele não roda como root: a unit lhe dá só `CAP_SETUID`, `CAP_SETGID` e `CAP_KILL` (`AmbientCapabilities`).
-- As pastas de trabalho são do `botloft-agents`, e o grupo `botloft` pode escrever nelas. O `.claude/` com as configurações que o daemon gera (7.5) fica do `botloft`, só leitura para os agentes.
-- O login do Claude Code é do `botloft-agents` (`~botloft-agents/.claude`), dividido entre os agentes, como no PC.
-- O que continua cooperativo: os agentes de crews diferentes são o mesmo usuário, então um ainda lê o ambiente do outro (13, 32.8).
-- Sem as capacidades (usuário comum, `service install`), tudo roda num usuário só, como no PC, e o `system.status` avisa.
+- **A troca** (`platform/unix/agent_user.rs`): ao subir, o daemon procura o usuário (`getpwnam_r`) e recusa root, o próprio usuário e um daemon que não pode trocar, ou seja, que não é root e não tem `CAP_SETUID`, `CAP_SETGID` e `CAP_KILL` efetivas (`CapEff` de `/proc/self/status`). Pedido e impossível, o daemon não sobe e diz por quê no log: é melhor parar do que rodar os agentes sem a separação.
+- **Cada processo do Claude Code** sobe com o usuário e o grupo dos agentes (`setgroups`, `setgid`, `setuid`), `HOME`, `USER`, `LOGNAME` e `SHELL` deles e, antes do `exec`, sem as capacidades ambientes que a unit dá ao daemon (`PR_CAP_AMBIENT_CLEAR_ALL`) e sem como ganhar outras (`PR_SET_NO_NEW_PRIVS`). Assim o agente não volta a ser o daemon nem usa `sudo`. Valem a mesma troca:
+  - os agentes;
+  - a conferência de versão e de login;
+  - os títulos por IA (40.6);
+  - a procura das ferramentas do claude.ai (34);
+  - os modelos do Codex e do Antigravity;
+  - o `git` e o `gh` da visão geral (33.5), porque o git recusa um repositório de outro usuário;
+  - o shell de login que dá o ambiente dos agentes (14.1).
+- **Pastas:** os títulos e a procura das ferramentas rodam em `<workspaces>/.botloft/<nome>`, e não na pasta de dados, que os agentes não abrem. O que o Claude Code dos agentes guarda (login, skills, plugins, `~/.claude.json`, o histórico do Criador) é procurado na pasta pessoal do usuário dos agentes. O Claude Code deixa parte disso fechada só para o dono (`.credentials.json` é `0600`). Nesse caso, o daemon não acha o que não pode ler: as barras do plano vêm do que os agentes viram (8.13), e as skills e plugins do dono e a importação do Claude Code ficam vazias, porque num servidor não há o Claude Code pessoal do dono.
+- **Permissões** (o instalador, 42.3): o daemon está no grupo dos agentes e cria arquivos com `UMask=0007`. As pastas de trabalho têm setgid, então o que um ou outro cria ali é do grupo dos agentes e os dois escrevem.
+- **Visto** (`deploy/server/test-agents-user.sh`, num contêiner Debian): o daemon estático rodou como `botloft`, só com as três capacidades (`setpriv`, como a unit), e chamou um Claude Code falso. O Claude Code rodou como `botloft-agents`, com a pasta pessoal dele, `CapEff`, `CapPrm` e `CapAmb` zeradas, e sem ler a pasta de dados. Um teste de unidade, só como root, faz o mesmo com o usuário `nobody`.
+- **O que continua cooperativo:**
+  - os agentes de crews diferentes são o mesmo usuário, então um lê o ambiente e as pastas do outro (13, 32.8);
+  - o `.claude/settings.json` de cada agente é do grupo, como no PC, e vale a cerca do próprio Claude Code (7.5);
+  - o navegador dos agentes roda no usuário do daemon (21).
+- Sem `agents_user` (o PC, um `service install` sem root), tudo roda no usuário do daemon, como sempre.
 
 ### 42.6 Chegar ao servidor
 
@@ -4183,7 +4195,7 @@ SV10, a fazer. `botloftd update` baixa o release novo, confere a assinatura e re
 | SV1 | Modo servidor (42.2) e o fuso do dono nas rotinas dos bots | feito |
 | SV2 | Binário Linux estático e instalador (42.3) | feito |
 | SV3 | Memória (42.4) | feito |
-| SV4 | Agentes num usuário separado (42.5) | a fazer |
+| SV4 | Agentes num usuário separado (42.5) | feito |
 | SV5 | Pareamento e conexão pela nuvem e por túnel (42.6) | a fazer |
 | SV6 | Arquivos pelo RPC (42.7) | a fazer |
 | SV7 | Docker (42.8) | a fazer |
