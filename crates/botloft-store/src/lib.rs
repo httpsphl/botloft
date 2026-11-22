@@ -24,6 +24,7 @@ mod crews;
 mod delete;
 mod deliveries;
 mod desktop_grants;
+mod devices;
 mod fingerprint;
 mod git_events;
 mod history;

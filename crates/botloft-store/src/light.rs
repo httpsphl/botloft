@@ -10,7 +10,8 @@ use crate::{Result, Store};
 
 /// Emptied in the light copy, children before parents. The chats, what the
 /// bots were asked and answered, the runs of the routines, what the bots
-/// cost and what this computer let a bot use on the desktop.
+/// cost, what this computer let a bot use on the desktop and the devices
+/// that reach this computer (spec 42.6).
 const EMPTIED: &[&str] = &[
     "reactions",
     "questions",
@@ -23,6 +24,7 @@ const EMPTIED: &[&str] = &[
     "routine_runs",
     "turn_costs",
     "desktop_grants",
+    "devices",
 ];
 
 impl Store {

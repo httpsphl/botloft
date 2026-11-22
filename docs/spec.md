@@ -864,7 +864,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 
 ### 11.1 Sessão
 
-- Primeiro request obrigatório: `session.hello {token, client: {name, version, locale?, timeZone?}, protocol: 2}` -> `{daemonVersion, protocol}`. `locale` é o idioma do app (24.7, 36.2); `timeZone` é o fuso IANA do computador do dono, que o daemon guarda (`settings`, chave `owner_time_zone`) para as rotinas e esperas que os bots criam (20.12, 20.14, 42.2). Um fuso que o daemon não conhece fica de fora.
+- Primeiro request obrigatório: `session.hello {token, client: {name, version, locale?, timeZone?}, protocol: 2}` -> `{daemonVersion, protocol, deviceId?}`. O `token` é o do dono ou o de um aparelho pareado (42.6); com o de um aparelho, `deviceId` diz qual. `locale` é o idioma do app (24.7, 36.2); `timeZone` é o fuso IANA do computador do dono, que o daemon guarda (`settings`, chave `owner_time_zone`) para as rotinas e esperas que os bots criam (20.12, 20.14, 42.2). Um fuso que o daemon não conhece fica de fora.
 - Qualquer outro método antes do hello: erro `-32001` e a conexão fecha. Token errado também dá `-32001`; `protocol` diferente dá `-32004`; nos dois casos a conexão fecha. O hello tem que chegar em até 10 s.
 - `Origin` aceito: `http://tauri.localhost`, `tauri://localhost` e `http://localhost:1420` (dev). Qualquer outro `Origin` recebe HTTP 403 antes do upgrade. Sem `Origin` (cliente nativo, testes) é aceito: navegadores sempre mandam o header, e o token continua obrigatório.
 - Um cliente lento que deixa acumular mais de 4096 notificações é desconectado e recarrega o estado ao reconectar.
@@ -1009,6 +1009,7 @@ Por padrão nada sai: conversas, messages e runs de rotina ficam para sempre. O 
 
 - Daemon escuta **só em 127.0.0.1** no MVP.
 - Token do owner: 32 bytes aleatórios em `secrets\owner.token`, ACL com acesso só para o SID do usuário atual (DACL protegida, sem herança).
+- Token de aparelho (42.6): 32 bytes aleatórios, um por aparelho pareado, mostrados uma vez na chave de conexão. O banco guarda só o SHA-256 (`devices.token_hash`), e revogar fecha as conexões do aparelho na hora. Só o token do dono pareia um aparelho novo.
 - Token de bot: 32 bytes aleatórios, novo a cada generation. O valor cru existe apenas no ambiente do processo do bot; o daemon guarda só o **SHA-256**, e só em memória: todo processo de bot morre junto com o daemon (Job Object), então nenhum token sobrevive a um reinício e não há motivo para gravá-lo. A coluna `bots.token_hash` fica sem uso.
 - Logs nunca registram tokens, conteúdo de mensagens, anexos nem itens do chat em nível `info`. Bots podem manipular dados sensíveis (inclusive de saúde); o daemon trata corpo de mensagem, anexo e saída de ferramenta como dado pessoal.
 - `log_level` vale só para os crates do Botloft; dependências ficam em `warn`, porque em `debug`/`trace` a pilha de WebSocket registra frames, que podem conter mensagens. `RUST_LOG` sobrepõe tudo e é só para depuração local.
@@ -4109,7 +4110,7 @@ SV2, feito em 2026-11-22: `deploy/server/install.sh`, testado em contêineres De
   3. arruma as pastas: `/var/lib/botloft` (`botloft:botloft-agents`, `0750`), a pasta de dados `home` (`botloft`, `0700`) e `workspaces` (`botloft:botloft-agents`, `2770`: com o setgid, o que um ou outro cria ali fica no grupo dos agentes); e grava `home/config.toml` com `server = true`, `agents_user = "botloft-agents"`, a porta e `workspaces_root`;
   4. instala a unit de sistema `botloft.service` (`User=botloft`, `BOTLOFT_HOME`, `UMask=0007`, `AmbientCapabilities` e `CapabilityBoundingSet` com só `CAP_SETUID`, `CAP_SETGID` e `CAP_KILL`, `NoNewPrivileges=yes`, `Restart=on-failure`, `KillMode=control-group` e `MemoryMax=90%`, para os agentes nunca levarem o resto do servidor), habilita e sobe. Rodado de novo, troca o daemon e o reinicia, e as configurações e os dados ficam;
   5. instala o Claude Code para o `botloft-agents` pelo instalador oficial, quando falta (como esse usuário, com `runuser -l` ou `su -l`);
-  6. mostra o próximo passo, o login do Claude: `sudo -u botloft-agents -i claude auth login`; com o SV5, também o código para o app (42.6).
+  6. mostra os próximos passos: o login do Claude, `sudo -u botloft-agents -i claude auth login`, e o pareamento do app, `sudo botloftd pair` (42.6).
   Sem root, cada comando que precisa passa pelo `sudo`, para o script funcionar também quando chega por um pipe. `BOTLOFT_VERSION` fixa um release, e `BOTLOFT_FROM`, `BOTLOFT_NO_SERVICE` e `BOTLOFT_NO_CLAUDE` servem aos testes e a quem instala sem rede.
 - **Sem systemd** (contêiner, Alpine com OpenRC): o instalador diz como rodar `botloftd serve` e não cria serviço. O Docker tem imagem própria (42.8).
 - **Sem root:** `botloftd service install` (14.1) grava a unit `--user`. No Linux, sem *linger*, a unit morre quando a sessão SSH fecha: o comando liga o *linger* (`loginctl enable-linger`), quando o sistema deixa o próprio usuário fazer isso, ou diz o comando para um administrador rodar.
@@ -4156,12 +4157,14 @@ SV4, feito em 2026-11-22, só no Linux. Com `agents_user` (6), o daemon roda os 
 
 ### 42.6 Chegar ao servidor
 
-SV5, a fazer.
+SV5 em partes: os aparelhos e o túnel no daemon, feitos em 2026-11-22; o app conectando pelo túnel e depois pela nuvem, a fazer.
 
-- **Pareamento:** `botloftd pair` no servidor (o instalador já chama) mostra um código de 6 dígitos. No app, "Conectar a um servidor" pede o código. Cada aparelho ganha um token próprio, que o dono vê e revoga, no lugar do token único do dono (13).
-- **Pela nuvem (padrão):** o app fala com o servidor pelo relay da conta (28), como um aparelho do tipo `desktop`. Os frames do JSON-RPC vão selados de ponta a ponta, em partes, com fila nos dois sentidos. Funciona atrás de NAT e sem porta aberta, e o daemon continua só em `127.0.0.1`.
-- **Direto:** um túnel que termina no loopback do servidor (`ssh -L`, `tailscale serve`), com o mesmo código.
-- O app escolhe entre "Este computador" e um servidor. Com um servidor, ele não sobe daemon local e esconde o que precisa de tela (Desktop Use, manter acordado, iniciar com o Windows, login de site em janela).
+- **Aparelhos.** Cada aparelho que chega de outro computador tem um token próprio, que o dono vê e revoga: `devices.list`, `devices.revoke {deviceId}` e a notificação `devices.changed`, todos com `{devices: [{id, name, pairedAt, lastSeenAt?}]}`, o mais novo primeiro. O banco guarda só o SHA-256 do token (tabela `devices`), e a cópia leve (14.2) deixa os aparelhos de fora. O `session.hello` aceita o token do dono ou o de um aparelho e marca quando o aparelho conectou (11.1). Revogar fecha na hora as conexões do aparelho, depois da resposta, e o token para de valer. Um app aberto em outro computador não conta como o dono presente no computador do daemon (24.8).
+- **Parear** só com o token do dono, ou seja, no computador onde o Botloft roda: `devices.pair {name}` -> `{device, token}`, e vindo de um aparelho volta com `-32004` e `reason: "pair_where_botloft_runs"`. Assim um aparelho que vaza não cria outros, e revogar basta. No servidor, `sudo botloftd pair [--name <nome>]` (o instalador mostra o comando) conecta no daemon dali como dono e mostra uma **chave de conexão**: `botloft1.` seguido de um JSON em base64url com `name` (o nome do computador, `gethostname`), `port` (a porta do daemon ali), `tunnel` (a porta sugerida do outro lado) e `token`. Sem `--home` nem `BOTLOFT_HOME` e sem Botloft no lugar de sempre, o comando usa a pasta do instalador (`/var/lib/botloft/home`, 42.3). Quem não lê o token do dono recebe "run this as the user Botloft runs as, or with sudo".
+  - O plano antigo era um código de 6 dígitos que o app digitaria. Ele pediria um método sem token, com limite de tentativas, ao alcance de qualquer programa do computador do app que chegasse no túnel. A chave já é a credencial, serve igual para o túnel e para a nuvem, e o dono só copia do terminal e cola no app.
+- **Direto:** um túnel que termina no loopback dos dois lados, como `ssh -N -L 45720:127.0.0.1:45710 <usuário>@<servidor>`, que o `botloftd pair` mostra. Do outro lado a porta é a 45720, porque um Botloft instalado ali já usa a 45710. `tailscale serve` ficou de fora: ele abre a porta na rede, e o app só conecta em `127.0.0.1`.
+- **Pela nuvem (padrão, a fazer):** o app fala com o servidor pelo relay da conta (28), como um aparelho do tipo `desktop`. Os frames do JSON-RPC vão selados de ponta a ponta, em partes, com fila nos dois sentidos. Funciona atrás de NAT e sem porta aberta, e o daemon continua só em `127.0.0.1`.
+- **No app (a fazer):** "Conectar a um servidor" recebe a chave. O app escolhe entre "Este computador" e um servidor. Com um servidor, ele não sobe daemon local e esconde o que precisa de tela (Desktop Use, manter acordado, iniciar com o Windows, login de site em janela).
 
 ### 42.7 Arquivos
 
@@ -4196,7 +4199,7 @@ SV10, a fazer. `botloftd update` baixa o release novo, confere a assinatura e re
 | SV2 | Binário Linux estático e instalador (42.3) | feito |
 | SV3 | Memória (42.4) | feito |
 | SV4 | Agentes num usuário separado (42.5) | feito |
-| SV5 | Pareamento e conexão pela nuvem e por túnel (42.6) | a fazer |
+| SV5 | Pareamento e conexão pela nuvem e por túnel (42.6) | em andamento: aparelhos e túnel no daemon feitos |
 | SV6 | Arquivos pelo RPC (42.7) | a fazer |
 | SV7 | Docker (42.8) | a fazer |
 | SV8 | Aviso de login (42.9) | a fazer |

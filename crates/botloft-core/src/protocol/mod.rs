@@ -63,6 +63,7 @@ mod connectors;
 mod conversations;
 mod crew_access;
 mod desktop;
+mod devices;
 #[cfg(test)]
 mod export;
 mod files;
@@ -107,6 +108,7 @@ pub use connectors::*;
 pub use conversations::*;
 pub use crew_access::*;
 pub use desktop::*;
+pub use devices::*;
 pub use files::*;
 pub use imports::*;
 pub use island::*;
@@ -242,6 +244,10 @@ pub mod method {
     pub const MOBILE_PAIR_CANCEL: &str = "mobile.pair_cancel";
     pub const MOBILE_PAIR_CONFIRM: &str = "mobile.pair_confirm";
     pub const MOBILE_REVOKE: &str = "mobile.revoke";
+    pub const DEVICES_LIST: &str = "devices.list";
+    /// Only from this computer, with the owner's token (spec 42.6).
+    pub const DEVICES_PAIR: &str = "devices.pair";
+    pub const DEVICES_REVOKE: &str = "devices.revoke";
     pub const CREW_ACCESS_LIST: &str = "crewAccess.list";
     pub const CREW_ACCESS_REVOKE: &str = "crewAccess.revoke";
     pub const PERMISSIONS_LIST: &str = "permissions.list";
@@ -372,6 +378,7 @@ pub mod notification {
     pub const AUTOBACKUP_CHANGED: &str = "autobackup.changed";
     pub const MOBILE_CHANGED: &str = "mobile.changed";
     pub const MOBILE_PAIR_REQUEST: &str = "mobile.pair_request";
+    pub const DEVICES_CHANGED: &str = "devices.changed";
 }
 
 /// Error codes: the standard JSON-RPC ones plus the daemon's (spec 11.4).

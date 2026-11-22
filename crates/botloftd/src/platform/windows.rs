@@ -21,7 +21,7 @@ pub use credentials::{secret_available, secret_delete, secret_load, secret_save}
 pub use env::user_environment;
 pub use job::ProcessJob;
 pub use memory::memory;
-pub use owner::owner_name;
+pub use owner::{computer_name, owner_name};
 pub use power::KeepAwake;
 pub use programs::running_programs;
 pub use recycle::recycle;

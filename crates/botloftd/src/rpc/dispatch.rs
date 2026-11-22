@@ -132,6 +132,9 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
             reply(mobile::pair_confirm(daemon, parse(params)?).map(|()| Value::Null))
         }
         method::MOBILE_REVOKE => reply(mobile::revoke(daemon, parse(params)?)),
+        method::DEVICES_LIST => reply(service::devices::list(daemon)),
+        method::DEVICES_PAIR => reply(service::devices::pair(daemon, parse(params)?)),
+        method::DEVICES_REVOKE => reply(service::devices::revoke(daemon, parse(params)?)),
         method::CREW_ACCESS_LIST => reply(crew_access::list(daemon, parse(params)?)),
         method::PERMISSIONS_LIST => reply(permissions::list(daemon)),
         method::SITES_REVOKE => reply(permissions::revoke_site(daemon, parse(params)?)),

@@ -11,7 +11,7 @@ use super::*;
 use crate::avatar::PALETTE;
 use crate::ids::{
     ApprovalId, AttachmentId, BotId, BuildId, ChatItemId, ConversationId, CrewAccessId, CrewId,
-    DeliveryId, DesktopGrantId, ImportId, McpServerId, MessageId, QuestionId, RoutineId,
+    DeliveryId, DesktopGrantId, DeviceId, ImportId, McpServerId, MessageId, QuestionId, RoutineId,
     RoutineRunId, RuleId, TaskId, VersionId,
 };
 
@@ -37,6 +37,8 @@ mod conversations;
 mod crew_access;
 #[path = "export_desktop.rs"]
 mod desktop;
+#[path = "export_devices.rs"]
+mod devices;
 #[path = "export_imports.rs"]
 mod imports;
 #[path = "export_island.rs"]
@@ -155,6 +157,7 @@ fn export_bindings() {
     out.decl::<VersionId>();
     out.decl::<ImportId>();
     out.decl::<ConversationId>();
+    out.decl::<DeviceId>();
     out.decl::<Crew>();
     out.decl::<Build>();
     out.decl::<BuildIdParams>();
@@ -250,6 +253,7 @@ fn export_bindings() {
     backup::decls(&mut out);
     cloud::decls(&mut out);
     mobile::decls(&mut out);
+    devices::decls(&mut out);
     island::decls(&mut out);
     keys::decls(&mut out);
     changes::decls(&mut out);
@@ -491,6 +495,7 @@ fn export_bindings() {
     backup::methods(&mut out);
     cloud::methods(&mut out);
     mobile::methods(&mut out);
+    devices::methods(&mut out);
     island::methods(&mut out);
     keys::methods(&mut out);
     changes::methods(&mut out);
@@ -556,6 +561,7 @@ fn export_bindings() {
     logins::notifications(&mut out);
     cloud::notifications(&mut out);
     mobile::notifications(&mut out);
+    devices::notifications(&mut out);
     browser::notifications(&mut out);
     out.text.push_str("}\n\n");
 

@@ -16,17 +16,19 @@ pub use helper::run_helper;
 
 #[cfg(unix)]
 pub use unix::{
-    KeepAwake, ProcessJob, TASK_KIND, agents_apart, agents_home, as_agent, delete_task, find_task,
-    leave_own_console, memory, owner_name, recycle, register_task, restrict_to_current_user,
-    run_task, running_programs, secret_available, secret_delete, secret_load, secret_save,
-    sign_in_id, stop_task, track_groups, use_agent_user, user_environment,
+    KeepAwake, ProcessJob, TASK_KIND, agents_apart, agents_home, as_agent, computer_name,
+    delete_task, find_task, leave_own_console, memory, owner_name, recycle, register_task,
+    restrict_to_current_user, run_task, running_programs, secret_available, secret_delete,
+    secret_load, secret_save, sign_in_id, stop_task, track_groups, use_agent_user,
+    user_environment,
 };
 #[cfg(windows)]
 pub use windows::{
-    KeepAwake, ProcessJob, TASK_KIND, agents_apart, agents_home, as_agent, delete_task, find_task,
-    leave_own_console, memory, owner_name, recycle, register_task, restrict_to_current_user,
-    run_task, running_programs, secret_available, secret_delete, secret_load, secret_save,
-    sign_in_id, stop_task, track_groups, use_agent_user, user_environment,
+    KeepAwake, ProcessJob, TASK_KIND, agents_apart, agents_home, as_agent, computer_name,
+    delete_task, find_task, leave_own_console, memory, owner_name, recycle, register_task,
+    restrict_to_current_user, run_task, running_programs, secret_available, secret_delete,
+    secret_load, secret_save, sign_in_id, stop_task, track_groups, use_agent_user,
+    user_environment,
 };
 
 /// What the owner should know so the service keeps running after they log

@@ -100,6 +100,30 @@ pub fn resolve_home(flag: Option<&Path>) -> io::Result<PathBuf> {
     }
 }
 
+/// Where `install.sh` keeps the daemon's data on a Linux server (spec 42.3).
+pub const SERVER_HOME: &str = "/var/lib/botloft/home";
+
+/// The data folder of the daemon a command run by hand talks to: as
+/// [`resolve_home`], but when neither `--home` nor `BOTLOFT_HOME` says and
+/// there is no Botloft in the usual place, the one `install.sh` set up, so
+/// `sudo botloftd pair` needs nothing more on a server (spec 42.3).
+pub fn resolve_home_by_hand(flag: Option<&Path>) -> io::Result<PathBuf> {
+    let said = flag.is_some() || std::env::var_os(HOME_ENV).is_some_and(|home| !home.is_empty());
+    let home = resolve_home(flag);
+    if said
+        || home
+            .as_ref()
+            .is_ok_and(|home| home.join("config.toml").exists())
+    {
+        return home;
+    }
+    let server = Path::new(SERVER_HOME);
+    if server.join("config.toml").exists() {
+        return Ok(server.to_owned());
+    }
+    home
+}
+
 /// `%LOCALAPPDATA%\Botloft`, the data folder of an installed daemon.
 pub fn default_home() -> Option<PathBuf> {
     dirs::data_local_dir().map(|dir| dir.join("Botloft"))
