@@ -39,5 +39,12 @@ export const shell = {
   signIn: {
     title: "Sign in to Claude",
     body: "Your agents work with your Claude account. Sign in once and they start by themselves.",
+    endedElsewhere:
+      "Your agents stopped: Claude's sign-in for them ended. Sign in again where Botloft runs, and they start by themselves.",
+    inTerminal: "In that computer's terminal, run:",
+    endsTitle: "Claude's sign-in for your agents ends soon",
+    endsBody: (from: string, by: string) =>
+      `It ends between ${from} and ${by}. Sign in again before that, or the agents stop until someone does.`,
+    endsNow: "It may end any day now. Sign in again, or the agents stop until someone does.",
   },
 };

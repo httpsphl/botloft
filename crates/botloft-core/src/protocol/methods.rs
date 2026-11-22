@@ -84,6 +84,11 @@ pub struct SystemStatus {
     pub claude_path: Option<String>,
     /// Whether Claude Code is signed in (`claude auth status`); `null` until checked.
     pub claude_signed_in: Option<bool>,
+    /// When the claude.ai sign-in the agents use ends (spec 42.9); absent
+    /// for other credentials, before Claude Code 2.1.318 or with no date.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, ts(optional))]
+    pub claude_sign_in_ends: Option<SignInEnds>,
     /// The bots' environment has an `ANTHROPIC_API_KEY`, which Claude Code
     /// uses instead of the Claude account (spec 7.4). Only whether it is
     /// there: never its value.
@@ -154,6 +159,19 @@ pub struct OwnerAccount {
     /// The Claude account Claude Code is signed in to; `null` when signed out
     /// or not checked yet.
     pub claude: Option<ClaudeAccount>,
+}
+
+/// The two end dates of a claude.ai sign-in, as `claude auth status --text`
+/// gives them (spec 42.9): sign in again before `from`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(test, derive(ts_rs::TS))]
+pub struct SignInEnds {
+    /// The earlier end, Unix ms (its day at midnight UTC); the time of the
+    /// check when it may end any day now.
+    pub from: i64,
+    /// The later end, Unix ms.
+    pub by: i64,
 }
 
 /// What `claude auth status` says about the account (spec 7.3).
