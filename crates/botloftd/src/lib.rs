@@ -32,6 +32,7 @@ pub mod mcp_secrets;
 pub mod media;
 pub mod memory;
 pub mod mobile;
+pub mod pair;
 pub mod paths;
 pub mod plan_usage;
 pub mod platform;

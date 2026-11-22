@@ -90,3 +90,17 @@ pub fn owner_name() -> String {
         .find(|name| !name.is_empty())
         .unwrap_or_default()
 }
+
+/// This computer's name (`gethostname`), for the lists of devices (spec
+/// 27, 42.6). A service has no `HOSTNAME` in its environment.
+pub fn computer_name() -> Option<String> {
+    let mut buf = [0u8; 256];
+    // SAFETY: `buf` outlives the call, which writes at most `buf.len()` bytes.
+    let code = unsafe { libc::gethostname(buf.as_mut_ptr().cast(), buf.len()) };
+    if code != 0 {
+        return None;
+    }
+    let end = buf.iter().position(|&byte| byte == 0).unwrap_or(buf.len());
+    let name = String::from_utf8_lossy(&buf[..end]).trim().to_owned();
+    (!name.is_empty()).then_some(name)
+}

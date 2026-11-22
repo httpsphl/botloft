@@ -19,6 +19,7 @@ pub mod crews;
 pub mod delete;
 pub mod deliveries;
 pub mod desktop;
+pub mod devices;
 pub mod files;
 pub(crate) mod import_sources;
 pub mod imports;
@@ -82,6 +83,8 @@ pub enum ApiError {
     /// 42.2).
     #[error("{0} needs someone at this computer's screen, and Botloft runs on a server here")]
     OnAServer(&'static str),
+    #[error("could not make a token: {0}")]
+    Token(#[source] std::io::Error),
 }
 
 impl ApiError {
@@ -91,7 +94,7 @@ impl ApiError {
             Self::Conflict(_) => error_code::CONFLICT,
             Self::OnAServer(_) => error_code::ON_A_SERVER,
             Self::Validation(_) | Self::Rule { .. } => error_code::VALIDATION,
-            Self::Workspace(_) | Self::Settings(_) | Self::Internal(_) => {
+            Self::Workspace(_) | Self::Settings(_) | Self::Internal(_) | Self::Token(_) => {
                 error_code::INTERNAL_ERROR
             }
         }

@@ -10,6 +10,14 @@ pub fn owner_name() -> String {
         .unwrap_or_else(|| std::env::var("USERNAME").unwrap_or_default())
 }
 
+/// This computer's name, for the lists of devices (spec 27, 42.6).
+pub fn computer_name() -> Option<String> {
+    std::env::var("COMPUTERNAME")
+        .ok()
+        .map(|name| name.trim().to_owned())
+        .filter(|name| !name.is_empty())
+}
+
 fn display_name() -> Option<String> {
     let mut len = 0u32;
     // SAFETY: a size query with no buffer; it fails and sets `len` to the

@@ -114,6 +114,12 @@ export type ImportId = string;
 export type ConversationId = string;
 
 /**
+ * Identifies a device that reaches the daemon with a token of its own,
+ * such as the app on another computer (spec 42.6).
+ */
+export type DeviceId = string;
+
+/**
  * A group of bots that can message each other and share a folder.
  */
 export type Crew = { id: CrewId, name: string, 
@@ -530,7 +536,8 @@ timeZone?: string, };
  */
 export type HelloParams = { 
 /**
- * Owner token from `secrets\owner.token`.
+ * Owner token from `secrets\owner.token`, or a device's own token
+ * (spec 42.6).
  */
 token: string, client: ClientInfo, protocol: number, };
 
@@ -539,7 +546,12 @@ token: string, client: ClientInfo, protocol: number, };
  */
 export type LocaleParams = { locale: string, };
 
-export type HelloResult = { daemonVersion: string, protocol: number, };
+export type HelloResult = { daemonVersion: string, protocol: number, 
+/**
+ * The device this connection came in as, when it used a device's token
+ * instead of the owner's (spec 42.6).
+ */
+deviceId?: DeviceId, };
 
 /**
  * Deliveries still to go and those that gave up, for `system.status`.
@@ -2372,6 +2384,41 @@ size: number, };
 export type FromPhone = { "t": "sync" } | { "t": "approval.answer", approvalId: ApprovalId, allow: boolean, note?: string, } | { "t": "question.answer", questionId: QuestionId, answer: string, } | { "t": "question.dismiss", questionId: QuestionId, } | { "t": "chats" } | { "t": "history", req: number, botId: BotId, before?: ChatItemId, } | { "t": "send", clientId: string, botId: BotId, text: string, files?: Array<PhoneFile>, } | { "t": "watch", botId?: BotId, } | { "t": "home", since: number, } | { "t": "routine.run", clientId: string, routineId: RoutineId, };
 
 /**
+ * A device the owner paired.
+ */
+export type Device = { id: DeviceId, name: string, 
+/**
+ * Unix time in milliseconds.
+ */
+pairedAt: number, 
+/**
+ * When the device last connected, in Unix milliseconds.
+ */
+lastSeenAt?: number, };
+
+/**
+ * `devices.list`, `devices.revoke` and the `devices.changed` notification:
+ * every paired device, the newest first.
+ */
+export type DeviceList = { devices: Array<Device>, };
+
+/**
+ * `devices.pair`.
+ */
+export type DevicesPairParams = { name: string, };
+
+/**
+ * What `devices.pair` answers. The token is shown this once: the daemon
+ * keeps only its SHA-256.
+ */
+export type DevicePaired = { device: Device, token: string, };
+
+/**
+ * `devices.revoke`.
+ */
+export type DeviceIdParams = { deviceId: DeviceId, };
+
+/**
  * A bot's open request for a key, as the home and the island list it: who
  * asks, for which key and why. It is answered only in the chat's card.
  */
@@ -3778,6 +3825,9 @@ export interface RpcMethods {
   "mobile.pair_cancel": { params: MobilePairIdParams; result: null };
   "mobile.pair_confirm": { params: MobilePairConfirmParams; result: null };
   "mobile.revoke": { params: MobileRevokeParams; result: MobileStatus };
+  "devices.list": { params: undefined; result: DeviceList };
+  "devices.pair": { params: DevicesPairParams; result: DevicePaired };
+  "devices.revoke": { params: DeviceIdParams; result: DeviceList };
   "cards.list": { params: undefined; result: Cards };
   "activity.today": { params: ActivityTodayParams; result: DayActivity };
   "keys.list": { params: KeysListParams; result: Array<AgentKey> };
@@ -3861,6 +3911,7 @@ export interface RpcNotifications {
   "autobackup.changed": AutoBackupStatus;
   "mobile.changed": MobileStatus;
   "mobile.pair_request": MobilePairRequest;
+  "devices.changed": DeviceList;
   "browser.changed": BrowserState;
   "browser.action": BrowserAction;
   "browser.frame": BrowserFrame;

@@ -9,7 +9,7 @@ use botloft_core::protocol::{
     AccountUsage, AgentUsage, AutoBackupStatus, Bot, BotBackgroundChanged, BotContextChanged,
     BotDeleted, BotDesktop, BotMcp, BotRules, BotSites, BotStateChanged, BrowserAction,
     BrowserState, ChatDelta, ChatItemChanged, CloudProgress, CloudSignedIn, Crew, CrewDeleted,
-    Delivery, DesktopAwayUse, DesktopState, FolderRecycled, McpOverview, Message,
+    Delivery, DesktopAwayUse, DesktopState, DeviceList, FolderRecycled, McpOverview, Message,
     MobilePairRequest, MobileStatus, Question, ReactionChanged, Routine, RoutineRun, ScreenDraft,
     Task, TextVersion,
 };
@@ -75,6 +75,10 @@ pub enum Event {
     AutoBackupChanged(AutoBackupStatus),
     MobileChanged(MobileStatus),
     MobilePairRequest(MobilePairRequest),
+    /// The devices with a token of their own changed (spec 42.6).
+    DevicesChanged(DeviceList),
+    /// A device lost its token: its connections close (spec 42.6).
+    DeviceRevoked(botloft_core::ids::DeviceId),
     /// A conversation's process changed state (spec 40.4); the bot's own
     /// `BotState` is the summary of these.
     SeatState(crate::seat::SeatState),

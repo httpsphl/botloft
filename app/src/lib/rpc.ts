@@ -148,7 +148,8 @@ export class RpcConnection {
     this.lastHeard = Date.now();
     const done = (result: HelloResult) => {
       this.retryMs = this.options.retryInitialMs;
-      this.setState({ kind: "open", daemonVersion: result.daemonVersion });
+      const { daemonVersion, deviceId } = result;
+      this.setState({ kind: "open", daemonVersion, ...(deviceId ? { deviceId } : {}) });
       clearInterval(this.beatTimer);
       this.beatTimer = setInterval(() => this.beat(socket), this.options.heartbeatMs);
       for (const pending of this.queue.splice(0)) {

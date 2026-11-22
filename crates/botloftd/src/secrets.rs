@@ -79,6 +79,21 @@ pub fn load_or_create_owner_token(secrets_dir: &Path) -> io::Result<TokenHash> {
     Ok(TokenHash::of(&token))
 }
 
+/// The owner token itself, for a command on this computer that talks to the
+/// daemon as the owner (`botloftd pair`, spec 42.6).
+pub fn read_owner_token(secrets_dir: &Path) -> io::Result<String> {
+    let path = secrets_dir.join(OWNER_TOKEN_FILE);
+    let text = std::fs::read_to_string(&path)?;
+    let token = text.trim();
+    if !is_valid_token(token) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("{} is not a valid token", path.display()),
+        ));
+    }
+    Ok(token.to_owned())
+}
+
 fn is_valid_token(text: &str) -> bool {
     text.len() == TOKEN_BYTES * 2 && text.bytes().all(|b| b.is_ascii_hexdigit())
 }
@@ -111,6 +126,7 @@ mod tests {
         let first = load_or_create_owner_token(&secrets).expect("create");
         let token = std::fs::read_to_string(secrets.join(OWNER_TOKEN_FILE)).expect("read");
         assert!(first.matches(&token));
+        assert_eq!(read_owner_token(&secrets).expect("read"), token);
         let second = load_or_create_owner_token(&secrets).expect("reuse");
         assert_eq!(first, second);
     }
@@ -120,5 +136,6 @@ mod tests {
         let dir = tempfile::tempdir().expect("tempdir");
         std::fs::write(dir.path().join(OWNER_TOKEN_FILE), "not-a-token").expect("write");
         assert!(load_or_create_owner_token(dir.path()).is_err());
+        assert!(read_owner_token(dir.path()).is_err());
     }
 }

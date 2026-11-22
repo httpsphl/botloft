@@ -2,7 +2,8 @@
 # Runs a built daemon the way the service does (spec 42.5): as the botloft
 # user with only CAP_SETUID, CAP_SETGID and CAP_KILL, the agents' user set.
 # A stand-in Claude Code, installed for the agents' user, writes down who
-# runs it. From the repository, after a release build:
+# runs it. Then root pairs a device as install.sh says (spec 42.6), and
+# another user cannot. From the repository, after a release build:
 #
 #   docker run --rm -v "$PWD:/src:ro" debian:12 sh /src/deploy/server/test-agents-user.sh /src/target/release/botloftd
 set -eu
@@ -52,6 +53,16 @@ until grep -q "uid=" /tmp/claude-ran.log; do
 	fi
 	sleep 0.2
 done
+
+# Pairing, with nothing more than what install.sh prints.
+paired="$("$daemon" pair --name Laptop)" || fail "botloftd pair failed"
+echo "$paired" | grep -q '^  botloft1\.' || fail "no key: $paired"
+echo "$paired" | grep -q 'ssh -N -L 45720:127.0.0.1:45710 ' || fail "no tunnel: $paired"
+if setpriv --reuid=nobody --regid=nogroup --clear-groups env HOME=/tmp "$daemon" pair >/tmp/pair.log 2>&1; then
+	fail "another user paired a device"
+fi
+grep -q "or with sudo" /tmp/pair.log || fail "an unclear refusal: $(cat /tmp/pair.log)"
+
 kill "$pid"
 wait "$pid" 2>/dev/null || true
 
@@ -63,4 +74,4 @@ for cap in CapEff CapPrm CapAmb; do
 	grep -q "^$cap:[[:space:]]*0000000000000000$" /tmp/claude-ran.log || fail "the agent kept capabilities: $(cat /tmp/claude-ran.log)"
 done
 if grep -q "read the daemon's folder" /tmp/claude-ran.log; then fail "the agent read the daemon's folder"; fi
-echo "agents user: ok"
+echo "agents user and pairing: ok"

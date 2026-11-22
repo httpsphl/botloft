@@ -185,6 +185,13 @@ prefixed_id!(
     "conversation",
     "cnv_"
 );
+prefixed_id!(
+    /// Identifies a device that reaches the daemon with a token of its own,
+    /// such as the app on another computer (spec 42.6).
+    DeviceId,
+    "device",
+    "dev_"
+);
 
 impl ConversationId {
     /// The main conversation of `bot`: `cnv_` with the bot's own ULID, so

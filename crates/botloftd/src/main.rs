@@ -1,7 +1,7 @@
 //! `botloftd` command line.
 
 use std::net::Ipv4Addr;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::Arc;
 
@@ -20,7 +20,7 @@ use botloftd::settings::LiveSettings;
 use botloftd::state::{BotSettings, Daemon, DaemonOptions};
 use botloftd::supervisor::{self, SupervisorSettings};
 use botloftd::trash::{FolderTrash, RecycleBin, Trash};
-use botloftd::{approvals, autostart, keep_awake, logging, routines, secrets, server};
+use botloftd::{approvals, autostart, keep_awake, logging, pair, routines, secrets, server};
 use clap::{Parser, Subcommand};
 use tokio::net::TcpListener;
 use tracing::{error, info, warn};
@@ -49,6 +49,13 @@ enum Command {
     /// Start the daemon at logon, as a scheduled task of the current user.
     #[command(subcommand)]
     Service(ServiceCommand),
+    /// Pair a device, such as the app on another computer, and print the
+    /// key it connects with. Run it where Botloft runs.
+    Pair {
+        /// The device's name, as the list of devices shows it.
+        #[arg(long, default_value = "App")]
+        name: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -79,8 +86,12 @@ fn main() -> ExitCode {
 }
 
 fn dispatch(cli: Cli) -> anyhow::Result<()> {
-    let home =
-        paths::resolve_home(cli.home.as_deref()).context("cannot resolve the data folder")?;
+    let home = match cli.command {
+        // Run by hand, also on a server set up by install.sh.
+        Command::Pair { .. } => paths::resolve_home_by_hand(cli.home.as_deref()),
+        _ => paths::resolve_home(cli.home.as_deref()),
+    }
+    .context("cannot resolve the data folder")?;
     match cli.command {
         Command::Serve { config, scheduled } => serve(home, config, scheduled),
         Command::Service(ServiceCommand::Install) => autostart::install(&home),
@@ -88,7 +99,31 @@ fn dispatch(cli: Cli) -> anyhow::Result<()> {
         Command::Service(ServiceCommand::Restart) => autostart::restart(&home),
         Command::Service(ServiceCommand::Stop) => autostart::stop(&home),
         Command::Service(ServiceCommand::Uninstall) => autostart::uninstall(&home),
+        Command::Pair { name } => pair(&home, &name),
     }
+}
+
+/// `botloftd pair` (spec 42.6): asks the daemon that runs here, as the
+/// owner, for a new device, and prints its key.
+fn pair(home: &Path, name: &str) -> anyhow::Result<()> {
+    let config = Config::load(&home.join("config.toml"), false)?;
+    let token = secrets::read_owner_token(&home.join("secrets")).with_context(|| {
+        format!(
+            "cannot read Botloft's token in {}; run this as the user Botloft runs as, or with sudo",
+            home.display()
+        )
+    })?;
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+    let paired = runtime.block_on(pair::pair(config.port, &token, name))?;
+    let computer = platform::computer_name().unwrap_or_else(|| "Botloft".to_owned());
+    let key = pair::key(&computer, config.port, &paired.token);
+    print!(
+        "{}",
+        pair::instructions(&paired.device.name, config.port, &key)
+    );
+    Ok(())
 }
 
 fn serve(home: PathBuf, config_path: Option<PathBuf>, scheduled: bool) -> anyhow::Result<()> {

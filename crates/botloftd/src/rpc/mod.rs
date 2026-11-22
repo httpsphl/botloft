@@ -3,29 +3,28 @@
 
 mod desktop_watch;
 mod dispatch;
+mod hello;
 pub mod jsonrpc;
 mod notify;
 mod watching;
 
 use std::sync::Arc;
-use std::time::Duration;
 
 use axum::extract::ws::{Message, WebSocket};
-use botloft_core::protocol::{HelloParams, HelloResult, PROTOCOL_VERSION, error_code, method};
+use botloft_core::protocol::{error_code, method};
 use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
 use serde_json::Value;
 use tokio::sync::{broadcast, mpsc, watch};
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 
 use self::desktop_watch::DesktopWatch;
+use self::hello::{Peer, authenticate};
 use self::jsonrpc::RpcError;
 use self::notify::to_notification;
 use self::watching::Watch;
 use crate::state::{Daemon, Event};
 
-/// How long a new connection may take to send `session.hello`.
-const HELLO_TIMEOUT: Duration = Duration::from_secs(10);
 /// Outgoing frames queued per connection.
 const OUTBOX: usize = 256;
 
@@ -38,11 +37,17 @@ pub async fn serve_connection(socket: WebSocket, daemon: Arc<Daemon>) {
 
     // Subscribe before answering hello so no change slips in between.
     let events = daemon.subscribe();
-    if authenticate(&mut stream, &outbox, &daemon).await {
-        // An open app is part of the owner being there (spec 24.8).
-        daemon.desktop.app_opened();
-        run(stream, &outbox, &frames, events, &daemon).await;
-        daemon.desktop.app_closed();
+    if let Some(peer) = authenticate(&mut stream, &outbox, &daemon).await {
+        // An open app here is part of the owner being there (spec 24.8);
+        // one on another computer is not.
+        let here = peer == Peer::Owner;
+        if here {
+            daemon.desktop.app_opened();
+        }
+        run(stream, &outbox, &frames, events, &daemon, &peer).await;
+        if here {
+            daemon.desktop.app_closed();
+        }
     }
     drop(outbox);
     drop(frames);
@@ -80,80 +85,20 @@ async fn write(
     let _ = sink.send(Message::Close(None)).await;
 }
 
-async fn authenticate(
-    stream: &mut SplitStream<WebSocket>,
-    outbox: &mpsc::Sender<String>,
-    daemon: &Daemon,
-) -> bool {
-    let Ok(Some(Ok(Message::Text(text)))) =
-        tokio::time::timeout(HELLO_TIMEOUT, stream.next()).await
-    else {
-        return false;
-    };
-    let request = match jsonrpc::parse(&text) {
-        Ok(request) => request,
-        Err((id, err)) => {
-            let _ = outbox.send(jsonrpc::failure(&id, &err)).await;
-            return false;
-        }
-    };
-    let id = request.id.clone().unwrap_or(Value::Null);
-    let result = hello(daemon, request);
-    let frame = match &result {
-        Ok(ok) => jsonrpc::success(&id, serde_json::to_value(ok).unwrap_or(Value::Null)),
-        Err(err) => jsonrpc::failure(&id, err),
-    };
-    let _ = outbox.send(frame).await;
-    result.is_ok()
-}
-
-fn hello(daemon: &Daemon, request: jsonrpc::Request) -> Result<HelloResult, RpcError> {
-    let unauthenticated = |message: &str| RpcError::new(error_code::NOT_AUTHENTICATED, message);
-    if request.method != method::SESSION_HELLO {
-        return Err(unauthenticated("call session.hello first"));
-    }
-    let params: HelloParams = serde_json::from_value(request.params.unwrap_or(Value::Null))
-        .map_err(|_| unauthenticated("session.hello needs token, client and protocol"))?;
-    if !daemon.is_owner_token(&params.token) {
-        warn!(client = %params.client.name, "rejected a connection with a wrong token");
-        return Err(unauthenticated("invalid token"));
-    }
-    if params.protocol != PROTOCOL_VERSION {
-        return Err(RpcError::new(
-            error_code::VALIDATION,
-            format!(
-                "protocol {} is not supported; this daemon speaks {PROTOCOL_VERSION}",
-                params.protocol
-            ),
-        ));
-    }
-    debug!(client = %params.client.name, version = %params.client.version, "app connected");
-    if let Some(locale) = &params.client.locale {
-        daemon.desktop.set_locale(locale);
-        crate::service::maker::localize(daemon, locale);
-    }
-    if let Some(zone) = &params.client.time_zone {
-        keep_owner_zone(daemon, zone);
-    }
-    Ok(HelloResult {
-        daemon_version: env!("CARGO_PKG_VERSION").to_owned(),
-        protocol: PROTOCOL_VERSION,
-    })
-}
-
 async fn run(
     mut stream: SplitStream<WebSocket>,
     outbox: &mpsc::Sender<String>,
     frames: &watch::Sender<Option<String>>,
     mut events: broadcast::Receiver<Event>,
     daemon: &Arc<Daemon>,
+    peer: &Peer,
 ) {
     let mut watch = Watch::default();
     let mut desktop = DesktopWatch::default();
     loop {
         let frame = tokio::select! {
             message = stream.next() => match message {
-                Some(Ok(Message::Text(text))) => match route(daemon, &text, &mut watch, &mut desktop, frames) {
+                Some(Ok(Message::Text(text))) => match route(daemon, peer, &text, &mut watch, &mut desktop, frames) {
                     Routed::Reply(frame) => frame,
                     Routed::InOrder(request) => answer(daemon, request).await,
                     Routed::Aside(request) => {
@@ -165,6 +110,12 @@ async fn run(
                 Some(Ok(_)) => None,
             },
             event = events.recv() => match event {
+                // What was already queued, the answer to the revoke
+                // included, still goes out before the close.
+                Ok(Event::DeviceRevoked(ref device)) if peer.is(device) => {
+                    info!("closing the connection of a revoked device");
+                    return;
+                }
                 Ok(event) => to_notification(&event),
                 Err(broadcast::error::RecvError::Lagged(skipped)) => {
                     // The client's view is stale; it reloads on reconnect.
@@ -232,6 +183,7 @@ enum Routed {
 
 fn route(
     daemon: &Arc<Daemon>,
+    peer: &Peer,
     text: &str,
     watch: &mut Watch,
     desktop: &mut DesktopWatch,
@@ -245,6 +197,18 @@ fn route(
     let Some(id) = request.id.clone() else {
         return Routed::Reply(None);
     };
+    // A new device is paired where Botloft runs, so a device that leaks
+    // cannot make more of itself (spec 42.6).
+    if request.method == method::DEVICES_PAIR && *peer != Peer::Owner {
+        let refused = Err(crate::service::ApiError::Rule {
+            reason: "pair_where_botloft_runs",
+            message: "a new device is paired on the computer where Botloft runs, with \
+                      botloftd pair"
+                .to_owned(),
+        }
+        .into());
+        return Routed::Reply(Some(reply(&id, refused)));
+    }
     // Nobody sits at a server's screen (spec 42.2).
     if daemon.server
         && let Some(what) = crate::server_mode::needs_screen(&request.method)
@@ -322,22 +286,6 @@ fn reply(id: &Value, result: Result<Value, RpcError>) -> String {
     match result {
         Ok(value) => jsonrpc::success(id, value),
         Err(err) => jsonrpc::failure(id, &err),
-    }
-}
-
-/// Keeps the zone the app says the owner is in, for the routines and waits
-/// the bots make (spec 20.12, 42.2). A name jiff does not know is left out.
-fn keep_owner_zone(daemon: &Daemon, zone: &str) {
-    if jiff::tz::TimeZone::get(zone).is_err() {
-        debug!(zone, "the app sent a time zone this daemon does not know");
-        return;
-    }
-    let store = daemon.store();
-    if store.owner_time_zone().ok().flatten().as_deref() == Some(zone) {
-        return;
-    }
-    if let Err(err) = store.set_owner_time_zone(zone) {
-        warn!("could not keep the owner's time zone: {err}");
     }
 }
 

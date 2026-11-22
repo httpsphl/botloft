@@ -124,6 +124,15 @@ export function SettingsPage() {
   const entries = useMemo(() => settingsIndex(t), [t]);
   const found = search(entries, query, names);
   const searching = plain(query) !== "";
+  // A site login opens a window on the screen where Botloft runs, and a
+  // server has none (spec 42.2).
+  const onServer = useApp((state) => state.system?.server ?? false);
+  const shown = onServer
+    ? groups.map((group) => ({
+        ...group,
+        pages: group.pages.filter((each) => each.id !== "logins"),
+      }))
+    : groups;
 
   useEffect(() => {
     if (permissionsAt) {
@@ -170,7 +179,7 @@ export function SettingsPage() {
         <div className="flex gap-6">
           <nav aria-label={s.pages} className="flex w-48 shrink-0 flex-col gap-0.5 self-start">
             <div role="tablist" aria-orientation="vertical" className="flex flex-col gap-0.5">
-              {groups.map((group) => (
+              {shown.map((group) => (
                 <div
                   key={group.id}
                   role="presentation"

@@ -5,6 +5,7 @@ import { Onboarding } from "./features/onboarding/Onboarding";
 import type { Host } from "./lib/host";
 import { useCloseBehavior } from "./shell/closing";
 import { useMotionRoot } from "./shell/motionRoot";
+import { server } from "./shell/server";
 import { useSignInWindow } from "./shell/signIn";
 import { TitleBar } from "./shell/TitleBar";
 import { useThemeRoot } from "./shell/theme";
@@ -23,6 +24,8 @@ export function App({ host, connect }: { host: Host; connect: Connect }) {
   useSignInWindow(host, current.step);
   useEffect(() => {
     link.getState().check();
+    // Choosing a server, or this computer again, connects anew (spec 42.6).
+    return server.subscribe(() => link.getState().check());
   }, [link]);
 
   return (

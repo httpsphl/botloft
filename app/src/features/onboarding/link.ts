@@ -2,7 +2,8 @@
 // the owner anything: install it when it does not run, keep it at the
 // version this app ships, read the owner token and say hello (spec 15.1).
 // Each run installs or updates at most once, so a failure shows instead
-// of looping.
+// of looping. With a server chosen (spec 42.6), nothing runs here: the app
+// goes through the tunnel with this computer's own token there.
 
 import { createStore, type StoreApi } from "zustand/vanilla";
 import { t } from "../../i18n";
@@ -11,6 +12,7 @@ import type { Client } from "../../lib/client";
 import type { DaemonStatus, Host } from "../../lib/host";
 import { PROTOCOL_VERSION } from "../../lib/protocol.gen";
 import { prefs } from "../../shell/prefs";
+import { type ServerProfile, server } from "../../shell/server";
 
 export type LinkStep =
   | { step: "checking" }
@@ -28,10 +30,13 @@ export type LinkStep =
   /** The daemon is older than this app and updating it failed. */
   | { step: "outdated"; daemonVersion: string; error: string }
   | { step: "error"; message: string }
-  | { step: "connecting"; api: Client }
+  /** `server` when it is one, not this computer (spec 42.6). */
+  | { step: "connecting"; api: Client; server?: ServerProfile }
   | { step: "connected"; api: Client }
   /** The daemon refused the hello (token or protocol). */
-  | { step: "refused"; reason: string };
+  | { step: "refused"; reason: string; server?: ServerProfile }
+  /** Nothing answers where the tunnel to the server starts; the app keeps trying. */
+  | { step: "unreachable"; server: ServerProfile };
 
 export interface Link {
   current: LinkStep;
@@ -83,6 +88,31 @@ export function createLink(host: Host, connect: Connect): StoreApi<Link> {
         }
       };
       set({ current: { step: "connecting", api: client } });
+      client.onConnection(follow);
+      follow();
+    };
+
+    /** Through the tunnel to `remote`, which keeps trying until it answers. */
+    const reach = (remote: ServerProfile, run: number) => {
+      const client = connect(remote.tunnel, remote.token);
+      api = client;
+      let opened = false;
+      const follow = () => {
+        const connection = client.connection();
+        if (run !== generation) {
+          return;
+        }
+        if (connection.kind === "open") {
+          opened = true;
+          set({ current: { step: "connected", api: client } });
+        } else if (connection.kind === "failed") {
+          drop();
+          set({ current: { step: "refused", reason: connection.reason, server: remote } });
+        } else if (connection.kind === "waiting" && !opened) {
+          set({ current: { step: "unreachable", server: remote } });
+        }
+      };
+      set({ current: { step: "connecting", api: client, server: remote } });
       client.onConnection(follow);
       follow();
     };
@@ -172,19 +202,26 @@ export function createLink(host: Host, connect: Connect): StoreApi<Link> {
       return generation;
     };
 
+    const check = async () => {
+      const run = begin();
+      const remote = server.get();
+      if (remote) {
+        reach(remote, run);
+        return;
+      }
+      set({ current: { step: "checking" } });
+      try {
+        await settle(await host.daemonStatus(), run);
+      } catch (error) {
+        if (run === generation) {
+          set({ current: { step: "error", message: errorText(error) } });
+        }
+      }
+    };
+
     return {
       current: { step: "checking" },
-      check: async () => {
-        const run = begin();
-        set({ current: { step: "checking" } });
-        try {
-          await settle(await host.daemonStatus(), run);
-        } catch (error) {
-          if (run === generation) {
-            set({ current: { step: "error", message: errorText(error) } });
-          }
-        }
-      },
+      check,
       install: async () => {
         const run = begin();
         await change(run, "install", () => host.installDaemon());

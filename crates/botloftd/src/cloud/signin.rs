@@ -22,12 +22,7 @@ pub struct Signin {
 
 /// The name of this computer, for the list of devices.
 fn device_name() -> String {
-    ["COMPUTERNAME", "HOSTNAME"]
-        .iter()
-        .find_map(|name| std::env::var(name).ok())
-        .map(|name| name.trim().to_owned())
-        .filter(|name| !name.is_empty())
-        .unwrap_or_else(|| "Botloft".to_owned())
+    crate::platform::computer_name().unwrap_or_else(|| "Botloft".to_owned())
 }
 
 impl Cloud {

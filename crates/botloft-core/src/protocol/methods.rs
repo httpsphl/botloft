@@ -5,7 +5,7 @@ use std::fmt;
 use serde::{Deserialize, Serialize};
 
 use super::{AgentKind, BotModel, DeliveryBacklog, PermissionMode};
-use crate::ids::{BotId, CrewId};
+use crate::ids::{BotId, CrewId, DeviceId};
 
 /// Identifies the connecting app in `session.hello`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -39,7 +39,8 @@ pub struct LocaleParams {
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct HelloParams {
-    /// Owner token from `secrets\owner.token`.
+    /// Owner token from `secrets\owner.token`, or a device's own token
+    /// (spec 42.6).
     pub token: String,
     pub client: ClientInfo,
     pub protocol: u32,
@@ -61,6 +62,11 @@ impl fmt::Debug for HelloParams {
 pub struct HelloResult {
     pub daemon_version: String,
     pub protocol: u32,
+    /// The device this connection came in as, when it used a device's token
+    /// instead of the owner's (spec 42.6).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, ts(optional))]
+    pub device_id: Option<DeviceId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
