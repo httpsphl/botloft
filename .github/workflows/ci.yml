@@ -129,3 +129,18 @@ jobs:
       - run: pnpm build
       - name: The setup window's page builds too (spec 15.7)
         run: pnpm exec vite build --mode setup
+
+  server-installer:
+    name: Server installer
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Shell check
+        run: shellcheck deploy/server/*.sh
+      # The installer in a fresh container of each family (spec 42.3).
+      - name: Install, again, remove and purge
+        run: |
+          for image in debian:12 ubuntu:24.04 alpine:3.20 fedora:41; do
+            docker run --rm -v "$PWD:/src:ro" "$image" sh /src/deploy/server/test-install.sh
+          done

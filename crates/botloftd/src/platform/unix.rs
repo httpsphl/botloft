@@ -30,7 +30,9 @@ pub use self::orphans::track_groups;
 pub use self::power::KeepAwake;
 pub use self::programs::running_programs;
 #[cfg(not(target_os = "macos"))]
-pub use self::systemd::{TASK_KIND, delete_task, find_task, register_task, run_task, stop_task};
+pub use self::systemd::{
+    TASK_KIND, delete_task, find_task, keep_after_logout, register_task, run_task, stop_task,
+};
 
 /// Longest a `systemctl` or `launchctl` call may take.
 const MANAGER_TIMEOUT: Duration = Duration::from_secs(30);

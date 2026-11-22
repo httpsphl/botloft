@@ -123,6 +123,10 @@ pub fn install(home: &Path) -> anyhow::Result<()> {
         "The {TASK_KIND} {name} starts {} at logon.",
         installed.path.display()
     );
+    // On a server reached by SSH, logging out would stop it (spec 42.3).
+    if let Some(note) = platform::keep_after_logout() {
+        println!("{note}");
+    }
 
     let running = platform::find_task(&name)?.is_some_and(|task| task.state == TaskState::Running);
     let current = health::probe(port).is_some_and(|health| health.version == VERSION);
