@@ -346,7 +346,7 @@ Eventos de uma generation antiga são ignorados. Todo processo novo emite `bot.s
 
 Cada processo de bot parado ainda reserva memória: medido em 31/10/2026, 29 bots ociosos do Claude Code reservavam 11,5 GB (uns 400 MB cada), com 1,8 GB na RAM. Um bot que dorme não tem processo; para o dono, continua ligado: recebe mensagens, rotinas e avisos como sempre.
 
-- **Quando dorme:** `idle` há `[bots] sleep_after_minutes` (padrão 30; 0 nunca), sem turno, mensagem a caminho, aprovação, subagente, reinício por configuração novo (7.4) nem tarefa em segundo plano. Comandos e monitores da lista de `system/background_tasks_changed` não contam como trabalho (7.2), mas morrem com o processo: com qualquer um rodando, o bot não dorme. O supervisor para o processo como numa pausa e o estado vira `sleeping`; ele acorda o próprio laço para a hora em que um bot `idle` deve dormir, então dorme na hora, sem esperar os 5 s.
+- **Quando dorme:** `idle` há `[bots] sleep_after_minutes` (padrão 30; 0 nunca; numa máquina de até 2 GB, no máximo 2 minutos, 42.4), sem turno, mensagem a caminho, aprovação, subagente, reinício por configuração novo (7.4) nem tarefa em segundo plano. Comandos e monitores da lista de `system/background_tasks_changed` não contam como trabalho (7.2), mas morrem com o processo: com qualquer um rodando, o bot não dorme. O supervisor para o processo como numa pausa e o estado vira `sleeping`; ele acorda o próprio laço para a hora em que um bot `idle` deve dormir, então dorme na hora, sem esperar os 5 s.
 - **Começa dormindo:** com o sono ligado, um bot que deve rodar, está sem processo e não tem nada a fazer fica `sleeping` em vez de subir: ao subir o daemon (o login do Windows não sobe nenhum processo de bot), ao criar o bot e ao despausá-lo. Um bot em `backoff` sobe pela regra dele, e `auth_error` fica parado (7.3).
 - **Acordar:** o courier, ao achar uma delivery vencida de um bot `sleeping`, pede que o supervisor o acorde (9.1); mensagens do dono, de outros bots, rotinas (20) e avisos (20.13) passam todos por ele. `bots.restart` também acorda. O processo sobe com `--resume` da conversa guardada (7.3), ou com `--session-id` se ainda não houve turno, e a delivery sai assim que ele fica `idle`. A primeira resposta leva uns segundos a mais; o cache do prompt já teria esfriado nesse tempo, então não gasta mais do plano. Os três agentes (30) retomam a conversa assim.
 - **Compactar e começar do zero:** compactar agora (8.6) acorda o bot (a mesma conversa, com `--resume`) e escreve o `/compact` assim que o processo fica pronto; o medidor mostra o último valor e "compactando" desde o pedido. Começar do zero (`bots.restart` com `fresh`) num bot `sleeping` **não** o acorda: tira a conversa guardada (`session_id`), zera o medidor e marca que o próximo processo começa uma conversa nova; o aviso `fresh_start` entra no chat e o bot segue dormindo, sem gastar nada do plano.
@@ -357,7 +357,7 @@ Cada processo de bot parado ainda reserva memória: medido em 31/10/2026, 29 bot
 
 ### 7.8 Limite de agentes rodando
 
-Sem limite por padrão. Com `[bots] max_running` maior que 0, nunca rodam mais processos de agente que isso ao mesmo tempo: é o que deixa uma máquina de memória fixa (um servidor) a salvo de um horário em que todas as rotinas acordam juntas. Só pelo `config.toml` por enquanto, lido ao subir o daemon.
+Sem limite por padrão, a não ser o da memória livre (42.4). Com `[bots] max_running` maior que 0, nunca rodam mais processos de agente que isso ao mesmo tempo: é o que deixa uma máquina de memória fixa (um servidor) a salvo de um horário em que todas as rotinas acordam juntas. Só pelo `config.toml` por enquanto, lido ao subir o daemon.
 
 - **Quem conta:** todo agente com processo, inclusive o que está saindo, e o que está sendo criado.
 - **Quem vem primeiro:** a cada passada do supervisor, os agentes que devem subir e têm uma mensagem esperando (delivery `pending` ou `sending`) vêm antes dos outros.
@@ -4116,16 +4116,20 @@ SV2, feito em 2026-11-22: `deploy/server/install.sh`, testado em contêineres De
 
 ### 42.4 Memória
 
-SV3, a fazer. Medido em 2026-11-22 (Windows, Claude Code 2.1.309):
+SV3, feito em 2026-11-22. Medido no mesmo dia (Windows, Claude Code 2.1.309):
 - o daemon com todos os agentes dormindo: 35 MB;
 - um processo do Claude Code como o Botloft o roda: 212 MB na RAM (450 MB reservados) antes de qualquer mensagem, e 228 MB depois de um turno do Haiku.
 
-As ferramentas MCP e o navegador de cada agente vêm por cima. O que pesa, então, é quantos agentes estão acordados ao mesmo tempo.
+As ferramentas MCP e o navegador de cada agente vêm por cima. O que pesa, então, é quantos agentes estão acordados ao mesmo tempo. A cada passada (7.2), o supervisor lê a memória da máquina (`memory.rs`, `platform::memory`):
+- no Linux, `MemTotal` e `MemAvailable` de `/proc/meminfo`, baixados pelo limite do grupo de controle do próprio daemon (cgroup v2: `memory.max` e `memory.current` do caminho em `/proc/self/cgroup`). Um serviço com `MemoryMax` (42.3) ou um contêiner enxerga a máquina toda em `/proc/meminfo`;
+- no Windows, `GlobalMemoryStatusEx`;
+- no macOS, nada, e a memória não limita.
 
-- O daemon lê a memória da máquina (total e disponível; `/proc/meminfo` no Linux, `GlobalMemoryStatusEx` no Windows) e conta uns 300 MB por agente acordado.
-- **Máquina pequena** (até 2 GB de RAM, ou `server = true`): um agente dorme pouco depois do turno (2 min, no lugar dos 30 de 7.7), e só um agente parado fica acordado quando a memória disponível cai abaixo da metade.
-- **Vaga pela memória:** além de `max_running` (7.8), um agente só sobe se a memória disponível comporta mais um, com folga de 256 MB. Sem folga, o agente parado há mais tempo dorme para abrir vaga (7.8), e o que esperava sobe quando ele sai. Sem nenhum parado, a mensagem espera na fila, em vez de a máquina ficar sem memória e o sistema matar processos.
-- O app mostra quando um agente espera vaga.
+Com a leitura:
+- **Vaga pela memória:** cada agente conta 300 MB, e 256 MB ficam livres para o sistema. Um agente só sobe se a memória disponível comporta mais um; os que estão subindo ainda não aparecem na memória e contam como já ocupando. Vale junto com `max_running` (7.8), o menor dos dois. Sem vaga, o agente com mensagem tira a vaga do que está parado há mais tempo, que dorme (7.8), e sobe quando a memória volta; sem nenhum parado, espera dormindo, e a mensagem fica na fila em vez de a máquina ficar sem memória e o sistema matar processos. Para o dono, quem espera vaga aparece dormindo, como em 7.8.
+- **Máquina pequena** (até 2 GB): um agente parado dorme depois de 2 minutos, ou do tempo do dono se for menor (7.7). O sono desligado continua desligado.
+- **Pouca memória** (menos da metade livre) numa máquina pequena ou num servidor: só o agente parado há menos tempo continua acordado, e os outros dormem, como para abrir vaga. No PC, a memória cheia de outros programas não faz os agentes dormirem antes da hora.
+- Sem leitura (macOS, ou um sistema que não diz), nada muda.
 
 ### 42.5 Agentes num usuário separado
 
@@ -4178,7 +4182,7 @@ SV10, a fazer. `botloftd update` baixa o release novo, confere a assinatura e re
 |---|---|---|
 | SV1 | Modo servidor (42.2) e o fuso do dono nas rotinas dos bots | feito |
 | SV2 | Binário Linux estático e instalador (42.3) | feito |
-| SV3 | Memória (42.4) | a fazer |
+| SV3 | Memória (42.4) | feito |
 | SV4 | Agentes num usuário separado (42.5) | a fazer |
 | SV5 | Pareamento e conexão pela nuvem e por túnel (42.6) | a fazer |
 | SV6 | Arquivos pelo RPC (42.7) | a fazer |

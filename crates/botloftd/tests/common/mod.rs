@@ -60,6 +60,8 @@ pub struct TestDaemon {
     pub clock: Arc<ManualClock>,
     /// Where folders go instead of the Recycle Bin.
     pub trash: FakeTrash,
+    /// The machine's memory, unknown until a test says (spec 42.4).
+    pub memory: botloftd::memory::FakeMemory,
     _dir: TempDir,
 }
 
@@ -105,6 +107,8 @@ pub struct Parts {
     pub clock: Arc<ManualClock>,
     pub paths: Paths,
     pub trash: FakeTrash,
+    /// The machine's memory, unknown until a test says (spec 42.4).
+    pub memory: botloftd::memory::FakeMemory,
     pub dir: TempDir,
 }
 
@@ -151,6 +155,7 @@ pub fn new_daemon_with(
     let runtime = FakeRuntime::new();
     let clock = Arc::new(ManualClock::new());
     let trash = FakeTrash::new(dir.path().join("bin"));
+    let memory = botloftd::memory::FakeMemory::default();
     let daemon = Daemon::new(DaemonOptions {
         paths: paths.clone(),
         port: 45710,
@@ -176,6 +181,7 @@ pub fn new_daemon_with(
         cloud,
         secrets,
         server,
+        memory: Arc::new(memory.clone()),
     });
     // Tests never read the plugins of whoever runs them (spec 41.1).
     daemon.plugins.use_root(dir.path().join("claude"));
@@ -185,6 +191,7 @@ pub fn new_daemon_with(
         clock,
         paths,
         trash,
+        memory,
         dir,
     }
 }
@@ -300,6 +307,7 @@ impl TestDaemon {
             runtime: parts.runtime,
             clock: parts.clock,
             trash: parts.trash,
+            memory: parts.memory,
             _dir: parts.dir,
         }
     }
