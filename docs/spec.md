@@ -4187,7 +4187,17 @@ SV6, feito em 2026-11-22. No próprio computador, o app abre, mostra e salva arq
 
 ### 42.8 Docker
 
-SV7, a fazer. Imagem `ghcr.io/httpsphl/botloft` com o daemon, o Claude Code e o Chromium, mais uma variante sem navegador. Volume `/data`, `server = true`, e daemon e agentes em usuários diferentes dentro do contêiner.
+SV7, feito em 2026-11-22: `deploy/docker/Dockerfile`, com o uso em `deploy/docker/README.md`.
+
+- **Imagem** `ghcr.io/httpsphl/botloft` (Debian 12 slim) com o daemon estático, o Claude Code do instalador oficial e o Chromium com fontes; a variante `:slim` não tem navegador. Para `x86_64` e `aarch64`, com o mesmo nome. O binário do Claude Code vai para `/usr/local/bin`, para o volume poder ficar onde mora o usuário dos agentes; a 2.1.330 roda assim, como outro usuário (teste real). Descompactadas, 843 MB a `:slim` (metade é o Claude Code) e 1,8 GB a completa.
+- **Dois usuários, como num servidor** (42.5): `botloft` roda o daemon e `botloft-agents` os agentes. A entrada (`entrypoint.sh`, sob o `tini`) arruma o `/data` na primeira vez (`home` `0700`, `workspaces` `2770` do grupo dos agentes, `agents` `0750`), grava o `config.toml` com `server = true` e `agents_user`, e sobe o daemon com `setpriv` como `botloft`, só com `CAP_SETUID`, `CAP_SETGID` e `CAP_KILL`, que o Docker já dá. `BOTLOFT_HOME=/data/home` vale também para o `docker exec`.
+- **Tudo no volume `/data`:** configurações, banco, pastas de trabalho e o login do Claude dos agentes (`/data/agents/.claude`). Trocar de imagem não perde nada.
+- **Rede:** `--network host`, para o `127.0.0.1` do daemon ser o do servidor e o túnel SSH chegar nele (42.6). O daemon não escuta em outro endereço, e um `-p` não alcança o loopback do contêiner.
+- **Navegador:** com o seccomp padrão do Docker o Chromium não sobe o sandbox ("No usable sandbox"), e com o `chromium-sandbox` do Debian o zigoto cai sem `CAP_SYS_ADMIN` (testes reais, Chromium 156). Por isso a imagem completa pede `--security-opt seccomp=unconfined`; o Botloft não roda o Chromium sem sandbox. A `:slim` não precisa disso.
+- **Memória:** o limite do contêiner (`--memory`) é o `memory.max` do cgroup que o daemon lê (42.4). `--restart unless-stopped` traz o daemon de volta depois de um `system.restart` (42.7).
+- **Login e pareamento:** `docker exec -it -u botloft-agents botloft claude auth login` e `docker exec botloft botloftd pair`.
+- **Atualizar:** puxar a imagem nova e subir o contêiner de novo. A imagem diz `BOTLOFT_IN_CONTAINER=1`, para o `botloftd update` (42.11) mandar puxar a imagem.
+- **No release** (`release.yml`, job `server`): cada processador monta a completa e a `:slim` com o daemon que o job acabou de compilar (`DAEMON=release`, sem recompilar) e roda `deploy/docker/test-image.sh` nas duas (o daemon como `botloft` com o usuário dos agentes, o Claude Code rodando para eles, os agentes sem ler a pasta do daemon e um `botloftd pair` pelo `docker exec`). Numa tag, publica `<versão>-<arq>[-slim]`, e o job `image` junta os dois processadores em `<versão>`, `latest`, `<versão>-slim` e `slim`. O pacote do GHCR nasce privado: o dono o torna público uma vez. Num PR que mexe em `deploy/docker`, o workflow `docker.yml` monta a `:slim` a partir do código e roda o mesmo teste.
 
 ### 42.9 Login do motor
 
@@ -4216,7 +4226,7 @@ SV10, a fazer. `botloftd update` baixa o release novo, confere a assinatura e re
 | SV4 | Agentes num usuário separado (42.5) | feito |
 | SV5 | Pareamento e conexão pela nuvem e por túnel (42.6) | em andamento: aparelhos e túnel feitos, nuvem a fazer |
 | SV6 | Arquivos pelo RPC (42.7) | feito |
-| SV7 | Docker (42.8) | a fazer |
+| SV7 | Docker (42.8) | feito |
 | SV8 | Aviso de login (42.9) | a fazer |
 | SV9 | Do PC para o servidor (42.10) | a fazer |
 | SV10 | Atualizar (42.11) | a fazer |

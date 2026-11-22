@@ -17,6 +17,8 @@ permissions:
   id-token: write
   attestations: write
   artifact-metadata: write
+  # The server's image on GHCR (spec 42.8).
+  packages: write
 
 env:
   CARGO_TERM_COLOR: always
@@ -135,6 +137,31 @@ jobs:
           mkdir -p target/release/bundle/server
           tar -czf "target/release/bundle/server/botloftd-linux-${{ matrix.arch }}.tar.gz" \
             -C target/release botloftd
+      # The image with the daemon just built, on this processor (spec 42.8).
+      - name: The image, and the one without a browser
+        run: |
+          mkdir -p target/docker/deploy/docker
+          cp target/release/botloftd target/docker/
+          cp deploy/docker/entrypoint.sh target/docker/deploy/docker/
+          for variant in "" "-slim"; do
+            browser=yes
+            [ "$variant" = "-slim" ] && browser=no
+            docker build -f deploy/docker/Dockerfile --build-arg DAEMON=release \
+              --build-arg BROWSER="$browser" -t "botloft:${{ matrix.arch }}$variant" target/docker
+            sh deploy/docker/test-image.sh "botloft:${{ matrix.arch }}$variant"
+          done
+      - name: Push the images
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          version="${GITHUB_REF_NAME#v}"
+          for variant in "" "-slim"; do
+            tag="ghcr.io/httpsphl/botloft:$version-${{ matrix.arch }}$variant"
+            docker tag "botloft:${{ matrix.arch }}$variant" "$tag"
+            docker push "$tag"
+          done
       - uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -150,6 +177,25 @@ jobs:
           name: release-server-${{ matrix.arch }}
           path: target/release/bundle/release
           if-no-files-found: error
+
+  # One name for both processors (spec 42.8).
+  image:
+    name: Image for both processors
+    if: github.ref_type == 'tag'
+    needs: server
+    runs-on: ubuntu-latest
+    steps:
+      - name: Join the two processors
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          version="${GITHUB_REF_NAME#v}"
+          base="ghcr.io/httpsphl/botloft"
+          docker buildx imagetools create -t "$base:$version" -t "$base:latest" \
+            "$base:$version-x86_64" "$base:$version-aarch64"
+          docker buildx imagetools create -t "$base:$version-slim" -t "$base:slim" \
+            "$base:$version-x86_64-slim" "$base:$version-aarch64-slim"
 
   publish:
     name: Draft release

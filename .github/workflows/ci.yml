@@ -137,7 +137,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Shell check
-        run: shellcheck deploy/server/*.sh
+        run: shellcheck deploy/server/*.sh deploy/docker/*.sh
       # The installer in a fresh container of each family (spec 42.3).
       - name: Install, again, remove and purge
         run: |

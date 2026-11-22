@@ -1,0 +1,26 @@
+name: Docker
+
+# The server's image (spec 42.8), built from the code when a pull request
+# touches it, and checked as a server would run it. The release builds it
+# again from the daemon it ships and publishes it (release.yml).
+on:
+  pull_request:
+    paths:
+      - "deploy/docker/**"
+      - ".github/workflows/docker.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    name: Image (slim, from the code)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build it
+        run: docker build -f deploy/docker/Dockerfile --build-arg BROWSER=no -t botloft:test .
+      - name: Run it as a server would
+        run: sh deploy/docker/test-image.sh botloft:test
