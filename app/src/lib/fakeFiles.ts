@@ -1,10 +1,13 @@
 // The fake daemon's files: what a bot made, for the files panel, and the
 // links its sounds and videos play from (spec 8.4).
 
-import { encodeBytes } from "./base64";
+import { decodeBytes, encodeBytes } from "./base64";
 import type { FakeBotloft, Handlers } from "./fake";
 import { invalid, notFound } from "./fakeRules";
 import type { BotFile, BotId, FileData } from "./protocol.gen";
+
+/** The most bytes in one piece, as the daemon gives them. */
+const CHUNK_BYTES = 1024 * 1024;
 
 const TYPES: Record<string, string> = {
   pdf: "application/pdf",
@@ -78,7 +81,7 @@ export class FakeFiles {
     this.media.set(path, url);
   }
 
-  handlers(): Pick<Handlers, "files.list" | "files.read" | "files.media"> {
+  handlers(): Pick<Handlers, "files.list" | "files.read" | "files.media" | "files.chunk"> {
     const known = (botId: BotId, path: string) => {
       const file = (this.files.get(botId) ?? []).find((one) => one.path === path);
       const data = this.contents.get(path);
@@ -95,6 +98,12 @@ export class FakeFiles {
           .sort((a, b) => b.modifiedAt - a.modifiedAt);
       },
       "files.read": ({ botId, path }) => known(botId, path).data,
+      // Pieces for an app on another computer (spec 42.7).
+      "files.chunk": ({ botId, path, offset }) => {
+        const bytes = decodeBytes(known(botId, path).data.data);
+        const piece = bytes.subarray(offset, offset + CHUNK_BYTES);
+        return { data: encodeBytes(piece), size: bytes.length };
+      },
       "files.media": ({ botId, path }) => {
         const { file } = known(botId, path);
         if (!/^(audio|video)\//.test(file.mediaType)) {

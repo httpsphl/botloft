@@ -39,6 +39,7 @@ import { conflict, invalid, notFound, slugify } from "./fakeRules";
 import { FakeScreens } from "./fakeScreens";
 import { searchHandlers } from "./fakeSearch";
 import { FakeSkills } from "./fakeSkills";
+import { uploadHandlers } from "./fakeUploads";
 import { type FakeCostPart, usageHandlers } from "./fakeUsage";
 import { FakeVersions } from "./fakeVersions";
 import {
@@ -93,6 +94,8 @@ export class FakeBotloft implements BotloftApi {
   };
   /** How many times the app asked for a new Claude Code check. */
   refreshes = 0;
+  /** How many times an app on another computer asked Botloft to restart (spec 42.7). */
+  restarts = 0;
   settings: Settings = {
     startWithWindows: true,
     keepAwake: true,
@@ -329,6 +332,10 @@ export class FakeBotloft implements BotloftApi {
       return null;
     },
     "system.status": () => this.system,
+    "system.restart": () => {
+      this.restarts += 1;
+      return null;
+    },
     "system.refresh": () => {
       this.refreshes += 1;
       return this.system;
@@ -395,6 +402,7 @@ export class FakeBotloft implements BotloftApi {
     ...autoBackupHandlers(this),
     ...mobileHandlers(this),
     ...deviceHandlers(this),
+    ...uploadHandlers(this),
     ...searchHandlers(this),
   };
 }

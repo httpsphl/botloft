@@ -1171,6 +1171,8 @@ Layout, como um app de mensagens:
 | `reveal_file` | abre o Explorer na pasta do arquivo, com ele marcado (`/select,`). Nada é executado. No macOS, `open -R`; no Linux, que não tem um jeito comum de marcar o arquivo, abre a pasta dele |
 | `save_file_as` | salva uma cópia de um arquivo do bot onde o dono escolher: o próprio comando abre o diálogo Salvar como do sistema (`tauri-plugin-dialog`, pelo Rust, com o nome do arquivo e um filtro pela extensão) e copia; responde `false` se o dono cancelar. Quem escolhe o destino é sempre o diálogo, então a página não grava arquivo em lugar nenhum que o dono não tenha escolhido. Copiar um arquivo sobre ele mesmo não faz nada |
 | `open_url` | abre no navegador padrão um link do chat (15.3); só `http` e `https`, porque qualquer outro esquema pode iniciar um programa. Seguir o link dentro do app trocaria a janela pela página |
+| `download_save`, `download_temp`, `download_write`, `download_end` | um arquivo do Botloft de um servidor, em pedaços (42.7): para onde o dono escolhe no diálogo Salvar como, ou para a pasta temporária do app, aberto no fim como o `open_file` (só documento e mídia). O nome perde pastas e os caracteres que o Windows recusa; a página só passa os pedaços em base64 |
+| `upload_pick`, `upload_read` | um arquivo que o dono escolhe no diálogo Abrir para mandar ao servidor (42.7); a página o conhece só por um id e lê pedaços de até 1 MiB dele, nunca outro arquivo |
 | overlay na taskbar | não é comando próprio: o app usa `setOverlayIcon` da janela (permissão `core:window:allow-set-overlay-icon`) e marca o ícone com um ponto enquanto algo espera o dono: aprovação pendente, bot em `auth_error`, ou mensagem não entregue a um bot ativo. Entregas mortas para bot arquivado não contam: foram abandonadas de propósito. Com "Marcar o ícone quando um bot responder" (15.1), o mesmo ponto aparece enquanto algum bot está não lido |
 
 O app acha o daemon como o daemon acha a si mesmo (seção 5): `BOTLOFT_HOME` ou `%LOCALAPPDATA%\Botloft`, com a porta lida do `config.toml` dessa pasta (45710 se ausente). Um daemon de dev com seu próprio `BOTLOFT_HOME` é encontrado sem configuração extra. A CSP libera `ws://127.0.0.1:*` pelo mesmo motivo, `blob:` para a imagem e o PDF da prévia de arquivos (15.1), `http://127.0.0.1:*` em `frame-src` para as telas (22.2) e em `media-src` para o som e o vídeo dos bots (8.4); sem `media-src`, valeria o `default-src 'self'` e nenhum player tocaria no app, só no navegador de dev, que não tem CSP.
@@ -4170,11 +4172,18 @@ SV5 em partes: os aparelhos e o túnel no daemon e o app conectando pelo túnel,
   - Os links de som e vídeo (`files.media`, 8.4) vêm com a porta do daemon no servidor, e o app troca pela do túnel.
   - "Usar este computador" volta para o daemon local, e os agentes do servidor continuam rodando. A lista de aparelhos, com "Remover" e a marca deste computador, fica na mesma seção.
   - Num servidor (`system.server`), o app esconde manter acordado, iniciar com o sistema e continuar ao fechar, as abas Desktop e Chrome das Permissões e a página de logins de site, que abre janela. Num servidor, o login num site é feito tomando o navegador do agente na tela do app (21.10). Com um servidor escolhido, também ficam de fora "continuar ao fechar" e o resto que só vale para o daemon deste computador.
-  - Arquivos (abrir, mostrar na pasta, salvar) ainda usam o caminho deste computador: o SV6 (42.7) leva isso para o RPC.
+  - Arquivos (abrir, salvar, enviar) passam pela conexão em pedaços, e as pastas deste computador somem (42.7).
 
 ### 42.7 Arquivos
 
-SV6, a fazer. Hoje o app abre, mostra e salva arquivos pelo caminho local (8.3, 9.5, 14.2). Com um servidor, ler, baixar e enviar passam pelo RPC, como os anexos já fazem, e "Mostrar na pasta" vira "Baixar". A pasta de trabalho de uma crew é uma pasta do servidor; para código, um repositório git que o servidor clona.
+SV6, feito em 2026-11-22. No próprio computador, o app abre, mostra e salva arquivos pelo caminho (8.3, 9.5, 14.2). Com um servidor escolhido (42.6), o caminho é do servidor, e o arquivo passa pela conexão em pedaços:
+
+- **Para baixar:** `files.chunk {botId, path, offset}` lê um arquivo do bot, com o mesmo alcance de `files.read` e sem o limite da prévia. `backup.chunk {path, offset}` lê a cópia que `backup.export` gravou, só dentro de `<home>/exports`. Os dois devolvem `{data, size}`: até 1 MiB a partir de `offset`, em base64, e o tamanho do arquivo inteiro (`CHUNK_MAX`). Correm por fora da fila (11.1), para um arquivo grande não segurar o chat.
+- **Para enviar:** `uploads.start {name, size}` -> `{uploadId}`, `uploads.chunk {uploadId, offset, data}` (cada pedaço logo depois do anterior; outro `offset` é `conflict`, então um pedaço repetido não duplica), `uploads.finish` -> `{path}` e `uploads.cancel`. O arquivo fica em `<home>/uploads/<id>/<nome>`, com o nome limpo como o de um anexo, fora do alcance dos agentes (42.5), até 16 GB, e some depois de uma hora parado. O `path` vale para o que já recebe um caminho: `backup.stage` e `imports.scan`.
+- **No app:** "Abrir" baixa para a pasta temporária do app e abre com o programa do sistema, só documento e mídia, como o `open_file` (15.2). "Salvar como" baixa direto para onde o dono escolhe no diálogo. A cópia de segurança sai do mesmo jeito. Escolher uma cópia para restaurar ou o ZIP do claude.ai manda o arquivo ao servidor antes. O app nativo só escreve onde o dono escolheu ou na pasta temporária dele, e só lê o arquivo que o dono escolheu; os pedaços passam em base64 do daemon ao Rust do app sem a página decodificar (`download_*`, `upload_*`). "Mostrar na pasta", "Abrir pasta" e o botão da pasta da crew somem, porque a pasta não é deste computador; na prévia, "Mostrar na pasta" vira "Salvar como".
+- **Restaurar uma cópia num servidor:** depois do `backup.confirm`, o app pede `system.restart` em vez de reiniciar o daemon deste computador. O daemon responde, sai com erro meio segundo depois, e o serviço que o roda (systemd, Docker, a tarefa agendada) o sobe de novo; a cópia entra ao subir (14.2), e o app reconecta sozinho.
+- A pasta de trabalho de uma crew nova é um caminho do servidor, digitado. Vazio, a pasta nova dentro do Botloft. Para código, a crew clona o repositório na pasta dela; o Botloft não tem um "clonar" próprio.
+- As telas HTML (22) carregam pela porta do túnel, como os vídeos (42.6).
 
 ### 42.8 Docker
 
@@ -4206,7 +4215,7 @@ SV10, a fazer. `botloftd update` baixa o release novo, confere a assinatura e re
 | SV3 | Memória (42.4) | feito |
 | SV4 | Agentes num usuário separado (42.5) | feito |
 | SV5 | Pareamento e conexão pela nuvem e por túnel (42.6) | em andamento: aparelhos e túnel feitos, nuvem a fazer |
-| SV6 | Arquivos pelo RPC (42.7) | a fazer |
+| SV6 | Arquivos pelo RPC (42.7) | feito |
 | SV7 | Docker (42.8) | a fazer |
 | SV8 | Aviso de login (42.9) | a fazer |
 | SV9 | Do PC para o servidor (42.10) | a fazer |

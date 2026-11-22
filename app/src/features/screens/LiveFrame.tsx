@@ -6,6 +6,7 @@
 
 import { useEffect, useReducer, useRef, useState } from "react";
 import type { Bot, ScreenDevice } from "../../lib/protocol.gen";
+import { throughTunnel } from "../../shell/server";
 import { BotCursor } from "../bots/BotCursor";
 import { type Mark, readMark } from "./cursorMark";
 
@@ -71,13 +72,15 @@ export function LiveFrame({
   /** The bot writing it now, whose cursor shows. */
   writer?: Pick<Bot, "name" | "color"> | null;
 }) {
+  // From a server, through the tunnel (spec 42.6).
+  const address = throughTunnel(url);
   const [state, change] = useReducer(frames, {
-    urls: [url, null],
+    urls: [address, null],
     front: 0,
     loading: false,
     waiting: null,
   });
-  useEffect(() => change({ kind: "show", url }), [url]);
+  useEffect(() => change({ kind: "show", url: address }), [address]);
   const size = DEVICES[device];
   const windows = useRef<(Window | null)[]>([null, null]);
   // Each frame's own mark: the one behind speaks before it is on show, and

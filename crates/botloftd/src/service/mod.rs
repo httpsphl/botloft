@@ -48,6 +48,7 @@ pub mod rules;
 pub mod screens;
 pub mod settings;
 pub mod tasks;
+pub mod uploads;
 pub mod usage;
 pub mod versions;
 

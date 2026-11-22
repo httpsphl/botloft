@@ -145,4 +145,37 @@ export interface Host {
   /** Opens an http(s) link in the default browser. */
   openUrl(url: string): Promise<void>;
   window: AppWindow;
+  transfers: HostTransfers;
+}
+
+/** A file the owner picked to send, known to the page only by an id. */
+export interface PickedFile {
+  id: string;
+  name: string;
+  /** Bytes. */
+  size: number;
+}
+
+/**
+ * Files in pieces to and from Botloft on another computer (spec 42.7). The
+ * page never names a path on this computer: a download goes where the owner
+ * picks, or into the app's temporary folder to be opened, and an upload
+ * reads only the file the owner picked.
+ */
+export interface HostTransfers {
+  /** A download called `name` where the owner picks in the Save dialog; null if they cancel. */
+  save(name: string): Promise<string | null>;
+  /** A download into the app's temporary folder, to open when done. */
+  temp(name: string): Promise<string>;
+  /** Adds a piece, base64, to a download. */
+  write(id: string, data: string): Promise<void>;
+  /**
+   * Ends a download: kept, and opened with the program the system uses for
+   * it when it is a temporary one and `open`; without `keep`, thrown away.
+   */
+  end(id: string, done: { keep: boolean; open: boolean }): Promise<void>;
+  /** Asks the owner for one file to send, with `extensions` under `kind`; null if they cancel. */
+  pick(title: string, kind: string, extensions: string[]): Promise<PickedFile | null>;
+  /** Up to `length` bytes of a picked file from `offset`, base64. */
+  read(id: string, offset: number, length: number): Promise<string>;
 }

@@ -9,6 +9,7 @@ import type { Attachment } from "../../lib/protocol.gen";
 import { useHost } from "../../store/context";
 import { Dialog } from "../../ui/Dialog";
 import { attempt } from "../../ui/toast";
+import { useFoldersHere } from "../files/fileActions";
 import { useImage } from "./images";
 
 /** The folder an attachment was saved in, inside the bot's workspace. */
@@ -36,6 +37,7 @@ function FileCard({
   note?: string;
 }) {
   const host = useHost();
+  const foldersHere = useFoldersHere();
   const t = useT();
   const Icon = attachment.mediaType.startsWith("image/")
     ? FileImage
@@ -54,7 +56,7 @@ function FileCard({
             `${kindLabel(attachment.mediaType, t.chat.attachments.file)} · ${fileSize(attachment.size)}`}
         </p>
       </div>
-      {workspace && (
+      {workspace && foldersHere && (
         <button
           type="button"
           aria-label={t.chat.attachments.showInFolder(attachment.name)}

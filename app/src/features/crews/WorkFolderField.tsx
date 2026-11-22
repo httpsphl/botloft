@@ -1,11 +1,14 @@
 // Where a new crew works (spec 5): a folder the owner picks with Windows'
-// folder picker, or a new one inside Botloft.
+// folder picker, or a new one inside Botloft. With Botloft on a server, a
+// folder of the server's, written as its path there (spec 42.7).
 
 import { Folder, X } from "lucide-react";
 import { useT } from "../../i18n";
 import { useHost } from "../../store/context";
 import { Button } from "../../ui/Button";
+import { TextField } from "../../ui/Field";
 import { attempt } from "../../ui/toast";
+import { useFoldersHere } from "../files/fileActions";
 
 export function WorkFolderField({
   value,
@@ -14,9 +17,11 @@ export function WorkFolderField({
   value: string | null;
   onChange(folder: string | null): void;
 }) {
-  const words = useT().crews.dialog;
-  const failed = useT().crews.view.failed.changeFolder;
+  const t = useT();
+  const words = t.crews.dialog;
+  const failed = t.crews.view.failed.changeFolder;
   const host = useHost();
+  const here = useFoldersHere();
 
   const pick = () =>
     attempt(failed, async () => {
@@ -25,6 +30,18 @@ export function WorkFolderField({
         onChange(folder);
       }
     });
+
+  if (!here) {
+    return (
+      <TextField
+        label={t.server.folder}
+        hint={t.server.folderHint}
+        placeholder={words.folderDefault}
+        value={value ?? ""}
+        onChange={(event) => onChange(event.target.value.trim() === "" ? null : event.target.value)}
+      />
+    );
+  }
 
   return (
     <fieldset className="flex flex-col gap-1">

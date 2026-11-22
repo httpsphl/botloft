@@ -22,6 +22,7 @@ import { isUnread } from "../../store/seen";
 import { Confirm } from "../../ui/Confirm";
 import type { MenuItem } from "../../ui/Menu";
 import { attempt } from "../../ui/toast";
+import { useFoldersHere } from "../files/fileActions";
 import { ClaudeAiImport } from "../maker/ClaudeAiImport";
 import { HistoryImport } from "../maker/HistoryImport";
 import { BotDialog } from "./BotDialog";
@@ -44,6 +45,7 @@ export function useBotActions(
   const words = t.bots.header;
   const api = useApi();
   const host = useHost();
+  const foldersHere = useFoldersHere();
   const putBot = useApp((state) => state.putBot);
   const putCrew = useApp((state) => state.putCrew);
   const unread = useApp((state) => isUnread(state, bot.id));
@@ -88,11 +90,16 @@ export function useBotActions(
       disabled: bot.paused || crew.paused,
       onSelect: () => setOpen("fresh"),
     },
-    {
-      label: words.openFolder,
-      icon: FolderOpen,
-      onSelect: () => attempt(words.failed.openFolder, () => host.openPath(bot.workspace)),
-    },
+    // A server's folders are not this computer's to open (spec 42.7).
+    ...(foldersHere
+      ? [
+          {
+            label: words.openFolder,
+            icon: FolderOpen,
+            onSelect: () => attempt(words.failed.openFolder, () => host.openPath(bot.workspace)),
+          },
+        ]
+      : []),
     unread
       ? { label: words.markRead, icon: MailOpen, onSelect: () => markSeen(bot.id) }
       : { label: words.markUnread, icon: Mail, onSelect: () => markUnread(bot.id) },

@@ -520,6 +520,7 @@ dependencies = [
 name = "botloft-app"
 version = "0.21.0"
 dependencies = [
+ "base64 0.23.1",
  "dirs 7.0.0",
  "serde",
  "serde_json",

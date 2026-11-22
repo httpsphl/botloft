@@ -2,6 +2,7 @@
 // the fake crews, at a made-up path, and a backup that opens only with
 // `FAKE_PASSPHRASE`. Nothing is sealed, written or restored.
 
+import { encodeBytes } from "./base64";
 import type { FakeBotloft, Handlers } from "./fake";
 import { type BackupManifest, type BackupScope, RpcErrorCode } from "./protocol.gen";
 import { RpcError } from "./rpc";
@@ -10,6 +11,8 @@ type BackupMethods = Extract<keyof Handlers, `backup.${string}`>;
 
 /** The passphrase the fake's backups open with. */
 export const FAKE_PASSPHRASE = "correct horse";
+/** What an exported backup holds, as `backup.chunk` reads it. */
+export const FAKE_BACKUP_BYTES = "sealed botloft backup";
 
 function refused(reason: string, message: string): RpcError {
   return new RpcError(RpcErrorCode.validation, message, reason);
@@ -52,5 +55,10 @@ export function backupHandlers(fake: FakeBotloft): Pick<Handlers, BackupMethods>
     },
     "backup.confirm": () => null,
     "backup.cancel": () => null,
+    // The sealed file, in pieces, for an app on another computer (spec 42.7).
+    "backup.chunk": ({ offset }) => {
+      const bytes = new TextEncoder().encode(FAKE_BACKUP_BYTES);
+      return { data: encodeBytes(bytes.subarray(offset)), size: bytes.length };
+    },
   };
 }

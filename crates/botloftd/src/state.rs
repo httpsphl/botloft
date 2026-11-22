@@ -199,6 +199,8 @@ pub struct Daemon {
     /// The usage the other agents last reported, one per agent.
     agent_usage: Mutex<Vec<AgentUsage>>,
     started: Instant,
+    /// Rung by `system.restart` (spec 42.7).
+    restart: tokio::sync::Notify,
 }
 
 impl Daemon {
@@ -262,6 +264,7 @@ impl Daemon {
             usage: Mutex::new(None),
             agent_usage: Mutex::new(Vec::new()),
             started: Instant::now(),
+            restart: tokio::sync::Notify::new(),
         })
     }
 
@@ -285,6 +288,18 @@ impl Daemon {
             port: self.port,
             approval_timeout: self.settings.approval_wait(),
         }
+    }
+
+    /// Asks the daemon to stop with an error, so the service that runs it
+    /// (systemd, Docker, the scheduled task) starts it again: a backup
+    /// restored from another computer takes over then (spec 42.7).
+    pub fn request_restart(&self) {
+        self.restart.notify_one();
+    }
+
+    /// Resolves once a restart was asked for.
+    pub async fn restart_requested(&self) {
+        self.restart.notified().await;
     }
 
     pub fn is_owner_token(&self, token: &str) -> bool {

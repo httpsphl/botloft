@@ -13,6 +13,19 @@ const LAUNCHER: &str = "open";
 #[cfg(all(unix, not(target_os = "macos")))]
 const LAUNCHER: &str = "xdg-open";
 
+/// Extensions `open_file` will open with the program the system picks. Anything
+/// else could be a program or a script that runs when opened.
+const OPENABLE: [&str; 24] = [
+    "pdf", "png", "jpg", "jpeg", "gif", "webp", "svg", "txt", "md", "csv", "json", "log", "html",
+    "htm", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "mp3", "wav", "mp4", "rtf",
+];
+
+pub fn is_openable(path: &Path) -> bool {
+    path.extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| OPENABLE.contains(&extension.to_ascii_lowercase().as_str()))
+}
+
 fn spawn(command: &mut Command) -> Result<(), String> {
     command
         .spawn()
@@ -64,5 +77,32 @@ pub fn reveal(path: &Path) -> Result<(), String> {
     {
         let folder = path.parent().unwrap_or(path);
         spawn(Command::new(LAUNCHER).arg(folder))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use super::is_openable;
+
+    #[test]
+    fn only_documents_and_media_open() {
+        for file in [r"C:\w\Report.PDF", r"C:\w\a b\notes.md", r"C:\w\chart.png"] {
+            assert!(is_openable(Path::new(file)), "{file}");
+        }
+        for file in [
+            r"C:\w\setup.exe",
+            r"C:\w\run.bat",
+            r"C:\w\run.cmd",
+            r"C:\w\run.ps1",
+            r"C:\w\link.lnk",
+            r"C:\w\page.hta",
+            r"C:\w\macro.docm",
+            r"C:\w\noextension",
+            r"C:\w\report.pdf.exe",
+        ] {
+            assert!(!is_openable(Path::new(file)), "{file}");
+        }
     }
 }

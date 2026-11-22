@@ -5,6 +5,7 @@
 
 import {
   ArrowLeft,
+  Download,
   ExternalLink,
   FolderOpen,
   LoaderCircle,
@@ -18,12 +19,13 @@ import { decodeBytes } from "../../lib/base64";
 import { fileSize, fromNow } from "../../lib/format";
 import { type Bot, type BotFile, RpcErrorCode } from "../../lib/protocol.gen";
 import { RpcError } from "../../lib/rpc";
-import { useApi, useHost } from "../../store/context";
+import { useApi } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { attempt } from "../../ui/toast";
 import { Markdown } from "../chat/Markdown";
 import { useKindLabel } from "./FileRow";
 import { FileThumb } from "./FileThumb";
+import { useFileActions } from "./fileActions";
 import { fileKind, previewKind } from "./kinds";
 import { MediaPlayer } from "./MediaPlayer";
 import { type MediaKind, mediaKind } from "./media";
@@ -112,7 +114,8 @@ export function FilePreview({
   onBack(): void;
 }) {
   const t = useT().files;
-  const host = useHost();
+  const files = useFileActions();
+  const reveal = files.reveal;
   const shown = useShown(bot, file);
   const kind = fileKind(file.mediaType, file.name);
   const label = useKindLabel()(file);
@@ -150,17 +153,27 @@ export function FilePreview({
               size="sm"
               variant="primary"
               icon={ExternalLink}
-              onClick={() => attempt(t.failed.open, () => host.openFile(file.path))}
+              onClick={() => attempt(t.failed.open, () => files.open(bot.id, file))}
             >
               {t.open}
             </Button>
-            <Button
-              size="sm"
-              icon={FolderOpen}
-              onClick={() => attempt(t.failed.reveal, () => host.revealFile(file.path))}
-            >
-              {t.reveal}
-            </Button>
+            {reveal ? (
+              <Button
+                size="sm"
+                icon={FolderOpen}
+                onClick={() => attempt(t.failed.reveal, () => reveal(file.path))}
+              >
+                {t.reveal}
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                icon={Download}
+                onClick={() => attempt(t.failed.save, () => files.save(bot.id, file))}
+              >
+                {t.save}
+              </Button>
+            )}
           </div>
         </div>
       </div>

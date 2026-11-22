@@ -1,5 +1,6 @@
 // A `Host` for tests: a daemon that is running unless told otherwise.
 
+import { FakeTransfers } from "./fakeTransfers";
 import type { AppUpdate, DaemonStatus, Host, TrayActions, TrayView } from "./host";
 import { PROTOCOL_VERSION } from "./protocol.gen";
 
@@ -210,6 +211,8 @@ export class FakeHost implements Host {
     this.opened.push(url);
     return Promise.resolve();
   }
+
+  readonly transfers = new FakeTransfers();
 
   window = {
     minimize: () => Promise.resolve(),

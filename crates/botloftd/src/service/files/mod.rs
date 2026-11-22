@@ -2,6 +2,7 @@
 //! previews. They are in the crew's work folder or the bot's own folder, or
 //! wherever the bot's `Write`/`Edit` calls put them.
 
+mod chunk;
 mod foreign;
 mod media;
 mod scan;
@@ -15,6 +16,8 @@ use botloft_core::ids::BotId;
 use botloft_core::protocol::{BotFile, FileData, FilesListParams, FilesReadParams};
 use botloft_store::BotRecord;
 
+pub use self::chunk::chunk;
+pub(crate) use self::chunk::read_piece;
 pub(crate) use self::foreign::{
     listed as foreign_files, readable as foreign_readable, writable as foreign_writable,
 };

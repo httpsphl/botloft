@@ -5,6 +5,11 @@ export const server: Messages["server"] = {
   address: "voce@seu-servidor",
   copy: "Copiar",
   copied: "Copiado",
+  sending: (name) => `Enviando ${name} ao servidor…`,
+  sendFailed: "Não deu para enviar o arquivo",
+  folder: "Pasta no servidor",
+  folderHint:
+    "Uma pasta do servidor, pelo caminho dela lá. Vazio, uma pasta nova dentro do Botloft. Para código, peça à crew para clonar o repositório na pasta dela.",
   useThisComputer: "Usar este computador",
   unreachable: {
     title: (name) => `Não achei ${name}`,

@@ -1,7 +1,8 @@
 //! `backup.*` (spec 14.2).
 
 use botloft_core::protocol::{
-    BackupExportParams, BackupExported, BackupManifest, BackupStageParams,
+    BackupChunkParams, BackupExportParams, BackupExported, BackupManifest, BackupStageParams,
+    FileChunk,
 };
 use tracing::info;
 
@@ -57,4 +58,29 @@ pub fn confirm(daemon: &Daemon) -> ApiResult<()> {
 pub fn cancel(daemon: &Daemon) -> ApiResult<()> {
     restore::cancel(&daemon.paths);
     Ok(())
+}
+
+/// `backup.chunk`: a piece of the backup `backup.export` wrote, for an app on
+/// another computer to save it (spec 42.7). Nothing outside the exports
+/// folder is read.
+pub fn chunk(daemon: &Daemon, params: BackupChunkParams) -> ApiResult<FileChunk> {
+    let not_ours = || {
+        ApiError::NotFound(format!(
+            "{} is not a backup this Botloft wrote",
+            params.path
+        ))
+    };
+    let exports = daemon
+        .paths
+        .home
+        .join(export::EXPORTS)
+        .canonicalize()
+        .map_err(|_| not_ours())?;
+    let path = std::path::Path::new(&params.path)
+        .canonicalize()
+        .map_err(|_| not_ours())?;
+    if !path.starts_with(&exports) || !path.is_file() {
+        return Err(not_ours());
+    }
+    super::files::read_piece(&path, params.offset).map_err(|_| not_ours())
 }

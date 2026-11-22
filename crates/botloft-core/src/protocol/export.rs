@@ -69,6 +69,8 @@ mod search;
 mod session;
 #[path = "export_skills.rs"]
 mod skills;
+#[path = "export_transfer.rs"]
+mod transfer;
 #[path = "export_usage.rs"]
 mod usage;
 #[path = "export_versions.rs"]
@@ -223,6 +225,7 @@ fn export_bindings() {
     out.decl::<FilesReadParams>();
     out.decl::<FileData>();
     out.decl::<MediaLink>();
+    transfer::decls(&mut out);
     out.decl::<Message>();
     out.decl::<MessageReply>();
     out.decl::<Delivery>();
@@ -312,6 +315,7 @@ fn export_bindings() {
         "undefined",
         &out.name::<SystemStatus>(),
     );
+    out.method(method::SYSTEM_RESTART, "undefined", "null");
     out.method(method::SETTINGS_GET, "undefined", &out.name::<Settings>());
     out.method(
         method::SETTINGS_UPDATE,
@@ -478,6 +482,7 @@ fn export_bindings() {
         &out.name::<Vec<Task>>(),
     );
     session::methods(&mut out);
+    transfer::methods(&mut out);
     conversations::methods(&mut out);
     usage::methods(&mut out);
     versions::methods(&mut out);

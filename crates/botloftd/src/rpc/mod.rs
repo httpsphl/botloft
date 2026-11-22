@@ -148,6 +148,9 @@ const ASIDE: &[&str] = &[
     method::FILES_LIST,
     method::FILES_READ,
     method::FILES_MEDIA,
+    // Pieces of a file for an app on another computer (spec 42.7).
+    method::FILES_CHUNK,
+    method::BACKUP_CHUNK,
     method::SCREENS_LIST,
     method::ATTACHMENTS_READ,
     method::USAGE_TOKENS,

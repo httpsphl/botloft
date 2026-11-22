@@ -29,6 +29,13 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
             daemon.supervisor.refresh_claude();
             reply(service::status(daemon))
         }
+        // The connection closes once the daemon stops; the app connects
+        // again when the service has started it (spec 42.7).
+        method::SYSTEM_RESTART => {
+            tracing::info!("restarting, as an app asked");
+            daemon.request_restart();
+            Ok(Value::Null)
+        }
         method::CREWS_LIST => reply(crews::list(daemon)),
         method::CREWS_CREATE => reply(crews::create(daemon, parse(params)?)),
         method::CREWS_RENAME => reply(crews::rename(daemon, parse(params)?)),
@@ -165,6 +172,12 @@ pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Va
         method::FILES_LIST => reply(files::list(daemon, parse(params)?)),
         method::FILES_READ => reply(files::read(daemon, parse(params)?)),
         method::FILES_MEDIA => reply(files::media(daemon, parse(params)?)),
+        method::FILES_CHUNK => reply(files::chunk(daemon, parse(params)?)),
+        method::BACKUP_CHUNK => reply(backup::chunk(daemon, parse(params)?)),
+        method::UPLOADS_START => reply(service::uploads::start(daemon, parse(params)?)),
+        method::UPLOADS_CHUNK => reply(service::uploads::chunk(daemon, parse(params)?)),
+        method::UPLOADS_FINISH => reply(service::uploads::finish(daemon, parse(params)?)),
+        method::UPLOADS_CANCEL => reply(service::uploads::cancel(daemon, parse(params)?)),
         method::DELIVERIES_LIST => reply(deliveries::list(daemon, parse(params)?)),
         method::DELIVERIES_RETRY => reply(deliveries::retry(daemon, parse(params)?)),
         method::ROUTINES_LIST => reply(routines::list(daemon, parse(params)?)),

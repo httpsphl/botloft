@@ -1,7 +1,8 @@
 // Bringing the owner's claude.ai export to the Maker (spec 36.6, 36.7):
 // three steps to get the ZIP from claude.ai (Botloft never signs in there
 // nor reads the e-mail), choosing the file, which the daemon reads where
-// it is, a period, then the same summary to read before it goes.
+// it is (sent to it first when it runs on a server, 42.7), a period, then
+// the same summary to read before it goes.
 
 import { ExternalLink, FileArchive } from "lucide-react";
 import { useState } from "react";
@@ -12,6 +13,7 @@ import { Button } from "../../ui/Button";
 import { Choices } from "../../ui/Choices";
 import { Dialog } from "../../ui/Dialog";
 import { attempt } from "../../ui/toast";
+import { usePickForDaemon } from "../files/pickForDaemon";
 import { ImportWorking } from "./ImportWorking";
 import { DraftReview, period, useImportDraft } from "./importParts";
 
@@ -28,6 +30,7 @@ export function ClaudeAiImport({ onClose }: { onClose(): void }) {
   const a = t.claudeAi;
   const api = useApi();
   const host = useHost();
+  const { pick: pickFile } = usePickForDaemon();
   const [path, setPath] = useState<string | null>(null);
   const [found, setFound] = useState<ImportConversations | null>(null);
   const [span, setSpan] = useState<Period>("all");
@@ -36,12 +39,13 @@ export function ClaudeAiImport({ onClose }: { onClose(): void }) {
   const { draft, busy, setBusy, make, forget, footer } = useImportDraft(onClose);
 
   const pick = async () => {
-    const picked = await host.pickFile(a.pickTitle, a.kind, ["zip"]);
-    if (!picked) return;
     setBusy(true);
-    setReading(true);
     setFound(null);
     await attempt(a.scanFailed, async () => {
+      // With Botloft on a server, the ZIP goes there first (spec 42.7).
+      const picked = await pickFile(a.pickTitle, a.kind, ["zip"]);
+      if (!picked) return;
+      setReading(true);
       const scan = await api.call("imports.scan", { source: "claude_ai", path: picked });
       setPath(picked);
       setFound(scan.conversations);

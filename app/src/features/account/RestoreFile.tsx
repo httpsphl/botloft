@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useT } from "../../i18n";
 import { when } from "../../lib/format";
 import type { BackupManifest } from "../../lib/protocol.gen";
+import { useServer } from "../../shell/server";
 import { useApi, useHost } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
@@ -18,6 +19,7 @@ export function RestoreFile({ file, onCancel }: { file: string; onCancel(): void
   const b = useT().account.backup;
   const api = useApi();
   const host = useHost();
+  const remote = useServer() !== null;
   const [passphrase, setPassphrase] = useState("");
   const [manifest, setManifest] = useState<BackupManifest | null>(null);
   const [busy, setBusy] = useState(false);
@@ -39,7 +41,8 @@ export function RestoreFile({ file, onCancel }: { file: string; onCancel(): void
     setFailed(null);
     try {
       await api.call("backup.confirm");
-      await host.restartDaemon();
+      // On a server, Botloft restarts itself under its service (spec 42.7).
+      await (remote ? api.call("system.restart") : host.restartDaemon());
     } catch (failure) {
       setFailed({ title: b.restoreFailed, text: backupError(failure, b.reasons) });
       setBusy(false);

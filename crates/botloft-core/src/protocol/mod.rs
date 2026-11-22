@@ -91,6 +91,7 @@ mod search;
 mod session;
 mod settings;
 mod skills;
+mod transfer;
 mod usage;
 mod versions;
 
@@ -134,6 +135,7 @@ pub use search::*;
 pub use session::*;
 pub use settings::*;
 pub use skills::*;
+pub use transfer::*;
 pub use usage::*;
 pub use versions::*;
 
@@ -150,6 +152,8 @@ pub mod method {
     pub const SESSION_PING: &str = "session.ping";
     pub const SYSTEM_STATUS: &str = "system.status";
     pub const SYSTEM_REFRESH: &str = "system.refresh";
+    /// Stops the daemon for its service to start it again (spec 42.7).
+    pub const SYSTEM_RESTART: &str = "system.restart";
     pub const CREWS_LIST: &str = "crews.list";
     pub const CREWS_CREATE: &str = "crews.create";
     pub const CREWS_RENAME: &str = "crews.rename";
@@ -226,6 +230,11 @@ pub mod method {
     pub const BACKUP_STAGE: &str = "backup.stage";
     pub const BACKUP_CONFIRM: &str = "backup.confirm";
     pub const BACKUP_CANCEL: &str = "backup.cancel";
+    pub const BACKUP_CHUNK: &str = "backup.chunk";
+    pub const UPLOADS_START: &str = "uploads.start";
+    pub const UPLOADS_CHUNK: &str = "uploads.chunk";
+    pub const UPLOADS_FINISH: &str = "uploads.finish";
+    pub const UPLOADS_CANCEL: &str = "uploads.cancel";
     pub const CLOUD_STATUS: &str = "cloud.status";
     pub const CLOUD_SIGNIN: &str = "cloud.signin";
     pub const CLOUD_SIGNIN_CANCEL: &str = "cloud.signin_cancel";
@@ -277,6 +286,8 @@ pub mod method {
     pub const FILES_LIST: &str = "files.list";
     pub const FILES_READ: &str = "files.read";
     pub const FILES_MEDIA: &str = "files.media";
+    /// For an app on another computer (spec 42.7).
+    pub const FILES_CHUNK: &str = "files.chunk";
     pub const DELIVERIES_LIST: &str = "deliveries.list";
     pub const DELIVERIES_RETRY: &str = "deliveries.retry";
     pub const TASKS_LIST: &str = "tasks.list";

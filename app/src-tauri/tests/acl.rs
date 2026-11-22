@@ -20,7 +20,8 @@ fn listed() -> Vec<String> {
         .collect()
 }
 
-/// The functions in `lib.rs`'s `generate_handler!`.
+/// The functions in `lib.rs`'s `generate_handler!`, without the module a
+/// command lives in (`transfer::download_save` is `download_save`).
 fn registered() -> Vec<String> {
     let lib = include_str!("../src/lib.rs");
     let list = lib
@@ -28,7 +29,9 @@ fn registered() -> Vec<String> {
         .and_then(|(_, rest)| rest.split_once(']'))
         .map(|(list, _)| list)
         .expect("generate_handler! in lib.rs");
-    names(list).map(str::to_owned).collect()
+    names(list)
+        .map(|name| name.rsplit("::").next().unwrap_or(name).to_owned())
+        .collect()
 }
 
 fn names(list: &str) -> impl Iterator<Item = &str> {

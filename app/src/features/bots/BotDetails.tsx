@@ -11,6 +11,7 @@ import { useHost } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { SidePanel } from "../../ui/SidePanel";
 import { attempt } from "../../ui/toast";
+import { useFoldersHere } from "../files/fileActions";
 import { BotPermissions } from "../permissions/BotPermissions";
 import { BotAvatar } from "./BotAvatar";
 import { BotDialog } from "./BotDialog";
@@ -106,6 +107,7 @@ export function Details({ bot, onClose }: { bot: Bot; onClose(): void }) {
   const t = useT();
   const words = t.bots.details;
   const host = useHost();
+  const foldersHere = useFoldersHere();
   const [editing, setEditing] = useState(false);
   const [history, setHistory] = useState<VersionKind | null>(null);
   const model =
@@ -159,15 +161,17 @@ export function Details({ bot, onClose }: { bot: Bot; onClose(): void }) {
             <span className="min-w-0 flex-1 truncate font-mono text-xs" title={bot.workspace}>
               {bot.workspace}
             </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={FolderOpen}
-              label={t.bots.header.openFolder}
-              onClick={() =>
-                attempt(t.bots.header.failed.openFolder, () => host.openPath(bot.workspace))
-              }
-            />
+            {foldersHere && (
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={FolderOpen}
+                label={t.bots.header.openFolder}
+                onClick={() =>
+                  attempt(t.bots.header.failed.openFolder, () => host.openPath(bot.workspace))
+                }
+              />
+            )}
           </Fact>
           <Fact label={words.process}>
             <span className="truncate text-ink-soft">

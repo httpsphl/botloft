@@ -8,6 +8,11 @@ export const server = {
   address: "you@your-server",
   copy: "Copy",
   copied: "Copied",
+  sending: (name: string) => `Sending ${name} to the server…`,
+  sendFailed: "Couldn't send the file",
+  folder: "Folder on the server",
+  folderHint:
+    "A folder of the server's, as its path there. Leave it empty for a new one inside Botloft. For code, ask the crew to clone the repository into its folder.",
   useThisComputer: "Use this computer instead",
   unreachable: {
     title: (name: string) => `Can't reach ${name}`,

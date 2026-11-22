@@ -283,6 +283,12 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
                 // Not a stop asked for: the service brings the daemon back.
                 anyhow::bail!("{ended}; stopping so Botloft starts again");
             }
+            () = daemon.restart_requested() => {
+                // The answer to `system.restart` goes out first.
+                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                daemon.supervisor.shutdown();
+                anyhow::bail!("restarting as asked; the service starts Botloft again");
+            }
         }
         daemon.supervisor.shutdown();
         // A stop asked for (logout, `service stop`): launchd must not
