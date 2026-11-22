@@ -165,6 +165,13 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 24
+      # With the updater's key, as the app's updates are: `botloftd update`
+      # checks it before replacing anything (spec 42.11).
+      - name: Sign it for botloftd update
+        if: env.TAURI_SIGNING_PRIVATE_KEY != ''
+        run: |
+          npx --yes @tauri-apps/cli@2 signer sign \
+            "target/release/bundle/server/botloftd-linux-${{ matrix.arch }}.tar.gz"
       - name: Stage the release files
         run: node app/scripts/release.mjs stage server-${{ matrix.arch }}
       - name: Attest where the downloads come from

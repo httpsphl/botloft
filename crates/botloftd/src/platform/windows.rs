@@ -192,3 +192,9 @@ pub async fn shutdown_signal() {
 
 #[cfg(test)]
 mod tests;
+
+/// `botloftd update` is for Linux servers; on Windows the app updates the
+/// daemon (spec 42.11).
+pub fn running_as_root() -> bool {
+    false
+}

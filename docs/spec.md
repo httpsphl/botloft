@@ -4113,7 +4113,8 @@ SV2, feito em 2026-11-22: `deploy/server/install.sh`, testado em contêineres De
   3. arruma as pastas: `/var/lib/botloft` (`botloft:botloft-agents`, `0750`), a pasta de dados `home` (`botloft`, `0700`) e `workspaces` (`botloft:botloft-agents`, `2770`: com o setgid, o que um ou outro cria ali fica no grupo dos agentes); e grava `home/config.toml` com `server = true`, `agents_user = "botloft-agents"`, a porta e `workspaces_root`;
   4. instala a unit de sistema `botloft.service` (`User=botloft`, `BOTLOFT_HOME`, `UMask=0007`, `AmbientCapabilities` e `CapabilityBoundingSet` com só `CAP_SETUID`, `CAP_SETGID` e `CAP_KILL`, `NoNewPrivileges=yes`, `Restart=on-failure`, `KillMode=control-group` e `MemoryMax=90%`, para os agentes nunca levarem o resto do servidor), habilita e sobe. Rodado de novo, troca o daemon e o reinicia, e as configurações e os dados ficam;
   5. instala o Claude Code para o `botloft-agents` pelo instalador oficial, quando falta (como esse usuário, com `runuser -l` ou `su -l`);
-  6. mostra os próximos passos: o login do Claude, `sudo -u botloft-agents -i claude auth login`, e o pareamento do app, `sudo botloftd pair` (42.6).
+  6. liga a atualização de hora em hora (`botloft-update.timer`, 42.11), a menos que `BOTLOFT_NO_AUTO_UPDATE=1`;
+  7. mostra os próximos passos: o login do Claude, `sudo -u botloft-agents -i claude auth login`, e o pareamento do app, `sudo botloftd pair` (42.6).
   Sem root, cada comando que precisa passa pelo `sudo`, para o script funcionar também quando chega por um pipe. `BOTLOFT_VERSION` fixa um release, e `BOTLOFT_FROM`, `BOTLOFT_NO_SERVICE` e `BOTLOFT_NO_CLAUDE` servem aos testes e a quem instala sem rede.
 - **Sem systemd** (contêiner, Alpine com OpenRC): o instalador diz como rodar `botloftd serve` e não cria serviço. O Docker tem imagem própria (42.8).
 - **Sem root:** `botloftd service install` (14.1) grava a unit `--user`. No Linux, sem *linger*, a unit morre quando a sessão SSH fecha: o comando liga o *linger* (`loginctl enable-linger`), quando o sistema deixa o próprio usuário fazer isso, ou diz o comando para um administrador rodar.
@@ -4211,16 +4212,26 @@ SV8, feito em 2026-11-22.
 
 ### 42.10 Do PC para o servidor
 
-SV9, a fazer.
+SV9 em partes: a mudança por uma cópia, feita em 2026-11-22; a vez de um computador só, pela nuvem, a fazer.
 
-- As crews vão por uma cópia (14.2, 27) que o app envia.
-- As pastas de trabalho escolhidas no Windows viram pastas do servidor.
-- O celular pareia de novo, porque o selo do relay não pode repetir nonce (28).
-- Um computador ativo por conta: a nuvem dá a vez a um daemon, e o outro para as rotinas.
+- **As crews vão por uma cópia** (14.2): no PC, Configurações > Cópia de segurança salva uma; com o app no servidor (42.6), escolher essa cópia para restaurar a manda ao servidor (42.7), e o daemon de lá reinicia com ela (`system.restart`). O formulário de conectar a um servidor diz esse caminho e lembra de pausar as crews do PC depois, para as rotinas não rodarem nos dois.
+- **Pastas de outro sistema:** ao subir, antes de qualquer agente, o daemon tira a escolha da pasta de trabalho de uma crew cujo caminho não é absoluto neste sistema, como `C:\...` num Linux, e a crew passa a trabalhar na pasta dela (com as regras dos agentes refeitas). Uma pasta que só não existe agora, como um disco desligado, continua escolhida. Os arquivos da pasta escolhida no PC não vêm na cópia; só as pastas das crews e dos agentes (14.2).
+- **O celular pareia de novo:** a cópia não leva `secrets` (14.2): nem o pareamento do celular, cujo selo não pode repetir nonce (28), nem a conta da nuvem nem as chaves dos agentes.
+- **A fazer:** um computador ativo por conta. A nuvem dá a vez a um daemon, e o outro para as rotinas, para as mesmas crews não rodarem em dois lugares.
 
 ### 42.11 Atualizar
 
-SV10, a fazer. `botloftd update` baixa o release novo, confere a assinatura e reinicia pelo serviço. O instalador oferece ligar a atualização automática.
+SV10, feito em 2026-11-22.
+
+- **No release:** o job `server` assina `botloftd-linux-<arq>.tar.gz` com a chave do atualizador do app (15.5), a mesma do `latest.json` (`tauri signer sign`, com `TAURI_SIGNING_PRIVATE_KEY`), e publica o `.sig` ao lado do `.sha256`. Sem a chave, o release sai sem `.sig`, e nenhum `botloftd update` aceita o pacote.
+- **`botloftd update [--check] [--now]`**, num servidor Linux, como root:
+  1. lê a versão do release mais novo no `latest.json` (`releases/latest/download`) e compara número a número com a própria. Igual ou mais velha, diz que está em dia; com `--check`, só diz se há uma nova;
+  2. sem `--now`, pergunta ao daemon dali, como dono (`bots.list`), quantos agentes estão num turno (`busy`). Com algum trabalhando, a versão espera: o comando grava `<home>/update-pending` com a versão e a hora e sai sem trocar nada; a vez seguinte troca se ninguém trabalha ou se a espera passou de um dia. Um daemon que não responde não tem o que interromper;
+  3. baixa o pacote e o `.sig` do release daquela versão e confere a assinatura minisign com a chave pública do atualizador, que vem no próprio `botloftd`. Assinatura errada ou ausente: nada é trocado;
+  4. desempacota com o `tar`, copia o novo para `<binário>.new` (`0755`) e o renomeia por cima do atual (o daemon que roda segue com o arquivo antigo até reiniciar) e roda `systemctl restart botloft.service`.
+- Fora do Linux, o comando recusa (o app atualiza o daemon, 15.5); num contêiner (`BOTLOFT_IN_CONTAINER`), manda puxar a imagem nova (42.8).
+- **O instalador** liga o `botloft-update.timer` (systemd): `botloftd update` 15 minutos depois do boot e a cada hora, com até 10 minutos de atraso sorteado. `BOTLOFT_NO_AUTO_UPDATE=1` não liga, e `sudo systemctl disable --now botloft-update.timer` desliga; `--uninstall` tira os dois arquivos.
+- Um app mais velho que o daemon novo cai na tela de versão diferente (15.1) e se atualiza sozinho; o celular não depende da versão.
 
 ### 42.12 Marcos
 
@@ -4235,4 +4246,4 @@ SV10, a fazer. `botloftd update` baixa o release novo, confere a assinatura e re
 | SV7 | Docker (42.8) | feito |
 | SV8 | Aviso de login (42.9) | feito |
 | SV9 | Do PC para o servidor (42.10) | a fazer |
-| SV10 | Atualizar (42.11) | a fazer |
+| SV10 | Atualizar (42.11) | feito |

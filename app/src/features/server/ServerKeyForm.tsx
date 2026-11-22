@@ -40,6 +40,8 @@ export function ServerKeyForm({ onCancel }: { onCancel?: () => void }) {
           <p className="font-medium text-sm">{f.found(found.name)}</p>
           <p className="text-ink-soft text-sm leading-relaxed">{f.tunnel}</p>
           <TunnelCommand server={found} />
+          {/* Moving from this computer goes by a copy (spec 42.10). */}
+          <p className="text-muted text-xs leading-relaxed">{f.move}</p>
         </div>
       )}
       <div className="flex gap-2">

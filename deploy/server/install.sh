@@ -17,6 +17,7 @@
 #   BOTLOFT_FROM=/path/botloftd  a daemon already on disk instead of a download
 #   BOTLOFT_NO_SERVICE=1         no system service (a container without systemd)
 #   BOTLOFT_NO_CLAUDE=1          do not install Claude Code
+#   BOTLOFT_NO_AUTO_UPDATE=1     no hourly `botloftd update` (spec 42.11)
 set -eu
 
 REPO="httpsphl/botloft"
@@ -31,6 +32,9 @@ ACCOUNT="botloft"
 AGENTS="botloft-agents"
 AGENTS_HOME="/var/lib/botloft-agents"
 UNIT="/etc/systemd/system/botloft.service"
+# `botloftd update` every hour, as root (spec 42.11).
+UPDATE_UNIT="/etc/systemd/system/botloft-update.service"
+UPDATE_TIMER="/etc/systemd/system/botloft-update.timer"
 PORT="45710"
 
 say() { printf '%s\n' "$*"; }
@@ -94,6 +98,10 @@ remove_user() {
 
 uninstall() {
 	purge="$1"
+	if has_systemd && [ -f "$UPDATE_TIMER" ]; then
+		as_root systemctl disable --now botloft-update.timer >/dev/null 2>&1 || true
+		as_root rm -f "$UPDATE_TIMER" "$UPDATE_UNIT"
+	fi
 	if has_systemd && [ -f "$UNIT" ]; then
 		as_root systemctl disable --now botloft.service >/dev/null 2>&1 || true
 		as_root rm -f "$UNIT"
@@ -266,6 +274,38 @@ EOF
 		as_root systemctl enable --now botloft.service
 	fi
 	say "Botloft is running as a service (systemctl status botloft)."
+
+	# 7. Updates: every hour, the newest release's daemon, checked against the
+	# updater's signature, once no agent is working (or after a day).
+	if [ -z "${BOTLOFT_NO_AUTO_UPDATE:-}" ]; then
+		as_root sh -c "cat >'$UPDATE_UNIT'" <<EOF
+[Unit]
+Description=Botloft update
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=BOTLOFT_HOME=$HOME_DIR
+ExecStart=$BIN update
+EOF
+		as_root sh -c "cat >'$UPDATE_TIMER'" <<EOF
+[Unit]
+Description=Looks for a Botloft update every hour
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=1h
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+		as_root systemctl daemon-reload
+		as_root systemctl enable --now botloft-update.timer >/dev/null
+		say "Botloft updates itself when a new version is out (turn it off: sudo systemctl disable --now botloft-update.timer)."
+	fi
 else
 	say "No system service was set up. Botloft needs CAP_SETUID, CAP_SETGID and CAP_KILL"
 	say "to run the agents as $AGENTS; as root, start it with:"

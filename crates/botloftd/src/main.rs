@@ -56,6 +56,16 @@ enum Command {
         #[arg(long, default_value = "App")]
         name: String,
     },
+    /// On a Linux server, put the newest release's daemon in place of this
+    /// one once no agent is working, and restart the service. As root.
+    Update {
+        /// Only say whether there is a newer one.
+        #[arg(long)]
+        check: bool,
+        /// Do not wait for the agents to finish.
+        #[arg(long)]
+        now: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -88,7 +98,9 @@ fn main() -> ExitCode {
 fn dispatch(cli: Cli) -> anyhow::Result<()> {
     let home = match cli.command {
         // Run by hand, also on a server set up by install.sh.
-        Command::Pair { .. } => paths::resolve_home_by_hand(cli.home.as_deref()),
+        Command::Pair { .. } | Command::Update { .. } => {
+            paths::resolve_home_by_hand(cli.home.as_deref())
+        }
         _ => paths::resolve_home(cli.home.as_deref()),
     }
     .context("cannot resolve the data folder")?;
@@ -100,6 +112,9 @@ fn dispatch(cli: Cli) -> anyhow::Result<()> {
         Command::Service(ServiceCommand::Stop) => autostart::stop(&home),
         Command::Service(ServiceCommand::Uninstall) => autostart::uninstall(&home),
         Command::Pair { name } => pair(&home, &name),
+        Command::Update { check, now } => {
+            botloftd::update::update(&home, &botloftd::update::Options { check, now })
+        }
     }
 }
 
@@ -239,6 +254,16 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
         info!(port = config.port, "listening on 127.0.0.1");
         // Each of these runs as long as the daemon does (spec 14).
         let mut loops = Loops::new();
+        // A backup from another computer may name folders that are no path
+        // here (spec 42.10); before any agent starts in one.
+        match botloftd::service::moved::forget_foreign_folders(&daemon) {
+            Ok(0) => {}
+            Ok(moved) => info!(
+                moved,
+                "crews from another computer work in their own folders"
+            ),
+            Err(err) => warn!("could not check the crews' folders: {err}"),
+        }
         loops.spawn("supervisor", supervisor::run(Arc::clone(&daemon)));
         loops.spawn("courier", courier::run(Arc::clone(&daemon)));
         loops.spawn("approvals", approvals::forget_turns(Arc::clone(&daemon)));

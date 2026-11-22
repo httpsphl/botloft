@@ -115,6 +115,13 @@ pub fn recycle(_path: &Path) -> io::Result<()> {
     ))
 }
 
+/// Whether this process runs as root, as `botloftd update` must to replace
+/// the daemon and restart its service (spec 42.11).
+pub fn running_as_root() -> bool {
+    // SAFETY: no arguments, never fails.
+    unsafe { libc::geteuid() == 0 }
+}
+
 /// No sign-in to tell apart: systemd and launchd start the daemon at
 /// sign-in only when the owner wants it, so a new sign-in needs no check.
 pub fn sign_in_id() -> Option<String> {

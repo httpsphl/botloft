@@ -2,29 +2,20 @@
 //! on this computer, as the owner, and prints the connection key the app on
 //! the other computer takes.
 
-use std::time::Duration;
-
-use anyhow::{Context, bail};
+use anyhow::Context;
 use base64::Engine as _;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use botloft_core::protocol::{DevicePaired, PROTOCOL_VERSION, method};
-use futures_util::{SinkExt, StreamExt};
+use botloft_core::protocol::{DevicePaired, method};
 use serde::Serialize;
-use serde_json::{Value, json};
-use tokio::net::TcpStream;
-use tokio_tungstenite::tungstenite::Message;
-use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
+use serde_json::json;
+
+use crate::local::Owner;
 
 /// What a connection key starts with: the format's version is in it.
 pub const KEY_PREFIX: &str = "botloft1.";
 /// The port on the other computer the suggested tunnel listens on. Not the
 /// daemon's own, which an installed Botloft there already uses.
 pub const TUNNEL_PORT: u16 = 45720;
-/// How long the daemon may take to answer.
-const WAIT: Duration = Duration::from_secs(10);
-
-type Socket = WebSocketStream<MaybeTlsStream<TcpStream>>;
-
 /// What a connection key holds, as JSON in base64url after [`KEY_PREFIX`].
 #[derive(Debug, Serialize)]
 struct Key<'a> {
@@ -64,57 +55,18 @@ pub fn instructions(device: &str, port: u16, key: &str) -> String {
 /// Pairs a device called `device` with the daemon on 127.0.0.1:`port`,
 /// signing in with the owner's token.
 pub async fn pair(port: u16, owner_token: &str, device: &str) -> anyhow::Result<DevicePaired> {
-    let url = format!("ws://127.0.0.1:{port}/rpc");
-    let connect = tokio_tungstenite::connect_async(url.as_str());
-    let (mut socket, _) = tokio::time::timeout(WAIT, connect)
-        .await
-        .context("Botloft did not answer")?
-        .with_context(|| format!("Botloft is not running on port {port} here"))?;
-    let hello = json!({
-        "token": owner_token,
-        "client": { "name": "botloftd pair", "version": env!("CARGO_PKG_VERSION") },
-        "protocol": PROTOCOL_VERSION,
-    });
-    call(&mut socket, 1, method::SESSION_HELLO, hello).await?;
-    let paired = call(
-        &mut socket,
-        2,
-        method::DEVICES_PAIR,
-        json!({ "name": device }),
-    )
-    .await?;
-    let _ = socket.close(None).await;
+    let mut owner = Owner::connect(port, owner_token, "botloftd pair").await?;
+    let paired = owner
+        .call(method::DEVICES_PAIR, json!({ "name": device }))
+        .await?;
+    owner.close().await;
     serde_json::from_value(paired).context("Botloft answered something unexpected")
-}
-
-/// Sends a request and waits for its answer, past any notification.
-async fn call(socket: &mut Socket, id: u64, name: &str, params: Value) -> anyhow::Result<Value> {
-    let request = json!({ "jsonrpc": "2.0", "id": id, "method": name, "params": params });
-    socket.send(Message::text(request.to_string())).await?;
-    loop {
-        let frame = tokio::time::timeout(WAIT, socket.next())
-            .await
-            .context("Botloft did not answer")?;
-        let Some(frame) = frame else {
-            bail!("Botloft closed the connection");
-        };
-        let Message::Text(text) = frame? else {
-            continue;
-        };
-        let answer: Value = serde_json::from_str(text.as_str())?;
-        if answer.get("id") != Some(&json!(id)) {
-            continue;
-        }
-        if let Some(error) = answer.get("error") {
-            let message = error["message"].as_str().unwrap_or("the request failed");
-            bail!("Botloft refused: {message}");
-        }
-        return Ok(answer["result"].clone());
-    }
 }
 
 #[cfg(test)]
 mod tests {
+    use serde_json::Value;
+
     use super::*;
 
     #[test]

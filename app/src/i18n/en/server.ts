@@ -35,6 +35,7 @@ export const server = {
     found: (name: string) => `Server: ${name}`,
     tunnel: "This computer reaches it through a tunnel. Open it in a terminal and leave it open:",
     connect: "Connect",
+    move: "To take this computer's crews along: in Settings > Backup, save a copy here; once connected, restore it there. Then pause the crews here, or they run twice.",
   },
   where: {
     title: "Where your agents run",

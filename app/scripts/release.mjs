@@ -74,11 +74,12 @@ function outputs(system, version) {
     ];
   }
   // The daemon alone for a Linux server, with its SHA-256 for the installer
-  // to check, and the installer itself once (spec 42.3).
+  // to check and the updater's signature for `botloftd update`, and the
+  // installer itself once (spec 42.3, 42.11).
   if (system.startsWith("server-")) {
     const arch = system.slice("server-".length);
     const archive = `botloftd-linux-${arch}.tar.gz`;
-    const files = [[archive, join(bundle, "server", archive), null, { sha256: true }]];
+    const files = [[archive, join(bundle, "server", archive), null, { sha256: true, sig: true }]];
     if (arch === "x86_64") {
       files.push(["install.sh", join(root, "deploy", "server", "install.sh"), null]);
     }
@@ -108,6 +109,11 @@ function stage(system) {
     if (extra?.sha256) {
       writeFileSync(join(staged, `${name}.sha256`), `${sha256(join(staged, name))}  ${name}\n`);
       manifest.files.push(`${name}.sha256`);
+    }
+    // Signed when the release has the updater's key (spec 42.11).
+    if (extra?.sig && existsSync(`${from}.sig`)) {
+      copyFileSync(`${from}.sig`, join(staged, `${name}.sig`));
+      manifest.files.push(`${name}.sig`);
     }
     if (key) {
       copyFileSync(`${from}.sig`, join(staged, `${name}.sig`));
