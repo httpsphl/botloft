@@ -56,6 +56,10 @@ fn light_allows(relative: &Path, is_dir: bool, bots: &HashSet<String>) -> bool {
     }
 }
 
+/// Where a full backup is written, in the daemon's home, for the owner to
+/// save elsewhere (also from another computer, `backup.chunk`).
+pub const EXPORTS: &str = "exports";
+
 /// Writes the sealed backup in `<home>\exports` and says what it holds.
 /// The app then lets the owner save it where they want. The light copy for
 /// the cloud (spec 27) goes in a folder of its own, so it never replaces a
@@ -66,7 +70,7 @@ pub fn export(
     scope: BackupScope,
 ) -> Result<BackupExported, SealError> {
     let folder = match scope {
-        BackupScope::Full => "exports",
+        BackupScope::Full => EXPORTS,
         BackupScope::Light => "cloud-upload",
     };
     export_to(daemon, passphrase, scope, &daemon.paths.home.join(folder))

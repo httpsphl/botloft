@@ -1014,6 +1014,66 @@ export type MediaLink = {
 url: string, };
 
 /**
+ * `files.chunk`: a piece of one of the bot's files, as `files.read` reaches
+ * them.
+ */
+export type FilesChunkParams = { botId: BotId, 
+/**
+ * A `BotFile.path`.
+ */
+path: string, offset: number, };
+
+/**
+ * `backup.chunk`: a piece of the backup `backup.export` wrote.
+ */
+export type BackupChunkParams = { 
+/**
+ * `BackupExported.path`.
+ */
+path: string, offset: number, };
+
+/**
+ * Up to `CHUNK_MAX` bytes from the offset asked, and the whole file's size.
+ * Past the end, no bytes.
+ */
+export type FileChunk = { 
+/**
+ * The bytes, base64.
+ */
+data: string, size: number, };
+
+/**
+ * `uploads.start`: a file the owner picked on the app's computer, to send.
+ */
+export type UploadsStartParams = { name: string, 
+/**
+ * Bytes.
+ */
+size: number, };
+
+export type UploadStarted = { uploadId: string, };
+
+/**
+ * `uploads.chunk`: the next piece, right after what came so far.
+ */
+export type UploadsChunkParams = { uploadId: string, offset: number, 
+/**
+ * At most `CHUNK_MAX` bytes, base64.
+ */
+data: string, };
+
+/**
+ * `uploads.finish` and `uploads.cancel`.
+ */
+export type UploadIdParams = { uploadId: string, };
+
+/**
+ * Where the whole file is now, on the daemon's computer, for what takes a
+ * path (`backup.stage`, `imports.scan`). It goes away after an hour.
+ */
+export type UploadFinished = { path: string, };
+
+/**
  * Text sent to a bot, by the owner, another bot or the daemon.
  */
 export type Message = { id: MessageId, crewId: CrewId, fromKind: SenderKind, 
@@ -3702,6 +3762,7 @@ export interface RpcMethods {
   "session.ping": { params: undefined; result: null };
   "system.status": { params: undefined; result: SystemStatus };
   "system.refresh": { params: undefined; result: SystemStatus };
+  "system.restart": { params: undefined; result: null };
   "settings.get": { params: undefined; result: Settings };
   "settings.update": { params: SettingsUpdateParams; result: Settings };
   "instructions.get": { params: undefined; result: OwnerInstructions };
@@ -3747,6 +3808,12 @@ export interface RpcMethods {
   "bots.compact": { params: BotConversationParams; result: Bot };
   "bots.interrupt": { params: BotConversationParams; result: Bot };
   "bots.stopTask": { params: BotsStopTaskParams; result: null };
+  "files.chunk": { params: FilesChunkParams; result: FileChunk };
+  "backup.chunk": { params: BackupChunkParams; result: FileChunk };
+  "uploads.start": { params: UploadsStartParams; result: UploadStarted };
+  "uploads.chunk": { params: UploadsChunkParams; result: null };
+  "uploads.finish": { params: UploadIdParams; result: UploadFinished };
+  "uploads.cancel": { params: UploadIdParams; result: null };
   "conversations.list": { params: ConversationsListParams; result: Array<Conversation> };
   "conversations.create": { params: BotIdParams; result: Conversation };
   "conversations.rename": { params: ConversationsRenameParams; result: Conversation };

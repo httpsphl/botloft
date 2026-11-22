@@ -20,6 +20,7 @@ import type { MenuItem } from "../../ui/Menu";
 import { attempt } from "../../ui/toast";
 import { BotDialog } from "../bots/BotDialog";
 import { BotAgencyDialog } from "../catalog/BotAgencyDialog";
+import { useFoldersHere } from "../files/fileActions";
 import { CrewDialog } from "./CrewDialog";
 import { DeleteCrew } from "./DeleteCrew";
 
@@ -32,8 +33,11 @@ export interface CrewActions {
   agency: MenuItem;
   /** Pause or resume, as the crew is now. */
   pause: MenuItem & { icon: LucideIcon };
-  /** Opens the work folder in the system's file manager. */
-  openFolder(): void;
+  /**
+   * Opens the work folder in the system's file manager; null when the crew
+   * is on a server, whose folders this computer cannot open (spec 42.7).
+   */
+  openFolder: (() => void) | null;
   /** Turns the crew's automatic mode on or off (spec 7.4). */
   setAutoMode(enabled: boolean): void;
   /** Rename, the folder, archive and delete. */
@@ -57,7 +61,10 @@ export function useCrewActions(crew: Crew): CrewActions {
   const [open, setOpen] = useState<Open>(null);
   const close = () => setOpen(null);
 
-  const openFolder = () => attempt(words.failed.openFolder, () => host.openPath(crew.workFolder));
+  const foldersHere = useFoldersHere();
+  const openFolder = foldersHere
+    ? () => attempt(words.failed.openFolder, () => host.openPath(crew.workFolder))
+    : null;
   const pickFolder = () =>
     attempt(words.failed.changeFolder, async () => {
       const folder = await host.pickFolder(t.crews.dialog.pickTitle, crew.workFolder);
@@ -127,8 +134,13 @@ export function useCrewActions(crew: Crew): CrewActions {
       : { label: words.pause, icon: Pause, onSelect: () => setPaused(true) },
     items: [
       { label: t.crews.rename, icon: Pencil, onSelect: () => setOpen("rename") },
-      { label: words.openFolder, icon: FolderOpen, onSelect: openFolder },
-      { label: words.changeFolder, icon: FolderInput, onSelect: pickFolder },
+      // A server's folders are not this computer's to open or pick.
+      ...(openFolder
+        ? [
+            { label: words.openFolder, icon: FolderOpen, onSelect: openFolder },
+            { label: words.changeFolder, icon: FolderInput, onSelect: pickFolder },
+          ]
+        : []),
       { label: words.archive, icon: Archive, danger: true, onSelect: () => setOpen("archive") },
       { label: words.delete, icon: Trash2, danger: true, onSelect: () => setOpen("delete") },
     ],

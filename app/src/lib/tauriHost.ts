@@ -14,6 +14,7 @@ import {
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { LOCALE_ASK_EVENT, LOCALE_EVENT, OPEN_BOT_EVENT } from "../island/event";
 import type { AppUpdate, DaemonStatus, Host } from "./host";
+import { tauriTransfers } from "./tauriTransfers";
 import { hideTray, rebuildTray, showTray } from "./tauriTray";
 
 const DOT = 16;
@@ -154,6 +155,7 @@ export function tauriHost(): Host {
       return typeof picked === "string" ? picked : null;
     },
     openUrl: (url) => invoke<void>("open_url", { url }),
+    transfers: tauriTransfers,
     window: {
       minimize: () => window.minimize(),
       toggleMaximize: () => window.toggleMaximize(),

@@ -7,6 +7,8 @@ import { Download } from "lucide-react";
 import { useState } from "react";
 import { useT } from "../../i18n";
 import { fileSize } from "../../lib/format";
+import { baseName, exportedBackup, saveFrom } from "../../lib/transfer";
+import { useServer } from "../../shell/server";
 import { useApi, useHost } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
@@ -39,6 +41,7 @@ function ExportCopy() {
   const b = useT().account.backup;
   const api = useApi();
   const host = useHost();
+  const remote = useServer() !== null;
   const passphrase = usePassphrase();
   const [busy, setBusy] = useState(false);
   const [outcome, setOutcome] = useState<Outcome>(null);
@@ -48,7 +51,10 @@ function ExportCopy() {
     setOutcome(null);
     try {
       const exported = await api.call("backup.export", { passphrase: passphrase.passphrase });
-      const kept = await host.saveFileAs(exported.path);
+      // From a server, the backup comes in pieces (spec 42.7).
+      const kept = remote
+        ? await saveFrom(host, baseName(exported.path), exportedBackup(api, exported.path))
+        : await host.saveFileAs(exported.path);
       setOutcome(kept ? { saved: fileSize(exported.size) } : { notSaved: true });
       if (kept) {
         passphrase.clear();

@@ -37,6 +37,12 @@
     "allow-launched-at-sign-in",
     "allow-quiet-now",
     "allow-main-in-front",
-    "allow-set-summon"
+    "allow-set-summon",
+    "allow-download-save",
+    "allow-download-temp",
+    "allow-download-write",
+    "allow-download-end",
+    "allow-upload-pick",
+    "allow-upload-read"
   ]
 }

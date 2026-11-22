@@ -47,16 +47,18 @@ export function CrewView({ crew }: { crew: Crew }) {
               {crew.paused && ` · ${words.pausedNote}`}
             </span>
             {/* Only the icon: the path is in its tooltip, and a click opens it. */}
-            <button
-              type="button"
-              onClick={actions.openFolder}
-              title={`${words.folder(crew.workFolder)}
+            {actions.openFolder && (
+              <button
+                type="button"
+                onClick={actions.openFolder}
+                title={`${words.folder(crew.workFolder)}
 ${words.openFolderHint}`}
-              aria-label={`${words.openFolder}: ${crew.workFolder}`}
-              className="grid size-6 shrink-0 place-items-center rounded-lg hover:bg-sunken hover:text-ink"
-            >
-              <Folder aria-hidden size={14} />
-            </button>
+                aria-label={`${words.openFolder}: ${crew.workFolder}`}
+                className="grid size-6 shrink-0 place-items-center rounded-lg hover:bg-sunken hover:text-ink"
+              >
+                <Folder aria-hidden size={14} />
+              </button>
+            )}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

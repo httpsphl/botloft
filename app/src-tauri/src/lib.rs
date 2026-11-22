@@ -10,6 +10,7 @@ mod sign_in;
 mod summon;
 #[cfg(unix)]
 mod terminal;
+mod transfer;
 mod window;
 
 use std::path::Path;
@@ -78,19 +79,6 @@ async fn open_path(path: String) -> Result<(), String> {
     .await
 }
 
-/// Extensions `open_file` will open with the program the system picks. Anything
-/// else could be a program or a script that runs when opened.
-const OPENABLE: [&str; 24] = [
-    "pdf", "png", "jpg", "jpeg", "gif", "webp", "svg", "txt", "md", "csv", "json", "log", "html",
-    "htm", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "mp3", "wav", "mp4", "rtf",
-];
-
-fn is_openable(path: &Path) -> bool {
-    path.extension()
-        .and_then(|extension| extension.to_str())
-        .is_some_and(|extension| OPENABLE.contains(&extension.to_ascii_lowercase().as_str()))
-}
-
 /// Opens a file a bot made with the program the system uses for it. Only
 /// documents, images, sound and video: never something that runs.
 #[tauri::command]
@@ -100,7 +88,7 @@ async fn open_file(path: String) -> Result<(), String> {
         if !file.is_absolute() || !file.is_file() {
             return Err(format!("{path} is not a file"));
         }
-        if !is_openable(file) {
+        if !open::is_openable(file) {
             return Err("this kind of file is not opened from Botloft".into());
         }
         open::file(file)
@@ -211,6 +199,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         // Windows notifications when a bot needs the owner (spec 15.1).
         .plugin(tauri_plugin_notification::init())
+        // Files in pieces from Botloft on another computer (spec 42.7).
+        .manage(transfer::Transfers::default())
         .setup(|app| {
             if !sign_in::launched_at_sign_in() {
                 window::bring_forward(app.handle());
@@ -250,7 +240,13 @@ pub fn run() {
             launched_at_sign_in,
             quiet_now,
             main_in_front,
-            set_summon
+            set_summon,
+            transfer::download_save,
+            transfer::download_temp,
+            transfer::download_write,
+            transfer::download_end,
+            transfer::upload_pick,
+            transfer::upload_read
         ])
         .run(tauri::generate_context!())
         .expect("error while running the Botloft app");
@@ -258,29 +254,7 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
-
-    use super::{is_openable, is_web_link};
-
-    #[test]
-    fn only_documents_and_media_open() {
-        for file in [r"C:\w\Report.PDF", r"C:\w\a b\notes.md", r"C:\w\chart.png"] {
-            assert!(is_openable(Path::new(file)), "{file}");
-        }
-        for file in [
-            r"C:\w\setup.exe",
-            r"C:\w\run.bat",
-            r"C:\w\run.cmd",
-            r"C:\w\run.ps1",
-            r"C:\w\link.lnk",
-            r"C:\w\page.hta",
-            r"C:\w\macro.docm",
-            r"C:\w\noextension",
-            r"C:\w\report.pdf.exe",
-        ] {
-            assert!(!is_openable(Path::new(file)), "{file}");
-        }
-    }
+    use super::is_web_link;
 
     #[test]
     fn only_plain_web_links_open() {

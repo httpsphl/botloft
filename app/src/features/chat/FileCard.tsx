@@ -9,9 +9,9 @@ import { useContext, useState } from "react";
 import { useT } from "../../i18n";
 import { fileSize } from "../../lib/format";
 import type { BotFile } from "../../lib/protocol.gen";
-import { useHost } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { attempt } from "../../ui/toast";
+import { useFileActions } from "../files/fileActions";
 import { ImageViewer } from "../files/ImageViewer";
 import { fileKind, kindIcon } from "../files/kinds";
 import { MediaPlayer } from "../files/MediaPlayer";
@@ -50,7 +50,7 @@ function Picture({ botId, file }: { botId: string; file: BotFile }) {
 
 export function FileCard({ botId, file }: { botId: string; file: BotFile }) {
   const t = useT().files;
-  const host = useHost();
+  const files = useFileActions();
   const showFile = useContext(ShowFile);
   const kind = fileKind(file.mediaType, file.name);
   const plays = mediaKind(file);
@@ -93,7 +93,7 @@ export function FileCard({ botId, file }: { botId: string; file: BotFile }) {
           size="sm"
           icon={ExternalLink}
           label={t.open}
-          onClick={() => attempt(t.failed.open, () => host.openFile(file.path))}
+          onClick={() => attempt(t.failed.open, () => files.open(botId, file))}
         />
         {/* A narrow card keeps the name and drops the words on the button. */}
         <Button
@@ -101,7 +101,7 @@ export function FileCard({ botId, file }: { botId: string; file: BotFile }) {
           icon={Download}
           aria-label={t.save}
           title={t.saveOne(file.name)}
-          onClick={() => attempt(t.failed.save, () => host.saveFileAs(file.path))}
+          onClick={() => attempt(t.failed.save, () => files.save(botId, file))}
         >
           <span className="hidden @[22rem]:inline">{t.save}</span>
         </Button>

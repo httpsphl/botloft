@@ -5,10 +5,10 @@ import { ArrowLeft, ExternalLink, FolderOpen, Monitor, Smartphone, Tablet } from
 import { useRef } from "react";
 import { useT } from "../../i18n";
 import type { Bot, Screen, ScreenDevice } from "../../lib/protocol.gen";
-import { useHost } from "../../store/context";
 import { Button } from "../../ui/Button";
 import { attempt } from "../../ui/toast";
 import { BotAvatar } from "../bots/BotAvatar";
+import { useFileActions } from "../files/fileActions";
 import { DEVICES, LiveFrame } from "./LiveFrame";
 import { useWidth } from "./prefs";
 
@@ -28,7 +28,8 @@ export function ScreenFocus({
   onBack(): void;
 }) {
   const t = useT().screens;
-  const host = useHost();
+  const files = useFileActions();
+  const reveal = files.reveal;
   const stage = useRef<HTMLDivElement>(null);
   const width = useWidth(stage);
   const scale = Math.min(1, (width - 32) / DEVICES[device].width);
@@ -74,15 +75,17 @@ export function ScreenFocus({
           size="sm"
           icon={ExternalLink}
           label={t.openFile}
-          onClick={() => attempt(t.failed.open, () => host.openFile(screen.path))}
+          onClick={() => attempt(t.failed.open, () => files.open(bot.id, screen))}
         />
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={FolderOpen}
-          label={t.reveal}
-          onClick={() => attempt(t.failed.reveal, () => host.revealFile(screen.path))}
-        />
+        {reveal && (
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={FolderOpen}
+            label={t.reveal}
+            onClick={() => attempt(t.failed.reveal, () => reveal(screen.path))}
+          />
+        )}
       </div>
       <div ref={stage} className="design-board min-h-0 flex-1 overflow-auto p-4">
         <div className="mx-auto w-fit overflow-hidden rounded-lg shadow-lift ring-1 ring-line">
