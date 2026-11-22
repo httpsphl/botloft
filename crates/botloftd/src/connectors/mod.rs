@@ -88,8 +88,8 @@ pub fn list(daemon: &Daemon, params: ConnectorsListParams) -> ApiResult<Connecto
             .to_ascii_uppercase()
             .starts_with("BOTLOFT_")
     });
-    let connectors =
-        discover::discover(&program, &env, &dir(daemon)).map_err(ApiError::Workspace)?;
+    let connectors = discover::discover(&program, &env, &daemon.paths.agents_scratch("connectors"))
+        .map_err(ApiError::Workspace)?;
     info!(found = connectors.len(), "claude.ai connectors looked for");
     let list = ConnectorList {
         connectors,
@@ -189,7 +189,7 @@ pub(crate) fn launch(daemon: &Daemon, bot: &BotId, workspace: &Path) -> io::Resu
         .filter(|connector| !chosen.contains(&connector.name))
         .map(|connector| names::connector_server(&connector.name))
         .collect();
-    let claude_json = std::env::home_dir().map(|home| home.join(".claude.json"));
+    let claude_json = crate::platform::agents_home().map(|home| home.join(".claude.json"));
     blocked.extend(
         names::planted(workspace, claude_json.as_deref())
             .iter()

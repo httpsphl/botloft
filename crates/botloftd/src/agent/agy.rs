@@ -314,7 +314,10 @@ fn window_of(model: &str) -> u64 {
 
 /// The models `agy models` lists: an id and a name for people, tab apart.
 pub fn models(program: &Path) -> io::Result<Vec<botloft_core::protocol::AgentModel>> {
-    let output = std::process::Command::new(program).arg("models").output()?;
+    let mut command = std::process::Command::new(program);
+    command.arg("models");
+    crate::platform::as_agent(&mut command);
+    let output = command.output()?;
     if !output.status.success() {
         return Err(io::Error::other("agy models failed"));
     }

@@ -106,6 +106,15 @@ fn serve(home: PathBuf, config_path: Option<PathBuf>, scheduled: bool) -> anyhow
 
 fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> anyhow::Result<()> {
     let _lock = InstanceLock::acquire(&paths.lock_file())?;
+    // Before anything runs Claude Code: with a user of their own, the
+    // agents never see the data folder (spec 42.5). Asked for and not
+    // possible, nothing starts rather than run them without it.
+    let apart = config.agents_user.trim();
+    if !apart.is_empty() {
+        platform::use_agent_user(apart)
+            .map_err(|err| anyhow::anyhow!("the agents cannot run as {apart}: {err}"))?;
+        info!(user = apart, "the agents run as their own user");
+    }
     // Before any bot starts: ends what a crashed run left behind (14.1).
     platform::track_groups(&paths.home.join("run"));
     if scheduled && !autostart::scheduled_start(&paths.home, config.start_with_windows) {

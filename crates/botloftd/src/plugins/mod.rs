@@ -44,7 +44,7 @@ impl Plugins {
 
     fn root(&self) -> Option<PathBuf> {
         let set = self.root.lock().unwrap_or_else(|p| p.into_inner()).clone();
-        set.or_else(|| std::env::home_dir().map(|home| home.join(".claude")))
+        set.or_else(|| crate::platform::agents_home().map(|home| home.join(".claude")))
     }
 
     fn copies(&self) -> MutexGuard<'_, ()> {

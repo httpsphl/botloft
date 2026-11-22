@@ -211,10 +211,10 @@ pub(crate) fn copy_rules_to_agents_md(workspace: &Path) -> io::Result<()> {
 
 /// The first line `program --version` prints; `None` if it cannot run.
 pub fn program_version(program: &Path) -> Option<String> {
-    let output = std::process::Command::new(program)
-        .arg("--version")
-        .output()
-        .ok()?;
+    let mut command = std::process::Command::new(program);
+    command.arg("--version");
+    crate::platform::as_agent(&mut command);
+    let output = command.output().ok()?;
     if !output.status.success() {
         return None;
     }

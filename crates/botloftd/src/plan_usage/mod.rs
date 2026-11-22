@@ -106,7 +106,7 @@ async fn read(daemon: &Daemon) -> Result<Vec<UsageWindow>, Missed> {
         Some(root) => root,
         None => crate::imports::claude_code::root(
             &crate::service::import_sources::environment(),
-            dirs::home_dir(),
+            crate::platform::agents_home(),
         )
         .ok_or(Missed::NoFolder)?,
     };

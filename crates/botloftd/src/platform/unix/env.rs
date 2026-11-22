@@ -51,6 +51,10 @@ fn is_claude_session(name: &str) -> bool {
 }
 
 fn login_shell() -> PathBuf {
+    // The agents' own, when they run as a user of their own (spec 42.5).
+    if let Some(shell) = super::agent_user::agent_shell() {
+        return shell;
+    }
     std::env::var_os("SHELL")
         .filter(|shell| !shell.is_empty())
         .map(PathBuf::from)
@@ -73,6 +77,8 @@ fn login_environment() -> Option<Vars> {
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null());
+    // What the agents' login sets up, as that user (spec 42.5).
+    super::agent_user::as_agent(&mut command);
     ProcessJob::prepare(&mut command);
     let job = ProcessJob::new().ok()?;
     let mut child = command.spawn().ok()?;

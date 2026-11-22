@@ -107,6 +107,8 @@ fn run(path: &Path, args: &[&str], env: &[(OsString, OsString)]) -> io::Result<O
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null());
+    // The agents' login, as the agents' user (spec 42.5).
+    crate::platform::as_agent(&mut command);
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;

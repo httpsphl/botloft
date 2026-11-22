@@ -40,7 +40,7 @@ pub(crate) fn environment() -> Vec<(String, String)> {
 /// Botloft's own (its agents work there) and the temporary ones.
 fn where_to_read(daemon: &Daemon) -> (Option<PathBuf>, Vec<String>) {
     let vars = environment();
-    let root = claude_code::root(&vars, dirs::home_dir());
+    let root = claude_code::root(&vars, crate::platform::agents_home());
     let mut skip = vec![
         daemon.paths.home.to_string_lossy().into_owned(),
         daemon.paths.workspaces_root.to_string_lossy().into_owned(),

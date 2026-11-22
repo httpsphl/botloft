@@ -1,6 +1,7 @@
 //! Windows ACLs, Job Objects, the user environment, power requests and
 //! console signals.
 
+mod agent_user;
 mod console;
 mod credentials;
 mod env;
@@ -14,6 +15,7 @@ mod sign_in;
 mod task;
 mod task_xml;
 
+pub use agent_user::{agents_apart, agents_home, as_agent, use_agent_user};
 pub use console::leave_own_console;
 pub use credentials::{secret_available, secret_delete, secret_load, secret_save};
 pub use env::user_environment;
