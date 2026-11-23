@@ -1,9 +1,11 @@
 // The server the app connects to instead of this computer (spec 42.6): the
 // key `botloftd pair` printed there, kept in this computer's storage. With
 // one, the app never starts Botloft here and reaches the server through a
-// tunnel that ends on this computer's 127.0.0.1.
+// tunnel that ends on this computer's 127.0.0.1: its own, when the key says
+// how to open it, else one the owner opens.
 
 import { useSyncExternalStore } from "react";
+import { tunnelPort } from "./tunnel";
 
 const STORAGE_KEY = "botloft.server";
 /** What a connection key starts with: its format's version is in it. */
@@ -18,24 +20,73 @@ export interface ServerProfile {
   tunnel: number;
   /** This computer's own token there. */
   token: string;
+  /** How the app opens the tunnel by itself, when the server was set up for it. */
+  ssh?: ServerSsh;
+}
+
+/** The app's own SSH tunnel to the server (`botloftd tunnel setup` there). */
+export interface ServerSsh {
+  /** The user sshd lets in, only to reach Botloft. */
+  user: string;
+  /** The server's address, which the owner may change. */
+  host: string;
+  /** sshd's port. */
+  port: number;
+  /** The server's host key: the tunnel opens to that server only. */
+  hostKey: string;
+  /** This computer's private key there. */
+  key: string;
 }
 
 function isPort(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value > 0 && value < 65536;
 }
 
+/** A server's name or IP address, never something `ssh` would take for an option. */
+export function isHost(value: string): boolean {
+  return /^[A-Za-z0-9._:-]{1,253}$/.test(value) && !value.startsWith("-");
+}
+
+function sshFromJson(value: unknown): ServerSsh | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const { user, host, port, hostKey, key } = value as Record<string, unknown>;
+  const texts = [user, host, hostKey, key];
+  if (!texts.every((text) => typeof text === "string" && text !== "") || !isPort(port)) {
+    return null;
+  }
+  const address = (host as string).trim();
+  if (!isHost(address)) {
+    return null;
+  }
+  return {
+    user: user as string,
+    host: address,
+    port,
+    hostKey: hostKey as string,
+    key: key as string,
+  };
+}
+
 function fromJson(value: unknown): ServerProfile | null {
   if (!value || typeof value !== "object") {
     return null;
   }
-  const { name, port, tunnel, token } = value as Record<string, unknown>;
+  const { name, port, tunnel, token, ssh } = value as Record<string, unknown>;
   if (typeof name !== "string" || typeof token !== "string" || token === "") {
     return null;
   }
   if (!isPort(port) || !isPort(tunnel)) {
     return null;
   }
-  return { name: name.trim() || "Botloft", port, tunnel, token };
+  const profile: ServerProfile = { name: name.trim() || "Botloft", port, tunnel, token };
+  if (ssh === undefined) {
+    return profile;
+  }
+  // A key that says how to open the tunnel says it whole, or is no key.
+  const own = sshFromJson(ssh);
+  return own ? { ...profile, ssh: own } : null;
 }
 
 /** The server in a key `botloftd pair` printed, or null when it is not one. */
@@ -63,7 +114,9 @@ export function throughTunnel(url: string): string {
     return url;
   }
   const own = `http://127.0.0.1:${chosen.port}/`;
-  return url.startsWith(own) ? `http://127.0.0.1:${chosen.tunnel}/${url.slice(own.length)}` : url;
+  return url.startsWith(own)
+    ? `http://127.0.0.1:${tunnelPort(chosen)}/${url.slice(own.length)}`
+    : url;
 }
 
 /** The command that opens the tunnel from this computer; `address` stands for the server's. */

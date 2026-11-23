@@ -146,6 +146,38 @@ export interface Host {
   openUrl(url: string): Promise<void>;
   window: AppWindow;
   transfers: HostTransfers;
+  tunnel: HostTunnel;
+}
+
+/** How the app opens its own SSH tunnel to Botloft on a server (spec 42.6). */
+export interface TunnelSpec {
+  /** The server's address. */
+  host: string;
+  /** sshd's port there. */
+  port: number;
+  /** The user sshd lets in, only to reach Botloft. */
+  user: string;
+  /** The server's host key, the only one accepted. */
+  hostKey: string;
+  /** This computer's private key, in OpenSSH's format. */
+  key: string;
+  /** Botloft's port on the server. */
+  remotePort: number;
+  /** The port wanted on this computer; another if it is taken. */
+  localPort: number;
+}
+
+/**
+ * The app's own SSH tunnel to Botloft on a server (spec 42.6): OpenSSH's
+ * `ssh`, which the app starts and stops.
+ */
+export interface HostTunnel {
+  /**
+   * Opens the tunnel, or finds it open, and resolves the port on this
+   * computer. Rejects with `reason: what ssh said` (`tunnelProblem`).
+   */
+  open(spec: TunnelSpec): Promise<number>;
+  close(): Promise<void>;
 }
 
 /** A file the owner picked to send, known to the page only by an id. */

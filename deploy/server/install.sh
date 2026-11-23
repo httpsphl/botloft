@@ -1,8 +1,8 @@
 #!/bin/sh
 # Installs Botloft on a Linux server (spec 42.3): the daemon, a system
 # service that starts at boot, a user for the daemon and another for the
-# agents (42.5), and Claude Code for the agents. Then it says how to sign in
-# to Claude.
+# agents (42.5), Claude Code for the agents, and sshd's way in for the app's
+# own tunnel (42.6). Then it says how to sign in to Claude.
 #
 #   curl -fsSL https://github.com/httpsphl/botloft/releases/latest/download/install.sh | sh
 #
@@ -18,6 +18,7 @@
 #   BOTLOFT_NO_SERVICE=1         no system service (a container without systemd)
 #   BOTLOFT_NO_CLAUDE=1          do not install Claude Code
 #   BOTLOFT_NO_AUTO_UPDATE=1     no hourly `botloftd update` (spec 42.11)
+#   BOTLOFT_NO_TUNNEL=1          the app does not open its own SSH tunnel (42.6)
 set -eu
 
 REPO="httpsphl/botloft"
@@ -106,6 +107,9 @@ uninstall() {
 		as_root systemctl disable --now botloft.service >/dev/null 2>&1 || true
 		as_root rm -f "$UNIT"
 		as_root systemctl daemon-reload
+	fi
+	if [ -x "$BIN" ]; then
+		as_root "$BIN" tunnel remove >/dev/null 2>&1 || true
 	fi
 	as_root rm -f "$BIN"
 	if [ "$purge" = "yes" ]; then
@@ -310,6 +314,12 @@ else
 	say "No system service was set up. Botloft needs CAP_SETUID, CAP_SETGID and CAP_KILL"
 	say "to run the agents as $AGENTS; as root, start it with:"
 	say "  BOTLOFT_HOME=$HOME_DIR $BIN serve"
+fi
+
+# 8. The app's own tunnel (spec 42.6): a user that can only reach Botloft,
+# whom sshd lets in with the key of a paired device. No new port opens.
+if [ -z "${BOTLOFT_NO_TUNNEL:-}" ]; then
+	as_root "$BIN" tunnel setup || say "So the app reaches Botloft through an SSH tunnel of yours (sudo botloftd pair says how)."
 fi
 
 say ""

@@ -93,6 +93,25 @@ impl Store {
         Self::init(Connection::open(path)?)
     }
 
+    /// Opens the database only to read, its schema untouched: for a command
+    /// that runs beside the daemon, such as sshd asking for the devices' keys
+    /// (spec 42.6). A schema newer than this build is refused.
+    pub fn open_read_only(path: &Path) -> Result<Self> {
+        let conn = Connection::open_with_flags(
+            path,
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+        )?;
+        conn.busy_timeout(Duration::from_millis(5000))?;
+        let found: u32 = conn.pragma_query_value(None, "user_version", |row| row.get(0))?;
+        if found > LATEST_VERSION {
+            return Err(StoreError::TooNew {
+                found,
+                supported: LATEST_VERSION,
+            });
+        }
+        Ok(Self { conn })
+    }
+
     /// A private in-memory database, for tests.
     pub fn open_in_memory() -> Result<Self> {
         Self::init(Connection::open_in_memory()?)

@@ -43,6 +43,9 @@
     "allow-download-write",
     "allow-download-end",
     "allow-upload-pick",
-    "allow-upload-read"
+    "allow-upload-read",
+    "allow-tunnel-open",
+    "allow-tunnel-port",
+    "allow-tunnel-close"
   ]
 }

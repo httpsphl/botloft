@@ -132,6 +132,12 @@ jobs:
         run: docker run --rm -v "$PWD:/src:ro" debian:12 sh /src/deploy/server/smoke.sh /src/target/release/botloftd
       - name: The agents run as their own user, without its capabilities
         run: docker run --rm -v "$PWD:/src:ro" debian:12 sh /src/deploy/server/test-agents-user.sh /src/target/release/botloftd
+      # The app's own SSH tunnel, set up by install.sh, on each family (spec 42.6).
+      - name: The app's own tunnel reaches Botloft and nothing else
+        run: |
+          for image in debian:12 ubuntu:24.04 alpine:3.20 fedora:41; do
+            docker run --rm -v "$PWD:/src:ro" "$image" sh /src/deploy/server/test-tunnel.sh /src/target/release/botloftd
+          done
       - name: Pack it
         run: |
           mkdir -p target/release/bundle/server

@@ -20,6 +20,41 @@ export const server: Messages["server"] = {
     title: (name) => `${name} não aceitou este computador`,
     body: "A chave dele pode ter sido removida lá. No servidor, rode sudo botloftd pair e cole a chave nova, ou volte para este computador.",
   },
+  own: {
+    found: (host) =>
+      `Este computador se conecta sozinho a ele, em ${host}. Não precisa abrir nada no terminal.`,
+    address: "Endereço do servidor",
+    addressHint:
+      "Onde este computador encontra o servidor: um IP ou um nome. Troque se você chega a ele de outro jeito.",
+    use: "Usar este endereço",
+    trouble: {
+      unreachable: {
+        title: (name) => `Não deu para chegar a ${name}`,
+        body: (host) =>
+          `O Botloft não conseguiu abrir a conexão com ${host}. Veja se o servidor está ligado e se esse endereço chega até ele. O Botloft continua tentando.`,
+      },
+      refused: {
+        title: (name) => `${name} não aceitou este computador`,
+        body: () =>
+          "O servidor não aceita mais a chave deste computador; ela pode ter sido removida lá. No servidor, rode sudo botloftd pair e cole a chave nova.",
+      },
+      host_key: {
+        title: (name) => `${name} não é o servidor onde esta chave foi feita`,
+        body: (host) =>
+          `O computador em ${host} respondeu como outro, então o Botloft não se conectou. Se o servidor foi instalado de novo, rode sudo botloftd pair nele e cole a chave nova.`,
+      },
+      no_ssh: {
+        title: (name) => `Para chegar a ${name}, este computador precisa do OpenSSH`,
+        body: () =>
+          "O Botloft abre a conexão com o servidor pelo cliente do OpenSSH. No Windows, adicione em Configurações > Sistema > Recursos opcionais > Cliente OpenSSH e tente de novo.",
+      },
+      failed: {
+        title: (name) => `Não deu para conectar a ${name}`,
+        body: () =>
+          "Algo deu errado ao abrir a conexão; os detalhes dizem o quê. Tente de novo ou cole a chave do servidor outra vez.",
+      },
+    },
+  },
   form: {
     title: "Conectar a um servidor",
     intro:

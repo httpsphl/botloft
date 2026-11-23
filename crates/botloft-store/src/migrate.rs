@@ -71,6 +71,7 @@ const MIGRATIONS: &[(u32, &str)] = &[
     (50, include_str!("../migrations/0050_bot_plugins.sql")),
     (51, include_str!("../migrations/0051_turn_cost_parts.sql")),
     (52, include_str!("../migrations/0052_devices.sql")),
+    (53, include_str!("../migrations/0053_device_ssh_key.sql")),
 ];
 
 /// Schema version after every migration has run.

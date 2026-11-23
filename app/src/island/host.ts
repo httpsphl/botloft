@@ -27,6 +27,11 @@ export interface IslandHost {
   /** Where the daemon listens and the owner token; null while it does not run. */
   daemon(): Promise<{ port: number; token: string } | null>;
   /**
+   * The port of the app's own tunnel to a server, which the main window
+   * opens (spec 42.6); null while none runs.
+   */
+  tunnelPort(): Promise<number | null>;
+  /**
    * Gives the window this size, in CSS pixels, at the top middle of the
    * screen, and shows it without taking the focus.
    */
@@ -86,6 +91,7 @@ export function tauriIslandHost(): IslandHost {
     },
     hide: () => window.hide(),
     openApp: (botId) => emitTo("main", OPEN_BOT_EVENT, botId ?? ""),
+    tunnelPort: () => invoke<number | null>("tunnel_port"),
     quiet: () => invoke<boolean>("quiet_now"),
     appInFront: () => invoke<boolean>("main_in_front"),
     onSummon: (listener) => listen(SUMMON_EVENT, () => listener()),

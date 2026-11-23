@@ -84,6 +84,7 @@ fn the_island_may_call_only_its_own_few() {
         "quiet_now",
         "main_in_front",
         "set_summon",
+        "tunnel_port",
     ]
     .map(allow);
     assert_eq!(island, own);

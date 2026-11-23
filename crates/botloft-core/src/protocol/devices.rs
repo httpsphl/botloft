@@ -35,6 +35,11 @@ pub struct DeviceList {
 #[cfg_attr(test, derive(ts_rs::TS))]
 pub struct DevicesPairParams {
     pub name: String,
+    /// The device's public SSH key (`ssh-ed25519 AAAA...`), when its app
+    /// opens its own tunnel to this computer (spec 42.6).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, ts(optional))]
+    pub ssh_key: Option<String>,
 }
 
 /// What `devices.pair` answers. The token is shown this once: the daemon

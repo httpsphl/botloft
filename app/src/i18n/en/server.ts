@@ -23,6 +23,42 @@ export const server = {
     title: (name: string) => `${name} didn't let this computer in`,
     body: "Its key may have been removed there. On the server, run sudo botloftd pair and paste the new key, or go back to this computer.",
   },
+  /** The app's own tunnel to the server (spec 42.6), when the key says how. */
+  own: {
+    found: (host: string) =>
+      `This computer connects to it by itself, at ${host}. Nothing to open in a terminal.`,
+    address: "Server address",
+    addressHint:
+      "Where this computer reaches the server: an IP address or a name. Change it if you reach it another way.",
+    use: "Use this address",
+    trouble: {
+      unreachable: {
+        title: (name: string) => `Can't reach ${name}`,
+        body: (host: string) =>
+          `Botloft couldn't open its connection to ${host}. Check that the server is on and that this address reaches it. Botloft keeps trying.`,
+      },
+      refused: {
+        title: (name: string) => `${name} didn't accept this computer`,
+        body: (_host: string) =>
+          "The server no longer accepts this computer's key; it may have been removed there. On the server, run sudo botloftd pair and paste the new key.",
+      },
+      host_key: {
+        title: (name: string) => `${name} isn't the server this key was made on`,
+        body: (host: string) =>
+          `The computer at ${host} answered as another one, so Botloft didn't connect. If the server was set up again, run sudo botloftd pair there and paste the new key.`,
+      },
+      no_ssh: {
+        title: (name: string) => `To reach ${name}, this computer needs OpenSSH`,
+        body: (_host: string) =>
+          "Botloft opens its connection to the server with OpenSSH's client. On Windows, add it in Settings > System > Optional features > OpenSSH Client, then try again.",
+      },
+      failed: {
+        title: (name: string) => `Couldn't connect to ${name}`,
+        body: (_host: string) =>
+          "Opening the connection went wrong; the details say how. Try again, or paste the server's key again.",
+      },
+    },
+  },
   form: {
     title: "Connect to a server",
     intro:

@@ -20,6 +20,41 @@ export const server: Messages["server"] = {
     title: (name) => `${name} no aceptó esta computadora`,
     body: "Puede que su llave se haya quitado allí. En el servidor, ejecuta sudo botloftd pair y pega la llave nueva, o vuelve a esta computadora.",
   },
+  own: {
+    found: (host) =>
+      `Esta computadora se conecta sola a él, en ${host}. No hace falta abrir nada en una terminal.`,
+    address: "Dirección del servidor",
+    addressHint:
+      "Dónde esta computadora encuentra el servidor: una IP o un nombre. Cámbiala si llegas a él de otra forma.",
+    use: "Usar esta dirección",
+    trouble: {
+      unreachable: {
+        title: (name) => `No se puede llegar a ${name}`,
+        body: (host) =>
+          `Botloft no pudo abrir su conexión con ${host}. Comprueba que el servidor esté encendido y que esta dirección llegue a él. Botloft sigue intentando.`,
+      },
+      refused: {
+        title: (name) => `${name} no aceptó esta computadora`,
+        body: () =>
+          "El servidor ya no acepta la llave de esta computadora; puede que se haya quitado allí. En el servidor, ejecuta sudo botloftd pair y pega la llave nueva.",
+      },
+      host_key: {
+        title: (name) => `${name} no es el servidor donde se hizo esta llave`,
+        body: (host) =>
+          `La computadora en ${host} respondió como otra, así que Botloft no se conectó. Si el servidor se instaló de nuevo, ejecuta sudo botloftd pair allí y pega la llave nueva.`,
+      },
+      no_ssh: {
+        title: (name) => `Para llegar a ${name}, esta computadora necesita OpenSSH`,
+        body: () =>
+          "Botloft abre su conexión con el servidor con el cliente de OpenSSH. En Windows, agrégalo en Configuración > Sistema > Características opcionales > Cliente OpenSSH y vuelve a intentar.",
+      },
+      failed: {
+        title: (name) => `No se pudo conectar a ${name}`,
+        body: () =>
+          "Algo salió mal al abrir la conexión; los detalles dicen qué. Vuelve a intentar, o pega otra vez la llave del servidor.",
+      },
+    },
+  },
   form: {
     title: "Conectar a un servidor",
     intro:
