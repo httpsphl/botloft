@@ -17,12 +17,20 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<Device> {
 }
 
 impl Store {
-    /// A new device, known from now on by the hash of its token.
-    pub fn insert_device(&self, name: &str, token_hash: &str, now: i64) -> Result<Device> {
+    /// A new device, known from now on by the hash of its token, with the
+    /// public SSH key its app opens its own tunnel with, if any (spec 42.6).
+    pub fn insert_device(
+        &self,
+        name: &str,
+        token_hash: &str,
+        ssh_key: Option<&str>,
+        now: i64,
+    ) -> Result<Device> {
         let id = DeviceId::generate();
         self.conn.execute(
-            "INSERT INTO devices (id, name, token_hash, paired_at) VALUES (?1, ?2, ?3, ?4)",
-            params![id.as_str(), name, token_hash, now],
+            "INSERT INTO devices (id, name, token_hash, ssh_key, paired_at) \
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![id.as_str(), name, token_hash, ssh_key, now],
         )?;
         Ok(Device {
             id,
@@ -57,6 +65,18 @@ impl Store {
             .optional()?)
     }
 
+    /// The public SSH keys of the devices there are, for sshd (spec 42.6): a
+    /// device removed takes its key along.
+    pub fn device_ssh_keys(&self) -> Result<Vec<String>> {
+        let mut statement = self.conn.prepare_cached(
+            "SELECT ssh_key FROM devices WHERE ssh_key IS NOT NULL ORDER BY paired_at, rowid",
+        )?;
+        let keys = statement
+            .query_map([], |row| row.get(0))?
+            .collect::<rusqlite::Result<_>>()?;
+        Ok(keys)
+    }
+
     /// Forgets a device and its token; false when there was none.
     pub fn delete_device(&self, id: &DeviceId) -> Result<bool> {
         let deleted = self
@@ -79,8 +99,12 @@ mod tests {
     #[test]
     fn a_device_is_found_by_its_token_hash_and_seen() {
         let (_dir, store) = store();
-        let laptop = store.insert_device("Laptop", "aa", 10).expect("insert");
-        let phone = store.insert_device("Tablet", "bb", 20).expect("insert");
+        let laptop = store
+            .insert_device("Laptop", "aa", None, 10)
+            .expect("insert");
+        let phone = store
+            .insert_device("Tablet", "bb", None, 20)
+            .expect("insert");
         assert_eq!(
             store.device_seen("aa", 30).expect("seen"),
             Some(laptop.id.clone())
@@ -96,7 +120,9 @@ mod tests {
     #[test]
     fn a_deleted_device_is_gone_with_its_token() {
         let (_dir, store) = store();
-        let laptop = store.insert_device("Laptop", "aa", 10).expect("insert");
+        let laptop = store
+            .insert_device("Laptop", "aa", None, 10)
+            .expect("insert");
         assert!(store.delete_device(&laptop.id).expect("delete"));
         assert!(!store.delete_device(&laptop.id).expect("again"));
         assert_eq!(store.device_seen("aa", 30).expect("seen"), None);
@@ -104,9 +130,34 @@ mod tests {
     }
 
     #[test]
+    fn only_the_keys_of_devices_still_there_are_listed() {
+        let (_dir, store) = store();
+        let laptop = store
+            .insert_device("Laptop", "aa", Some("ssh-ed25519 AAAAone"), 10)
+            .expect("insert");
+        store
+            .insert_device("Tablet", "bb", None, 20)
+            .expect("insert");
+        store
+            .insert_device("Desk", "cc", Some("ssh-ed25519 AAAAtwo"), 30)
+            .expect("insert");
+        assert_eq!(
+            store.device_ssh_keys().expect("keys"),
+            ["ssh-ed25519 AAAAone", "ssh-ed25519 AAAAtwo"]
+        );
+        store.delete_device(&laptop.id).expect("delete");
+        assert_eq!(
+            store.device_ssh_keys().expect("keys"),
+            ["ssh-ed25519 AAAAtwo"]
+        );
+    }
+
+    #[test]
     fn two_devices_never_share_a_token() {
         let (_dir, store) = store();
-        store.insert_device("Laptop", "aa", 10).expect("insert");
-        assert!(store.insert_device("Copy", "aa", 20).is_err());
+        store
+            .insert_device("Laptop", "aa", None, 10)
+            .expect("insert");
+        assert!(store.insert_device("Copy", "aa", None, 20).is_err());
     }
 }

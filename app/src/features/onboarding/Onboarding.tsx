@@ -10,6 +10,7 @@ import { Callout } from "../../ui/Callout";
 import { Details } from "../../ui/Details";
 import { ServerOffer } from "../server/ServerOffer";
 import { TunnelCommand } from "../server/TunnelCommand";
+import { TunnelTrouble } from "../server/TunnelTrouble";
 import type { Link } from "./link";
 
 // Plain words on purpose: the owner never has to know that a daemon, a
@@ -47,6 +48,14 @@ export function Onboarding({ link }: { link: StoreApi<Link> }) {
         </div>
       );
       break;
+    case "opening":
+      body = (
+        <div className="flex flex-col items-start gap-4">
+          <Waiting text={t.server.connecting(current.server.name)} />
+          {thisComputer}
+        </div>
+      );
+      break;
     case "connecting":
       body = current.server ? (
         <div className="flex flex-col items-start gap-4">
@@ -68,7 +77,11 @@ export function Onboarding({ link }: { link: StoreApi<Link> }) {
       );
       break;
     case "unreachable":
-      body = (
+      body = current.problem ? (
+        <TunnelTrouble chosen={current.server} problem={current.problem} onRetry={check}>
+          {thisComputer}
+        </TunnelTrouble>
+      ) : (
         <div className="flex flex-col items-start gap-4">
           <div className="w-full">
             <Callout tone="warn" title={t.server.unreachable.title(current.server.name)}>

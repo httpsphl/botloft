@@ -54,6 +54,7 @@ pub mod supervisor;
 pub mod titles;
 pub mod tools;
 pub mod trash;
+pub mod tunnel;
 pub mod update;
 pub mod versions;
 pub mod workspace;

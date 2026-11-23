@@ -156,6 +156,10 @@ export function tauriHost(): Host {
     },
     openUrl: (url) => invoke<void>("open_url", { url }),
     transfers: tauriTransfers,
+    tunnel: {
+      open: (spec) => invoke<number>("tunnel_open", { spec }),
+      close: () => invoke<void>("tunnel_close"),
+    },
     window: {
       minimize: () => window.minimize(),
       toggleMaximize: () => window.toggleMaximize(),

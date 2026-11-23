@@ -122,6 +122,38 @@ pub fn running_as_root() -> bool {
     unsafe { libc::geteuid() == 0 }
 }
 
+/// Asks process `pid` to read its settings again (`SIGHUP`), as sshd does
+/// (spec 42.6).
+pub fn hang_up(pid: i32) -> io::Result<()> {
+    // SAFETY: plain integers; a wrong pid only makes the call fail.
+    if unsafe { libc::kill(pid, libc::SIGHUP) } == 0 {
+        Ok(())
+    } else {
+        Err(io::Error::last_os_error())
+    }
+}
+
+/// Whether only root can change `path` and every folder above it, as sshd
+/// wants of a program it runs to ask for keys (spec 42.6).
+pub fn only_root_writes(path: &Path) -> io::Result<bool> {
+    use std::os::unix::fs::MetadataExt;
+
+    for part in path.ancestors().filter(|part| !part.as_os_str().is_empty()) {
+        let meta = std::fs::metadata(part)?;
+        if meta.uid() != 0 || meta.mode() & 0o022 != 0 {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+/// The user who owns `path`.
+pub fn owner_of(path: &Path) -> io::Result<Option<String>> {
+    use std::os::unix::fs::MetadataExt;
+
+    Ok(account::user_name(std::fs::metadata(path)?.uid()))
+}
+
 /// No sign-in to tell apart: systemd and launchd start the daemon at
 /// sign-in only when the owner wants it, so a new sign-in needs no check.
 pub fn sign_in_id() -> Option<String> {

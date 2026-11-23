@@ -2485,7 +2485,12 @@ export type DeviceList = { devices: Array<Device>, };
 /**
  * `devices.pair`.
  */
-export type DevicesPairParams = { name: string, };
+export type DevicesPairParams = { name: string, 
+/**
+ * The device's public SSH key (`ssh-ed25519 AAAA...`), when its app
+ * opens its own tunnel to this computer (spec 42.6).
+ */
+sshKey?: string, };
 
 /**
  * What `devices.pair` answers. The token is shown this once: the daemon

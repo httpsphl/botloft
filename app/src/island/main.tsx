@@ -26,10 +26,20 @@ async function tauriProps(): Promise<{ api: BotloftApi; host: IslandHost }> {
     locale: currentLocale(),
   };
   // A server chosen in the app: the island goes through the same tunnel
-  // with the same key (spec 42.6).
+  // with the same key (spec 42.6), once the main window has opened it when
+  // it is the app's own.
   const remote = server.get();
   if (remote) {
-    return { api: connect({ url: rpcUrl(remote.tunnel), token: remote.token, client }), host };
+    let port = remote.tunnel;
+    while (remote.ssh) {
+      const open = await host.tunnelPort().catch(() => null);
+      if (open !== null) {
+        port = open;
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, RETRY_MS));
+    }
+    return { api: connect({ url: rpcUrl(port), token: remote.token, client }), host };
   }
   for (;;) {
     const daemon = await host.daemon().catch(() => null);

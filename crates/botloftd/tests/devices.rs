@@ -4,11 +4,23 @@
 
 mod common;
 
+use botloft_core::protocol::DevicesPairParams;
 use common::{Client, TOKEN, TestDaemon};
 use serde_json::{Value, json};
 
 const NOT_AUTHENTICATED: i64 = -32001;
 const VALIDATION: i64 = -32004;
+
+/// A device's public SSH key, in the form `ssh-keygen -t ed25519` writes.
+const SSH_KEY: &str =
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB0fX3dnSrK6yp6CmM8kU4DhkBiQ0jFv1UuSGBNPmSdw";
+
+fn laptop_params() -> DevicesPairParams {
+    DevicesPairParams {
+        name: "Laptop".to_owned(),
+        ssh_key: None,
+    }
+}
 
 /// Pairs a device called `name` as the owner; its id and token.
 async fn pair(owner: &mut Client, name: &str) -> (Value, String) {
@@ -133,7 +145,7 @@ async fn a_device_may_revoke_itself_and_hears_the_answer() {
 #[tokio::test]
 async fn the_command_line_pairs_with_the_owners_token() {
     let t = TestDaemon::start().await;
-    let paired = botloftd::pair::pair(t.addr.port(), TOKEN, "Laptop")
+    let paired = botloftd::pair::pair(t.addr.port(), TOKEN, &laptop_params())
         .await
         .expect("pair");
     assert_eq!(paired.device.name, "Laptop");
@@ -143,8 +155,48 @@ async fn the_command_line_pairs_with_the_owners_token() {
         .await
         .expect("the key's token works");
 
-    let wrong = botloftd::pair::pair(t.addr.port(), "not-the-owner", "Laptop")
+    let wrong = botloftd::pair::pair(t.addr.port(), "not-the-owner", &laptop_params())
         .await
         .expect_err("a wrong token pairs nothing");
     assert!(wrong.to_string().contains("refused"), "{wrong}");
+}
+
+#[tokio::test]
+async fn a_device_brings_its_ssh_key_and_takes_it_along() {
+    let t = TestDaemon::start().await;
+    let mut owner = t.session().await;
+    let paired = owner
+        .call(
+            "devices.pair",
+            json!({ "name": "Laptop", "sshKey": format!("{SSH_KEY} botloft") }),
+        )
+        .await
+        .expect("pair");
+    let keys = || t.daemon.store().device_ssh_keys().expect("keys");
+    assert_eq!(keys(), [SSH_KEY], "kept without its comment");
+
+    owner
+        .call(
+            "devices.revoke",
+            json!({ "deviceId": paired["device"]["id"] }),
+        )
+        .await
+        .expect("revoke");
+    assert!(keys().is_empty(), "sshd no longer lets it in");
+}
+
+#[tokio::test]
+async fn a_key_that_is_not_ed25519_pairs_nothing() {
+    let t = TestDaemon::start().await;
+    let mut owner = t.session().await;
+    let err = owner
+        .call(
+            "devices.pair",
+            json!({ "name": "Laptop", "sshKey": format!("command=\"sh\" {SSH_KEY}") }),
+        )
+        .await
+        .expect_err("refused");
+    assert_eq!(err.code, VALIDATION);
+    let list = owner.call("devices.list", Value::Null).await.expect("list");
+    assert_eq!(list["devices"], json!([]));
 }

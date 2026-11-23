@@ -11,6 +11,7 @@ mod summon;
 #[cfg(unix)]
 mod terminal;
 mod transfer;
+mod tunnel;
 mod window;
 
 use std::path::Path;
@@ -201,6 +202,8 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         // Files in pieces from Botloft on another computer (spec 42.7).
         .manage(transfer::Transfers::default())
+        // The app's own SSH tunnel to Botloft on a server (spec 42.6).
+        .manage(tunnel::Tunnels::default())
         .setup(|app| {
             if !sign_in::launched_at_sign_in() {
                 window::bring_forward(app.handle());
@@ -246,10 +249,19 @@ pub fn run() {
             transfer::download_write,
             transfer::download_end,
             transfer::upload_pick,
-            transfer::upload_read
+            transfer::upload_read,
+            tunnel::tunnel_open,
+            tunnel::tunnel_port,
+            tunnel::tunnel_close
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running the Botloft app");
+        .build(tauri::generate_context!())
+        .expect("error while running the Botloft app")
+        .run(|app, event| {
+            // `ssh` ends with the app, and the tunnel's files go.
+            if let tauri::RunEvent::Exit = event {
+                tunnel::close_at_exit(app);
+            }
+        });
 }
 
 #[cfg(test)]

@@ -1,7 +1,9 @@
 //! `botloftd` command line.
 
+mod cli;
+
 use std::net::Ipv4Addr;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::ExitCode;
 use std::sync::Arc;
 
@@ -20,68 +22,14 @@ use botloftd::settings::LiveSettings;
 use botloftd::state::{BotSettings, Daemon, DaemonOptions};
 use botloftd::supervisor::{self, SupervisorSettings};
 use botloftd::trash::{FolderTrash, RecycleBin, Trash};
-use botloftd::{approvals, autostart, keep_awake, logging, pair, routines, secrets, server};
-use clap::{Parser, Subcommand};
+use botloftd::{
+    approvals, autostart, keep_awake, logging, pair, routines, secrets, server, tunnel,
+};
+use clap::Parser as _;
 use tokio::net::TcpListener;
 use tracing::{error, info, warn};
 
-#[derive(Parser)]
-#[command(name = "botloftd", version, about = "Botloft daemon")]
-struct Cli {
-    /// Data folder. Defaults to BOTLOFT_HOME, then %LOCALAPPDATA%\Botloft.
-    #[arg(long, global = true)]
-    home: Option<PathBuf>,
-    #[command(subcommand)]
-    command: Command,
-}
-
-#[derive(Subcommand)]
-enum Command {
-    /// Run the daemon in the foreground.
-    Serve {
-        /// Config file. Defaults to config.toml in the data folder.
-        #[arg(long)]
-        config: Option<PathBuf>,
-        /// Started by the scheduled task (spec 14).
-        #[arg(long, hide = true)]
-        scheduled: bool,
-    },
-    /// Start the daemon at logon, as a scheduled task of the current user.
-    #[command(subcommand)]
-    Service(ServiceCommand),
-    /// Pair a device, such as the app on another computer, and print the
-    /// key it connects with. Run it where Botloft runs.
-    Pair {
-        /// The device's name, as the list of devices shows it.
-        #[arg(long, default_value = "App")]
-        name: String,
-    },
-    /// On a Linux server, put the newest release's daemon in place of this
-    /// one once no agent is working, and restart the service. As root.
-    Update {
-        /// Only say whether there is a newer one.
-        #[arg(long)]
-        check: bool,
-        /// Do not wait for the agents to finish.
-        #[arg(long)]
-        now: bool,
-    },
-}
-
-#[derive(Subcommand)]
-enum ServiceCommand {
-    /// Copy this binary to the data folder, register the task and start it.
-    Install,
-    /// Show whether the task is installed and the daemon answers.
-    Status,
-    /// Stop the daemon and start it again.
-    Restart,
-    /// Stop the daemon until Botloft is opened again, or until the next
-    /// logon if it starts with Windows.
-    Stop,
-    /// Stop the daemon and remove the task. Bots and data stay.
-    Uninstall,
-}
+use crate::cli::{Cli, Command, ServiceCommand, TunnelCommand};
 
 /// Errors go to stderr on one line (`what failed: why`), which the app
 /// shows as is when it runs `service install`.
@@ -98,7 +46,7 @@ fn main() -> ExitCode {
 fn dispatch(cli: Cli) -> anyhow::Result<()> {
     let home = match cli.command {
         // Run by hand, also on a server set up by install.sh.
-        Command::Pair { .. } | Command::Update { .. } => {
+        Command::Pair { .. } | Command::Update { .. } | Command::Tunnel(_) => {
             paths::resolve_home_by_hand(cli.home.as_deref())
         }
         _ => paths::resolve_home(cli.home.as_deref()),
@@ -111,34 +59,27 @@ fn dispatch(cli: Cli) -> anyhow::Result<()> {
         Command::Service(ServiceCommand::Restart) => autostart::restart(&home),
         Command::Service(ServiceCommand::Stop) => autostart::stop(&home),
         Command::Service(ServiceCommand::Uninstall) => autostart::uninstall(&home),
-        Command::Pair { name } => pair(&home, &name),
+        Command::Pair {
+            name,
+            host,
+            ssh_port,
+        } => pair::run(
+            &home,
+            &pair::Options {
+                name,
+                host,
+                ssh_port,
+            },
+        ),
+        Command::Tunnel(TunnelCommand::Setup) => tunnel::setup(&home),
+        Command::Tunnel(TunnelCommand::Remove) => tunnel::remove(),
+        Command::Tunnel(TunnelCommand::Keys { user }) => {
+            tunnel::keys(&home, user.as_deref()).map(|keys| print!("{keys}"))
+        }
         Command::Update { check, now } => {
             botloftd::update::update(&home, &botloftd::update::Options { check, now })
         }
     }
-}
-
-/// `botloftd pair` (spec 42.6): asks the daemon that runs here, as the
-/// owner, for a new device, and prints its key.
-fn pair(home: &Path, name: &str) -> anyhow::Result<()> {
-    let config = Config::load(&home.join("config.toml"), false)?;
-    let token = secrets::read_owner_token(&home.join("secrets")).with_context(|| {
-        format!(
-            "cannot read Botloft's token in {}; run this as the user Botloft runs as, or with sudo",
-            home.display()
-        )
-    })?;
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()?;
-    let paired = runtime.block_on(pair::pair(config.port, &token, name))?;
-    let computer = platform::computer_name().unwrap_or_else(|| "Botloft".to_owned());
-    let key = pair::key(&computer, config.port, &paired.token);
-    print!(
-        "{}",
-        pair::instructions(&paired.device.name, config.port, &key)
-    );
-    Ok(())
 }
 
 fn serve(home: PathBuf, config_path: Option<PathBuf>, scheduled: bool) -> anyhow::Result<()> {

@@ -17,7 +17,17 @@ pub(super) struct Account {
 
 pub(super) fn current() -> Option<Account> {
     // SAFETY: no arguments, never fails.
-    let uid = unsafe { libc::getuid() };
+    by_uid(unsafe { libc::getuid() })
+}
+
+/// The login name of `uid`, such as the owner of a folder.
+pub fn user_name(uid: u32) -> Option<String> {
+    by_uid(uid)
+        .map(|account| account.login)
+        .filter(|login| !login.is_empty())
+}
+
+fn by_uid(uid: libc::uid_t) -> Option<Account> {
     let mut buf = vec![0u8; 4096];
     // SAFETY: plain data; `getpwuid_r` fills it in.
     let mut entry: libc::passwd = unsafe { std::mem::zeroed() };

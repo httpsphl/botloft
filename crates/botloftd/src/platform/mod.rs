@@ -22,6 +22,8 @@ pub use unix::{
     secret_delete, secret_load, secret_save, sign_in_id, stop_task, track_groups, use_agent_user,
     user_environment,
 };
+#[cfg(unix)]
+pub use unix::{hang_up, only_root_writes, owner_of};
 #[cfg(windows)]
 pub use windows::{
     KeepAwake, ProcessJob, TASK_KIND, agents_apart, agents_home, as_agent, computer_name,

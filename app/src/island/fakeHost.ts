@@ -17,6 +17,10 @@ export class FakeIslandHost implements IslandHost {
     return Promise.resolve({ port: 0, token: "" });
   }
 
+  tunnelPort(): Promise<number | null> {
+    return Promise.resolve(null);
+  }
+
   show(width: number, height: number, screen: IslandScreen): Promise<void> {
     this.calls.push(`show ${width}x${height} ${screen}`);
     return Promise.resolve();

@@ -8,6 +8,7 @@ use tracing::info;
 use super::{ApiError, ApiResult};
 use crate::secrets::{self, TokenHash};
 use crate::state::{Daemon, Event};
+use crate::tunnel;
 
 /// `devices.list`
 pub fn list(daemon: &Daemon) -> ApiResult<DeviceList> {
@@ -17,14 +18,22 @@ pub fn list(daemon: &Daemon) -> ApiResult<DeviceList> {
 }
 
 /// `devices.pair`: a new device and its token, which only this answer
-/// carries. The connection lets only the owner's token ask (`rpc`).
+/// carries. The connection lets only the owner's token ask (`rpc`). A
+/// device whose app opens its own tunnel brings its SSH key, which sshd
+/// asks for through `botloftd tunnel keys`.
 pub fn pair(daemon: &Daemon, params: DevicesPairParams) -> ApiResult<DevicePaired> {
     let name = validate::name("name", &params.name)?;
+    let ssh_key = params
+        .ssh_key
+        .as_deref()
+        .map(tunnel::public_key)
+        .transpose()?;
     let token = secrets::random_token().map_err(ApiError::Token)?;
     let hash = TokenHash::of(&token).to_hex();
-    let device = daemon
-        .store()
-        .insert_device(&name, &hash, daemon.clock.now_ms())?;
+    let device =
+        daemon
+            .store()
+            .insert_device(&name, &hash, ssh_key.as_deref(), daemon.clock.now_ms())?;
     info!("a new device was paired");
     changed(daemon)?;
     Ok(DevicePaired { device, token })
