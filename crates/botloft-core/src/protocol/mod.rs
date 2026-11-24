@@ -71,6 +71,7 @@ mod imports;
 mod island;
 mod keys;
 mod lesson;
+mod limits;
 mod logins;
 mod mcp;
 mod mcp_claude;
@@ -115,6 +116,7 @@ pub use imports::*;
 pub use island::*;
 pub use keys::*;
 pub use lesson::*;
+pub use limits::*;
 pub use logins::*;
 pub use mcp::*;
 pub use mcp_claude::*;
@@ -152,6 +154,7 @@ pub mod method {
     pub const SESSION_PING: &str = "session.ping";
     pub const SYSTEM_STATUS: &str = "system.status";
     pub const SYSTEM_REFRESH: &str = "system.refresh";
+    pub const SYSTEM_LIMITS: &str = "system.limits";
     /// Stops the daemon for its service to start it again (spec 42.7).
     pub const SYSTEM_RESTART: &str = "system.restart";
     pub const CREWS_LIST: &str = "crews.list";

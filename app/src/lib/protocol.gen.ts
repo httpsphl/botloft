@@ -1094,6 +1094,51 @@ export type UploadIdParams = { uploadId: string, };
 export type UploadFinished = { path: string, };
 
 /**
+ * `system.limits`. The numbers the system does not give (Windows has no
+ * cap, macOS says nothing) are left out.
+ */
+export type MachineLimits = { 
+/**
+ * The machine's memory, in bytes.
+ */
+memoryTotal?: number, 
+/**
+ * The most Botloft and its agents may use together, in bytes, when
+ * the system caps them below the machine.
+ */
+memoryLimit?: number, 
+/**
+ * What Botloft and its agents use now, in bytes.
+ */
+memoryUsed?: number, 
+/**
+ * The machine's processors.
+ */
+cpus: number, 
+/**
+ * The processors Botloft and its agents may keep busy together, in
+ * hundredths (150 is one and a half), when the system caps them.
+ */
+cpuLimitPercent?: number, 
+/**
+ * Agents awake now.
+ */
+agentsAwake: number, 
+/**
+ * Most agents awake at once, `Settings.max_running`; 0 no limit.
+ */
+agentsMax: number, 
+/**
+ * How many more agents the free memory takes now.
+ */
+agentsFit?: number, 
+/**
+ * The memory and the processors can be changed with `botloftd limits`
+ * (a Linux service); otherwise they are the container's or none.
+ */
+changeable: boolean, };
+
+/**
  * Text sent to a bot, by the owner, another bot or the daemon.
  */
 export type Message = { id: MessageId, crewId: CrewId, fromKind: SenderKind, 
@@ -3392,7 +3437,12 @@ makerBuildsWithoutAsking: boolean,
  * Days the chats, messages and routine runs are kept; 0 keeps them
  * for good, which is the default (spec 12.1).
  */
-historyDays: number, };
+historyDays: number, 
+/**
+ * Most agents awake at once; 0 no limit, which is the default
+ * (spec 7.8, 42.4).
+ */
+maxRunning: number, };
 
 /**
  * The settings to change; the ones left out stay as they are.
@@ -3409,7 +3459,11 @@ sleepAfterMinutes?: number, defaultAgent?: AgentKind, showExperimentalAgents?: b
 /**
  * From 0 (for good) to [`HISTORY_MAX_DAYS`].
  */
-historyDays?: number, };
+historyDays?: number, 
+/**
+ * From 0 (no limit) to [`MAX_RUNNING_MAX`](super::MAX_RUNNING_MAX).
+ */
+maxRunning?: number, };
 
 /**
  * What the owner wrote for every agent to follow, in Settings (spec 7.10):
@@ -3788,6 +3842,7 @@ export interface RpcMethods {
   "system.status": { params: undefined; result: SystemStatus };
   "system.refresh": { params: undefined; result: SystemStatus };
   "system.restart": { params: undefined; result: null };
+  "system.limits": { params: undefined; result: MachineLimits };
   "settings.get": { params: undefined; result: Settings };
   "settings.update": { params: SettingsUpdateParams; result: Settings };
   "instructions.get": { params: undefined; result: OwnerInstructions };

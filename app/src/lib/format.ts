@@ -89,7 +89,7 @@ function decimal(value: number, digits: 0 | 1): string {
   return formats().decimals[digits].format(value);
 }
 
-/** "912 B", "48 KB", "3.4 MB". */
+/** "912 B", "48 KB", "3.4 MB", "15.6 GB". */
 export function fileSize(bytes: number): string {
   if (bytes < 1024) {
     return `${bytes} B`;
@@ -99,7 +99,15 @@ export function fileSize(bytes: number): string {
     return `${Math.round(kb)} KB`;
   }
   const mb = kb / 1024;
-  return `${mb < 10 ? decimal(mb, 1) : Math.round(mb)} MB`;
+  if (mb < 1024) {
+    return `${mb < 10 ? decimal(mb, 1) : Math.round(mb)} MB`;
+  }
+  return `${decimal(mb / 1024, 1)} GB`;
+}
+
+/** Processors from hundredths: 200 is "2", 150 is "1.5" (spec 42.4). */
+export function processors(percent: number): string {
+  return decimal(percent / 100, percent % 100 === 0 ? 0 : 1);
 }
 
 /**

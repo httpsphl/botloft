@@ -46,9 +46,10 @@ fn main() -> ExitCode {
 fn dispatch(cli: Cli) -> anyhow::Result<()> {
     let home = match cli.command {
         // Run by hand, also on a server set up by install.sh.
-        Command::Pair { .. } | Command::Update { .. } | Command::Tunnel(_) => {
-            paths::resolve_home_by_hand(cli.home.as_deref())
-        }
+        Command::Pair { .. }
+        | Command::Update { .. }
+        | Command::Tunnel(_)
+        | Command::Limits { .. } => paths::resolve_home_by_hand(cli.home.as_deref()),
         _ => paths::resolve_home(cli.home.as_deref()),
     }
     .context("cannot resolve the data folder")?;
@@ -69,6 +70,18 @@ fn dispatch(cli: Cli) -> anyhow::Result<()> {
                 name,
                 host,
                 ssh_port,
+            },
+        ),
+        Command::Limits {
+            memory,
+            cpus,
+            agents,
+        } => botloftd::limits::run(
+            &home,
+            &botloftd::limits::Options {
+                memory,
+                cpus,
+                agents,
             },
         ),
         Command::Tunnel(TunnelCommand::Setup) => tunnel::setup(&home),

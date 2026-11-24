@@ -10,6 +10,7 @@ mod job;
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 mod launchd;
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+mod limits;
 mod memory;
 mod orphans;
 mod power;
@@ -30,6 +31,7 @@ pub use self::env::user_environment;
 pub use self::job::ProcessJob;
 #[cfg(target_os = "macos")]
 pub use self::launchd::{TASK_KIND, delete_task, find_task, register_task, run_task, stop_task};
+pub use self::limits::group_limits;
 pub use self::memory::memory;
 pub use self::orphans::track_groups;
 pub use self::power::KeepAwake;

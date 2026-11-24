@@ -227,6 +227,7 @@ fn export_bindings() {
     out.decl::<FileData>();
     out.decl::<MediaLink>();
     transfer::decls(&mut out);
+    out.decl::<MachineLimits>();
     out.decl::<Message>();
     out.decl::<MessageReply>();
     out.decl::<Delivery>();
@@ -317,6 +318,11 @@ fn export_bindings() {
         &out.name::<SystemStatus>(),
     );
     out.method(method::SYSTEM_RESTART, "undefined", "null");
+    out.method(
+        method::SYSTEM_LIMITS,
+        "undefined",
+        &out.name::<MachineLimits>(),
+    );
     out.method(method::SETTINGS_GET, "undefined", &out.name::<Settings>());
     out.method(
         method::SETTINGS_UPDATE,

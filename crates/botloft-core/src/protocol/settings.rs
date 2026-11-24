@@ -33,6 +33,9 @@ pub struct Settings {
     /// Days the chats, messages and routine runs are kept; 0 keeps them
     /// for good, which is the default (spec 12.1).
     pub history_days: u32,
+    /// Most agents awake at once; 0 no limit, which is the default
+    /// (spec 7.8, 42.4).
+    pub max_running: u32,
 }
 
 /// The settings to change; the ones left out stay as they are.
@@ -67,6 +70,10 @@ pub struct SettingsUpdateParams {
     #[serde(default)]
     #[cfg_attr(test, ts(optional))]
     pub history_days: Option<u32>,
+    /// From 0 (no limit) to [`MAX_RUNNING_MAX`](super::MAX_RUNNING_MAX).
+    #[serde(default)]
+    #[cfg_attr(test, ts(optional))]
+    pub max_running: Option<u32>,
 }
 
 /// What the owner wrote for every agent to follow, in Settings (spec 7.10):

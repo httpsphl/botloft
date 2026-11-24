@@ -18,6 +18,7 @@ use crate::state::Daemon;
 pub fn dispatch(daemon: &Daemon, name: &str, params: Option<Value>) -> Result<Value, RpcError> {
     match name {
         method::SYSTEM_STATUS => reply(service::status(daemon)),
+        method::SYSTEM_LIMITS => reply(service::limits::get(daemon)),
         method::SESSION_SET_LOCALE => {
             let params: botloft_core::protocol::LocaleParams = parse(params)?;
             daemon.desktop.set_locale(&params.locale);

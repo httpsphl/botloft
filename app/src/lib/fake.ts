@@ -50,6 +50,7 @@ import {
   type ContextUsage,
   type Crew,
   type CrewId,
+  type MachineLimits,
   PROTOCOL_VERSION,
   type Settings,
   type SystemStatus,
@@ -105,7 +106,10 @@ export class FakeBotloft implements BotloftApi {
     showExperimentalAgents: false,
     makerBuildsWithoutAsking: false,
     historyDays: 0,
+    maxRunning: 0,
   };
+  /** What the server lets Botloft take (spec 42.4). */
+  limits: MachineLimits = { cpus: 4, agentsAwake: 0, agentsMax: 0, changeable: false };
   /** What the owner wrote for every agent (spec 7.10). */
   ownerInstructions = "";
   /** Folders the owner sent to the Recycle Bin with a delete, in order. */
@@ -332,6 +336,7 @@ export class FakeBotloft implements BotloftApi {
       return null;
     },
     "system.status": () => this.system,
+    "system.limits": () => ({ ...this.limits, agentsMax: this.settings.maxRunning }),
     "system.restart": () => {
       this.restarts += 1;
       return null;
@@ -353,6 +358,7 @@ export class FakeBotloft implements BotloftApi {
         makerBuildsWithoutAsking:
           change.makerBuildsWithoutAsking ?? this.settings.makerBuildsWithoutAsking,
         historyDays: change.historyDays ?? this.settings.historyDays,
+        maxRunning: change.maxRunning ?? this.settings.maxRunning,
       };
       if (change.showExperimentalAgents !== undefined) {
         this.system = {

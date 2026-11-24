@@ -94,4 +94,24 @@ export const server: Messages["server"] = {
     removeText: "Su llave deja de valer al instante y se desconecta.",
     failed: "No se pudo quitar",
   },
+  limits: {
+    title: "Límites de este servidor",
+    hint: "Cuánto del servidor pueden usar Botloft y sus agentes, para que tus otros sistemas sigan con su parte.",
+    memory: "Memoria",
+    memoryOf: (used, limit, total) => `${used} en uso de ${limit} (el servidor tiene ${total})`,
+    memoryUsed: (used, total) => `${used} en uso, sin límite (el servidor tiene ${total})`,
+    memoryOpen: (total) => `Sin límite (el servidor tiene ${total})`,
+    processors: "Procesadores",
+    processorsOf: (limit, cpus) => `Hasta ${limit} de ${cpus}`,
+    processorsOpen: (cpus) => `Sin límite (el servidor tiene ${cpus})`,
+    agents: "Agentes despiertos a la vez",
+    agentsHint: (awake) =>
+      `${awake} despiertos ahora. Los demás esperan dormidos y despiertan cuando hay lugar.`,
+    noLimit: "Sin límite",
+    change: "Para cambiar la memoria y los procesadores, ejecuta esto en el servidor:",
+    container:
+      "Aquí Botloft corre en un contenedor: la memoria y los procesadores son los límites del contenedor, definidos en Docker o en Coolify.",
+    unknown: "Sin dato",
+    failed: "No se pudieron leer los límites",
+  },
 };

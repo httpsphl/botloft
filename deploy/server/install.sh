@@ -19,6 +19,11 @@
 #   BOTLOFT_NO_CLAUDE=1          do not install Claude Code
 #   BOTLOFT_NO_AUTO_UPDATE=1     no hourly `botloftd update` (spec 42.11)
 #   BOTLOFT_NO_TUNNEL=1          the app does not open its own SSH tunnel (42.6)
+#
+# How much of the server Botloft may take (spec 42.4); later, sudo botloftd limits:
+#   BOTLOFT_MEMORY=4G            most memory for Botloft and its agents (default 50%)
+#   BOTLOFT_CPUS=2               most processors they keep busy (default none)
+#   BOTLOFT_AGENTS=6             most agents awake at once (default no limit)
 set -eu
 
 REPO="httpsphl/botloft"
@@ -33,6 +38,8 @@ ACCOUNT="botloft"
 AGENTS="botloft-agents"
 AGENTS_HOME="/var/lib/botloft-agents"
 UNIT="/etc/systemd/system/botloft.service"
+# Where `systemctl set-property` keeps the limits (`botloftd limits`).
+LIMITS_DIR="/etc/systemd/system.control/botloft.service.d"
 # `botloftd update` every hour, as root (spec 42.11).
 UPDATE_UNIT="/etc/systemd/system/botloft-update.service"
 UPDATE_TIMER="/etc/systemd/system/botloft-update.timer"
@@ -106,6 +113,7 @@ uninstall() {
 	if has_systemd && [ -f "$UNIT" ]; then
 		as_root systemctl disable --now botloft.service >/dev/null 2>&1 || true
 		as_root rm -f "$UNIT"
+		as_root rm -rf "$LIMITS_DIR"
 		as_root systemctl daemon-reload
 	fi
 	if [ -x "$BIN" ]; then
@@ -244,7 +252,8 @@ fi
 
 # 6. The system service: it starts at boot and comes back after a crash. It
 # may only switch to the agents' user and stop their processes, and keeps
-# the agents within most of the memory, so the rest of the server lives.
+# the agents within half the memory, so the rest of the server lives; the
+# owner's own limits (`botloftd limits`) are kept apart and win.
 if [ -z "${BOTLOFT_NO_SERVICE:-}" ] && has_systemd; then
 	as_root sh -c "cat >'$UNIT'" <<EOF
 [Unit]
@@ -266,7 +275,7 @@ Restart=on-failure
 RestartSec=5
 KillMode=control-group
 TimeoutStopSec=20
-MemoryMax=90%
+MemoryMax=50%
 
 [Install]
 WantedBy=multi-user.target
@@ -278,6 +287,23 @@ EOF
 		as_root systemctl enable --now botloft.service
 	fi
 	say "Botloft is running as a service (systemctl status botloft)."
+
+	# The limits asked for, once Botloft answers (the agents' cap is its own
+	# setting).
+	if [ -n "${BOTLOFT_MEMORY:-}${BOTLOFT_CPUS:-}${BOTLOFT_AGENTS:-}" ]; then
+		set --
+		[ -n "${BOTLOFT_MEMORY:-}" ] && set -- "$@" --memory "$BOTLOFT_MEMORY"
+		[ -n "${BOTLOFT_CPUS:-}" ] && set -- "$@" --cpus "$BOTLOFT_CPUS"
+		[ -n "${BOTLOFT_AGENTS:-}" ] && set -- "$@" --agents "$BOTLOFT_AGENTS"
+		tries=0
+		until as_root env BOTLOFT_HOME="$HOME_DIR" "$BIN" limits "$@"; do
+			tries=$((tries + 1))
+			[ "$tries" -lt 10 ] || fail "the limits were not set; try: sudo botloftd limits $*"
+			sleep 1
+		done
+	else
+		say "Botloft and its agents may use up to half the memory (change it: sudo botloftd limits --memory 4G --cpus 2 --agents 6)."
+	fi
 
 	# 7. Updates: every hour, the newest release's daemon, checked against the
 	# updater's signature, once no agent is working (or after a day).

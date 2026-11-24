@@ -38,6 +38,7 @@ impl LiveSettings {
         let minutes = u32::try_from(config.bots.approval_timeout_minutes).unwrap_or(u32::MAX);
         let sleep = u32::try_from(config.bots.sleep_after_minutes).unwrap_or(u32::MAX);
         let history = u32::try_from(config.bots.history_days).unwrap_or(u32::MAX);
+        let max_running = u32::try_from(config.bots.max_running).unwrap_or(u32::MAX);
         let settings = Settings {
             start_with_windows: config.start_with_windows,
             keep_awake: config.keep_awake,
@@ -48,6 +49,7 @@ impl LiveSettings {
             show_experimental_agents: !config.experimental_agents.is_empty(),
             maker_builds_without_asking: config.maker_builds_without_asking,
             history_days: history,
+            max_running,
         };
         Self {
             file,
@@ -112,7 +114,9 @@ impl LiveSettings {
 
     /// Changes the limit while running (tests); 0 no limit.
     pub fn set_max_running(&self, max: usize) {
-        self.lock().max_running = max;
+        let mut current = self.lock();
+        current.max_running = max;
+        current.settings.max_running = u32::try_from(max).unwrap_or(u32::MAX);
     }
 
     /// How long a bot stays idle before it sleeps (spec 7.7); `None` never.
@@ -162,6 +166,10 @@ impl LiveSettings {
         }
         if let Some(days) = update.history_days {
             current.settings.history_days = days;
+        }
+        if let Some(max) = update.max_running {
+            current.settings.max_running = max;
+            current.max_running = usize::try_from(max).unwrap_or(usize::MAX);
         }
         Ok(current.settings)
     }
@@ -252,6 +260,13 @@ fn write(file: &Path, update: SettingsUpdateParams) -> io::Result<()> {
             .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "bots is not a table"))?;
         set(bots, "history_days", i64::from(days));
     }
+    if let Some(max) = update.max_running {
+        let bots = config["bots"]
+            .or_insert(toml_edit::table())
+            .as_table_like_mut()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "bots is not a table"))?;
+        set(bots, "max_running", i64::from(max));
+    }
     let staged = file.with_extension("toml.new");
     std::fs::write(&staged, config.to_string())?;
     std::fs::rename(&staged, file)
@@ -313,6 +328,7 @@ mod tests {
                 show_experimental_agents: false,
                 maker_builds_without_asking: false,
                 history_days: 0,
+                max_running: 0,
             }
         );
         assert!(awake.has_changed().expect("sender") && !*awake.borrow_and_update());
@@ -334,6 +350,7 @@ mod tests {
                 show_experimental_agents: None,
                 maker_builds_without_asking: Some(true),
                 history_days: Some(90),
+                max_running: Some(6),
             })
             .expect("save");
         let text = std::fs::read_to_string(&file).expect("read");
@@ -363,9 +380,14 @@ mod tests {
                 show_experimental_agents: false,
                 maker_builds_without_asking: true,
                 history_days: 90,
+                max_running: 6,
             }
         );
         assert_eq!(settings.approval_wait(), Duration::from_secs(4 * 3600));
+        // The most agents awake at once, at once and for the next start
+        // (spec 7.8, 42.4).
+        assert_eq!(config.bots.max_running, 6);
+        assert_eq!(settings.max_running(), Some(6));
     }
 
     #[test]

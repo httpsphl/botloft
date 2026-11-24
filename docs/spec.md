@@ -170,7 +170,7 @@ retry_backoff_max_ms = 120000
 [bots]
 approval_timeout_minutes = 60 # sem resposta do dono, a ferramenta é negada
 sleep_after_minutes = 30     # parado por esse tempo, o bot dorme (7.7); 0 nunca
-max_running = 0               # quantos agentes rodam ao mesmo tempo (7.8); 0 sem limite
+max_running = 0               # quantos agentes acordados ao mesmo tempo (7.8, 42.4); 0 sem limite; o app muda
 attachment_max_mb = 20        # por arquivo; no máximo 10 arquivos por message
 max_per_crew = 12             # até onde as sugestões do chefe levam uma crew (10.2)
 history_days = 0              # dias que conversas, messages e runs ficam guardados (12.1); 0 para sempre
@@ -358,7 +358,7 @@ Cada processo de bot parado ainda reserva memória: medido em 31/10/2026, 29 bot
 
 ### 7.8 Limite de agentes rodando
 
-Sem limite por padrão, a não ser o da memória livre (42.4). Com `[bots] max_running` maior que 0, nunca rodam mais processos de agente que isso ao mesmo tempo: é o que deixa uma máquina de memória fixa (um servidor) a salvo de um horário em que todas as rotinas acordam juntas. Só pelo `config.toml` por enquanto, lido ao subir o daemon.
+Sem limite por padrão, a não ser o da memória livre (42.4). Com `[bots] max_running` maior que 0, nunca rodam mais processos de agente que isso ao mesmo tempo: é o que deixa uma máquina de memória fixa (um servidor) a salvo de um horário em que todas as rotinas acordam juntas. O dono muda pelo app (`settings.update {maxRunning}`, de 0 a 100, que vale na hora e fica no `config.toml`) ou por `botloftd limits --agents` (42.4). Mais vaga acorda na hora quem esperava; menos vale conforme os acordados dormem.
 
 - **Quem conta:** todo agente com processo, inclusive o que está saindo, e o que está sendo criado.
 - **Quem vem primeiro:** a cada passada do supervisor, os agentes que devem subir e têm uma mensagem esperando (delivery `pending` ou `sending`) vêm antes dos outros.
@@ -877,6 +877,7 @@ Endpoint: `ws://127.0.0.1:45710/rpc`. Mensagens seguem JSON-RPC 2.0: requests co
 | Método | Params | Result |
 |---|---|---|
 | `system.status` | | versão, uptime, `enabledAgents` (os agentes para os quais um bot pode ser criado: `claude` e os experimentais ligados, seção 30), versão e caminho do claude (`claudeVersion`, `claudePath`), `runtimeError` (por que os bots não sobem), `claudeSignedIn` (7.3; `null` antes de conferir), `account` (o dono para a área da conta do app: `name`, o nome de exibição da conta do Windows, `GetUserNameExW(NameDisplay)`, ou o nome de usuário sem ele, lido uma vez; e `claude`, a conta do Claude com `email`, `plan` e `organization`, ou `null` desconectado), backlog de entrega, `usage` (uso da conta, 8.1), `server` (o daemon roda num servidor, 42.2) |
+| `system.limits` | | o que o sistema deixa o Botloft e os agentes usarem e o que usam agora (42.4): `memoryTotal`, `memoryLimit`, `memoryUsed`, `cpus`, `cpuLimitPercent`, `agentsAwake`, `agentsMax`, `agentsFit` e `changeable` |
 | `system.refresh` | | pede uma nova conferência do Claude Code (login e, se falhou, o executável) e responde na hora com o `system.status` atual; o app relê o status até ver o resultado |
 | `crews.list` | | `Crew[]` |
 | `crews.create` | `name, workFolder?, lead?` (`{name, role, instructions, model?}`: o chefe, 10.2) | `Crew` |
@@ -4114,7 +4115,7 @@ SV2, feito em 2026-11-22: `deploy/server/install.sh`, testado em contêineres De
   1. descobre a arquitetura, baixa o daemon do mesmo release e confere o SHA-256;
   2. põe o daemon em `/usr/local/bin` e cria dois usuários de sistema, cada um com grupo próprio (`useradd`, ou `adduser` do BusyBox): `botloft`, do daemon, sem shell, e `botloft-agents`, dos agentes, com pasta `/var/lib/botloft-agents` (`0750`) e um shell para os comandos deles. O `botloft` entra no grupo dos agentes. No Alpine, põe o `procps`, porque o `ps` do BusyBox não mostra o comando inteiro que a limpeza de órfãos lê (14.1);
   3. arruma as pastas: `/var/lib/botloft` (`botloft:botloft-agents`, `0750`), a pasta de dados `home` (`botloft`, `0700`) e `workspaces` (`botloft:botloft-agents`, `2770`: com o setgid, o que um ou outro cria ali fica no grupo dos agentes); e grava `home/config.toml` com `server = true`, `agents_user = "botloft-agents"`, a porta e `workspaces_root`;
-  4. instala a unit de sistema `botloft.service` (`User=botloft`, `BOTLOFT_HOME`, `UMask=0007`, `AmbientCapabilities` e `CapabilityBoundingSet` com só `CAP_SETUID`, `CAP_SETGID` e `CAP_KILL`, `NoNewPrivileges=yes`, `Restart=on-failure`, `KillMode=control-group` e `MemoryMax=90%`, para os agentes nunca levarem o resto do servidor), habilita e sobe. Rodado de novo, troca o daemon e o reinicia, e as configurações e os dados ficam;
+  4. instala a unit de sistema `botloft.service` (`User=botloft`, `BOTLOFT_HOME`, `UMask=0007`, `AmbientCapabilities` e `CapabilityBoundingSet` com só `CAP_SETUID`, `CAP_SETGID` e `CAP_KILL`, `NoNewPrivileges=yes`, `Restart=on-failure`, `KillMode=control-group` e `MemoryMax=50%`, para os agentes nunca levarem o resto do servidor), habilita e sobe. Com `BOTLOFT_MEMORY`, `BOTLOFT_CPUS` ou `BOTLOFT_AGENTS`, roda `botloftd limits` com eles assim que o Botloft responde (42.4). Rodado de novo, troca o daemon e o reinicia, e as configurações e os dados ficam;
   5. instala o Claude Code para o `botloft-agents` pelo instalador oficial, quando falta (como esse usuário, com `runuser -l` ou `su -l`);
   6. liga a atualização de hora em hora (`botloft-update.timer`, 42.11), a menos que `BOTLOFT_NO_AUTO_UPDATE=1`;
   7. mostra os próximos passos: o login do Claude, `sudo -u botloft-agents -i claude auth login`, e o pareamento do app, `sudo botloftd pair` (42.6).
@@ -4140,6 +4141,11 @@ Com a leitura:
 - **Máquina pequena** (até 2 GB): um agente parado dorme depois de 2 minutos, ou do tempo do dono se for menor (7.7). O sono desligado continua desligado.
 - **Pouca memória** (menos da metade livre) numa máquina pequena ou num servidor: só o agente parado há menos tempo continua acordado, e os outros dormem, como para abrir vaga. No PC, a memória cheia de outros programas não faz os agentes dormirem antes da hora.
 - Sem leitura (macOS, ou um sistema que não diz), nada muda.
+
+**Limites do dono** (pedido do dono em 2026-11-24, para um servidor que roda outros sistemas):
+- **Memória e processadores** são do sistema, não do Botloft: `MemoryMax` e `CPUQuota` do `botloft.service`. Tudo o que o Botloft e os agentes rodam, um build que cresce inclusive, fica no mesmo grupo de controle (os agentes trocam de usuário, não de grupo, 42.5), então ninguém passa do teto, e um processo que passa morre sozinho sem tocar o resto do servidor. O padrão é metade da memória, sem limite de processadores. A vaga pela memória (acima) já lê o teto do grupo, então os agentes acordados seguem o teto escolhido.
+- **`botloftd limits`** mostra os limites e o uso (o `system.limits`). `--memory 4G` (também `512M`... a partir de 768 MB, `50%` de 10% a 100%, ou `none`) e `--cpus 2` (também `1.5`, ou `none`) rodam `systemctl set-property botloft.service`, como root: valem na hora, sem reiniciar, e ficam em `/etc/systemd/system.control/botloft.service.d`, que o instalador não reescreve e o `--uninstall` apaga. `--agents 6` muda o `max_running` (7.8) no Botloft que roda, como o app. Sem a unit (um contêiner), memória e processadores são recusados com o que fazer: os limites do contêiner (`docker run --memory --cpus`, ou os do serviço no Coolify), que o Botloft lê do mesmo jeito.
+- **No app**, Configurações > Geral, só num servidor: "Limites deste servidor" com a memória em uso, o teto e a da máquina, os processadores, e os agentes acordados ao mesmo tempo para escolher (sem limite, 1, 2, 3, 4, 6, 8, 12 ou 16; um outro número posto à mão aparece como está). Relê a cada 10 s enquanto aberta. Para memória e processadores, o comando para copiar, ou, num contêiner, que os limites são os dele.
 
 ### 42.5 Agentes num usuário separado
 
