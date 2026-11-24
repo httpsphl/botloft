@@ -24,6 +24,14 @@
 #   BOTLOFT_MEMORY=4G            most memory for Botloft and its agents (default 50%)
 #   BOTLOFT_CPUS=2               most processors they keep busy (default none)
 #   BOTLOFT_AGENTS=6             most agents awake at once (default no limit)
+#
+# What Botloft and its agents see and reach (spec 42.5):
+#   BOTLOFT_REACH="10.0.0.5 192.168.1.0/24"  private addresses they may reach
+#                                (the server's private networks are closed to them)
+#   BOTLOFT_WRITE="/srv/site"    more folders they may write (the rest is read-only)
+#   BOTLOFT_HIDE="/srv/clients"  more folders they may not see at all
+#   BOTLOFT_OPEN_NETWORK=1       leave the private networks open
+#   BOTLOFT_NO_SANDBOX=1         no read-only system, hidden folders or private network block
 set -eu
 
 REPO="httpsphl/botloft"
@@ -37,6 +45,10 @@ ACCOUNT="botloft"
 # The agents' user: their commands run as it, and it keeps the Claude login.
 AGENTS="botloft-agents"
 AGENTS_HOME="/var/lib/botloft-agents"
+# The agents' browser's user: it holds the browsers' cookies, which neither
+# the agents nor a page that broke out of the browser reach past it.
+BROWSER="botloft-browser"
+BROWSER_HOME="/var/lib/botloft-browser"
 UNIT="/etc/systemd/system/botloft.service"
 # Where `systemctl set-property` keeps the limits (`botloftd limits`).
 LIMITS_DIR="/etc/systemd/system.control/botloft.service.d"
@@ -123,8 +135,9 @@ uninstall() {
 	if [ "$purge" = "yes" ]; then
 		remove_user "$ACCOUNT"
 		remove_user "$AGENTS"
-		as_root rm -rf "$DATA" "$AGENTS_HOME"
-		say "Botloft, its data and the $ACCOUNT and $AGENTS users were removed."
+		remove_user "$BROWSER"
+		as_root rm -rf "$DATA" "$AGENTS_HOME" "$BROWSER_HOME"
+		say "Botloft, its data and the $ACCOUNT, $AGENTS and $BROWSER users were removed."
 	else
 		say "Botloft was removed. Its data is still in $DATA (remove it with --uninstall --purge)."
 	fi
@@ -196,8 +209,10 @@ if command -v apk >/dev/null 2>&1 && ! ps -ww -o command= -p 1 >/dev/null 2>&1; 
 	as_root apk add --no-cache -q procps
 fi
 
-# 2. The two users. The agents need a shell for their commands; the daemon
-# none. The daemon joins the agents' group to reach their folders.
+# 2. The users. The agents need a shell for their commands; the daemon and
+# the browser none. The daemon joins the agents' group to reach their
+# folders, and the browser the daemon's, to write in the profiles the daemon
+# makes for it.
 nologin="/usr/sbin/nologin"
 [ -x "$nologin" ] || nologin="/sbin/nologin"
 [ -x "$nologin" ] || nologin="/bin/false"
@@ -205,16 +220,19 @@ shell="/bin/bash"
 [ -x "$shell" ] || shell="/bin/sh"
 add_user "$ACCOUNT" "$DATA" "$nologin"
 add_user "$AGENTS" "$AGENTS_HOME" "$shell"
+add_user "$BROWSER" "$BROWSER_HOME" "$nologin"
 if command -v usermod >/dev/null 2>&1; then
 	as_root usermod -aG "$AGENTS" "$ACCOUNT"
+	as_root usermod -aG "$ACCOUNT" "$BROWSER"
 else
 	as_root addgroup "$ACCOUNT" "$AGENTS" 2>/dev/null || true
+	as_root addgroup "$BROWSER" "$ACCOUNT" 2>/dev/null || true
 fi
 
 # 3. The folders. The data folder is the daemon's alone; the agents only
 # pass through it to the workspaces, which both write (setgid: what either
 # makes there stays in the agents' group).
-as_root mkdir -p "$HOME_DIR" "$WORK_DIR" "$AGENTS_HOME"
+as_root mkdir -p "$HOME_DIR" "$WORK_DIR" "$AGENTS_HOME" "$BROWSER_HOME"
 as_root chown "$ACCOUNT:$AGENTS" "$DATA"
 as_root chmod 0750 "$DATA"
 as_root chown "$ACCOUNT:$ACCOUNT" "$HOME_DIR"
@@ -223,6 +241,9 @@ as_root chown "$ACCOUNT:$AGENTS" "$WORK_DIR"
 as_root chmod 2770 "$WORK_DIR"
 as_root chown "$AGENTS:$AGENTS" "$AGENTS_HOME"
 as_root chmod 0750 "$AGENTS_HOME"
+# The browser's home: its own and the daemon's group's, no one else's.
+as_root chown "$BROWSER:$ACCOUNT" "$BROWSER_HOME"
+as_root chmod 2770 "$BROWSER_HOME"
 
 # 4. The settings, kept when they are already there.
 if ! as_root test -f "$HOME_DIR/config.toml"; then
@@ -230,11 +251,22 @@ if ! as_root test -f "$HOME_DIR/config.toml"; then
 # Botloft on a server (spec 42). After a change: systemctl restart botloft
 server = true
 agents_user = "$AGENTS"
+browser_user = "$BROWSER"
 port = $PORT
 workspaces_root = "$WORK_DIR"
 EOF
 	as_root chown "$ACCOUNT:$ACCOUNT" "$HOME_DIR/config.toml"
 	as_root chmod 0600 "$HOME_DIR/config.toml"
+fi
+# An older install gets the browsers' user too: a key of the top, so it goes
+# before the first table.
+if ! as_root grep -q '^browser_user' "$HOME_DIR/config.toml"; then
+	as_root awk -v line="browser_user = \"$BROWSER\"" '
+		!done && /^\[/ { print line; done = 1 }
+		{ print }
+		END { if (!done) print line }
+	' "$HOME_DIR/config.toml" >"$TMP/config.toml"
+	as_root sh -c "cat '$TMP/config.toml' >'$HOME_DIR/config.toml'"
 fi
 
 # 5. Claude Code, which the agents run, from its official installer.
@@ -247,6 +279,46 @@ if [ -z "${BOTLOFT_NO_CLAUDE:-}" ]; then
 		command -v curl >/dev/null 2>&1 || fail "install curl first: Claude Code's installer needs it"
 		say "Installing Claude Code for the agents..."
 		as_agents 'curl -fsSL https://claude.ai/install.sh | bash'
+	fi
+fi
+
+# What the service may see and reach (spec 42.5). The rules are the
+# service's, so every program an agent runs keeps them. The system is
+# read-only but for Botloft's folders; people's homes, the containers' and
+# databases' data are not there at all; and the private networks, where a
+# server's other systems and the cloud's metadata live, are closed. The
+# internet and this computer's loopback stay open.
+sandbox=""
+network=""
+if [ -z "${BOTLOFT_NO_SANDBOX:-}" ]; then
+	hidden="-/root -/var/lib/docker -/var/lib/containerd -/run/docker.sock -/run/containerd -/data/coolify -/var/lib/mysql -/var/lib/postgresql -/var/lib/redis -/var/lib/mongodb"
+	for path in ${BOTLOFT_HIDE:-}; do
+		hidden="$hidden -$path"
+	done
+	sandbox="ProtectSystem=strict
+ReadWritePaths=$DATA $AGENTS_HOME $BROWSER_HOME${BOTLOFT_WRITE:+ $BOTLOFT_WRITE}
+PrivateTmp=yes
+ProtectHome=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+LockPersonality=yes
+InaccessiblePaths=$hidden"
+	if [ -z "${BOTLOFT_OPEN_NETWORK:-}" ]; then
+		# The name servers may sit on a private address; they stay reachable.
+		allow=""
+		for address in $(awk '/^nameserver/ { print $2 }' /etc/resolv.conf 2>/dev/null) ${BOTLOFT_REACH:-}; do
+			allow="${allow:+$allow }$address"
+		done
+		network="IPAddressDeny=10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 169.254.0.0/16 fc00::/7 fe80::/10"
+		if [ -n "$allow" ]; then
+			network="$network
+IPAddressAllow=$allow"
+		fi
 	fi
 fi
 
@@ -276,6 +348,8 @@ RestartSec=5
 KillMode=control-group
 TimeoutStopSec=20
 MemoryMax=50%
+$sandbox
+$network
 
 [Install]
 WantedBy=multi-user.target

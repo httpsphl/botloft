@@ -33,11 +33,21 @@ static AGENT: OnceLock<AgentUser> = OnceLock::new();
 /// the user does not exist, is root or the daemon's own, or the daemon may
 /// not switch to it.
 pub fn use_agent_user(name: &str) -> Result<(), String> {
+    AGENT
+        .set(switchable(name)?)
+        .map_err(|_| "the agents' user was already set".to_owned())
+}
+
+/// The user called `name`, if the daemon may run programs as it: it exists,
+/// is not root nor the daemon's own, and the daemon can switch.
+pub(super) fn switchable(name: &str) -> Result<AgentUser, String> {
     let user = lookup(name).ok_or_else(|| format!("there is no user called {name}"))?;
     // SAFETY: no arguments, never fails.
     let (uid, euid) = unsafe { (libc::getuid(), libc::geteuid()) };
     if user.uid == 0 {
-        return Err(format!("{name} is root: the agents must not run as root"));
+        return Err(format!(
+            "{name} is root: nothing Botloft starts runs as root"
+        ));
     }
     if user.uid == uid {
         return Err(format!("{name} is the daemon's own user"));
@@ -49,9 +59,7 @@ pub fn use_agent_user(name: &str) -> Result<(), String> {
                 .to_owned(),
         );
     }
-    AGENT
-        .set(user)
-        .map_err(|_| "the agents' user was already set".to_owned())
+    Ok(user)
 }
 
 /// The agents run as a user of their own.
@@ -82,7 +90,7 @@ pub fn as_agent(command: &mut Command) {
     }
 }
 
-fn switch(command: &mut Command, user: &AgentUser) {
+pub(super) fn switch(command: &mut Command, user: &AgentUser) {
     command
         .uid(user.uid)
         .gid(user.gid)

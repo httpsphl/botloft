@@ -119,6 +119,12 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
             .map_err(|err| anyhow::anyhow!("the agents cannot run as {apart}: {err}"))?;
         info!(user = apart, "the agents run as their own user");
     }
+    let browser = config.browser_user.trim();
+    if !browser.is_empty() {
+        platform::use_browser_user(browser)
+            .map_err(|err| anyhow::anyhow!("the browsers cannot run as {browser}: {err}"))?;
+        info!(user = browser, "the agents' browsers run as their own user");
+    }
     // Before any bot starts: ends what a crashed run left behind (14.1).
     platform::track_groups(&paths.home.join("run"));
     if scheduled && !autostart::scheduled_start(&paths.home, config.start_with_windows) {

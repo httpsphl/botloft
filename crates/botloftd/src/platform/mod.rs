@@ -16,21 +16,21 @@ pub use helper::run_helper;
 
 #[cfg(unix)]
 pub use unix::{
-    KeepAwake, ProcessJob, TASK_KIND, agents_apart, agents_home, as_agent, computer_name,
-    delete_task, find_task, leave_own_console, memory, owner_name, recycle, register_task,
-    restrict_to_current_user, run_task, running_as_root, running_programs, secret_available,
-    secret_delete, secret_load, secret_save, sign_in_id, stop_task, track_groups, use_agent_user,
-    user_environment,
+    KeepAwake, ProcessJob, TASK_KIND, agents_apart, agents_home, as_agent, as_browser,
+    browser_profiles, computer_name, delete_task, find_task, leave_own_console, memory, owner_name,
+    recycle, register_task, remove_profile, restrict_to_current_user, run_task, running_as_root,
+    running_programs, secret_available, secret_delete, secret_load, secret_save, sign_in_id,
+    stop_task, track_groups, use_agent_user, use_browser_user, user_environment,
 };
 #[cfg(unix)]
 pub use unix::{hang_up, only_root_writes, owner_of};
 #[cfg(windows)]
 pub use windows::{
-    KeepAwake, ProcessJob, TASK_KIND, agents_apart, agents_home, as_agent, computer_name,
-    delete_task, find_task, leave_own_console, memory, owner_name, recycle, register_task,
-    restrict_to_current_user, run_task, running_as_root, running_programs, secret_available,
-    secret_delete, secret_load, secret_save, sign_in_id, stop_task, track_groups, use_agent_user,
-    user_environment,
+    KeepAwake, ProcessJob, TASK_KIND, agents_apart, agents_home, as_agent, as_browser,
+    browser_profiles, computer_name, delete_task, find_task, leave_own_console, memory, owner_name,
+    recycle, register_task, remove_profile, restrict_to_current_user, run_task, running_as_root,
+    running_programs, secret_available, secret_delete, secret_load, secret_save, sign_in_id,
+    stop_task, track_groups, use_agent_user, use_browser_user, user_environment,
 };
 
 /// What the system lets Botloft and its agents take together (spec 42.4).
