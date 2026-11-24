@@ -16,6 +16,15 @@ use super::start::Start;
 use super::{Inner, Supervisor};
 
 impl Supervisor {
+    /// Agent processes alive now (spec 7.8, 42.4).
+    pub fn awake_count(&self) -> usize {
+        self.lock()
+            .slots
+            .values()
+            .filter(|slot| slot.running.is_some())
+            .count()
+    }
+
     /// Of the starts this pass decided, the ones that fit under `max` and in
     /// the `fits` more agents the free memory takes (spec 42.4); the others
     /// wait asleep. Called under the supervisor lock.

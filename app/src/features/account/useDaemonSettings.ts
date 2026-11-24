@@ -30,6 +30,7 @@ export function useDaemonSettings(): {
         makerBuildsWithoutAsking:
           update.makerBuildsWithoutAsking ?? before.makerBuildsWithoutAsking,
         historyDays: update.historyDays ?? before.historyDays,
+        maxRunning: update.maxRunning ?? before.maxRunning,
       });
     }
     attempt(failed, async () => {

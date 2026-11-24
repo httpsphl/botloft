@@ -98,4 +98,26 @@ export const server = {
     removeText: "Its key stops working at once, and it is disconnected.",
     failed: "Couldn't remove it",
   },
+  limits: {
+    title: "This server's limits",
+    hint: "How much of the server Botloft and its agents may take, so your other systems keep theirs.",
+    memory: "Memory",
+    memoryOf: (used: string, limit: string, total: string) =>
+      `${used} in use of ${limit} (the server has ${total})`,
+    memoryUsed: (used: string, total: string) =>
+      `${used} in use, no limit (the server has ${total})`,
+    memoryOpen: (total: string) => `No limit (the server has ${total})`,
+    processors: "Processors",
+    processorsOf: (limit: string, cpus: number) => `Up to ${limit} of ${cpus}`,
+    processorsOpen: (cpus: number) => `No limit (the server has ${cpus})`,
+    agents: "Agents awake at once",
+    agentsHint: (awake: number) =>
+      `${awake} awake now. The others wait asleep and wake when there is room.`,
+    noLimit: "No limit",
+    change: "To change the memory and the processors, run this on the server:",
+    container:
+      "Here Botloft runs in a container: the memory and the processors are the container's limits, set in Docker or in Coolify.",
+    unknown: "Unknown",
+    failed: "Couldn't read the limits",
+  },
 };

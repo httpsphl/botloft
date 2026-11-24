@@ -33,6 +33,42 @@ pub use windows::{
     user_environment,
 };
 
+/// What the system lets Botloft and its agents take together (spec 42.4).
+/// What it does not say is left out.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct GroupLimits {
+    /// The machine's memory, in bytes.
+    pub memory_total: Option<u64>,
+    /// A cap below the machine's memory, in bytes.
+    pub memory_limit: Option<u64>,
+    /// What Botloft and its agents use now, in bytes.
+    pub memory_used: Option<u64>,
+    /// The machine's processors.
+    pub cpus: u32,
+    /// A cap on the processors, in hundredths.
+    pub cpu_limit_percent: Option<u32>,
+    /// Botloft runs as `botloft.service`, whose limits `botloftd limits`
+    /// changes (Linux).
+    pub service: bool,
+}
+
+/// Reads [`GroupLimits`] now.
+pub fn group_limits() -> GroupLimits {
+    #[cfg(unix)]
+    {
+        unix::group_limits()
+    }
+    #[cfg(windows)]
+    {
+        GroupLimits {
+            memory_total: memory().map(|info| info.total),
+            cpus: std::thread::available_parallelism()
+                .map_or(1, |cpus| u32::try_from(cpus.get()).unwrap_or(u32::MAX)),
+            ..GroupLimits::default()
+        }
+    }
+}
+
 /// What the owner should know so the service keeps running after they log
 /// out, if anything (spec 42.3). Only a Linux user service stops then.
 pub fn keep_after_logout() -> Option<String> {

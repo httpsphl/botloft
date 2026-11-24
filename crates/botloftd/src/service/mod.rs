@@ -30,6 +30,7 @@ pub mod key_requests;
 pub mod key_scan;
 pub mod keys;
 pub mod lead;
+pub mod limits;
 pub mod maker;
 pub mod mcp;
 pub mod mcp_claude;

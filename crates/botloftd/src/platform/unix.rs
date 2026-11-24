@@ -9,6 +9,7 @@ mod job;
 // Both build everywhere, so each one's tests run on either system.
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 mod launchd;
+mod limits;
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 mod memory;
 mod orphans;
@@ -30,6 +31,7 @@ pub use self::env::user_environment;
 pub use self::job::ProcessJob;
 #[cfg(target_os = "macos")]
 pub use self::launchd::{TASK_KIND, delete_task, find_task, register_task, run_task, stop_task};
+pub use self::limits::group_limits;
 pub use self::memory::memory;
 pub use self::orphans::track_groups;
 pub use self::power::KeepAwake;

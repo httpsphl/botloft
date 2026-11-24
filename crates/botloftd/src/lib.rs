@@ -25,6 +25,7 @@ pub mod failures;
 pub mod history;
 pub mod imports;
 pub mod keep_awake;
+pub mod limits;
 pub mod local;
 pub mod logging;
 pub mod logins;

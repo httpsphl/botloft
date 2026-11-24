@@ -17,6 +17,7 @@ import { useServer } from "../../shell/server";
 import { useApp } from "../../store/context";
 import { Select } from "../../ui/Select";
 import { MakerSettings } from "../maker/MakerSettings";
+import { LimitsSettings } from "../server/LimitsSettings";
 import { WhereSettings } from "../server/WhereSettings";
 import { AgentPrograms } from "./AgentPrograms";
 import { HistorySettings } from "./HistorySettings";
@@ -53,6 +54,7 @@ export function GeneralSettings() {
         <Select label={s.language} value={locale} options={languages} onChange={setLocaleChoice} />
       </Section>
       <WhereSettings />
+      {onServer && <LimitsSettings />}
       <MakerSettings />
       <Section title={s.experimentalAgents}>
         <Toggle

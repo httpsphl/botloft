@@ -2,8 +2,8 @@
 //! changes in the app's Settings.
 
 use botloft_core::protocol::{
-    APPROVAL_WAIT_MAX_MINUTES, AgentKind, HISTORY_MAX_DAYS, SLEEP_AFTER_MAX_MINUTES, Settings,
-    SettingsUpdateParams,
+    APPROVAL_WAIT_MAX_MINUTES, AgentKind, HISTORY_MAX_DAYS, MAX_RUNNING_MAX,
+    SLEEP_AFTER_MAX_MINUTES, Settings, SettingsUpdateParams,
 };
 use tracing::info;
 
@@ -44,6 +44,11 @@ pub fn update(daemon: &Daemon, params: SettingsUpdateParams) -> ApiResult<Settin
     {
         return Err(ApiError::validation(format!(
             "historyDays must be between 0 and {HISTORY_MAX_DAYS}"
+        )));
+    }
+    if params.max_running.is_some_and(|max| max > MAX_RUNNING_MAX) {
+        return Err(ApiError::validation(format!(
+            "maxRunning must be between 0 and {MAX_RUNNING_MAX}"
         )));
     }
     // A server starts with its system and never sleeps (spec 42.2).
@@ -94,6 +99,11 @@ pub fn update(daemon: &Daemon, params: SettingsUpdateParams) -> ApiResult<Settin
     if after.approval_wait_minutes > before.approval_wait_minutes {
         daemon.supervisor.workspace_settings_changed();
     }
+    // More room starts the agents that wait for it now; less is kept as
+    // the awake ones go to sleep (spec 7.8).
+    if after.max_running != before.max_running {
+        daemon.supervisor.wake();
+    }
     // A shorter history goes now, not at the next pass (spec 12.1).
     if after.history_days != before.history_days {
         crate::history::wake();
@@ -103,6 +113,7 @@ pub fn update(daemon: &Daemon, params: SettingsUpdateParams) -> ApiResult<Settin
         keep_awake = after.keep_awake,
         approval_wait_minutes = after.approval_wait_minutes,
         history_days = after.history_days,
+        max_running = after.max_running,
         "settings changed"
     );
     Ok(after)

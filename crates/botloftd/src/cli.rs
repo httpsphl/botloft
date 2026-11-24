@@ -43,6 +43,19 @@ pub enum Command {
         #[arg(long)]
         ssh_port: Option<u16>,
     },
+    /// Show or change how much of this server Botloft may take: memory and
+    /// processors (on a Linux server, as root) and agents awake at once.
+    Limits {
+        /// Most memory for Botloft and its agents: 4G, 512M, 50% or none.
+        #[arg(long)]
+        memory: Option<String>,
+        /// Most processors they keep busy: 2, 1.5 or none.
+        #[arg(long)]
+        cpus: Option<String>,
+        /// Most agents awake at once; 0 is no limit.
+        #[arg(long)]
+        agents: Option<u32>,
+    },
     /// The app's own SSH tunnel to this Linux server.
     #[command(subcommand)]
     Tunnel(TunnelCommand),

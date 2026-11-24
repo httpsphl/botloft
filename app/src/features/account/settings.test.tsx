@@ -62,6 +62,7 @@ describe("settings", () => {
         showExperimentalAgents: false,
         makerBuildsWithoutAsking: false,
         historyDays: 0,
+        maxRunning: 0,
       }),
     );
     expect(
