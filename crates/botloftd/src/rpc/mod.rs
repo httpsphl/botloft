@@ -159,6 +159,11 @@ const ASIDE: &[&str] = &[
     // Reading the owner's whole history takes a while (spec 36.7).
     method::IMPORTS_SCAN,
     method::IMPORTS_CREATE,
+    // Sealing or opening a backup of big crew folders takes minutes: in the
+    // queue, the connection could not answer the app's ping meanwhile, and
+    // the app dropped it, and the request with it (spec 14.2).
+    method::BACKUP_EXPORT,
+    method::BACKUP_STAGE,
     // They wait for the network, a copy's transfer for minutes (spec 27.5).
     method::CLOUD_STATUS,
     method::CLOUD_SIGNIN,

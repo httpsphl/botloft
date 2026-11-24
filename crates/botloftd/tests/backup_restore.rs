@@ -87,3 +87,48 @@ async fn a_backup_from_one_computer_replaces_another_after_a_restart() {
         "applied once"
     );
 }
+
+/// The first answer with one of `ids`, skipping notifications.
+async fn first_answer(app: &mut common::Client, ids: &[i64]) -> i64 {
+    loop {
+        let frame = app.recv().await.expect("connection open");
+        if let Some(id) = frame["id"].as_i64().filter(|id| ids.contains(id)) {
+            return id;
+        }
+    }
+}
+
+#[tokio::test]
+async fn sealing_or_opening_a_backup_does_not_hold_up_the_connection() {
+    // A backup of big crew folders takes minutes; the app's ping must still
+    // be answered meanwhile, or the app drops the connection (spec 14.2).
+    let t = TestDaemon::start().await;
+    let mut app = t.session().await;
+    app.call("crews.create", json!({ "name": "Ops" }))
+        .await
+        .expect("crew");
+    let export = json!({ "jsonrpc": "2.0", "id": 901, "method": "backup.export",
+        "params": { "passphrase": "correct horse" } });
+    app.send_raw(&export.to_string()).await;
+    app.send_raw(r#"{"jsonrpc":"2.0","id":902,"method":"session.ping"}"#)
+        .await;
+    assert_eq!(first_answer(&mut app, &[901, 902]).await, 902);
+    assert_eq!(first_answer(&mut app, &[901]).await, 901);
+
+    let file = fs::read_dir(t.paths.home.join("exports"))
+        .expect("exports")
+        .flatten()
+        .map(|entry| entry.path())
+        .find(|path| path.extension().is_some_and(|ext| ext == "botloft"))
+        .expect("the sealed backup");
+    let stage = json!({ "jsonrpc": "2.0", "id": 903, "method": "backup.stage",
+        "params": { "path": file.display().to_string(), "passphrase": "correct horse" } });
+    app.send_raw(&stage.to_string()).await;
+    app.send_raw(r#"{"jsonrpc":"2.0","id":904,"method":"session.ping"}"#)
+        .await;
+    assert_eq!(first_answer(&mut app, &[903, 904]).await, 904);
+    assert_eq!(first_answer(&mut app, &[903]).await, 903);
+    app.call("backup.cancel", serde_json::Value::Null)
+        .await
+        .expect("cancel");
+}

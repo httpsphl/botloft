@@ -8,6 +8,7 @@ use std::io::{self, BufReader, BufWriter, Write};
 use std::path::{Component, Path, PathBuf};
 
 use std::collections::HashSet;
+use std::sync::{Mutex, PoisonError};
 
 use botloft_core::protocol::{BackupCrew, BackupExported, BackupManifest, BackupScope};
 use zip::ZipWriter;
@@ -76,6 +77,11 @@ pub fn export(
     export_to(daemon, passphrase, scope, &daemon.paths.home.join(folder))
 }
 
+/// One export at a time: `backup.export` runs beside the other requests
+/// (spec 11.1), and so do the cloud's light copies; two in one folder would
+/// empty it under each other.
+static EXPORTING: Mutex<()> = Mutex::new(());
+
 fn export_to(
     daemon: &Daemon,
     passphrase: &str,
@@ -85,6 +91,7 @@ fn export_to(
     if passphrase.chars().count() < PASSPHRASE_MIN {
         return Err(SealError::ShortPassphrase);
     }
+    let _held = EXPORTING.lock().unwrap_or_else(PoisonError::into_inner);
     let dir = dir.to_path_buf();
     // Only the newest export is kept: the owner saved the earlier ones.
     let _ = fs::remove_dir_all(&dir);

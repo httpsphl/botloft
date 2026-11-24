@@ -6,6 +6,7 @@
 use std::fs::{self, File};
 use std::io::{self, BufReader, BufWriter, Read};
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use botloft_core::protocol::BackupManifest;
 use tracing::{info, warn};
@@ -20,6 +21,14 @@ const STAGED: &str = "staged.zip";
 const READY: &str = "READY";
 /// What the archive unpacks into before the swap.
 const UNPACKED: &str = "unpacked";
+
+/// One staging at a time: `backup.stage` runs beside the other requests
+/// (spec 11.1), and two of them, or a cancel, would share `<home>/restore`.
+static STAGING: Mutex<()> = Mutex::new(());
+
+fn hold() -> MutexGuard<'static, ()> {
+    STAGING.lock().unwrap_or_else(PoisonError::into_inner)
+}
 
 fn restore_dir(paths: &Paths) -> PathBuf {
     paths.home.join("restore")
@@ -39,6 +48,7 @@ fn version(text: &str) -> Vec<u64> {
 /// Opens the backup with the passphrase, checks it, and keeps it staged.
 /// Nothing changes until `confirm` and a restart.
 pub fn stage(paths: &Paths, file: &Path, passphrase: &str) -> Result<BackupManifest, SealError> {
+    let _held = hold();
     let dir = restore_dir(paths);
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir)?;
@@ -78,6 +88,7 @@ fn check(staged: &Path) -> Result<BackupManifest, SealError> {
 /// The owner said yes: the staged backup replaces everything on the next
 /// start.
 pub fn confirm(paths: &Paths) -> io::Result<()> {
+    let _held = hold();
     let dir = restore_dir(paths);
     if !dir.join(STAGED).is_file() {
         return Err(io::Error::new(
@@ -90,6 +101,7 @@ pub fn confirm(paths: &Paths) -> io::Result<()> {
 
 /// The owner changed their mind: the staged backup goes.
 pub fn cancel(paths: &Paths) {
+    let _held = hold();
     let _ = fs::remove_dir_all(restore_dir(paths));
 }
 
