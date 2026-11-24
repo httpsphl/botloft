@@ -3,6 +3,7 @@
 
 mod account;
 mod agent_user;
+mod browser_user;
 mod credentials;
 mod env;
 mod job;
@@ -26,6 +27,7 @@ use std::time::{Duration, Instant};
 
 pub use self::account::{computer_name, owner_name};
 pub use self::agent_user::{agents_apart, agents_home, as_agent, use_agent_user};
+pub use self::browser_user::{as_browser, browser_profiles, remove_profile, use_browser_user};
 pub use self::credentials::{secret_available, secret_delete, secret_load, secret_save};
 pub use self::env::user_environment;
 pub use self::job::ProcessJob;

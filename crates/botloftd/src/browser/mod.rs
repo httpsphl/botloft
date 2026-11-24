@@ -55,6 +55,7 @@ pub use self::watch::Watching;
 pub use self::window::WindowError;
 use crate::clock::Clock;
 use crate::config::Config;
+use crate::platform;
 use crate::state::Event;
 
 #[derive(Debug, thiserror::Error)]
@@ -154,7 +155,8 @@ impl Browsers {
     ) -> Self {
         Self {
             settings,
-            profiles: home.join("browsers"),
+            // Apart, in the browsers' own user's home (spec 42.5).
+            profiles: platform::browser_profiles().unwrap_or_else(|| home.join("browsers")),
             events,
             clock,
             slots: Slots::default(),
@@ -257,13 +259,13 @@ impl Browsers {
         self.close(bot);
         let profile = self.profiles.join(bot.as_str());
         let Ok(runtime) = tokio::runtime::Handle::try_current() else {
-            let _ = std::fs::remove_dir_all(&profile);
+            let _ = platform::remove_profile(&profile);
             return;
         };
         runtime.spawn(async move {
             // The processes may take a moment to let go of their files.
             for _ in 0..10 {
-                match std::fs::remove_dir_all(&profile) {
+                match platform::remove_profile(&profile) {
                     Ok(()) => return,
                     Err(err) if err.kind() == io::ErrorKind::NotFound => return,
                     Err(_) => tokio::time::sleep(Duration::from_millis(500)).await,

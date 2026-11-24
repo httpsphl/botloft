@@ -15,7 +15,10 @@ mod sign_in;
 mod task;
 mod task_xml;
 
-pub use agent_user::{agents_apart, agents_home, as_agent, use_agent_user};
+pub use agent_user::{
+    agents_apart, agents_home, as_agent, as_browser, browser_profiles, remove_profile,
+    use_agent_user, use_browser_user,
+};
 pub use console::leave_own_console;
 pub use credentials::{secret_available, secret_delete, secret_load, secret_save};
 pub use env::user_environment;

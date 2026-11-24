@@ -88,6 +88,8 @@ pub async fn launch(
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::piped());
+    // Apart, as the browsers' own user (spec 42.5).
+    platform::as_browser(&mut command);
     ProcessJob::prepare(&mut command);
     let job = ProcessJob::new()?;
     let mut child = command.spawn()?;

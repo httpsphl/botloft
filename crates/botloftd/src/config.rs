@@ -37,6 +37,9 @@ pub struct Config {
     /// The system user the agents run as, apart from the daemon's (spec
     /// 42.5, Linux); empty runs them as the daemon's user.
     pub agents_user: String,
+    /// The system user the agents' browser runs as, apart from the daemon's
+    /// and the agents' (spec 42.5, Linux); empty runs it as the daemon's.
+    pub browser_user: String,
     pub log_level: String,
     pub supervisor: SupervisorConfig,
     pub courier: CourierConfig,
@@ -61,6 +64,7 @@ impl Default for Config {
             maker_builds_without_asking: false,
             server: false,
             agents_user: String::new(),
+            browser_user: String::new(),
             log_level: "info".to_owned(),
             supervisor: SupervisorConfig::default(),
             courier: CourierConfig::default(),

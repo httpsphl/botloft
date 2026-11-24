@@ -112,3 +112,19 @@ async fn more_room_starts_the_agent_that_waited() {
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
 }
+
+/// `botloftd limits` asks as the owner, with no params for `system.limits`:
+/// the request leaves them out, as JSON-RPC wants.
+#[tokio::test]
+async fn the_owners_command_line_reads_the_limits() {
+    let t = TestDaemon::start().await;
+    let mut owner = botloftd::local::Owner::connect(t.addr.port(), common::TOKEN, "test")
+        .await
+        .expect("connect");
+    let limits = owner
+        .call("system.limits", Value::Null)
+        .await
+        .expect("limits");
+    assert!(limits["cpus"].as_u64().expect("cpus") >= 1);
+    owner.close().await;
+}

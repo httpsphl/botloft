@@ -1,7 +1,8 @@
 //! The agents run as another user only on a Linux server (spec 42.5): on
 //! Windows they always run as the owner.
 
-use std::path::PathBuf;
+use std::io;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 pub fn use_agent_user(_name: &str) -> Result<(), String> {
@@ -19,3 +20,18 @@ pub fn agents_home() -> Option<PathBuf> {
 }
 
 pub fn as_agent(_command: &mut Command) {}
+
+pub fn use_browser_user(_name: &str) -> Result<(), String> {
+    Err("the browsers run as another user only on Linux".to_owned())
+}
+
+/// Never apart here: the profiles stay in Botloft's folder.
+pub fn browser_profiles() -> Option<PathBuf> {
+    None
+}
+
+pub fn as_browser(_command: &mut Command) {}
+
+pub fn remove_profile(profile: &Path) -> io::Result<()> {
+    std::fs::remove_dir_all(profile)
+}
