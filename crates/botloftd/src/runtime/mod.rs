@@ -25,6 +25,9 @@ pub struct SpawnSpec {
     pub cwd: PathBuf,
     /// The complete environment. Nothing is inherited from the daemon.
     pub env: Vec<(OsString, OsString)>,
+    /// The folders it writes in, beside its home: in its box, when it has
+    /// one, the only ones (spec 42.5).
+    pub writable: Vec<PathBuf>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -35,3 +35,25 @@ pub fn as_browser(_command: &mut Command) {}
 pub fn remove_profile(profile: &Path) -> io::Result<()> {
     std::fs::remove_dir_all(profile)
 }
+
+/// The agents' box is Linux's (spec 42.5): here a command is the program
+/// itself.
+pub fn agent_command(
+    program: &Path,
+    args: &[std::ffi::OsString],
+    cwd: &Path,
+    _writable: &[PathBuf],
+) -> Command {
+    let mut command = Command::new(program);
+    command.args(args).current_dir(cwd);
+    command
+}
+
+pub fn boxed() -> bool {
+    false
+}
+
+/// The gate runs only beside the box.
+pub fn own_addresses() -> Vec<std::net::IpAddr> {
+    Vec::new()
+}

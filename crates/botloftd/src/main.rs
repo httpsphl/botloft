@@ -44,6 +44,16 @@ fn main() -> ExitCode {
 }
 
 fn dispatch(cli: Cli) -> anyhow::Result<()> {
+    // Inside an agent's box, with no data folder (spec 42.5).
+    #[cfg(unix)]
+    if let Command::BoxBridge { bridges, command } = &cli.command {
+        let bridges = bridges
+            .iter()
+            .map(|text| botloftd::bridge::Bridge::parse(text).context("not a bridge"))
+            .collect::<anyhow::Result<Vec<_>>>()?;
+        let code = botloftd::bridge::run(&bridges, command)?;
+        std::process::exit(code);
+    }
     let home = match cli.command {
         // Run by hand, also on a server set up by install.sh.
         Command::Pair { .. }
@@ -92,6 +102,8 @@ fn dispatch(cli: Cli) -> anyhow::Result<()> {
         Command::Update { check, now } => {
             botloftd::update::update(&home, &botloftd::update::Options { check, now })
         }
+        #[cfg(unix)]
+        Command::BoxBridge { .. } => unreachable!("handled before the data folder"),
     }
 }
 
@@ -212,6 +224,15 @@ fn run(paths: Paths, config: Config, config_path: PathBuf, scheduled: bool) -> a
                 )
             })?;
         info!(port = config.port, "listening on 127.0.0.1");
+        // Before any agent starts (spec 42.5).
+        if config.agents_box {
+            #[cfg(unix)]
+            botloftd::boxes::open(&daemon, &config.reach)
+                .await
+                .map_err(|err| anyhow::anyhow!("the agents cannot run in their box: {err}"))?;
+            #[cfg(not(unix))]
+            anyhow::bail!("the agents' box needs Linux");
+        }
         // Each of these runs as long as the daemon does (spec 14).
         let mut loops = Loops::new();
         // A backup from another computer may name folders that are no path

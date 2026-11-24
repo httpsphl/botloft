@@ -5,7 +5,7 @@
 //! a process group elsewhere (spec 14.1).
 
 use std::io::{self, BufRead, BufReader, Read, Write};
-use std::process::{Child, ChildStdin, Command, Stdio};
+use std::process::{Child, ChildStdin, Stdio};
 use std::sync::{Arc, Mutex, mpsc as std_mpsc};
 use std::thread;
 
@@ -37,10 +37,10 @@ impl Runtime for PipeRuntime {
     }
 
     fn spawn(&self, spec: SpawnSpec) -> io::Result<Process> {
-        let mut command = Command::new(&spec.program);
+        // In its box, when the agents have one (spec 42.5).
+        let mut command =
+            platform::agent_command(&spec.program, &spec.args, &spec.cwd, &spec.writable);
         command
-            .args(&spec.args)
-            .current_dir(&spec.cwd)
             .env_clear()
             .envs(spec.env.iter().map(|(name, value)| (name, value)))
             .stdin(Stdio::piped())

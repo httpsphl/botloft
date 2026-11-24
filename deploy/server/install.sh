@@ -31,7 +31,9 @@
 #   BOTLOFT_WRITE="/srv/site"    more folders they may write (the rest is read-only)
 #   BOTLOFT_HIDE="/srv/clients"  more folders they may not see at all
 #   BOTLOFT_OPEN_NETWORK=1       leave the private networks open
-#   BOTLOFT_NO_SANDBOX=1         no read-only system, hidden folders or private network block
+#   BOTLOFT_NO_BOX=1             the agents run without a box of their own
+#   BOTLOFT_NO_SANDBOX=1         none of these: no box, read-only system, hidden
+#                                folders or private network block
 set -eu
 
 REPO="httpsphl/botloft"
@@ -50,6 +52,9 @@ AGENTS_HOME="/var/lib/botloft-agents"
 BROWSER="botloft-browser"
 BROWSER_HOME="/var/lib/botloft-browser"
 UNIT="/etc/systemd/system/botloft.service"
+# Lets bubblewrap make the agents' box where AppArmor holds user namespaces
+# back (Ubuntu 24.04 and later).
+APPARMOR_PROFILE="/etc/apparmor.d/botloft-bwrap"
 # Where `systemctl set-property` keeps the limits (`botloftd limits`).
 LIMITS_DIR="/etc/systemd/system.control/botloft.service.d"
 # `botloftd update` every hour, as root (spec 42.11).
@@ -132,6 +137,10 @@ uninstall() {
 		as_root "$BIN" tunnel remove >/dev/null 2>&1 || true
 	fi
 	as_root rm -f "$BIN"
+	if [ -f "$APPARMOR_PROFILE" ]; then
+		as_root apparmor_parser -R "$APPARMOR_PROFILE" >/dev/null 2>&1 || true
+		as_root rm -f "$APPARMOR_PROFILE"
+	fi
 	if [ "$purge" = "yes" ]; then
 		remove_user "$ACCOUNT"
 		remove_user "$AGENTS"
@@ -258,15 +267,74 @@ EOF
 	as_root chown "$ACCOUNT:$ACCOUNT" "$HOME_DIR/config.toml"
 	as_root chmod 0600 "$HOME_DIR/config.toml"
 fi
-# An older install gets the browsers' user too: a key of the top, so it goes
-# before the first table.
-if ! as_root grep -q '^browser_user' "$HOME_DIR/config.toml"; then
-	as_root awk -v line="browser_user = \"$BROWSER\"" '
+# Sets a key of the settings' top, `set_key <key> <value>`: in place when it
+# is there, else before the first table.
+set_key() {
+	# $1 inside the program is awk's first field.
+	# shellcheck disable=SC2016
+	as_root awk -v key="$1" -v line="$1 = $2" '
+		!done && $1 == key { print line; done = 1; next }
 		!done && /^\[/ { print line; done = 1 }
 		{ print }
 		END { if (!done) print line }
 	' "$HOME_DIR/config.toml" >"$TMP/config.toml"
 	as_root sh -c "cat '$TMP/config.toml' >'$HOME_DIR/config.toml'"
+}
+# An older install gets the browsers' user too.
+if ! as_root grep -q '^browser_user' "$HOME_DIR/config.toml"; then
+	set_key browser_user "\"$BROWSER\""
+fi
+
+# 4b. The agents' box (spec 42.5): each agent runs under bubblewrap, sees
+# only its own folders and the system's programs, and reaches only the
+# public internet, through Botloft's gate.
+box_works() { as_agents 'bwrap --unshare-all --ro-bind / / true' >/dev/null 2>&1; }
+if [ -z "${BOTLOFT_NO_BOX:-}${BOTLOFT_NO_SANDBOX:-}" ]; then
+	if ! command -v bwrap >/dev/null 2>&1; then
+		say "Installing bubblewrap, for the agents' box..."
+		if command -v apt-get >/dev/null 2>&1; then
+			as_root apt-get update -qq >/dev/null 2>&1 || true
+			as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq bubblewrap >/dev/null
+		elif command -v dnf >/dev/null 2>&1; then
+			as_root dnf install -y -q bubblewrap
+		elif command -v yum >/dev/null 2>&1; then
+			as_root yum install -y -q bubblewrap
+		elif command -v apk >/dev/null 2>&1; then
+			as_root apk add --no-cache -q bubblewrap
+		elif command -v zypper >/dev/null 2>&1; then
+			as_root zypper --non-interactive -q install bubblewrap
+		elif command -v pacman >/dev/null 2>&1; then
+			as_root pacman -S --noconfirm --needed bubblewrap >/dev/null
+		fi
+	fi
+	command -v bwrap >/dev/null 2>&1 || fail "could not install bubblewrap, the agents' box; install it and run this again (or, without the box: BOTLOFT_NO_BOX=1)"
+	# The box is tried as the agents' user.
+	command -v runuser >/dev/null 2>&1 || command -v su >/dev/null 2>&1 || fail "install su or runuser (util-linux) first"
+	userns="/proc/sys/kernel/apparmor_restrict_unprivileged_userns"
+	if ! box_works && [ "$(cat "$userns" 2>/dev/null)" = "1" ] && command -v apparmor_parser >/dev/null 2>&1; then
+		as_root sh -c "cat >'$APPARMOR_PROFILE'" <<EOF
+# Botloft's agents' box (spec 42.5): bubblewrap may make user namespaces.
+abi <abi/4.0>,
+include <tunables/global>
+
+profile botloft-bwrap $(command -v bwrap) flags=(unconfined) {
+  userns,
+}
+EOF
+		as_root apparmor_parser -r "$APPARMOR_PROFILE"
+	fi
+	box_works || fail "bubblewrap cannot make the agents' box here (user namespaces may be off); run without it: BOTLOFT_NO_BOX=1"
+	set_key agents_box true
+	say "Each agent runs in a box of its own."
+else
+	set_key agents_box false
+fi
+if [ -n "${BOTLOFT_REACH:-}" ]; then
+	reach=""
+	for address in $BOTLOFT_REACH; do
+		reach="${reach:+$reach, }\"$address\""
+	done
+	set_key reach "[$reach]"
 fi
 
 # 5. Claude Code, which the agents run, from its official installer.
@@ -287,7 +355,8 @@ fi
 # read-only but for Botloft's folders; people's homes, the containers' and
 # databases' data are not there at all; and the private networks, where a
 # server's other systems and the cloud's metadata live, are closed. The
-# internet and this computer's loopback stay open.
+# internet and this computer's loopback stay open to the service; an agent
+# in its box (4b) reaches only the internet, through the gate.
 sandbox=""
 network=""
 if [ -z "${BOTLOFT_NO_SANDBOX:-}" ]; then

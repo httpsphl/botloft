@@ -9,6 +9,12 @@ pub mod autobackup;
 pub mod autostart;
 pub mod background;
 pub mod backup;
+/// Sets up the agents' boxes (spec 42.5).
+#[cfg(unix)]
+pub mod boxes;
+/// The agents' box's bridges (spec 42.5).
+#[cfg(unix)]
+pub mod bridge;
 pub mod browser;
 pub mod catalog;
 pub mod changes;
@@ -22,6 +28,7 @@ pub mod context;
 pub mod courier;
 pub mod desktop;
 pub mod failures;
+pub mod gate;
 pub mod history;
 pub mod imports;
 pub mod keep_awake;

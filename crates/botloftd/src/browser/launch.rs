@@ -82,6 +82,7 @@ pub async fn launch(
             "--disable-blink-features=AutomationControlled",
         ])
         .arg(format!("--user-data-dir={}", profile.display()))
+        .args(through_gate(crate::gate::for_browsers()))
         .arg("about:blank")
         .env_clear()
         .envs(env.iter().map(|(name, value)| (name, value)))
@@ -130,6 +131,20 @@ pub async fn launch(
         }
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
+}
+
+/// With a gate, every page goes out through it, loopback too: a page or an
+/// agent asking for this computer's own services is refused there (spec
+/// 42.5). WebRTC keeps to the proxy as well.
+fn through_gate(port: Option<u16>) -> Vec<String> {
+    let Some(port) = port else {
+        return Vec::new();
+    };
+    vec![
+        format!("--proxy-server=http://127.0.0.1:{port}"),
+        "--proxy-bypass-list=<-loopback>".to_owned(),
+        "--force-webrtc-ip-handling-policy=disable_non_proxied_udp".to_owned(),
+    ]
 }
 
 /// Starts `program` with a window of its own and no DevTools on the
@@ -294,6 +309,19 @@ mod tests {
         assert_eq!(devtools_url("62475\n"), None);
         assert_eq!(devtools_url("0\n/devtools/browser/x"), None);
         assert_eq!(devtools_url(""), None);
+    }
+
+    #[test]
+    fn with_a_gate_every_page_goes_through_it() {
+        assert!(through_gate(None).is_empty());
+        assert_eq!(
+            through_gate(Some(41000)),
+            [
+                "--proxy-server=http://127.0.0.1:41000",
+                "--proxy-bypass-list=<-loopback>",
+                "--force-webrtc-ip-handling-policy=disable_non_proxied_udp",
+            ]
+        );
     }
 
     #[test]
