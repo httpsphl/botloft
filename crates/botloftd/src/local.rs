@@ -40,10 +40,15 @@ impl Owner {
     }
 
     /// Sends a request and waits for its answer, past any notification.
+    /// `Value::Null` params are left out, as for a request without any:
+    /// JSON-RPC takes only an object or an array there.
     pub async fn call(&mut self, name: &str, params: Value) -> anyhow::Result<Value> {
         let id = self.next_id;
         self.next_id += 1;
-        let request = json!({ "jsonrpc": "2.0", "id": id, "method": name, "params": params });
+        let mut request = json!({ "jsonrpc": "2.0", "id": id, "method": name });
+        if !params.is_null() {
+            request["params"] = params;
+        }
         self.socket.send(Message::text(request.to_string())).await?;
         loop {
             let frame = tokio::time::timeout(WAIT, self.socket.next())
