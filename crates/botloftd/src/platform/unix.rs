@@ -9,8 +9,8 @@ mod job;
 // Both build everywhere, so each one's tests run on either system.
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 mod launchd;
-#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 mod limits;
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 mod memory;
 mod orphans;
 mod power;
