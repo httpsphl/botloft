@@ -21,11 +21,14 @@ export * from "./rpcTypes";
 
 /**
  * Requests that may take minutes: reading the owner's whole Claude Code
- * history with a cold disk took over 30 s (spec 36.7).
+ * history with a cold disk took over 30 s (spec 36.7). Sealing or opening a
+ * backup of big crew folders takes as long (spec 14.2).
  */
 const SLOW_MS: Partial<Record<Method, number>> = {
   "imports.scan": 10 * 60_000,
   "imports.create": 10 * 60_000,
+  "backup.export": 30 * 60_000,
+  "backup.stage": 30 * 60_000,
 };
 
 export interface RpcOptions {

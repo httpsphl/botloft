@@ -216,6 +216,17 @@ describe("RpcConnection", () => {
     await expect(scan).resolves.toMatchObject({ projects: [] });
   });
 
+  test("sealing or opening a backup waits minutes, not the usual time", async () => {
+    const { connection, socket, accept } = setup({ requestTimeoutMs: 1000 });
+    connection.start();
+    accept();
+    const exported = connection.request("backup.export", { passphrase: "correct horse" });
+    vi.advanceTimersByTime(10 * 60_000);
+    const answer = { path: "/x.botloft", size: 1, manifest: {} };
+    socket().reply(socket().last().id, answer);
+    await expect(exported).resolves.toMatchObject({ size: 1 });
+  });
+
   test("a quiet connection asks whether the daemon is there, and replaces a dead one", async () => {
     const { connection, sockets, socket, accept } = setup({ requestTimeoutMs: 120_000 });
     connection.start();
