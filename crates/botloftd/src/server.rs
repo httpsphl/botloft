@@ -47,6 +47,28 @@ pub fn router(daemon: Arc<Daemon>) -> Router {
         .with_state(daemon)
 }
 
+/// What the agents' boxes reach through their socket (spec 42.5): the MCP
+/// alone, never the owner's `/rpc`.
+#[cfg(unix)]
+pub fn box_router(daemon: Arc<Daemon>) -> Router {
+    Router::new()
+        .route("/health", get(health))
+        .route(
+            "/mcp",
+            post(tools::handle)
+                .get(tools::not_allowed)
+                .delete(tools::not_allowed)
+                .layer(DefaultBodyLimit::max(MAX_MCP_BYTES)),
+        )
+        .with_state(daemon)
+}
+
+/// Serves the boxes' socket as long as the daemon runs.
+#[cfg(unix)]
+pub async fn serve_box(daemon: Arc<Daemon>, listener: tokio::net::UnixListener) {
+    let _ = axum::serve(listener, box_router(daemon)).await;
+}
+
 /// Serves until `shutdown` resolves.
 pub async fn serve(
     daemon: Arc<Daemon>,

@@ -21,7 +21,9 @@ fi
 stub="/tmp/botloftd"
 printf '#!/bin/sh\necho "botloftd 0.0.0-test"\n' >"$stub"
 chmod +x "$stub"
-run() { BOTLOFT_FROM="$stub" BOTLOFT_NO_SERVICE=1 BOTLOFT_NO_CLAUDE=1 sh "$INSTALL"; }
+# A plain container may not make user namespaces: the agents' box is
+# test-sandbox.sh's, under systemd.
+run() { BOTLOFT_FROM="$stub" BOTLOFT_NO_SERVICE=1 BOTLOFT_NO_CLAUDE=1 BOTLOFT_NO_BOX=1 sh "$INSTALL"; }
 # owner:group mode of a path.
 looks() { stat -c '%U:%G %a' "$1"; }
 
@@ -35,6 +37,7 @@ config="/var/lib/botloft/home/config.toml"
 grep -q '^server = true$' "$config" || fail "the settings do not say server"
 grep -q '^agents_user = "botloft-agents"$' "$config" || fail "the settings do not name the agents' user"
 grep -q '^workspaces_root = "/var/lib/botloft/workspaces"$' "$config" || fail "no workspaces root"
+grep -q '^agents_box = false$' "$config" || fail "the settings do not say the agents run without a box"
 [ "$(looks /var/lib/botloft)" = "botloft:botloft-agents 750" ] || fail "data folder: $(looks /var/lib/botloft)"
 [ "$(looks /var/lib/botloft/home)" = "botloft:botloft 700" ] || fail "the daemon's folder is open: $(looks /var/lib/botloft/home)"
 [ "$(looks "$config")" = "botloft:botloft 600" ] || fail "the settings are open: $(looks "$config")"

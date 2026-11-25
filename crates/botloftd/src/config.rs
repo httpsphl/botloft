@@ -40,6 +40,13 @@ pub struct Config {
     /// The system user the agents' browser runs as, apart from the daemon's
     /// and the agents' (spec 42.5, Linux); empty runs it as the daemon's.
     pub browser_user: String,
+    /// Each agent runs in a box of its own (spec 42.5, Linux): it sees its
+    /// folders and the system's programs, and reaches only the public
+    /// internet, through the gate.
+    pub agents_box: bool,
+    /// Addresses or ranges past the gate that the agents and their browser
+    /// may reach all the same (`10.0.0.5`, `192.168.1.0/24`).
+    pub reach: Vec<String>,
     pub log_level: String,
     pub supervisor: SupervisorConfig,
     pub courier: CourierConfig,
@@ -65,6 +72,8 @@ impl Default for Config {
             server: false,
             agents_user: String::new(),
             browser_user: String::new(),
+            agents_box: false,
+            reach: Vec::new(),
             log_level: "info".to_owned(),
             supervisor: SupervisorConfig::default(),
             courier: CourierConfig::default(),
@@ -310,6 +319,10 @@ mod tests {
         let apart = Config::parse("agents_user = 'botloft-agents'").expect("parse");
         assert_eq!(apart.agents_user, "botloft-agents");
         assert_eq!(Config::default().agents_user, "");
+        let boxed = Config::parse("agents_box = true\nreach = ['10.0.0.5']").expect("parse");
+        assert!(boxed.agents_box);
+        assert_eq!(boxed.reach, ["10.0.0.5"]);
+        assert!(!Config::default().agents_box);
     }
 
     #[test]

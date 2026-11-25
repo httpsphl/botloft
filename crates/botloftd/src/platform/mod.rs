@@ -15,6 +15,8 @@ use std::path::{Path, PathBuf};
 pub use helper::run_helper;
 
 #[cfg(unix)]
+pub use unix::{BoxSetup, agent_command, boxed, check_box, own_addresses, use_box};
+#[cfg(unix)]
 pub use unix::{
     KeepAwake, ProcessJob, TASK_KIND, agents_apart, agents_home, as_agent, as_browser,
     browser_profiles, computer_name, delete_task, find_task, leave_own_console, memory, owner_name,
@@ -32,6 +34,8 @@ pub use windows::{
     running_programs, secret_available, secret_delete, secret_load, secret_save, sign_in_id,
     stop_task, track_groups, use_agent_user, use_browser_user, user_environment,
 };
+#[cfg(windows)]
+pub use windows::{agent_command, boxed, own_addresses};
 
 /// What the system lets Botloft and its agents take together (spec 42.4).
 /// What it does not say is left out.

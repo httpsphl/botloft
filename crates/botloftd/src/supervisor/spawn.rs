@@ -208,11 +208,21 @@ pub(super) fn launch_spec(
 
     // The connected tools in the agent's own configuration, secrets in place.
     let connected = workspace::connected::codex_entries(&servers, &env);
+    // Its crew's folder (its own and the others' of the crew, the shared
+    // one) and the folder the crew works in, when the owner chose another.
+    let mut writable = vec![daemon.paths.crew_dir(&crew.slug)];
+    if !writable
+        .iter()
+        .any(|folder| work_folder.starts_with(folder))
+    {
+        writable.push(work_folder.clone());
+    }
     let spec = SpawnSpec {
         program,
         args,
         cwd: workspace.clone(),
         env,
+        writable,
     };
     Ok((
         spec,

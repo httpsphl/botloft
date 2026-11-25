@@ -69,6 +69,17 @@ pub enum Command {
         #[arg(long)]
         now: bool,
     },
+    /// Inside an agent's box: carry the ports to Botloft's sockets and run
+    /// the agent (spec 42.5).
+    #[cfg(unix)]
+    #[command(hide = true)]
+    BoxBridge {
+        /// `127.0.0.1:PORT=SOCKET`, each.
+        bridges: Vec<String>,
+        /// The agent's program and its arguments, after `--`.
+        #[arg(last = true, required = true)]
+        command: Vec<std::ffi::OsString>,
+    },
 }
 
 #[derive(Subcommand)]

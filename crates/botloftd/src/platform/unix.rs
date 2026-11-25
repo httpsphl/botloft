@@ -2,6 +2,7 @@
 //! started for the owner by systemd or launchd.
 
 mod account;
+mod agent_box;
 mod agent_user;
 mod browser_user;
 mod credentials;
@@ -13,6 +14,7 @@ mod launchd;
 mod limits;
 #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 mod memory;
+mod net;
 mod orphans;
 mod power;
 mod programs;
@@ -26,6 +28,7 @@ use std::process::{Command, Output, Stdio};
 use std::time::{Duration, Instant};
 
 pub use self::account::{computer_name, owner_name};
+pub use self::agent_box::{BoxSetup, agent_command, boxed, check_box, use_box};
 pub use self::agent_user::{agents_apart, agents_home, as_agent, use_agent_user};
 pub use self::browser_user::{as_browser, browser_profiles, remove_profile, use_browser_user};
 pub use self::credentials::{secret_available, secret_delete, secret_load, secret_save};
@@ -35,6 +38,7 @@ pub use self::job::ProcessJob;
 pub use self::launchd::{TASK_KIND, delete_task, find_task, register_task, run_task, stop_task};
 pub use self::limits::group_limits;
 pub use self::memory::memory;
+pub use self::net::own_addresses;
 pub use self::orphans::track_groups;
 pub use self::power::KeepAwake;
 pub use self::programs::running_programs;
