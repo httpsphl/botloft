@@ -149,9 +149,10 @@ systemctl show botloft.service -p IPAddressDeny --value | grep -q "169.254.0.0/1
 id botloft-browser >/dev/null 2>&1 || fail "no browser user"
 grep -q '^browser_user = "botloft-browser"' /var/lib/botloft/home/config.toml || fail "the settings do not name the browser's user"
 [ "$(stat -c '%U:%G %a' /var/lib/botloft-browser)" = "botloft-browser:botloft 2770" ] || fail "browser home: $(stat -c '%U:%G %a' /var/lib/botloft-browser)"
-if ! command -v chromium >/dev/null 2>&1; then
-	apt-get update -qq >/dev/null && apt-get install -y -qq chromium python3 >/dev/null
-fi
+# The installer gave the agents a browser (Debian's Chromium here).
+grep -q "The agents have a browser." /tmp/install.log || fail "no browser for the agents: $(grep -i browser /tmp/install.log)"
+command -v chromium >/dev/null 2>&1 || fail "the installer's browser is not chromium"
+command -v python3 >/dev/null 2>&1 || { apt-get update -qq >/dev/null && apt-get install -y -qq python3 >/dev/null; }
 # A service of the server's own on its loopback, and the server's address,
 # which the agents try from their box.
 python3 -m http.server 9876 --bind 127.0.0.1 >/dev/null 2>&1 &
