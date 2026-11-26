@@ -288,7 +288,8 @@ fi
 # 4b. The agents' box (spec 42.5): each agent runs under bubblewrap, sees
 # only its own folders and the system's programs, and reaches only the
 # public internet, through Botloft's gate.
-box_works() { as_agents 'bwrap --unshare-all --ro-bind / / true' >/dev/null 2>&1; }
+box_works() { as_agents 'bwrap --unshare-all --ro-bind / / --proc /proc true' >/dev/null 2>&1; }
+boxed=""
 if [ -z "${BOTLOFT_NO_BOX:-}${BOTLOFT_NO_SANDBOX:-}" ]; then
 	if ! command -v bwrap >/dev/null 2>&1; then
 		say "Installing bubblewrap, for the agents' box..."
@@ -325,6 +326,7 @@ EOF
 	fi
 	box_works || fail "bubblewrap cannot make the agents' box here (user namespaces may be off); run without it: BOTLOFT_NO_BOX=1"
 	set_key agents_box true
+	boxed="yes"
 	say "Each agent runs in a box of its own."
 else
 	set_key agents_box false
@@ -364,18 +366,23 @@ if [ -z "${BOTLOFT_NO_SANDBOX:-}" ]; then
 	for path in ${BOTLOFT_HIDE:-}; do
 		hidden="$hidden -$path"
 	done
+	# These three cover parts of /proc, and the kernel then refuses the
+	# agents' box a /proc of its own (bubblewrap: "Can't mount proc"). The
+	# daemon's user holds no capability that would touch them anyway.
+	kernel="ProtectKernelTunables=yes
+ProtectKernelLogs=yes
+ProtectHostname=yes"
+	[ -z "$boxed" ] || kernel=""
 	sandbox="ProtectSystem=strict
 ReadWritePaths=$DATA $AGENTS_HOME $BROWSER_HOME${BOTLOFT_WRITE:+ $BOTLOFT_WRITE}
 PrivateTmp=yes
 ProtectHome=yes
 PrivateDevices=yes
-ProtectKernelTunables=yes
 ProtectKernelModules=yes
-ProtectKernelLogs=yes
 ProtectControlGroups=yes
 ProtectClock=yes
-ProtectHostname=yes
-LockPersonality=yes
+LockPersonality=yes${kernel:+
+$kernel}
 InaccessiblePaths=$hidden"
 	if [ -z "${BOTLOFT_OPEN_NETWORK:-}" ]; then
 		# The name servers may sit on a private address; they stay reachable.
@@ -428,6 +435,16 @@ EOF
 		as_root systemctl restart botloft.service
 	else
 		as_root systemctl enable --now botloft.service
+	fi
+	# It checks its box and the rest as it starts; one that stops right away
+	# comes back over and over, so it must still be up a moment later.
+	sleep 2
+	first="$(as_root systemctl show botloft.service -p MainPID --value)"
+	sleep 5
+	if ! as_root systemctl is-active --quiet botloft.service || [ "$first" = "0" ] ||
+		[ "$(as_root systemctl show botloft.service -p MainPID --value)" != "$first" ]; then
+		as_root journalctl -u botloft.service -n 15 --no-pager >&2 || true
+		fail "Botloft did not stay up as a service; what it said is above"
 	fi
 	say "Botloft is running as a service (systemctl status botloft)."
 
