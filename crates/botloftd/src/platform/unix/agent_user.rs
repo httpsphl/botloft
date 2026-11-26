@@ -25,6 +25,8 @@ pub struct AgentUser {
     pub gid: u32,
     pub home: PathBuf,
     pub shell: PathBuf,
+    /// Every group it is in, `gid` among them.
+    pub groups: Vec<u32>,
 }
 
 static AGENT: OnceLock<AgentUser> = OnceLock::new();
@@ -92,17 +94,66 @@ pub fn as_agent(command: &mut Command) {
 
 pub(super) fn switch(command: &mut Command, user: &AgentUser) {
     command
-        .uid(user.uid)
-        .gid(user.gid)
         .env("HOME", &user.home)
         .env("USER", &user.name)
         .env("LOGNAME", &user.name)
         .env("SHELL", &user.shell);
-    // SAFETY: the hook only calls `prctl`, which is async-signal-safe, as
-    // the time between fork and exec asks.
+    // With its groups too: the browsers' user reaches its profiles, which
+    // the daemon makes, through the daemon's group. `Command::uid` alone
+    // leaves none (`setgroups(0)`) and `Command::groups` is not stable.
+    let (uid, gid, groups) = (user.uid, user.gid, user.groups.clone());
+    // SAFETY: the hook only makes plain system calls (`setgroups`,
+    // `setgid`, `setuid`, `prctl`) on data made before the fork, as the
+    // time between fork and exec asks.
     unsafe {
-        command.pre_exec(drop_capabilities);
+        command.pre_exec(move || {
+            take_on(uid, gid, &groups)?;
+            drop_capabilities()
+        });
     }
+}
+
+/// Runs in the child, before `exec`: the user's groups, then its group,
+/// then the user, in the only order the capabilities allow.
+fn take_on(uid: u32, gid: u32, groups: &[u32]) -> io::Result<()> {
+    // A `size_t` on Linux, an `int` on macOS.
+    #[allow(clippy::useless_conversion)]
+    let count = groups
+        .len()
+        .try_into()
+        .map_err(|_| io::ErrorKind::InvalidInput)?;
+    // SAFETY: `groups` holds `count` ids and outlives the call.
+    let set = unsafe { libc::setgroups(count, groups.as_ptr()) };
+    // SAFETY: plain system calls with ids as arguments.
+    if set != 0 || unsafe { libc::setgid(gid) } != 0 || unsafe { libc::setuid(uid) } != 0 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(())
+}
+
+/// The groups `name` is in, its own `gid` among them (`getgrouplist`).
+#[cfg(target_os = "linux")]
+fn groups_of(name: &CStr, gid: u32) -> Vec<u32> {
+    let mut room: libc::c_int = 32;
+    while room <= 1 << 16 {
+        let mut found = room;
+        let mut list: Vec<libc::gid_t> = vec![gid; usize::try_from(room).unwrap_or(32)];
+        // SAFETY: `list` has room for `found` ids, and both outlive the call.
+        let code =
+            unsafe { libc::getgrouplist(name.as_ptr(), gid, list.as_mut_ptr(), &raw mut found) };
+        if code >= 0 {
+            list.truncate(usize::try_from(found).unwrap_or_default());
+            return list;
+        }
+        room = found.max(room * 2);
+    }
+    vec![gid]
+}
+
+/// Elsewhere, its own group only, as before.
+#[cfg(not(target_os = "linux"))]
+fn groups_of(_name: &CStr, gid: u32) -> Vec<u32> {
+    vec![gid]
 }
 
 /// Runs in the child after the switch, before `exec`.
@@ -168,6 +219,7 @@ fn lookup(name: &str) -> Option<AgentUser> {
     }
     let shell = text(entry.pw_shell);
     Some(AgentUser {
+        groups: groups_of(&wanted, entry.pw_gid),
         name: name.to_owned(),
         uid: entry.pw_uid,
         gid: entry.pw_gid,
@@ -192,61 +244,5 @@ fn text(ptr: *const c_char) -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn the_switch_needs_all_three_capabilities() {
-        // CAP_KILL, CAP_SETGID and CAP_SETUID: bits 5, 6 and 7.
-        assert!(can_switch("Name:\tbotloftd\nCapEff:\t00000000000000e0\n"));
-        assert!(can_switch("CapEff:\t000001ffffffffff\n"));
-        assert!(!can_switch("CapEff:\t00000000000000c0\n"));
-        assert!(!can_switch("CapEff:\t0000000000000000\n"));
-        assert!(!can_switch("Name:\tbotloftd\n"));
-    }
-
-    #[test]
-    fn a_user_that_is_not_there_is_refused() {
-        assert_eq!(
-            use_agent_user("botloft-no-such-user").map_err(|err| err.contains("no user")),
-            Err(true)
-        );
-        assert!(lookup("root").is_some_and(|root| root.uid == 0));
-    }
-
-    /// Only as root (a container): `nobody` cannot read a file only root
-    /// may, and the command runs as `nobody`.
-    #[test]
-    fn a_command_as_another_user_cannot_read_the_daemons_secrets() {
-        // SAFETY: no arguments, never fails.
-        if unsafe { libc::geteuid() } != 0 {
-            return;
-        }
-        let Some(nobody) = lookup("nobody") else {
-            return;
-        };
-        let dir = tempfile::tempdir().expect("dir");
-        let secret = dir.path().join("owner.token");
-        std::fs::write(&secret, "s3cret").expect("secret");
-        std::fs::set_permissions(&secret, std::os::unix::fs::PermissionsExt::from_mode(0o600))
-            .expect("mode");
-        // Not through the daemon-wide user: the other tests run as they are.
-        let mut command = Command::new("sh");
-        command
-            .args(["-c", "id -u; cat \"$1\" 2>/dev/null || echo refused", "sh"])
-            .arg(&secret)
-            .current_dir("/");
-        switch(&mut command, &nobody);
-        let output = command.output().expect("run");
-        let text = String::from_utf8_lossy(&output.stdout);
-        assert_eq!(
-            text.lines().next(),
-            Some(nobody.uid.to_string().as_str()),
-            "{text}"
-        );
-        assert!(
-            text.contains("refused") && !text.contains("s3cret"),
-            "{text}"
-        );
-    }
-}
+#[path = "agent_user_tests.rs"]
+mod tests;
