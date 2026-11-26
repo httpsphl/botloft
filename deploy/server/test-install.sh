@@ -23,7 +23,7 @@ printf '#!/bin/sh\necho "botloftd 0.0.0-test"\n' >"$stub"
 chmod +x "$stub"
 # A plain container may not make user namespaces: the agents' box is
 # test-sandbox.sh's, under systemd.
-run() { BOTLOFT_FROM="$stub" BOTLOFT_NO_SERVICE=1 BOTLOFT_NO_CLAUDE=1 BOTLOFT_NO_BOX=1 sh "$INSTALL"; }
+run() { BOTLOFT_FROM="$stub" BOTLOFT_NO_SERVICE=1 BOTLOFT_NO_CLAUDE=1 BOTLOFT_NO_BOX=1 BOTLOFT_NO_BROWSER=1 sh "$INSTALL"; }
 # owner:group mode of a path.
 looks() { stat -c '%U:%G %a' "$1"; }
 

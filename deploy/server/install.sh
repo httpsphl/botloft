@@ -17,6 +17,7 @@
 #   BOTLOFT_FROM=/path/botloftd  a daemon already on disk instead of a download
 #   BOTLOFT_NO_SERVICE=1         no system service (a container without systemd)
 #   BOTLOFT_NO_CLAUDE=1          do not install Claude Code
+#   BOTLOFT_NO_BROWSER=1         do not install a browser for the agents
 #   BOTLOFT_NO_AUTO_UPDATE=1     no hourly `botloftd update` (spec 42.11)
 #   BOTLOFT_NO_TUNNEL=1          the app does not open its own SSH tunnel (42.6)
 #
@@ -349,6 +350,51 @@ if [ -z "${BOTLOFT_NO_CLAUDE:-}" ]; then
 		command -v curl >/dev/null 2>&1 || fail "install curl first: Claude Code's installer needs it"
 		say "Installing Claude Code for the agents..."
 		as_agents 'curl -fsSL https://claude.ai/install.sh | bash'
+	fi
+fi
+
+# 5b. A browser for the agents (spec 42.5), one Botloft finds on the PATH.
+# Not a snap: a snap's browser does not run as a service's other user.
+# Without one the agents work, only without their browser.
+browser_found() {
+	for name in google-chrome-stable google-chrome chromium chromium-browser brave-browser microsoft-edge-stable; do
+		path="$(command -v "$name" 2>/dev/null)" || continue
+		case "$(readlink -f "$path")" in /snap/*) continue ;; esac
+		grep -q "/snap/" "$path" 2>/dev/null && continue
+		return 0
+	done
+	return 1
+}
+if [ -z "${BOTLOFT_NO_BROWSER:-}" ] && ! browser_found; then
+	say "Installing a browser for the agents..."
+	os="$(sed -n 's/^ID=//p' /etc/os-release 2>/dev/null | tr -d "\"'")"
+	if command -v apt-get >/dev/null 2>&1; then
+		as_root apt-get update -qq >/dev/null 2>&1 || true
+	fi
+	if [ "$os" = "ubuntu" ]; then
+		# Ubuntu's Chromium is only a snap: Google Chrome's own package, which
+		# also adds Google's repository for its updates. Linux on ARM has none.
+		if [ "$(dpkg --print-architecture 2>/dev/null)" = "amd64" ] && command -v curl >/dev/null 2>&1; then
+			deb="$(mktemp -d)/google-chrome-stable_current_amd64.deb"
+			curl -fsSL -o "$deb" https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb &&
+				as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$deb" >/dev/null 2>&1 || true
+			rm -rf "$(dirname "$deb")"
+		fi
+	elif command -v apt-get >/dev/null 2>&1; then
+		as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq chromium >/dev/null 2>&1 || true
+	elif command -v dnf >/dev/null 2>&1; then
+		as_root dnf install -y -q chromium >/dev/null || true
+	elif command -v apk >/dev/null 2>&1; then
+		as_root apk add --no-cache -q chromium >/dev/null || true
+	elif command -v zypper >/dev/null 2>&1; then
+		as_root zypper --non-interactive -q install chromium >/dev/null || true
+	elif command -v pacman >/dev/null 2>&1; then
+		as_root pacman -S --noconfirm --needed chromium >/dev/null || true
+	fi
+	if browser_found; then
+		say "The agents have a browser."
+	else
+		say "No browser for the agents was installed: they work without one. Install Google Chrome or Chromium (not a snap) to give them one."
 	fi
 fi
 
