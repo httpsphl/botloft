@@ -115,6 +115,37 @@ fn the_box_reaches_botloft_and_the_internet_through_its_bridges() {
 }
 
 #[test]
+fn a_program_in_sight_is_not_mounted_again_and_one_elsewhere_is() {
+    // In the agents' home: Claude Code's own link, which cannot be mounted
+    // over. Mounting it made bubblewrap fail before Claude Code ran.
+    let plan = made();
+    assert!(
+        !after(&plan, "--ro-bind-try")
+            .iter()
+            .any(|path| path.contains("claude"))
+    );
+    let elsewhere = texts(&plan_for(Path::new("/opt/tools/claude")));
+    assert!(after(&elsewhere, "--ro-bind-try").contains(&"/opt/tools/claude".to_owned()));
+    let in_usr = texts(&plan_for(Path::new("/usr/local/bin/claude")));
+    assert!(
+        !after(&in_usr, "--ro-bind-try")
+            .iter()
+            .any(|path| path.contains("claude"))
+    );
+}
+
+fn plan_for(program: &Path) -> Vec<OsString> {
+    plan(
+        &setup(),
+        &[Mount::ReadOnly("/usr".into())],
+        program,
+        &[],
+        Path::new("/var/lib/botloft/workspaces/ops/scout"),
+        &[PathBuf::from("/var/lib/botloft/workspaces/ops")],
+    )
+}
+
+#[test]
 fn without_a_box_the_command_is_the_program_itself() {
     // No box was set in this process's tests.
     let command = agent_command(Path::new("/bin/echo"), &["hi".into()], Path::new("/"), &[]);

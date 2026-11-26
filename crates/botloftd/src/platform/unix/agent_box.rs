@@ -113,11 +113,27 @@ pub fn agent_command(
         command.args(args).current_dir(cwd);
         return command;
     };
+    // A program kept elsewhere is mounted by itself, and a link cannot be:
+    // its real file then. One already in sight runs as it is.
+    let real = (!shown(setup, system, writable, program))
+        .then(|| std::fs::canonicalize(program).ok())
+        .flatten();
+    let program = real.as_deref().unwrap_or(program);
     let mut command = Command::new(&setup.bwrap);
     command
         .args(plan(setup, system, program, args, cwd, writable))
         .current_dir("/");
     command
+}
+
+/// Whether `path` is inside a folder the box shows anyway.
+fn shown(setup: &BoxSetup, system: &[Mount], writable: &[PathBuf], path: &Path) -> bool {
+    path.starts_with(&setup.home)
+        || writable.iter().any(|folder| path.starts_with(folder))
+        || system.iter().any(|mount| match mount {
+            Mount::ReadOnly(folder) => path.starts_with(folder),
+            Mount::Link { link, .. } => path.starts_with(link),
+        })
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -188,8 +204,12 @@ pub(crate) fn plan(
     for folder in writable {
         put!(plan, "--bind", folder, folder);
     }
-    // A program kept outside the visible folders still runs.
-    put!(plan, "--ro-bind-try", program, program);
+    // A program kept outside the visible folders still runs. Not one inside
+    // them: there it may be a link (Claude Code's installer makes one in its
+    // home), and bubblewrap cannot mount over a link.
+    if !shown(setup, system, writable, program) {
+        put!(plan, "--ro-bind-try", program, program);
+    }
     let inside = Path::new(INSIDE);
     let (exe, mcp, gate) = (
         inside.join("botloftd"),

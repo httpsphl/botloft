@@ -51,9 +51,12 @@ grep -q '^reach = \["10.9.9.9"\]' "$config" || fail "the settings do not open th
 # service, when it checks the version and the sign-in; and in an agent's box
 # when an agent wakes (below).
 bin="/var/lib/botloft-agents/.local/bin"
+# Where Claude Code's installer keeps it: a version, linked from bin.
+real="/var/lib/botloft-agents/.local/share/claude/versions/2.1.999"
 # The service's /tmp is its own; the log goes where both see it.
-mkdir -p "$bin" /var/lib/botloft-agents/out
-cat >"$bin/claude" <<'EOF'
+mkdir -p "$bin" "$(dirname "$real")" /var/lib/botloft-agents/out
+rm -f "$bin/claude"
+cat >"$real" <<'EOF'
 #!/bin/bash
 out="/var/lib/botloft-agents/out"
 case "$1" in
@@ -112,7 +115,8 @@ esac
 } >>/var/lib/botloft-agents/out/ran.log 2>&1
 echo "2.1.999 (Claude Code)"
 EOF
-chmod 0755 "$bin/claude"
+chmod 0755 "$real"
+ln -s "$real" "$bin/claude"
 chown -R botloft-agents:botloft-agents /var/lib/botloft-agents/.local /var/lib/botloft-agents/out
 systemctl restart botloft.service
 log=/var/lib/botloft-agents/out/ran.log
@@ -180,6 +184,17 @@ users="$(pgrep -f -- "$browsers" | xargs -I{} ps -o user:20= -p {} | sort -u | t
 # Its pages go out through the gate, loopback too.
 pgrep -a -f -- "$browsers" | grep -- "--proxy-server=http://127.0.0.1:" | grep -q -- "--proxy-bypass-list=<-loopback>" ||
 	fail "the browser does not go through the gate"
+# And it came up: it wrote its port in the profile the daemon made, which it
+# reaches through the daemon's group.
+tries=0
+until ls /var/lib/botloft-browser/profiles/*/DevToolsActivePort >/dev/null 2>&1; do
+	tries=$((tries + 1))
+	[ "$tries" -lt 40 ] || {
+		grep Groups "/proc/$(pgrep -o -f -- "$browsers")/status" || true
+		fail "the browser runs but never came up: its profile is not its to write"
+	}
+	sleep 1
+done
 
 # The agent woke in its box (spec 42.5).
 box=/var/lib/botloft-agents/out/box.log
